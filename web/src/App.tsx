@@ -14,6 +14,7 @@ import { fromHash, parseView, recordView, toHash, type View } from "./lib/views"
 import { screenOf, type Screen } from "./lib/walkthrough";
 import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
+import { AiCompare } from "./components/AiCompare";
 import { Ask } from "./components/Ask";
 import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
@@ -77,6 +78,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   const focusFirstGo = useFocusFirstGo();
   // Sources opens on the form that adds one when Today or a sign-in sends the person there.
   const [addSource, setAddSource] = useState<AddRequest | null>(null);
+  // Settings opens on the form that adds an AI account when a Today line sends the person there.
+  const [addAccount, setAddAccount] = useState<number | null>(null);
   // A screen that puts focus somewhere of its own on opening (a step's heading, a form) keeps it.
   const ownFocus = useRef(false);
   const openAddSource = (plugin: string | null = null) => {
@@ -98,6 +101,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     setView(recordView(kind, id));
   };
   const shown = parseView(view);
+  // The grid of what each account can do belongs to Settings, so Settings stays marked in the navigation.
+  const navView: View = view === "settings/ai-compare" ? "settings" : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen is not taken from it.
@@ -161,6 +166,10 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             onAddSource={() => openAddSource()}
             onOpenRecord={openRecord}
             onOpenGuide={openGuide}
+            onAddAccount={() => {
+              setAddAccount(Date.now());
+              setView("settings");
+            }}
           />
         );
       case "work/changed":
@@ -206,8 +215,13 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             onOpenAddons={() => setView("addons")}
             onChooseSource={openAddSource}
             onOpenKnowledge={() => setView("records/knowledge")}
+            onOpenCompare={() => setView("settings/ai-compare")}
+            addAccount={addAccount}
+            onAddAccountOpened={() => setAddAccount(null)}
           />
         );
+      case "settings/ai-compare":
+        return <AiCompare onBack={() => setView("settings")} />;
       case "addons":
         return <Addons onBack={() => setView("settings")} />;
       case "handover":
@@ -294,7 +308,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           onFeedback={openFeedback}
           onOpenGuide={openGuide}
         />
-        {!narrow && <Sidebar current={view} expanded={sidebar.expanded} onToggle={sidebar.toggle} />}
+        {!narrow && <Sidebar current={navView} expanded={sidebar.expanded} onToggle={sidebar.toggle} />}
         <main id="main" className={shell.main} tabIndex={-1}>
           {handIn && <HandIn onClose={() => setHandIn(false)} />}
           {body}
@@ -302,7 +316,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       </div>
       {narrow && (
         <BottomBar
-          current={view}
+          current={navView}
           version={rc.version}
           onHandIn={() => setHandIn(true)}
           onAsk={() => setAsk({})}

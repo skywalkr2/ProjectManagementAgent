@@ -19,6 +19,7 @@ from api.schemas import (
     KnowledgeView,
     LearnedLine,
     LearnedView,
+    Ok,
     ProposalsView,
     ProposalView,
     ReadVersion,
@@ -34,7 +35,7 @@ from engine.config import Config
 from engine.dispatcher import SAY_WHO_FIRST, signal
 from engine.origin import origins
 from engine.records import Rule, Scope
-from engine.rule_review import due, review
+from engine.rule_review import due, review, take_back_not_now
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
 
@@ -358,9 +359,17 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events, worker: Wo
         now = datetime.now(UTC)
         settings = cfg.dispatch.knowledge
         flagged = review(store.read(), settings, now).flagged
-        signal(store, "not_now", [f.id for f in flagged], now=now)
+        made = signal(store, "not_now", [f.id for f in flagged], now=now)
         events.changed()
-        return RuleReviewPutOff(until=now + timedelta(days=settings.rule_review_every_days))
+        return RuleReviewPutOff(until=now + timedelta(days=settings.rule_review_every_days), signal=made)
+
+    @r.post("/knowledge/rules/review/not-now/{signal_id}/undo")
+    def rule_review_not_now_undo(signal_id: str) -> Ok:
+        """Undo "Not now": the line is back on Today at once."""
+        if not take_back_not_now(store, signal_id):
+            raise HTTPException(status_code=404, detail='There is no "not now" to take back.')
+        events.changed()
+        return Ok(ok=signal_id)
 
     @r.post("/knowledge/{entry_id}/keep-rule")
     def keep_rule(entry_id: str, body: ReadVersion) -> Applied:

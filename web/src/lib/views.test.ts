@@ -14,6 +14,7 @@ const routes = [
   "sources",
   "addons",
   "settings",
+  "settings/ai-compare",
   "setup",
   "styleguide",
 ] as const;

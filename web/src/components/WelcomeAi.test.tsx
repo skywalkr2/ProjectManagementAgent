@@ -343,7 +343,7 @@ test("after an add the suggested name looks at the accounts as they are now", as
   const calls = api({
     "GET ai/accounts": () => existing,
     "POST ai/accounts": () => {
-      existing = [{ name: "service-a", kind: "service-a", adapter: "adapter-one", models: { everyday: "model-a" }, used_for: [], has_key: true, key_state: "saved" }];
+      existing = [{ name: "service-a", label: "Service A account", kind: "service-a", adapter: "adapter-one", models: { everyday: "model-a" }, used_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 }];
       return { changes: [], fingerprint: "fp-2", needs_restart: false };
     },
   });
@@ -354,10 +354,10 @@ test("after an add the suggested name looks at the accounts as they are now", as
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a-2"));
   expect(calls.filter((c) => c.route === "GET ai/accounts").length).toBeGreaterThan(1);
-  // The account just made is listed, with a way to fix or remove it.
-  const row = (await screen.findByText("service-a", { selector: "strong" })).closest("li")!;
-  expect(within(row).getByRole("button", { name: "Test service-a" })).toBeInTheDocument();
-  expect(within(row).getByRole("button", { name: "More actions for service-a" })).toBeInTheDocument();
+  // The account just made is listed by the name the person sees (never its id), with a way to fix or remove it.
+  const row = (await screen.findByText("Service A account", { selector: "li[data-row] span[id$=title]" })).closest("li")!;
+  expect(within(row).getByRole("button", { name: "Test Service A account" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "More actions for Service A account" })).toBeInTheDocument();
 });
 
 test("a name the person typed is dropped after an add, so the next one is suggested again", async () => {
@@ -389,6 +389,7 @@ test("adding sends the kind, both models, the data levels the kind allows and wh
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
     name: "service-a",
+    label: "Service A account",
     adapter: "adapter-one",
     endpoint: "service-a",
     base_url: `${WEB}api.service-a.example.com/v1`,
@@ -496,6 +497,7 @@ test("a server found on this computer is offered first and is added without a ke
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
     name: "local-box",
+    label: "A server on this computer account",
     adapter: "adapter-one",
     endpoint: "local-box",
     base_url: "http://localhost:1234/v1",
@@ -551,6 +553,7 @@ test("a command-line program asks for a command and how it is fed, and sends its
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
     name: "runner",
+    label: "A command-line program account",
     adapter: "adapter-two",
     endpoint: "runner",
     models: { everyday: "std" },
@@ -702,6 +705,7 @@ test("an app left to choose its own model is added with no models and works thro
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
     name: "app-a",
+    label: "App A account",
     adapter: "adapter-two",
     endpoint: "app-a",
     models: {},

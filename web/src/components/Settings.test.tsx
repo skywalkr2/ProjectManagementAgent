@@ -7,6 +7,9 @@ import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Settings } from "./Settings";
 
+/** Made-up addresses are built from this, so no address is written out whole. */
+const WEB = "https" + "://";
+
 function item(key: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
   const [file, ...rest] = key.split(".");
   return {
@@ -490,19 +493,77 @@ test("the search finds an add-on's settings by the add-on's name", async () => {
   expect(screen.queryByLabelText("What greeting does for the add-on")).toBeNull();
 });
 
-test("the AI section lists the accounts that are set up, one row each, with a Test button", async () => {
-  api(ITEMS, {
-    "GET ai/accounts": () => [{ name: "main", kind: "svc", adapter: "adapter-one", base_url: null, models: { everyday: "m" }, used_for: ["routine"], has_key: true }],
-    "GET ai/endpoints": () => [{ id: "svc", name: "A service", adapter: "adapter-one", base_url: "", needs_key: true }],
-    "GET setup": () => ({ steps: [], finished: false, local: true }),
-  });
+const ACCOUNT: S["AiAccountView"] = {
+  name: "main",
+  label: "Main account",
+  kind: "svc",
+  adapter: "adapter-one",
+  base_url: null,
+  models: { everyday: "m" },
+  used_for: ["routine"],
+  backup_for: [],
+  has_key: true,
+  key_state: "saved",
+  key_where: null,
+  key_ending: false,
+  answered_at: null,
+  spent_today_usd: 0,
+  checked_for: [],
+  check_failed_for: [],
+  checked_at: null,
+  paused_until: null,
+  check_usd: null,
+};
+const AI_ROUTES = {
+  "GET ai/accounts": () => [ACCOUNT],
+  "GET ai/endpoints": () => [{ id: "svc", name: "A service", adapter: "adapter-one", base_url: `${WEB}api.svc.example.com/v1`, needs_key: true, key_url: "", local: false, note: "", allowed_data: ["open"], program: "", model_optional: false, model_examples: [], installed: null }],
+  "GET ai/skills": () => ({ min_score: 0.8, stale_days: 60, accounts: [] }),
+  "GET ai/check-size": () => ({ calls: 10, input_tokens: 1000, output_tokens: 200 }),
+  "GET ai/local": () => [],
+  "GET setup": () => ({ steps: [], finished: false, local: true }),
+};
+
+test("the AI section lists the accounts that are set up, one row each, with its role, its name and one next step", async () => {
+  api(ITEMS, AI_ROUTES);
   open();
-  expect(await screen.findByRole("heading", { name: "Your AI accounts" })).toBeInTheDocument();
-  const row = screen.getByText("main", { selector: "strong" }).closest("li") as HTMLElement;
+  expect(await screen.findByRole("heading", { name: /AI accounts/ })).toBeInTheDocument();
+  const row = screen.getByText("Main account", { selector: "li[data-row] span[id$=title]" }).closest("li") as HTMLElement;
+  expect(row).toHaveTextContent("Does the work");
   expect(row).toHaveTextContent("A service");
-  expect(row).toHaveTextContent("Key saved");
-  expect(within(row).getByRole("button", { name: "Test main" })).toBeInTheDocument();
-  expect(within(row).getByRole("button", { name: "More actions for main" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "Test Main account" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "More actions for Main account" })).toBeInTheDocument();
+});
+
+test("Add an account opens its form in a drawer inside Settings, never the setup guide, with the cursor in it", async () => {
+  const user = userEvent.setup();
+  const onOpenGuide = vi.fn();
+  api(ITEMS, AI_ROUTES);
+  renderApp(<Settings onOpenGuide={onOpenGuide} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  await user.click(await screen.findByRole("button", { name: "Add an account" }));
+  const drawer = await screen.findByRole("dialog", { name: "Add an account" });
+  expect(onOpenGuide).not.toHaveBeenCalled();
+  expect(within(drawer).getByRole("group", { name: /Which AI should/ })).toBeInTheDocument();
+  await waitFor(() => expect(within(drawer).getAllByRole("radio")[0]).toHaveFocus());
+  await user.click(within(drawer).getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add an account" })).toBeNull());
+  await waitFor(() => expect(screen.getByRole("button", { name: "Add an account" })).toHaveFocus());
+});
+
+test("a Today line that asks for an account to be added opens the same drawer", async () => {
+  api(ITEMS, AI_ROUTES);
+  const done = vi.fn();
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} addAccount={Date.now()} onAddAccountOpened={done} />);
+  expect(await screen.findByRole("dialog", { name: "Add an account" })).toBeInTheDocument();
+  expect(done).toHaveBeenCalled();
+});
+
+test("Compare what they can do opens the grid", async () => {
+  const user = userEvent.setup();
+  const onOpenCompare = vi.fn();
+  api(ITEMS, AI_ROUTES);
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenCompare={onOpenCompare} />);
+  await user.click(await screen.findByRole("button", { name: "Compare what they can do" }));
+  expect(onOpenCompare).toHaveBeenCalledTimes(1);
 });
 
 test("an add-on's data files are listed in an Add-on files section, and the section is absent when no add-on has any", async () => {

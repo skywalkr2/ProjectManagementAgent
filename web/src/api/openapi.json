@@ -780,6 +780,18 @@
             "description": "Or a reference: env:NAME or file:/path.",
             "title": "Key Ref"
           },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name the person gives it, shown in lists; left out: the service's name and \"account\".",
+            "title": "Label"
+          },
           "models": {
             "additionalProperties": {
               "type": "string"
@@ -827,7 +839,7 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Tiers to one of its models by short name, added to each tier's backups: the accounts tried in order when the main one can't answer. Only a checked account, or one accepted unchecked, may be one.",
+            "description": "Tiers to one of its models by short name, added to each tier's backups: the accounts tried in order when the main one can't answer. An account already a backup there with another model has that entry moved to this one. Only a checked account, or one accepted unchecked, may be one.",
             "title": "Backup",
             "type": "object"
           },
@@ -884,6 +896,18 @@
             "description": "Or where the key is now: env:NAME or file:/path.",
             "title": "Key Ref"
           },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name the person gives it; empty clears it.",
+            "title": "Label"
+          },
           "models": {
             "anyOf": [
               {
@@ -899,6 +923,18 @@
             "description": "Its models, replacing the ones it has.",
             "title": "Models"
           },
+          "stop_backup": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Take the account out of every kind of work's backups.",
+            "title": "Stop Backup"
+          },
           "use": {
             "additionalProperties": {
               "type": "string"
@@ -912,6 +948,33 @@
           "fingerprint"
         ],
         "title": "AiAccountChange",
+        "type": "object"
+      },
+      "AiAccountRemove": {
+        "additionalProperties": false,
+        "description": "Remove an account, saying which backup takes over the work it did.",
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "take_over": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of a backup account that does the removed account's work in its place, for each kind of work it stands in for; left out, that work has no account until one is chosen.",
+            "title": "Take Over"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "AiAccountRemove",
         "type": "object"
       },
       "AiAccountSkills": {
@@ -943,6 +1006,19 @@
             "title": "Adapter",
             "type": "string"
           },
+          "answered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it last answered a call, on the person's own clock; none before the first.",
+            "title": "Answered At"
+          },
           "backup_for": {
             "description": "The tiers it stands in for as a backup.",
             "items": {
@@ -962,6 +1038,47 @@
             ],
             "title": "Base Url"
           },
+          "check_failed_for": {
+            "description": "The kinds of work (tiers) whose last check of it failed.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Check Failed For",
+            "type": "array"
+          },
+          "check_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About what one connection check of it costs, from the prices in the settings or kept from earlier runs; none when its price isn't known.",
+            "title": "Check Usd"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it was last checked as it is set up now; none when it never was.",
+            "title": "Checked At"
+          },
+          "checked_for": {
+            "description": "The kinds of work (tiers) it passed the connection check for, with their exact settings.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Checked For",
+            "type": "array"
+          },
           "credential_expires": {
             "anyOf": [
               {
@@ -978,6 +1095,12 @@
           "has_key": {
             "description": "A key or a reference to one is set.",
             "title": "Has Key",
+            "type": "boolean"
+          },
+          "key_ending": {
+            "default": false,
+            "description": "Its key stops working within the days Today warns ahead (`ai.credential_warn_days`).",
+            "title": "Key Ending",
             "type": "boolean"
           },
           "key_state": {
@@ -1015,6 +1138,12 @@
             "description": "The kind of account it was made from (GET /api/ai/endpoints).",
             "title": "Kind"
           },
+          "label": {
+            "default": "",
+            "description": "The name the person gave it; empty when they gave none (the screen says the service's name).",
+            "title": "Label",
+            "type": "string"
+          },
           "models": {
             "additionalProperties": {
               "type": "string"
@@ -1023,9 +1152,28 @@
             "type": "object"
           },
           "name": {
-            "description": "Its short name in ai.yaml.",
+            "description": "Its short name in ai.yaml; an identifier, never shown to the person.",
             "title": "Name",
             "type": "string"
+          },
+          "paused_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the usage limit holding it resets, on the person's own clock; none when not paused.",
+            "title": "Paused Until"
+          },
+          "spent_today_usd": {
+            "default": 0.0,
+            "description": "What its calls cost today, in the person's day.",
+            "title": "Spent Today Usd",
+            "type": "number"
           },
           "used_for": {
             "description": "The tiers whose main account it is.",
@@ -1092,6 +1240,33 @@
           "released"
         ],
         "title": "AiBorrowed",
+        "type": "object"
+      },
+      "AiCheckSize": {
+        "description": "What one account's connection check involves, for pricing it with a model's price per million tokens.",
+        "properties": {
+          "calls": {
+            "description": "How many small calls the check makes.",
+            "title": "Calls",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "description": "About how many tokens they read together.",
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "description": "About how many tokens they write together.",
+            "title": "Output Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "calls",
+          "input_tokens",
+          "output_tokens"
+        ],
+        "title": "AiCheckSize",
         "type": "object"
       },
       "AiMeasureEstimate": {
@@ -4035,6 +4210,14 @@
             "title": "Id",
             "type": "string"
           },
+          "links": {
+            "description": "Pages that belong to the action's project, for the copied table.",
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            },
+            "title": "Links",
+            "type": "array"
+          },
           "on_hold": {
             "anyOf": [
               {
@@ -4151,6 +4334,18 @@
               }
             ],
             "description": "Where the question came from, for its link."
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The projects it is about, by name, joined with commas.",
+            "title": "Project Name"
           },
           "sent": {
             "anyOf": [
@@ -8926,7 +9121,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `extractor` is a kind of file that isn't\nbeing read (`file_kind`, and `text` says why), which clears once a file of that kind reads well.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well.",
         "properties": {
           "account": {
             "anyOf": [
@@ -9098,6 +9293,7 @@
               "account_check",
               "switch_failed",
               "credential",
+              "no_account",
               "extractor",
               "review",
               "rule_review",
@@ -9374,7 +9570,7 @@
                 "type": "null"
               }
             ],
-            "description": "When the account's limit resets and the work waiting on it runs again by itself (paused), on the person's own clock (their time zone).",
+            "description": "When the account's limit resets and the work waiting on it runs again by itself (paused), or when the line comes back if the person says Not now (rule_review), on the person's own clock (their time zone).",
             "title": "Until"
           },
           "untrusted": {
@@ -9823,6 +10019,11 @@
       "RuleReviewPutOff": {
         "description": "The answer to \"Not now\" on the rules review line: the review is off Today until this moment.",
         "properties": {
+          "signal": {
+            "description": "The id of what was recorded, which Undo takes back.",
+            "title": "Signal",
+            "type": "string"
+          },
           "until": {
             "description": "When the review is offered again, if it still has something to show.",
             "format": "date-time",
@@ -9831,7 +10032,8 @@
           }
         },
         "required": [
-          "until"
+          "until",
+          "signal"
         ],
         "title": "RuleReviewPutOff",
         "type": "object"
@@ -13727,7 +13929,7 @@
     },
     "/api/ai/accounts/{name}/remove": {
       "post": {
-        "description": "Remove an account, with Undo: the work it did goes back to the tier's default account. Its kept key stays\non this computer, so Undo brings the account back whole.",
+        "description": "Remove an account, with Undo. The work it did goes to the backup named in `take_over` (the backup's own entry\nfor that kind of work becomes its main one), or, with none named, has no account until one is chosen. Its kept\nkey stays on this computer, so Undo brings the account back whole.",
         "operationId": "ai_account_remove_api_ai_accounts__name__remove_post",
         "parameters": [
           {
@@ -13744,7 +13946,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FingerprintIn"
+                "$ref": "#/components/schemas/AiAccountRemove"
               }
             }
           },
@@ -13988,6 +14190,25 @@
           }
         },
         "summary": "Ai Borrow"
+      }
+    },
+    "/api/ai/check-size": {
+      "get": {
+        "description": "What one account's connection check involves (calls and tokens), so a screen can price it with the price of\nthe model the person picks.",
+        "operationId": "ai_check_size_api_ai_check_size_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiCheckSize"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Check Size"
       }
     },
     "/api/ai/endpoints": {
@@ -16131,6 +16352,46 @@
           }
         },
         "summary": "Rule Review Not Now"
+      }
+    },
+    "/api/knowledge/rules/review/not-now/{signal_id}/undo": {
+      "post": {
+        "description": "Undo \"Not now\": the line is back on Today at once.",
+        "operationId": "rule_review_not_now_undo_api_knowledge_rules_review_not_now__signal_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rule Review Not Now Undo"
       }
     },
     "/api/knowledge/{entry_id}/discard": {

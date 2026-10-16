@@ -29,6 +29,8 @@ export interface QueueHandlers {
   onOpenAiAccounts: () => void;
   onOpenHandover: () => void;
   onOpenRules: () => void;
+  onOpenKnowledge?: () => void;
+  onAddAccount?: () => void;
   onOpenRecord?: (kind: string, id: string) => void;
   onOpenGuide?: (step: string) => void;
 }
@@ -169,7 +171,7 @@ function LineItem(props: {
   if (isHeld(line)) {
     return (
       <li className={styles.item}>
-        <HeldLine line={line} onOpenAiAccounts={handlers.onOpenAiAccounts} onOpenHandover={handlers.onOpenHandover} onOpenRules={handlers.onOpenRules} />
+        <HeldLine line={line} onOpenAiAccounts={handlers.onOpenAiAccounts} onOpenHandover={handlers.onOpenHandover} onOpenRules={handlers.onOpenRules} onOpenKnowledge={handlers.onOpenKnowledge} onAddAccount={handlers.onAddAccount} />
       </li>
     );
   }

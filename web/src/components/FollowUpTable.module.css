@@ -1,0 +1,15 @@
+/* The tables a person's follow-ups copy as: shown exactly as they will be copied, the fill-in column last, widest and tinted. */
+.wrap { display: grid; gap: var(--space-3); min-width: 0; }
+.wrap > div { min-width: 0; }
+.heading { margin: 0 0 var(--space-1); font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); }
+.scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.scroll:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.table { border-collapse: collapse; width: 100%; min-width: 560px; table-layout: fixed; }
+.table th, .table td { text-align: left; vertical-align: top; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.table thead th { background: var(--surface-sunk); color: var(--text-muted); font-weight: var(--weight-semibold); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.fill { width: 38%; background: var(--accent-soft); }
+.table thead th.fill { color: var(--accent-text); background: var(--accent-soft); }
+.late { color: var(--danger); font-weight: var(--weight-semibold); }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.hint { margin: 0; flex: 1 1 24ch; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }

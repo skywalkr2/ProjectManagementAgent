@@ -429,6 +429,25 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # Risk: a kind of work with no AI account to do it, which waits until the person picks one. A workspace with no
+    # account at all is a new one: the setup line says so, so this line is for work an account stopped doing.
+    unserved = [
+        name
+        for name, tier in cfg.ai.tiers.items()
+        if not tier.use or tier.use.partition("/")[0] not in cfg.ai.providers
+    ]
+    if unserved and cfg.ai.providers:
+        lines.append(
+            Line(
+                key="no_account",
+                group="risk",
+                kind="no_account",
+                count=len(unserved),
+                tier=unserved[0],
+                names=unserved,
+            )
+        )
+
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
     for action in reader.list("action"):
@@ -504,6 +523,9 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 stable_budget=found.stable_budget,
                 moved=found.moved,
                 days=found.days,
+                until=(now + timedelta(days=cfg.dispatch.knowledge.rule_review_every_days))
+                .astimezone(zone(cfg))
+                .isoformat(),
                 since=acted.isoformat() if acted else "",
             )
         )
@@ -684,6 +706,7 @@ _KIND_ORDER = {
     "account_check": 1,
     "switch_failed": 1,
     "credential": 1,
+    "no_account": 0,
     "extractor": 1,
     "review": 0,
     "rule_review": 1,

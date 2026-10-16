@@ -440,3 +440,19 @@ def test_not_now_route_records_a_signal_names_the_flagged_rules_and_changes_no_r
     assert datetime.fromisoformat(put_off.json()["until"]) - datetime.fromisoformat(said.data["at"]) == every
     assert client.get("/api/knowledge/rules/review").json()["due"] is False
     assert store.read().get("rule", quiet).version == before.version
+
+
+def test_undoing_not_now_brings_the_line_back_at_once_and_it_says_when_it_would_return(app):
+    client, store = app
+    quiet = rule(store, "quiet")
+    run(store, present=[quiet], at=datetime.now(UTC) - timedelta(days=1))
+    [line] = [x for x in client.get("/api/today/queue").json() if x["kind"] == "rule_review"]
+    every = timedelta(days=KnowledgeSettings().rule_review_every_days)
+    assert abs(datetime.fromisoformat(line["until"]) - (datetime.now(UTC) + every)) < timedelta(minutes=5)
+    put_off = client.post("/api/knowledge/rules/review/not-now").json()
+    assert client.get("/api/knowledge/rules/review").json()["due"] is False
+    assert client.post(f"/api/knowledge/rules/review/not-now/{put_off['signal']}/undo").status_code == 200
+    assert client.get("/api/knowledge/rules/review").json()["due"] is True
+    # The signal stays as it was said; taking it back twice, or taking back something else, finds nothing.
+    assert client.post(f"/api/knowledge/rules/review/not-now/{put_off['signal']}/undo").status_code == 404
+    assert client.post("/api/knowledge/rules/review/not-now/SIG-0/undo").status_code == 404

@@ -4,6 +4,7 @@
 // tried in. It sits beside the status chip, whose own states it reuses and does not repeat.
 import { useQuery } from "@tanstack/react-query";
 import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria-components";
+import { useAccountNames } from "../lib/account-names";
 import { api, type S } from "../lib/api";
 import { wallWhen } from "../lib/dates";
 import { useRestart } from "../lib/restart";
@@ -17,7 +18,7 @@ import styles from "./AssistantLine.module.css";
 const ICON: Record<AliveTone, IconName> = { ok: "check", warn: "alert", bad: "close" };
 
 /** The words after the icon: the problem when there is one, otherwise when the assistant last ran. */
-function sayText(kind: AliveKind, a: S["AssistantStatus"], t: (key: string, vars?: Record<string, string | number>) => string): string {
+function sayText(kind: AliveKind, a: S["AssistantStatus"], t: (key: string, vars?: Record<string, string | number>) => string, nameOf: (id: string) => string): string {
   const when = a.last_run_at ? wallWhen(a.last_run_at) : "";
   switch (kind) {
     case "fine":
@@ -26,7 +27,7 @@ function sayText(kind: AliveKind, a: S["AssistantStatus"], t: (key: string, vars
       return t("alive.say.run_failed", { time: when });
     case "paused": {
       const first = a.paused[0];
-      return t("alive.say.paused", { account: first.account, time: wallWhen(first.until) });
+      return t("alive.say.paused", { account: nameOf(first.account), time: wallWhen(first.until) });
     }
     default:
       return t(`alive.say.${kind}`);
@@ -37,10 +38,11 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
   const { t, tn, has } = useWords();
   const restart = useRestart();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const nameOf = useAccountNames();
   if (!status.data) return null;
   const a = status.data.assistant;
   const { kind, tone } = aliveState({ status: status.data, restartPhase: restart.phase });
-  const say = sayText(kind, a, t);
+  const say = sayText(kind, a, t, nameOf);
   const work = (tier: string) => (has(`welcome.ai.tier.${tier}`) ? t(`welcome.ai.tier.${tier}`) : tier);
   const toGuide = (close: () => void) => {
     close();
@@ -78,7 +80,7 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                   <ul className={styles.rows}>
                     {a.runs_today.map((r) => (
                       <li key={r.account} className={styles.text}>
-                        {tn("alive.runs_row", r.count, { account: r.account, failed: r.failed ? t("alive.runs_failed", { failed: r.failed }) : "" })}
+                        {tn("alive.runs_row", r.count, { account: nameOf(r.account), failed: r.failed ? t("alive.runs_failed", { failed: r.failed }) : "" })}
                       </li>
                     ))}
                   </ul>
@@ -100,14 +102,14 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                   <ul className={styles.rows}>
                     {a.chains.map((c) => (
                       <li key={c.tier} className={styles.text}>
-                        {t("alive.chain_row", { work: work(c.tier), accounts: c.accounts.join(t("alive.chain_join")) })}
+                        {t("alive.chain_row", { work: work(c.tier), accounts: c.accounts.map(nameOf).join(t("alive.chain_join")) })}
                       </li>
                     ))}
                   </ul>
                 )}
                 {a.paused.map((p) => (
                   <p key={p.account} className={styles.note}>
-                    {t("alive.paused_until", { account: p.account, time: wallWhen(p.until) })}
+                    {t("alive.paused_until", { account: nameOf(p.account), time: wallWhen(p.until) })}
                   </p>
                 ))}
               </li>

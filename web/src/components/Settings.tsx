@@ -1,7 +1,7 @@
 // Settings (design 7.9): every setting the config schemas describe, as a form. Basic settings come first and the rest
 // sit behind a toggle; the search looks at all of them. A save sends only what changed, reads it back and offers Undo.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { fromDraft, groupItems, groupLabel, isOff, depthOf, switchOf, toDraft, type Draft, type Group, type Item } from "../lib/settings";
@@ -12,7 +12,10 @@ import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { SettingRow } from "./SettingRow";
 import { ValueLists } from "./ValueLists";
+import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
+import { WelcomeAi } from "./WelcomeAi";
+import { restoreFocus } from "./ModalPanel";
 
 type Edits = Record<string, Draft>;
 
@@ -23,11 +26,28 @@ export function Settings(props: {
   onChooseSource: (plugin: string | null) => void;
   /** Opens the Knowledge screen, where the standing rules are kept and reviewed. */
   onOpenKnowledge?: () => void;
+  /** Opens the grid of what each AI account can do. */
+  onOpenCompare?: () => void;
+  /** A moment (a counter) when something else asks for the form that adds an AI account to open, and its acknowledgment. */
+  addAccount?: number | null;
+  onAddAccountOpened?: () => void;
 }) {
   const { t, tn, has } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
+  // The form that adds an AI account opens here, as a drawer, so the person never leaves Settings for it.
+  const [adding, setAdding] = useState(false);
+  const [addDirty, setAddDirty] = useState(false);
+  const addButton = useRef<HTMLElement | null>(null);
+  const requested = props.addAccount;
+  const acknowledge = props.onAddAccountOpened;
+  useEffect(() => {
+    if (requested == null) return;
+    setAdding(true);
+    acknowledge?.();
+  }, [requested, acknowledge]);
   const [more, setMore] = useState(false);
   const [query, setQuery] = useState("");
   const [edits, setEdits] = useState<Edits>({});
@@ -176,7 +196,45 @@ export function Settings(props: {
         )}
       </div>
       <DataForms />
-      <AiAccounts onAdd={() => props.onOpenGuide("ai")} />
+      <AiAccounts
+        local={setup.data?.local}
+        onAdd={() => {
+          addButton.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setAdding(true);
+        }}
+        onCompare={props.onOpenCompare}
+      />
+      <Drawer
+        open={adding}
+        title={t("ai_add.title")}
+        dirty={addDirty}
+        wide
+        onClose={() => {
+          setAdding(false);
+          setAddDirty(false);
+          restoreFocus(() => addButton.current);
+        }}
+      >
+        {adding && setup.data && (
+          <WelcomeAi
+            local={setup.data.local}
+            done
+            drawer={{
+              onAdded: () => {
+                setAdding(false);
+                setAddDirty(false);
+                restoreFocus(() => addButton.current);
+              },
+              onCancel: () => {
+                setAdding(false);
+                setAddDirty(false);
+                restoreFocus(() => addButton.current);
+              },
+              onDirty: setAddDirty,
+            }}
+          />
+        )}
+      </Drawer>
       <ValueLists />
     </section>
   );

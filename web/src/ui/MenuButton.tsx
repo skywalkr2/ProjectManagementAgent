@@ -16,6 +16,8 @@ export interface MenuEntry {
   /** The entry can't be used now; `reason` says why, under its label. */
   disabled?: boolean;
   reason?: string;
+  /** A line under the label that says what the entry does or costs, shown whether or not the entry can be used. */
+  note?: string;
 }
 
 export interface MenuGroup {
@@ -72,9 +74,9 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
                             <Icon name="check" size={16} />
                           </span>
                         )}
-                        {entry.disabled && entry.reason && (
+                        {(entry.disabled && entry.reason ? entry.reason : entry.note) && (
                           <Text slot="description" className={styles.reason}>
-                            {entry.reason}
+                            {entry.disabled && entry.reason ? entry.reason : entry.note}
                           </Text>
                         )}
                       </>

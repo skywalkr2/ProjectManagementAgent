@@ -178,3 +178,21 @@ def test_a_sign_in_whose_credential_ends_soon_is_a_line_naming_the_sign_in_and_w
     assert found[0].places == [f"the {sign_in.label} sign-in", "the source Reader"]
     flow.keep(keys, sign_in, {"access_token": "t", "expires_at": time.time() + 3600, "refresh_token": "r"})
     assert [x for x in queue(ws, store, cfg, now) if x.kind == "credential"] == []
+
+
+def test_work_with_no_account_is_a_line_until_one_does_it(env):
+    ws, cfg, store = env
+    assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] == []
+    cfg.ai.tiers["routine"].use = ""
+    [line] = [x for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"]
+    assert (line.group, line.count, line.tier, line.names) == ("risk", 1, "routine", ["routine"])
+    cfg.ai.tiers["routine"].use = "gone/default"  # an account that isn't set up is no account either
+    assert [x.names for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] == [["routine"]]
+
+
+def test_a_workspace_with_no_account_at_all_is_left_to_the_setup_line(env):
+    ws, cfg, store = env
+    cfg.ai.providers.clear()
+    for tier in cfg.ai.tiers.values():
+        tier.use = ""
+    assert [x for x in queue(ws, store, cfg, NOW) if x.kind == "no_account"] == []

@@ -4,6 +4,9 @@ import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 
+/** Made-up addresses are built from this, so no address is written out whole. */
+const WEB = "https" + "://";
+
 const sections: S["FollowupSection"][] = [
   {
     person: "PER-1",
@@ -413,4 +416,157 @@ test("Take off hold acts at once and Undo puts the old hold back", async () => {
   await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-1/unhold")).toBe(true));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold/restore")?.body).toEqual({ hold: previous }));
+});
+
+// ---- the table view (design 7.5) ----------------------------------------------------------------------------------------
+
+const tableSections: S["FollowupSection"][] = [
+  sections[0],
+  {
+    person: "PER-2",
+    name: "Robin Sample",
+    is_pm: false,
+    questions: [
+      { id: "Q-1", title: "Is the index final?", text: "", links: [{ label: "Book page", url: `${WEB}example.com/book` }], kind: "question", status: "open", project_name: "Book", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
+      { id: "Q-2", title: "Who writes the jacket copy?", text: "", links: [], kind: "question", status: "open", project_name: "Book", sent: "2026-10-10", waiting_days: null, chase_due: false, about: null, options: [] },
+    ],
+    actions: [
+      { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Book", links: [], told: null, told_days: null, followed_up: null, chase_due: false },
+      { id: "ACT-1", text: "Send the index", due: "2020-10-14", project_name: "Book", links: [{ label: "Book page", url: `${WEB}example.com/book` }], told: null, told_days: null, followed_up: null, chase_due: false },
+    ],
+    message: "Hi Robin",
+    to_send: 4,
+  },
+] as S["FollowupSection"][];
+
+const tableRoutes = { ...markSentRoutes, "GET followups": () => tableSections };
+
+async function showTable(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  await user.click(screen.getByRole("radio", { name: "Table" }));
+}
+
+test("a person's group has a Message | Table switch, and the message is what shows first", async () => {
+  const user = userEvent.setup();
+  fakeApi(tableRoutes);
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  const switcher = screen.getByRole("radiogroup", { name: "Show as" });
+  expect(within(switcher).getAllByRole("radio").map((b) => b.textContent)).toEqual(["Message", "Table"]);
+  expect(within(switcher).getByRole("radio", { name: "Message" })).toBeChecked();
+  expect(screen.getByRole("textbox", { name: /Message to Robin Sample/ })).toBeInTheDocument();
+  expect(screen.queryByRole("table")).toBeNull();
+});
+
+test("the table is on screen before anything is copied: actions by due date with overdue first, questions by first asked", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(tableRoutes);
+  renderApp(<FollowUps />);
+  await showTable(user);
+  const [actions, questions] = screen.getAllByRole("table");
+  expect(within(actions).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Project", "Action", "Due", "Link", "Your update"]);
+  expect(within(questions).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Project", "Question", "First asked", "Link", "Your answer"]);
+  const bodyRows = (table: HTMLElement) => within(table).getAllByRole("row").slice(1);
+  const a = bodyRows(actions).map((r) => within(r).getAllByRole("cell").map((c) => c.textContent));
+  expect(a.map((r) => r[1])).toEqual(["Send the index", "Send the acknowledgments page"]);
+  // The project is on every row; overdue is said in words; no link is a dash; the fill-in column is empty.
+  expect(a.map((r) => r[0])).toEqual(["Book", "Book"]);
+  expect(a[0][2]).toMatch(/ · overdue$/);
+  expect(a[1][2]).not.toMatch(/overdue/);
+  expect(a[0][3]).toContain("Book page");
+  expect(a[1][3]).toBe("—");
+  expect(a.map((r) => r[4])).toEqual(["", ""]);
+  const q = bodyRows(questions).map((r) => within(r).getAllByRole("cell").map((c) => c.textContent));
+  expect(q.map((r) => r[1])).toEqual(["Who writes the jacket copy?", "Is the index final?"]);
+  expect(q[0][2]).toMatch(/Oct 10/);
+  expect(q[1][2]).toBe("Not sent yet");
+  expect(q.map((r) => r[4])).toEqual(["", ""]);
+  // Nothing has been copied, and no AI run or other request was made for it.
+  expect(await navigator.clipboard.readText()).toBe("");
+  expect(posts(calls)).toHaveLength(0);
+});
+
+test("the fill-in column is the last one, and a table switch back to the message keeps the message", async () => {
+  const user = userEvent.setup();
+  fakeApi(tableRoutes);
+  renderApp(<FollowUps />);
+  await showTable(user);
+  for (const table of screen.getAllByRole("table")) {
+    const headers = within(table).getAllByRole("columnheader");
+    expect(headers[headers.length - 1].textContent).toMatch(/^Your (update|answer)$/);
+  }
+  await user.click(screen.getByRole("radio", { name: "Message" }));
+  expect(screen.getByRole("textbox", { name: /Message to Robin Sample/ })).toHaveValue("Hi Robin");
+});
+
+/** The browser's rich clipboard item, which the test browser lacks. */
+class FakeClipboardItem {
+  constructor(private data: Record<string, Blob>) {}
+  get types() {
+    return Object.keys(this.data);
+  }
+  async getType(type: string) {
+    return this.data[type];
+  }
+}
+
+test("Copy as table puts an HTML table on the clipboard and Copy for a spreadsheet puts tab-separated cells with full addresses", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(tableRoutes);
+  renderApp(<FollowUps />);
+  await showTable(user);
+  await user.click(screen.getByRole("button", { name: "Copy for a spreadsheet" }));
+  const sheet = await navigator.clipboard.readText();
+  expect(sheet.split("\n")[0]).toBe("Project\tAction\tDue\tLink\tYour update");
+  expect(sheet).toContain("Send the index");
+  expect(sheet).toContain(`${WEB}example.com/book`);
+  expect(sheet).not.toContain("Book page");
+  expect(await screen.findByText("Copied for a spreadsheet.")).toBeInTheDocument();
+  // The rich copy needs the browser's clipboard item, which the test browser lacks.
+  vi.stubGlobal("ClipboardItem", FakeClipboardItem);
+  const written: FakeClipboardItem[] = [];
+  Object.defineProperty(navigator.clipboard, "write", { configurable: true, value: async (items: FakeClipboardItem[]) => void written.push(...items) });
+  await user.click(screen.getByRole("button", { name: "Copy as table" }));
+  await waitFor(() => expect(written).toHaveLength(1));
+  const textOf = (blob: Blob) =>
+    new Promise<string>((done) => {
+      const reader = new FileReader();
+      reader.onload = () => done(String(reader.result));
+      reader.readAsText(blob);
+    });
+  const html = await textOf(await written[0].getType("text/html"));
+  expect(html).toContain("<table");
+  expect(html).toContain(`<a href="${WEB}example.com/book">Book page</a>`);
+  expect(html).not.toContain("<caption");
+  expect(await textOf(await written[0].getType("text/plain"))).toBe(sheet);
+  expect(await screen.findByText("Copied as a table.")).toBeInTheDocument();
+  expect(posts(calls)).toHaveLength(0);
+});
+
+test("when the browser can't copy a table the person is told, and nothing is marked sent", async () => {
+  vi.stubGlobal("ClipboardItem", undefined);
+  const user = userEvent.setup();
+  const calls = fakeApi(tableRoutes);
+  renderApp(<FollowUps />);
+  await showTable(user);
+  await user.click(screen.getByRole("button", { name: "Copy as table" }));
+  expect(await screen.findByText(/Your browser blocked copying/)).toBeInTheDocument();
+  // The table is selected, so the toast is true: it can be copied by hand.
+  expect(window.getSelection()?.toString()).toContain("Send the index");
+  expect(posts(calls)).toHaveLength(0);
+});
+
+test("the two copy buttons are named for where the table goes, with one hint, and Mark sent sits beside them", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(tableRoutes);
+  renderApp(<FollowUps />);
+  await showTable(user);
+  const buttons = screen.getAllByRole("button").map((b) => b.textContent);
+  const at = buttons.indexOf("Copy as table");
+  expect(buttons.slice(at, at + 3)).toEqual(["Copy as table", "Copy for a spreadsheet", "Mark sent"]);
+  expect(screen.getByText(/For a spreadsheet.*copies tab-separated cells with full web addresses/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Copy as table" }));
+  await user.click(screen.getAllByRole("button", { name: "Mark sent" })[0]);
+  await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/mark-sent")).toBe(true));
+  expect(await screen.findByText("Marked as sent to Robin Sample")).toBeInTheDocument();
 });

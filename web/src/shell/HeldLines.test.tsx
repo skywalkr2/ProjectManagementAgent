@@ -9,7 +9,13 @@ import { fakeApi, renderApp, statusFixture } from "../test-utils";
 import { HeldLine, isHeld } from "./HeldLines";
 
 /** The held lines of the queue on their own, as the Today queue draws them among the others. */
-function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
+function HeldLines(props: {
+  onOpenAiAccounts: () => void;
+  onOpenHandover: () => void;
+  onOpenRules?: () => void;
+  onOpenKnowledge?: () => void;
+  onAddAccount?: () => void;
+}) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
   const lines = (queue.data ?? []).filter(isHeld);
   if (!lines.length) return null;
@@ -39,12 +45,14 @@ function show(lines: S["QueueLineView"][], routes: Record<string, (body: unknown
   const onOpenAiAccounts = vi.fn();
   const onOpenHandover = vi.fn();
   const onOpenRules = vi.fn();
+  const onOpenKnowledge = vi.fn();
+  const onAddAccount = vi.fn();
   renderApp(
     <RestartProvider hellos={1}>
-      <HeldLines onOpenAiAccounts={onOpenAiAccounts} onOpenHandover={onOpenHandover} onOpenRules={onOpenRules} />
+      <HeldLines onOpenAiAccounts={onOpenAiAccounts} onOpenHandover={onOpenHandover} onOpenRules={onOpenRules} onOpenKnowledge={onOpenKnowledge} onAddAccount={onAddAccount} />
     </RestartProvider>,
   );
-  return { calls, onOpenAiAccounts, onOpenHandover, onOpenRules };
+  return { calls, onOpenAiAccounts, onOpenHandover, onOpenRules, onOpenKnowledge, onAddAccount };
 }
 
 test("nothing is drawn while the queue has neither a restart nor a paused line", async () => {
@@ -229,22 +237,56 @@ test("rules to look over are a line that starts with the look and opens the revi
   expect(onOpenRules).toHaveBeenCalledTimes(1);
 });
 
-test("Not now on the rules review puts it off for its week and the line goes", async () => {
+test("the rules review has one button, Look over, and Not now is in its menu with what it does under it", async () => {
+  const user = userEvent.setup();
+  const { onOpenKnowledge } = show([line("rule_review", { key: "rule_review", group: "review", count: 2, days: 30, rules: ["RULE-1"], until: "2026-10-22T09:00:00+00:00" })]);
+  const row = await screen.findByRole("region", { name: "Rules to look over" });
+  expect(within(row).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual(["Look over", "More actions for Rules to look over"]);
+  expect(within(row).queryByRole("button", { name: "Not now" })).toBeNull();
+  await user.click(within(row).getByRole("button", { name: "More actions for Rules to look over" }));
+  const items = await screen.findAllByRole("menuitem");
+  expect(items.map((i) => i.querySelector("[slot=label]")?.textContent)).toEqual(["Not now", "Open Knowledge"]);
+  // The consequence is said before the click.
+  expect(items[0]).toHaveTextContent(/Back on Today on .*22/);
+  await user.click(items[1]);
+  expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
+});
+
+test("Not now puts the review off for its week, the toast says until when, and Undo brings the line back", async () => {
   const user = userEvent.setup();
   let putOff = false;
   const { calls, onOpenRules } = show([], {
-    "GET today/queue": () => (putOff ? [] : [line("rule_review", { key: "rule_review", group: "review", count: 2, days: 30, rules: ["RULE-1", "RULE-2"] })]),
+    "GET today/queue": () => (putOff ? [] : [line("rule_review", { key: "rule_review", group: "review", count: 2, days: 30, rules: ["RULE-1", "RULE-2"], until: "2026-10-22T09:00:00+00:00" })]),
     "POST knowledge/rules/review/not-now": () => {
       putOff = true;
-      return { until: "2026-10-22T09:00:00+00:00" };
+      return { until: "2026-10-22T09:00:00+00:00", signal: "SIG-7" };
+    },
+    "POST knowledge/rules/review/not-now/SIG-7/undo": () => {
+      putOff = false;
+      return { ok: "SIG-7" };
     },
   });
   const row = await screen.findByRole("region", { name: "Rules to look over" });
-  await user.click(within(row).getByRole("button", { name: "Not now" }));
+  await user.click(within(row).getByRole("button", { name: "More actions for Rules to look over" }));
+  await user.click(await screen.findByRole("menuitem", { name: /Not now/ }));
   await waitFor(() => expect(calls.filter((c) => c.route === "POST knowledge/rules/review/not-now")).toHaveLength(1));
-  expect(await screen.findByText(/The rules review is off Today until/)).toBeInTheDocument();
+  expect(await screen.findByText(/Off Today until .*22/)).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole("region", { name: "Rules to look over" })).toBeNull());
   expect(onOpenRules).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST knowledge/rules/review/not-now/SIG-7/undo")).toBe(true));
+  expect(await screen.findByRole("region", { name: "Rules to look over" })).toBeInTheDocument();
+});
+
+test("work with no AI account is a line that starts with the step that fixes it", async () => {
+  const user = userEvent.setup();
+  const { onAddAccount } = show([line("no_account", { key: "no_account", group: "risk", count: 2, tier: "routine", names: ["routine", "deep"] })]);
+  const row = await screen.findByRole("region", { name: "No AI account" });
+  expect(row).toHaveTextContent("Helper has no AI account");
+  expect(row).toHaveTextContent("Its work waits until one is added.");
+  expect(within(row).getAllByRole("button")).toHaveLength(1);
+  await user.click(within(row).getByRole("button", { name: "Add one" }));
+  expect(onAddAccount).toHaveBeenCalledTimes(1);
 });
 
 test("one rule is singular, and rules only moved out of the always-sent part have their own words", async () => {
@@ -454,4 +496,31 @@ test("a check that couldn't finish says so and names no cases", async () => {
   const row = await screen.findByRole("region", { name: "Switch check" });
   expect(row).toHaveTextContent("The check after the switch couldn't finish, so nothing shows the new choice works well.");
   expect(within(row).queryAllByRole("listitem")).toHaveLength(0);
+});
+
+test("a paused account and a check are named as the person named the account, and the answer still goes to its id", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET today/queue": () => [paused({ account: "acct-1" }), line("account_check", { key: "check", account: "acct-2", tier: "routine", model: "default", group: "risk" })],
+    "GET status": () => statusFixture(),
+    "GET runtime-config": () => ({ instance: null }),
+    "GET ai/accounts": () => [
+      { name: "acct-1", label: "Main account", kind: null, adapter: "x", models: {}, used_for: [], backup_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 },
+      { name: "acct-2", label: "Second account", kind: null, adapter: "x", models: {}, used_for: [], backup_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 },
+    ],
+    "GET ai/endpoints": () => [],
+    "POST ai/accounts/acct-2/test?tier=routine&model=default": () => [{ tier: "account", account: "acct-2", main: true, ok: true, detail: "answered" }],
+  });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <HeldLines onOpenAiAccounts={() => undefined} onOpenHandover={() => undefined} />
+    </RestartProvider>,
+  );
+  const pausedRow = await screen.findByRole("region", { name: "Paused account" });
+  await waitFor(() => expect(pausedRow).toHaveTextContent("Main account's limit resets"));
+  expect(pausedRow).not.toHaveTextContent("acct-1");
+  const check = await screen.findByRole("region", { name: "Check an account" });
+  expect(check).toHaveTextContent("Check Second account before it stands in for everyday work");
+  await user.click(within(check).getByRole("button", { name: /Check Second account/ }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/acct-2/test?tier=routine&model=default")).toBe(true));
 });

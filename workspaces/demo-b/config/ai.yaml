@@ -3,6 +3,7 @@ version: 1
 providers:
   stub:
     adapter: stub
+    label: Stand-in account
     models: {default: scripted}
     accepted_unchecked: false
     allowed_data: [open, internal, restricted]

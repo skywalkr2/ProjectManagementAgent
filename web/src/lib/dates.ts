@@ -8,6 +8,15 @@ export function day(iso: string | null | undefined): string {
   return dayFormat.format(new Date(y, m - 1, d));
 }
 
+const monthDayFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+
+/** The day of a date, or of a time as the server wrote it on the person's own clock, as a month and a day: "Oct 14". */
+export function monthDay(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return monthDayFormat.format(new Date(y, m - 1, d));
+}
+
 const longDayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
 
 /** A date in full words, "Tuesday, October 13", for a heading. */

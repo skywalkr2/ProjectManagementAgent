@@ -129,3 +129,40 @@ test("the popover with nothing to show says so in words, and has no problem row 
   expect(within(dialog).getByText("No account is set up yet.")).toBeInTheDocument();
   expect(dialog.querySelector("[data-section='problem']")).toBeNull();
 });
+
+test("accounts are called by the names the person gave them, in the line and in the details, never by their ids", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET status": () =>
+      statusFixture(
+        {},
+        {
+          assistant: {
+            ...ran,
+            runs_today: [{ account: "acct-1", count: 3, failed: 0 }],
+            chains: [{ tier: "routine", accounts: ["acct-1", "acct-2"] }],
+            paused: [{ account: "acct-1", until: `${TODAY}T14:20:00+09:00` }],
+          },
+        },
+      ),
+    "GET runtime-config": () => ({ instance: null }),
+    "GET ai/accounts": () => [
+      { name: "acct-1", label: "Main account", kind: null, adapter: "x", models: {}, used_for: ["routine"], backup_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 },
+      { name: "acct-2", label: "", kind: "svc", adapter: "x", models: {}, used_for: [], backup_for: ["routine"], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 },
+    ],
+    "GET ai/endpoints": () => [{ id: "svc", name: "Service A", adapter: "x", base_url: "", needs_key: true }],
+  });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <AssistantLine onOpenGuide={() => undefined} />
+    </RestartProvider>,
+  );
+  const button = await line();
+  await waitFor(() => expect(button).toHaveTextContent("Main account"));
+  expect(button).not.toHaveTextContent("acct-1");
+  await user.click(button);
+  const dialog = screen.getByRole("dialog", { name: "Assistant" });
+  expect(dialog).toHaveTextContent("Main account");
+  expect(dialog).toHaveTextContent("Service A account");
+  expect(dialog).not.toHaveTextContent(/acct-/);
+});

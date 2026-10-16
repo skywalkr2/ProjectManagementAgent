@@ -21,15 +21,17 @@ export function BackupLine(props: { onOpenGuide: (step: string) => void }) {
     <section className={styles.line} aria-label={t("backup.line.label")} data-backup-line="">
       <Pill>{t("backup.line.label")}</Pill>
       <p className={styles.text}>{backupLineText(b, t)}</p>
-      {b.configured ? (
-        <Button size="sm" onClick={run}>
-          {t("backup.now")}
-        </Button>
-      ) : (
-        <Button size="sm" onClick={() => props.onOpenGuide("backup")}>
-          {t("status.backup_set_up")}
-        </Button>
-      )}
+      <div className={styles.actions}>
+        {b.configured ? (
+          <Button size="sm" onClick={run}>
+            {t("backup.now")}
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => props.onOpenGuide("backup")}>
+            {t("status.backup_set_up")}
+          </Button>
+        )}
+      </div>
     </section>
   );
 }

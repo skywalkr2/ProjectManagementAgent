@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: AI accounts as one place, the comparison grid, "Not now" in the menu and the copy tables are built
+
+- **Decided (main session, from the UI designer's answers 25, 26, 31 and 32; phase B):** an AI account carries an optional
+  `label`, the name the person gave it, kept apart from its id in the settings and left out of the connection check's
+  fingerprint, so renaming never un-checks an account. Removing the account that does the work hands that work to the
+  backup that stands in for all of it, said in the toast with Undo; with none it leaves the work with no account and Today
+  says so. The one it replaces stays a backup when it passes its own check (the existing guard that only checked accounts
+  stand in a fallback chain is unchanged: every route that adds a backup checks first). A backup that gains a harder model
+  can move its harder-work backup there, checked first. "Not now" on the rules review is undone by marking its signal taken
+  back, so the line is due again at once. A follow-up's table shows an action's project pages as its links.
+- **Why:** the designer's answers say each of these, and the owner asked for one place for accounts with Undo on every
+  change; a label keeps ids out of the screens without changing what the connection check covers.
+- **Impact:** design 7.5, 7.6 and 7.16 (edited), `docs/design/CHANGES.md`. One new config key (`ai.providers.<name>.label`,
+  with its description; shown in both fictional workspaces). New reads on `GET /api/ai/accounts` (label, state, check cost),
+  `GET /api/ai/check-size`, and `take_over`, `label` and `stop_backup` on the account routes; no change to scope or to the
+  plugin API.
+
 ## 2026-10-16: Today's queue, inspector and rail are built; three readings of the design are fixed
 
 - **Decided (main session, for review; phase B wave 1):** (1) "New items arriving while the PM works wait behind a 'N new

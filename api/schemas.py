@@ -554,6 +554,7 @@ class FollowupQuestion(BaseModel):
     links: list[Link]
     kind: str
     status: Literal["open", "sent"]
+    project_name: str | None = Field(None, description="The projects it is about, by name, joined with commas.")
     sent: str | None
     waiting_days: int | None
     chase_due: bool = Field(
@@ -569,6 +570,9 @@ class FollowupAction(BaseModel):
     text: str
     due: str | None
     project_name: str
+    links: list[Link] = Field(
+        default_factory=list, description="Pages that belong to the action's project, for the copied table."
+    )
     told: str | None
     told_days: int | None
     followed_up: str | None = Field(None, description="The day the person was last chased about it (a date).")
@@ -1263,8 +1267,9 @@ class QueueLineView(BaseModel):
     `places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model
     whose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`
     of what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST
-    /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `extractor` is a kind of file that isn't
-    being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well."""
+    /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account
+    at all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that
+    isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -1288,6 +1293,7 @@ class QueueLineView(BaseModel):
         "account_check",
         "switch_failed",
         "credential",
+        "no_account",
         "extractor",
         "review",
         "rule_review",
@@ -1328,8 +1334,9 @@ class QueueLineView(BaseModel):
     account: str | None = Field(None, description="The AI account waiting for its limit to reset (paused).")
     until: datetime | None = Field(
         None,
-        description="When the account's limit resets and the work waiting on it runs again by itself (paused), on the "
-        "person's own clock (their time zone).",
+        description="When the account's limit resets and the work waiting on it runs again by itself (paused), or "
+        "when the line comes back if the person says Not now (rule_review), on the person's own clock (their time "
+        "zone).",
     )
     waiting_since: datetime | None = Field(
         None,
@@ -1874,7 +1881,10 @@ class EndpointView(BaseModel):
 class AiAccountView(BaseModel):
     """An AI account in the settings, for the screens: never its key."""
 
-    name: str = Field(description="Its short name in ai.yaml.")
+    name: str = Field(description="Its short name in ai.yaml; an identifier, never shown to the person.")
+    label: str = Field(
+        "", description="The name the person gave it; empty when they gave none (the screen says the service's name)."
+    )
     kind: str | None = Field(None, description="The kind of account it was made from (GET /api/ai/endpoints).")
     adapter: str
     base_url: str | None = None
@@ -1892,6 +1902,31 @@ class AiAccountView(BaseModel):
     )
     credential_expires: date | None = Field(
         None, description="The day its key stops working, when one was entered; Today says so ahead of it."
+    )
+    key_ending: bool = Field(
+        False, description="Its key stops working within the days Today warns ahead (`ai.credential_warn_days`)."
+    )
+    answered_at: datetime | None = Field(
+        None, description="When it last answered a call, on the person's own clock; none before the first."
+    )
+    spent_today_usd: float = Field(0.0, description="What its calls cost today, in the person's day.")
+    checked_for: list[str] = Field(
+        default_factory=list,
+        description="The kinds of work (tiers) it passed the connection check for, with their exact settings.",
+    )
+    check_failed_for: list[str] = Field(
+        default_factory=list, description="The kinds of work (tiers) whose last check of it failed."
+    )
+    checked_at: datetime | None = Field(
+        None, description="When it was last checked as it is set up now; none when it never was."
+    )
+    paused_until: datetime | None = Field(
+        None, description="When the usage limit holding it resets, on the person's own clock; none when not paused."
+    )
+    check_usd: float | None = Field(
+        None,
+        description="About what one connection check of it costs, from the prices in the settings or kept from earlier "
+        "runs; none when its price isn't known.",
     )
 
 
@@ -1991,14 +2026,38 @@ class AiAccountChange(BaseModel):
     clear_credential_expires: bool | None = Field(
         None, description="Forget the end date of its key (it has none, or is renewed)."
     )
+    label: str | None = Field(None, description="The name the person gives it; empty clears it.")
     models: dict[str, str] | None = Field(None, description="Its models, replacing the ones it has.")
     use: dict[str, str] = Field(default_factory=dict, description="Tiers to one of its models by short name.")
     backup: dict[str, str] = Field(
         default_factory=dict,
         description="Tiers to one of its models by short name, added to each tier's backups: the accounts tried in "
-        "order when the main one can't answer. Only a checked account, or one accepted unchecked, may be one.",
+        "order when the main one can't answer. An account already a backup there with another model has that entry "
+        "moved to this one. Only a checked account, or one accepted unchecked, may be one.",
     )
+    stop_backup: bool | None = Field(None, description="Take the account out of every kind of work's backups.")
     fingerprint: str
+
+
+class AiAccountRemove(BaseModel):
+    """Remove an account, saying which backup takes over the work it did."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fingerprint: str
+    take_over: str | None = Field(
+        None,
+        description="The name of a backup account that does the removed account's work in its place, for each kind of "
+        "work it stands in for; left out, that work has no account until one is chosen.",
+    )
+
+
+class AiCheckSize(BaseModel):
+    """What one account's connection check involves, for pricing it with a model's price per million tokens."""
+
+    calls: int = Field(description="How many small calls the check makes.")
+    input_tokens: int = Field(description="About how many tokens they read together.")
+    output_tokens: int = Field(description="About how many tokens they write together.")
 
 
 class AiSwitchEstimate(BaseModel):
@@ -2073,6 +2132,9 @@ class AiAccountAdd(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(description="The account's short name in ai.yaml: lowercase letters, digits and dashes.")
+    label: str | None = Field(
+        None, description='The name the person gives it, shown in lists; left out: the service\'s name and "account".'
+    )
     adapter: str = Field(description="The adapter of the kind of account chosen, from GET /api/ai/endpoints.")
     endpoint: str | None = Field(
         None, description="The kind of account chosen; its starting provider settings are added to the account's."
@@ -2700,6 +2762,7 @@ class RuleReviewPutOff(BaseModel):
     """The answer to "Not now" on the rules review line: the review is off Today until this moment."""
 
     until: datetime = Field(description="When the review is offered again, if it still has something to show.")
+    signal: str = Field(description="The id of what was recorded, which Undo takes back.")
 
 
 class KnowledgeDiscard(BaseModel):

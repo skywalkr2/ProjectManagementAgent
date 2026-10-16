@@ -23,6 +23,29 @@ from engine.records import Rule
 ACTS = ("kept", "narrowed", "retired", "not_now")
 
 
+#: The note a "not now" signal carries once the person took it back (Undo): it no longer puts the line off.
+TAKEN_BACK = "taken back"
+
+
+def take_back_not_now(store: Any, signal_id: str) -> bool:
+    """Undo a "not now": the signal stays as it was said, marked as taken back, and the line is due again at once.
+    Returns whether there was such a signal to take back."""
+    from engine.storage import WriteContext
+
+    found = store.read().get("signal", signal_id)
+    if found is None or found.data["kind"] != "not_now" or found.data.get("note") == TAKEN_BACK:
+        return False
+    with store.transaction() as tx:
+        tx.update(
+            "signal",
+            signal_id,
+            {"note": TAKEN_BACK},
+            WriteContext(actor="pm", trust="trusted", op="rule_review.take_back"),
+            read_version=found.version,
+        )
+    return True
+
+
 @dataclass(frozen=True)
 class FlaggedRule:
     id: str
@@ -117,8 +140,12 @@ def last_acted(view: Any) -> datetime | None:
     moments = [
         _at(s.data["at"])
         for s in view.list("signal")
-        if s.data["kind"] == "not_now"
-        or (s.data["kind"] in ACTS and any(ref.startswith(prefix) for ref in s.data.get("refs", [])))
+        if (s.data["kind"] == "not_now" and s.data.get("note") != TAKEN_BACK)
+        or (
+            s.data["kind"] in ACTS
+            and s.data["kind"] != "not_now"
+            and any(ref.startswith(prefix) for ref in s.data.get("refs", []))
+        )
     ]
     return max((m for m in moments if m is not None), default=None)
 

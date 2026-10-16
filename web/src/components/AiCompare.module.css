@@ -1,0 +1,21 @@
+/* The grid of what each account can do: kinds of work down the side, one column for each account and model. */
+.back { margin: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.sub { margin: 0; color: var(--text-muted); }
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.scroll:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.grid { border-collapse: collapse; width: 100%; min-width: 640px; }
+.grid th, .grid td { text-align: left; vertical-align: top; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.grid thead th { background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.grid tbody tr:last-child th, .grid tbody tr:last-child td { border-bottom: 0; }
+.grid tbody th { font-weight: var(--weight-regular); min-width: 14ch; }
+.cell { display: grid; gap: var(--space-1); min-width: 14ch; }
+.best { background: var(--ok-soft); }
+.value { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }
+.value[data-state="below"] { color: var(--danger); display: flex; align-items: center; gap: var(--space-1); }
+.value[data-state="old"], .value[data-state="none"] { color: var(--text-muted); }
+.small { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.mark { margin: 0; color: var(--ok); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
+.confirm { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.empty { margin: 0; }

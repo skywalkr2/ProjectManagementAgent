@@ -3,12 +3,14 @@ version: 1
 providers:
   stub:
     adapter: stub
+    label: Stand-in account
     models: {default: scripted}
     accepted_unchecked: false
     allowed_data: [open, internal, restricted]
   # Examples of other accounts, left out so a new workspace lists only what it can use. Add one
   # from the setup guide's AI step, or uncomment one here and set its key.
   # company-gateway:
+  #   label: Company gateway   # the name shown in lists; empty: the service name and "account"
   #   adapter: openai-compatible
   #   base_url: https://ai-gateway.example.com/v1
   #   auth: env:GATEWAY_AI_KEY

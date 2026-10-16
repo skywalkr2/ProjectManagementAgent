@@ -50,3 +50,18 @@ test("an encrypted backup says so on the line", async () => {
   show({ configured: true, needs_attention: true, age_hours: 100, encrypted: true });
   expect(await screen.findByRole("region", { name: "Backup" })).toHaveTextContent("The backups are encrypted.");
 });
+
+test("the button is at the end of the row, as on the setup line, whichever button it is", async () => {
+  show({ configured: true, needs_attention: true });
+  const line = await screen.findByRole("region", { name: "Backup" });
+  const button = screen.getByRole("button", { name: "Back up now" });
+  // Its own end-aligned group is the row's last part, so the row's words never push it into the middle.
+  expect(line.lastElementChild).toBe(button.parentElement);
+  expect(line.lastElementChild).not.toBe(button);
+});
+
+test("the set-up button is at the end of the row too", async () => {
+  show({ configured: false, needs_attention: true });
+  const line = await screen.findByRole("region", { name: "Backup" });
+  expect(line.lastElementChild).toBe(screen.getByRole("button", { name: "Set up backups" }).parentElement);
+});

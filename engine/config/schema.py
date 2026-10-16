@@ -463,6 +463,11 @@ class AgentSettings(ConfigModel):
 
 class ProviderSettings(ConfigModel):
     adapter: str = Field("stub", description="Which installed adapter talks to this account.")
+    label: str = Field(
+        "",
+        description="The name the person gave this account, shown in lists and messages. Empty: the screens use the "
+        'service\'s name followed by "account".',
+    )
     kind: str | None = Field(
         None, description="The kind of account from the app's list it was made from (its id), for showing its name."
     )

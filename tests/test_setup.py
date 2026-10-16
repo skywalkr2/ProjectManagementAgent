@@ -676,6 +676,131 @@ def test_an_account_becomes_a_backup_only_once_checked_and_says_which_work_it_ba
     assert again.status_code == 400, "an account already a backup there isn't added twice"
 
 
+def _two_accounts(c, api, kind, fingerprint, label="Main"):
+    for name in ("main", "spare"):
+        body = {
+            "name": name,
+            "label": label if name == "main" else "",
+            "adapter": kind["adapter"],
+            "endpoint": kind["id"],
+            "base_url": kind["base_url"],
+            "key": f"{name}-key",
+            "models": {"everyday": "a-model"},
+            "fingerprint": fingerprint,
+        }
+        if name == "main":
+            body["use"] = {"routine": "everyday", "deep": "everyday"}
+        fingerprint = c.post(f"{api}/ai/accounts", json=body).json()["fingerprint"]
+    return fingerprint
+
+
+def test_an_account_has_the_name_its_person_gave_and_its_state_for_the_row(tmp_path):
+    """The label is the person's own name for the account, changed without a new check; the state says when it last
+    answered, what it cost today, which work it was checked for and until when it is paused."""
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kind = next(k for k in known_endpoints() if k["needs_key"] and k["base_url"])
+    fingerprint = _two_accounts(c, api, kind, c.get(f"{api}/settings").json()["fingerprint"])
+    listed = {a["name"]: a for a in c.get(f"{api}/ai/accounts").json()}
+    assert listed["main"]["label"] == "Main" and listed["spare"]["label"] == ""
+    assert listed["main"]["checked_for"] == [] and listed["main"]["paused_until"] is None
+    assert listed["main"]["answered_at"] is None and listed["main"]["spent_today_usd"] == 0
+    renamed = c.post(f"{api}/ai/accounts/spare", json={"label": "Second", "fingerprint": fingerprint})
+    assert renamed.status_code == 200, renamed.text
+    assert load_config(ws.config_dir, env={}).ai.providers["spare"].label == "Second"
+    cleared = c.post(f"{api}/ai/accounts/spare", json={"label": " ", "fingerprint": renamed.json()["fingerprint"]})
+    assert cleared.status_code == 200 and load_config(ws.config_dir, env={}).ai.providers["spare"].label == ""
+
+
+def test_a_new_name_never_makes_a_checked_account_unchecked(tmp_path):
+    from engine.ai.checked import account_fingerprint
+
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kind = next(k for k in known_endpoints() if k["needs_key"] and k["base_url"])
+    fingerprint = _two_accounts(c, api, kind, c.get(f"{api}/settings").json()["fingerprint"])
+    before = account_fingerprint(load_config(ws.config_dir, env={}), "main/everyday")
+    c.post(f"{api}/ai/accounts/main", json={"label": "Another name", "fingerprint": fingerprint})
+    assert account_fingerprint(load_config(ws.config_dir, env={}), "main/everyday") == before
+
+
+def test_removing_the_main_account_hands_its_work_to_the_backup_named_or_to_nobody(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kind = next(k for k in known_endpoints() if k["needs_key"] and k["base_url"])
+    fingerprint = _two_accounts(c, api, kind, c.get(f"{api}/settings").json()["fingerprint"])
+    fingerprint = c.post(
+        f"{api}/settings", json={"changes": {"ai.providers.spare.accepted_unchecked": True}, "fingerprint": fingerprint}
+    ).json()["fingerprint"]
+    backup = {"routine": "everyday", "deep": "everyday"}
+    fingerprint = c.post(f"{api}/ai/accounts/spare", json={"backup": backup, "fingerprint": fingerprint}).json()[
+        "fingerprint"
+    ]
+    # With no heir named the work has no account, and Today says so.
+    nobody = c.post(f"{api}/ai/accounts/main/remove", json={"fingerprint": fingerprint})
+    assert nobody.status_code == 200, nobody.text
+    after = load_config(ws.config_dir, env={})
+    assert after.ai.tiers["routine"].use == "" and after.ai.tiers["routine"].fallback == ["spare/everyday"]
+    undo = {
+        "changes": {c_["key"]: c_["before"] for c_ in nobody.json()["changes"]},
+        "reset": [],
+        "fingerprint": nobody.json()["fingerprint"],
+    }
+    assert c.post(f"{api}/settings", json=undo).status_code == 200
+    # With the backup named, it takes over and is no longer its own backup.
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    heir = c.post(f"{api}/ai/accounts/main/remove", json={"fingerprint": fingerprint, "take_over": "spare"})
+    assert heir.status_code == 200, heir.text
+    after = load_config(ws.config_dir, env={})
+    assert {t: v.use for t, v in after.ai.tiers.items()} == {"routine": "spare/everyday", "deep": "spare/everyday"}
+    assert after.ai.tiers["routine"].fallback == [] and "main" not in after.ai.providers
+    gone = c.post(f"{api}/ai/accounts/spare/remove", json={"fingerprint": heir.json()["fingerprint"], "take_over": "x"})
+    assert gone.status_code == 404
+
+
+def test_a_backup_moves_to_its_harder_model_keeps_its_place_and_can_stop(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kind = next(k for k in known_endpoints() if k["needs_key"] and k["base_url"])
+    fingerprint = _two_accounts(c, api, kind, c.get(f"{api}/settings").json()["fingerprint"])
+    fingerprint = c.post(
+        f"{api}/settings", json={"changes": {"ai.providers.spare.accepted_unchecked": True}, "fingerprint": fingerprint}
+    ).json()["fingerprint"]
+    both = {"routine": "everyday", "deep": "everyday"}
+    fingerprint = c.post(f"{api}/ai/accounts/spare", json={"backup": both, "fingerprint": fingerprint}).json()[
+        "fingerprint"
+    ]
+    fingerprint = c.post(
+        f"{api}/ai/accounts/spare",
+        json={"models": {"everyday": "a-model", "harder": "b-model"}, "fingerprint": fingerprint},
+    ).json()["fingerprint"]
+    moved = c.post(f"{api}/ai/accounts/spare", json={"backup": {"deep": "harder"}, "fingerprint": fingerprint})
+    assert moved.status_code == 200, moved.text
+    tiers = load_config(ws.config_dir, env={}).ai.tiers
+    assert tiers["deep"].fallback == ["spare/harder"] and tiers["routine"].fallback == ["spare/everyday"]
+    stopped = c.post(f"{api}/ai/accounts/spare", json={"stop_backup": True, "fingerprint": moved.json()["fingerprint"]})
+    assert stopped.status_code == 200, stopped.text
+    tiers = load_config(ws.config_dir, env={}).ai.tiers
+    assert tiers["deep"].fallback == [] and tiers["routine"].fallback == []
+    listed = {a["name"]: a for a in c.get(f"{api}/ai/accounts").json()}
+    assert listed["spare"]["backup_for"] == []
+
+
+def test_a_check_is_priced_from_its_size_and_the_models_price_and_never_guessed(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kind = next(k for k in known_endpoints() if k["needs_key"] and k["base_url"])
+    _two_accounts(c, api, kind, c.get(f"{api}/settings").json()["fingerprint"])
+    size = c.get(f"{api}/ai/check-size").json()
+    assert size["calls"] > 0 and size["input_tokens"] > 0 and size["output_tokens"] > 0
+    assert {a["name"]: a["check_usd"] for a in c.get(f"{api}/ai/accounts").json()}["main"] is None
+    price = {"input_per_million": 2.0, "output_per_million": 10.0}
+    path = ws.config_dir / "ai.yaml"
+    path.write_text(set_key(path.read_text(encoding="utf-8"), ["prices", "main/everyday"], price), encoding="utf-8")
+    usd = {a["name"]: a["check_usd"] for a in c.get(f"{api}/ai/accounts").json()}["main"]
+    assert usd == pytest.approx((size["input_tokens"] * 2.0 + size["output_tokens"] * 10.0) / 1e6)
+
+
 def test_built_in_agents_start_with_their_tools_off_and_say_if_installed(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)

@@ -21,7 +21,7 @@ from engine.state_file import write_whole
 from engine.workspace import Workspace
 
 CHECKED_FILE = "ai-checked.json"
-NOT_ACCOUNT = ("accepted_unchecked",)
+NOT_ACCOUNT = ("accepted_unchecked", "label")
 
 
 def account_fingerprint(cfg: Config, ref: str) -> str | None:
@@ -84,6 +84,17 @@ def remember(ws: Workspace, cfg: Config, results: list[SmokeResult]) -> None:
             "at": datetime.now(UTC).isoformat(),
         }
     write_whole(ws.private_dir / CHECKED_FILE, json.dumps(kept, indent=2) + "\n")
+
+
+def checked_at(ws: Workspace | Folder, cfg: Config, ref: str) -> datetime | None:
+    """When the account last passed or failed a check as it is set up now, or None when it never was checked."""
+    found = _read(ws).get(ref)
+    if not isinstance(found, dict) or found.get("fingerprint") != account_fingerprint(cfg, ref):
+        return None
+    try:
+        return datetime.fromisoformat(str(found["at"]))
+    except (KeyError, ValueError):
+        return None
 
 
 def is_checked(ws: Workspace | Folder, cfg: Config, ref: str, tier: str) -> bool:

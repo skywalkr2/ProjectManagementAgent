@@ -25,6 +25,7 @@ const VIEW_LABEL: Record<CoreView, string> = {
   sources: "nav.sources",
   addons: "nav.addons",
   settings: "nav.settings",
+  "settings/ai-compare": "ai_compare.title",
   setup: "welcome.title",
   handover: "handover.title",
   styleguide: "nav.styleguide",

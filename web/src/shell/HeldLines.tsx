@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { useAccountNames } from "../lib/account-names";
 import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
@@ -17,20 +18,29 @@ import { useFreshFingerprint } from "../lib/settings-save";
 import { useStartSignIn } from "../lib/sign-in-start";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { IconButton } from "../ui/IconButton";
+import { MenuButton } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
 import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "offline", "handover", "account_check", "switch_failed", "extractor", "rule_review", "catch_up_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "extractor", "rule_review", "catch_up_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
 }
 
 /** One held line of the Today queue, drawn by its kind. */
-export function HeldLine(props: { line: Line; onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
+export function HeldLine(props: {
+  line: Line;
+  onOpenAiAccounts: () => void;
+  onOpenHandover: () => void;
+  onOpenRules?: () => void;
+  onOpenKnowledge?: () => void;
+  onAddAccount?: () => void;
+}) {
   const { line } = props;
   switch (line.kind) {
     case "restart":
@@ -50,7 +60,9 @@ export function HeldLine(props: { line: Line; onOpenAiAccounts: () => void; onOp
     case "extractor":
       return <ExtractorLine line={line} />;
     case "rule_review":
-      return <RuleReviewLine line={line} onOpen={props.onOpenRules} />;
+      return <RuleReviewLine line={line} onOpen={props.onOpenRules} onOpenKnowledge={props.onOpenKnowledge} />;
+    case "no_account":
+      return <NoAccountLine line={line} onAdd={props.onAddAccount ?? props.onOpenAiAccounts} />;
     case "catch_up_go":
       return <CatchUpGoLine line={line} />;
     default:
@@ -87,8 +99,9 @@ function RestartLine(props: { line: Line }) {
 
 function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const { t, tn } = useWords();
+  const nameOf = useAccountNames();
   const { line } = props;
-  const label = tn("queue.paused", line.count, { account: line.account ?? "", time: line.until ? wallWhen(line.until) : "" });
+  const label = tn("queue.paused", line.count, { account: nameOf(line.account ?? ""), time: line.until ? wallWhen(line.until) : "" });
   return (
     <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.paused.label")} data-queue-line="paused">
       <Pill tone="warn">{t("queue.paused.label")}</Pill>
@@ -112,9 +125,11 @@ function BorrowLine(props: { line: Line }) {
   const act = useAct();
   const estimate = useEstimate();
   const [busy, setBusy] = useState<"yes" | "no" | null>(null);
+  const nameOf = useAccountNames();
   const { line } = props;
-  const account = line.account ?? "";
-  const paused = line.text ?? "";
+  const accountId = line.account ?? "";
+  const account = nameOf(accountId);
+  const paused = nameOf(line.text ?? "");
   const time = line.until ? wallWhen(line.until) : "";
   const work = t(has(`queue.borrow.work.${line.tier}`) ? `queue.borrow.work.${line.tier}` : "queue.borrow.work.other");
   const cost = line.estimate_usd == null ? null : estimate(line.estimate_usd);
@@ -127,7 +142,7 @@ function BorrowLine(props: { line: Line }) {
   const answer = async (use: boolean) => {
     setBusy(use ? "yes" : "no");
     await act(
-      () => api.borrowAccount({ tier: line.tier ?? "", account, model: line.model ?? "", use }),
+      () => api.borrowAccount({ tier: line.tier ?? "", account: accountId, model: line.model ?? "", use }),
       () => ({ message: use ? t("queue.borrow.yes_toast", { account, time }) : t("queue.borrow.no_toast", { paused }) }),
     );
     setBusy(null);
@@ -254,14 +269,16 @@ function HandoverLine(props: { line: Line; onOpen: () => void }) {
 function AccountCheckLine(props: { line: Line }) {
   const { t, has } = useWords();
   const act = useAct();
+  const nameOf = useAccountNames();
   const [checking, setChecking] = useState(false);
   const { line } = props;
-  const account = line.account ?? "";
+  const accountId = line.account ?? "";
+  const account = nameOf(accountId);
   const work = t(has(`queue.account_check.work.${line.tier}`) ? `queue.account_check.work.${line.tier}` : "queue.account_check.work.other");
   const run = async () => {
     setChecking(true);
     await act(
-      () => api.testAccount(account, line.tier ?? undefined, line.model ?? undefined),
+      () => api.testAccount(accountId, line.tier ?? undefined, line.model ?? undefined),
       (results) => {
         const bad = results.find((r) => !r.ok);
         return { message: bad ? t("queue.account_check.not_passed", { account, detail: bad.detail }) : t("queue.account_check.passed", { account, work }) };
@@ -293,10 +310,11 @@ function SwitchFailedLine(props: { line: Line }) {
   const act = useAct();
   const fingerprint = useFreshFingerprint();
   const [busy, setBusy] = useState<"back" | "keep" | null>(null);
+  const nameOf = useAccountNames();
   const { line } = props;
   const tier = line.tier ?? "";
-  const account = line.account ?? "";
-  const previous = line.text ?? "";
+  const account = nameOf(line.account ?? "");
+  const previous = nameOf(line.text ?? "");
   const work = t(has(`queue.switch_failed.work.${tier}`) ? `queue.switch_failed.work.${tier}` : "queue.switch_failed.work.other");
   const names = line.names ?? [];
   const back = async () => {
@@ -397,17 +415,17 @@ function CatchUpGoLine(props: { line: Line }) {
 
 /** The standing rules given to runs and never shown applying: the line opens the review, and "Not now" puts it off for
  * its week without deciding anything. */
-function RuleReviewLine(props: { line: Line; onOpen?: () => void }) {
+function RuleReviewLine(props: { line: Line; onOpen?: () => void; onOpenKnowledge?: () => void }) {
   const { t, tn } = useWords();
   const act = useAct();
-  const [busy, setBusy] = useState(false);
   const { line } = props;
   const text = line.count > 0 ? tn("queue.rule_review", line.count, { days: line.days ?? "" }) : t("queue.rule_review.moved");
-  const notNow = async () => {
-    setBusy(true);
-    await act(api.ruleReviewNotNow, (put) => ({ message: t("queue.rule_review.not_now_done", { day: day(put.until) }) }));
-    setBusy(false);
-  };
+  // Not now puts the line off; it doesn't answer it, so it is in the menu with what it does, not a button beside the answer.
+  const notNow = () =>
+    void act(api.ruleReviewNotNow, (put) => ({
+      message: t("queue.rule_review.not_now_done", { day: day(put.until) }),
+      undo: () => api.ruleReviewNotNowUndo(put.signal),
+    }));
   return (
     <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.rule_review.label")} data-queue-line="rule_review">
       <Pill tone="neutral">{t("queue.rule_review.label")}</Pill>
@@ -417,12 +435,45 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void }) {
       </div>
       <div className={styles.actions}>
         {props.onOpen && (
-          <Button size="sm" variant="primary" data-key="primary" disabled={busy} onClick={props.onOpen}>
+          <Button size="sm" variant="primary" data-key="primary" onClick={props.onOpen}>
             {t("queue.rule_review.open")}
           </Button>
         )}
-        <Button size="sm" variant="secondary" loading={busy} onClick={() => void notNow()}>
-          {t("queue.rule_review.not_now")}
+        <MenuButton
+          groups={[
+            {
+              id: "rule-review",
+              entries: [
+                {
+                  id: "not-now",
+                  label: t("queue.rule_review.not_now"),
+                  note: line.until ? t("queue.rule_review.not_now_back", { day: day(line.until) }) : undefined,
+                  run: notNow,
+                },
+                ...(props.onOpenKnowledge ? [{ id: "knowledge", label: t("queue.rule_review.open_knowledge"), run: props.onOpenKnowledge }] : []),
+              ],
+            },
+          ]}
+          trigger={<IconButton icon="more" size="sm" label={t("menu.more", { what: t("queue.rule_review.label") })} tooltip={false} />}
+        />
+      </div>
+    </section>
+  );
+}
+
+/** Work with no AI account at all: it waits until one is added, so the line says so and offers the one step that fixes it. */
+function NoAccountLine(props: { line: Line; onAdd: () => void }) {
+  const { t } = useWords();
+  return (
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.no_account.label")} data-queue-line="no_account">
+      <Pill tone="warn">{t("queue.no_account.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.no_account")}</p>
+        <p className={styles.sub}>{t("queue.no_account.sub")}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" data-key="primary" onClick={props.onAdd}>
+          {t("queue.no_account.open")}
         </Button>
       </div>
     </section>

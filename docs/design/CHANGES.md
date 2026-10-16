@@ -1131,6 +1131,16 @@ All *not yet built*: L7, phase B and phase P.
 | Evaluation (6.16) | Cases start from an input | Replay cases start from the person's own action and score the end state. Built in L7 |
 | Follow-ups (phase B) | One message to copy per person | A Copy table per person (tab-separated and HTML, with a reply column), from the same data, with no AI run |
 
+## 71. The UI designer's answers 25, 26, 31 and 32, built (2026-10-16)
+
+| Where | Before | Now |
+|---|---|---|
+| AI accounts (7.16) | A list of rows by id with a Test button each; Add opened the setup guide | One place in Settings: a line saying who does the work and who stands in, rows with a role pill, the person's own name, a state line and one next step, "What is it for?" in an add drawer and in each row's menu; removing the main account says what happens. A provider has an optional `label` (`ai.providers.<name>.label`), and the settings' ids are never shown |
+| What each model can do (6.16, 7.16) | A disclosure under each row | A grid of kinds of work by account and model on its own page, pass rate first, the cheapest passing cell marked, Measure with its estimate; one line on each row |
+| Rules review (7.6) | "Not now" a button beside the answer | "Not now" in the line's menu with what it does; the 7.6 rule: a second answer is a visible button, a postponement is in the menu |
+| Follow-ups (7.5) | One message per person | A Message / Table switch; the table is shown before it is copied; Copy as table (HTML) and Copy for a spreadsheet (tab-separated) |
+| Today | None | A held line when work has no AI account; the backup line's button is at the row's end |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

@@ -333,6 +333,8 @@ export const api = {
   addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
   aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),
   aiSkills: () => call<S["AiSkillsView"]>("GET", "ai/skills"),
+  /** What one account's connection check involves, to price it with a model's price. */
+  aiCheckSize: () => call<S["AiCheckSize"]>("GET", "ai/check-size"),
   changeAccount: (name: string, body: S["AiAccountChange"]) =>
     call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}`, body),
   /** What the check that comes with a change of account or model would cost, and whether one is offered at all. */
@@ -346,8 +348,17 @@ export const api = {
     call<S["SettingsSaved"]>("POST", `ai/switch/${id(tier)}/back`, { fingerprint } satisfies S["FingerprintIn"]),
   /** Keeps a switch whose check didn't pass. */
   keepSwitch: (tier: string) => call<S["Ok"]>("POST", `ai/switch/${id(tier)}/keep`),
-  removeAccount: (name: string, fingerprint: string) =>
-    call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
+  /** Removes an account; `takeOver` names the backup that does its work in its place. */
+  removeAccount: (name: string, fingerprint: string, takeOver?: string) =>
+    call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/remove`, {
+      fingerprint,
+      ...(takeOver ? { take_over: takeOver } : {}),
+    } satisfies S["AiAccountRemove"]),
+  /** What measuring an account (or one of its models) would cost; nothing is run. */
+  measureEstimate: (name: string, model?: string) =>
+    call<S["AiMeasureEstimate"]>("POST", `ai/skills/${id(name)}/estimate`, model ? ({ model, confirmed: false } satisfies S["AiMeasureIn"]) : undefined),
+  /** Measures an account's model (or all of them) in the background; `confirmed` is the person's go above the amount they asked to be asked about. */
+  measure: (name: string, body: S["AiMeasureIn"]) => call<S["AiMeasureStarted"]>("POST", `ai/skills/${id(name)}/measure`, body),
   testAi: () => call<S["AiTestResult"][]>("POST", "ai/test"),
   /** Tests one account on its first model, whether or not any work uses it; with a tier and a model, with that tier's
    * kinds of work and their exact parameters, which is what lets the account stand in for it. */
@@ -368,6 +379,8 @@ export const api = {
   ruleReview: () => call<S["RuleReviewView"]>("GET", "knowledge/rules/review"),
   /** "Not now" on the rules review line: the review leaves Today for its week, and no rule changes. */
   ruleReviewNotNow: () => call<S["RuleReviewPutOff"]>("POST", "knowledge/rules/review/not-now"),
+  /** Takes a "Not now" back: the line is on Today again at once. */
+  ruleReviewNotNowUndo: (signal: string) => call<S["Ok"]>("POST", `knowledge/rules/review/not-now/${id(signal)}/undo`),
   keepRule: (entry: string, readVersion: number) =>
     call<S["Applied"]>("POST", `knowledge/${id(entry)}/keep-rule`, { read_version: readVersion } satisfies S["ReadVersion"]),
 };

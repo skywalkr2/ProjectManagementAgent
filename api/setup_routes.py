@@ -12,10 +12,12 @@ from fastapi import APIRouter, HTTPException
 from api.schemas import (
     AiAccountAdd,
     AiAccountChange,
+    AiAccountRemove,
     AiAccountSkills,
     AiAccountView,
     AiBorrowAnswer,
     AiBorrowed,
+    AiCheckSize,
     AiMeasureEstimate,
     AiMeasureIn,
     AiMeasureStarted,
@@ -589,9 +591,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.get("/ai/accounts")
     def ai_accounts() -> list[AiAccountView]:
         """The AI accounts in the settings, as they are on disk now; never a key."""
+        from datetime import UTC, datetime
+
+        from engine.ai import check_cost
+        from engine.ai.account_state import AccountState, account_states
+        from engine.ai.catalog import Catalogs
         from engine.secrets import SecretError, describe_secret, resolve_secret
+        from engine.today import zone
 
         ai = current().ai
+        states = account_states(ws, store, current(), datetime.now(UTC))
+        catalogs = Catalogs(store.path.parent / ".cockpit" / "ai-catalog.json", ai.catalog_refresh_hours)
+        today = datetime.now(zone(current())).date()
 
         def key_state(ref: str | None) -> tuple[str, str | None]:
             if not ref:
@@ -604,9 +615,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         found = []
         for name, p in ai.providers.items():
             state, where = key_state(p.auth)
+            now_state = states.get(name, AccountState())
             found.append(
                 AiAccountView(
                     name=name,
+                    label=p.label,
                     kind=p.kind,
                     adapter=p.adapter,
                     base_url=p.base_url,
@@ -619,9 +632,27 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     key_state=state,
                     key_where=where,
                     credential_expires=p.credential_expires,
+                    key_ending=p.credential_expires is not None
+                    and (p.credential_expires - today).days <= ai.credential_warn_days,
+                    answered_at=now_state.answered_at,
+                    spent_today_usd=now_state.spent_today_usd,
+                    checked_for=now_state.checked_for,
+                    check_failed_for=now_state.check_failed_for,
+                    checked_at=now_state.checked_at,
+                    paused_until=now_state.paused_until,
+                    check_usd=check_cost.cost(current(), name, catalogs),
                 )
             )
         return found
+
+    @r.get("/ai/check-size")
+    def ai_check_size() -> AiCheckSize:
+        """What one account's connection check involves (calls and tokens), so a screen can price it with the price of
+        the model the person picks."""
+        from engine.ai import check_cost
+
+        found = check_cost.size(current())
+        return AiCheckSize(calls=found.calls, input_tokens=found.input_tokens, output_tokens=found.output_tokens)
 
     @r.get("/ai/skills")
     def ai_skills() -> AiSkillsView:
@@ -789,6 +820,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         elif body.key_ref:
             changes[f"ai.providers.{name}.auth"] = body.key_ref.strip()
         reset: list[str] = []
+        if body.label is not None:
+            if body.label.strip():
+                changes[f"ai.providers.{name}.label"] = body.label.strip()
+            else:
+                reset.append(f"ai.providers.{name}.label")
         if body.credential_expires is not None:
             changes[f"ai.providers.{name}.credential_expires"] = body.credential_expires.isoformat()
         elif body.clear_credential_expires:
@@ -811,7 +847,19 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 raise HTTPException(status_code=400, detail=f"There is no kind of work called {tier}.")
             if settings.use == ref or ref in settings.fallback:
                 raise HTTPException(status_code=400, detail=f"{name} already does that work or stands in for it.")
-            changes[f"ai.tiers.{tier}.fallback"] = [*settings.fallback, ref]
+            chain = list(changes.get(f"ai.tiers.{tier}.fallback", settings.fallback))
+            mine = [i for i, other in enumerate(chain) if other.split("/", 1)[0] == name]
+            if mine:  # it already stands in with another of its models: that entry moves, keeping its place
+                chain[mine[0]] = ref
+                chain = [other for i, other in enumerate(chain) if i not in mine[1:]]
+            else:
+                chain.append(ref)
+            changes[f"ai.tiers.{tier}.fallback"] = chain
+        if body.stop_backup:
+            for tier, settings in tiers.items():
+                kept = [other for other in settings.fallback if other.split("/", 1)[0] != name]
+                if kept != list(settings.fallback):
+                    changes[f"ai.tiers.{tier}.fallback"] = kept
         if not changes and not reset:
             raise HTTPException(status_code=400, detail="Nothing to change.")
         return changes, reset
@@ -953,18 +1001,26 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return DataLevelAllowed(request=request_id, account=name, level=level, saved=done)
 
     @r.post("/ai/accounts/{name}/remove")
-    def ai_account_remove(name: str, body: FingerprintIn) -> SettingsSaved:
-        """Remove an account, with Undo: the work it did goes back to the tier's default account. Its kept key stays
-        on this computer, so Undo brings the account back whole."""
+    def ai_account_remove(name: str, body: AiAccountRemove) -> SettingsSaved:
+        """Remove an account, with Undo. The work it did goes to the backup named in `take_over` (the backup's own entry
+        for that kind of work becomes its main one), or, with none named, has no account until one is chosen. Its kept
+        key stays on this computer, so Undo brings the account back whole."""
         ai = current().ai
         if name not in ai.providers:
             raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
+        if body.take_over is not None and body.take_over not in ai.providers:
+            raise HTTPException(status_code=404, detail=f"There is no account called {body.take_over}.")
         reset = [f"ai.providers.{name}"]
         changes: dict[str, Any] = {}
         for tier_name, tier in ai.tiers.items():
-            if (tier.use or "").split("/", 1)[0] == name:
-                reset.append(f"ai.tiers.{tier_name}.use")
             kept = [ref for ref in tier.fallback if ref.split("/", 1)[0] != name]
+            if (tier.use or "").split("/", 1)[0] == name:
+                heir = next((ref for ref in kept if ref.split("/", 1)[0] == body.take_over), None)
+                if heir is None:
+                    reset.append(f"ai.tiers.{tier_name}.use")
+                else:
+                    changes[f"ai.tiers.{tier_name}.use"] = heir
+                    kept = [ref for ref in kept if ref != heir]
             if kept != list(tier.fallback):
                 changes[f"ai.tiers.{tier_name}.fallback"] = kept
         return saved(save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
@@ -996,6 +1052,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             "models": models,
             "allowed_data": list(body.allowed_data),
         }
+        if body.label and body.label.strip():
+            provider["label"] = body.label.strip()
         if body.base_url:
             provider["base_url"] = body.base_url.strip()
         if body.agent is not None:

@@ -1708,20 +1708,20 @@ From L3 (design 7.18):
   `GET /api/quality` (built in L3).
 
 From the functional designer's lessons of 2026-10-15 (lessons 5 and 6):
-- [ ] **Copy tables on each person's group in Follow-ups** (design 7.5): the same data the group shows, with no AI run,
+- [x] **Copy tables on each person's group in Follow-ups** (design 7.5): the same data the group shows, with no AI run,
   as two tables: actions (project, action, due, "Your update", link) and questions (project, question, first asked,
   "Your answer", link), with no status column. Each copies as tab-separated text (cells in a spreadsheet, links kept)
   and as an HTML table (for chat or mail). A request for "a list of X's items" points here; the assistant never asks
-  for a blank file. *Today:* each group copies one message, not a table.
+  for a blank file. *Today:* each group copies one message, not a table. *Built (phase B), see item 32:* `web/src/lib/followup-table.test.ts`, `web/src/components/FollowUps.test.tsx`.
 
 From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux-2026-10/answers-25-32.md`, mockups in
 `reviews/ui-ux-2026-10/mockup-round-25-32/`; each answer has its layout, exact wording, edge cases and the test for done):
-- [ ] **25 AI accounts as one place**: the summary line, rows with a role pill in words, the person's own name for the
+- [x] **25 AI accounts as one place**: the summary line, rows with a role pill in words, the person's own name for the
   account, a state line and one next step; "What is it for?" in an add drawer and in each row's menu; removing the main
-  account says what happens in the Undo toast. Replaces the accounts items above.
-- [ ] **26 What each model can do**: a grid of kinds of work × account and model on its own page, pass rate first, then
+  account says what happens in the Undo toast. Replaces the accounts items above. *Built (phase B):* `web/src/lib/ai-accounts.test.ts` (the summary for every combination of main and backup accounts, names, order, state and next step), `web/src/components/AiAccounts.test.tsx` (the summary line, a role pill and a state line in words on every row, no id on screen, one next step by state, the menu, Make this the main account keeping the one it replaces as a backup only when it passes its check, Use as backup checked first with its cost, Stop using as backup, removing the main account with a backup and with none, rename, the harder-model backup offer), `web/src/components/WelcomeAiDrawer.test.tsx` (What is it for? with its three answers, the cost on the button, the check for each kind of work, never leaving Settings), `web/src/components/Settings.test.tsx` (Add an account opens the drawer in place, with the cursor in it), `web/src/shell/HeldLines.test.tsx` (the "no AI account" line), `tests/test_setup.py`, `tests/test_account_state.py`, `tests/test_credential_expiry.py::test_work_with_no_account_is_a_line_until_one_does_it`, `web/e2e/shell.spec.ts`. The guide keeps its own add form (same choices, its checkbox for "my work"), by design: the drawer is Settings'. *Also built:* Today's paused, borrow, check and switch lines and the header's status call an account by the person's name (`web/src/shell/HeldLines.test.tsx`, `web/src/shell/AssistantLine.test.tsx`). *Left for later:* the drawer's footer is not sticky (its buttons end the form), and the key-ending line's list of places is words from the server that still name an account by its id.
+- [x] **26 What each model can do**: a grid of kinds of work × account and model on its own page, pass rate first, then
   cost per right answer among those that pass, the cheapest passing one marked; ⚠ with words below the minimum; old and
-  not measured as their own states with Measure and its estimate; a one-line summary on each account row.
+  not measured as their own states with Measure and its estimate; a one-line summary on each account row. *Built (phase B):* `web/src/lib/ai-compare.test.ts` (pass first, the cheapest passing cell, only one that passes, old counts as unknown), `web/src/components/AiCompare.test.tsx` (the grid, the cell's states in words and an icon, Measure with its estimate, asking above the configured amount, Measure again, a failed measuring, back), `web/src/components/AiAccounts.test.tsx` (the one-line summary and See all), `web/e2e/shell.spec.ts` (accessibility in light and dark, phone width).
 - [ ] **27 After a move**: one group line per move in Decide, one row inside per thing to check; questions to others go to
   Follow-ups and are counted in the group's meta; a group of one is a normal row; a second move replaces the group.
 - [ ] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
@@ -1730,12 +1730,12 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
   dashed outline with Confirm it; no italics; never in copied or published text.
 - [ ] **30 A series page**: next meeting's open items by person, past meetings collapsed, details; item rows link "for
   Thursday's print sync"; the agenda stays the project management pack's.
-- [ ] **31 Not now in the menu**, with its consequence; the 7.6 rule: a second answer stays a visible button, a
-  postponement goes in the menu, held lines may show two buttons, every other row one.
-- [ ] **32 Copy tables**: a Message | Table switch shows the table before copying; "Your update"/"Your answer" last and
+- [x] **31 Not now in the menu**, with its consequence; the 7.6 rule: a second answer stays a visible button, a
+  postponement goes in the menu, held lines may show two buttons, every other row one. *Built (phase B):* `web/src/shell/HeldLines.test.tsx` (one button, Not now in the menu with what it does, the toast and its Undo), `tests/test_rule_review.py::test_undoing_not_now_brings_the_line_back_at_once_and_it_says_when_it_would_return`, and the 7.6 rule is written into the design. *Left for later:* no other "later" exists on Today yet to move into a menu; each new one follows the same pattern.
+- [x] **32 Copy tables**: a Message | Table switch shows the table before copying; "Your update"/"Your answer" last and
   widest, tinted in the HTML copy, no placeholder; the project on every row; overdue in words; page names in the HTML
   copy, full addresses for a spreadsheet; "Copy as table" and "Copy for a spreadsheet" beside Mark sent; no title in the
-  table.
+  table. *Built (phase B):* `web/src/lib/followup-table.test.ts`, `web/src/components/FollowUps.test.tsx` (the switch, the table before any copy, both copies, a blocked copy, Mark sent beside them), `tests/test_routes.py::test_a_followup_row_names_its_project_and_carries_its_pages_for_the_copied_table`, `web/e2e/shell.spec.ts`. A filled-in table handed back and read by column is the later case the answer names.
 
 From the original designer's lessons of 2026-10-14:
 - [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
@@ -1795,19 +1795,19 @@ From the original designer's lessons of 2026-10-14:
   synced folder lives only in Settings.
 - [ ] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
-- [ ] **Add an account in Settings, in place** (owner, 2026-10-15; design 7.16): the button opens only the AI account
+- [x] **Add an account in Settings, in place** (owner, 2026-10-15; design 7.16): the button opens only the AI account
   form (service, key, models, what it is for) inside Settings, never the setup guide. "What it is for" offers the
   assistant's work or a backup for it, so a backup is set in the same form (checked first, as "Use as backup" is).
-  *Today:* it opens the setup guide at its AI step, and a backup is set afterwards from the account's row.
-- [ ] **The AI accounts flow as a whole** (owner, 2026-10-15: "a terrible UI flow"): one place for accounts in Settings, where
+  *Today:* it opens the setup guide at its AI step, and a backup is set afterwards from the account's row. *Built (replaced by item 25):* `web/src/components/Settings.test.tsx` ("Add an account opens its form in a drawer inside Settings, never the setup guide, with the cursor in it"), `web/src/components/WelcomeAiDrawer.test.tsx` (a backup is added, then checked for each kind of work, then made the backup).
+- [x] **The AI accounts flow as a whole** (owner, 2026-10-15: "a terrible UI flow"): one place for accounts in Settings, where
   each row says plainly what it does now (does the work, backs it up, or nothing) and the one thing to do next. Removing
   the account that does the work says in its toast that nothing does the work now and offers its backup or another
   account in one click (never picked silently, 6.16), and Today carries the line until one is chosen. *Today:* removing
-  it leaves the work with no account, said only by the test lines in the guide.
-- [ ] **A backup uses the account's harder model for harder work** (owner, 2026-10-15: "if haiku is only so good for
+  it leaves the work with no account, said only by the test lines in the guide. *Built (replaced by item 25):* `web/src/components/AiAccounts.test.tsx` ("removing the main account when a backup exists hands the work to it and says so in the toast", "removing the main account with no backup says so in the menu before the click and in the toast after"), `web/src/shell/HeldLines.test.tsx` ("work with no AI account is a line that starts with the step that fixes it"), `tests/test_credential_expiry.py::test_work_with_no_account_is_a_line_until_one_does_it`.
+- [x] **A backup uses the account's harder model for harder work** (owner, 2026-10-15: "if haiku is only so good for
   certain tasks we can add sonnet for harder tasks"): adding a harder model to an account that is a backup offers to move
   its harder-work backup to that model, checked first, in one click. *Today:* "Use as backup" puts the harder model in
-  only when the account has one at that moment; afterwards the harder work stays on the everyday model.
+  only when the account has one at that moment; afterwards the harder work stays on the everyday model. *Built (replaced by item 25):* `web/src/components/AiAccounts.test.tsx` ("a backup that gains a harder model offers to move its harder work there, checked first, in one click"), `tests/test_setup.py::test_a_backup_moves_to_its_harder_model_keeps_its_place_and_can_stop`.
 - [ ] **Setup guide** as steps | step.
 - [ ] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its

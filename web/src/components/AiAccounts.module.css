@@ -1,0 +1,17 @@
+/* The AI accounts section (design 7.16): the heading with its two buttons, the line saying who does the work, and one row per account. */
+.count { margin-left: var(--space-2); color: var(--text-muted); font-weight: var(--weight-regular); }
+.summary { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.sentence { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); overflow-wrap: anywhere; }
+.quiet { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.meta { display: block; }
+.state { display: flex; align-items: center; gap: var(--space-1); }
+.state[data-tone="warn"] { color: var(--warn); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-full); flex: none; }
+.dot[data-tone="ok"] { background: var(--ok); }
+.dot[data-tone="quiet"] { background: transparent; border: 1.5px solid var(--text-muted); }
+.skills { display: block; }
+.forms { display: grid; gap: var(--space-2); }
+.forms form { display: grid; gap: var(--space-2); max-width: 520px; }
+.ok { color: var(--ok); margin: 0; }
+.bad { color: var(--danger); margin: 0; }

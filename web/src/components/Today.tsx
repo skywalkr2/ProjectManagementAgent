@@ -24,6 +24,8 @@ export function Today(props: {
   onView: (view: View) => void;
   onAddSource: () => void;
   onOpenGuide: (step?: string) => void;
+  /** Opens the form that adds an AI account, in Settings. */
+  onAddAccount?: () => void;
   onOpenRecord: (kind: string, id: string) => void;
 }) {
   const { t, tn } = useWords();
@@ -55,6 +57,8 @@ export function Today(props: {
     onOpenAiAccounts: () => props.onView("settings"),
     onOpenHandover: () => props.onView("handover"),
     onOpenRules: () => props.onView("records/rules-review"),
+    onOpenKnowledge: () => props.onView("records/knowledge"),
+    onAddAccount: props.onAddAccount,
     onOpenRecord: props.onOpenRecord,
     onOpenGuide: props.onOpenGuide,
   };

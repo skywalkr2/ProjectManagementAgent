@@ -3,7 +3,7 @@
 //   #today  #work/changed  #work/followups  #work/outgoing  #work/stages  #work/panel/<name>
 //   #records/projects  #records/people  #records/files  #records/knowledge  #records/rules-review
 //   #records/panel/<name>  #records/<kind>/<id>
-//   #sources  #addons  #settings  #setup (the guide)  #handover (which copy to keep)  #styleguide
+//   #sources  #addons  #settings  #settings/ai-compare (what each AI account can do)  #setup (the guide)  #handover (which copy to keep)  #styleguide
 // A `View` is that fragment, written without the "#" and with each name or id encoded, so two views compare with ===.
 export type CoreView =
   | "today"
@@ -19,6 +19,7 @@ export type CoreView =
   | "sources"
   | "addons"
   | "settings"
+  | "settings/ai-compare"
   | "setup"
   | "handover"
   | "styleguide";
@@ -39,6 +40,7 @@ export const CORE_VIEWS: readonly CoreView[] = [
   "sources",
   "addons",
   "settings",
+  "settings/ai-compare",
   "setup",
   "handover",
   "styleguide",

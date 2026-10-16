@@ -436,3 +436,196 @@ test.describe("screen use and the shell", () => {
     await shoot(page, "phone-stages");
   });
 });
+
+// Made-up answers for the screens that need accounts and measurements the demo workspace doesn't have, so the layout and the
+// accessibility checks run on what a person with accounts would see. The shapes are the server's own.
+const account = (name: string, label: string, over: Record<string, unknown> = {}) => ({
+  name,
+  label,
+  kind: null,
+  adapter: "adapter-one",
+  base_url: null,
+  models: { everyday: "model-a", harder: "model-b" },
+  used_for: [],
+  backup_for: [],
+  has_key: true,
+  key_state: "saved",
+  key_where: null,
+  key_ending: false,
+  credential_expires: null,
+  answered_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+  spent_today_usd: 1.2,
+  checked_for: [],
+  check_failed_for: [],
+  checked_at: null,
+  paused_until: null,
+  check_usd: 0.02,
+  ...over,
+});
+const ACCOUNTS = [
+  account("main", "Main account", { used_for: ["routine", "deep"] }),
+  account("second", "Second account", { backup_for: ["routine", "deep"], answered_at: null, spent_today_usd: 0, checked_for: ["routine", "deep"], checked_at: "2026-10-14T09:00:00+00:00" }),
+  account("trial", "Trial account", { key_state: "missing", answered_at: null, spent_today_usd: 0 }),
+];
+const skill = (id: string, label: string, over: Record<string, unknown> = {}) => ({
+  id,
+  label,
+  description: "",
+  measured: true,
+  runs: 18,
+  passes: 17,
+  pass_rate: 0.94,
+  age_days: 2,
+  cost_per_pass_usd: 0.03,
+  stale: null,
+  below_min: false,
+  ...over,
+});
+const unmeasured = (id: string, label: string) => skill(id, label, { measured: false, runs: 0, passes: 0, pass_rate: null, age_days: null, cost_per_pass_usd: null });
+const SKILLS = {
+  min_score: 0.8,
+  stale_days: 60,
+  accounts: [
+    {
+      name: "main",
+      models: [
+        { model: "everyday", measure: null, measure_why: null, skills: [skill("notes", "Pull actions from meeting notes"), skill("route", "Route a question to who decides", { pass_rate: 0.9, cost_per_pass_usd: 0.02 }), skill("term", "Use a known term", { pass_rate: 0.88, cost_per_pass_usd: 0.02 }), unmeasured("voice", "Write an update in your voice")] },
+        { model: "harder", measure: null, measure_why: null, skills: [skill("notes", "Pull actions from meeting notes", { pass_rate: 0.97, cost_per_pass_usd: 0.11 }), skill("route", "Route a question to who decides", { pass_rate: 0.96, cost_per_pass_usd: 0.08 }), skill("term", "Use a known term", { pass_rate: 1, cost_per_pass_usd: 0.07 }), skill("voice", "Write an update in your voice", { pass_rate: 0.91, runs: 6, age_days: 40, cost_per_pass_usd: 0.14, stale: "age" })] },
+      ],
+    },
+    {
+      name: "second",
+      models: [{ model: "everyday", measure: null, measure_why: null, skills: [skill("notes", "Pull actions from meeting notes", { pass_rate: 0.89, cost_per_pass_usd: 0.04 }), skill("route", "Route a question to who decides", { pass_rate: 0.85, cost_per_pass_usd: 0.01 }), skill("term", "Use a known term", { pass_rate: 0.56, runs: 9, below_min: true, cost_per_pass_usd: 0.05 }), unmeasured("voice", "Write an update in your voice")] }],
+    },
+  ],
+};
+const ESTIMATE = { models: ["everyday"], level: "internal", cases: 12, skipped: 0, runs: 3, usd: 0.12, confirm_above_usd: 0.1, needs_go: false };
+
+async function mockAccounts(page: Page) {
+  await page.route("**/api/ai/accounts", (route) => (route.request().method() === "GET" ? route.fulfill({ json: ACCOUNTS }) : route.continue()));
+  await page.route("**/api/ai/skills", (route) => route.fulfill({ json: SKILLS }));
+  await page.route("**/api/ai/skills/*/estimate", (route) => route.fulfill({ json: ESTIMATE }));
+}
+
+test.describe("AI accounts as one place, what each can do, and the follow-ups table", () => {
+  test("Settings: the summary line, a row with a role pill, a state line and one next step each, and the add drawer opens in place", async ({ page }) => {
+    await mockAccounts(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page, "settings");
+    const section = page.getByRole("region", { name: /^AI accounts/ });
+    await expect(section.getByRole("heading", { name: /^AI accounts/ })).toBeVisible();
+    await expect(section.getByRole("group", { name: "Who does the work" })).toContainText("Main account does");
+    await expect(section.getByRole("group", { name: "Who does the work" })).toContainText("Second account stands in");
+    const rows = section.locator("li[data-row]");
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0)).toContainText("Does the work");
+    await expect(rows.nth(0)).toContainText("Ready · answered 2 h ago · $1.20 today");
+    await expect(rows.nth(1)).toContainText("Backup");
+    await expect(rows.nth(1)).toContainText("Checked for every kind of work · Oct 14");
+    await expect(rows.nth(2)).toContainText("Key not found on this computer");
+    await expect(rows.nth(2).getByRole("button", { name: "Add the key for Trial account" })).toBeVisible();
+    await section.scrollIntoViewIfNeeded();
+    await shoot(page, "accounts-1440");
+    await expectNoViolations(page);
+    // The form opens here, as a drawer, and the address stays Settings.
+    await section.getByRole("button", { name: "Add an account" }).click();
+    const drawer = page.getByRole("dialog", { name: "Add an account" });
+    await expect(drawer).toBeVisible();
+    await expect(page).toHaveURL(/#settings$/);
+    await expectNoViolations(page);
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+    await expect(section.getByRole("button", { name: "Add an account" })).toBeFocused();
+  });
+
+  test("Settings on a phone: no sideways scroll, and the rows keep their one button", async ({ page }) => {
+    await mockAccounts(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signIn(page, "settings");
+    const section = page.getByRole("region", { name: /^AI accounts/ });
+    await section.scrollIntoViewIfNeeded();
+    await expect(section.locator("li[data-row]").first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await shoot(page, "accounts-phone");
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the grid of what each account can do, in ${scheme}: pass rate first, the cheapest passing marked, and no violations`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await mockAccounts(page);
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await signIn(page, "settings");
+      await page.getByRole("button", { name: "Compare what they can do" }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "Compare what accounts can do" })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "Views" }).locator("a[aria-current=page]")).toHaveAttribute("href", /#settings$/);
+      const table = page.getByRole("table");
+      await expect(table.getByRole("columnheader")).toHaveText(["Kind of work", "Main account · everyday", "Main account · harder", "Second account · everyday"]);
+      await expect(table).toContainText("✓ Cheapest that passes");
+      await expect(table).toContainText("Below 80%");
+      await expect(table).toContainText("(old)");
+      await expect(table.getByRole("button", { name: "Measure Main account · everyday" })).toContainText("Measure (about $0.12)");
+      if (scheme === "light") await shoot(page, "grid-1440");
+      await expectNoViolations(page);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForFunction(() => document.documentElement.hasAttribute("data-narrow"));
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await expectNoViolations(page);
+    });
+  }
+
+  test("Follow-ups: the Message | Table switch shows the table before anything is copied, and it passes the accessibility checks", async ({ page }) => {
+    const book = `${"https" + "://"}example.com/book`;
+    const section = {
+      person: "PER-9",
+      name: "Robin Sample",
+      is_pm: false,
+      questions: [
+        { id: "Q-1", title: "Do we have written permission for the epigraph?", text: "", links: [{ label: "Book page", url: book }], kind: "question", status: "open", project_name: "Sample project", sent: "2026-10-10", waiting_days: null, chase_due: false, about: null, options: [] },
+        { id: "Q-2", title: "Which author bio goes on the jacket?", text: "", links: [], kind: "question", status: "open", project_name: "Sample project", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
+      ],
+      actions: [
+        { id: "ACT-1", text: "Agree on the back-cover copy", due: "2020-10-14", project_name: "Sample project", links: [{ label: "Book page", url: book }], told: null, told_days: null, followed_up: null, on_hold: null, chase_due: false },
+        { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Sample project", links: [], told: null, told_days: null, followed_up: null, on_hold: null, chase_due: false },
+      ],
+      message: "Hi Robin",
+      to_send: 4,
+    };
+    await page.route("**/api/followups", (route) => route.fulfill({ json: [section] }));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page, "work/followups");
+    await page.getByRole("button", { name: /^Robin Sample/ }).click();
+    await page.getByRole("radio", { name: "Table" }).click();
+    const tables = page.getByRole("table");
+    await expect(tables).toHaveCount(2);
+    await expect(tables.first().getByRole("columnheader")).toHaveText(["Project", "Action", "Due", "Link", "Your update"]);
+    await expect(tables.nth(1).getByRole("columnheader")).toHaveText(["Project", "Question", "First asked", "Link", "Your answer"]);
+    await expect(tables.first()).toContainText("overdue");
+    await expect(page.getByRole("button", { name: "Copy as table" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy for a spreadsheet" })).toBeVisible();
+    // The fill-in column is the last and the widest.
+    const widths = await tables.first().getByRole("columnheader").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+    expect(widths[widths.length - 1]).toBe(Math.max(...widths));
+    await shoot(page, "followups-table-1440");
+    await expectNoViolations(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.documentElement.hasAttribute("data-narrow"));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test("Today: the backup line's button is at the end of the row, like the setup line's", async ({ page }) => {
+    await page.route("**/api/status", async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      await route.fulfill({ json: { ...body, backup: { ...body.backup, configured: true, needs_attention: true, age_hours: 100 } } });
+    });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page);
+    const line = page.locator("[data-backup-line]");
+    await expect(line).toBeVisible();
+    const button = line.getByRole("button", { name: "Back up now" });
+    const [lineBox, buttonBox] = await Promise.all([line.boundingBox(), button.boundingBox()]);
+    // The button ends where the row's padding does, however long the words are.
+    expect(lineBox!.x + lineBox!.width - (buttonBox!.x + buttonBox!.width)).toBeLessThan(24);
+    await shoot(page, "backup-line-1440");
+  });
+});

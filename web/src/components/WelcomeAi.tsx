@@ -1,7 +1,9 @@
 // The AI step of the setup guide (design 7.8): pick a service by name, get a key from its page, paste it, pick a model from
 // the list the service gives, choose what it may see, add it, then test it. A pasted key is sent once and kept on this
 // computer; the account's settings only refer to it. What a kind needs is read from its catalog entry (a key, an address, or a
-// command for a command-line agent), never from its name.
+// command for a command-line agent), never from its name. In Settings the same form opens in a drawer (`drawer`): it adds
+// the account's own name and "What is it for?" (the assistant's work, a backup, or nothing yet), checks the account for each
+// kind of work it was added for with the cost shown first, and never leaves Settings.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -9,7 +11,10 @@ import { useSmallMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { asReference } from "../lib/secret-ref";
 import { useAfterSave } from "../lib/settings-save";
+import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { accountName, roleOf } from "../lib/ai-accounts";
+import { HARDER as HARDER_SHORT, planFor, useAccountActs, useConfirmAbove } from "../lib/ai-account-acts";
 import { AiAccounts } from "./AiAccounts";
 import { domainOf } from "./SafeText";
 import { Skeleton } from "../ui/Skeleton";
@@ -37,6 +42,12 @@ const isService = (kind: Kind) => kind.needs_key && kind.base_url !== "" && !kin
 const isBuiltin = (kind: Kind) => (kind.program ?? "") !== "" && !takesAddress(kind);
 
 /** The kind's id, or the id with -2, -3 … when an account of that name is already set up. */
+/** An id for the settings from the name the person gave: lowercase letters, digits and dashes, free among the accounts. */
+function idFrom(label: string, fallback: string, taken: Set<string>): string {
+  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
+  return freeName(ACCOUNT_NAME.test(slug) ? slug : fallback, taken);
+}
+
 function freeName(id: string, taken: Set<string>): string {
   if (!taken.has(id)) return id;
   let n = 2;
@@ -44,15 +55,31 @@ function freeName(id: string, taken: Set<string>): string {
   return `${id}-${n}`;
 }
 
-export function WelcomeAi(props: { local: boolean; done: boolean }) {
+type For = "work" | "backup" | "none";
+
+export function WelcomeAi(props: {
+  local: boolean;
+  done: boolean;
+  /** Set in Settings' drawer: the form asks what the account is for and the list and the guide's test are left out. */
+  drawer?: { onAdded: () => void; onCancel: () => void; onDirty?: (dirty: boolean) => void };
+}) {
   const { t, tn, has } = useWords();
   const money = useSmallMoney();
   const client = useQueryClient();
   const afterSave = useAfterSave();
+  const acts = useAccountActs();
+  const confirmAbove = useConfirmAbove();
+  const [askedGo, setAskedGo] = useState(false);
+  const { push } = useToasts();
+  const drawer = props.drawer;
   const endpoints = useQuery({ queryKey: ["ai-endpoints"], queryFn: api.endpoints });
   const found = useQuery({ queryKey: ["ai-local"], queryFn: api.aiLocal });
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
+  const checkSize = useQuery({ queryKey: ["ai-check-size"], queryFn: api.aiCheckSize, enabled: !!drawer });
+  const [labelText, setLabelText] = useState("");
+  const [labelTouched, setLabelTouched] = useState(false);
+  const [forWhat, setForWhat] = useState<For | null>(null);
   const [kindId, setKindId] = useState("");
   const [usingFound, setUsingFound] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -101,8 +128,20 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
     ...(settings.data?.items ?? []).flatMap((i) => (i.key.startsWith("ai.providers.") ? [i.key.split(".")[2]] : [])),
     ...(accounts.data ?? []).map((a) => a.name),
   ]);
-  const accountName = nameTouched ? name : kind ? freeName(kind.id, taken) : "";
-  const nameBad = accountName !== "" && !ACCOUNT_NAME.test(accountName);
+  // The name the person sees: theirs, else the service's name and "account", numbered when that is taken.
+  const labels = new Set((accounts.data ?? []).map((a) => accountName(a, endpoints.data?.find((e) => e.id === a.kind), t)));
+  const defaultLabel = (() => {
+    if (!kind) return "";
+    const base = t("ai_accounts.default_name", { service: kind.name });
+    let n = 2;
+    let found = base;
+    while (labels.has(found)) found = `${base} ${n++}`;
+    return found;
+  })();
+  const shownLabel = labelTouched ? labelText : defaultLabel;
+  // The id in the settings: typed under Advanced in the guide, made from the name in the drawer.
+  const accountId = drawer ? (kind ? idFrom(shownLabel, kind.id, taken) : "") : nameTouched ? name : kind ? freeName(kind.id, taken) : "";
+  const nameBad = !drawer && accountId !== "" && !ACCOUNT_NAME.test(accountId);
 
   const list: ModelInfo[] = server ? server.models.map((id) => ({ id })) : (models ?? []);
   const asked = models !== null || listProblem !== "";
@@ -127,6 +166,23 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   useEffect(() => {
     if (added) testButton.current?.focus();
   }, [added]);
+
+  // In the drawer: a typed key or name is unsaved text, and the cursor starts in the first main field, the choice of service.
+  const typed = key.trim() !== "" || keyRef.trim() !== "" || labelTouched || nameTouched;
+  const onDirty = drawer?.onDirty;
+  useEffect(() => {
+    onDirty?.(typed);
+  }, [typed, onDirty]);
+  const firstKind = useRef<HTMLDivElement>(null);
+  const kindsShown = !!endpoints.data?.length;
+  useEffect(() => {
+    if (!drawer || !kindsShown) return;
+    // After the drawer has taken focus itself, which it does as it opens.
+    const frame = window.requestAnimationFrame(() => firstKind.current?.querySelector<HTMLInputElement>('input[name="ai-kind"]')?.focus());
+    return () => window.cancelAnimationFrame(frame);
+    // Only when the choices first appear.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kindsShown]);
 
   const keyArgs = (over?: { key?: string }) => {
     const pasted = (over?.key ?? key).trim();
@@ -212,7 +268,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
 
   const ready =
     !!kind &&
-    ACCOUNT_NAME.test(accountName) &&
+    ACCOUNT_NAME.test(accountId) && (!drawer || shownLabel.trim() !== "") &&
     (programPicks || everyday.trim() !== "") &&
     !noMatch &&
     levels.length > 0 &&
@@ -235,19 +291,46 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
     }
   };
 
+  // What the new account is for, in the drawer: the assistant's work when nothing does it yet, a backup once something does.
+  const mains = (accounts.data ?? []).filter((a) => roleOf(a) === "work");
+  const mainName = mains[0] ? accountName(mains[0], endpoints.data?.find((e) => e.id === mains[0].kind), t) : "";
+  const chosenFor: For = forWhat ?? (mains.length ? "backup" : "work");
+
+  /** About what checking the new account costs: the check's calls priced with the dearest model it will use. */
+  const checkUsd = (() => {
+    if (!drawer || !checkSize.data || agent || server) return null;
+    const second = harder !== HARDER_SAME && harder !== everyday ? harder : "";
+    const used = [everyday, ...(second ? [second] : [])].map((id) => list.find((m) => m.id === id));
+    if (used.some((m) => m?.input_per_million == null || m?.output_per_million == null)) return null;
+    return Math.max(...used.map((m) => ((m?.input_per_million ?? 0) * checkSize.data.input_tokens + (m?.output_per_million ?? 0) * checkSize.data.output_tokens) / 1e6));
+  })();
+
+  // A check that would cost more than the person asked to be asked about waits for a second press, with its cost shown.
+  const overLimit = !!drawer && chosenFor !== "none" && checkUsd != null && checkUsd > confirmAbove;
+  const addOrAsk = () => {
+    if (overLimit && !askedGo) {
+      setAskedGo(true);
+      return;
+    }
+    setAskedGo(false);
+    void add();
+  };
+
   const add = async () => {
     if (!kind || !settings.data) return;
     const second = !agent && harder !== HARDER_SAME && harder !== everyday ? harder : "";
     const body: S["AiAccountAdd"] = {
-      name: accountName,
+      name: accountId,
+      label: drawer ? shownLabel.trim() : defaultLabel,
       adapter: kind.adapter,
       endpoint: kind.id,
       models: programPicks ? {} : second ? { everyday: everyday.trim(), harder: second } : { everyday: everyday.trim() },
       allowed_data: levels,
       fingerprint: settings.data.fingerprint,
     };
+    const asWork = drawer ? chosenFor === "work" : useForWork;
     // With no model named there is no short name to point at, so the account's own first model does the work.
-    if (useForWork) {
+    if (asWork) {
       if (programPicks) body.use_for = ["routine", "deep"];
       else body.use = { routine: "everyday", deep: second ? "harder" : "everyday" };
     }
@@ -264,11 +347,44 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
       setKey("");
       setKeyRef("");
       setResults(null);
-      setAdded(accountName);
+      setAdded(accountId);
       // The next suggested name looks at the accounts as they are now, so a second account of this kind gets -2.
       setName("");
       setNameTouched(false);
-      await afterSave(saved, { message: t("welcome.ai.added", { name: accountName }) });
+      if (drawer) {
+        const shown = body.label ?? accountId;
+        await afterSave(saved, { message: t(asWork ? "ai_add.done_main" : "ai_add.done", { name: shown }) });
+        // Checked for each kind of work it was added for, with the exact settings, so a failure is said now.
+        const shorts = programPicks ? { everyday: "default", deep: "default" } : { everyday: "everyday", deep: second ? HARDER_SHORT : "everyday" };
+        const plan: [string, string][] = [
+          ["routine", shorts.everyday],
+          ["deep", shorts.deep],
+        ];
+        if (chosenFor === "backup") {
+          const bad = await acts.standIn(accountId, plan, t("ai_accounts.backup_set", { name: shown }));
+          if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
+        } else if (asWork) {
+          const bad = await acts.failing(accountId, plan);
+          if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
+          // The account it replaces stays as its backup when it passes its own check, so the work is never left with nothing.
+          for (const prev of mains) {
+            const prevPlan = planFor(prev, prev.used_for);
+            const prevName = accountName(prev, endpoints.data?.find((e) => e.id === prev.kind), t);
+            if (await acts.failing(prev.name, prevPlan)) {
+              push({ message: t("ai_accounts.main_made_not_kept", { name: shown, previous: prevName }) });
+            } else {
+              await acts.save(
+                (fingerprint) => api.changeAccount(prev.name, { fingerprint, backup: Object.fromEntries(prevPlan) }),
+                t("ai_accounts.main_made_kept", { name: shown, previous: prevName }),
+              );
+            }
+          }
+        }
+        await client.invalidateQueries({ queryKey: ["ai-accounts"] });
+        drawer.onAdded();
+        return;
+      }
+      await afterSave(saved, { message: t("welcome.ai.added", { name: accountId }) });
       await client.invalidateQueries({ queryKey: ["ai-accounts"] });
       void test();
     } catch (err) {
@@ -391,7 +507,9 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                 </div>
               );
             })}
-            <div className="kinds kind-grid">{services.map(kindChoice)}</div>
+            <div className="kinds kind-grid" ref={firstKind}>
+              {services.map(kindChoice)}
+            </div>
             {apps.length > 0 && (
               <div role="group" className="kind-group" aria-labelledby="ai-apps-title">
                 <h4 id="ai-apps-title">{t("welcome.ai.apps")}</h4>
@@ -696,18 +814,65 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                   {t("welcome.ai.data_internal_note")}
                 </p>
               </fieldset>
-              <label className="check-line">
-                <input type="checkbox" checked={useForWork} onChange={(e) => setUseForWork(e.target.checked)} />
-                <span>{t("welcome.ai.everyday")}</span>
-              </label>
+              {drawer ? (
+                <>
+                  <div className="field">
+                    <label htmlFor="ai-label">{t("ai_add.name")}</label>
+                    <input
+                      id="ai-label"
+                      type="text"
+                      value={shownLabel}
+                      autoComplete="off"
+                      aria-describedby="ai-label-hint"
+                      onChange={(e) => {
+                        setLabelText(e.target.value);
+                        setLabelTouched(true);
+                      }}
+                    />
+                    <p className="hint" id="ai-label-hint">
+                      {t("ai_add.name_hint")}
+                    </p>
+                  </div>
+                  <fieldset className="details">
+                    <legend>{t("ai_add.for")}</legend>
+                    {(["work", "backup", "none"] as const)
+                      .filter((choice) => choice !== "backup" || mains.length > 0)
+                      .map((choice) => (
+                        <label key={choice} className="radio kind-choice">
+                          <input type="radio" name="ai-for" value={choice} checked={chosenFor === choice} onChange={() => setForWhat(choice)} />
+                          <span>
+                            <strong>{t(`ai_add.for.${choice}`)}</strong>
+                            <span className="hint block">
+                              {choice === "work"
+                                ? mains.length
+                                  ? t("ai_add.for.work_note", { main: mainName })
+                                  : t("ai_add.for.work_note_first")
+                                : choice === "backup"
+                                  ? checkUsd == null
+                                    ? t("ai_add.for.backup_note_free", { main: mainName })
+                                    : t("ai_add.for.backup_note", { main: mainName, amount: money(checkUsd) })
+                                  : t("ai_add.for.none_note")}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                  </fieldset>
+                </>
+              ) : (
+                <label className="check-line">
+                  <input type="checkbox" checked={useForWork} onChange={(e) => setUseForWork(e.target.checked)} />
+                  <span>{t("welcome.ai.everyday")}</span>
+                </label>
+              )}
               <details className="more-options advanced">
                 <summary>{t("welcome.ai.advanced")}</summary>
+                {!drawer && (
                 <div className="field">
                   <label htmlFor="ai-name">{t("welcome.ai.name")}</label>
                   <input
                     id="ai-name"
                     type="text"
-                    value={accountName}
+                    value={accountId}
                     autoComplete="off"
                     aria-invalid={nameBad ? true : undefined}
                     aria-describedby="ai-name-hint"
@@ -720,6 +885,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                     {t("welcome.ai.name_hint")}
                   </p>
                 </div>
+                )}
                 {takesAddress(kind) && !asksAddress(kind) && (
                   <div className="field">
                     <label htmlFor="ai-address-fixed">{t("welcome.ai.address")}</label>
@@ -745,20 +911,42 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                   </div>
                 )}
               </details>
+              {overLimit && askedGo && checkUsd != null && (
+                <p className="hint" role="alert">
+                  {t("ai_add.over", { amount: money(checkUsd), limit: money(confirmAbove) })}
+                </p>
+              )}
               {problem && (
                 <p className="problem-note" role="alert">
                   {problem}
                 </p>
               )}
               <div className="row-end">
-                <button type="button" className="btn primary" disabled={!ready} onClick={() => void add()}>
-                  {t(busy ? "welcome.ai.adding" : "welcome.ai.add")}
+                {drawer && (
+                  <button type="button" className="btn quiet" disabled={busy} onClick={drawer.onCancel}>
+                    {t("ai_add.cancel")}
+                  </button>
+                )}
+                <button type="button" className="btn primary" disabled={!ready} onClick={addOrAsk}>
+                  {drawer
+                    ? busy
+                      ? t("ai_add.adding")
+                      : chosenFor === "none"
+                        ? t("ai_add.add")
+                        : checkUsd == null
+                          ? t("ai_add.add_check")
+                          : overLimit && askedGo
+                            ? t("ai_add.go_ahead", { amount: money(checkUsd) })
+                            : t("ai_add.add_check_cost", { amount: money(checkUsd) })
+                    : t(busy ? "welcome.ai.adding" : "welcome.ai.add")}
                 </button>
               </div>
             </>
           )}
         </form>
       )}
+      {!drawer && (
+        <>
       <AiAccounts local={props.local} level={4} />
       <div className="guide-test">
         {canTest && (
@@ -782,6 +970,8 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
           {testProblem && <p className="problem-note">{testProblem}</p>}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

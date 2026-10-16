@@ -66,6 +66,7 @@ class Section:
 def sections(store: Store, cfg: Config, today: date) -> list[Section]:
     people = People(store, cfg)
     projects = {p.id: p.data["name"] for p in store.read().list("project")}
+    project_links = {p.id: p.data.get("links", []) for p in store.read().list("project")}
     by_person: dict[str, Section] = {}
 
     def section(pid: str) -> Section:
@@ -89,6 +90,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                 "links": d.get("links", []),
                 "kind": d["kind"],
                 "status": d["status"],
+                "project_name": ", ".join(projects[p] for p in d.get("projects", []) if p in projects),
                 "sent": sent.isoformat() if sent else None,
                 "waiting_days": waiting,
                 "chase_due": d["status"] == "sent" and follow_up_due(cfg, today, waiting_days=waiting),
@@ -115,6 +117,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                     "due": d.get("due"),
                     "project": d.get("project"),
                     "project_name": projects.get(d.get("project"), ""),
+                    "links": project_links.get(d.get("project"), []),
                     "told": told,
                     "told_days": told_days,
                     "followed_up": last_chase,

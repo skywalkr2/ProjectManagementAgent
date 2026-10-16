@@ -6,3 +6,4 @@
   font-size: var(--text-sm); line-height: var(--lh-sm);
 }
 .text { margin: 0; min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+.actions { display: flex; align-items: center; gap: var(--space-1); flex: none; margin-left: auto; }

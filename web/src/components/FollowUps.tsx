@@ -1,10 +1,13 @@
 // Follow-ups by person (design 7.5): the PM first (decisions and their own actions), then everyone A to Z, each with
 // one clean message to copy, then mark sent. The message can be edited where it is shown; what is marked sent is the box's text.
+// The same follow-ups can be shown as a table (Message | Table) and copied as one: as an HTML table for mail and chat, or as
+// tab-separated cells for a spreadsheet. The table is on screen before anything is copied, and no AI run makes it.
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day } from "../lib/dates";
+import { day, localDate, monthDay } from "../lib/dates";
+import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
 import { useToasts } from "../lib/toasts";
@@ -19,7 +22,10 @@ import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
+import { Button } from "../ui/Button";
+import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
+import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
 
 type Filter = "send" | "waiting";
 const FILTERS: Filter[] = ["send", "waiting"];
@@ -265,11 +271,13 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   const [open, setOpen] = useState(!!props.open);
   const [draft, setDraft] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [view, setView] = useState<"message" | "table">("message");
   const message = draft ?? s.message;
   const questions = toSendQuestions(s);
   const actions = toSendActions(s);
 
   const edit = () => {
+    setView("message");
     setOpen(true);
     window.setTimeout(() => area.current?.focus(), 0);
   };
@@ -295,6 +303,67 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     push({ message: t("toast.copied") });
   };
 
+  // The table is what the message holds, in rows: its words come from the sheet and nothing is added to it.
+  const words: TableWords = {
+    project: t("followups.table.project"),
+    action: t("followups.table.action"),
+    question: t("followups.table.question"),
+    due: t("followups.table.due"),
+    asked: t("followups.table.asked"),
+    link: t("followups.table.link"),
+    update: t("followups.table.update"),
+    answer: t("followups.table.answer"),
+    notSent: t("followups.table.not_sent"),
+    noLink: t("followups.table.no_link"),
+    overdue: (date) => t("followups.table.overdue", { date }),
+    due_day: day,
+    asked_day: monthDay,
+  };
+  const tables = tablesOf(s, words, localDate(new Date()));
+  const preview = useRef<HTMLDivElement>(null);
+  // If the browser won't copy, the table on screen is selected so the person can copy it by hand.
+  const blocked = () => {
+    setCopied(false);
+    const shown = preview.current;
+    if (shown) {
+      const range = document.createRange();
+      range.selectNodeContents(shown);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+    }
+    push({ message: t("toast.copy_blocked") });
+  };
+  /** Copies the table as HTML (with the tab-separated cells as its plain text), for mail and chat. */
+  const copyTable = async () => {
+    if (!tables.length) return;
+    try {
+      if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) throw new Error("no rich copy");
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([toHtml(tables, words)], { type: "text/html" }),
+          "text/plain": new Blob([toTsv(tables, words)], { type: "text/plain" }),
+        }),
+      ]);
+    } catch {
+      blocked();
+      return;
+    }
+    setCopied(true);
+    push({ message: t("toast.copied_table") });
+  };
+  /** Copies the table as tab-separated cells with full web addresses, for a spreadsheet. */
+  const copySheet = async () => {
+    if (!tables.length) return;
+    try {
+      await navigator.clipboard.writeText(toTsv(tables, words));
+    } catch {
+      blocked();
+      return;
+    }
+    setCopied(true);
+    push({ message: t("toast.copied_sheet") });
+  };
+
   const markSent = async () => {
     if (!message.trim()) return;
     const result = await act(
@@ -310,7 +379,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     }
   };
 
-  const primary = () => void (copied ? markSent() : copy());
+  const primary = () => void (copied ? markSent() : view === "table" ? copyTable() : copy());
   const menu: MenuAction[] = [
     { id: "edit", label: t("followups.edit"), run: edit },
     { id: "mark-sent", label: t("followups.mark_sent"), run: () => void markSent() },
@@ -318,7 +387,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   useRowKeys(ref, {
     toggle: () => setOpen((v) => !v),
     primary,
-    copy: () => void copy(),
+    copy: () => void (view === "table" ? copyTable() : copy()),
     edit,
   });
 
@@ -338,45 +407,70 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
       </div>
       {open && (
         <div className="body">
-          <div className="what" id={`in-${s.person}`}>
-            {t("followups.in_message")}
-          </div>
-          <ul className="plain-list" aria-labelledby={`in-${s.person}`}>
-            {questions.map((q) => (
-              <li key={q.id}>
-                <span className="title">{q.title}</span>
-              </li>
-            ))}
-            {actions.map((a) => (
-              <li key={a.id}>
-                <span className="title">{a.text}</span>
-                {actionMeta(a, t) && <span className="meta">{actionMeta(a, t)}</span>}
-              </li>
-            ))}
-          </ul>
-          <div className="message">
-            <label className="hint" htmlFor={`msg-${s.person}`}>
-              {t("followups.message_label", { name: s.name })}
-            </label>
-            <textarea
-              id={`msg-${s.person}`}
-              className="msg"
-              ref={area}
-              value={message}
-              onChange={(e) => setDraft(e.target.value)}
-            />
-            <div className="row-end">
-              <span className="hint">{t("followups.clean_copy")}</span>
-              {draft !== null && (
-                <button type="button" className="btn quiet" onClick={() => setDraft(null)}>
-                  {t("followups.reset")}
-                </button>
-              )}
-              <button type="button" className="btn primary" onClick={primary}>
-                {copied ? t("followups.mark_sent") : t("followups.copy_message")}
-              </button>
-            </div>
-          </div>
+          <SegmentedControl
+            label={t("followups.view")}
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "message", label: t("followups.view.message") },
+              { value: "table", label: t("followups.view.table") },
+            ]}
+          />
+          {view === "table" ? (
+            <>
+              <div ref={preview}>
+                <FollowUpTables tables={tables} name={s.name} noLink={words.noLink} />
+              </div>
+              <div className={tableBar}>
+                <Button variant="primary" disabled={!tables.length} onClick={() => void copyTable()}>
+                  {t("followups.copy_table")}
+                </Button>
+                <Button disabled={!tables.length} onClick={() => void copySheet()}>
+                  {t("followups.copy_sheet")}
+                </Button>
+                <p className={tableHint}>{t("followups.copy_table_hint")}</p>
+                <Button variant={copied ? "primary" : "secondary"} onClick={() => void markSent()}>
+                  {t("followups.mark_sent")}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="what" id={`in-${s.person}`}>
+                {t("followups.in_message")}
+              </div>
+              <ul className="plain-list" aria-labelledby={`in-${s.person}`}>
+                {questions.map((q) => (
+                  <li key={q.id}>
+                    <span className="title">{q.title}</span>
+                  </li>
+                ))}
+                {actions.map((a) => (
+                  <li key={a.id}>
+                    <span className="title">{a.text}</span>
+                    {actionMeta(a, t) && <span className="meta">{actionMeta(a, t)}</span>}
+                  </li>
+                ))}
+              </ul>
+              <div className="message">
+                <label className="hint" htmlFor={`msg-${s.person}`}>
+                  {t("followups.message_label", { name: s.name })}
+                </label>
+                <textarea id={`msg-${s.person}`} className="msg" ref={area} value={message} onChange={(e) => setDraft(e.target.value)} />
+                <div className="row-end">
+                  <span className="hint">{t("followups.clean_copy")}</span>
+                  {draft !== null && (
+                    <button type="button" className="btn quiet" onClick={() => setDraft(null)}>
+                      {t("followups.reset")}
+                    </button>
+                  )}
+                  <button type="button" className="btn primary" onClick={primary}>
+                    {copied ? t("followups.mark_sent") : t("followups.copy_message")}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </li>

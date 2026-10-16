@@ -128,6 +128,23 @@ def test_send_back_queues_a_new_request(api):
     assert {r.data["task"] for r in queued} == {"notes", "learn-correction"} and new in {r.id for r in queued}
 
 
+def test_a_followup_row_names_its_project_and_carries_its_pages_for_the_copied_table(api):
+    client, base, _ = api
+    reader = client.app.state.store.read()
+    names = {p.id: p.data["name"] for p in reader.list("project")}
+    links = {p.id: p.data.get("links", []) for p in reader.list("project")}
+    sections = client.get(f"{base}/followups").json()
+    for q in (q for s in sections for q in s["questions"]):
+        record = reader.get("question", q["id"]).data
+        assert q["project_name"] == ", ".join(names[p] for p in record.get("projects", []) if p in names)
+        assert q["links"] == [dict(x) for x in record.get("links", [])]
+    seen = [a for s in sections for a in s["actions"]]
+    assert seen
+    for a in seen:
+        record = reader.get("action", a["id"]).data
+        assert a["links"] == [dict(x) for x in links.get(record.get("project"), [])]
+
+
 def test_followups_put_the_pm_first_and_mark_sent_clears_a_person(api):
     client, base, _ = api
     sections = client.get(f"{base}/followups").json()
