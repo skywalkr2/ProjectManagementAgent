@@ -2071,7 +2071,12 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   screen, in the installers and in the docs comes from one place; internal names (the package, the command, the add-on
   entry point, the environment prefix) change, if at all, in phase C's plugin API release, so add-on builders adapt
   once. Icons: the app icon for macOS and Windows at every size, a one-color menu bar and tray icon, and the browser tab
-  icon, from the designer.
+  icon, from the designer. *Direction chosen 2026-10-17: "Reginald's bow", a cream thimble with a deep red bow tie and a
+  gold rim on a deep red tile (concept: `docs/design/brand/icon-concept-reginalds-bow.webp`, an image-generator sketch,
+  not a final file). The final set is redrawn as vector art: one consistent bow size and position at every size, the
+  macOS tile on Apple's icon grid with its margin, no extra border on the dark version, dimples only at 512 and above,
+  the bare silhouette with a white bow notch at 16, filled shapes for the menu bar and tray, a Windows .ico (16, 24,
+  32, 48, 256) and the browser tab icon.*
 - [ ] **Nothing made-up ships** (owner, 2026-10-16: "I want it to come with all the capabilities but without all the
   nonsense demo setups that just make things confusing. The user can addon during setup"): the installed app has no
   sandbox command, no fictional workspaces and no example add-on; the first launch is the walkthrough on an empty
