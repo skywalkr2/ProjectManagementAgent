@@ -1711,6 +1711,8 @@ all the updates done"); the message then gives the update commands and a walkthr
    repeating the chip, the rail's to-dos as checkboxes, meta lines that start with pasted text); then the Settings
    rework (sections down the side so AI accounts is its own page, changes saved as made with Undo, "Changed · Reset",
    help beside the form; the owner: "i dont really see much different and the save button never seems to be active").
+   The screen wording review (`docs/project/wording-review-2026-10.md`) is applied in this wave by its triage, with the
+   browser tests updated in the same change, and every count it marks is checked so that zero never renders.
 2. **Wave 4, records:** Projects and People as their own tables with detail panes, record pages, forms in drawers (the
    two nav buttons that open one screen), the series page (30), the fact's source label (29), held lines (28),
    questions after a move grouped (27), Completed as a place, P13 ("Add a person" inside the owner list) and P14 (a home

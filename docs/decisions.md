@@ -98,6 +98,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   the bytes themselves when it is wired in (open promise P19), and the classifier also reads that printed form back. Drafted with an outside assistant; here a plain
   authentication failure became its own kind (check the user name and password, or make an app password) instead of
   "unknown", and the phrases moved to a YAML data file.
+- **Also (2026-10-17): the screen wording review and its triage.** An outside review of all 2,308 screen wording
+  entries is kept with the main session's triage (`docs/project/wording-review-2026-10.md`) and applied in phase B
+  wave 3. Kept: shorter text, one name per thing ("to-do", "calendar event", "Add-ons"), spelled-out abbreviations,
+  plain words for internal terms, and a check of 110 counts so that zero never renders. Rejected: "Approve" for
+  starting paid AI work (approval stays the yes on exact outward content), new names for the data levels, "work" for
+  workspace, "person responsible" for owner, and "Download" for working copies.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
