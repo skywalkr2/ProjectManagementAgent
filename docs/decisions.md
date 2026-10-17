@@ -72,6 +72,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   moving it to the last day and know nothing of business days. Drafted with an outside assistant; a bill moved
   forward from just before the window, onto its first day, was dropped and is now kept (found by checking that two
   halves of a window give the same dates as the whole).
+- **Also (2026-10-17): where the installed app keeps its data, and not roaming on Windows.** `engine/app_dirs.py`
+  computes the data, logs, add-ons and cache folders for macOS (Application Support, Logs, Caches), Windows and Linux
+  (the XDG folders), never inside the app's own install folder. Changed from the phase I plan: on Windows the data
+  goes to local AppData, not roaming, because a company may redirect the roaming folder to a network share or copy
+  it at sign-out, and SQLite's own documentation warns that a database on a network share can be corrupted; two
+  computers already share a workspace through its synced folder. **Impact:** phase I's data-folder item (roadmap)
+  now says local AppData. Drafted with an outside assistant.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

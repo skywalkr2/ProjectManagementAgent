@@ -2116,8 +2116,11 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   replaces phase B's "A launcher for people who never open a terminal".
 - [ ] **The data where each system keeps app data:** the workspace, its private folder, backups' defaults and logs go to
   the system's own place: on macOS the person's Application Support folder (logs in their Logs folder), on Windows their
-  roaming AppData folder (logs in local AppData). The app's location is never written to. Where the folder is stays a
-  setting (`cockpit init` and the walkthrough can pick another), and uninstalling never deletes the person's data.
+  local AppData folder, never the roaming one, which a company may put on a network share where a database's locks
+  are unreliable (logs and cache beside the data, each in its own folder). The app's location is never written to.
+  Where the folder is stays a setting (`cockpit init` and the walkthrough can pick another), and uninstalling never
+  deletes the person's data. The folders are computed by `engine/app_dirs.py` (`tests/test_app_dirs.py`); nothing
+  uses it until phase I.
 - [ ] **Opening the app starts it:** the app starts the local server on loopback, opens the person's browser at it, and
   shows a menu bar (macOS) or tray (Windows) item with Open, Restart (only when one is waiting, per the restart rule) and
   Quit. A second launch opens the running one instead of starting another. The first launch lands in the walkthrough on
