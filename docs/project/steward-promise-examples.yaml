@@ -1,0 +1,790 @@
+# Promise examples for phase S's evaluation cases (2026-10-17). Drafted with an outside assistant at the owner's
+# request and reviewed: 120 items (34 promises by the person, 35 to the person, 31 not promises, 20 resolutions, four of
+# each kind); every resolution points to the right earlier item and owner (checked by script). Review changes: item 30,
+# a promise to hold back, is not a promise to track. Notes for turning them into cases: each needs a received date and
+# starting records (the earlier promise for a resolution); vague dates stay as written and show as "no date" (TBD);
+# "non_answer" on the person's own promise means the message doesn't keep it, and it stays open; keeping a
+# draft confidential (item 64) is an ongoing promise made to the person, with no deadline, shown with no date.
+# Fictional promise-tracking examples. All addresses use example.com.
+# User identity: Rowan (rowan@example.com). External promises are addressed to Rowan.
+# resolves.item is the one-based position of an earlier item in this list.
+# Resolution types partial and non_answer leave the earlier obligation open.
+# Relative/vague dates are preserved because no message timestamp is supplied.
+# For two promises, due is a list of action/due pairs; otherwise a string or null.
+# owner is null for non-promises, including quoted earlier commitments.
+- text: Mira, I'll send the proposal by November 6, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-06'
+  resolves: null
+  why: Explicit commitment and deadline.
+- text: I'll deliver the draft to Theo by November 10, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-10'
+  resolves: null
+  why: Specific promised delivery.
+- text: Nessa, I'll finish the brochure by November 12, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-12'
+  resolves: null
+  why: Work completion is promised.
+- text: I'll send Oren the logo files and usage guide by November 13, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-13'
+  resolves: null
+  why: Two deliverables share one deadline.
+- text: Liora, I'll confirm whether the £800 quote is approved by November 9, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-09'
+  resolves: null
+  why: A decision response is promised, not approval itself.
+- text: I'll call Ansel on November 16, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-16'
+  resolves: null
+  why: Explicit promised call.
+- text: I'll book the studio for November 20, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: null
+  resolves: null
+  why: The booking date is stated; the deadline for making it is not.
+- text: I promise to return Zella's recorder by November 18, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-18'
+  resolves: null
+  why: Explicit return commitment.
+- text: I'll send the invoice to Bram on November 19, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-19'
+  resolves: null
+  why: Explicit scheduled action.
+- text: I've committed to sending Iona the analysis by November 23, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-23'
+  resolves: null
+  why: A commitment is acknowledged.
+- text: I'll email the two sample layouts to Pella by November 24, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-24'
+  resolves: null
+  why: Both samples are promised.
+- text: I'll send you the budget by November 25, 2026, Varo.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-25'
+  resolves: null
+  why: Explicit delivery commitment.
+- text: I'll pick up Edda's parcel on November 26, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-26'
+  resolves: null
+  why: Personal-life commitment.
+- text: I'll transfer the final artwork to Jori by November 27, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-27'
+  resolves: null
+  why: Final delivery is promised.
+- text: I'll send Soren the research notes by November 30, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-11-30'
+  resolves: null
+  why: Explicit delivery commitment.
+- text: I'll send the revised outline early next week, Mira.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: early next week
+  resolves: null
+  why: Vague relative deadline; do not invent a calendar date.
+- text: I'll get back to Theo after the workshop.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: after the workshop
+  resolves: null
+  why: Event-relative commitment needs workshop context.
+- text: Nessa, you have my word that I'll review it.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: null
+  resolves: null
+  why: Firm commitment without a due date.
+- text: If the committee approves, I'll send the contract to Oren on Friday.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: Friday
+  resolves: null
+  why: Conditional commitment; activate only if committee approval occurs.
+- text: Provided the deposit arrives, I'll reserve the venue for Liora tomorrow.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: tomorrow
+  resolves: null
+  why: Conditional on receipt of deposit.
+- text: I'll send Ansel the estimate when the measurements arrive.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: when the measurements arrive
+  resolves: null
+  why: Action depends on a future event.
+- text: Zella, I'll proofread it tonight unless you withdraw the draft.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: tonight
+  resolves: null
+  why: Commitment has an explicit cancellation condition.
+- text: I'll send Bram the proposal Friday and the invoice Monday.
+  label: promise_by_me
+  owner: rowan@example.com
+  due:
+  - action: send proposal
+    due: Friday
+  - action: send invoice
+    due: Monday
+  resolves: null
+  why: Two distinct commitments by the same owner.
+- text: I'll call Iona tomorrow and deliver her report by November 30, 2026.
+  label: promise_by_me
+  owner: rowan@example.com
+  due:
+  - action: call Iona
+    due: tomorrow
+  - action: deliver report
+    due: '2026-11-30'
+  resolves: null
+  why: Two actions with different deadlines.
+- text: Pella, I can take responsibility for sending the minutes; I'll do it by lunch.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: by lunch
+  resolves: null
+  why: Capability wording is followed by a clear commitment.
+- text: Yes, Varo, I'll send the missing attachment now.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: now
+  resolves: null
+  why: Acceptance includes an immediate action.
+- text: 'Note to self: return Edda''s library book by December 2, 2026.'
+  label: promise_by_me
+  owner: rowan@example.com
+  due: '2026-12-02'
+  resolves: null
+  why: Self-assigned concrete task.
+- text: I've agreed to collect Jori from the station tomorrow evening.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: tomorrow evening
+  resolves: null
+  why: Personal commitment with relative timing.
+- text: Soren, I'll review the first chapter, but I cannot commit to the rest.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: null
+  resolves: null
+  why: Promise covers the first chapter only.
+- text: I won't send Mira the draft until she approves the outline.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: A promise to hold back gives nothing to do or wait for; the open question is Mira's approval, if asked.
+- text: I'll make sure Theo receives the handover before his leave starts.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: before his leave starts
+  resolves: null
+  why: Firm delivery promise with an event-relative deadline.
+- text: Nessa, I'll try the new export settings tonight and tell you what happens.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: tonight
+  resolves: null
+  why: Promises an attempt and report, not a successful export.
+- text: I'll reply to Oren within two working days of receiving the files.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: within two working days of receiving the files
+  resolves: null
+  why: Conditional timing must remain tied to file receipt.
+- text: Liora, I'll bring both printed copies on Thursday.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: Thursday
+  resolves: null
+  why: Concrete delivery despite informal wording.
+- text: Fine, Ansel, I'll actually send the spreadsheet by five; no more jokes.
+  label: promise_by_me
+  owner: rowan@example.com
+  due: by five
+  resolves: null
+  why: Explicit sincere commitment despite irritated tone.
+- text: Rowan, I'll send our feedback by Tuesday.
+  label: promise_to_me
+  owner: mira@example.com
+  due: Tuesday
+  resolves: null
+  why: External sender promises feedback.
+- text: I'll send you the signed agreement by November 6, 2026, Rowan.
+  label: promise_to_me
+  owner: theo@example.com
+  due: '2026-11-06'
+  resolves: null
+  why: External sender promises a signed document.
+- text: Rowan, I'll deliver the two illustrations by November 10, 2026.
+  label: promise_to_me
+  owner: nessa@example.com
+  due: '2026-11-10'
+  resolves: null
+  why: Two illustrations are promised together.
+- text: I'll confirm the interview time by November 11, 2026.
+  label: promise_to_me
+  owner: oren@example.com
+  due: '2026-11-11'
+  resolves: null
+  why: Sender promises confirmation.
+- text: I'll send the survey results to you by November 12, 2026.
+  label: promise_to_me
+  owner: liora@example.com
+  due: '2026-11-12'
+  resolves: null
+  why: External delivery commitment.
+- text: I'll return your camera by November 13, 2026, Rowan.
+  label: promise_to_me
+  owner: ansel@example.com
+  due: '2026-11-13'
+  resolves: null
+  why: Personal return commitment.
+- text: I'll send you the receipts by November 16, 2026.
+  label: promise_to_me
+  owner: zella@example.com
+  due: '2026-11-16'
+  resolves: null
+  why: External delivery commitment.
+- text: I'll bring your keys back on November 17, 2026.
+  label: promise_to_me
+  owner: bram@example.com
+  due: '2026-11-17'
+  resolves: null
+  why: Personal delivery commitment.
+- text: I'll check the totals and reply by November 18, 2026.
+  label: promise_to_me
+  owner: iona@example.com
+  due: '2026-11-18'
+  resolves: null
+  why: Checking and replying are promised.
+- text: I'll supply the portrait and biography by November 19, 2026.
+  label: promise_to_me
+  owner: pella@example.com
+  due: '2026-11-19'
+  resolves: null
+  why: Two components share a deadline.
+- text: I'll confirm whether the purchase is authorized by November 20, 2026.
+  label: promise_to_me
+  owner: varo@example.com
+  due: '2026-11-20'
+  resolves: null
+  why: Decision confirmation is promised.
+- text: I'll send the accessibility review to you by November 23, 2026.
+  label: promise_to_me
+  owner: edda@example.com
+  due: '2026-11-23'
+  resolves: null
+  why: External review delivery.
+- text: I'll send you the venue address by November 24, 2026.
+  label: promise_to_me
+  owner: jori@example.com
+  due: '2026-11-24'
+  resolves: null
+  why: Specific information is promised.
+- text: I'll send you both data files by November 25, 2026.
+  label: promise_to_me
+  owner: soren@example.com
+  due: '2026-11-25'
+  resolves: null
+  why: Both files are owed.
+- text: I'll send the corrected contract by November 26, 2026.
+  label: promise_to_me
+  owner: mira@example.com
+  due: '2026-11-26'
+  resolves: null
+  why: Corrected document is promised.
+- text: I'll get you an answer early next week.
+  label: promise_to_me
+  owner: theo@example.com
+  due: early next week
+  resolves: null
+  why: Vague due phrase must remain unresolved.
+- text: I'll return the samples after the exhibition.
+  label: promise_to_me
+  owner: nessa@example.com
+  due: after the exhibition
+  resolves: null
+  why: Event-relative promise.
+- text: You can count on me to review your application, Rowan.
+  label: promise_to_me
+  owner: oren@example.com
+  due: null
+  resolves: null
+  why: Firm promise without timing.
+- text: If the board approves, I'll release the photographs Friday.
+  label: promise_to_me
+  owner: liora@example.com
+  due: Friday
+  resolves: null
+  why: Conditional promise; board approval is not established.
+- text: Once I receive the keys, I'll inspect the room for you.
+  label: promise_to_me
+  owner: ansel@example.com
+  due: once I receive the keys
+  resolves: null
+  why: Explicit dependency before inspection.
+- text: I'll send the dimensions tomorrow if the site is accessible.
+  label: promise_to_me
+  owner: zella@example.com
+  due: tomorrow
+  resolves: null
+  why: Conditional on site access.
+- text: I'll call you Friday and send the estimate Monday.
+  label: promise_to_me
+  owner: bram@example.com
+  due:
+  - action: call Rowan
+    due: Friday
+  - action: send estimate
+    due: Monday
+  resolves: null
+  why: Two separate promises by one sender.
+- text: I'll return your charger tonight and email the notes tomorrow.
+  label: promise_to_me
+  owner: iona@example.com
+  due:
+  - action: return charger
+    due: tonight
+  - action: email notes
+    due: tomorrow
+  resolves: null
+  why: Personal and work promises have different due times.
+- text: Yes, Rowan, I'll handle the booking by noon.
+  label: promise_to_me
+  owner: pella@example.com
+  due: by noon
+  resolves: null
+  why: Explicit acceptance and deadline.
+- text: I'll make sure you have the slides before your presentation.
+  label: promise_to_me
+  owner: varo@example.com
+  due: before your presentation
+  resolves: null
+  why: Firm promise tied to another event.
+- text: I'll take a look tonight, though I can't promise a fix.
+  label: promise_to_me
+  owner: edda@example.com
+  due: tonight
+  resolves: null
+  why: Commits to inspection, not repair.
+- text: I'll ask the venue manager and report back within two working days.
+  label: promise_to_me
+  owner: jori@example.com
+  due: within two working days
+  resolves: null
+  why: Promises both inquiry and report.
+- text: I'll send the first chapter; the appendix isn't included.
+  label: promise_to_me
+  owner: soren@example.com
+  due: null
+  resolves: null
+  why: Promise explicitly excludes the appendix.
+- text: I'll keep your draft confidential until you publish it.
+  label: promise_to_me
+  owner: mira@example.com
+  due: until you publish it
+  resolves: null
+  why: Ongoing confidentiality commitment, not a delivery task.
+- text: I'll send an update even if the review isn't finished.
+  label: promise_to_me
+  owner: theo@example.com
+  due: null
+  resolves: null
+  why: Update is promised regardless of review completion.
+- text: I'll cover the school pickup for you Thursday.
+  label: promise_to_me
+  owner: nessa@example.com
+  due: Thursday
+  resolves: null
+  why: Personal-life commitment.
+- text: I'll reply as soon as I've spoken to the surveyor.
+  label: promise_to_me
+  owner: oren@example.com
+  due: as soon as I've spoken to the surveyor
+  resolves: null
+  why: Reply depends on a conversation.
+- text: I'll resend the link now, Rowan.
+  label: promise_to_me
+  owner: liora@example.com
+  due: now
+  resolves: null
+  why: Immediate external promise.
+- text: I promise I'll replace the broken mug.
+  label: promise_to_me
+  owner: ansel@example.com
+  due: null
+  resolves: null
+  why: Firm promise without a deadline.
+- text: I'll send the reference number by close of business.
+  label: promise_to_me
+  owner: zella@example.com
+  due: close of business
+  resolves: null
+  why: Relative business-time deadline needs context.
+- text: I hope to send Mira the outline Friday.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Hope is not a firm commitment.
+- text: We should send Theo a reminder.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Suggestion, not an accepted assignment.
+- text: Maybe Friday for Nessa's draft?
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Tentative timing, not a promise.
+- text: I might review Oren's notes tomorrow.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Possibility, not commitment.
+- text: I'd love to help Liora sometime.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Polite willingness without a concrete commitment.
+- text: Thanks, Ansel, much appreciated.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Polite acknowledgment creates no task.
+- text: Sounds good, Zella.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Ambiguous acknowledgment does not establish a new commitment.
+- text: Can you send Bram the agenda Monday?
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Request; Rowan has not accepted it.
+- text: Would Iona be able to review this?
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Question about capability, not a promise.
+- text: Pella could probably finish by Thursday.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Speculation about another person.
+- text: The target is Friday, but nobody has agreed to it.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Explicitly unaccepted target.
+- text: I'm thinking about booking a room for Varo.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Intention under consideration.
+- text: I planned to call Edda yesterday, but never agreed to do so.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Past intention without a commitment.
+- text: Let's discuss whether Jori should write the summary.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Discussion proposal, not assignment acceptance.
+- text: Soren's deadline would be Monday if we chose that option.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Hypothetical plan without commitment.
+- text: Great, I'll just clone myself and finish forty reports tonight.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Sarcastic impossibility, not a literal promise.
+- text: Sure, I'll deliver the moon by breakfast, shall I?
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Sarcastic rhetorical question.
+- text: Because obviously I can rebuild the whole website in ten minutes.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Sarcastic capability claim, not a commitment.
+- text: 'Quoted earlier from Rowan: ''Mira, I''ll send the proposal by November 6, 2026.'''
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Quote repeats item 1; do not count it again.
+- text: 'Theo forwarded Rowan''s old line: ''I''ll deliver the draft to Theo by November 10, 2026.'''
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Forwarded quote repeats item 2; no new promise.
+- text: Mira's quoted message says, 'Rowan, I'll send our feedback by Tuesday.'
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Quoted promise from item 36 is not a second promise.
+- text: The template says, 'I'll send the report Friday'; replace that before sending.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Template text is not an actual commitment.
+- text: 'Example wording: ''I''ll call you tomorrow.'''
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Illustrative text, not a real action.
+- text: Did I promise to send Nessa the draft Friday?
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Question about history, not a new commitment.
+- text: Please don't assume I'll attend Oren's meeting.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Explicitly rejects an inference of commitment.
+- text: I can't promise Liora an answer this week.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Explicit refusal to commit.
+- text: If Ansel approves, we could perhaps start next week.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Conditional possibility, not a conditional promise.
+- text: I hope to call Zella Friday, and maybe send Bram a note Monday.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Two tentative intentions; neither is a promise.
+- text: Thanks in advance for sending the files, Iona.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Assumes a favor but supplies no evidence of acceptance.
+- text: Pella usually replies within a day.
+  label: not_a_promise
+  owner: null
+  due: null
+  resolves: null
+  why: Habit or expectation, not an individual commitment.
+- text: Mira, I've attached the proposal I promised.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 1
+    type: done
+  why: Reports delivery of the promised proposal.
+- text: Theo, the draft will arrive November 12, 2026, instead of November 10.
+  label: resolution
+  owner: rowan@example.com
+  due: '2026-11-12'
+  resolves:
+    item: 2
+    type: date_changed
+  why: Explicitly replaces the earlier deadline.
+- text: Nessa, as agreed, we no longer need the brochure, so I'm cancelling that delivery.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 3
+    type: cancelled
+  why: Explicitly cancels the earlier obligation.
+- text: Oren, the logo files are attached; the usage guide is still outstanding.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 4
+    type: partial
+  why: Only one of the promised components was delivered.
+- text: Liora, the quote looks very tidy.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 5
+    type: non_answer
+  why: Does not confirm whether the quote is approved; keep the promise open.
+- text: I called Ansel this morning and we covered the repairs.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 6
+    type: done
+  why: Explicit completion of the promised call.
+- text: Zella, I'll return the recorder on November 20, 2026, rather than November 18.
+  label: resolution
+  owner: rowan@example.com
+  due: '2026-11-20'
+  resolves:
+    item: 8
+    type: date_changed
+  why: New date supersedes the old return date.
+- text: Bram, you've waived the invoice, so I won't send one.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 9
+    type: cancelled
+  why: The invoice obligation is explicitly withdrawn.
+- text: Pella, one sample layout is attached; the second is not finished.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 11
+    type: partial
+  why: One of two promised layouts remains due.
+- text: Varo, thanks for being patient.
+  label: resolution
+  owner: rowan@example.com
+  due: null
+  resolves:
+    item: 12
+    type: non_answer
+  why: Acknowledges waiting without supplying the promised budget.
+- text: Rowan, our feedback is attached, as promised.
+  label: resolution
+  owner: mira@example.com
+  due: null
+  resolves:
+    item: 36
+    type: done
+  why: Reports fulfillment of the feedback promise.
+- text: Rowan, I'll send the signed agreement on November 9, 2026, instead of November 6.
+  label: resolution
+  owner: theo@example.com
+  due: '2026-11-09'
+  resolves:
+    item: 37
+    type: date_changed
+  why: Replaces the agreement delivery deadline.
+- text: Rowan, we have dropped the illustrations, so I won't be delivering them.
+  label: resolution
+  owner: nessa@example.com
+  due: null
+  resolves:
+    item: 38
+    type: cancelled
+  why: Explicit cancellation of the illustrations.
+- text: The interview sounds interesting, Rowan.
+  label: resolution
+  owner: oren@example.com
+  due: null
+  resolves:
+    item: 39
+    type: non_answer
+  why: Does not provide the promised interview time.
+- text: Rowan, the survey results are attached, but the regional breakdown is missing.
+  label: resolution
+  owner: liora@example.com
+  due: null
+  resolves:
+    item: 40
+    type: partial
+  why: Results are delivered incompletely; do not close the obligation.
+- text: Rowan, your camera is back in its case at your desk.
+  label: resolution
+  owner: ansel@example.com
+  due: null
+  resolves:
+    item: 41
+    type: done
+  why: Reports completion of the camera return.
+- text: Rowan, the receipts will come November 19, 2026, not November 16.
+  label: resolution
+  owner: zella@example.com
+  due: '2026-11-19'
+  resolves:
+    item: 42
+    type: date_changed
+  why: Explicit replacement of receipt delivery date.
+- text: Rowan, you said to keep the spare keys, so the return is cancelled.
+  label: resolution
+  owner: bram@example.com
+  due: null
+  resolves:
+    item: 43
+    type: cancelled
+  why: Reports withdrawal of the return obligation.
+- text: Rowan, I checked the totals, but I haven't sent you the findings yet.
+  label: resolution
+  owner: iona@example.com
+  due: null
+  resolves:
+    item: 44
+    type: partial
+  why: Checking is done; the promised substantive reply remains outstanding.
+- text: Rowan, this is a lovely portrait project.
+  label: resolution
+  owner: pella@example.com
+  due: null
+  resolves:
+    item: 45
+    type: non_answer
+  why: Neither the portrait nor biography is delivered; keep the promise open.

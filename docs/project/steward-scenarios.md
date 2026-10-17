@@ -81,3 +81,5 @@ and dates are written the British way, so the test workspace's language is `en-G
 - Scenarios 2, 14 and 15 and scenarios 1 and 14 run in sequence on the same workspace (promises that resolve).
 - Scenario 12 is a learning pair: the dismissal, then a later draft from Oren where no chase is suggested, and a draft
   from someone else where one still is.
+- `docs/project/steward-promise-examples.yaml` adds 120 labeled sentences (promises both ways, lookalikes that are not
+  promises, and resolutions of each kind) for the extraction cases; its header has the review notes.
