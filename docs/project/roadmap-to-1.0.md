@@ -2051,6 +2051,9 @@ S2. **Time and attention:**
 - [ ] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
   the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
   scheduling.
+  Free time is computed by rules (`engine/free_slots.py`, `tests/test_free_slots.py`): every calendar merged,
+  working hours and days in the person's zone across clock changes, a buffer around meetings, tentative entries
+  blocking unless counted as free; it also finds the slots for "propose a new time".
 - [ ] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
   threshold, and dismissals that stick and teach (a dismissed kind of suggestion comes back only when something
   changes). All settings with defaults.
