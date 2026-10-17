@@ -36,6 +36,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   through the publisher after the person's yes (phase S1b). Windows zone names resolve without an embedded definition;
   an unknown zone is refused, never read as floating. Drafted with an outside assistant; `icalendar` is now a runtime
   dependency.
+- **Also (2026-10-17): promise threads and the launcher's core.** 25 fictional threads with how each promise ends
+  (done, partial, a new date, cancelled, a non-answer, a condition met) join the 120 single examples as phase S
+  evaluation material; drafted with an outside assistant, one inline reply corrected to quote what was really said.
+  Checking them found that the reply splitter missed a "<name> wrote:" line, now history when quoted lines follow it.
+  The tray launcher's core (`engine/launcher.py`) is in the repository for phase I and not yet started by anything; its
+  wording, title and the address it opens come from the caller, and `pystray` and Pillow are imported only when it runs.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

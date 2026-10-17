@@ -1,0 +1,930 @@
+# Fictional promise threads for the daily steward (design 6.32, phase S2); all addresses use example.com.
+# Drafted with an outside assistant and checked by tests/test_steward_threads.py.
+# Message and promise ids are local to each thread. Due phrases stay verbatim.
+# A non_answer does not close a promise. Partial keeps its undelivered remainder open.
+# condition_met activates a conditional promise without fulfilling it; condition_state on an expected open promise
+# is met or not_met. Quoted history and signature text never create duplicate promises.
+# Bodies mention attachments as fictional evidence; no attachment files are supplied.
+- id: t01
+  subject: Alderline proposal
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: mira@example.com
+    body: "Mira, I'll send the Alderline proposal by Friday at noon.\n\n-- \nRowan"
+  - id: m2
+    from: mira@example.com
+    to: rowan@example.com
+    body: "Perfect; the budget section is the bit we need most.\n\n-- \nMira\n\nRowan <rowan@example.com> wrote:\n> Mira,\
+      \ I'll send the Alderline proposal by Friday at noon.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: mira@example.com
+    body: "The proposal is attached, including the budget section. Thanks for waiting.\n\n-- \nRowan\n\nMira <mira@example.com>\
+      \ wrote:\n> Perfect; the budget section is the bit we need most.\n> \n> -- \n> Mira\n> \n> Rowan <rowan@example.com>\
+      \ wrote:\n> > Mira, I'll send the Alderline proposal by Friday at noon.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the Alderline proposal
+    due: Friday at noon
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: done
+    why: The promised proposal is delivered.
+- id: t02
+  subject: Bracken feedback
+  messages:
+  - id: m1
+    from: theo@example.com
+    to: rowan@example.com
+    body: "I'll send our Bracken Studio feedback by Tuesday.\n\n-- \nTheo"
+  - id: m2
+    from: rowan@example.com
+    to: theo@example.com
+    body: "It's Wednesday and I haven't seen the feedback. Is there a new date?\n\n-- \nRowan\n\nTheo <theo@example.com>\
+      \ wrote:\n> I'll send our Bracken Studio feedback by Tuesday.\n> \n> -- \n> Theo"
+  - id: m3
+    from: theo@example.com
+    to: rowan@example.com
+    body: "Sorry, the review ran over. I'll send the feedback Friday morning instead.\n\n-- \nTheo\n\nRowan <rowan@example.com>\
+      \ wrote:\n> It's Wednesday and I haven't seen the feedback. Is there a new date?\n> \n> -- \n> Rowan\n> \n> Theo <theo@example.com>\
+      \ wrote:\n> > I'll send our Bracken Studio feedback by Tuesday.\n> > \n> > -- \n> > Theo"
+  promises:
+  - id: p1
+    message: m1
+    owner: theo@example.com
+    what: Send Bracken Studio feedback
+    due: Tuesday
+  expected_open_promises:
+  - promise: p1
+    owner: theo@example.com
+    what: Send Bracken Studio feedback
+    due: Friday morning
+  resolutions:
+  - message: m3
+    promise: p1
+    type: date_changed
+    why: Friday morning replaces Tuesday; the feedback is still owed.
+- id: t03
+  subject: Copper Finch launch flyer
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: nessa@example.com
+    body: "I'll finish the Copper Finch launch flyer by November 20, 2026.\n\n-- \nRowan"
+  - id: m2
+    from: nessa@example.com
+    to: rowan@example.com
+    body: "We've called off the launch. Please cancel the flyer; we don't need it.\n\n-- \nNessa\n\nRowan <rowan@example.com>\
+      \ wrote:\n> I'll finish the Copper Finch launch flyer by November 20, 2026.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: nessa@example.com
+    body: "Understood. I'll stop the flyer work.\n\n-- \nRowan\n\nNessa <nessa@example.com> wrote:\n> We've called off the\
+      \ launch. Please cancel the flyer; we don't need it.\n> \n> -- \n> Nessa\n> \n> Rowan <rowan@example.com> wrote:\n\
+      > > I'll finish the Copper Finch launch flyer by November 20, 2026.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Finish the launch flyer
+    due: November 20, 2026
+  expected_open_promises: []
+  resolutions:
+  - message: m2
+    promise: p1
+    type: cancelled
+    why: The client explicitly withdraws the deliverable.
+- id: t04
+  subject: Mossgate identity files
+  messages:
+  - id: m1
+    from: oren@example.com
+    to: rowan@example.com
+    body: "I'll send you the logo files and the usage guide by Thursday.\n\n-- \nOren"
+  - id: m2
+    from: rowan@example.com
+    to: oren@example.com
+    body: "Thanks; I need both before the handover.\n\n-- \nRowan\n\nOren <oren@example.com> wrote:\n> I'll send you the\
+      \ logo files and the usage guide by Thursday.\n> \n> -- \n> Oren"
+  - id: m3
+    from: oren@example.com
+    to: rowan@example.com
+    body: "The logo files are attached. The usage guide isn't ready yet.\n\n-- \nOren\n\nRowan <rowan@example.com> wrote:\n\
+      > Thanks; I need both before the handover.\n> \n> -- \n> Rowan\n> \n> Oren <oren@example.com> wrote:\n> > I'll send\
+      \ you the logo files and the usage guide by Thursday.\n> > \n> > -- \n> > Oren"
+  promises:
+  - id: p1
+    message: m1
+    owner: oren@example.com
+    what: Send logo files and usage guide
+    due: Thursday
+  expected_open_promises:
+  - promise: p1
+    owner: oren@example.com
+    what: Send the remaining usage guide
+    due: Thursday
+  resolutions:
+  - message: m3
+    promise: p1
+    type: partial
+    why: Logo files arrived; the guide remains due without a replacement deadline.
+- id: t05
+  subject: Fern Assembly approval
+  messages:
+  - id: m1
+    from: liora@example.com
+    to: rowan@example.com
+    body: "I'll confirm whether the £800 print quote is approved by Monday.\n\n-- \nLiora"
+  - id: m2
+    from: rowan@example.com
+    to: liora@example.com
+    body: "Monday has passed. Is the quote approved?\n\n-- \nRowan\n\nLiora <liora@example.com> wrote:\n> I'll confirm whether\
+      \ the £800 print quote is approved by Monday.\n> \n> -- \n> Liora"
+  - id: m3
+    from: liora@example.com
+    to: rowan@example.com
+    body: "The layout looks lovely, Rowan. Nice work.\n\n-- \nLiora\n\nRowan <rowan@example.com> wrote:\n> Monday has passed.\
+      \ Is the quote approved?\n> \n> -- \n> Rowan\n> \n> Liora <liora@example.com> wrote:\n> > I'll confirm whether the\
+      \ £800 print quote is approved by Monday.\n> > \n> > -- \n> > Liora"
+  promises:
+  - id: p1
+    message: m1
+    owner: liora@example.com
+    what: Confirm whether the print quote is approved
+    due: Monday
+  expected_open_promises:
+  - promise: p1
+    owner: liora@example.com
+    what: Confirm whether the print quote is approved
+    due: Monday
+  resolutions:
+  - message: m3
+    promise: p1
+    type: non_answer
+    why: Praise neither grants nor refuses approval; the promised decision remains open.
+- id: t06
+  subject: Two deliveries for Paper Orchard
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: pella@example.com
+    body: "I'll send the outline Friday and the invoice Monday.\n\n-- \nRowan"
+  - id: m2
+    from: pella@example.com
+    to: rowan@example.com
+    body: "That works. Please keep the invoice separate.\n\n-- \nPella\n\nRowan <rowan@example.com> wrote:\n> I'll send\
+      \ the outline Friday and the invoice Monday.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: pella@example.com
+    body: "The outline is attached. The invoice will follow on Monday as promised.\n\n-- \nRowan\n\nPella <pella@example.com>\
+      \ wrote:\n> That works. Please keep the invoice separate.\n> \n> -- \n> Pella\n> \n> Rowan <rowan@example.com> wrote:\n\
+      > > I'll send the outline Friday and the invoice Monday.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the outline
+    due: Friday
+  - id: p2
+    message: m1
+    owner: rowan@example.com
+    what: Send the invoice
+    due: Monday
+  expected_open_promises:
+  - promise: p2
+    owner: rowan@example.com
+    what: Send the invoice
+    due: Monday
+  resolutions:
+  - message: m3
+    promise: p1
+    type: done
+    why: Outline delivered; repeating the invoice date does not create another promise.
+- id: t07
+  subject: Borrowed recorder
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: zella@example.com
+    body: "I'll return your recorder Saturday.\n\n-- \nRowan"
+  - id: m2
+    from: zella@example.com
+    to: rowan@example.com
+    body: "I'm away Saturday. Could you keep it until Tuesday?\n\n-- \nZella\n\nRowan <rowan@example.com> wrote:\n> I'll\
+      \ return your recorder Saturday.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: zella@example.com
+    body: "Yes, I'll return it Tuesday instead.\n\n-- \nRowan\n\nZella <zella@example.com> wrote:\n> I'm away Saturday.\
+      \ Could you keep it until Tuesday?\n> \n> -- \n> Zella\n> \n> Rowan <rowan@example.com> wrote:\n> > I'll return your\
+      \ recorder Saturday.\n> > \n> > -- \n> > Rowan"
+  - id: m4
+    from: zella@example.com
+    to: rowan@example.com
+    body: "Got it back today, thanks. The case was there too.\n\n-- \nZella\n\nRowan <rowan@example.com> wrote:\n> Yes,\
+      \ I'll return it Tuesday instead.\n> \n> -- \n> Rowan\n> \n> Zella <zella@example.com> wrote:\n> > I'm away Saturday.\
+      \ Could you keep it until Tuesday?\n> > \n> > -- \n> > Zella\n> > \n> > Rowan <rowan@example.com> wrote:\n> > > I'll\
+      \ return your recorder Saturday.\n> > > \n> > > -- \n> > > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Return Zella's recorder
+    due: Saturday
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: date_changed
+    why: Rowan accepts Tuesday as the replacement.
+  - message: m4
+    promise: p1
+    type: done
+    why: The recipient confirms receipt.
+- id: t08
+  subject: Receipt bundle
+  messages:
+  - id: m1
+    from: bram@example.com
+    to: rowan@example.com
+    body: "I'll send the train and hotel receipts by close of business.\n\n-- \nBram"
+  - id: m2
+    from: rowan@example.com
+    to: bram@example.com
+    body: "Please include both so I can finish the expenses.\n\n-- \nRowan\n\nBram <bram@example.com> wrote:\n> I'll send\
+      \ the train and hotel receipts by close of business.\n> \n> -- \n> Bram"
+  - id: m3
+    from: bram@example.com
+    to: rowan@example.com
+    body: "The train receipt is attached; the hotel is still looking for theirs.\n\n-- \nBram\n\nRowan <rowan@example.com>\
+      \ wrote:\n> Please include both so I can finish the expenses.\n> \n> -- \n> Rowan\n> \n> Bram <bram@example.com> wrote:\n\
+      > > I'll send the train and hotel receipts by close of business.\n> > \n> > -- \n> > Bram"
+  - id: m4
+    from: bram@example.com
+    to: rowan@example.com
+    body: "Here's the hotel receipt as well. That should be the full set.\n\n-- \nBram\n\nBram <bram@example.com> wrote:\n\
+      > The train receipt is attached; the hotel is still looking for theirs.\n> \n> -- \n> Bram\n> \n> Rowan <rowan@example.com>\
+      \ wrote:\n> > Please include both so I can finish the expenses.\n> > \n> > -- \n> > Rowan\n> > \n> > Bram <bram@example.com>\
+      \ wrote:\n> > > I'll send the train and hotel receipts by close of business.\n> > > \n> > > -- \n> > > Bram"
+  promises:
+  - id: p1
+    message: m1
+    owner: bram@example.com
+    what: Send train and hotel receipts
+    due: close of business
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: partial
+    why: Only the train receipt arrives.
+  - message: m4
+    promise: p1
+    type: done
+    why: The final outstanding receipt arrives.
+- id: t09
+  subject: A flexible review date
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: iona@example.com
+    body: "I'll send the review early next week.\n\n-- \nRowan"
+  - id: m2
+    from: iona@example.com
+    to: rowan@example.com
+    body: "Could we make that Thursday at 3pm instead?\n\n-- \nIona\n\nRowan <rowan@example.com> wrote:\n> I'll send the\
+      \ review early next week.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: iona@example.com
+    body: "Agreed, I'll send it Thursday at 3pm.\n\n-- \nRowan\n\nIona <iona@example.com> wrote:\n> Could we make that Thursday\
+      \ at 3pm instead?\n> \n> -- \n> Iona\n> \n> Rowan <rowan@example.com> wrote:\n> > I'll send the review early next\
+      \ week.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the review
+    due: early next week
+  expected_open_promises:
+  - promise: p1
+    owner: rowan@example.com
+    what: Send the review
+    due: Thursday at 3pm
+  resolutions:
+  - message: m3
+    promise: p1
+    type: date_changed
+    why: An explicit accepted date replaces the vague phrase.
+- id: t10
+  subject: Waiting for board approval
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: varo@example.com
+    body: "If the board approves the budget, I'll send the contract Friday.\n\n-- \nRowan"
+  - id: m2
+    from: varo@example.com
+    to: rowan@example.com
+    body: "The board approved the budget this morning. Please proceed.\n\n-- \nVaro\n\nRowan <rowan@example.com> wrote:\n\
+      > If the board approves the budget, I'll send the contract Friday.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: varo@example.com
+    body: "Thanks. The contract will be with you Friday.\n\n-- \nRowan\n\nVaro <varo@example.com> wrote:\n> The board approved\
+      \ the budget this morning. Please proceed.\n> \n> -- \n> Varo\n> \n> Rowan <rowan@example.com> wrote:\n> > If the\
+      \ board approves the budget, I'll send the contract Friday.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the contract
+    due: Friday
+    condition: The board approves the budget
+  expected_open_promises:
+  - promise: p1
+    owner: rowan@example.com
+    what: Send the contract
+    due: Friday
+    condition_state: met
+  resolutions:
+  - message: m2
+    promise: p1
+    type: condition_met
+    why: Approval activates the existing conditional promise; it does not complete it.
+- id: t11
+  subject: A condition that never happens
+  messages:
+  - id: m1
+    from: edda@example.com
+    to: rowan@example.com
+    body: "If the venue approves access, I'll take the measurements tomorrow morning.\n\n-- \nEdda"
+  - id: m2
+    from: rowan@example.com
+    to: edda@example.com
+    body: "Any news from the venue?\n\n-- \nRowan\n\nEdda <edda@example.com> wrote:\n> If the venue approves access, I'll\
+      \ take the measurements tomorrow morning.\n> \n> -- \n> Edda"
+  - id: m3
+    from: edda@example.com
+    to: rowan@example.com
+    body: "They refused access, and we've dropped the measurement visit entirely.\n\n-- \nEdda\n\nRowan <rowan@example.com>\
+      \ wrote:\n> Any news from the venue?\n> \n> -- \n> Rowan\n> \n> Edda <edda@example.com> wrote:\n> > If the venue approves\
+      \ access, I'll take the measurements tomorrow morning.\n> > \n> > -- \n> > Edda"
+  promises:
+  - id: p1
+    message: m1
+    owner: edda@example.com
+    what: Take the measurements
+    due: tomorrow morning
+    condition: The venue approves access
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: cancelled
+    why: The condition failed and the visit was explicitly abandoned.
+- id: t12
+  subject: No site access yet
+  messages:
+  - id: m1
+    from: jori@example.com
+    to: rowan@example.com
+    body: "Once the keys arrive, I'll inspect the room.\n\n-- \nJori"
+  - id: m2
+    from: rowan@example.com
+    to: jori@example.com
+    body: "Have the keys arrived?\n\n-- \nRowan\n\nJori <jori@example.com> wrote:\n> Once the keys arrive, I'll inspect\
+      \ the room.\n> \n> -- \n> Jori"
+  - id: m3
+    from: jori@example.com
+    to: rowan@example.com
+    body: "Not yet. The inspection is still on once they arrive.\n\n-- \nJori\n\nRowan <rowan@example.com> wrote:\n> Have\
+      \ the keys arrived?\n> \n> -- \n> Rowan\n> \n> Jori <jori@example.com> wrote:\n> > Once the keys arrive, I'll inspect\
+      \ the room.\n> > \n> > -- \n> > Jori"
+  promises:
+  - id: p1
+    message: m1
+    owner: jori@example.com
+    what: Inspect the room
+    due: once the keys arrive
+    condition: The keys arrive
+  expected_open_promises:
+  - promise: p1
+    owner: jori@example.com
+    what: Inspect the room
+    due: once the keys arrive
+    condition_state: not_met
+  resolutions: []
+- id: t13
+  subject: Inline answers on the handover
+  messages:
+  - id: m1
+    from: soren@example.com
+    to: rowan@example.com
+    body: "I'll confirm the handover date and send the checklist by Friday.\n\n-- \nSoren"
+  - id: m2
+    from: rowan@example.com
+    to: soren@example.com
+    body: "> I'll confirm the handover date\nPlease confirm that first.\n> and send the checklist by Friday.\nI still need\
+      \ the checklist too.\n\n-- \nRowan\n\nSoren <soren@example.com> wrote:\n> I'll confirm the handover date and send\
+      \ the checklist by Friday.\n> \n> -- \n> Soren"
+  - id: m3
+    from: soren@example.com
+    to: rowan@example.com
+    body: "> Please confirm that first.\nThe handover is November 24, 2026.\n> I still need the checklist too.\nThe checklist\
+      \ isn't finished.\n\n-- \nSoren\n\nRowan <rowan@example.com> wrote:\n> > I'll confirm the handover date\n> Please\
+      \ confirm that first.\n> > and send the checklist by Friday.\n> I still need the checklist too.\n> \n> -- \n> Rowan\n\
+      > \n> Soren <soren@example.com> wrote:\n> > I'll confirm the handover date and send the checklist by Friday.\n> >\
+      \ \n> > -- \n> > Soren"
+  promises:
+  - id: p1
+    message: m1
+    owner: soren@example.com
+    what: Confirm handover date and send checklist
+    due: Friday
+  expected_open_promises:
+  - promise: p1
+    owner: soren@example.com
+    what: Send the remaining handover checklist
+    due: Friday
+  resolutions:
+  - message: m3
+    promise: p1
+    type: partial
+    why: The date is supplied inline, but the checklist remains outstanding.
+- id: t14
+  subject: An old promise quoted twice
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: mira@example.com
+    body: "I'll send the risk summary by Wednesday.\n\n-- \nRowan"
+  - id: m2
+    from: mira@example.com
+    to: rowan@example.com
+    body: "Thanks; Wednesday is fine.\n\n-- \nMira\n\nRowan <rowan@example.com> wrote:\n> I'll send the risk summary by\
+      \ Wednesday.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: mira@example.com
+    body: "The risk summary is attached.\n\n-- \nRowan\n\nMira <mira@example.com> wrote:\n> Thanks; Wednesday is fine.\n\
+      > \n> -- \n> Mira\n> \n> Rowan <rowan@example.com> wrote:\n> > I'll send the risk summary by Wednesday.\n> > \n> >\
+      \ -- \n> > Rowan"
+  - id: m4
+    from: mira@example.com
+    to: rowan@example.com
+    body: "Received, thank you. Keeping the earlier exchange below for context.\n\n-- \nMira\n\nRowan <rowan@example.com>\
+      \ wrote:\n> The risk summary is attached.\n> \n> -- \n> Rowan\n> \n> Mira <mira@example.com> wrote:\n> > Thanks; Wednesday\
+      \ is fine.\n> > \n> > -- \n> > Mira\n> > \n> > Rowan <rowan@example.com> wrote:\n> > > I'll send the risk summary\
+      \ by Wednesday.\n> > > \n> > > -- \n> > > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the risk summary
+    due: Wednesday
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: done
+    why: Delivery completes the single promise; nested quotes must not reopen it.
+- id: t15
+  subject: A promise-like signature
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: theo@example.com
+    body: "I'll send your access code by noon.\n\n-- \nRowan\nI promise clear thinking and prompt service.\nrowan@example.com"
+  - id: m2
+    from: theo@example.com
+    to: rowan@example.com
+    body: "The access code came through, thanks.\n\n-- \nTheo\n\nRowan <rowan@example.com> wrote:\n> I'll send your access\
+      \ code by noon.\n> \n> -- \n> Rowan\n> I promise clear thinking and prompt service.\n> rowan@example.com"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the access code
+    due: by noon
+  expected_open_promises: []
+  resolutions:
+  - message: m2
+    promise: p1
+    type: done
+    why: Recipient confirms receipt; signature marketing is not another promise.
+- id: t16
+  subject: A mobile reply is not the answer
+  messages:
+  - id: m1
+    from: nessa@example.com
+    to: rowan@example.com
+    body: "I'll confirm the delivery address by Thursday.\n\n-- \nNessa"
+  - id: m2
+    from: rowan@example.com
+    to: nessa@example.com
+    body: "Could you send that delivery address?\n\n-- \nRowan\n\nNessa <nessa@example.com> wrote:\n> I'll confirm the delivery\
+      \ address by Thursday.\n> \n> -- \n> Nessa"
+  - id: m3
+    from: nessa@example.com
+    to: rowan@example.com
+    body: "Thanks for checking in.\n\nSent from my phone\n\n\n\nRowan <rowan@example.com> wrote:\n> Could you send that\
+      \ delivery address?\n> \n> -- \n> Rowan\n> \n> Nessa <nessa@example.com> wrote:\n> > I'll confirm the delivery address\
+      \ by Thursday.\n> > \n> > -- \n> > Nessa"
+  promises:
+  - id: p1
+    message: m1
+    owner: nessa@example.com
+    what: Confirm the delivery address
+    due: Thursday
+  expected_open_promises:
+  - promise: p1
+    owner: nessa@example.com
+    what: Confirm the delivery address
+    due: Thursday
+  resolutions:
+  - message: m3
+    promise: p1
+    type: non_answer
+    why: Polite acknowledgment and mobile signature do not provide the address.
+- id: t17
+  subject: A proposed move is not accepted
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: oren@example.com
+    body: "I'll deliver the audit Friday.\n\n-- \nRowan"
+  - id: m2
+    from: oren@example.com
+    to: rowan@example.com
+    body: "Could you deliver it Wednesday instead?\n\n-- \nOren\n\nRowan <rowan@example.com> wrote:\n> I'll deliver the\
+      \ audit Friday.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: oren@example.com
+    body: "I can't commit to Wednesday. Friday is still the date.\n\n-- \nRowan\n\nOren <oren@example.com> wrote:\n> Could\
+      \ you deliver it Wednesday instead?\n> \n> -- \n> Oren\n> \n> Rowan <rowan@example.com> wrote:\n> > I'll deliver the\
+      \ audit Friday.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Deliver the audit
+    due: Friday
+  expected_open_promises:
+  - promise: p1
+    owner: rowan@example.com
+    what: Deliver the audit
+    due: Friday
+  resolutions: []
+- id: t18
+  subject: One delivery moves, another is waived
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: liora@example.com
+    body: "I'll send the draft Tuesday and the printed copies Friday.\n\n-- \nRowan"
+  - id: m2
+    from: liora@example.com
+    to: rowan@example.com
+    body: "Please cancel the printed copies. Could the draft come Thursday instead?\n\n-- \nLiora\n\nRowan <rowan@example.com>\
+      \ wrote:\n> I'll send the draft Tuesday and the printed copies Friday.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: liora@example.com
+    body: "Yes, Thursday for the draft. I'll skip the printed copies.\n\n-- \nRowan\n\nLiora <liora@example.com> wrote:\n\
+      > Please cancel the printed copies. Could the draft come Thursday instead?\n> \n> -- \n> Liora\n> \n> Rowan <rowan@example.com>\
+      \ wrote:\n> > I'll send the draft Tuesday and the printed copies Friday.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the draft
+    due: Tuesday
+  - id: p2
+    message: m1
+    owner: rowan@example.com
+    what: Send the printed copies
+    due: Friday
+  expected_open_promises:
+  - promise: p1
+    owner: rowan@example.com
+    what: Send the draft
+    due: Thursday
+  resolutions:
+  - message: m2
+    promise: p2
+    type: cancelled
+    why: The client explicitly withdraws the printed-copy requirement.
+  - message: m3
+    promise: p1
+    type: date_changed
+    why: Rowan accepts Thursday for the draft.
+- id: t19
+  subject: Friendship and a library book
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: ansel@example.com
+    body: "I'll return your book tonight and call you tomorrow evening.\n\n-- \nRowan"
+  - id: m2
+    from: ansel@example.com
+    to: rowan@example.com
+    body: "The book is back on my shelf, thanks. I can't talk tomorrow; let's drop the call.\n\n-- \nAnsel\n\nRowan <rowan@example.com>\
+      \ wrote:\n> I'll return your book tonight and call you tomorrow evening.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: ansel@example.com
+    body: "No problem. Catch you another time.\n\n-- \nRowan\n\nAnsel <ansel@example.com> wrote:\n> The book is back on\
+      \ my shelf, thanks. I can't talk tomorrow; let's drop the call.\n> \n> -- \n> Ansel\n> \n> Rowan <rowan@example.com>\
+      \ wrote:\n> > I'll return your book tonight and call you tomorrow evening.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Return Ansel's book
+    due: tonight
+  - id: p2
+    message: m1
+    owner: rowan@example.com
+    what: Call Ansel
+    due: tomorrow evening
+  expected_open_promises: []
+  resolutions:
+  - message: m2
+    promise: p1
+    type: done
+    why: Recipient confirms return.
+  - message: m2
+    promise: p2
+    type: cancelled
+    why: The planned call is explicitly dropped, not rescheduled.
+- id: t20
+  subject: A boundary into January
+  messages:
+  - id: m1
+    from: zella@example.com
+    to: rowan@example.com
+    body: "I'll send the signed form by December 31, 2026.\n\n-- \nZella"
+  - id: m2
+    from: rowan@example.com
+    to: zella@example.com
+    body: "Can you still make that date?\n\n-- \nRowan\n\nZella <zella@example.com> wrote:\n> I'll send the signed form\
+      \ by December 31, 2026.\n> \n> -- \n> Zella"
+  - id: m3
+    from: zella@example.com
+    to: rowan@example.com
+    body: "No, I'll send it January 4, 2027, instead.\n\n-- \nZella\n\nRowan <rowan@example.com> wrote:\n> Can you still\
+      \ make that date?\n> \n> -- \n> Rowan\n> \n> Zella <zella@example.com> wrote:\n> > I'll send the signed form by December\
+      \ 31, 2026.\n> > \n> > -- \n> > Zella"
+  - id: m4
+    from: zella@example.com
+    to: rowan@example.com
+    body: "The signed form is attached now.\n\n-- \nZella\n\nZella <zella@example.com> wrote:\n> No, I'll send it January\
+      \ 4, 2027, instead.\n> \n> -- \n> Zella\n> \n> Rowan <rowan@example.com> wrote:\n> > Can you still make that date?\n\
+      > > \n> > -- \n> > Rowan\n> > \n> > Zella <zella@example.com> wrote:\n> > > I'll send the signed form by December\
+      \ 31, 2026.\n> > > \n> > > -- \n> > > Zella"
+  promises:
+  - id: p1
+    message: m1
+    owner: zella@example.com
+    what: Send the signed form
+    due: December 31, 2026
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: date_changed
+    why: Explicit replacement crosses the year boundary.
+  - message: m4
+    promise: p1
+    type: done
+    why: Signed form delivered.
+- id: t21
+  subject: The quote and its missing detail
+  messages:
+  - id: m1
+    from: bram@example.com
+    to: rowan@example.com
+    body: "I'll send the quote and warranty terms within two working days.\n\n-- \nBram"
+  - id: m2
+    from: bram@example.com
+    to: rowan@example.com
+    body: "Here's the quote; I'll send the warranty terms Monday.\n\n-- \nBram\n\nBram <bram@example.com> wrote:\n> I'll\
+      \ send the quote and warranty terms within two working days.\n> \n> -- \n> Bram"
+  - id: m3
+    from: rowan@example.com
+    to: bram@example.com
+    body: "Thanks for the quote. Please include the warranty terms when you can.\n\n-- \nRowan\n\nBram <bram@example.com>\
+      \ wrote:\n> Here's the quote; I'll send the warranty terms Monday.\n> \n> -- \n> Bram\n> \n> Bram <bram@example.com>\
+      \ wrote:\n> > I'll send the quote and warranty terms within two working days.\n> > \n> > -- \n> > Bram"
+  - id: m4
+    from: bram@example.com
+    to: rowan@example.com
+    body: "We use excellent materials.\n\n-- \nBram\n\nRowan <rowan@example.com> wrote:\n> Thanks for the quote. Please\
+      \ include the warranty terms when you can.\n> \n> -- \n> Rowan\n> \n> Bram <bram@example.com> wrote:\n> > Here's the\
+      \ quote; I'll send the warranty terms Monday.\n> > \n> > -- \n> > Bram\n> > \n> > Bram <bram@example.com> wrote:\n\
+      > > > I'll send the quote and warranty terms within two working days.\n> > > \n> > > -- \n> > > Bram"
+  promises:
+  - id: p1
+    message: m1
+    owner: bram@example.com
+    what: Send quote and warranty terms
+    due: within two working days
+  expected_open_promises:
+  - promise: p1
+    owner: bram@example.com
+    what: Send the remaining warranty terms
+    due: Monday
+  resolutions:
+  - message: m2
+    promise: p1
+    type: partial
+    why: Quote delivered; warranty terms still owed.
+  - message: m2
+    promise: p1
+    type: date_changed
+    why: Monday is the replacement deadline for the remaining terms.
+  - message: m4
+    promise: p1
+    type: non_answer
+    why: A quality claim does not provide warranty terms.
+- id: t22
+  subject: A corrected file still has work left
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: iona@example.com
+    body: "I'll send the corrected report by Friday at 5pm.\n\n-- \nRowan"
+  - id: m2
+    from: rowan@example.com
+    to: iona@example.com
+    body: "The revised report is attached, but I haven't corrected the totals yet.\n\n-- \nRowan\n\nRowan <rowan@example.com>\
+      \ wrote:\n> I'll send the corrected report by Friday at 5pm.\n> \n> -- \n> Rowan"
+  - id: m3
+    from: iona@example.com
+    to: rowan@example.com
+    body: "I still need the totals corrected before I can use it.\n\n-- \nIona\n\nRowan <rowan@example.com> wrote:\n> The\
+      \ revised report is attached, but I haven't corrected the totals yet.\n> \n> -- \n> Rowan\n> \n> Rowan <rowan@example.com>\
+      \ wrote:\n> > I'll send the corrected report by Friday at 5pm.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the corrected report
+    due: Friday at 5pm
+  expected_open_promises:
+  - promise: p1
+    owner: rowan@example.com
+    what: Correct the totals and send the completed report
+    due: Friday at 5pm
+  resolutions:
+  - message: m2
+    promise: p1
+    type: partial
+    why: Attachment is explicitly incomplete despite being described as revised.
+- id: t23
+  subject: A deadline hidden behind enthusiasm
+  messages:
+  - id: m1
+    from: pella@example.com
+    to: rowan@example.com
+    body: "I'll confirm whether the room is booked by end of day.\n\n-- \nPella"
+  - id: m2
+    from: rowan@example.com
+    to: pella@example.com
+    body: "Is the room booked? We need a definite yes or no.\n\n-- \nRowan\n\nPella <pella@example.com> wrote:\n> I'll confirm\
+      \ whether the room is booked by end of day.\n> \n> -- \n> Pella"
+  - id: m3
+    from: pella@example.com
+    to: rowan@example.com
+    body: "Everyone is really excited about the workshop!\n\n-- \nPella\n\nRowan <rowan@example.com> wrote:\n> Is the room\
+      \ booked? We need a definite yes or no.\n> \n> -- \n> Rowan\n> \n> Pella <pella@example.com> wrote:\n> > I'll confirm\
+      \ whether the room is booked by end of day.\n> > \n> > -- \n> > Pella"
+  - id: m4
+    from: pella@example.com
+    to: rowan@example.com
+    body: "Confirmed: the room is booked for us.\n\n-- \nPella\n\nPella <pella@example.com> wrote:\n> Everyone is really\
+      \ excited about the workshop!\n> \n> -- \n> Pella\n> \n> Rowan <rowan@example.com> wrote:\n> > Is the room booked?\
+      \ We need a definite yes or no.\n> > \n> > -- \n> > Rowan\n> > \n> > Pella <pella@example.com> wrote:\n> > > I'll\
+      \ confirm whether the room is booked by end of day.\n> > > \n> > > -- \n> > > Pella"
+  promises:
+  - id: p1
+    message: m1
+    owner: pella@example.com
+    what: Confirm whether the room is booked
+    due: by end of day
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: non_answer
+    why: Enthusiasm is not a booking confirmation.
+  - message: m4
+    promise: p1
+    type: done
+    why: An explicit booking confirmation answers the question.
+- id: t24
+  subject: A sarcastic line and a real date
+  messages:
+  - id: m1
+    from: rowan@example.com
+    to: varo@example.com
+    body: "Sure, I'll clone myself and finish a hundred pages tonight. Seriously, I'll send the first ten pages Friday.\n\
+      \n-- \nRowan"
+  - id: m2
+    from: varo@example.com
+    to: rowan@example.com
+    body: "Ten pages Friday is enough. No cloning required.\n\n-- \nVaro\n\nRowan <rowan@example.com> wrote:\n> Sure, I'll\
+      \ clone myself and finish a hundred pages tonight. Seriously, I'll send the first ten pages Friday.\n> \n> -- \n>\
+      \ Rowan"
+  - id: m3
+    from: rowan@example.com
+    to: varo@example.com
+    body: "The first ten pages are attached.\n\n-- \nRowan\n\nVaro <varo@example.com> wrote:\n> Ten pages Friday is enough.\
+      \ No cloning required.\n> \n> -- \n> Varo\n> \n> Rowan <rowan@example.com> wrote:\n> > Sure, I'll clone myself and\
+      \ finish a hundred pages tonight. Seriously, I'll send the first ten pages Friday.\n> > \n> > -- \n> > Rowan"
+  promises:
+  - id: p1
+    message: m1
+    owner: rowan@example.com
+    what: Send the first ten pages
+    due: Friday
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: done
+    why: The sincere ten-page promise is kept; the cloning remark never counted.
+- id: t25
+  subject: A forward with a new promise on top
+  messages:
+  - id: m1
+    from: edda@example.com
+    to: rowan@example.com
+    body: "I'll send you the venue checklist Friday.\n\n-- \nEdda"
+  - id: m2
+    from: rowan@example.com
+    to: edda@example.com
+    body: "I'll review it Monday once it arrives. Keeping your note below.\n\nBegin forwarded message:\nFrom: Edda <edda@example.com>\n\
+      Sent: Thursday\nTo: Rowan <rowan@example.com>\nSubject: Venue checklist\nI'll send you the venue checklist Friday.\n\
+      \n-- \nRowan\n\nEdda <edda@example.com> wrote:\n> I'll send you the venue checklist Friday.\n> \n> -- \n> Edda"
+  - id: m3
+    from: edda@example.com
+    to: rowan@example.com
+    body: "The checklist is attached, Rowan.\n\n-- \nEdda\n\nRowan <rowan@example.com> wrote:\n> I'll review it Monday once\
+      \ it arrives. Keeping your note below.\n> \n> Begin forwarded message:\n> From: Edda <edda@example.com>\n> Sent: Thursday\n\
+      > To: Rowan <rowan@example.com>\n> Subject: Venue checklist\n> I'll send you the venue checklist Friday.\n> \n> --\
+      \ \n> Rowan\n> \n> Edda <edda@example.com> wrote:\n> > I'll send you the venue checklist Friday.\n> > \n> > -- \n\
+      > > Edda"
+  - id: m4
+    from: rowan@example.com
+    to: edda@example.com
+    body: "Received. Monday still works for my review.\n\n-- \nRowan\n\nEdda <edda@example.com> wrote:\n> The checklist\
+      \ is attached, Rowan.\n> \n> -- \n> Edda\n> \n> Rowan <rowan@example.com> wrote:\n> > I'll review it Monday once it\
+      \ arrives. Keeping your note below.\n> > \n> > Begin forwarded message:\n> > From: Edda <edda@example.com>\n> > Sent:\
+      \ Thursday\n> > To: Rowan <rowan@example.com>\n> > Subject: Venue checklist\n> > I'll send you the venue checklist\
+      \ Friday.\n> > \n> > -- \n> > Rowan\n> > \n> > Edda <edda@example.com> wrote:\n> > > I'll send you the venue checklist\
+      \ Friday.\n> > > \n> > > -- \n> > > Edda"
+  - id: m5
+    from: rowan@example.com
+    to: edda@example.com
+    body: "I've reviewed the checklist; no changes needed.\n\n-- \nRowan\n\nRowan <rowan@example.com> wrote:\n> Received.\
+      \ Monday still works for my review.\n> \n> -- \n> Rowan\n> \n> Edda <edda@example.com> wrote:\n> > The checklist is\
+      \ attached, Rowan.\n> > \n> > -- \n> > Edda\n> > \n> > Rowan <rowan@example.com> wrote:\n> > > I'll review it Monday\
+      \ once it arrives. Keeping your note below.\n> > > \n> > > Begin forwarded message:\n> > > From: Edda <edda@example.com>\n\
+      > > > Sent: Thursday\n> > > To: Rowan <rowan@example.com>\n> > > Subject: Venue checklist\n> > > I'll send you the\
+      \ venue checklist Friday.\n> > > \n> > > -- \n> > > Rowan\n> > > \n> > > Edda <edda@example.com> wrote:\n> > > > I'll\
+      \ send you the venue checklist Friday.\n> > > > \n> > > > -- \n> > > > Edda"
+  promises:
+  - id: p1
+    message: m1
+    owner: edda@example.com
+    what: Send the venue checklist
+    due: Friday
+  - id: p2
+    message: m2
+    owner: rowan@example.com
+    what: Review the venue checklist
+    due: Monday
+    condition: The checklist arrives
+  expected_open_promises: []
+  resolutions:
+  - message: m3
+    promise: p1
+    type: done
+    why: Checklist delivered; its forwarded promise is not counted again.
+  - message: m3
+    promise: p2
+    type: condition_met
+    why: Receipt activates Rowan's review commitment.
+  - message: m5
+    promise: p2
+    type: done
+    why: Rowan explicitly confirms the review is complete.

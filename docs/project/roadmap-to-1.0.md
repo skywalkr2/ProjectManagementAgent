@@ -2000,6 +2000,8 @@ S1. **Promises, and how they end:**
   (`engine/due_phrases.py`, `tests/test_due_phrases.py`, 2026-10-17): weekdays, times, written dates with or without a
   year, week and month ranges, working days; anything vague or tied to an event stays "no date", and an uncertain
   reading (next Friday, a past "this Friday", a year-less date far ahead) is marked for the person to check.
+  Evaluation material: 120 single items (`docs/project/steward-promise-examples.yaml`) and 25 whole threads with how
+  each promise ends (`docs/project/steward-promise-threads.yaml`, checked by `tests/test_steward_threads.py`).
 - [ ] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
   owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
   doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the
@@ -2105,6 +2107,11 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   shows a menu bar (macOS) or tray (Windows) item with Open, Restart (only when one is waiting, per the restart rule) and
   Quit. A second launch opens the running one instead of starting another. The first launch lands in the walkthrough on
   a new workspace in the default folder (`cockpit init` with no template).
+  The launcher's core is built (`engine/launcher.py`, `tests/test_launcher.py`): the per-folder lock, the readiness
+  wait, the tray loop on the main thread and one server thread. Left: start it from the app with the configured
+  base path and the install token, the menu wording from the wording sheet, the brand icon, `pystray` and Pillow in
+  the desktop build only, one restart path shared with `cockpit serve` (which restarts by starting itself again),
+  and the manual check on Windows and macOS.
 - [ ] **Add-ons install beside the app, not inside it:** an installed app's own folder is read-only (and signed), so
   Install on Add-ons puts add-ons in a per-person add-ons folder in the app-data place, which the app reads at start.
 - [ ] **Updates:** the app checks the release feed it was built with (a build variable, empty in the repository) and

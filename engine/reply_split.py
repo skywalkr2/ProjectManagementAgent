@@ -82,6 +82,13 @@ def split_message(text: str) -> Split:
                     break
                 if not content(index + length - 1).strip() or quoted_line(index + length - 1):
                     break
+        # A "<name or address> wrote:" line counts only when quoted lines follow it.
+        if re.fullmatch(r"\S.*\s+wrote\s*:", current, re.I):
+            following = index + 1
+            while following < len(lines) and not content(following).strip():
+                following += 1
+            if following < len(lines) and quoted_line(following):
+                return 1, False
         return 0, False
 
     index = 0

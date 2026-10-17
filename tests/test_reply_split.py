@@ -233,3 +233,17 @@ def test_header_blocks_with_date_and_any_order_are_history(header):
 def test_a_header_block_with_a_field_twice_stays_new():
     body = "From: Mira\nSent: Friday\nDate: Friday\nTo: Rowan\nSubject: Draft\nI'll send it.\n"
     assert split_message(body) == Split(body, "", "", False)
+
+
+@pytest.mark.parametrize("attribution", ["Rowan <rowan@example.com> wrote:", "rowan@example.com wrote:"])
+def test_name_wrote_attribution_before_quotes_is_history(attribution):
+    body = f"Thanks for checking in.\n\nSent from my phone\n\n{attribution}\n> Could you send that address?\n"
+    split = split_message(body)
+    assert split.new == "Thanks for checking in.\n\n"
+    assert split.signature.startswith("Sent from my phone")
+    assert attribution not in split.new + split.signature
+
+
+def test_wrote_line_without_quotes_stays_new():
+    body = "Mira wrote:\nthe plan looks fine to me.\n"
+    assert split_message(body).new == body
