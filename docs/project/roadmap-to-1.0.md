@@ -2073,6 +2073,8 @@ S2. **Time and attention:**
   Free time is computed by rules (`engine/free_slots.py`, `tests/test_free_slots.py`): every calendar merged,
   working hours and days in the person's zone across clock changes, a buffer around meetings, tentative entries
   blocking unless counted as free; it also finds the slots for "propose a new time".
+  Clashes are found by rules (`engine/clashes.py`, `tests/test_clashes.py`): overlaps across every calendar,
+  tentative ones apart, and too little travel time between two places, an online meeting needing none.
 - [ ] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
   threshold, and dismissals that stick and teach (a dismissed kind of suggestion comes back only when something
   changes). All settings with defaults.

@@ -122,6 +122,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   a fixed to-do and never changes anything itself. Order: to-dos due today or overdue last, then lowest priority, not
   promised, no due date and latest due first. Drafted with an outside assistant; here due-today and overdue to-dos
   went from first-by-priority to last, and a small move a later, larger one made unnecessary is dropped.
+- **Also (2026-10-17): calendar clashes, by rules.** `engine/clashes.py` finds every pair of events that overlap
+  (busy and out of office blocking, tentative ones listed apart, free never) and, given a travel allowance, pairs at
+  two different stated places with too short a gap. Drafted with an outside assistant; here a web link as the
+  location is an online meeting needing no travel, a pair with no location is listed for review without making the
+  whole report unknown (most events have none), the comparison stops once later events start past the allowance,
+  and show-as spellings are read as the free-time finder reads them.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
