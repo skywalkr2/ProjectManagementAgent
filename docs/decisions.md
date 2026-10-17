@@ -24,6 +24,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   alarms, organizer and attendees, method and sequence), for reminders placed in the person's own calendar and
   calendar acts after a yes (phase S); drafted with an outside assistant, checked by parsing its output back with the
   `icalendar` package, now a development dependency.
+- **Also (2026-10-17): due phrases by rules.** `engine/due_phrases.py` reads a due phrase against the message's received
+  time and zone, with the workweek, locale and end-of-day time as inputs; its conventions (a bare weekday is the next
+  one, "next Friday" is the following week's but marked uncertain, close of business is the configured time) are
+  product behavior shown to the person as a note beside the proposed date. Drafted with an outside assistant in two
+  rounds; short forms (EOD, COB, Fri), a weekday with a date, and far-ahead year-less dates marked uncertain added here.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
