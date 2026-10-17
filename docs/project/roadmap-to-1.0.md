@@ -2160,6 +2160,25 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   signatures (individuals eligible in the US and Canada, identity checked; signs from GitHub without a long-lived
   secret), or a standard certificate from about $129 a year plus a signing service or hardware token. About $219 a
   year for Apple plus Azure Basic. No signing removes SmartScreen's warning at once; reputation builds over downloads.
+- [ ] **Mail and calendar sign-in approval for testers and launch** (research the owner brought, 2026-10-17; the
+  services' published rules, to be confirmed with them):
+  - *Google:* the full feature set needs `gmail.modify` and `calendar.events` (plus `calendar.calendarlist.readonly`
+    to pick calendars); Gmail reading is already a "restricted" permission, so a read-only test changes nothing. An
+    app in Google's Testing mode allows up to 100 listed testers, shows an unverified warning, and its sign-ins expire
+    after 7 days (testers reconnect weekly; the app's "sign in again" line covers it). Public use needs Google's
+    verification: a verified domain (thimbleby.app), a homepage and privacy policy, a reason for each permission, a
+    demonstration video. Sending mail content to a cloud AI service likely counts as processing outside the computer,
+    which brings Google's yearly independent security assessment (priced by the assessing lab; ask for a written quote;
+    a local model keeps the content on the computer). Start verification as soon as the acting features (S1b) can be
+    shown.
+  - *Microsoft:* `Mail.ReadWrite`, `Mail.Send` and `Calendars.ReadWrite` (with `offline_access` and `openid`); no
+    published tester cap; personal Outlook accounts consent themselves; companies' consent rules often need an
+    administrator's approval even for a verified publisher. Publisher verification is free but needs a verified
+    organization in Microsoft's partner program.
+  - *Both:* a public desktop client with the system browser, the authorization code flow and PKCE, no secret embedded
+    in the app; and Thimbleby's own approval of every exact act stays, since a granted permission allows more than the
+    person approved. For the first test: Google in Testing mode for under 100 people (others on Microsoft or a plain
+    mailbox), a guide for company administrators, and the warning and weekly reconnection explained to testers.
 - [ ] **Exit test:** on a clean Mac and a clean Windows machine, download from the release page, install, open, finish
   the walkthrough to the first result, quit, reopen with the data still there, update to the next version, uninstall
   with the data kept. Journey tests cover what CI can (launch, the server answering, the data folder), and the owner
