@@ -4,9 +4,9 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 one file per part; section "6.18" is in `06-engine.md`. Start at `docs/design/README.md`, which says what to read for each
 kind of task. Always read Parts 1, 2 and 10.
 
-**Direction (owner, 2026-10-16 and 2026-10-17; `docs/decisions.md`):** the product is becoming **Reginald**, a daily
+**Direction (owner, 2026-10-16 and 2026-10-17; `docs/decisions.md`):** the product is becoming **Thimbleby**, a daily
 assistant for anyone juggling work rather than a tool only for project managers (design 6.32, the daily steward). The
-assistant's default name is Reginald too, and the person can rename it. The order of work is phase B (screens), phase S
+assistant inside it is called **Reginald** by default, and the person can rename it. The order of work is phase B (screens), phase S
 (the daily steward), phase I (Windows and macOS installers, name and icons, nothing made-up shipped), then phase C (the
 packs, starting with one plugin API release answering `docs/project/plugin-answers-34-48.md`). Until phase I renames
 them, the code and docs still say PM Cockpit and `cockpit`.

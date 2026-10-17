@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-17: The product is called Thimbleby; the assistant inside it is Reginald
+
+- **Decided (owner: "okay i checked Thimbleby and we can go with that"):** the product's name is **Thimbleby**. The
+  assistant's default name stays **Reginald**, which the person can rename. This replaces the earlier entry that made
+  Reginald the product name.
+- **Why:** the first clearance check found "Reginald" already used by two AI assistants in the same field and a Windows
+  productivity app, with the .app domain held; "Morrowby" and "Daywarden" also collided (several AI products named Morrow,
+  one with approval before sending). A made-up name is the easiest to own, and a character's name inside the app carries
+  far less risk than a product name.
+- **Impact:** phase I puts Thimbleby on screen, in the installers and in the docs from one place, and draws the icons for
+  it; the default assistant name becomes Reginald. Internal names change, if at all, in phase C's plugin API release.
+  Domains and an official trademark search are confirmed before the installers ship.
+
 ## 2026-10-17: The core becomes a daily steward (phase S), before the installers
 
 - **Decided (owner: "this core needs to be full featured"; then "i agree with everything you wrote so definetely want to
