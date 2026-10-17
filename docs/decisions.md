@@ -53,6 +53,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   a number of days, and a new conversation when more than one would match. The caller leaves the person's own
   addresses out of the participants, or every message they're on would overlap. Drafted with an outside assistant;
   a known parent now wins when the references were trimmed.
+- **Also (2026-10-17): automatic mail by its headers.** `engine/automatic_mail.py` tells an automatic reply, a
+  delivery report, generated mail (a receipt, a notification), list and bulk mail from a person's message, from the
+  headers and an anchored subject phrase only, never the body, with the deciding header as evidence. None of them
+  counts as an answer to a promise. Drafted with an outside assistant; here the mail programs' own header names and
+  the subject phrases moved to `engine/defaults/automatic_mail.yaml`, and generated mail became its own kind instead
+  of an automatic reply.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

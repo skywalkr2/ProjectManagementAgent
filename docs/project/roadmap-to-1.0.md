@@ -2005,6 +2005,9 @@ S1. **Promises, and how they end:**
   Messages join their conversation by rules (`engine/mail_threads.py`, `tests/test_mail_threads.py`): the reply
   headers first, then the same subject with a shared correspondent within a set number of days (a setting, 14 by
   default), never on an ambiguous match.
+  Automatic mail is recognized by its headers (`engine/automatic_mail.py`, `tests/test_automatic_mail.py`; markers in
+  `engine/defaults/automatic_mail.yaml`): an automatic reply, a delivery report or generated or list mail never
+  counts as the other person answering, and never resolves a promise.
 - [ ] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
   owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
   doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the
