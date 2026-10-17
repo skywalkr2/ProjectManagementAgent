@@ -74,7 +74,12 @@ The core stays a base; whole uses go in packs (CLAUDE.md, "The boundary"):
 - **Project management pack** (phase P): what stays PM-specific today (status reports, stages for projects, RAID-style
   logs, the scope resolver's tracked area, schedules). An audit lists every PM-only concept in the core and moves it there,
   so the core reads as a daily assistant to anyone.
-- **Life admin pack:** bills, subscriptions, renewals, warranties, household documents and their checklists.
+- **Life admin pack:** bills, subscriptions, renewals, warranties, household documents and their checklists. For bills,
+  reminders only (owner, 2026-10-17: "I dont want to touch that here, but simple things like bill reminders is good"): a
+  bill is a name, who it's paid to, its usual amount if the person wants it noted, its due day and how it repeats, found
+  from the bill's mail or added by hand, with a reminder before it's due and "Paid" to mark it. No bank connection, no
+  account balances and no cash-flow analysis. Even without the pack, the core's repeating to-dos, reminders and dates in
+  documents (items 2, 3 and 8) already cover a bill reminder.
 - **Travel pack:** itineraries from confirmations, packing and document checklists, time zone help.
 - **Household pack:** shared to-dos and roles for a family, once organization installs with roles exist (design 11.8,
   after 1.0).
