@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-17: Repeating events are expanded by `engine/recurrence.py`, on `python-dateutil`
+
+- **Decided (main session):** the core expands iCalendar repeat rules with a pure function in `engine/recurrence.py`
+  (drafted with an outside assistant at the owner's request, reviewed against RFC 5545 and revised once), built on
+  `python-dateutil`'s rule engine, now a dependency. It covers daily to yearly rules with interval, count, until,
+  weekday ordinals, month days, set positions, skipped and extra dates, moved and cancelled occurrences, all-day and
+  floating events, and daylight saving time (a missing hour moves forward; an ambiguous one takes the first).
+- **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
+  it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
+  dropping the event.
+
 ## 2026-10-17: Mail and calendar management after the person's yes; reminders through the person's own calendar; the first audience
 
 - **Decided (owner):** (1) "if we can have the app actually able to do mail/calendar management (not just read only)
