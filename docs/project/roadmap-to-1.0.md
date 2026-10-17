@@ -2052,6 +2052,8 @@ S2. **Time and attention:**
 - [ ] **Reminders at a time** on any dated thing, with snooze; a Today line and a browser notification while the app is
   open (desktop notifications from the menu bar or tray with phase I). **Missed while asleep:** on waking, reminders
   that came due while the computer slept are shown at once, marked late, never dropped.
+  When a reminder fires is computed by rules (`engine/reminders.py`, `tests/test_reminders.py`): quiet hours across
+  midnight, working hours, missed occurrences each or as one summary, and the snooze choices.
   **Reaching the person while the computer sleeps** (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
   event with an alarm (an approved calendar write, once per reminder or by a standing yes for reminders), so their phone

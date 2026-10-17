@@ -104,6 +104,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   plain words for internal terms, and a check of 110 counts so that zero never renders. Rejected: "Approve" for
   starting paid AI work (approval stays the yes on exact outward content), new names for the data levels, "work" for
   workspace, "person responsible" for owner, and "Download" for working copies.
+- **Also (2026-10-17): when a reminder fires, by rules.** `engine/reminders.py` plans a reminder's delivery from its
+  occurrences and what was already delivered: an on-time one waits for working hours and the end of quiet hours (which
+  may cross midnight), a missed one fires at once marked late, each or as one summary, and planning never marks
+  anything delivered. Snooze choices: in an hour (60 real minutes across a clock change), later today, this evening,
+  tomorrow morning, next week, or a picked time. Drafted with an outside assistant; here a zone whose clocks change at
+  midnight no longer makes every plan "unknown", and "tomorrow morning" on a Friday is Saturday morning rather than
+  refused, since the steward covers the person's own life too.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
