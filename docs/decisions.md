@@ -15,6 +15,10 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   territory mapping in `engine/defaults/windows_zones.yaml` (Unicode-3.0 licensed; checked against the source file's
   published fingerprint and all 139 entries when added). `tzdata` becomes a dependency so time zones work on Windows,
   which ships no IANA database.
+- **Also (2026-10-17): a reply's own words.** `engine/reply_split.py` separates an email body's new text from its quoted
+  history (">" quoting, "On ... wrote:", Outlook and other mail programs' header blocks, forwarding markers) and its
+  signature, keeping anything uncertain as new text; drafted with an outside assistant and widened here to header blocks
+  that use Date instead of Sent in any order.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
