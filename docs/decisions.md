@@ -3,6 +3,20 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-17: The product is called Reginald, and so is the assistant until the person renames it
+
+- **Decided (owner: "We can call it Reginald and just let the user change the name (already coded) but we can just default
+  it so its called reginald like the name of the app"):** the product's name is Reginald, marketed as a daily assistant for
+  anyone juggling work rather than a tool for project managers. The assistant's default name (`workspace.assistant_name`,
+  today "Assistant") becomes Reginald, and the person can still rename it.
+- **Why:** after Jeeves (Reginald Jeeves), who sees what's needed, handles it quietly and leaves the decision to his employer:
+  the app notices, drafts, and the person approves.
+- **Impact:** done in phase I: the name on screen, in the installers and in the docs comes from one place (the wording
+  sheet's `app.name` and the build's product facts); the default assistant name changes with a demo value in both
+  workspaces left as their own; the icons are drawn for it. Internal names (the package, the `cockpit` command, the add-on
+  entry point group, the `COCKPIT__` prefix) change, if at all, in phase C's plugin API release. Availability (app stores,
+  domains, trademarks) is checked before the installers ship.
+
 ## 2026-10-16: Installers for Windows and macOS, built by CI, are a phase of their own after phase B
 
 - **Decided (owner: "I really want to be able to create windows and mac distributions so that I can send them to people for
