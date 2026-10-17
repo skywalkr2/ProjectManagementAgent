@@ -83,7 +83,11 @@ produced: text, a document, a PDF, an ebook; with a synced folder, by default th
 is a channel of its own kind: mail to the person themselves, or a webhook. It sends only to the person, and only the "needs
 you" items, so it needs no per-message approval.
 Channels are called only by the publisher (6.12). The publisher, the file channel and the clipboard channel as channels are
-*designed, not yet built* (roadmap, phase C4); the person copies approved text from the review today.
+*designed, not yet built*; the person copies approved text from the review today. **Mail and calendar acts** (owner,
+2026-10-17) are channels too: a connected account's service, through its add-on, or a plain mailbox's outgoing server,
+sending, replying, forwarding, archiving, moving, labeling and marking read, and creating, moving, cancelling, accepting,
+declining or proposing a time for calendar events; each act is one outbound op the person approves exactly. They and the
+publisher come in phase S1b; the file channel stays in phase C4.
 
 **Canonical form.** A channel normalizes values the way its system stores them (a width written as `15%` that the system
 keeps as `15.0%`), and every diff compares normalized forms. After a publish, the publisher pulls the target again and checks
@@ -2465,7 +2469,10 @@ people and details, and never acts in their name without their yes on the exact 
   scheduling. Reminders that came due while the computer slept show at once on waking, marked late.
 - **Measured:** promises found and kept, false alerts, time spent reviewing and follow-ups completed, on the Quality
   screen (6.20).
-- **Not in 1.0 unless the owner changes it:** writes to mail or calendar (they stay read-only), phone push, a bank or any
-  financial account. The details of each item are designed in its own section when its wave starts; the proposal is
+- **Acting after a yes** (owner, 2026-10-17): mail (reply, forward, send, archive, move, label, mark read) and calendar
+  (create, move, cancel, accept, decline, propose a time) through the publisher (6.3, 6.12), each act shown exactly,
+  approved, carried out with a visible status and written to the ledger. A reminder can reach a sleeping person as an
+  event with an alarm in their own calendar or a mail to themselves.
+- **Not in 1.0:** a third-party push service (a companion phone app comes after 1.0), a bank or any financial account. The details of each item are designed in its own section when its wave starts; the proposal is
   `docs/project/steward-proposal.md`.
 

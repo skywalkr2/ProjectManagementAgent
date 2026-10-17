@@ -3,6 +3,24 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-17: Mail and calendar management after the person's yes; reminders through the person's own calendar; the first audience
+
+- **Decided (owner):** (1) "if we can have the app actually able to do mail/calendar management (not just read only)
+  lets do it": in 1.0 the assistant replies, forwards, sends, archives, moves, labels and marks read, and creates,
+  moves, cancels, accepts and declines calendar events, each only after the person's yes on that exact act, carried out
+  by the publisher (brought forward from phase C4 to phase S1b) with a visible status and the ledger. (2) "whatever we
+  can do to make it full featured ... but not phone pushes unless it was an installed ios or apk": reminders reach a
+  sleeping person through an event with an alarm in their own calendar or a mail to themselves; missed reminders show on
+  waking; no third-party push service; a companion iOS and Android app is planned after 1.0. (3) "yes agreed": the
+  first audience is independent professionals juggling clients and personal life; testers are the owner's colleagues
+  and people answering a LinkedIn post.
+- **Why:** copying every reply is the biggest friction left; exact-content approval, recipient checks and a visible
+  status keep the trust that read-only gave.
+- **Impact:** phase S grows by a wave (S1b, the publisher, mail and calendar acts); the Google and Microsoft add-ons ask
+  for send and modify access, which reverses their read-only rule (their builder is told; the change is theirs); a plain
+  mailbox sends through its outgoing server; a subscribed calendar link stays read-only. Design 6.3, 6.12 and 6.32 say
+  so. CLAUDE.md's "not built yet" line for the publisher now points to phase S1b.
+
 ## 2026-10-17: The installers are built with PyInstaller (folder mode) and Inno Setup
 
 - **Decided (main session, from the owner's research report on packaging, checked against the code):** phase I builds

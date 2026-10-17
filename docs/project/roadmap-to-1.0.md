@@ -2009,10 +2009,29 @@ S1. **Promises, and how they end:**
 - [ ] **A first success in five minutes:** the walkthrough connects one mailbox and an AI account, looks back over the
   last two weeks of the person's own mail (estimate first), and shows a handful of real open promises with one follow-up
   ready, before any project, area, pack or extra account is asked about.
+S1b. **Acting for you, after your yes** (owner, 2026-10-17: "if we can have the app actually able to do mail/calendar
+management (not just read only) lets do it"):
+- [ ] **The publisher, brought forward from phase C4:** every outward act is shown as its exact content and target
+  (recipients, the calendar and the time), approved by the person, then carried out with a visible status (sent, failed
+  with why, undone where the service allows) and written to the ledger. Recipient checks: a new or outside recipient,
+  or one taken from untrusted text, is called out before the yes.
+- [ ] **Mail:** reply, reply all, forward and send a drafted message; archive, move, label and mark read, one at a time
+  or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
+  access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
+- [ ] **Calendar:** create an event or a hold, move or cancel one the person owns, and accept, decline or propose a
+  new time for an invitation. Through the account's service; a subscribed calendar link stays read-only by nature.
+- [ ] **Nothing on its own:** the assistant drafts every act; none runs without the person's yes on that exact act, and
+  rules may only suggest (an outbound op is never applied automatically, design 6.7).
 S2. **Time and attention:**
 - [ ] **Reminders at a time** on any dated thing, with snooze; a Today line and a browser notification while the app is
   open (desktop notifications from the menu bar or tray with phase I). **Missed while asleep:** on waking, reminders
   that came due while the computer slept are shown at once, marked late, never dropped.
+  **Reaching the person while the computer sleeps** (owner: "whatever we can do to make it full featured ... but not
+  phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
+  event with an alarm (an approved calendar write, once per reminder or by a standing yes for reminders), so their phone
+  rings without Thimbleby running; or as a reminder mail to their own address. No third-party push service. A
+  companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
+  the apps can reach).
 - [ ] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
 - [ ] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
   evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
@@ -2046,9 +2065,10 @@ S5. **Manner and proof:**
   (dismissed or corrected), time spent reviewing, and follow-ups completed. The exit test reads these from the owner's
   week.
 
-Open for the owner (in the proposal): approved writes (sending a reply or placing a calendar hold after a yes on the
-exact content) or read-only for 1.0; how reminders reach a phone when the computer sleeps; the first audience. Until
-decided: read-only, no phone push, areas inside one workspace.
+Decided by the owner (2026-10-17): approved mail and calendar management in 1.0 (S1b); reminders reach a sleeping
+person through their own calendar or a mail to themselves, no third-party push, a companion phone app after 1.0; the
+first audience is independent professionals juggling clients and personal life, tested first by the owner's colleagues
+and people answering a LinkedIn post. Areas stay inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S, about 2 sessions)
 
@@ -2175,7 +2195,8 @@ C1. **The writing pack, installed and reviewed.**
 - [ ] The owner's walkthrough on a fictional book, with what to change written down.
 
 C4. **What the packs need from the core.**
-- [ ] **The publisher and the file channel.** Approved files are saved or shared after the person approves the exact
+- [ ] **The publisher and the file channel** (the publisher itself moves to phase S1b for mail and calendar; this item
+  keeps the file channel). Approved files are saved or shared after the person approves the exact
   content. Waiting to go out lists them, with a diff where it applies. A page whose changes are logged as history rows
   logs each change, except the removal of a stray history row, which needs no row of its own (the functional designer's
   lesson 8, 2026-10-15).
