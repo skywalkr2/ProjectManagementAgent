@@ -98,3 +98,32 @@ The core stays a base; whole uses go in packs (CLAUDE.md, "The boundary"):
    last wave (they are screens on things the core nearly has); commitments both ways, replies owed, meeting prep and
    people memory as a new phase S right after phase I; dates in documents, areas, capture and voice after that, before
    phase C's packs; the PM audit with phase P.
+
+## Review, 2026-10-17 (an outside review the owner brought), and what changed
+
+The review's judgment: Thimbleby's strongest selling point is dependable memory for commitments across work and personal
+life, and the plan should make that measurable and quick to experience. Checked against the design and the code; taken
+into phase S (the roadmap has the new order):
+- **Promises first** (review 1), with **how they resolve** (2): done, date changed, called off, partly delivered, or
+  answered without answering; each a proposal with evidence, never a silent close.
+- **Every promise shows why** (3): source sentence, owner, date and whether it was said or inferred (the `basis` facts
+  carry), not a model's confidence score, which the design never trusts (checks decide, not self-reported confidence).
+- **Drafted follow-ups are expected** (4) and **consent alone isn't unique** (7): the difference is promises kept across
+  every source with the people around them, and the same controls for messages, calendar and learned rules.
+- **A capacity check** (5) without automatic scheduling; **a five-minute first success** (8); **visible privacy between
+  areas** (9); **missed-while-asleep recovery** (10, part); **the brief as changes, risks and what needs a yes** (11);
+  **an attention budget** (12); **outcome measures** on the Quality screen (13, part).
+
+Decisions the review raises, for the owner:
+1. **Approved writes** (review 6): today mail and calendar are read-only and replies are copied. Sending a reply or
+   placing a calendar hold after the person's yes on the exact content, with recipient checks and a visible sent/failed
+   status, removes the copy-and-paste step. It needs the publisher (phase C4) and the add-ons asking for send and write
+   access. Keep read-only for 1.0, or bring approved writes in?
+2. **A phone when the computer sleeps** (review 10): a desktop app can't remind anyone while its computer sleeps. Options:
+   (a) missed reminders shown on waking only (built in S2 either way); (b) the person's own calendar carries the alarm,
+   with Thimbleby adding the reminder to it (needs approved calendar writes, decision 1); (c) a push service to the phone
+   (costs something, needs an account); (d) a reminder mail to the person's own address (no new service, needs approved
+   sends, decision 1).
+3. **The first audience** (review 13): independent professionals juggling clients and personal life are suggested. It
+   decides the walkthrough's examples, the store copy and which pack comes first after the core.
+

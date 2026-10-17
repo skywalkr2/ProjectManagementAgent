@@ -1982,48 +1982,73 @@ From the original designer's lessons of 2026-10-14:
 
 The journey tests from A3 run against the new screens as they land.
 
-## Phase S: the daily steward (after phase B, before phase I; about 5 sessions)
+## Phase S: the daily steward (after phase B, before phase I; about 6 sessions)
 
 The owner's ask (2026-10-17): "this core needs to be full featured" as a daily assistant for anyone, not only project
-support; the owner accepted the proposal in `docs/project/steward-proposal.md` as written ("i agree with everything you
-wrote so definetely want to work on these before we do the full ci/cd setup with the installers"). Design 6.32. Each item
-ends with named tests; the exit test is a week of the owner's own use with the morning brief, reminders and replies owed.
+support; the owner accepted `docs/project/steward-proposal.md` ("i agree with everything you wrote so definetely want to
+work on these before we do the full ci/cd setup with the installers"). Reordered the same day after an outside review the
+owner brought (in the proposal's "Review, 2026-10-17"): **dependable memory for commitments across work and personal life
+is the reason to choose Thimbleby**, so promises and how they resolve come first, before reminders and briefs. Design
+6.32. Each item ends with named tests. Exit test: a week of the owner's own use, measured (S5).
 
-S1. **Time** (first, since everything else leans on it):
-- [ ] **Reminders at a time** on any to-do, waiting-on, dated fact or calendar entry ("at", "the morning of", "an hour
-  before"), with snooze; shown as a Today line and as a browser notification while the app is open (desktop
-  notifications from the menu bar or tray come with phase I); content follows the data level rules.
-- [ ] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row:
-  done, moved or skipped.
-- [ ] **The morning brief and the evening wrap-up,** with the Monday briefing as their weekly form (phase B's item moves
-  here).
-S2. **Promises and people:**
+S1. **Promises, and how they end:**
 - [ ] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
-  folder is offered as a source when a mailbox is connected).
+  folder is offered as a source when a mailbox is connected): "I'll send it Friday" is the person's to-do; "they'll get
+  back to me Tuesday" is a waiting-on with its date.
+- [ ] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
+  owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
+  doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the
+  person keeps or changes, never a silent close, so "Waiting on" never goes stale. A promise with no news by its date
+  is a line with its choices.
+- [ ] **Every promise shows why:** the source sentence (the exact words, as evidence already requires), who owes it, the
+  date and where it came from, and whether it was said outright or inferred (the `basis` facts already carry), never a
+  model's own confidence score. One click to correct any of them, recorded as a signal.
 - [ ] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
-  their voice to edit and copy; "No reply needed" is a choice the assistant learns from.
+  their voice to edit and copy; "No reply needed" is a choice the assistant learns from. (Drafting follow-ups is now
+  expected of any assistant; Thimbleby's difference is promises kept across every source, with the people around them.)
+- [ ] **A first success in five minutes:** the walkthrough connects one mailbox and an AI account, looks back over the
+  last two weeks of the person's own mail (estimate first), and shows a handful of real open promises with one follow-up
+  ready, before any project, area, pack or extra account is asked about.
+S2. **Time and attention:**
+- [ ] **Reminders at a time** on any dated thing, with snooze; a Today line and a browser notification while the app is
+  open (desktop notifications from the menu bar or tray with phase I). **Missed while asleep:** on waking, reminders
+  that came due while the computer slept are shown at once, marked late, never dropped.
+- [ ] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
+- [ ] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
+  evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
+- [ ] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
+  the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
+  scheduling.
+- [ ] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
+  threshold, and dismissals that stick and teach (a dismissed kind of suggestion comes back only when something
+  changes). All settings with defaults.
+S3. **People and meetings:**
 - [ ] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
 - [ ] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
   dates, all with evidence; shown before a meeting, and one line when a promised follow-up has gone quiet.
-S3. **What arrives:**
+S4. **What arrives, and where it may go:**
 - [ ] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed
   reminder; travel and booking confirmations become the app's own calendar entries. Bills are reminders only: no bank
   connection, balances or cash flow (owner, 2026-10-17).
-- [ ] **Areas of life** (work, home, a side project): top-level areas with their own data level and allowed AI accounts,
-  one Today across them.
+- [ ] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
+  them, and **the separation visible:** each area says which account reads it and whether anything leaves the
+  computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).
 - [ ] **Capture from anywhere:** a forward-to address or watched folder, voice notes transcribed through a new adapter
-  capability, the phone page's capture box; the global shortcut comes with phase I's menu bar and tray app.
-S4. **The steward's manner:**
-- [ ] **Gentle suggestions with choices** on patterns ("moved three times: drop it, hand it on, or give it a time?"),
-  each choice recorded as a signal; the governor's stale sweep for the person's own items is brought forward from
-  phase E.
-- [ ] **Talking to Reginald:** the conversation on a record (plugin question 190) as the core's way to ask for anything,
-  every proposed change kept or dropped inline.
-- [ ] **The core reads as a daily assistant:** every screen, prompt and help page audited for project-manager wording;
-  what is PM-only is listed for the PM pack (phase P).
+  capability, the phone page's capture box; the global shortcut with phase I's menu bar and tray app.
+S5. **Manner and proof:**
+- [ ] **Gentle suggestions with choices** on patterns, each choice recorded as a signal, within the attention budget; the
+  governor's stale sweep for the person's own items is brought forward from phase E.
+- [ ] **Talking to Reginald:** the conversation on a record (plugin question 190) as the way to ask for anything, every
+  proposed change kept or dropped inline.
+- [ ] **The core reads as a daily assistant:** screens, prompts and help audited for project-manager wording; what is
+  PM-only is listed for the PM pack (phase P).
+- [ ] **The outcome, measured** on the Quality screen (6.20): open promises found that the person kept, false alerts
+  (dismissed or corrected), time spent reviewing, and follow-ups completed. The exit test reads these from the owner's
+  week.
 
-Defaults until the owner says otherwise: mail and calendar stay read-only for 1.0 (approved writes go through the publisher
-later, phase C4); phone notifications beyond the phone page are not in 1.0; areas live inside one workspace.
+Open for the owner (in the proposal): approved writes (sending a reply or placing a calendar hold after a yes on the
+exact content) or read-only for 1.0; how reminders reach a phone when the computer sleeps; the first audience. Until
+decided: read-only, no phone push, areas inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S, about 2 sessions)
 
