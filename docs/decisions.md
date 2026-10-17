@@ -10,6 +10,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   `python-dateutil`'s rule engine, now a dependency. It covers daily to yearly rules with interval, count, until,
   weekday ordinals, month days, set positions, skipped and extra dates, moved and cancelled occurrences, all-day and
   floating events, and daylight saving time (a missing hour moves forward; an ambiguous one takes the first).
+- **Also (2026-10-17): Windows time zone names.** `engine/windows_zones.py` turns a calendar's time zone name (an Outlook
+  "Eastern Standard Time", a quoted or prefixed name, or an IANA name) into its IANA name, from CLDR 48.2's default
+  territory mapping in `engine/defaults/windows_zones.yaml` (Unicode-3.0 licensed; checked against the source file's
+  published fingerprint and all 139 entries when added). `tzdata` becomes a dependency so time zones work on Windows,
+  which ships no IANA database.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
