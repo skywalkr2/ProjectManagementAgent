@@ -65,6 +65,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   text comes from outside, so a booking stays untrusted until the person keeps the calendar entry. Drafted with an
   outside assistant; here deeply nested markup, which crashed it, is reported instead, and structured data is built
   only for reservation types, which keeps hostile markup from slowing it down.
+- **Also (2026-10-17): bill dates by rules.** `engine/bill_dates.py` lists a bill's due dates in a window from a rule
+  (a day of the month, the last day, the nth weekday, every N weeks, yearly), moved to the previous or next business
+  day around weekends and the holidays the person gives, with reminder dates before each; no amounts, accounts or
+  payments. Separate from the repeat engine because calendar repeat rules skip a 31st in short months instead of
+  moving it to the last day and know nothing of business days. Drafted with an outside assistant; a bill moved
+  forward from just before the window, onto its first day, was dropped and is now kept (found by checking that two
+  halves of a window give the same dates as the whole).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

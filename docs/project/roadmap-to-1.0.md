@@ -2074,6 +2074,9 @@ S4. **What arrives, and where it may go:**
   Booking confirmations are read from the structured data the mail carries (`engine/bookings.py`,
   `tests/test_bookings.py`, fictional samples in `tests/fixtures/bookings/`): flights, stays, events, restaurants,
   rental cars and trains, with every missing or unclear field reported and nothing guessed from the prose.
+  Bill dates by rules (`engine/bill_dates.py`, `tests/test_bill_dates.py`): a day of the month (the 31st becomes the
+  month's last day), the last day, the nth weekday, every N weeks or yearly, moved to the previous or next business
+  day around weekends and the person's holidays, each with reminders some days before.
 - [ ] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
   them, and **the separation visible:** each area says which account reads it and whether anything leaves the
   computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).
