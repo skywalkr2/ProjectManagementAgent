@@ -1173,3 +1173,4 @@ refused by this host, not silently ignored. The contract and current limitations
 - **Page width (7.0):** never wider than the window, with no sideways page scroll at any width (owner, 2026-10-16). To be built with a browser test of every main screen at several widths (open promise P19).
 
 - **The daily steward (6.32, new):** the core is a daily assistant for anyone, with time (reminders, repeating to-dos, briefs), promises both ways, replies owed, meeting prep, people memory, dates in documents, areas of life, capture from anywhere, suggestions and talking to the assistant; planned as phase S before the installers (owner, 2026-10-17).
+- **The daily steward, after review (6.32):** promises and how they resolve come first; attention budget, capacity check, missed-while-asleep reminders and outcome measures added (2026-10-17).

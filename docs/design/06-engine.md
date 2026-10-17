@@ -2457,6 +2457,14 @@ people and details, and never acts in their name without their yes on the exact 
   through an adapter capability.
 - **Manner:** suggestions on patterns, each a line with choices recorded as signals; talking to the assistant as the way
   to ask for anything, every proposed change kept or dropped inline.
+- **Promises come first** (2026-10-17): dependable memory for commitments is the reason to choose the product. A promise
+  is found with its evidence and its basis (said or inferred), and its end is proposed the same way: done, date
+  changed, called off, partly delivered, or answered without an answer; never closed silently.
+- **Attention is budgeted:** quiet hours, a daily cap with a digest for the rest, an importance threshold, and
+  dismissals that stick; the day's priorities are checked against the free time on the calendar, without automatic
+  scheduling. Reminders that came due while the computer slept show at once on waking, marked late.
+- **Measured:** promises found and kept, false alerts, time spent reviewing and follow-ups completed, on the Quality
+  screen (6.20).
 - **Not in 1.0 unless the owner changes it:** writes to mail or calendar (they stay read-only), phone push, a bank or any
   financial account. The details of each item are designed in its own section when its wave starts; the proposal is
   `docs/project/steward-proposal.md`.
