@@ -2071,6 +2071,9 @@ S4. **What arrives, and where it may go:**
 - [ ] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed
   reminder; travel and booking confirmations become the app's own calendar entries. Bills are reminders only: no bank
   connection, balances or cash flow (owner, 2026-10-17).
+  Booking confirmations are read from the structured data the mail carries (`engine/bookings.py`,
+  `tests/test_bookings.py`, fictional samples in `tests/fixtures/bookings/`): flights, stays, events, restaurants,
+  rental cars and trains, with every missing or unclear field reported and nothing guessed from the prose.
 - [ ] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
   them, and **the separation visible:** each area says which account reads it and whether anything leaves the
   computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).

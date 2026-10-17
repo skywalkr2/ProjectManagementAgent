@@ -59,6 +59,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   counts as an answer to a promise. Drafted with an outside assistant; here the mail programs' own header names and
   the subject phrases moved to `engine/defaults/automatic_mail.yaml`, and generated mail became its own kind instead
   of an automatic reply.
+- **Also (2026-10-17): bookings from a confirmation's structured data.** `engine/bookings.py` reads the reservation
+  data that confirmation mails embed (flights, stays, events, restaurants, rental cars, trains) into bookings, keeping
+  partial ones with each missing or unclear field reported, never inferring a time zone or reading the prose. Its
+  text comes from outside, so a booking stays untrusted until the person keeps the calendar entry. Drafted with an
+  outside assistant; here deeply nested markup, which crashed it, is reported instead, and structured data is built
+  only for reservation types, which keeps hostile markup from slowing it down.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
