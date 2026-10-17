@@ -91,6 +91,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   and a quiet day is one line, following the rule that no line counts zero things. Ten samples drafted with an outside
   assistant were rewritten to this: the brief asked for a verb at the start of every line, which put filler ("Note
   that…", "Enjoy the quiet") in front of news. **Impact:** design 6.32 gains the brief's shape.
+- **Also (2026-10-17): a mail server's sign-in refusal, read by rules.** `engine/connectors/imap_refusal.py` reads the
+  standard IMAP response codes first, then known phrases from `engine/defaults/imap_refusals.yaml` (service names in
+  data only), shortens any web address to its domain, and gives a kind with an advice key. The odd text in the owner's
+  screenshot is Python's way of printing the server's bytes (`str(err)` gives `b'…'`); the mailbox reader is to pass
+  the bytes themselves when it is wired in (open promise P19), and the classifier also reads that printed form back. Drafted with an outside assistant; here a plain
+  authentication failure became its own kind (check the user name and password, or make an app password) instead of
+  "unknown", and the phrases moved to a YAML data file.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

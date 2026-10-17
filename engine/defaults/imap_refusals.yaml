@@ -1,0 +1,21 @@
+# Phrases mail servers put in a sign-in refusal, read by `engine/connectors/imap_refusal.py` after the standard IMAP
+# response codes (RFC 9051, RFC 5530). A phrase matches anywhere in the refusal, without regard to case. `hosts`, when
+# given, limits a phrase to those exact server names. `service` says where a phrase was seen; it is never used to
+# detect a service. This list is small on purpose: an unmatched refusal shows the server's own words.
+rules:
+  - {service: Generic, phrase: "invalid credentials", kind: credentials_refused}
+  - {service: Generic, phrase: "authenticate failed", kind: credentials_refused}
+  - {service: Generic, phrase: "login failed", kind: credentials_refused}
+  - {service: Google, phrase: "application-specific password required", kind: app_password_needed}
+  - {service: Yahoo, phrase: "app password required", kind: app_password_needed}
+  - {service: Generic, phrase: "incorrect password", kind: wrong_password}
+  - {service: Generic, phrase: "account is locked", kind: account_locked}
+  - {service: Generic, phrase: "account temporarily locked", kind: account_locked}
+  - {service: Generic, phrase: "imap access is disabled", kind: sign_in_method_off}
+  - {service: Microsoft, phrase: "basic authentication is disabled", kind: sign_in_method_off}
+  - {service: Generic, phrase: "server is busy", kind: server_busy}
+  - {service: Generic, phrase: "tls negotiation failed", kind: secure_connection_failed}
+  - {service: Generic, phrase: "mot de passe incorrect", kind: wrong_password}
+  - {service: Generic, phrase: "contraseña incorrecta", kind: wrong_password}
+  - {service: Generic, phrase: "konto ist gesperrt", kind: account_locked}
+  - {service: Generic, phrase: "アプリパスワードが必要", kind: app_password_needed}
