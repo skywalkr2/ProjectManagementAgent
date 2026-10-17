@@ -1698,6 +1698,35 @@ from" link are built for real use at the end of L-core ("Ready for real use"); p
 
 The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 
+**Where phase B stands (2026-10-17) and the waves left, in order.** Built and pushed: wave 1 (Today: queue, inspector,
+rail; 9dbee51), wave 2 (answers 25, 26, 31 and 32: AI accounts in one place, what each model can do, Not now in the menu,
+copy tables; 1adccce), and a batch for open promises P15 and P16 with the language list (13129e7, ec5bd4f). The owner
+holds feedback until phase B is done and then tests it all at once ("im going to wait on any other feedback until we get
+all the updates done"); the message then gives the update commands and a walkthrough. Left:
+1. **Wave 3, Today follow-ups and Settings:** open promise P19 first (the page-width rule with its browser test at
+   390, 768, 1024, 1280, 1512 and 1920 pixels and in a narrow window; long unbroken text breaks; the mailbox sign-in
+   refusal in plain words with the app-password step; no "0 things" line; no repeated stage name); the designer's
+   answers 33 to 38 and the four extra findings (toasts off the nav, the details pane follows focus, links to a person's
+   Follow-ups group, the nudge template, the add-on Today group, "N new behaviors", the phone header, the Backup bar
+   repeating the chip, the rail's to-dos as checkboxes, meta lines that start with pasted text); then the Settings
+   rework (sections down the side so AI accounts is its own page, changes saved as made with Undo, "Changed · Reset",
+   help beside the form; the owner: "i dont really see much different and the save button never seems to be active").
+2. **Wave 4, records:** Projects and People as their own tables with detail panes, record pages, forms in drawers (the
+   two nav buttons that open one screen), the series page (30), the fact's source label (29), held lines (28),
+   questions after a move grouped (27), Completed as a place, P13 ("Add a person" inside the owner list) and P14 (a home
+   for unfiled items).
+3. **Wave 5, sources and accounts:** open promise P17 (.ics calendars, full featured: a pasted link, a file on disk,
+   invitations as calendar entries, repeating events expanded, Outlook time zones, attendees) and P18 (several accounts
+   of one service at once, each source picking its account; a plugin API change told to the mail add-on's builder).
+   P16's leftovers too: an add-on's own secrets and the backup key typed on the screen.
+4. **Wave 6, the rest:** Top priorities, the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane,
+   the Quality screen, a project's "what the assistant knows", the work screens as list and detail, blocked actions, Copy
+   with formatting, the action and question clean-up, lists not typing everywhere, the cursor in the first field, and
+   checklist C1–C46 with screenshots. (The Monday briefing moved to phase S1; the launcher moved to phase I.)
+
+Waiting on the owner: whether a Follow-ups table's action links should go to the project's pages (built that way in wave 2);
+signing for the installers (phase I).
+
 From L3 (design 7.18):
 - [ ] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
   glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
@@ -1891,7 +1920,8 @@ From the original designer's lessons of 2026-10-14:
   pasted, mail and documents get the formatting, chat gets clean plain text, and the menu has Copy as plain text. Every
   Copy in the app uses it (questions, follow-ups, the briefing, reports). A browser test pastes both versions and checks
   the formatted one escapes every piece of text.
-- [ ] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). On the first
+- [ ] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). *Moved to phase
+  S1 (2026-10-17), as the weekly form of the morning brief; the description below stands.* On the first
   open of the week (the day is a setting), a briefing: what is due this week, what is late or at risk, what is
   blocked, who the person is waiting on, and decisions still open, built from the records by rules. A short written
   summary on top is an optional AI task kind with its estimate, off by default. Sending it to the person is phase E.
@@ -2096,6 +2126,9 @@ C4. **What the packs need from the core.**
   was found stays blank.
 - [ ] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked.
 - [ ] Anything else either pack's builder asks for, answered in one weekly round.
+- [ ] **Rounds 34 to 48 and 52, answered 2026-10-16** in `docs/project/plugin-answers-34-48.md` (sent to the builder, who
+  confirmed and will adapt once): built together as phase C's first plugin API release, the dependency install in C1, and
+  the conversation on a record (190) right after it. The owner keeps phase B first (2026-10-16: "Keep B first").
 - [ ] **Round 39 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
   - 190, **a conversation on a record**: a thread kept on the record, opened from any screen with that record as its
     context, each message a request of a task kind the pack names, replies with citations, kept-or-dropped changes,
