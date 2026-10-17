@@ -1989,7 +1989,8 @@ right after phase B and before phase C's plugin API release. Today a tag builds 
   decides, the builds are unsigned and the release notes say how to open them.
 - [ ] **A name and icons** (owner, 2026-10-16: "I also want to make sure we add proper icons and a good name. is PM
   Cockpit really a good name ... it should be marketed more as a daily assistant type thing versus only for PMs"): the
-  owner picks the product name from a short list checked for clashes (app stores, trademarks, domains). The name shown on
+  name is **Reginald** (owner, 2026-10-17), and so is the assistant's default name, which the person can still
+  change; it is checked for clashes (app stores, trademarks, domains) before the installers ship. The name shown on
   screen, in the installers and in the docs comes from one place; internal names (the package, the command, the add-on
   entry point, the environment prefix) change, if at all, in phase C's plugin API release, so add-on builders adapt
   once. Icons: the app icon for macOS and Windows at every size, a one-color menu bar and tray icon, and the browser tab
