@@ -1704,8 +1704,10 @@ copy tables; 1adccce), and a batch for open promises P15 and P16 with the langua
 holds feedback until phase B is done and then tests it all at once ("im going to wait on any other feedback until we get
 all the updates done"); the message then gives the update commands and a walkthrough. Left:
 1. **Wave 3, Today follow-ups and Settings:** open promise P19 first (the page-width rule with its browser test at
-   390, 768, 1024, 1280, 1512 and 1920 pixels and in a narrow window; long unbroken text breaks; the mailbox sign-in
-   refusal in plain words with the app-password step; no "0 things" line; no repeated stage name); the designer's
+   390, 768, 1024, 1280, 1512 and 1920 pixels and in a narrow window; long unbroken text breaks, tried with the 50
+   layout stress strings in `web/e2e/fixtures/layout-strings.json` in titles, rows, the rail and the details pane;
+   the mailbox sign-in refusal in plain words with the app-password step; no "0 things" line; no repeated stage
+   name); the designer's
    answers 33 to 38 and the four extra findings (toasts off the nav, the details pane follows focus, links to a person's
    Follow-ups group, the nudge template, the add-on Today group, "N new behaviors", the phone header, the Backup bar
    repeating the chip, the rail's to-dos as checkboxes, meta lines that start with pasted text); then the Settings
