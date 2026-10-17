@@ -2453,7 +2453,11 @@ The core is a daily assistant for anyone juggling work, not only project support
 what was promised to them, notices what needs them, gets the next step ready, reminds them at the right moment, remembers
 people and details, and never acts in their name without their yes on the exact content. On top of 6.8 to 6.15 and 6.22:
 - **Time:** reminders at a time on any dated thing, with snooze; repeating to-dos on the calendar's repeat engine; a
-  morning brief and an evening wrap-up, with the Monday briefing as the weekly form.
+  morning brief and an evening wrap-up, with the Monday briefing as the weekly form. The brief has three sections in
+  order (changed overnight, at risk today, needs your yes): a changed or at-risk line states one fact plainly, an
+  at-risk line says when it bites, a needs-your-yes line starts with what the person does and opens the exact
+  content, an empty section is left out, a quiet day is one line, and no line reports status or progress (samples in
+  `docs/project/steward-brief-samples.md`).
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank

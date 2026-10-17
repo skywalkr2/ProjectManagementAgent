@@ -85,6 +85,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   delivery, non-answers, corrected dates, cancellations, "it" from the thread) are kept as material until promise
   records and ops exist, then converted to harness pairs. Drafted with an outside assistant; an unowned "we" promise
   is held for Pick an owner, as every action names a person.
+- **Also (2026-10-17): the morning brief's shape.** Three sections in a fixed order (changed overnight, at risk today,
+  needs your yes); changed and at-risk lines state one fact plainly, at-risk lines say when it bites, and only the yes
+  lines start with what the person does, naming the thing rather than "Approve a draft". Empty sections are left out
+  and a quiet day is one line, following the rule that no line counts zero things. Ten samples drafted with an outside
+  assistant were rewritten to this: the brief asked for a verb at the start of every line, which put filler ("Note
+  that…", "Enjoy the quiet") in front of news. **Impact:** design 6.32 gains the brief's shape.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

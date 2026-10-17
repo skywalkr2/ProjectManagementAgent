@@ -2057,6 +2057,7 @@ S2. **Time and attention:**
 - [ ] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
 - [ ] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
   evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
+  Its shape is in design 6.32, with ten samples (`docs/project/steward-brief-samples.md`) that become its evaluation cases.
 - [ ] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
   the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
   scheduling.
