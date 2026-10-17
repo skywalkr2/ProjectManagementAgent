@@ -2082,6 +2082,29 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   sandbox command, no fictional workspaces and no example add-on; the first launch is the walkthrough on an empty
   workspace, and add-ons are offered in its add-ons step from the catalog. The fictional workspaces stay in the
   repository as test fixtures only.
+- [ ] **How it is built (research, 2026-10-17, checked against the code):** PyInstaller in its folder mode (not one
+  file, which unpacks on every start) for the app; on macOS an `.app` signed with the hardened runtime, notarized and
+  stapled, inside a `.dmg`, built separately on Apple silicon and Intel runners (pinned, not "latest"); on Windows an
+  Inno Setup installer for the person only (`PrivilegesRequired=lowest`, under their local programs folder), with both
+  the program and the installer signed. Python 3.12 on native runners; no Node or browser engine in the download (the
+  screens are prebuilt and open in the person's own browser). The launcher: the menu bar or tray loop on the main
+  thread, one server in the background (no reload, one worker), a readiness check before the browser opens, one
+  instance only, and Quit stops everything. The local API already requires the install token besides loopback and the
+  Host and Origin checks (`api/app.py`), which an app holding mail access needs. Updates start as "a new version is
+  ready" opening the signed download; Sparkle (macOS) and WinSparkle (Windows) are the later step.
+- [ ] **Add-ons in an installed app (decide at the start of phase I, with a trial):** today Install unpacks a wheel into
+  the app's own package folder (`engine/pack_install.py` `target()`), which a frozen, signed app can't take. The plan:
+  an add-ons folder in the person's app-data place, put on the import path at start, filled with exactly the wheels a
+  release lists (round 35's design: every wheel with its checksum, never from an index). Pure-Python wheels work that
+  way. Wheels with compiled parts (a pack's XML or typesetting library) also need, on macOS, either the
+  `disable-library-validation` entitlement (allowed for notarized apps; it lets the app load code not signed by its
+  own team, so add-ons stay limited to checksummed catalog releases) or a separate Python worker for add-ons. The trial
+  installs the writing pack's own wheels into a built app on both systems and picks one.
+- [ ] **Signing costs (the owner's decision; prices advertised 2026-10-17, before tax):** Apple Developer Program $99 a
+  year (signing and notarization for direct downloads); Windows: Azure Artifact Signing Basic $9.99 a month with 5,000
+  signatures (individuals eligible in the US and Canada, identity checked; signs from GitHub without a long-lived
+  secret), or a standard certificate from about $129 a year plus a signing service or hardware token. About $219 a
+  year for Apple plus Azure Basic. No signing removes SmartScreen's warning at once; reputation builds over downloads.
 - [ ] **Exit test:** on a clean Mac and a clean Windows machine, download from the release page, install, open, finish
   the walkthrough to the first result, quit, reopen with the data still there, update to the next version, uninstall
   with the data kept. Journey tests cover what CI can (launch, the server answering, the data folder), and the owner

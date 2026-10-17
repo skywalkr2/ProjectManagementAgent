@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-17: The installers are built with PyInstaller (folder mode) and Inno Setup
+
+- **Decided (main session, from the owner's research report on packaging, checked against the code):** phase I builds
+  the app with PyInstaller in folder mode; macOS ships a signed, notarized `.app` in a `.dmg`, built per architecture;
+  Windows ships a per-person Inno Setup installer. Briefcase and Nuitka were weighed: Briefcase brings its own project
+  layout, and Nuitka's compiling doesn't help an app that mostly waits on the network. Updates start as a "new version
+  is ready" link to the signed download.
+- **Open, decided at the start of phase I with a trial:** how add-ons with compiled parts load in a signed app (the
+  library-validation entitlement, or a separate worker), and signing (the owner's decision: about $219 a year for
+  Apple plus Azure's basic signing).
+- **Impact:** add-ons move from the app's own package folder to one in the person's app-data place; the rest of the
+  app is unchanged.
+
 ## 2026-10-17: The product is called Thimbleby; the assistant inside it is Reginald
 
 - **Decided (owner: "okay i checked Thimbleby and we can go with that"):** the product's name is **Thimbleby**. The
