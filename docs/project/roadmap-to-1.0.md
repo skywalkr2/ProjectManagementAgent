@@ -2100,7 +2100,12 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   `disable-library-validation` entitlement (allowed for notarized apps; it lets the app load code not signed by its
   own team, so add-ons stay limited to checksummed catalog releases) or a separate Python worker for add-ons. The trial
   installs the writing pack's own wheels into a built app on both systems and picks one.
-- [ ] **Signing costs (the owner's decision; prices advertised 2026-10-17, before tax):** Apple Developer Program $99 a
+- [ ] **Signing: unsigned to start** (owner, 2026-10-17: "i will just use unsigned to start"). The macOS build is
+  only ad-hoc signed (Apple silicon needs that much, and PyInstaller does it), so a tester opens it once through
+  System Settings, Privacy & Security, "Open Anyway"; on Windows, SmartScreen's "More info", then "Run anyway". The
+  release notes and the download page show both, with pictures. Unsigned builds don't enforce library validation, so
+  compiled add-ons load without the entitlement for now; the trial above still decides the signed setup. Signing is
+  added later without other changes. **Costs when it is (prices advertised 2026-10-17, before tax):** Apple Developer Program $99 a
   year (signing and notarization for direct downloads); Windows: Azure Artifact Signing Basic $9.99 a month with 5,000
   signatures (individuals eligible in the US and Canada, identity checked; signs from GitHub without a long-lived
   secret), or a standard certificate from about $129 a year plus a signing service or hardware token. About $219 a

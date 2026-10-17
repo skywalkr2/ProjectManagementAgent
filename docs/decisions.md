@@ -10,9 +10,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   Windows ships a per-person Inno Setup installer. Briefcase and Nuitka were weighed: Briefcase brings its own project
   layout, and Nuitka's compiling doesn't help an app that mostly waits on the network. Updates start as a "new version
   is ready" link to the signed download.
-- **Open, decided at the start of phase I with a trial:** how add-ons with compiled parts load in a signed app (the
-  library-validation entitlement, or a separate worker), and signing (the owner's decision: about $219 a year for
-  Apple plus Azure's basic signing).
+- **Signing:** unsigned to start (owner: "i will just use unsigned to start"); testers open the app once through the
+  system's "Open Anyway" or "Run anyway", shown in the release notes. Signing (about $219 a year for Apple plus
+  Azure's basic signing) is added later without other changes.
+- **Open, decided at the start of phase I with a trial:** how add-ons with compiled parts load once the app is signed
+  (the library-validation entitlement, or a separate worker); unsigned builds load them as they are.
 - **Impact:** add-ons move from the app's own package folder to one in the person's app-data place; the rest of the
   app is unchanged.
 
