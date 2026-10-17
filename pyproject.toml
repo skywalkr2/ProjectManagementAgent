@@ -24,6 +24,7 @@ cockpit = "engine.cli:main"
 
 [dependency-groups]
 dev = [
+    "icalendar>=6",
     "pytest>=8.3",
     "pytest-xdist>=3.6",
     "ruff>=0.6",

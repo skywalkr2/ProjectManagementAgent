@@ -19,6 +19,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   history (">" quoting, "On ... wrote:", Outlook and other mail programs' header blocks, forwarding markers) and its
   signature, keeping anything uncertain as new text; drafted with an outside assistant and widened here to header blocks
   that use Date instead of Sent in any order.
+- **Also (2026-10-17): writing calendar events.** `engine/ics_write.py` writes one event as an iCalendar file (escaping,
+  75-octet folding that never splits a character, a time zone definition covering the event's years, reminders as
+  alarms, organizer and attendees, method and sequence), for reminders placed in the person's own calendar and
+  calendar acts after a yes (phase S); drafted with an outside assistant, checked by parsing its output back with the
+  `icalendar` package, now a development dependency.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
