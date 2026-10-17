@@ -2067,6 +2067,9 @@ S2. **Time and attention:**
 - [ ] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
   the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
   scheduling.
+  What to move is proposed by rules (`engine/capacity.py`, `tests/test_capacity.py`): never a fixed to-do, those due
+  today or overdue last, then lowest priority, not promised and latest due first, with no move a larger one made
+  unnecessary.
   Free time is computed by rules (`engine/free_slots.py`, `tests/test_free_slots.py`): every calendar merged,
   working hours and days in the person's zone across clock changes, a buffer around meetings, tentative entries
   blocking unless counted as free; it also finds the slots for "propose a new time".

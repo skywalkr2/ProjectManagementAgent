@@ -117,6 +117,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   not put in the digest: the threshold is what's worth the person's attention at all. A dismissal lasts until the
   suggestion's change key differs. Drafted with an outside assistant; here dismissals are kept per kind and subject,
   since one per kind let dismissing a second suggestion bring back the first unchanged.
+- **Also (2026-10-17): the capacity check, by rules.** `engine/capacity.py` adds up the day's to-do estimates against
+  the free minutes and, when they don't fit, proposes whole to-dos to move, each with a plain reason; it never moves
+  a fixed to-do and never changes anything itself. Order: to-dos due today or overdue last, then lowest priority, not
+  promised, no due date and latest due first. Drafted with an outside assistant; here due-today and overdue to-dos
+  went from first-by-priority to last, and a small move a later, larger one made unnecessary is dropped.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
