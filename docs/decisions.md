@@ -23,12 +23,19 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   75-octet folding that never splits a character, a time zone definition covering the event's years, reminders as
   alarms, organizer and attendees, method and sequence), for reminders placed in the person's own calendar and
   calendar acts after a yes (phase S); drafted with an outside assistant, checked by parsing its output back with the
-  `icalendar` package, now a development dependency.
+  `icalendar` package.
 - **Also (2026-10-17): due phrases by rules.** `engine/due_phrases.py` reads a due phrase against the message's received
   time and zone, with the workweek, locale and end-of-day time as inputs; its conventions (a bare weekday is the next
   one, "next Friday" is the following week's but marked uncertain, close of business is the configured time) are
   product behavior shown to the person as a note beside the proposed date. Drafted with an outside assistant in two
   rounds; short forms (EOD, COB, Fri), a weekday with a date, and far-ahead year-less dates marked uncertain added here.
+- **Also (2026-10-17): answering invitations.** `engine/itip.py` reads one invitation, update, cancellation or reply
+  (RFC 5546), prepares the person's answer (accept, decline, maybe, with an optional note) without sending it, and picks
+  the newer of two versions by sequence, then time stamp. It doesn't check who sent the message: before a cancellation
+  or update changes a calendar entry, the caller checks that the sender is the organizer, and an answer goes out only
+  through the publisher after the person's yes (phase S1b). Windows zone names resolve without an embedded definition;
+  an unknown zone is refused, never read as floating. Drafted with an outside assistant; `icalendar` is now a runtime
+  dependency.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

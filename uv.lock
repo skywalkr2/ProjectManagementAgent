@@ -341,6 +341,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "icalendar" },
     { name = "packaging" },
     { name = "pydantic" },
     { name = "pypdf" },
@@ -352,7 +353,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "icalendar" },
     { name = "pytest" },
     { name = "pytest-xdist" },
     { name = "ruff" },
@@ -363,6 +363,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=43" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "icalendar", specifier = ">=6" },
     { name = "packaging", specifier = ">=24" },
     { name = "pydantic", specifier = ">=2.8" },
     { name = "pypdf", specifier = ">=5" },
@@ -374,7 +375,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "icalendar", specifier = ">=6" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-xdist", specifier = ">=3.6" },
     { name = "ruff", specifier = ">=0.6" },
