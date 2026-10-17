@@ -1171,3 +1171,5 @@ The later 1.0 extension points and reach capabilities (interfaces, panels, jobs,
 refused by this host, not silently ignored. The contract and current limitations are in `docs/plugin-api-0.x.md`.
 
 - **Page width (7.0):** never wider than the window, with no sideways page scroll at any width (owner, 2026-10-16). To be built with a browser test of every main screen at several widths (open promise P19).
+
+- **The daily steward (6.32, new):** the core is a daily assistant for anyone, with time (reminders, repeating to-dos, briefs), promises both ways, replies owed, meeting prep, people memory, dates in documents, areas of life, capture from anywhere, suggestions and talking to the assistant; planned as phase S before the installers (owner, 2026-10-17).

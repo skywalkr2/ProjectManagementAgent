@@ -35,7 +35,7 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
   learning, each fixed with its pair. **Phase L-core's code is done.** The one step left is the owner's "after" run (O3),
   which the comparison with O1 and O2 needs before real use starts.
 - **Next:** phase B (L7 and O3 on the backup model are done, 2026-10-16; the main account's pairs run when its allowance resets), then
-  phase C (the writing pack, finished completely first), then phase P (the project management
+  phase S (the daily steward), then phase I (the Windows and macOS installers), then phase C (the writing pack, finished completely first), then phase P (the project management
   and publishing packs), then the owner's sign-off (D).
 - **When the owner uses it** (owner, 2026-10-15): the owner tests it after phase B and starts real use once the writing
   pack is complete (end of phase C). There is no go/no-go date: the 2026-10-30 one was set aside on 2026-10-09 and
@@ -1952,13 +1952,56 @@ From the original designer's lessons of 2026-10-14:
 
 The journey tests from A3 run against the new screens as they land.
 
-## Phase I: installers for Windows and macOS (after phase B, about 2 sessions)
+## Phase S: the daily steward (after phase B, before phase I; about 5 sessions)
+
+The owner's ask (2026-10-17): "this core needs to be full featured" as a daily assistant for anyone, not only project
+support; the owner accepted the proposal in `docs/project/steward-proposal.md` as written ("i agree with everything you
+wrote so definetely want to work on these before we do the full ci/cd setup with the installers"). Design 6.32. Each item
+ends with named tests; the exit test is a week of the owner's own use with the morning brief, reminders and replies owed.
+
+S1. **Time** (first, since everything else leans on it):
+- [ ] **Reminders at a time** on any to-do, waiting-on, dated fact or calendar entry ("at", "the morning of", "an hour
+  before"), with snooze; shown as a Today line and as a browser notification while the app is open (desktop
+  notifications from the menu bar or tray come with phase I); content follows the data level rules.
+- [ ] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row:
+  done, moved or skipped.
+- [ ] **The morning brief and the evening wrap-up,** with the Monday briefing as their weekly form (phase B's item moves
+  here).
+S2. **Promises and people:**
+- [ ] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
+  folder is offered as a source when a mailbox is connected).
+- [ ] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
+  their voice to edit and copy; "No reply needed" is a choice the assistant learns from.
+- [ ] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
+- [ ] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
+  dates, all with evidence; shown before a meeting, and one line when a promised follow-up has gone quiet.
+S3. **What arrives:**
+- [ ] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed
+  reminder; travel and booking confirmations become the app's own calendar entries. Bills are reminders only: no bank
+  connection, balances or cash flow (owner, 2026-10-17).
+- [ ] **Areas of life** (work, home, a side project): top-level areas with their own data level and allowed AI accounts,
+  one Today across them.
+- [ ] **Capture from anywhere:** a forward-to address or watched folder, voice notes transcribed through a new adapter
+  capability, the phone page's capture box; the global shortcut comes with phase I's menu bar and tray app.
+S4. **The steward's manner:**
+- [ ] **Gentle suggestions with choices** on patterns ("moved three times: drop it, hand it on, or give it a time?"),
+  each choice recorded as a signal; the governor's stale sweep for the person's own items is brought forward from
+  phase E.
+- [ ] **Talking to Reginald:** the conversation on a record (plugin question 190) as the core's way to ask for anything,
+  every proposed change kept or dropped inline.
+- [ ] **The core reads as a daily assistant:** every screen, prompt and help page audited for project-manager wording;
+  what is PM-only is listed for the PM pack (phase P).
+
+Defaults until the owner says otherwise: mail and calendar stay read-only for 1.0 (approved writes go through the publisher
+later, phase C4); phone notifications beyond the phone page are not in 1.0; areas live inside one workspace.
+
+## Phase I: installers for Windows and macOS (after phase S, about 2 sessions)
 
 The owner's ask (2026-10-16): "I really want to be able to create windows and mac distributions so that I can send them
 to people for testing, and they will not want to do all the command lines to build it. Can we have a CI/CD setup that
 will create windows and mac installers? Those windows/mac installers should set the program to be installed in the
 appropriate places, and default the storage to the place where windows/mac typically store application data." It comes
-right after phase B and before phase C's plugin API release. Today a tag builds the Python package with install scripts
+after phase S (the owner's order, 2026-10-17) and before phase C's plugin API release. Today a tag builds the Python package with install scripts
 (`.github/workflows/release.yml`); a tester still needs a terminal.
 
 - [ ] **Built by CI from a tag:** the same `v*` tag that builds the package also builds, on macOS and Windows runners, a

@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-17: The core becomes a daily steward (phase S), before the installers
+
+- **Decided (owner: "this core needs to be full featured"; then "i agree with everything you wrote so definetely want to
+  work on these before we do the full ci/cd setup with the installers"):** the twelve additions of
+  `docs/project/steward-proposal.md` become phase S, after phase B and before phase I: reminders, repeating to-dos, the
+  morning brief and evening wrap-up, promises both ways, replies owed, meeting prep, people memory, dates in documents,
+  areas of life, capture from anywhere, gentle suggestions, and talking to Reginald; the core is audited for PM-only
+  wording. Bills are reminders only, with no bank connection (owner).
+- **Defaults until the owner says otherwise:** mail and calendar stay read-only for 1.0; no phone push in 1.0; areas live
+  inside one workspace.
+- **Impact:** about five sessions before phase I; design 6.32 describes the steward; phase B's Monday briefing moves to S1.
+
 ## 2026-10-17: The product is called Reginald, and so is the assistant until the person renames it
 
 - **Decided (owner: "We can call it Reginald and just let the user change the name (already coded) but we can just default

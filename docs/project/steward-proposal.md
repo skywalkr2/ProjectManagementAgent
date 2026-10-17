@@ -1,4 +1,4 @@
-# From project support to a daily steward: what the core needs (proposal, 2026-10-17)
+# From project support to a daily steward: what the core needs (accepted 2026-10-17, phase S)
 
 The owner's ask (2026-10-17): "since we are turning this into a steward think about what we need to add to the design to
 really dig into that. Most of what i originally designed came out of PM support, but this core needs to be full

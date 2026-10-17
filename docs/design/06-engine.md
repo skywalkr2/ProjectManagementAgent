@@ -2442,3 +2442,22 @@ was told or a question sent), and per project its open actions, open questions a
 - **Seen by the assistant:** a packet lists the values each list-bound field takes (6.6), so a proposal names a real value.
   Adding a value is a deliberate act ("Add to the list"), never a side effect of writing a new value; the assistant may only
   propose it, as a system op that waits for the person.
+
+## 6.32 The daily steward (phase S, designed)
+
+The core is a daily assistant for anyone juggling work, not only project support: it knows what the person promised and
+what was promised to them, notices what needs them, gets the next step ready, reminds them at the right moment, remembers
+people and details, and never acts in their name without their yes on the exact content. On top of 6.8 to 6.15 and 6.22:
+- **Time:** reminders at a time on any dated thing, with snooze; repeating to-dos on the calendar's repeat engine; a
+  morning brief and an evening wrap-up, with the Monday briefing as the weekly form.
+- **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
+  replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
+- **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
+  connection); areas of life with their own data level and allowed accounts; capture from anywhere, voice included
+  through an adapter capability.
+- **Manner:** suggestions on patterns, each a line with choices recorded as signals; talking to the assistant as the way
+  to ask for anything, every proposed change kept or dropped inline.
+- **Not in 1.0 unless the owner changes it:** writes to mail or calendar (they stay read-only), phone push, a bank or any
+  financial account. The details of each item are designed in its own section when its wave starts; the proposal is
+  `docs/project/steward-proposal.md`.
+
