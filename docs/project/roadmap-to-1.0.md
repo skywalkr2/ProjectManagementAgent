@@ -2002,6 +2002,9 @@ S1. **Promises, and how they end:**
   reading (next Friday, a past "this Friday", a year-less date far ahead) is marked for the person to check.
   Evaluation material: 120 single items (`docs/project/steward-promise-examples.yaml`) and 25 whole threads with how
   each promise ends (`docs/project/steward-promise-threads.yaml`, checked by `tests/test_steward_threads.py`).
+  Messages join their conversation by rules (`engine/mail_threads.py`, `tests/test_mail_threads.py`): the reply
+  headers first, then the same subject with a shared correspondent within a set number of days (a setting, 14 by
+  default), never on an ambiguous match.
 - [ ] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
   owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
   doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the

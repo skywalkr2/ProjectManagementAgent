@@ -47,6 +47,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   capacity check and for proposing a new time. Drafted with an outside assistant; changed here so an all-day entry
   follows its show-as like a timed one (a day out of office is not free time; holidays marked free still don't block).
   The caller maps each source's own show-as words to busy, tentative, free and out of office.
+- **Also (2026-10-17): conversations by rules.** `engine/mail_threads.py` strips reply and forward prefixes and outside
+  tags from a subject (in several languages, keeping ticket numbers) and picks a message's conversation: a known
+  message in its reply headers, then the first reference, then the same subject with a shared correspondent within
+  a number of days, and a new conversation when more than one would match. The caller leaves the person's own
+  addresses out of the participants, or every message they're on would overlap. Drafted with an outside assistant;
+  a known parent now wins when the references were trimmed.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
