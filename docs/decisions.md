@@ -111,6 +111,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   tomorrow morning, next week, or a picked time. Drafted with an outside assistant; here a zone whose clocks change at
   midnight no longer makes every plan "unknown", and "tomorrow morning" on a Friday is Saturday morning rather than
   refused, since the steward covers the person's own life too.
+- **Also (2026-10-17): the attention budget, by rules.** `engine/attention.py` decides for each suggestion whether it is
+  shown now, saved for the digest (quiet hours, or past the day's cap, the most important going first) or held back
+  (below the importance threshold, or dismissed and unchanged), each with a reason. Below the threshold is held back,
+  not put in the digest: the threshold is what's worth the person's attention at all. A dismissal lasts until the
+  suggestion's change key differs. Drafted with an outside assistant; here dismissals are kept per kind and subject,
+  since one per kind let dismissing a second suggestion bring back the first unchanged.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

@@ -2073,6 +2073,9 @@ S2. **Time and attention:**
 - [ ] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
   threshold, and dismissals that stick and teach (a dismissed kind of suggestion comes back only when something
   changes). All settings with defaults.
+  Which suggestions interrupt is decided by rules (`engine/attention.py`, `tests/test_attention.py`): held back when
+  dismissed and unchanged or below the threshold, saved for the digest in quiet hours or past the day's cap, the
+  most important shown first.
 S3. **People and meetings:**
 - [ ] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
 - [ ] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
