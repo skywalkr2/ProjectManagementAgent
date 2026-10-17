@@ -1989,7 +1989,8 @@ support; the owner accepted `docs/project/steward-proposal.md` ("i agree with ev
 work on these before we do the full ci/cd setup with the installers"). Reordered the same day after an outside review the
 owner brought (in the proposal's "Review, 2026-10-17"): **dependable memory for commitments across work and personal life
 is the reason to choose Thimbleby**, so promises and how they resolve come first, before reminders and briefs. Design
-6.32. Each item ends with named tests. Exit test: a week of the owner's own use, measured (S5).
+6.32. Each item ends with named tests. Exit test: a week of the owner's own use, measured (S5). The starting set of
+journey tests and evaluation cases is `docs/project/steward-scenarios.md` (15 fictional scenarios, reviewed 2026-10-17).
 
 S1. **Promises, and how they end:**
 - [ ] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
