@@ -2179,6 +2179,10 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
     in the app; and Thimbleby's own approval of every exact act stays, since a granted permission allows more than the
     person approved. For the first test: Google in Testing mode for under 100 people (others on Microsoft or a plain
     mailbox), a guide for company administrators, and the warning and weekly reconnection explained to testers.
+- [ ] **Passwords, keys and sign-in tokens in the system's own vault** (found writing the privacy policy, 2026-10-17):
+  today they are files in the workspace's private folder, readable only by the person's account; the installed app
+  keeps them in the macOS Keychain and Windows Credential Manager instead, with the files as the fallback where no vault
+  exists. The privacy policy draft (`docs/design/brand/privacy-policy.md`) is updated to match when it lands.
 - [ ] **Exit test:** on a clean Mac and a clean Windows machine, download from the release page, install, open, finish
   the walkthrough to the first result, quit, reopen with the data still there, update to the next version, uninstall
   with the data kept. Journey tests cover what CI can (launch, the server answering, the data folder), and the owner
