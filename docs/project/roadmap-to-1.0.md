@@ -1996,7 +1996,10 @@ S1. **Promises, and how they end:**
 - [ ] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
   folder is offered as a source when a mailbox is connected): "I'll send it Friday" is the person's to-do; "they'll get
   back to me Tuesday" is a waiting-on with its date. A message's own new text is separated from its quoted history and signature first
-  (`engine/reply_split.py`, `tests/test_reply_split.py`, 2026-10-17), so a promise quoted again is never counted twice.
+  (`engine/reply_split.py`, `tests/test_reply_split.py`, 2026-10-17), so a promise quoted again is never counted twice. Due phrases are read by rules before any AI
+  (a draft `due_phrases.py` from an outside assistant, 96 tests, is with the owner for a revision round: a past "this
+  Friday" or end of week on a weekend, "next Friday" marked as needing a check, times such as "Friday at noon", month
+  and day without a year, month abbreviations, next week and end of next week).
 - [ ] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
   owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
   doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the
