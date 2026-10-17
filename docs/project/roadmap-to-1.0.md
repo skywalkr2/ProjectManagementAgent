@@ -2067,7 +2067,7 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   (2026-10-17, the owner's research report, kept on their computer): two AI assistants already use the name in the same
   field (one with email integrations, one a reminder "butler"), a Windows productivity app has the exact name, the
   .app domain is held, and an official trademark search is still owed. "Morrowby" and "Daywarden" collided too; the owner chose
-  Thimbleby after their own check.* The name shown on
+  Thimbleby after their own check; thimbleby.app was free on 2026-10-17 (the owner's check).* The name shown on
   screen, in the installers and in the docs comes from one place; internal names (the package, the command, the add-on
   entry point, the environment prefix) change, if at all, in phase C's plugin API release, so add-on builders adapt
   once. Icons: the app icon for macOS and Windows at every size, a one-color menu bar and tray icon, and the browser tab
