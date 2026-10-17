@@ -2020,6 +2020,10 @@ management (not just read only) lets do it"):
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
 - [ ] **Calendar:** create an event or a hold, move or cancel one the person owns, and accept, decline or propose a
   new time for an invitation. Through the account's service; a subscribed calendar link stays read-only by nature.
+- [ ] **Plugin API for acting:** add-ons declare the acts they can carry out (a channel per account kind: send,
+  reply, move, label, create or change an event) and the access they need in `requires`; the core calls them only from
+  the publisher after the yes, and their sign-in asks for the wider access when the person turns acting on. Released
+  with the guide, so the mail add-on's builder builds against it.
 - [ ] **Nothing on its own:** the assistant drafts every act; none runs without the person's yes on that exact act, and
   rules may only suggest (an outbound op is never applied automatically, design 6.7).
 S2. **Time and attention:**
