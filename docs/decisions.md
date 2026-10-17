@@ -79,6 +79,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   it at sign-out, and SQLite's own documentation warns that a database on a network share can be corrupted; two
   computers already share a workspace through its synced folder. **Impact:** phase I's data-folder item (roadmap)
   now says local AppData. Drafted with an outside assistant.
+- **Also (2026-10-17): learning pairs for promises, as material first.** Twenty mistakes and corrections about finding
+  promises (sarcasm, quoted history, "we", conditions, proposals, promises made on someone's behalf, forwards,
+  signatures, hopes, suggestions, vague dates, two promises in one line, offers, negation, completion, partial
+  delivery, non-answers, corrected dates, cancellations, "it" from the thread) are kept as material until promise
+  records and ops exist, then converted to harness pairs. Drafted with an outside assistant; an unowned "we" promise
+  is held for Pick an owner, as every action names a person.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

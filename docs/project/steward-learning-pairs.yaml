@@ -1,0 +1,257 @@
+# Learning pairs for finding promises (design 6.22, 6.32; phase S2). Each is a mistake, the person's correction in
+# their own words, the lesson, and a later, different message where the same mistake would happen again. The person
+# using the app is Rowan. They become harness pairs (a workspace's `pairs/` folder, `engine/pairs.py`) once phase S has
+# promise records and ops to score; until then `tests/test_steward_learning_pairs.py` checks their shape and that the
+# reply splitter reads the quoted and forwarded ones as labeled. Drafted with an outside assistant and reviewed:
+# item 2's later message now comes from another person, and item 3's answer holds an unowned promise for Pick an owner.
+- id: 1
+  message: 'From: rowan@example.com
+
+    Sure, I’ll rebuild the entire website before lunch. And teach the printer to sing.'
+  wrong: Rowan promised to rebuild the website before lunch.
+  correction: I was being sarcastic. I didn’t agree to rebuild anything.
+  lesson: Treat clear sarcasm as uncertain intent rather than a firm commitment.
+  later_message: 'From: rowan@example.com
+
+    Of course I’ll proofread all 900 pages tonight, right after I move the moon.'
+  right_answer: No firm promise; the message is sarcastic.
+- id: 2
+  message: 'From: rowan@example.com
+
+    Thanks for checking.
+
+
+    > I’ll send the estimate by Friday.'
+  wrong: Created a new promise to send the estimate by Friday.
+  correction: That’s my old message underneath. Don’t count it again.
+  lesson: Quoted history can identify an existing promise but must not create a duplicate.
+  later_message: 'From: mira@example.com
+
+    Any update?
+
+
+    On Tuesday, Rowan wrote:
+
+    > I’ll share the draft on Thursday.'
+  right_answer: No new promise; the quoted draft commitment belongs to the earlier message.
+- id: 3
+  message: 'From: rowan@example.com
+
+    We’ll send the proposal on Friday.'
+  wrong: Assigned the entire proposal commitment to Rowan.
+  correction: By 'we' I mean our project team. Don’t make me the sole owner.
+  lesson: Keep collective ownership when a message says 'we' and names no individual owner.
+  later_message: 'From: rowan@example.com
+
+    We’ll get the revised drawings to you on Monday.'
+  right_answer: A collective promise to send revised drawings on Monday; no individual owner is named, so it is held for
+    Pick an owner instead of being assigned to Rowan.
+- id: 4
+  message: 'From: rowan@example.com
+
+    If Mira approves the budget, I’ll book the studio on Thursday.'
+  wrong: Rowan must book the studio on Thursday.
+  correction: Only if Mira approves the budget. That hasn’t happened yet.
+  lesson: Preserve a promise’s condition and do not present it as unconditional.
+  later_message: 'From: rowan@example.com
+
+    If the samples pass inspection, I’ll place the order tomorrow.'
+  right_answer: Conditional promise by Rowan to order tomorrow, dependent on the samples passing inspection.
+- id: 5
+  message: 'From: rowan@example.com
+
+    Could I send you the outline on Friday instead?'
+  wrong: Rowan promised to send the outline on Friday.
+  correction: I’m asking whether Friday works, not confirming a new date.
+  lesson: Distinguish a proposed arrangement from an accepted commitment.
+  later_message: 'From: rowan@example.com
+
+    Would it work if I delivered the mockups next Tuesday?'
+  right_answer: Proposed delivery next Tuesday; no confirmed promise or deadline change.
+- id: 6
+  message: 'From: lena@example.com
+
+    I told the client Rowan would finish the audit by Monday.'
+  wrong: Rowan promised to finish the audit by Monday.
+  correction: Lena volunteered me. I haven’t agreed to that.
+  lesson: A commitment made on someone’s behalf needs their acceptance before becoming their own promise.
+  later_message: 'From: dev@example.com
+
+    I assured the committee Rowan would prepare the slides tonight.'
+  right_answer: Dev made a commitment on Rowan’s behalf; Rowan’s acceptance is unconfirmed.
+- id: 7
+  message: 'From: lena@example.com
+
+    For your awareness.
+
+
+    ---------- Forwarded message ---------
+
+    From: oren@example.com
+
+    To: lena@example.com
+
+    I’ll send you the signed agreement on Thursday.'
+  wrong: Lena promised Rowan a signed agreement on Thursday.
+  correction: Oren promised Lena, not me. Lena just forwarded it.
+  lesson: Keep a forwarded promise attached to its original speaker and recipient.
+  later_message: 'From: mira@example.com
+
+    Passing this along.
+
+
+    Begin forwarded message:
+
+    From: tess@example.com
+
+    To: mira@example.com
+
+    I’ll deliver your prints on Saturday.'
+  right_answer: Tess promised Mira the prints on Saturday; Mira made no new promise to Rowan.
+- id: 8
+  message: "From: lena@example.com\nThanks for the update.\n\n-- \nLena\nWe promise delivery beyond expectations."
+  wrong: Lena promised to deliver the project.
+  correction: That’s her signature slogan. It isn’t a project commitment.
+  lesson: Do not extract task promises from signature slogans.
+  later_message: "From: oren@example.com\nReceived, thank you.\n\n-- \nOren\nYour success, delivered every day."
+  right_answer: No promise; the delivery wording is a signature slogan.
+- id: 9
+  message: 'From: rowan@example.com
+
+    I hope to finish the report tomorrow.'
+  wrong: Rowan promised to finish the report tomorrow.
+  correction: That’s a hope, not a deadline I committed to.
+  lesson: Preserve the distinction between an aspiration and a firm commitment.
+  later_message: 'From: rowan@example.com
+
+    I’m hoping to clear the revisions by Wednesday.'
+  right_answer: Tentative intention to finish revisions by Wednesday; no firm promise.
+- id: 10
+  message: 'From: rowan@example.com
+
+    We should send the client a summary next week.'
+  wrong: Rowan promised to send a summary next week.
+  correction: I’m suggesting something we might do. Nobody has taken it on.
+  lesson: Suggestions do not establish an owner or commitment without acceptance.
+  later_message: 'From: rowan@example.com
+
+    We ought to organize a review before Friday.'
+  right_answer: Suggestion to organize a review; no accepted promise or assigned owner.
+- id: 11
+  message: 'From: mira@example.com
+
+    I’ll get the samples to you early next week.'
+  wrong: Mira promised the samples by Monday.
+  correction: She said early next week. Don’t turn that into Monday.
+  lesson: Keep vague timing as written instead of inventing an exact deadline.
+  later_message: 'From: tess@example.com
+
+    I’ll send the measurements toward the end of the month.'
+  right_answer: Tess promised the measurements toward the end of the month; no exact date was stated.
+- id: 12
+  message: 'From: oren@example.com
+
+    I’ll send the invoice tomorrow and the installation notes next Friday.'
+  wrong: Found only the promise to send the invoice tomorrow.
+  correction: There are two promises here, with different deadlines.
+  lesson: Separate distinct promised actions and retain each action’s deadline.
+  later_message: 'From: lena@example.com
+
+    I’ll confirm the venue on Monday and share the guest list on Thursday.'
+  right_answer: 'Two promises by Lena: confirm the venue on Monday; share the guest list on Thursday.'
+- id: 13
+  message: 'From: mira@example.com
+
+    I can send the source files if you need them.'
+  wrong: Mira promised to send the source files.
+  correction: She’s offering. I haven’t asked her to send them.
+  lesson: An offer of help is not an active delivery commitment until its condition is met or accepted.
+  later_message: 'From: dev@example.com
+
+    I could review your draft if that would help.'
+  right_answer: An offer to review the draft; no active review commitment yet.
+- id: 14
+  message: 'From: rowan@example.com
+
+    I won’t be able to send the drawings on Thursday.'
+  wrong: Rowan promised to send the drawings on Thursday.
+  correction: I said I can’t send them then. That date is no longer reliable.
+  lesson: Read negation before interpreting an action and date as a promise.
+  later_message: 'From: lena@example.com
+
+    I can’t deliver the revised copy by Monday.'
+  right_answer: Lena says Monday delivery is not possible; flag any matching commitment for review without inventing a new
+    date.
+- id: 15
+  message: 'From: oren@example.com
+
+    As promised, I’ve attached the signed form.'
+  wrong: Created an open promise to send the signed form.
+  correction: He says he’s already sent it. Mark the matching promise done, if the attachment is there.
+  lesson: Completion language should resolve an existing commitment, with delivery verified where possible.
+  later_message: 'From: tess@example.com
+
+    Here are the measurements I said I’d send.'
+  right_answer: Evidence of delivery for the matching measurements promise; verify the measurements are included before
+    marking it done.
+- id: 16
+  message: 'From: mira@example.com
+
+    I’ve attached the first two illustrations. The last one will follow on Tuesday.'
+  wrong: Marked the promise to deliver three illustrations complete.
+  correction: Only two arrived. Keep the third open for Tuesday.
+  lesson: Partial delivery resolves only the delivered portion of a promise.
+  later_message: 'From: dev@example.com
+
+    Three of the four reference sheets are attached; I’ll send the fourth tomorrow.'
+  right_answer: Three sheets delivered; the fourth remains open, promised by Dev for tomorrow.
+- id: 17
+  message: 'From: lena@example.com
+
+    You asked whether the quote includes travel. We always aim to keep our pricing competitive.'
+  wrong: Marked the question about travel costs answered.
+  correction: That doesn’t tell me whether travel is included. I still need an answer.
+  lesson: A reply resolves a request for information only if it answers the actual question.
+  later_message: 'From: oren@example.com
+
+    Regarding your question about the warranty length, customer satisfaction is very important to us.'
+  right_answer: The warranty-length question remains unanswered; no warranty duration was provided.
+- id: 18
+  message: 'From: mira@example.com
+
+    Correction: I’ll send the final layout on Wednesday, not Monday.'
+  wrong: Kept Monday open and created a second delivery promise for Wednesday.
+  correction: It’s the same layout. Replace the old date instead of making a duplicate.
+  lesson: An explicit correction to a matching commitment updates its deadline rather than creating another obligation.
+  later_message: 'From: tess@example.com
+
+    The proof I promised for Thursday will now arrive on Friday.'
+  right_answer: Update the matching proof-delivery promise from Thursday to Friday.
+- id: 19
+  message: 'From: rowan@example.com
+
+    Please don’t prepare the workshop handouts after all; we’ve canceled the session.'
+  wrong: Kept Lena’s promise to prepare the workshop handouts open.
+  correction: I called that work off. Stop chasing Lena for it.
+  lesson: An explicit cancellation should close the matching obligation rather than leave it overdue.
+  later_message: 'From: rowan@example.com
+
+    We no longer need the display boards, so please cancel that preparation.'
+  right_answer: Cancel the matching display-board preparation commitment; no follow-up for delivery is needed.
+- id: 20
+  message: 'From: rowan@example.com
+
+    Yes, Friday works. I’ll have it ready then.'
+  wrong: Missed the promise because the message did not name the deliverable.
+  correction: We were discussing the revised proposal. 'It' means that proposal.
+  lesson: Use clear thread context to resolve a promised deliverable, but ask when the reference is ambiguous.
+  later_message: 'From: rowan@example.com
+
+    Tuesday is fine. I’ll bring them along.
+
+
+    > From: mira@example.com
+
+    > Can you bring the printed seating plans to our meeting?'
+  right_answer: Rowan promised to bring the printed seating plans to the meeting on Tuesday; the new promise is supported
+    by the quoted context.

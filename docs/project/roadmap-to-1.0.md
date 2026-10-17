@@ -2002,6 +2002,9 @@ S1. **Promises, and how they end:**
   reading (next Friday, a past "this Friday", a year-less date far ahead) is marked for the person to check.
   Evaluation material: 120 single items (`docs/project/steward-promise-examples.yaml`) and 25 whole threads with how
   each promise ends (`docs/project/steward-promise-threads.yaml`, checked by `tests/test_steward_threads.py`).
+  Twenty learning pairs for promises (`docs/project/steward-learning-pairs.yaml`, shape checked by
+  `tests/test_steward_learning_pairs.py`) become harness pairs in a workspace's `pairs/` folder once promise
+  records and ops exist; this item isn't done until they run there.
   Messages join their conversation by rules (`engine/mail_threads.py`, `tests/test_mail_threads.py`): the reply
   headers first, then the same subject with a shared correspondent within a set number of days (a setting, 14 by
   default), never on an ambiguous match.
