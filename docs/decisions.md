@@ -141,6 +141,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   text, past the wait, and no later message from you. Unknown (several recipients and no name, FYI with a question, a
   later reply in prose) is where the AI step reads the thread. Drafted with an outside assistant; each answer gained a
   `code` for the screen.
+- **Also (2026-10-18): dates in documents, by rules.** `engine/document_dates.py` finds renewal, expiry, cancel-by,
+  valid-until, warranty-end, payment-due, check-in and appointment dates next to their label, with the exact words as
+  evidence; it never infers a missing year or the numeric order beyond the locale, leaves relative wording ("30 days
+  after purchase") uncalculated with its anchor named, and marks a date uncertain under correction or conditional
+  wording. Drafted with an outside assistant and taken as written.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
