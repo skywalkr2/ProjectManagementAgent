@@ -146,6 +146,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   evidence; it never infers a missing year or the numeric order beyond the locale, leaves relative wording ("30 days
   after purchase") uncalculated with its anchor named, and marks a date uncertain under correction or conditional
   wording. Drafted with an outside assistant and taken as written.
+- **Also (2026-10-18): repeat phrases, and the 31st in short months.** `engine/repeat_phrases.py` reads "every other
+  Tuesday", "the first Monday of each month", "weekdays", "every 3 months on the 15th" and "yearly on March 3" into a
+  repeat rule, and returns a supported rule as a shape (kind and values) for the screen. A day past the 28th means that
+  day or the month's last day when shorter, written as the standard `BYMONTHDAY=28,...,N;BYSETPOS=-1`, because the
+  plain rule skips months without that day and a repeating to-do would vanish; February 29 falls on the 28th the same
+  way, matching bill dates. Drafted with an outside assistant, whose describe step returned English sentences.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

@@ -2061,6 +2061,8 @@ S2. **Time and attention:**
   companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
   the apps can reach).
 - [ ] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
+  A repeat is typed as a phrase and shown back from data (`engine/repeat_phrases.py`, `tests/test_repeat_phrases.py`):
+  "the 31st" falls on a short month's last day rather than skipping it.
 - [ ] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
   `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
   added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed
