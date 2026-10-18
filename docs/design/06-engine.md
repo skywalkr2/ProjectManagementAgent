@@ -2457,7 +2457,9 @@ people and details, and never acts in their name without their yes on the exact 
   order (changed overnight, at risk today, needs your yes): a changed or at-risk line states one fact plainly, an
   at-risk line says when it bites, a needs-your-yes line starts with what the person does and opens the exact
   content, an empty section is left out, a quiet day is one line, and no line reports status or progress (samples in
-  `docs/project/steward-brief-samples.md`).
+  `docs/project/steward-brief-samples.md`). The evening wrap-up has done today (credited to whoever did it), moved to
+  tomorrow and still waiting on others; the Monday briefing has the week's promises both ways, deadlines, clashes
+  and what needs a decision, under the same line rules (`docs/project/steward-wrapup-samples.md`).
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
