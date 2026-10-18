@@ -2154,6 +2154,8 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   base path and the install token, the menu wording from the wording sheet, the brand icon, `pystray` and Pillow in
   the desktop build only, one restart path shared with `cockpit serve` (which restarts by starting itself again),
   and the manual check on Windows and macOS.
+  Draft build files (PyInstaller for macOS and Windows, a per-user Inno Setup installer, a tag workflow with
+  checksums) are in `deploy/desktop/`, not switched on; `deploy/desktop/DRAFT.md` lists what to verify and fix first.
 - [ ] **Add-ons install beside the app, not inside it:** an installed app's own folder is read-only (and signed), so
   Install on Add-ons puts add-ons in a per-person add-ons folder in the app-data place, which the app reads at start.
 - [ ] **Updates:** the app checks the release feed it was built with (a build variable, empty in the repository) and
