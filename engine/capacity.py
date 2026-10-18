@@ -1,4 +1,8 @@
-"""Propose moving work out of a day without changing any task."""
+"""Propose moving work out of a day without changing any task.
+
+Results are data the screen words from the wording sheet: a move says whether the to-do was promised and where its
+due date stands (none, overdue, today or later), and the plan's `reason` is a code.
+"""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -20,7 +24,9 @@ class Todo:
 class Move:
     todo_id: str
     minutes: int
-    reason: str
+    promised: bool
+    due: date | None
+    due_state: str  # none, overdue, today or later
 
 
 @dataclass(frozen=True)
@@ -41,33 +47,33 @@ def plan_day(todos: Sequence[Todo], free_minutes: int, now: datetime) -> DayPlan
         return DayPlan("unknown", None, None, None, (), reason)
 
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
-        return unknown("Supply an aware datetime for now.")
+        return unknown("no_zone")
     if now.astimezone(UTC).astimezone(now.tzinfo).replace(tzinfo=None) != now.replace(tzinfo=None):
-        return unknown("Now falls in a nonexistent local time.")
+        return unknown("time_does_not_exist")
     if type(free_minutes) is not int or free_minutes < 0:
-        return unknown("Free minutes must be a nonnegative whole number.")
+        return unknown("bad_free_minutes")
     seen = set()
     for todo in entries:
         if not isinstance(todo, Todo):
-            return unknown("Each to-do must include its estimate, priority, and flags.")
+            return unknown("bad_todo")
         if not isinstance(todo.id, str) or not todo.id.strip() or todo.id in seen:
-            return unknown("Each to-do needs a nonempty, unique ID.")
+            return unknown("bad_id")
         seen.add(todo.id)
         if not isinstance(todo.title, str) or not todo.title.strip():
-            return unknown("Each to-do needs a title.")
+            return unknown("no_title")
         if type(todo.estimate_minutes) is not int or todo.estimate_minutes < 0:
-            return unknown("Every to-do needs a nonnegative whole-minute estimate.")
+            return unknown("bad_estimate")
         if type(todo.priority) is not int:
-            return unknown("Every to-do needs an integer priority; higher numbers mean higher priority.")
+            return unknown("bad_priority")
         if todo.due is not None and type(todo.due) is not date:
-            return unknown("A due date must be a date or explicitly absent.")
+            return unknown("bad_due")
         if type(todo.promised) is not bool or type(todo.fixed) is not bool:
-            return unknown("Promised and fixed flags must be explicit booleans.")
+            return unknown("bad_flags")
 
     total = sum(todo.estimate_minutes for todo in entries)
     over = max(0, total - free_minutes)
     if not over:
-        return DayPlan("known", total, 0, 0, (), "The to-dos fit within the supplied free minutes.")
+        return DayPlan("known", total, 0, 0, (), "fits")
 
     today = now.date()
 
@@ -90,23 +96,11 @@ def plan_day(todos: Sequence[Todo], free_minutes: int, now: datetime) -> DayPlan
     for todo in candidates:
         if remaining <= 0:
             break
-        parts = [f"Moving this to-do would free {todo.estimate_minutes} minutes."]
-        if todo.promised:
-            parts.append("You promised it to someone; review that promise before agreeing to move it.")
-        else:
-            parts.append("You haven't marked it as promised to someone.")
         if todo.due is None:
-            parts.append("It has no stated due date.")
-        elif todo.due < today:
-            parts.append(
-                f"It was due {todo.due.isoformat()}; moving it would leave an overdue promise or task unresolved."
-            )
-        elif todo.due == today:
-            parts.append("It is due today; check the deadline before agreeing to move it.")
+            due_state = "none"
         else:
-            parts.append(f"It is due {todo.due.isoformat()}.")
-        parts.append("It comes next under the priority, promise, and due-date order.")
-        moves.append(Move(todo.id, todo.estimate_minutes, " ".join(parts)))
+            due_state = "overdue" if todo.due < today else "today" if todo.due == today else "later"
+        moves.append(Move(todo.id, todo.estimate_minutes, todo.promised, todo.due, due_state))
         remaining = max(0, remaining - todo.estimate_minutes)
     # Drop any earlier move a later, larger one made unnecessary, checking the most important first.
     if remaining == 0:
@@ -115,9 +109,5 @@ def plan_day(todos: Sequence[Todo], free_minutes: int, now: datetime) -> DayPlan
             if freed - move.minutes >= over:
                 moves.remove(move)
                 freed -= move.minutes
-    reason = (
-        "These proposed moves would make the remaining work fit. No to-do has been changed."
-        if remaining == 0
-        else "The day would still be overbooked because fixed to-dos cannot be moved. No to-do has been changed."
-    )
+    reason = "fits_after_moves" if remaining == 0 else "still_over_fixed"
     return DayPlan("known", total, over, remaining, tuple(moves), reason)

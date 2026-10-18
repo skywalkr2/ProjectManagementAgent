@@ -2061,6 +2061,10 @@ S2. **Time and attention:**
   companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
   the apps can reach).
 - [ ] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
+- [ ] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
+  `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
+  added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed
+  overnight" lines and the invitation's page.
 - [ ] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
   evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
   Its shape is in design 6.32, with ten samples (`docs/project/steward-brief-samples.md`) that become its evaluation cases.

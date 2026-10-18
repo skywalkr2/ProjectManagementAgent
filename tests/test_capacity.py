@@ -43,7 +43,7 @@ def test_overage_and_whole_task_move():
     assert result.remaining_over_minutes == 0
     assert moved(result) == ("outline",)
     assert result.moves[0].minutes == 30
-    assert result.moves[0].reason
+    assert result.moves[0].due_state == "none"
 
 
 def test_lowest_priority_first():
@@ -64,7 +64,7 @@ def test_latest_due_first_at_equal_priority_and_promise_status():
 def test_no_due_date_is_explicit_first_category():
     items = (todo("dated", due=date(2027, 12, 1)), todo("undated"))
     assert moved(plan_day(items, 30, now())) == ("undated",)
-    assert "no stated due date" in plan_day(items, 30, now()).moves[0].reason
+    assert plan_day(items, 30, now()).moves[0].due_state == "none"
 
 
 def test_stable_ties():
@@ -75,7 +75,7 @@ def test_priority_precedes_promise_flag():
     items = (todo("low", priority=1, promised=True), todo("high", priority=5))
     result = plan_day(items, 30, now())
     assert moved(result) == ("low",)
-    assert "promised it to someone" in result.moves[0].reason
+    assert result.moves[0].promised
 
 
 def test_fixed_never_moved():
@@ -84,7 +84,7 @@ def test_fixed_never_moved():
     assert moved(result) == ("other",)
     assert result.over_minutes == 50
     assert result.remaining_over_minutes == 30
-    assert "fixed" in result.reason
+    assert result.reason == "still_over_fixed"
 
 
 def test_all_fixed():
@@ -105,16 +105,17 @@ def test_move_several():
 
 
 @pytest.mark.parametrize(
-    "due,phrase", [(date(2027, 1, 4), "overdue"), (date(2027, 1, 5), "due today"), (date(2027, 2, 1), "2027-02-01")]
+    "due,state", [(date(2027, 1, 4), "overdue"), (date(2027, 1, 5), "today"), (date(2027, 2, 1), "later")]
 )
-def test_deadline_warning(due, phrase):
-    assert phrase in plan_day((todo(due=due),), 0, now()).moves[0].reason
+def test_deadline_warning(due, state):
+    move = plan_day((todo(due=due),), 0, now()).moves[0]
+    assert (move.due_state, move.due) == (state, due)
 
 
 def test_local_date_controls_due_today():
     local = datetime(2027, 1, 4, 23, tzinfo=ZoneInfo("America/New_York"))
     result = plan_day((todo(due=date(2027, 1, 4)),), 0, local)
-    assert "due today" in result.moves[0].reason
+    assert result.moves[0].due_state == "today"
 
 
 @pytest.mark.parametrize("free", [-1, 1.5, True, None])
@@ -187,3 +188,9 @@ def test_small_moves_made_unnecessary_by_a_larger_one_are_dropped():
     assert result.over_minutes == 70
     assert moved(result) == ("big",)
     assert result.remaining_over_minutes == 0
+
+
+def test_reasons_are_codes_not_sentences():
+    over = plan_day((todo("a", 60), todo("b", 30, 5)), 30, now())
+    assert over.reason == "fits_after_moves" and plan_day((todo(),), 60, now()).reason == "fits"
+    assert plan_day((todo(minutes=-1),), 0, now()).reason == "bad_estimate"

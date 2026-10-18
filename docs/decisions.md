@@ -128,6 +128,14 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   location is an online meeting needing no travel, a pair with no location is listed for review without making the
   whole report unknown (most events have none), the comparison stops once later events start past the allowance,
   and show-as spellings are read as the free-time finder reads them.
+- **Also (2026-10-18): engine helpers return data, never on-screen sentences.** Following the rule that no on-screen
+  text is written in code, a helper whose result reaches a screen returns kinds, codes and values, and the screen words
+  them from the wording sheet. `engine/invitation_changes.py` (what changed between two versions of an invitation,
+  drafted with an outside assistant as English sentences) returns `Change(kind, values)`, with an all-day end's last
+  day and a repeated-hour flag included so the screen needs no calendar rules; the capacity check's moves now carry
+  `promised`, `due` and `due_state` and its reason is a code. The free-text reasons left in the reminder, clash,
+  booking and sign-in modules are diagnostics for logs and tests; a screen that shows them reads their codes
+  (`reason_code`, `advice_key`, `kind`), or a code is added first.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
