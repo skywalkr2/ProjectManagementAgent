@@ -1996,6 +1996,10 @@ is the reason to choose Thimbleby**, so promises and how they resolve come first
 6.32. Each item ends with named tests. Exit test: a week of the owner's own use, measured (S5). The starting set of
 journey tests and evaluation cases is `docs/project/steward-scenarios.md` (15 fictional scenarios, reviewed 2026-10-17).
 
+Guide sections for promises, the brief, reminders, bills, bookings and acting after a yes are drafted
+(`docs/project/steward-guide-sections.md`); each moves into `engine/guide/guide.md` in the change that builds its
+feature, never before, since the guide is what the assistant answers from.
+
 S1. **Promises, and how they end:**
 - [ ] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
   folder is offered as a source when a mailbox is connected): "I'll send it Friday" is the person's to-do; "they'll get
