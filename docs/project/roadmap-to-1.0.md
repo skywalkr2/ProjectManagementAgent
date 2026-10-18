@@ -1703,6 +1703,12 @@ rail; 9dbee51), wave 2 (answers 25, 26, 31 and 32: AI accounts in one place, wha
 copy tables; 1adccce), and a batch for open promises P15 and P16 with the language list (13129e7, ec5bd4f). The owner
 holds feedback until phase B is done and then tests it all at once ("im going to wait on any other feedback until we get
 all the updates done"); the message then gives the update commands and a walkthrough. Left:
+**First when the weekly allowance returns: the invariant tests (ChatGPT task list item 25).** Received 2026-10-18,
+unreviewed, kept as `docs/project/incoming/invariant_tests.zip`: property tests for free slots, bill dates, mail
+threads and repeating events, with the drafter's own copies of those modules and its run (12 passed). Review them
+against the engine's modules (not the drafter's copies), keep the tests that hold, fix what they find, then delete the
+zip in the same change. Open promise P22.
+
 1. **Wave 3, Today follow-ups and Settings:** open promise P19 first (the page-width rule with its browser test at
    390, 768, 1024, 1280, 1512 and 1920 pixels and in a narrow window; long unbroken text breaks, tried with the 50
    layout stress strings in `web/e2e/fixtures/layout-strings.json` in titles, rows, the rail and the details pane;
