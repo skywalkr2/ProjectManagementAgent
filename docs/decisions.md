@@ -136,6 +136,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   `promised`, `due` and `due_state` and its reason is a code. The free-text reasons left in the reminder, clash,
   booking and sign-in modules are diagnostics for logs and tests; a screen that shows them reads their codes
   (`reason_code`, `advice_key`, `kind`), or a code is added first.
+- **Also (2026-10-18): replies owed, by rules first.** `engine/replies_owed.py` says owed, not owed or unknown for a
+  message, with the exact questions as evidence: only for a person's mail with you in To, a direct question in the new
+  text, past the wait, and no later message from you. Unknown (several recipients and no name, FYI with a question, a
+  later reply in prose) is where the AI step reads the thread. Drafted with an outside assistant; each answer gained a
+  `code` for the screen.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
