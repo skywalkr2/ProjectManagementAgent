@@ -1728,6 +1728,39 @@ against the code before recording; a failing test of each defect first. Open pro
    line (what was read, when, and what wasn't) so "nothing needs you" never looks like "couldn't check"; a cheap way
    to add a missed promise, with omissions measured.
 
+**Also first: the supplemental review (2026-10-18, `supplemental-review.md` beside the three above; the website's
+address and the site it copied are left out of the saved copy).** Integrity before features, in this order; each is
+reproduced with a failing test first, and every sibling with the same cause is fixed in the same change. Spot-checked
+in the code when recorded (the router's fallback loop, the secret write before the settings save, the download
+header, the README's hosting claim); the rest is to reproduce.
+1. **Spending:** fallback, retry and escalation can call a dearer or unpriced account without the per-run limit or the
+   approval the first account got (`engine/ai/router.py` fallback loop, `engine/dispatcher.py` checks). Every
+   account actually called obeys the policy; a refused or unapproved call never reaches the adapter; retries and the
+   task, record and day budgets audited for the same cause.
+2. **Credentials:** a refused settings save (stale fingerprint) still overwrites the kept secret, because secrets are
+   written before the settings are validated (`api/setup_routes.py`, sources, release tokens, AI keys). A refused
+   save changes nothing; Undo of a successful replacement follows a secure recovery design.
+3. **Undo:** the orphaned "Pick an owner" questions above, plus a second case: undoing only a later hold loses an
+   earlier owner assignment (`_with_answers()` in `engine/applier.py` gathers every past `action.assign`). Fixed
+   together, not with a null check.
+4. **Stale source forms** overwrite newer edits: the form fetches a fresh fingerprint and sends old values
+   (`web/src/components/Sources.tsx`); search other forms for the same pattern.
+5. **Downloads** of a file with a non-Latin name fail (`api/routes.py`): an ASCII fallback plus `filename*`.
+6. **Python 3.14**, merged with the item above.
+7. **Current-truth pass** with the fixes, not a separate phase: README's hosting claim (local only today), outbound
+   scope (S1b adds approved mail and calendar acts; scope and charter still exclude email), Parts 10 and 12 status
+   tables, the setup-cost promise (paid account checks the person starts vs processing their material), learning
+   acceptance (O3 closed without every pair passing; fresh evidence or an approved change to the criterion), and the
+   risks register's withdrawn go/no-go and freeze.
+
+**Owner decisions waiting (from the reviews):** the product review's plan changes above; numeric dependability
+thresholds set before the acceptance run, measured with denominators and a held-out set, omissions found by an
+independent reading of a consented sample; publisher acceptance tests (stale approvals, duplicates after a retry,
+uncertain remote results, revoked sign-ins, hostile content redirecting an act); whether the mail and calendar
+add-on ships inside the installers (an extension plus packaging: provider code stays in the add-on, connecting stays
+optional, the core stays testable without it); and the owner's target of sharing installers with a small invited
+group on 2026-10-20, which the plan's order (B, S, then I) and the integrity items above don't yet support.
+
 1. **Wave 3, Today follow-ups and Settings:** open promise P19 first (the page-width rule with its browser test at
    390, 768, 1024, 1280, 1512 and 1920 pixels and in a narrow window; long unbroken text breaks, tried with the 50
    layout stress strings in `web/e2e/fixtures/layout-strings.json` in titles, rows, the rail and the details pane;
