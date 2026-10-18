@@ -167,6 +167,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   the caller keeps, and `Auto-Submitted: auto-generated`, so the mailbox reader classifies it as generated mail and
   never acts on its own reminder (tested against `engine/automatic_mail.py`). It goes out only through the publisher
   after the person's yes. Drafted with an outside assistant and taken as written.
+- **Also (2026-10-18): checking for a new version.** `engine/release_check.py` picks the newest release in the release
+  feed newer than the installed version (version order from `packaging`, prereleases only when asked), refusing an
+  entry without a SHA-256, with a bad date, or with a download address that isn't HTTPS; conflicting entries for the
+  newest version raise instead of picking one. For phase I's "A new version is ready". Drafted with an outside
+  assistant; here plain HTTP downloads were refused, since the file and its checksum could both be swapped.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
