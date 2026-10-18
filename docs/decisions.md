@@ -162,6 +162,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   median length, how often they use contractions, exclamations and questions, and a formality score with the markers
   behind it), keeping no message text or names. It measures; it never instructs: a packet quotes it as observed
   style. Drafted with an outside assistant and taken as written.
+- **Also (2026-10-18): a reminder mailed to oneself.** `engine/reminder_mail.py` builds (never sends) the reminder
+  mail phase S sends to the person's own address: plain text, an optional calendar file, a Message-ID from a token
+  the caller keeps, and `Auto-Submitted: auto-generated`, so the mailbox reader classifies it as generated mail and
+  never acts on its own reminder (tested against `engine/automatic_mail.py`). It goes out only through the publisher
+  after the person's yes. Drafted with an outside assistant and taken as written.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
