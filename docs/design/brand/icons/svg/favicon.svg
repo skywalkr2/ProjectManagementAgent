@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-labelledby="title desc">
+  <title id="title">Thimbleby favicon</title>
+  <desc id="desc">A cream thimble with a burgundy bow cutout on a burgundy rounded square.</desc>
+  <rect width="32" height="32" rx="7" fill="#741E25"/>
+  <path fill="#FFF2D8" fill-rule="evenodd" d="M9 9 C9.6 5.8 11.8 4 16 4 C20.2 4 22.4 5.8 23 9 L25.8 25 H27 V28 H5 V25 H6.2Z M10 17 L16 20 L10 23Z M22 17 L16 20 L22 23Z"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Reginald’s bow</title>
+  <desc id="desc">A cream thimble with a large burgundy bow and a brass rim on a burgundy rounded square.</desc>
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#81262C"/><stop offset="1" stop-color="#66191F"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#B59859"/><stop offset="0.5" stop-color="#C0A267"/><stop offset="1" stop-color="#B59859"/>
+    </linearGradient>
+    <pattern id="dimple-pattern" width="72" height="72" patternUnits="userSpaceOnUse">
+      <circle cx="18" cy="18" r="11" fill="#B59859"/><circle cx="54" cy="54" r="11" fill="#B59859"/>
+    </pattern>
+    <clipPath id="thimble-clip"><path d="M248 744 L320 334 C336 231 398 188 512 188 C626 188 688 231 704 334 L776 744 Q512 810 248 744Z"/></clipPath>
+  </defs>
+  <rect id="background" x="48" y="48" width="928" height="928" rx="186" fill="url(#ground)" stroke="#B59859" stroke-width="5"/>
+  <path id="thimble" d="M248 744 L320 334 C336 231 398 188 512 188 C626 188 688 231 704 334 L776 744 Q512 810 248 744Z" fill="#FFF2D8"/>
+  <path id="bow" d="M350 563 Q338 556 338 572 L338 718 Q338 734 350 727 L512 645Z M674 563 Q686 556 686 572 L686 718 Q686 734 674 727 L512 645Z" fill="#741E25"/>
+  <path id="rim" d="M230 779 Q512 855 794 779 Q808 776 808 796 L808 830 Q808 849 790 857 Q512 935 234 857 Q216 849 216 830 L216 796 Q216 776 230 779Z" fill="url(#brass)"/>
+</svg>

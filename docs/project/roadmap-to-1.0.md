@@ -2156,6 +2156,9 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   and the manual check on Windows and macOS.
   Draft build files (PyInstaller for macOS and Windows, a per-user Inno Setup installer, a tag workflow with
   checksums) are in `deploy/desktop/`, not switched on; `deploy/desktop/DRAFT.md` lists what to verify and fix first.
+  The icon set ("Reginald's bow": SVG masters, the macOS iconset and .icns, the Windows .ico, one-color menu bar and
+  tray icons in black and white, and the favicon) is in `docs/design/brand/icons/`; `export_icons.py` rebuilds the
+  exports from the renders, checked to reproduce them pixel for pixel.
 - [ ] **Add-ons install beside the app, not inside it:** an installed app's own folder is read-only (and signed), so
   Install on Add-ons puts add-ons in a per-person add-ons folder in the app-data place, which the app reads at start.
 - [ ] **Updates:** the app checks the release feed it was built with (a build variable, empty in the repository) and
