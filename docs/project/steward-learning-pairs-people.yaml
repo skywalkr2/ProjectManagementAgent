@@ -1,0 +1,204 @@
+- message: |-
+    Signature from mira@example.com:
+    Mira Fen
+    Delivering brilliant ideas every day.
+  wrong: Remembered Mira’s job title as Delivering brilliant ideas every day.
+  correction: That’s a slogan, not her job title.
+  lesson: Do not turn promotional signature wording into a personal job title.
+  later_message: |-
+    Signature from oren@example.com:
+    Oren Reed
+    Your success is our promise.
+  right_answer: Oren’s job title is unknown; the final line is a slogan.
+- message: |-
+    From: tess@example.com
+    My colleague Lena is the editor. I handle the illustrations.
+  wrong: Remembered Tess as the editor.
+  correction: Tess says Lena is the editor. Tess handles illustrations.
+  lesson: Attach each stated role to the person the sentence actually names.
+  later_message: |-
+    From: dev@example.com
+    Nia manages the venue; I prepare the slides.
+  right_answer: Nia manages the venue and Dev prepares slides; do not swap their responsibilities.
+- message: |-
+    From: ravi@example.com
+    Forwarded note from Esme: I’m the accounts contact at Alder Circle.
+  wrong: Remembered Ravi as Alder Circle’s accounts contact.
+  correction: Those are Esme’s words in a forward, not Ravi’s role.
+  lesson: Keep forwarded identity facts attached to their original speaker.
+  later_message: |-
+    From: kian@example.com
+    Forwarded note from Alia: I coordinate bookings for Fern Workshop.
+  right_answer: Alia coordinates Fern Workshop’s bookings; the forwarded note does not establish Kian’s role.
+- message: |-
+    From: mira@example.com
+    I left Willow Desk in June and now work for Moss Hall.
+  wrong: Kept Willow Desk as Mira’s current employer.
+  correction: Willow Desk is her old employer. Moss Hall is the current one.
+  lesson: Distinguish a former organization from an explicitly stated current one.
+  later_message: |-
+    From: oren@example.com
+    I no longer work at Birch Bench; I joined Clover Studio last month.
+  right_answer: Clover Studio is Oren’s current organization; Birch Bench is former.
+- message: |-
+    From: tess@example.com
+    I’m covering Lena’s inbox this week while she is away.
+  wrong: Replaced Lena’s permanent contact role with Tess.
+  correction: Tess is covering for a week. Don’t make that a permanent job change.
+  lesson: Preserve the scope and duration of temporary cover arrangements.
+  later_message: |-
+    From: dev@example.com
+    For the next three days, send Nia’s booking questions to me.
+  right_answer: Dev is a temporary booking contact for three days; Nia’s permanent role is not stated to have changed.
+- message: |-
+    Signature from ravi@example.com:
+    Ravi Linden
+    Title: Independent Consultant
+    Company: Fern Advisory
+  wrong: Remembered Ravi as an employee of Rowan’s client Alder Circle because he wrote about that project.
+  correction: His signature says Fern Advisory. Working on a client project doesn’t make him their employee.
+  lesson: Do not infer employment from participation in a client project.
+  later_message: |-
+    From: esme@example.com
+    I’m consulting on Willow Desk’s launch. My business is Moss Letter Studio.
+  right_answer: Esme’s stated business is Moss Letter Studio; Willow Desk is the client project, not an inferred employer.
+- message: |-
+    From: kian@example.com
+    Alia Reed and Alia Marsh are different people; Alia Reed handles the venue.
+  wrong: Merged the two Alias into one contact.
+  correction: Same first name, different people. Keep both contacts.
+  lesson: Shared names do not establish identity.
+  later_message: |-
+    From: mira@example.com
+    Oren Vale handles printing; Oren Fen handles accounts. They are different people.
+  right_answer: Keep Oren Vale and Oren Fen separate with their explicitly stated responsibilities.
+- message: |-
+    From: tess@example.com
+    Please call me Tess; Theresa Alder is the name on the agreement.
+  wrong: Created Tess and Theresa Alder as separate people.
+  correction: She says both names are hers. Tess is what she wants us to use.
+  lesson: An explicit self-identified nickname can link names without creating another person.
+  later_message: |-
+    From: dev@example.com
+    My legal name is Devendra Moss, but I use Dev in messages.
+  right_answer: Dev and Devendra Moss refer to the same explicitly identified person; use Dev in messages.
+- message: |-
+    From: nia@example.com
+    Our office is in Berlin. I work from home in Bristol.
+  wrong: Remembered Nia as based in Berlin.
+  correction: Berlin is the office. Nia says she works from Bristol.
+  lesson: Keep organization locations separate from a person’s stated working location.
+  later_message: |-
+    From: ravi@example.com
+    The company is based in Dublin; I work remotely from York.
+  right_answer: Ravi’s stated work location is York; Dublin is the company location.
+- message: |-
+    From: esme@example.com
+    I’m in Lisbon for a conference this week.
+  wrong: Changed Esme’s home location to Lisbon.
+  correction: She’s visiting for a conference. We don’t know that she lives there.
+  lesson: A temporary visit does not establish residence or a permanent work location.
+  later_message: |-
+    From: kian@example.com
+    I’m spending the weekend in Bath for a family visit.
+  right_answer: Kian is visiting Bath for the weekend; no home-location change is established.
+- message: |-
+    Signature from alia@example.com:
+    Phone: +44 7700 900123
+  wrong: Remembered that Alia lives in the United Kingdom.
+  correction: A phone code isn’t proof of where she lives.
+  lesson: Do not infer residence, nationality, or current time zone from a phone number.
+  later_message: |-
+    Signature from mira@example.com:
+    Phone: +1 202 555 0101
+  right_answer: Remember the stated phone number only; Mira’s residence and time zone remain unknown.
+- message: |-
+    From: oren@example.com
+    For venue questions, use bookings@example.com; several of us answer it.
+  wrong: Replaced Oren’s personal email address with bookings@example.com.
+  correction: That’s a shared booking inbox, not Oren’s personal address.
+  lesson: Keep shared organizational mailboxes separate from personal contact addresses.
+  later_message: |-
+    From: tess@example.com
+    Send invoices to accounts@example.com. Nia and Ravi both monitor it.
+  right_answer: accounts@example.com is a shared invoice contact, not an inferred personal address for Nia or Ravi.
+- message: |-
+    From: lena@example.com
+    My new phone number is +1 202 555 0112; the old one no longer works.
+  wrong: Kept the old number as Lena’s main contact.
+  correction: She explicitly replaced it. Use the new number and mark the old one obsolete.
+  lesson: An explicit contact replacement supersedes the old contact detail.
+  later_message: |-
+    From: dev@example.com
+    Please use +44 7700 900124 from now on; I have closed the previous line.
+  right_answer: Dev’s current stated phone is +44 7700 900124; the previous line is obsolete.
+- message: |-
+    From: nia@example.com
+    The printer’s number is +1 202 555 0113 if you need to check delivery.
+  wrong: Saved the printer’s number as Nia’s phone.
+  correction: She gave us someone else’s number. It isn’t hers.
+  lesson: Attribute a contact detail to the entity explicitly identified as its owner.
+  later_message: |-
+    From: ravi@example.com
+    The caretaker can be reached on +1 202 555 0114.
+  right_answer: The number belongs to the caretaker; Ravi’s own phone remains unknown.
+- message: |-
+    From: esme@example.com
+    I can approve copy changes, but Lena must approve the budget.
+  wrong: Remembered Esme as able to approve every project change.
+  correction: Her authority is for copy. Budget approval belongs to Lena.
+  lesson: Keep approval authority limited to the area explicitly stated.
+  later_message: |-
+    From: kian@example.com
+    I approve room layouts; Alia signs off catering costs.
+  right_answer: Kian approves room layouts and Alia approves catering costs; neither authority is broadened.
+- message: |-
+    From: mira@example.com
+    For this project, I’m the person to ask about delivery dates.
+  wrong: Made Mira the delivery contact for every project.
+  correction: She said this project. Don’t apply that to all her work.
+  lesson: Preserve the project scope of a responsibility.
+  later_message: |-
+    From: oren@example.com
+    On the Fern Workshop job, send print questions to me.
+  right_answer: Oren is the print-question contact for the Fern Workshop job only.
+- message: |-
+    From: tess@example.com
+    Could Nia be our finance contact? I haven’t asked her yet.
+  wrong: Remembered Nia as the confirmed finance contact.
+  correction: That’s a suggestion. Nia hasn’t agreed.
+  lesson: Do not store a proposed role as an accepted responsibility.
+  later_message: |-
+    From: dev@example.com
+    Maybe Ravi could coordinate the workshop, if he is available.
+  right_answer: Ravi is a proposed coordinator, not a confirmed one; availability and acceptance are unknown.
+- message: |-
+    From: lena@example.com
+    I’m happy to use email for this invoice discussion.
+  wrong: Remembered that Lena always prefers email to calls.
+  correction: That’s for this discussion. She didn’t state a general preference.
+  lesson: Do not generalize a situational communication choice into a standing preference.
+  later_message: |-
+    From: alia@example.com
+    Let’s use a phone call for the urgent delivery issue.
+  right_answer: Alia chooses a call for this delivery issue; a general contact preference is not established.
+- message: |-
+    From: mira@example.com
+    I prefer to be called Dr. Fen in client letters.
+  wrong: Inferred a medical specialty and began describing Mira as a physician.
+  correction: Use the title she asked for. It doesn’t tell us her profession.
+  lesson: An honorific does not establish profession, specialty, or other unstated personal facts.
+  later_message: |-
+    From: oren@example.com
+    Please use Professor Reed on the printed invitation.
+  right_answer: Use Professor Reed for the invitation; Oren’s academic field and current employer remain unknown.
+- message: |-
+    From: tess@example.com
+    I don’t work for Alder Circle. I’m their freelance illustrator.
+  wrong: Remembered Tess as an employee of Alder Circle.
+  correction: She explicitly says she’s freelance, not their employee.
+  lesson: Respect explicit negation and distinguish a client relationship from employment.
+  later_message: |-
+    From: dev@example.com
+    Willow Desk is a client of mine; I’m not on their staff.
+  right_answer: Willow Desk is Dev’s client; Dev is explicitly not a staff member there.

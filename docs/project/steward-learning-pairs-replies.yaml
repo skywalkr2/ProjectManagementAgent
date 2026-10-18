@@ -1,0 +1,250 @@
+- message: |-
+    From: mira@example.com
+    To: rowan@example.com
+    Is the revised proposal ready?
+  wrong: Marked it no reply needed because it looked like a status update.
+  correction: Mira is asking me a direct question. I owe her an answer.
+  lesson: A direct unanswered question to the person in To needs a reply.
+  later_message: |-
+    From: oren@example.com
+    To: rowan@example.com
+    Does your estimate include travel?
+  right_answer: 'Needs a reply: Oren asks Rowan a direct question that has no supplied answer.'
+- message: |-
+    From: tess@example.com
+    To: rowan@example.com
+    The proofs arrived and the colors look good. Please confirm how many copies to print. I can book the press tomorrow.
+  wrong: Missed the request in the middle of the paragraph.
+  correction: She still needs the print quantity from me. Read past the opening update.
+  lesson: Check the whole new text for requests, not just its opening sentence.
+  later_message: |-
+    From: lena@example.com
+    To: rowan@example.com
+    The room is reserved. Tell me whether you need a microphone. Lunch is arranged.
+  right_answer: 'Needs a reply: Lena asks Rowan to confirm a microphone requirement mid-paragraph.'
+- message: |-
+    From: dev@example.com
+    To: rowan@example.com
+    Please send the final measurements before Thursday.
+  wrong: Marked it no reply needed because there was no question mark.
+  correction: It’s still a request to me. A question mark isn’t required.
+  lesson: Explicit requests can require a response or fulfillment without question punctuation.
+  later_message: |-
+    From: nia@example.com
+    To: rowan@example.com
+    Let me know which lease option you prefer.
+  right_answer: 'Needs a reply: Nia explicitly requests Rowan’s choice.'
+- message: |-
+    From: ravi@example.com
+    To: rowan@example.com
+    FYI, the interview moved to Friday. Does 11:00 work for you?
+  wrong: Suppressed it because the message said FYI.
+  correction: The update is FYI, but he also asks whether I can make it.
+  lesson: An FYI label does not cancel a separate explicit request.
+  later_message: |-
+    From: esme@example.com
+    To: rowan@example.com
+    FYI, the draft is ready. Could you approve the headline?
+  right_answer: 'Needs a reply: Esme requests headline approval despite the FYI introduction.'
+- message: |-
+    From: kian@example.com
+    To: rowan@example.com
+    FYI only: the sample box was delivered this morning.
+  wrong: Created a reply task even though no response was requested.
+  correction: That just tells me the box arrived. There’s nothing to answer.
+  lesson: An informational update without a request does not create a reply obligation.
+  later_message: |-
+    From: alia@example.com
+    To: rowan@example.com
+    For your records, the garden booking is confirmed.
+  right_answer: 'No reply needed: Alia supplies information without a question or request.'
+- message: |-
+    From: mira@example.com
+    To: oren@example.com
+    Cc: rowan@example.com
+    Oren, which room should we reserve?
+  wrong: Assigned Rowan a reply because a question appeared in the thread.
+  correction: Oren is being asked. I’m only copied.
+  lesson: Do not assign a reply solely because the person is on Cc.
+  later_message: |-
+    From: tess@example.com
+    To: lena@example.com
+    Cc: rowan@example.com
+    Lena, can you approve the print quantity?
+  right_answer: 'No reply needed from Rowan: Lena is the addressee and Rowan is only copied.'
+- message: |-
+    From: dev@example.com
+    To: rowan@example.com; nia@example.com
+    Nia, have you signed the agreement? Rowan, this is just for your records.
+  wrong: Assigned the question to Rowan because Rowan was in To.
+  correction: He names Nia. Being in To doesn’t make every question mine.
+  lesson: A named intended respondent takes precedence over mere presence in To.
+  later_message: |-
+    From: ravi@example.com
+    To: rowan@example.com; esme@example.com
+    Esme, which invoice covers the deposit?
+  right_answer: 'No reply needed from Rowan: the question explicitly asks Esme.'
+- message: |-
+    From: kian@example.com
+    To: rowan@example.com; alia@example.com
+    Rowan, can you confirm the delivery address?
+  wrong: Ignored it because there were several recipients.
+  correction: He names me. I’m the one who needs to answer.
+  lesson: Multiple recipients do not make an explicitly named request ambiguous.
+  later_message: |-
+    From: mira@example.com
+    To: rowan@example.com; oren@example.com
+    Rowan, which cover should we use?
+  right_answer: 'Needs a reply from Rowan: the cover question explicitly names Rowan.'
+- message: |-
+    From: tess@example.com
+    To: rowan@example.com
+    The proofs arrived safely. No need to reply.
+  wrong: Added a reply task to acknowledge receipt.
+  correction: She specifically says not to reply. Leave it alone.
+  lesson: Respect an explicit whole-message waiver of a reply.
+  later_message: |-
+    From: lena@example.com
+    To: rowan@example.com
+    The room booking is complete. No response required.
+  right_answer: 'No reply needed: Lena explicitly says no response is required.'
+- message: |-
+    From: dev@example.com
+    To: rowan@example.com
+    No need to reply about the sketches. Could you still confirm your arrival time?
+  wrong: Suppressed every question because the message included no need to reply.
+  correction: That only applies to the sketches. He still needs my arrival time.
+  lesson: Apply a reply waiver only to the topic it actually covers.
+  later_message: |-
+    From: nia@example.com
+    To: rowan@example.com
+    No answer needed on the deposit. Please tell me who will collect the keys.
+  right_answer: Needs a reply about key collection; the waiver covers only the deposit.
+- message: |-
+    From: ravi@example.com
+    To: rowan@example.com
+    Why do printers always jam before a deadline? It’s fixed now; the proofs are running.
+  wrong: Asked Rowan to answer the question about printers.
+  correction: That’s a rhetorical complaint, not a question for me to solve.
+  lesson: Use the surrounding text to distinguish a rhetorical aside from a real request.
+  later_message: |-
+    From: esme@example.com
+    To: rowan@example.com
+    Who knew a ten-minute job could take all afternoon? All finished now.
+  right_answer: 'No reply needed: the question is a rhetorical comment on completed work.'
+- message: |-
+    From: kian@example.com
+    To: rowan@example.com
+    Automatic reply: I am away until Monday and will read your message when I return.
+  wrong: Created a reply task because Kian had not answered the earlier question.
+  correction: That’s an automatic absence message. It doesn’t need an answer from me.
+  lesson: An automatic reply does not itself create a new personal reply obligation.
+  later_message: |-
+    From: alia@example.com
+    To: rowan@example.com
+    Automated receipt: your form arrived. Please do not reply.
+  right_answer: No reply needed to the automatic receipt; any earlier thread obligation must be assessed separately.
+- message: |-
+    From: mira@example.com
+    To: rowan@example.com
+    Thanks, the notes are exactly what I needed.
+  wrong: Created a task to send another acknowledgment.
+  correction: That’s just a thank-you. Don’t turn every courtesy into work.
+  lesson: A thank-you without a new request does not require a reply.
+  later_message: |-
+    From: oren@example.com
+    To: rowan@example.com
+    Much appreciated, Rowan. The estimate is clear now.
+  right_answer: 'No reply needed: Oren expresses thanks and asks for nothing else.'
+- message: |-
+    From: tess@example.com
+    To: rowan@example.com
+    Thanks for the outline. Could you add your delivery date?
+  wrong: Dismissed it as a thank-you note.
+  correction: She’s thanking me and asking for another detail. I still need to respond.
+  lesson: Read past gratitude to find any new request.
+  later_message: |-
+    From: lena@example.com
+    To: rowan@example.com
+    Thank you for the slides. Please send a short introduction as well.
+  right_answer: 'Needs a reply or fulfillment: Lena asks Rowan for an introduction.'
+- message: |-
+    From: dev@example.com
+    To: rowan@example.com
+    Is the draft ready?
+    Later from rowan@example.com: Yes, the draft is ready to send.
+  wrong: Kept the draft-readiness question open.
+  correction: I already answered it in my next message. Close that reply task.
+  lesson: A later direct answer from the person resolves the matching question.
+  later_message: |-
+    From: nia@example.com
+    To: rowan@example.com
+    Which day should we meet?
+    Later from rowan@example.com: Let’s meet on Thursday.
+  right_answer: 'No reply still owed to that question: Rowan’s later message selects Thursday.'
+- message: |-
+    From: ravi@example.com
+    To: rowan@example.com
+    Does the estimate include travel?
+    Later from rowan@example.com: Thanks, I’ll look at this later.
+  wrong: Marked the travel question answered merely because Rowan replied.
+  correction: I acknowledged the email. I didn’t answer the travel question.
+  lesson: A later message resolves a question only when it supplies the requested answer.
+  later_message: |-
+    From: esme@example.com
+    To: rowan@example.com
+    What time will you arrive?
+    Later from rowan@example.com: Good to hear from you. I’ll check my plans.
+  right_answer: The arrival-time question remains unanswered; the later reply does not supply a time.
+- message: |-
+    From: kian@example.com
+    To: rowan@example.com
+    Which cover should I use, and how many copies should I print?
+    Later from rowan@example.com: Use the blue cover.
+  wrong: Closed both questions after the cover choice arrived.
+  correction: I only chose the cover. He still needs the quantity.
+  lesson: Resolve each question separately when a reply answers only part of a message.
+  later_message: |-
+    From: alia@example.com
+    To: rowan@example.com
+    What day are you coming, and will you stay for dinner?
+    Later from rowan@example.com: I’ll come on Saturday.
+  right_answer: The day is answered, but Rowan still owes an answer about dinner.
+- message: |-
+    From: mira@example.com
+    To: rowan@example.com
+    Can you send the final file?
+    Later from rowan@example.com: Yes, I can send it.
+  wrong: Marked the file request fulfilled.
+  correction: I agreed to send it. I haven’t actually sent it yet.
+  lesson: Acceptance of a work request is not evidence that the requested delivery occurred.
+  later_message: |-
+    From: oren@example.com
+    To: rowan@example.com
+    Please send the measurements.
+    Later from rowan@example.com: I’ll send them tomorrow.
+  right_answer: The request has been acknowledged, but delivery is still open as Rowan’s promise for tomorrow.
+- message: |-
+    From: tess@example.com
+    To: rowan@example.com; lena@example.com
+    Can someone confirm the final quantity?
+  wrong: Assigned the reply to Rowan without evidence.
+  correction: She hasn’t picked either of us. Don’t decide I own it.
+  lesson: An unassigned request to multiple people remains uncertain rather than being assigned arbitrarily.
+  later_message: |-
+    From: dev@example.com
+    To: rowan@example.com; nia@example.com
+    Who can confirm the room booking?
+  right_answer: 'Unknown who owes the reply: the request does not name Rowan or Nia as its owner.'
+- message: |-
+    From: ravi@example.com
+    To: consulting@example.com
+    Could you confirm the invoice address? Rowan’s supplied address list includes consulting@example.com.
+  wrong: Missed the request because it was not sent to rowan@example.com.
+  correction: That consulting address is mine too. This question is for me.
+  lesson: Use the person’s supplied address aliases when deciding whether they are directly addressed.
+  later_message: |-
+    From: esme@example.com
+    To: studio@example.com
+    Can you approve the room plan? Rowan’s supplied address list includes studio@example.com.
+  right_answer: 'Needs a reply from Rowan: the request was sent directly to a supplied address alias.'

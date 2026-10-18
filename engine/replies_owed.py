@@ -5,6 +5,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+#: Wording that asks for something even without a question mark.
+_REQUEST = r"\b(?:please|let me know|tell me|confirm|could you|can you|would you|need your|still need|send me)\b"
+
 
 @dataclass(frozen=True)
 class Address:
@@ -118,11 +121,19 @@ def reply_owed(
             message.new_text,
             re.IGNORECASE,
         ):
+            # A waiver beside a question or request may cover only one topic: leave it for the reading step.
+            if questions or re.search(_REQUEST, message.new_text, re.IGNORECASE):
+                return ReplyOwed(
+                    None,
+                    questions,
+                    "Unknown: a reply waiver sits beside a question or request.",
+                    "waiver_with_question",
+                )
             return ReplyOwed(False, questions, "The message explicitly says a reply is not needed.", "no_reply_needed")
         if not questions:
             # A request without a question mark still needs a reply: hand it to the reading step, never say "not owed".
             if re.search(
-                r"\b(?:please|let me know|tell me|confirm|could you|can you|would you|need your|still need|send me)\b",
+                _REQUEST,
                 message.new_text,
                 re.IGNORECASE,
             ):

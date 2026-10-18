@@ -85,8 +85,12 @@ def test_multiple_recipients_unspecified():
         "Is the draft ready? Don't reply.",
     ],
 )
-def test_no_reply(text):
-    assert check(message(text)).owed is False
+def test_a_waiver_beside_a_question_is_left_for_reading(text):
+    assert (check(message(text)).owed, check(message(text)).code) == (None, "waiver_with_question")
+
+
+def test_a_waiver_alone_means_no_reply():
+    assert check(message("The proofs arrived safely. No need to reply.")).owed is False
 
 
 def test_fyi_no_question():

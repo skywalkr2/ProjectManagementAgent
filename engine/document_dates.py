@@ -86,6 +86,11 @@ def find_dates(text: str, received: datetime, tz: tzinfo, locale: str) -> list[D
     if not isinstance(locale, str):
         return unknown("The date-order locale is unknown.")
     locale = locale.replace("_", "-").casefold()
+    # A document that states its own numeric date order is read that way, ahead of any locale.
+    if re.search(r"\bday/month/year\b|\bdd/mm/yyyy\b", text, re.IGNORECASE):
+        locale = "en-gb"
+    elif re.search(r"\bmonth/day/year\b|\bmm/dd/yyyy\b", text, re.IGNORECASE):
+        locale = "en-us"
     month = (
         r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
         r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?"

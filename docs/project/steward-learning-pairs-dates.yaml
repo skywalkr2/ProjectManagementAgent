@@ -1,0 +1,124 @@
+- message: 'Letter from Mira at Alder Circle: Your renewal date is 04/05/2028. Dates in this letter use day/month/year.'
+  wrong: Read the renewal as April 5, 2028.
+  correction: This letter says day first. It means May 4, not April 5.
+  lesson: Use the document’s stated numeric date order before any default locale.
+  later_message: 'Notice from Oren at Fern Workshop: Payment due 07/08/2028. All dates use day/month/year.'
+  right_answer: Payment is due August 7, 2028; the notice explicitly states day/month/year.
+- message: 'Notice from Tess at Willow Desk: Your subscription renews on 03/04/2028. No date order is supplied.'
+  wrong: Recorded March 4, 2028 as certain.
+  correction: We don’t know which way round they wrote that. Leave it uncertain.
+  lesson: Do not choose a numeric date order without a stated or supplied convention.
+  later_message: 'Letter from Lena at Moss Hall: Cancel by 06/07/2028. No locale or date convention is supplied.'
+  right_answer: 'The cancel-by date is unknown: it could be June 7 or July 6, 2028.'
+- message: 'Warranty from Dev at Birch Bench: Coverage ends November 20. No year appears.'
+  wrong: Recorded November 20 of the message’s received year.
+  correction: The year isn’t there. Don’t borrow one from when the email arrived.
+  lesson: A missing year stays unknown unless the applicable task explicitly authorizes an inference.
+  later_message: 'Appointment card from Nia: Your appointment is February 12 at 10:00. The card has no year.'
+  right_answer: The appointment month and day are stated, but the complete date is unknown because the year is missing.
+- message: 'Letter from Ravi: Your membership renews in 30 days. The letter has no issue date.'
+  wrong: Calculated a certain renewal date from the receipt date.
+  correction: That’s relative wording. We don’t know whether they mean from writing it or receiving it.
+  lesson: Report relative timing and its anchor uncertainty instead of inventing a certain calendar date.
+  later_message: 'Notice from Esme: Your trial expires in two weeks. No issue date is printed.'
+  right_answer: Report a relative expiry of two weeks with an uncertain writing-or-receipt anchor; do not assign a certain
+    date.
+- message: 'Warranty from Kian: Purchased January 8, 2028. Coverage ends 12 months after purchase.'
+  wrong: Used the email receipt date as the warranty anchor.
+  correction: It says after purchase. Receiving the email has nothing to do with that anchor.
+  lesson: Preserve an explicitly named event anchor rather than replacing it with message receipt.
+  later_message: 'Ticket from Alia: This pass is valid for 30 days after activation. No activation date is supplied.'
+  right_answer: Validity is relative to activation; its end date is unknown without the activation date.
+- message: 'Correction from Mira: Renewal is June 12, 2028, replacing June 5, 2028.'
+  wrong: Kept June 5 as the active renewal date.
+  correction: They corrected it to June 12. June 5 is the old date.
+  lesson: An explicit replacement identifies the current date and supersedes the earlier one.
+  later_message: 'Appointment update from Oren: Your visit is now September 18, 2028, not September 11, 2028.'
+  right_answer: The current appointment date is September 18, 2028; September 11 is superseded.
+- message: 'Lease from Tess: One paragraph says renewal on March 1, 2029; another says renewal on March 15, 2029. Neither
+    is marked as a correction.'
+  wrong: Selected March 15 because it appeared last.
+  correction: Later in the document doesn’t mean more current. Those dates conflict.
+  lesson: Conflicting dates remain uncertain unless the text identifies which supersedes the other.
+  later_message: 'Notice from Lena: The heading says cancellation deadline July 10, 2028; the body says July 17, 2028.'
+  right_answer: Report both cancellation-date candidates as conflicting and uncertain; do not select one.
+- message: 'Draft from Dev: Proposed appointment on April 3, 2028, subject to your approval.'
+  wrong: Recorded a confirmed appointment for April 3.
+  correction: That’s a proposal. I haven’t accepted it.
+  lesson: Keep a proposed date distinct from a confirmed arrangement.
+  later_message: 'Booking email from Nia: We can hold November 9, 2028 if you accept by Friday.'
+  right_answer: November 9, 2028 is a provisional booking date, not a confirmed appointment.
+- message: 'Notice from Ravi: Warranty expires on November 31, 2028.'
+  wrong: Changed the expiry to November 30, 2028.
+  correction: November 31 isn’t a real date, but you can’t decide what they meant.
+  lesson: Report invalid dates rather than silently correcting them.
+  later_message: 'Confirmation from Esme: Your appointment is February 29, 2027.'
+  right_answer: The appointment date is invalid because 2027 is not a leap year; the intended date is unknown.
+- message: 'Invoice from Kian: Payment due September 2, 2028. Late fees begin September 9, 2028.'
+  wrong: Used September 9 as the payment deadline.
+  correction: That’s when the fee starts. The bill is due on September 2.
+  lesson: Assign each date the role explicitly stated beside it.
+  later_message: 'Subscription notice from Alia: Renewal is May 20, 2028; cancel by May 13, 2028.'
+  right_answer: Record renewal on May 20 and cancellation deadline on May 13, 2028 as separate facts.
+- message: 'Letter from Mira: Written August 1, 2028. Payment is due August 20, 2028.'
+  wrong: Recorded August 1 as the payment date.
+  correction: August 1 is the letter date. The payment is due on August 20.
+  lesson: Keep document issue dates separate from the deadlines described in the document.
+  later_message: 'Ticket from Oren: Issued October 2, 2028. Performance date October 18, 2028.'
+  right_answer: Record October 18, 2028 as the event date; October 2 is the ticket issue date.
+- message: 'Message from Tess: The quote says “valid until January 31, 2028.” I’m asking them for a new quote; that old
+    one has expired.'
+  wrong: Created a new future validity reminder from the quoted date.
+  correction: She’s describing an expired quote, not giving us a new deadline.
+  lesson: Use surrounding context to distinguish historical dates from current actionable deadlines.
+  later_message: 'Message from Lena: Our old lease ended June 30, 2027; the new lease ends June 30, 2029.'
+  right_answer: The current lease end is June 30, 2029; the 2027 date is historical.
+- message: 'Calendar invitation from Dev: All-day workshop starts May 4, 2028; its exclusive end date is May 5, 2028.'
+  wrong: Said the workshop occupies both May 4 and May 5.
+  correction: That end is exclusive. The workshop is only on May 4.
+  lesson: Interpret structured all-day exclusive ends without applying that convention to ordinary prose.
+  later_message: 'All-day booking from Nia: Start July 10, 2028; exclusive end July 13, 2028.'
+  right_answer: The booking occupies July 10 through July 12, 2028; July 13 is the exclusive boundary.
+- message: 'Email from Ravi: Appointment starts January 6, 2028 at 01:00 UTC. Rowan’s supplied zone has UTC−05:00 at
+    that instant.'
+  wrong: Displayed the appointment as January 6 at 01:00 for Rowan.
+  correction: Show it in my zone. That’s January 5 at eight in the evening here.
+  lesson: Convert timed instants into the supplied display zone and include any resulting date change.
+  later_message: 'Invitation from Esme: Start March 2, 2028 at 02:00 UTC. Rowan’s supplied zone has UTC−05:00 then.'
+  right_answer: Display March 1, 2028 at 21:00 in Rowan’s zone.
+- message: 'Printed pass from Kian: Valid until December 31, 2028. No time or zone is printed.'
+  wrong: Assigned a UTC expiry instant and shifted the displayed date backward.
+  correction: It gives a date, not a UTC timestamp. Keep the printed date.
+  lesson: Do not invent a time or zone for a civil date.
+  later_message: 'Warranty card from Alia: Coverage ends March 31, 2029. No cutoff time is stated.'
+  right_answer: Keep March 31, 2029 as the civil warranty-end date; the exact cutoff instant is unknown.
+- message: 'Notice from Mira: Cancel by November 20, 2028. No cutoff time is stated.'
+  wrong: Said cancellation remained possible until 23:59 that day.
+  correction: They didn’t promise the whole day. Don’t make up a cutoff time.
+  lesson: An explicit deadline date does not establish its time-of-day or inclusivity.
+  later_message: 'Letter from Oren: Renewal notice must arrive by April 10, 2029.'
+  right_answer: Record April 10, 2029 as the notice deadline; the cutoff time is unspecified.
+- message: 'Repair confirmation from Tess: Warranty ends 20 Nov. 2028.'
+  wrong: Read Nov. as part of a sentence break and missed the year.
+  correction: Nov. means November here. Keep the whole date together.
+  lesson: Recognize supported month abbreviations without splitting their periods into sentence boundaries.
+  later_message: 'Membership letter from Lena: Renewal date 21 Sept. 2029.'
+  right_answer: The renewal date is September 21, 2029; retain the complete phrase as evidence.
+- message: 'US-order notice from Dev: Payment due 02/29/2028.'
+  wrong: Rejected the date because February only has 28 days.
+  correction: 2028 is a leap year. February 29 is valid.
+  lesson: Validate the actual calendar year instead of assuming every February has 28 days.
+  later_message: 'Appointment notice from Nia: Confirmed for February 29, 2032.'
+  right_answer: February 29, 2032 is a valid explicit appointment date.
+- message: 'Ticket from Ravi: Your event runs December 31, 2028 through January 1, 2029.'
+  wrong: Assigned both dates to 2028.
+  correction: The second date says 2029. This goes across the year end.
+  lesson: Preserve the year attached to each date in a range.
+  later_message: 'Lease from Esme: The term begins November 1, 2029 and ends October 31, 2030.'
+  right_answer: Record the lease start as November 1, 2029 and end as October 31, 2030.
+- message: 'Letter from Kian: Renewal date 2028-03-04. The document’s locale is not supplied.'
+  wrong: Left the date unresolved because the locale was unknown.
+  correction: That year-month-day form is clear. You don’t need to pick US or UK order for it.
+  lesson: Do not apply numeric day/month ambiguity to an explicit year-month-day date.
+  later_message: 'Notice from Alia: Appointment date 2029-11-06.'
+  right_answer: The explicit appointment date is November 6, 2029.

@@ -184,6 +184,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   kind of date given twice with different values is now uncertain, and `tests/test_document_date_labels.py` holds the
   finder to never calling certain a date a careful reader wouldn't. The dates it misses are kinds it doesn't look for
   (events, lease starts, valid-from, claim deadlines); the reading step covers them.
+- **Also (2026-10-18): learning pairs for dates, replies owed and facts about people.** Sixty more pairs (twenty each,
+  `docs/project/steward-learning-pairs-{dates,replies,people}.yaml`, drafted with an outside assistant) are kept as
+  phase S material until the records they score exist. Two described mistakes the rules would make, fixed now: a
+  document that states its numeric date order ("day/month/year") is read that way ahead of the locale, and a reply
+  waiver beside a question or request ("No need to reply about the sketches. Could you still confirm…?") is left to
+  the reading step instead of dropping the question (`tests/test_steward_more_pairs.py`).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
