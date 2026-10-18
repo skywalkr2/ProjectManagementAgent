@@ -1709,6 +1709,25 @@ threads and repeating events, with the drafter's own copies of those modules and
 against the engine's modules (not the drafter's copies), keep the tests that hold, fix what they find, then delete the
 zip in the same change. Open promise P22.
 
+**Also first: three outside reviews (2026-10-18), kept in `docs/project/incoming/reviews-2026-10-18/`.** Checked
+against the code before recording; a failing test of each defect first. Open promise P23.
+1. **Defect, user-blocking:** undoing a changeset leaves its "Pick an owner" questions on Today; answering one crashes
+   (`engine/applier.py` `pick_owner` reads the removed action without a check), and dropping it is refused. Fix: a
+   plain refusal for a missing action, drop allowed when the action is gone, and undo retires the unresolved routing
+   questions of the work it removed.
+2. **Defect:** on Python 3.14 the guard against a plugin redefining `stage` never fires (`engine/plugin_host.py`
+   reads `vars(model)["__annotations__"]`, which 3.14 fills lazily), and the generated plugin guide renders types
+   differently. `requires-python` is `>=3.12` and CI runs 3.12 and 3.13 only. Fix the guard to read class-local
+   annotations on both, make the guide's output independent of the interpreter, and add 3.14 to CI.
+3. **Plan changes proposed, for the owner to decide** (product review): the tester cohort as a roadmap milestone with
+   exit numbers; a real-mail acceptance gate at S1 (the owner's mailbox, one week, the promise workflow whole, a
+   miss and false-alarm rate the owner accepts); numbers for "dependable" before S's later waves; later steward
+   capabilities held behind a dependable promise workflow; the risks register rewritten for the steward product;
+   a policy for older mail at first run; a named S1b test of the approval guards against hostile input; the
+   walkthrough reworked for the new audience; Today judged by the next action being obvious; a visible coverage
+   line (what was read, when, and what wasn't) so "nothing needs you" never looks like "couldn't check"; a cheap way
+   to add a missed promise, with omissions measured.
+
 1. **Wave 3, Today follow-ups and Settings:** open promise P19 first (the page-width rule with its browser test at
    390, 768, 1024, 1280, 1512 and 1920 pixels and in a narrow window; long unbroken text breaks, tried with the 50
    layout stress strings in `web/e2e/fixtures/layout-strings.json` in titles, rows, the rail and the details pane;
