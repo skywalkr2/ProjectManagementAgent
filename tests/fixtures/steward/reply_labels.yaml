@@ -1,0 +1,641 @@
+- id: 1
+  from: mira@example.com
+  to: rowan@example.com
+  subject: Draft review
+  body: |-
+    Hi Rowan, is the revised proposal ready for me to review?
+    Thanks,
+    Mira
+  automatic: false
+  label: needs a reply
+  reason: Mira asks Rowan a direct question and no answer is supplied.
+- id: 2
+  from: oren@example.com
+  to: rowan@example.com
+  subject: Site visit
+  body: |-
+    Hello Rowan, which day works better for the site visit: Tuesday or Thursday?
+    Best,
+    Oren
+  automatic: false
+  label: needs a reply
+  reason: Oren needs Rowan to choose between two dates.
+- id: 3
+  from: tess@example.com
+  to: rowan@example.com
+  subject: Print estimate
+  body: |-
+    Rowan, does your estimate include the proof copies?
+    Regards,
+    Tess
+  automatic: false
+  label: needs a reply
+  reason: Tess asks Rowan to clarify what the estimate covers.
+- id: 4
+  from: lena@example.com
+  to: rowan@example.com
+  subject: Workshop numbers
+  body: |-
+    Hi Rowan, how many people should I order lunch for?
+    Lena
+  automatic: false
+  label: needs a reply
+  reason: Lena needs a head count from Rowan.
+- id: 5
+  from: dev@example.com
+  to: rowan@example.com
+  subject: Missing attachment
+  body: |-
+    Hi Rowan, could you resend the drawing as a PDF? The attachment will not open.
+    Dev
+  automatic: false
+  label: needs a reply
+  reason: Dev requests a replacement attachment from Rowan.
+- id: 6
+  from: nia@example.com
+  to: rowan@example.com
+  subject: Agreement
+  body: |-
+    Hello Rowan, please send the signed agreement by Friday.
+    Thank you,
+    Nia
+  automatic: false
+  label: needs a reply
+  reason: Nia makes a direct request even though it has no question mark.
+- id: 7
+  from: ravi@example.com
+  to: rowan@example.com
+  subject: Invoice details
+  body: |-
+    Hi Rowan, what name should appear on the invoice?
+    Best,
+    Ravi
+  automatic: false
+  label: needs a reply
+  reason: Ravi asks Rowan for information needed to prepare the invoice.
+- id: 8
+  from: esme@example.com
+  to: rowan@example.com
+  subject: Final copy
+  body: |-
+    Rowan, may we use the shorter introduction in the final booklet?
+    Esme
+  automatic: false
+  label: needs a reply
+  reason: Esme needs Rowan’s permission to use a different introduction.
+- id: 9
+  from: kian@example.com
+  to: rowan@example.com
+  subject: Parcel collection
+  body: |-
+    Hi Rowan, can you collect the sample box on Wednesday?
+    Thanks,
+    Kian
+  automatic: false
+  label: needs a reply
+  reason: Kian asks Rowan to accept or decline a collection task.
+- id: 10
+  from: alia@example.com
+  to: rowan@example.com
+  subject: Dinner plans
+  body: |-
+    Hello Rowan, are you coming to dinner on Saturday?
+    Alia
+  automatic: false
+  label: needs a reply
+  reason: Alia asks Rowan to confirm attendance.
+- id: 11
+  from: mira@example.com
+  to: rowan@example.com
+  subject: Alder Circle update
+  body: |-
+    Hi Rowan, the client liked the first two options. I have filed the notes with the drawings. Please send me your preferred cover before noon so I can prepare the proof. The printer has reserved a slot.
+    Mira
+  automatic: false
+  label: needs a reply
+  reason: A direct request for Rowan’s cover choice is buried in the middle of the paragraph.
+- id: 12
+  from: oren@example.com
+  to: rowan@example.com
+  subject: Access arrangements
+  body: |-
+    Hi Rowan, the front entrance is being repaired and visitors are using the side gate. Could you tell me your arrival time? I will leave a key with the caretaker.
+    Oren
+  automatic: false
+  label: needs a reply
+  reason: Oren asks for an arrival time between two informational sentences.
+- id: 13
+  from: tess@example.com
+  to: rowan@example.com
+  subject: Proof notes
+  body: |-
+    Hello Rowan, I have checked the margins and the page numbers. The only thing I still need is your approval of the blue cover. Everything else is ready.
+    Tess
+  automatic: false
+  label: needs a reply
+  reason: Tess explicitly identifies an approval still needed from Rowan.
+- id: 14
+  from: lena@example.com
+  to: rowan@example.com
+  subject: Workshop preparation
+  body: |-
+    Hi Rowan, the room has chairs and a screen. Please confirm whether you need a microphone. I have already arranged water for the tables.
+    Lena
+  automatic: false
+  label: needs a reply
+  reason: The equipment update contains a direct request for confirmation.
+- id: 15
+  from: dev@example.com
+  to: rowan@example.com
+  subject: Illustration delivery
+  body: |-
+    Hi Rowan, two illustrations are attached. Let me know which version of the third sketch to finish. I will keep the same colors across all three.
+    Dev
+  automatic: false
+  label: needs a reply
+  reason: Dev needs Rowan’s choice before finishing the third illustration.
+- id: 16
+  from: nia@example.com
+  to: rowan@example.com
+  subject: Lease paperwork
+  body: |-
+    Hello Rowan, I have received the reference and checked the deposit. Please confirm the name of the second occupant. The revised lease will follow after that.
+    Nia
+  automatic: false
+  label: needs a reply
+  reason: The lease update includes a specific unanswered request.
+- id: 17
+  from: ravi@example.com
+  to: rowan@example.com
+  subject: Bookkeeping handoff
+  body: |-
+    Hi Rowan, I have matched most of the receipts. Please explain what the payment marked studio materials covered. The remaining entries are clear.
+    Ravi
+  automatic: false
+  label: needs a reply
+  reason: Ravi requests an explanation of a particular payment.
+- id: 18
+  from: esme@example.com
+  to: rowan@example.com
+  subject: Schedule revision
+  body: |-
+    Hello Rowan, the interview moved to Thursday and the room is reserved. Would 10:30 still work for you? I have left the afternoon free as a backup.
+    Esme
+  automatic: false
+  label: needs a reply
+  reason: Esme asks Rowan to confirm a proposed time inside a schedule update.
+- id: 19
+  from: kian@example.com
+  to: rowan@example.com
+  subject: Garden delivery
+  body: |-
+    Hi Rowan, the plants are ready and the pots arrived this morning. Tell me whether you want delivery or collection. I can arrange either.
+    Kian
+  automatic: false
+  label: needs a reply
+  reason: Kian asks Rowan to choose how to receive the plants.
+- id: 20
+  from: alia@example.com
+  to: rowan@example.com
+  subject: 'FYI: revised travel plan'
+  body: |-
+    Hi Rowan, FYI, I moved my train to Friday. Could you pick me up at the station at six? I can take a bus if that is awkward.
+    Alia
+  automatic: false
+  label: needs a reply
+  reason: The FYI label does not cancel the explicit pickup request.
+- id: 21
+  from: mira@example.com
+  to: rowan@example.com
+  subject: Thanks for the outline
+  body: |-
+    Thanks for the outline, Rowan. Could you add the estimated delivery date before I share it?
+    Mira
+  automatic: false
+  label: needs a reply
+  reason: The thank-you note also asks Rowan to revise the outline.
+- id: 22
+  from: oren@example.com
+  to: rowan@example.com
+  subject: Estimate received
+  body: |-
+    Thank you, Rowan. Please confirm whether travel is included in that total.
+    Oren
+  automatic: false
+  label: needs a reply
+  reason: Oren acknowledges receipt but still asks for a clarification.
+- id: 23
+  from: tess@example.com
+  to: rowan@example.com
+  subject: Almost there
+  body: |-
+    Thanks, Rowan, this is nearly ready. Are you happy for me to print 80 copies?
+    Tess
+  automatic: false
+  label: needs a reply
+  reason: Tess still needs approval of the print quantity.
+- id: 24
+  from: lena@example.com
+  to: rowan@example.com
+  subject: Workshop outline received
+  body: |-
+    Thank you for sending the outline. Please send a short introduction I can read before you speak.
+    Lena
+  automatic: false
+  label: needs a reply
+  reason: The acknowledgment includes a new request for an introduction.
+- id: 25
+  from: dev@example.com
+  to: rowan@example.com
+  subject: Color choices
+  body: |-
+    Thanks for choosing the palette, Rowan. Which of the two sketches should I develop?
+    Dev
+  automatic: false
+  label: needs a reply
+  reason: Dev asks for a separate decision after acknowledging an earlier one.
+- id: 26
+  from: nia@example.com
+  to: rowan@example.com
+  subject: Address check
+  body: |-
+    Rowan, please check that the postal address on page two is correct.
+    Nia
+  automatic: false
+  label: needs a reply
+  reason: Nia directly asks Rowan to check and confirm a detail.
+- id: 27
+  from: ravi@example.com
+  to: rowan@example.com
+  subject: Two details for the invoice
+  body: |-
+    Hi Rowan, should I bill Alder Circle or Fern Workshop, and which project reference should I use?
+    Ravi
+  automatic: false
+  label: needs a reply
+  reason: Two billing questions remain unanswered.
+- id: 28
+  from: esme@example.com
+  to:
+  - rowan@example.com
+  - mira@example.com
+  subject: Who can approve this?
+  body: |-
+    Rowan, can you approve the revised headline? Mira, please hold publication until Rowan answers.
+    Esme
+  automatic: false
+  label: needs a reply
+  reason: Rowan is explicitly named as the person who must give approval.
+- id: 29
+  from: kian@example.com
+  to: rowan@example.com
+  subject: Room booking
+  body: |-
+    Hi Rowan, I can reserve Alder Hall or Willow Room. Please choose one by Thursday.
+    Kian
+  automatic: false
+  label: needs a reply
+  reason: Kian needs Rowan’s room choice before making the booking.
+- id: 30
+  from: alia@example.com
+  to: rowan@example.com
+  subject: A small favor
+  body: |-
+    Hi Rowan, when you have a moment, would you send me the recipe from Sunday?
+    Thanks,
+    Alia
+  automatic: false
+  label: needs a reply
+  reason: Polite timing language does not remove the direct request.
+- id: 31
+  from: mira@example.com
+  to: rowan@example.com
+  subject: 'FYI: report filed'
+  body: |-
+    Hi Rowan, FYI, I filed the approved report in the project folder.
+    Best,
+    Mira
+  automatic: false
+  label: no reply needed
+  reason: Mira shares completed work without asking Rowan to do anything.
+- id: 32
+  from: oren@example.com
+  to: rowan@example.com
+  subject: 'FYI: entrance change'
+  body: |-
+    Hello Rowan, FYI only: visitors will use the side entrance this week.
+    Oren
+  automatic: false
+  label: no reply needed
+  reason: This is an informational access notice with no request for a response.
+- id: 33
+  from: tess@example.com
+  to: rowan@example.com
+  subject: Proof copies dispatched
+  body: |-
+    Hi Rowan, the proof copies left this morning and should arrive Thursday.
+    Tess
+  automatic: false
+  label: no reply needed
+  reason: Tess provides a delivery update without a question or action request.
+- id: 34
+  from: lena@example.com
+  to: rowan@example.com
+  subject: Workshop room confirmed
+  body: |-
+    Hi Rowan, Alder Hall is confirmed for the workshop. I have arranged the chairs and screen.
+    Lena
+  automatic: false
+  label: no reply needed
+  reason: Lena confirms arrangements and asks for no further input.
+- id: 35
+  from: dev@example.com
+  to: rowan@example.com
+  subject: For your records
+  body: |-
+    Hello Rowan, here is the final illustration set for your records.
+    Dev
+  automatic: false
+  label: no reply needed
+  reason: The message delivers files for reference without requesting review or approval.
+- id: 36
+  from: nia@example.com
+  to: oren@example.com
+  subject: Lease wording
+  body: |-
+    Hi Oren, can you check the wording on page three? Rowan is copied for visibility.
+    Nia
+  automatic: false
+  cc: rowan@example.com
+  label: no reply needed
+  reason: Rowan is only on Cc and the question is explicitly addressed to Oren.
+- id: 37
+  from: ravi@example.com
+  to: mira@example.com
+  subject: Payment reference
+  body: |-
+    Hi Mira, which invoice does this payment belong to? Copying Rowan so the records stay together.
+    Ravi
+  automatic: false
+  cc: rowan@example.com
+  label: no reply needed
+  reason: Mira is the intended respondent; Rowan is only copied.
+- id: 38
+  from: esme@example.com
+  to:
+  - mira@example.com
+  - rowan@example.com
+  subject: Publication approval
+  body: |-
+    Mira, are you happy with the headline? Rowan, this is just a copy for your files.
+    Esme
+  automatic: false
+  label: no reply needed
+  reason: The question names Mira and the message explicitly gives Rowan no action.
+- id: 39
+  from: kian@example.com
+  to:
+  - alia@example.com
+  - rowan@example.com
+  subject: Delivery confirmation
+  body: |-
+    Alia, could you confirm the delivery window? Rowan is included because the plants are for the shared courtyard.
+    Kian
+  automatic: false
+  label: no reply needed
+  reason: The request names Alia rather than Rowan.
+- id: 40
+  from: alia@example.com
+  to: lena@example.com
+  subject: Dinner shopping
+  body: |-
+    Hi Lena, could you bring bread? Copying Rowan to keep the dinner plans in one place.
+    Alia
+  automatic: false
+  cc: rowan@example.com
+  label: no reply needed
+  reason: Lena receives the request while Rowan is only on Cc.
+- id: 41
+  from: mira@example.com
+  to: rowan@example.com
+  subject: Final proof archived
+  body: |-
+    Hi Rowan, is there anything more satisfying than finishing a long project? The final proof is archived. No need to reply.
+    Mira
+  automatic: false
+  label: no reply needed
+  reason: The question is rhetorical and Mira explicitly waives a reply.
+- id: 42
+  from: oren@example.com
+  to: rowan@example.com
+  subject: Stationery samples
+  body: |-
+    Hi Rowan, the sample pack arrived safely. No response needed; I will bring it to our next meeting.
+    Oren
+  automatic: false
+  label: no reply needed
+  reason: Oren explicitly says no response is needed.
+- id: 43
+  from: tess@example.com
+  to: rowan@example.com
+  subject: A long printing day
+  body: |-
+    Hi Rowan, who knew a paper jam could eat an entire afternoon? Everything is printing again now.
+    Tess
+  automatic: false
+  label: no reply needed
+  reason: The rhetorical question introduces a resolved anecdote rather than asking Rowan for information.
+- id: 44
+  from: lena@example.com
+  to: rowan@example.com
+  subject: The missing cable
+  body: |-
+    Hi Rowan, why do cables always disappear five minutes before a meeting? I found a spare and we are all set.
+    Lena
+  automatic: false
+  label: no reply needed
+  reason: The rhetorical complaint is followed by confirmation that the problem is solved.
+- id: 45
+  from: dev@example.com
+  to: rowan@example.com
+  subject: Old question resolved
+  body: |-
+    Hi Rowan, I was going to ask whether the cover should be blue, but your notes answered that. No need to reply.
+    Dev
+  automatic: false
+  label: no reply needed
+  reason: Dev explicitly says the intended question is already answered and waives a reply.
+- id: 46
+  from: nia@example.com
+  to: rowan@example.com
+  subject: 'Automatic reply: away'
+  body: This is an automatic reply. I am away until Monday and will read your message when I return.
+  automatic: true
+  label: no reply needed
+  reason: An explicitly automatic absence reply creates no personal response obligation.
+- id: 47
+  from: ravi@example.com
+  to: rowan@example.com
+  subject: Automatic receipt confirmation
+  body: 'Automated notice: your upload has been received. Please do not reply to this mailbox.'
+  automatic: true
+  label: no reply needed
+  reason: This automatic receipt notice explicitly says not to reply.
+- id: 48
+  from: esme@example.com
+  to: rowan@example.com
+  subject: Thank you
+  body: |-
+    Thanks, Rowan. The notes are exactly what I needed.
+    Esme
+  automatic: false
+  label: no reply needed
+  reason: This is a thank-you with no new request or unanswered question.
+- id: 49
+  from: kian@example.com
+  to: rowan@example.com
+  subject: Much appreciated
+  body: |-
+    Thank you for collecting the samples, Rowan. That saved me a trip.
+    Kian
+  automatic: false
+  label: no reply needed
+  reason: Kian acknowledges completed help without requesting anything else.
+- id: 50
+  from: alia@example.com
+  to: rowan@example.com
+  subject: Lovely evening
+  body: |-
+    Thanks for dinner, Rowan. I had a lovely evening.
+    Alia
+  automatic: false
+  label: no reply needed
+  reason: The personal thank-you does not call for an answer.
+- id: 51
+  from: mira@example.com
+  to: rowan@example.com
+  subject: Proposal ready?
+  body: |-
+    Hi Rowan, is the proposal ready to send?
+    Mira
+  automatic: false
+  later_messages:
+  - from: rowan@example.com
+    to: mira@example.com
+    body: |-
+      Yes, the proposal is ready to send.
+      Rowan
+  label: no reply needed
+  reason: Rowan’s later message directly answers the question.
+- id: 52
+  from: oren@example.com
+  to: rowan@example.com
+  subject: Arrival time
+  body: |-
+    Hi Rowan, what time will you arrive on Thursday?
+    Oren
+  automatic: false
+  later_messages:
+  - from: rowan@example.com
+    to: oren@example.com
+    body: |-
+      I will arrive at 10:30 on Thursday.
+      Rowan
+  label: no reply needed
+  reason: Rowan later supplies the requested arrival time.
+- id: 53
+  from: tess@example.com
+  to: rowan@example.com
+  subject: Proof quantity
+  body: |-
+    Rowan, should I print 80 or 100 proof copies?
+    Tess
+  automatic: false
+  later_messages:
+  - from: rowan@example.com
+    to: tess@example.com
+    body: |-
+      Please print 80 proof copies.
+      Rowan
+  label: no reply needed
+  reason: Rowan later chooses one of the two quantities.
+- id: 54
+  from: lena@example.com
+  to: rowan@example.com
+  subject: Microphone needed?
+  body: |-
+    Hi Rowan, do you need a microphone for the workshop?
+    Lena
+  automatic: false
+  later_messages:
+  - from: rowan@example.com
+    to: lena@example.com
+    body: |-
+      No, I will not need a microphone.
+      Rowan
+  label: no reply needed
+  reason: Rowan’s later reply explicitly answers the equipment question.
+- id: 55
+  from: dev@example.com
+  to: rowan@example.com
+  subject: Which sketch?
+  body: |-
+    Hi Rowan, which sketch should I finish: the arch or the leaf?
+    Dev
+  automatic: false
+  later_messages:
+  - from: rowan@example.com
+    to: dev@example.com
+    body: |-
+      Please finish the leaf sketch.
+      Rowan
+  label: no reply needed
+  reason: Rowan later selects the sketch, so this question is no longer open.
+- id: 56
+  from: nia@example.com
+  to: rowan@example.com
+  subject: Subscription notice
+  body: 'Automated notice from Alder Reading Circle: your membership renewed today. Questions? Read the help notes
+    in your account. This mailbox does not accept replies.'
+  automatic: true
+  label: no reply needed
+  reason: The automatic notice’s Questions prompt is not a personal question to Rowan.
+- id: 57
+  from: ravi@example.com
+  to: rowan@example.com
+  subject: Appointment reminder
+  body: 'Automated reminder: your appointment is tomorrow at 10:00. Replying to this reminder will not change the
+    booking.'
+  automatic: true
+  label: no reply needed
+  reason: An automatic appointment reminder does not request a personal reply.
+- id: 58
+  from: esme@example.com
+  to: rowan@example.com
+  subject: 'FYI: comment resolved'
+  body: |-
+    Hi Rowan, FYI, Oren asked whether travel was included. I confirmed that it was and closed the query.
+    Esme
+  automatic: false
+  label: no reply needed
+  reason: Esme reports someone else’s question and its answer rather than asking Rowan.
+- id: 59
+  from: kian@example.com
+  to: rowan@example.com
+  subject: Meeting accepted
+  body: |-
+    Hi Rowan, Thursday at 11 works for me. See you then.
+    Kian
+  automatic: false
+  label: no reply needed
+  reason: Kian accepts the existing arrangement without asking for another confirmation.
+- id: 60
+  from: alia@example.com
+  to: rowan@example.com
+  subject: No action for you
+  body: |-
+    Hi Rowan, do we need more chairs? Lena is checking that for us, so there is nothing for you to do. No need to reply.
+    Alia
+  automatic: false
+  label: no reply needed
+  reason: Alia assigns the question to Lena and explicitly tells Rowan no reply is needed.

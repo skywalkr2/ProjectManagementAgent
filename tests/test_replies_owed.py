@@ -181,8 +181,10 @@ def test_invalid_wait(wait):
     assert check(message(), wait=wait).owed is None
 
 
-def test_no_inferred_request_without_question_mark():
-    assert check(message("Please send the draft.")).owed is False
+def test_a_request_without_question_mark_is_left_for_reading():
+    result = check(message("Please send the draft."))
+    assert (result.owed, result.code) == (None, "request_without_question")
+    assert check(message("The draft is attached.")).owed is False
 
 
 def test_plain_newline_questions():

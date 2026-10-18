@@ -172,6 +172,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   entry without a SHA-256, with a bad date, or with a download address that isn't HTTPS; conflicting entries for the
   newest version raise instead of picking one. For phase I's "A new version is ready". Drafted with an outside
   assistant; here plain HTTP downloads were refused, since the file and its checksum could both be swapped.
+- **Also (2026-10-18): a request without a question mark is never "no reply owed".** Measured against 60 labeled
+  fictional messages (`tests/fixtures/steward/reply_labels.yaml`, drafted with an outside assistant), the replies-owed
+  rules said a confident "not owed" for 12 of the 30 that need a reply, all requests phrased without a question mark
+  ("Please send the signed agreement by Friday"). Those would have been silently missed, since the reading step only
+  looks at "unknown". Such a request is now unknown, and `tests/test_reply_labels.py` holds the rules to never being
+  confidently wrong on the set.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

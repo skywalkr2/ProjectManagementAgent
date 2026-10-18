@@ -120,9 +120,16 @@ def reply_owed(
         ):
             return ReplyOwed(False, questions, "The message explicitly says a reply is not needed.", "no_reply_needed")
         if not questions:
-            return ReplyOwed(
-                False, (), "No explicit question was found; indirect requests are outside this rule.", "no_question"
-            )
+            # A request without a question mark still needs a reply: hand it to the reading step, never say "not owed".
+            if re.search(
+                r"\b(?:please|let me know|tell me|confirm|could you|can you|would you|need your|still need|send me)\b",
+                message.new_text,
+                re.IGNORECASE,
+            ):
+                return ReplyOwed(
+                    None, (), "Unknown: a request is phrased without a question.", "request_without_question"
+                )
+            return ReplyOwed(False, (), "No explicit question or request was found.", "no_question")
 
         my_names = set()
         other_names = set()
