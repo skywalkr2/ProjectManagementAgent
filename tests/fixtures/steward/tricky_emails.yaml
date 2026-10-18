@@ -1,0 +1,675 @@
+# Fifty fictional plain-text emails that are hard to split, each with the text its writer added ("new"). Drafted with an
+# outside assistant. "new" keeps inline answers, paragraph breaks and wording; standalone names and closings count as
+# signature, and uncertain prose stays new.
+- id: 1
+  email: |-
+    Thanks, Mira. Thursday works.
+
+    On Tuesday, Mira Venn <mira@example.com> wrote:
+    > Could we meet Thursday?
+
+    --
+    Rowan
+  new: |-
+    Thanks, Mira. Thursday works.
+
+- id: 2
+  email: |-
+    On Monday, Oren Pell <oren@example.com> wrote:
+    > Can you send the revised outline?
+    > We need it before lunch.
+
+    I'll send it by eleven.
+
+    Regards,
+    Rowan
+  new: |-
+    I'll send it by eleven.
+
+- id: 3
+  email: |-
+    > Is the first draft ready?
+    Yes, I've attached it.
+    > Can we share it with the group?
+    Please wait until I fix the final paragraph.
+
+    --
+    Rowan
+  new: |-
+    Yes, I've attached it.
+    Please wait until I fix the final paragraph.
+
+- id: 4
+  email: |-
+    Please use the second attachment.
+
+    ________________________________
+    From: Tessa Vale <tessa@example.com>
+    Sent: Tuesday, November 10, 2026 09:14
+    To: Rowan <rowan@example.com>
+    Subject: Revised figures
+
+    The first attachment has yesterday's totals.
+  new: |-
+    Please use the second attachment.
+
+- id: 5
+  email: |-
+    This is the booking I mentioned. Please keep Friday clear.
+
+    Begin forwarded message:
+
+    From: Bram Fen <bram@example.com>
+    Date: November 10, 2026 at 10:20
+    To: Rowan <rowan@example.com>
+    Subject: Your reservation
+
+    Your reservation is confirmed for Friday.
+  new: |-
+    This is the booking I mentioned. Please keep Friday clear.
+
+- id: 6
+  email: |-
+    Can you check whether this includes the garden room?
+
+    ---------- Forwarded message ---------
+    From: Nila Rook <nila@example.com>
+    Date: Tue, 10 Nov 2026
+    Subject: Room booking
+    To: Rowan <rowan@example.com>
+
+    The room is reserved.
+
+    ---------- Forwarded message ---------
+    From: Ellis Tarn <ellis@example.com>
+    Subject: Availability
+
+    We have two rooms available.
+  new: |-
+    Can you check whether this includes the garden room?
+
+- id: 7
+  email: |-
+    I'll bring the printed copies.
+
+    Sent from my phone
+  new: |-
+    I'll bring the printed copies.
+
+- id: 8
+  email: |-
+    Je peux passer demain matin.
+
+    Envoyé de mon téléphone
+  new: |-
+    Je peux passer demain matin.
+
+- id: 9
+  email: |-
+    Ich schicke den Entwurf morgen.
+
+    Von meinem Mobiltelefon gesendet
+  new: |-
+    Ich schicke den Entwurf morgen.
+
+- id: 10
+  email: |-
+    Te envío las notas esta tarde.
+
+    Enviado desde mi teléfono
+  new: |-
+    Te envío las notas esta tarde.
+
+- id: 11
+  email: |-
+    Ti chiamo dopo pranzo.
+
+    Inviato dal mio telefono
+  new: |-
+    Ti chiamo dopo pranzo.
+
+- id: 12
+  email: |-
+    Envio os documentos amanhã.
+
+    Enviado do meu celular
+  new: |-
+    Envio os documentos amanhã.
+
+- id: 13
+  email: |-
+    明日の午前中に送ります。
+
+    携帯電話から送信
+  new: |-
+    明日の午前中に送ります。
+
+- id: 14
+  email: |-
+    我明天上午发送文件。
+
+    发自我的手机
+  new: |-
+    我明天上午发送文件。
+
+- id: 15
+  email: |-
+    The revised estimate is attached.
+
+    --
+    Rowan
+    Independent consultant
+    I promise clarity, every single day.
+    rowan@example.com
+  new: |-
+    The revised estimate is attached.
+
+- id: 16
+  email: |-
+    Let's keep the smaller room.
+
+    Best,
+    Rowan
+    Tomorrow's answers, delivered today.
+    rowan@example.com
+  new: |-
+    Let's keep the smaller room.
+
+- id: 17
+  email: |-
+    I haven't received the signed page. Could you resend it?
+
+    --
+    Rowan
+    rowan@example.com
+
+    CONFIDENTIALITY NOTICE: This message is intended only for its named recipient.
+    If received in error, notify the sender and delete it.
+  new: |-
+    I haven't received the signed page. Could you resend it?
+
+- id: 18
+  email: |-
+    The legal notice needs to say:
+    "If received in error, notify the sender."
+
+    Please keep those exact words in the draft.
+
+    --
+    Rowan
+  new: |-
+    The legal notice needs to say:
+    "If received in error, notify the sender."
+
+    Please keep those exact words in the draft.
+
+- id: 19
+  email: |-
+    The screen currently shows "Sent from my phone" in the wrong place.
+    I'll remove that line tomorrow.
+
+    Thanks,
+    Rowan
+  new: |-
+    The screen currently shows "Sent from my phone" in the wrong place.
+    I'll remove that line tomorrow.
+
+- id: 20
+  email: |-
+    > Please confirm both dates.
+    > We can hold Tuesday and Thursday.
+
+    Tuesday is confirmed.
+    Thursday still depends on the venue.
+  new: |-
+    Tuesday is confirmed.
+    Thursday still depends on the venue.
+
+- id: 21
+  email: |-
+    On Tue, 10 Nov 2026 at 09:12, Mira Venn
+    <mira@example.com> wrote:
+    > Could you approve the wording?
+
+    Yes, except for the final sentence.
+
+    --
+    Rowan
+  new: |-
+    Yes, except for the final sentence.
+
+- id: 22
+  email: |-
+    On 10 November 2026, at 09:12, Oren Pell <oren@example.com> wrote:
+    > Is the room booked?
+
+    Not yet. I'm waiting for confirmation.
+  new: |-
+    Not yet. I'm waiting for confirmation.
+
+- id: 23
+  email: |-
+    Le 10 novembre 2026 à 09:12, Tessa Vale <tessa@example.com> a écrit :
+    > Peux-tu confirmer mardi ?
+
+    Oui, mardi me convient.
+
+    Cordialement,
+    Rowan
+  new: |-
+    Oui, mardi me convient.
+
+- id: 24
+  email: |-
+    Am 10.11.2026 um 09:12 schrieb Bram Fen <bram@example.com>:
+    > Passt dir Donnerstag?
+
+    Donnerstag passt.
+
+    Viele Grüße
+    Rowan
+  new: |-
+    Donnerstag passt.
+
+- id: 25
+  email: |-
+    El 10 nov 2026, a las 09:12, Nila Rook <nila@example.com> escribió:
+    > ¿Puedes revisar el contrato?
+
+    Sí, lo reviso mañana.
+
+    Saludos,
+    Rowan
+  new: |-
+    Sí, lo reviso mañana.
+
+- id: 26
+  email: |-
+    Please see my answers below.
+
+    On Tuesday, Ellis Tarn <ellis@example.com> wrote:
+    > Who will lead the session?
+    I'll lead it.
+    > Who will take notes?
+    Could you ask Mira?
+    > Do we need lunch?
+    No, we'll finish before noon.
+
+    --
+    Rowan
+  new: |-
+    Please see my answers below.
+
+    I'll lead it.
+    Could you ask Mira?
+    No, we'll finish before noon.
+
+- id: 27
+  email: |-
+    > Mira wrote:
+    >> Can we move the review?
+    > I suggested Friday.
+
+    Friday is too late. Could we do Wednesday?
+  new: |-
+    Friday is too late. Could we do Wednesday?
+
+- id: 28
+  email: |-
+    Agreed.
+
+    On Tuesday, Oren Pell <oren@example.com> wrote:
+    > Let's use the shorter version.
+
+    One more thing: please keep the pricing paragraph.
+
+    --
+    Rowan
+  new: |-
+    Agreed.
+
+    One more thing: please keep the pricing paragraph.
+
+- id: 29
+  email: |-
+    > Can you send the notes?
+
+    Sent just now.
+
+    > Could you also send the photographs?
+
+    I'll send those tomorrow.
+
+    Thanks,
+    Rowan
+  new: |-
+    Sent just now.
+
+    I'll send those tomorrow.
+
+- id: 30
+  email: |-
+    Please check the address below.
+
+    -----Original Message-----
+    From: Mira Venn <mira@example.com>
+    Sent: Tuesday, November 10, 2026 09:12
+    To: Rowan <rowan@example.com>
+    Subject: Delivery
+
+    Use 18 Alder Lane.
+
+    -----Original Message-----
+    From: Rowan <rowan@example.com>
+    Sent: Monday, November 9, 2026 16:00
+    To: Mira Venn <mira@example.com>
+    Subject: Delivery
+
+    Where should the parcel go?
+  new: |-
+    Please check the address below.
+
+- id: 31
+  email: |-
+    Begin forwarded message:
+
+    From: Tessa Vale <tessa@example.com>
+    To: Rowan <rowan@example.com>
+    Subject: Friday
+
+    I can cover the morning session.
+  new: ""
+
+- id: 32
+  email: |-
+    > Please send the signed copy.
+    >
+    > Thanks,
+    > Bram
+  new: ""
+
+- id: 33
+  email: |-
+    These are the headings I suggest:
+
+    From: who is speaking
+    To: who needs to act
+    Subject: what needs deciding
+
+    I'll put an example beneath each heading.
+  new: |-
+    These are the headings I suggest:
+
+    From: who is speaking
+    To: who needs to act
+    Subject: what needs deciding
+
+    I'll put an example beneath each heading.
+
+- id: 34
+  email: |-
+    On Friday, Mira wrote: the room number on the whiteboard.
+    I copied it into the visitor instructions.
+
+    Please check that it is still correct.
+  new: |-
+    On Friday, Mira wrote: the room number on the whiteboard.
+    I copied it into the visitor instructions.
+
+    Please check that it is still correct.
+
+- id: 35
+  email: |-
+    The proposed label is:
+
+    -----Original Message-----
+
+    Please replace it with "Earlier message".
+  new: |-
+    The proposed label is:
+
+    -----Original Message-----
+
+    Please replace it with "Earlier message".
+
+- id: 36
+  email: |-
+    Please compare these values:
+    > 30 means we need a larger room.
+    < 10 means we can use the study.
+
+    These are thresholds, not quoted answers.
+  new: |-
+    Please compare these values:
+    > 30 means we need a larger room.
+    < 10 means we can use the study.
+
+    These are thresholds, not quoted answers.
+
+- id: 37
+  email: |-
+    The old footer said "I will always reply within a day."
+    Please remove it; I can't promise that.
+
+    --
+    Rowan
+    Thoughtful work. Clear answers.
+  new: |-
+    The old footer said "I will always reply within a day."
+    Please remove it; I can't promise that.
+
+- id: 38
+  email: |-
+    I'll send the final schedule on Thursday.
+
+    --
+    Rowan
+    rowan@example.com
+
+    P.S. Please leave the first session unassigned until then.
+  new: |-
+    I'll send the final schedule on Thursday.
+
+    P.S. Please leave the first session unassigned until then.
+
+- id: 39
+  email: |-
+    Thanks,
+    Rowan
+
+    I forgot the attachment. Here it is.
+  new: |-
+    I forgot the attachment. Here it is.
+
+- id: 40
+  email: |-
+    The draft is ready.
+
+    --
+    Rowan
+
+    On Tuesday, Nila Rook <nila@example.com> wrote:
+    > Could you send the draft today?
+    >
+    > --
+    > Nila
+    > I make every deadline count.
+  new: |-
+    The draft is ready.
+
+- id: 41
+  email: |-
+    I'll ask Ellis about access.
+
+    Sent from my phone
+
+    On Tuesday, Mira Venn <mira@example.com> wrote:
+    > Who has the door code?
+  new: |-
+    I'll ask Ellis about access.
+
+- id: 42
+  email: |-
+    > Can you approve the deposit?
+    I can approve it once the date is confirmed.
+    > Will you call the venue?
+    Yes, tomorrow morning.
+
+    Enviado desde mi teléfono
+  new: |-
+    I can approve it once the date is confirmed.
+    Yes, tomorrow morning.
+
+- id: 43
+  email: |-
+    This is the latest answer.
+
+    ---------- Forwarded message ---------
+    From: Oren Pell <oren@example.com>
+    To: Rowan <rowan@example.com>
+    Subject: Re: Access
+
+    > Can we arrive at eight?
+    Yes, the side entrance will be open.
+
+    --
+    Oren
+    If received in error, please delete this message.
+  new: |-
+    This is the latest answer.
+
+- id: 44
+  email: |-
+    On Tuesday, Tessa Vale <tessa@example.com> wrote:
+    > Can we use the courtyard?
+    > It would give us more space.
+
+    Only if the weather stays dry.
+
+    On Monday, Bram Fen <bram@example.com> wrote:
+    > The indoor room holds twenty.
+
+    We should keep that room as the backup.
+  new: |-
+    Only if the weather stays dry.
+
+    We should keep that room as the backup.
+
+- id: 45
+  email: |-
+    Answers below.
+
+    From: Ellis Tarn <ellis@example.com>
+    Sent: Tuesday, November 10, 2026 09:12
+    To: Rowan <rowan@example.com>
+    Subject: Review questions
+
+    > Is the budget approved?
+    Not yet.
+    > Can we book the room anyway?
+    Please wait until Friday.
+
+    Regards,
+    Rowan
+  new: |-
+    Answers below.
+
+    Not yet.
+    Please wait until Friday.
+
+- id: 46
+  email: |-
+    I'll collect the badges.
+
+    --
+    Rowan
+
+    LEGAL NOTICE
+    This email may contain confidential information.
+    If you are not the intended recipient, please notify the sender.
+  new: |-
+    I'll collect the badges.
+
+- id: 47
+  email: |-
+    Please add a legal notice to the last page.
+
+    It should explain who can use the report.
+    I'll send the approved wording tomorrow.
+  new: |-
+    Please add a legal notice to the last page.
+
+    It should explain who can use the report.
+    I'll send the approved wording tomorrow.
+
+- id: 48
+  email: |-
+    Here's the line I want to keep:
+
+    > We should make room for questions.
+
+    That's a quotation for the introduction, not an earlier email.
+    Please leave the punctuation alone.
+
+    --
+    Rowan
+  new: |-
+    Here's the line I want to keep:
+
+    > We should make room for questions.
+
+    That's a quotation for the introduction, not an earlier email.
+    Please leave the punctuation alone.
+
+- id: 49
+  email: |-
+    On Tuesday, Mira Venn <mira@example.com> wrote:
+    > I'll send the seating plan.
+    >
+    > Sent from my phone
+
+    Thank you. Please include a place for Ellis.
+
+    Thanks,
+    Rowan
+    I'll go the extra mile, every time.
+    rowan@example.com
+  new: |-
+    Thank you. Please include a place for Ellis.
+
+- id: 50
+  email: |-
+    Please use my answers below, not the ones in the forwarded copy.
+
+    > Can we confirm Monday?
+    Yes, Monday is confirmed.
+
+    > Will you send the joining instructions?
+    I'll send them on Friday.
+
+    --
+    Rowan
+    Clear plans. Promises kept.
+    rowan@example.com
+
+    P.S. The room is Alder Hall.
+
+    ---------- Forwarded message ---------
+    From: Bram Fen <bram@example.com>
+    To: Rowan <rowan@example.com>
+    Subject: Earlier answers
+
+    Monday is still provisional.
+
+    --
+    Bram
+
+    CONFIDENTIALITY NOTICE: If received in error, notify the sender.
+  new: |-
+    Please use my answers below, not the ones in the forwarded copy.
+
+    Yes, Monday is confirmed.
+
+    I'll send them on Friday.
+
+    P.S. The room is Alder Hall.

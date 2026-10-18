@@ -190,6 +190,14 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   document that states its numeric date order ("day/month/year") is read that way ahead of the locale, and a reply
   waiver beside a question or request ("No need to reply about the sketches. Could you still confirm…?") is left to
   the reading step instead of dropping the question (`tests/test_steward_more_pairs.py`).
+- **Also (2026-10-18): fifty hard emails for the splitter.** Against 50 labeled fictional emails
+  (`tests/fixtures/steward/tricky_emails.yaml`, drafted with an outside assistant) the splitter lost the writer's
+  words in 3 and counted quoted text or signatures as new in 34. Fixed: a bare "--" before a name, a closing such as
+  "Regards," followed by a short block starting with a name, device footers in seven languages, Outlook's separator
+  rule before a header block, reply attributions in six languages, a postscript after the signature (kept as new),
+  and a forwarded message whose own quotes and signature followed its header. Four cases stay allowed gaps, listed in
+  `tests/test_tricky_emails.py`: lines that only look like quotes or a reply marker (kept as history, as before) and
+  a closing in the middle of the text (kept as new).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
