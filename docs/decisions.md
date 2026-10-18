@@ -157,6 +157,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   domain, each with its exact line as evidence; it stops at a legal notice and never takes a title from a name. A
   signature is outside text, so these facts stay untrusted until the person keeps them (people memory, phase S3).
   Drafted with an outside assistant and taken as written.
+- **Also (2026-10-18): the person's writing voice, counted.** `engine/voice_profile.py` turns the new text of the
+  person's sent mail into a small profile for drafting packets (usual greetings and sign-offs with their shares,
+  median length, how often they use contractions, exclamations and questions, and a formality score with the markers
+  behind it), keeping no message text or names. It measures; it never instructs: a packet quotes it as observed
+  style. Drafted with an outside assistant and taken as written.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
