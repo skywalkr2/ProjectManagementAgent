@@ -2054,6 +2054,8 @@ S2. **Time and attention:**
   that came due while the computer slept are shown at once, marked late, never dropped.
   When a reminder fires is computed by rules (`engine/reminders.py`, `tests/test_reminders.py`): quiet hours across
   midnight, working hours, missed occurrences each or as one summary, and the snooze choices.
+  Their wording (Today lines, the snooze menu with resolved times, the digest, the calendar alarm and the email) is
+  in `docs/project/steward-reminder-wording.md`.
   **Reaching the person while the computer sleeps** (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
   event with an alarm (an approved calendar write, once per reminder or by a standing yes for reminders), so their phone
