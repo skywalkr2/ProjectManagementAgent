@@ -198,6 +198,14 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   and a forwarded message whose own quotes and signature followed its header. Four cases stay allowed gaps, listed in
   `tests/test_tricky_emails.py`: lines that only look like quotes or a reply marker (kept as history, as before) and
   a closing in the middle of the text (kept as new).
+- **Also (2026-10-18): outside reviews and the tester gate (owner).** Four outside reviews found integrity defects
+  (spending on fallback, secrets written before a refused save, two Undo cases, stale source forms, non-Latin
+  downloads, Python 3.14). The owner decided: all are fixed before anyone outside tests the app; testers use the mail
+  and calendar add-on, which becomes optional at 1.0; no fixed tester date; and the plan feeds the product's website
+  what to say and later keeps it in step with releases.
+  **Impact:** the roadmap's phase B starts with the defects (each with a failing test first); phase I gains the
+  tester milestone and "The website"; open promises P23 and P24. No design section changes until the defects'
+  fixes and the website feed are built.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

@@ -1753,6 +1753,13 @@ header, the README's hosting claim); the rest is to reproduce.
    acceptance (O3 closed without every pair passing; fresh evidence or an approved change to the criterion), and the
    risks register's withdrawn go/no-go and freeze.
 
+**The owner decided (2026-10-18):** (1) every defect above is fixed before anyone outside tests the app: the tester
+milestone below is gated on them; (2) testers use the mail and calendar add-on, since a test without real mail isn't
+much of a test; it stays an add-on and becomes optional at 1.0, and how testers get it (inside the installers, or
+offered from the catalog during setup) is designed in phase I without putting its code in this repository; (3) no
+fixed date: the 2026-10-20 target is dropped and the tester group follows the gates; (4) the website is fed by this
+plan (phase I, "The website").
+
 **Owner decisions waiting (from the reviews):** the product review's plan changes above; numeric dependability
 thresholds set before the acceptance run, measured with denominators and a held-out set, omissions found by an
 independent reading of a consented sample; publisher acceptance tests (stale approvals, duplicates after a retry,
@@ -2187,6 +2194,22 @@ first audience is independent professionals juggling clients and personal life, 
 and people answering a LinkedIn post. Areas stay inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S, about 2 sessions)
+
+**The tester milestone (owner, 2026-10-18).** A small invited group tests the installers with the mail and calendar
+add-on. Gated on: every integrity defect in phase B's first items fixed with its test; the installers built and tried
+on a clean Mac and a clean Windows computer with the same journey (install, connect mail, a first result, Undo,
+reopen); and the owner's thresholds for missed and false promises set before the run.
+
+**The website (owner, 2026-10-18).** The product's public website lives in its own repository, worked by its own
+session; today it is a coming-soon page. This plan feeds it what to say, and it never says more than the app does:
+- [ ] A content brief for the website's session at each milestone that changes what's true (the tester milestone,
+  each release, 1.0): what the product does today, what it doesn't yet, who it's for, how to join the testers, and
+  where downloads are. Written here from the release state; sent with `send_message`; the website's repository never
+  receives code or private details from this one.
+- [ ] Keeping the two in step: the release workflow publishes the facts the website shows (latest version, download
+  links and their checksums, release notes) in a form the website reads, so the site is never edited by hand to
+  match a release. Designed with the website's session; the domain and repository are named in that session's
+  settings, not in this repository.
 
 The owner's ask (2026-10-16): "I really want to be able to create windows and mac distributions so that I can send them
 to people for testing, and they will not want to do all the command lines to build it. Can we have a CI/CD setup that
