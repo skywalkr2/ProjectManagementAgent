@@ -152,6 +152,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   day or the month's last day when shorter, written as the standard `BYMONTHDAY=28,...,N;BYSETPOS=-1`, because the
   plain rule skips months without that day and a repeating to-do would vanish; February 29 falls on the 28th the same
   way, matching bill dates. Drafted with an outside assistant, whose describe step returned English sentences.
+- **Also (2026-10-18): facts from signatures, by rules.** `engine/signature_facts.py` reads phone numbers (labeled or
+  international only), labeled job titles and organizations, a few standalone role lines, and websites as their
+  domain, each with its exact line as evidence; it stops at a legal notice and never takes a title from a name. A
+  signature is outside text, so these facts stay untrusted until the person keeps them (people memory, phase S3).
+  Drafted with an outside assistant and taken as written.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
