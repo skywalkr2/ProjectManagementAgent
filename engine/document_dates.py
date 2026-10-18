@@ -1,7 +1,7 @@
 """Extract explicitly labeled date statements without inventing missing dates."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, tzinfo
 
 
@@ -198,4 +198,14 @@ def find_dates(text: str, received: datetime, tz: tzinfo, locale: str) -> list[D
                             mark.lastgroup, value, evidence, value is not None and not ambiguous, False, None, reason
                         )
                     )
-    return findings
+    # One document giving the same kind of date twice, with different values, settles neither.
+    dates_by_kind: dict[str, set[date]] = {}
+    for finding in findings:
+        if finding.date is not None:
+            dates_by_kind.setdefault(finding.kind, set()).add(finding.date)
+    return [
+        replace(finding, certain=False, reason="The document gives different dates of this kind. " + finding.reason)
+        if finding.certain and len(dates_by_kind.get(finding.kind, ())) > 1
+        else finding
+        for finding in findings
+    ]

@@ -178,6 +178,12 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   ("Please send the signed agreement by Friday"). Those would have been silently missed, since the reading step only
   looks at "unknown". Such a request is now unknown, and `tests/test_reply_labels.py` holds the rules to never being
   confidently wrong on the set.
+- **Also (2026-10-18): dates in documents, measured.** Against 40 labeled fictional documents
+  (`tests/fixtures/steward/document_dates.yaml`, drafted with an outside assistant) the date finder calls 24 of the 45
+  certain dates certain and is confidently wrong only where one letter gives two different renewal dates; the same
+  kind of date given twice with different values is now uncertain, and `tests/test_document_date_labels.py` holds the
+  finder to never calling certain a date a careful reader wouldn't. The dates it misses are kinds it doesn't look for
+  (events, lease starts, valid-from, claim deadlines); the reading step covers them.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

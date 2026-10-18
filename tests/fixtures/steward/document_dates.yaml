@@ -1,0 +1,443 @@
+# Fictional date-finding examples; dates are civil dates as printed, not inferred instants.
+# certain means an explicit, valid, unambiguous and unqualified statement in this snippet.
+# A provisional candidate may retain its printed date with certain: false.
+# Missing years, invalid dates, ambiguous numeric order and relative dates use date: null.
+# Superseded dates are retained in evidence where useful, but are not current actionable facts.
+# kind is a descriptive label, not a claim of compatibility with another module's enum.
+- id: 1
+  document_type: renewal letter
+  snippet: Dear Rowan Vale, your membership of Alder Reading Circle renews on January 20, 2028. To stop the next term,
+    cancel by January 10, 2028. — Mira Fen
+  facts:
+  - kind: renewal
+    date: '2028-01-20'
+    evidence: your membership of Alder Reading Circle renews on January 20, 2028
+    certain: true
+  - kind: cancel_by
+    date: '2028-01-10'
+    evidence: cancel by January 10, 2028
+    certain: true
+- id: 2
+  document_type: renewal letter
+  snippet: Willow Workshop writes to confirm that your studio access renews on 1 February 2028. The renewal payment is
+    due on 25 January 2028.
+  facts:
+  - kind: renewal
+    date: '2028-02-01'
+    evidence: your studio access renews on 1 February 2028
+    certain: true
+  - kind: payment_due
+    date: '2028-01-25'
+    evidence: The renewal payment is due on 25 January 2028
+    certain: true
+- id: 3
+  document_type: renewal letter
+  snippet: Your Fern Archive pass expires on February 29, 2028. The replacement pass is valid from March 1, 2028.
+  facts:
+  - kind: expiry
+    date: '2028-02-29'
+    evidence: Your Fern Archive pass expires on February 29, 2028
+    certain: true
+  - kind: valid_from
+    date: '2028-03-01'
+    evidence: The replacement pass is valid from March 1, 2028
+    certain: true
+- id: 4
+  document_type: renewal letter
+  snippet: 'Birch Makers Guild: renewal is expected on April 3, 2028, subject to the committee approving the new term.'
+  facts:
+  - kind: renewal
+    date: '2028-04-03'
+    evidence: renewal is expected on April 3, 2028, subject to the committee approving the new term
+    certain: false
+    reason: The date is provisional and depends on approval.
+- id: 5
+  document_type: renewal letter
+  snippet: 'Clover Notes Society: your membership renews on May 15. Please keep this letter with your records.'
+  facts:
+  - kind: renewal
+    date: null
+    evidence: your membership renews on May 15
+    certain: false
+    reason: No year is stated.
+- id: 6
+  document_type: renewal letter
+  snippet: 'Correction from Moss Hall: the renewal date is June 12, 2028, replacing the June 5, 2028 date in our previous
+    letter.'
+  facts:
+  - kind: renewal
+    date: '2028-06-12'
+    evidence: the renewal date is June 12, 2028, replacing the June 5, 2028 date in our previous letter
+    certain: true
+- id: 7
+  document_type: renewal letter
+  snippet: 'Reed Lane Studios: your renewal date is 04/05/2028. Contact Tess Alder if you wish to discuss another term.'
+  facts:
+  - kind: renewal
+    date: null
+    evidence: your renewal date is 04/05/2028
+    certain: false
+    reason: The numeric date could mean April 5 or May 4; no date order is supplied.
+- id: 8
+  document_type: warranty
+  snippet: 'Alder Lamp Works warranty certificate for Rowan Vale: coverage starts on July 2, 2027 and ends on July 1,
+    2029.'
+  facts:
+  - kind: warranty_start
+    date: '2027-07-02'
+    evidence: coverage starts on July 2, 2027
+    certain: true
+  - kind: warranty_end
+    date: '2029-07-01'
+    evidence: ends on July 1, 2029
+    certain: true
+- id: 9
+  document_type: warranty
+  snippet: 'Fern Bench Craft: the repair warranty ends on August 18, 2028. Claims must be received by August 11, 2028.'
+  facts:
+  - kind: warranty_end
+    date: '2028-08-18'
+    evidence: the repair warranty ends on August 18, 2028
+    certain: true
+  - kind: claim_by
+    date: '2028-08-11'
+    evidence: Claims must be received by August 11, 2028
+    certain: true
+- id: 10
+  document_type: warranty
+  snippet: 'Willow Lens Workshop: purchased September 9, 2027. Warranty ends 12 months after purchase.'
+  facts:
+  - kind: purchase
+    date: '2027-09-09'
+    evidence: purchased September 9, 2027
+    certain: true
+  - kind: warranty_end
+    date: null
+    evidence: Warranty ends 12 months after purchase
+    certain: false
+    reason: The warranty end is relative to purchase; no explicit end date is printed.
+- id: 11
+  document_type: warranty
+  snippet: 'Meadow Tool House certificate: warranty end date 2028-11-31. Please quote the certificate number when contacting
+    us.'
+  facts:
+  - kind: warranty_end
+    date: null
+    evidence: warranty end date 2028-11-31
+    certain: false
+    reason: November has no 31st day; the printed date must not be corrected by guesswork.
+- id: 12
+  document_type: warranty
+  snippet: 'Juniper Desk Studio: your extended warranty is valid until December 31, 2028. Your service visit is booked
+    for December 12, 2028.'
+  facts:
+  - kind: warranty_end
+    date: '2028-12-31'
+    evidence: your extended warranty is valid until December 31, 2028
+    certain: true
+  - kind: appointment
+    date: '2028-12-12'
+    evidence: Your service visit is booked for December 12, 2028
+    certain: true
+- id: 13
+  document_type: warranty
+  snippet: 'Brook Frame Works: we may extend your warranty until January 31, 2029 after inspecting the damaged hinge.'
+  facts:
+  - kind: warranty_end
+    date: '2029-01-31'
+    evidence: we may extend your warranty until January 31, 2029 after inspecting the damaged hinge
+    certain: false
+    reason: This is a possible extension, not confirmed coverage.
+- id: 14
+  document_type: warranty
+  snippet: 'Pine Stitch repairs: warranty expires on 20 Nov. 2028. Inspection requests must reach us by 13 Nov. 2028.'
+  facts:
+  - kind: warranty_end
+    date: '2028-11-20'
+    evidence: warranty expires on 20 Nov. 2028
+    certain: true
+  - kind: claim_by
+    date: '2028-11-13'
+    evidence: Inspection requests must reach us by 13 Nov. 2028
+    certain: true
+- id: 15
+  document_type: event ticket
+  snippet: 'Alder Hall ticket for Rowan Vale: the concert takes place on March 3, 2028. Doors open at 18:30.'
+  facts:
+  - kind: event
+    date: '2028-03-03'
+    evidence: the concert takes place on March 3, 2028
+    certain: true
+- id: 16
+  document_type: event ticket
+  snippet: 'Fern Garden admission: this ticket is valid from April 1, 2028 through April 30, 2028. One visit only.'
+  facts:
+  - kind: valid_from
+    date: '2028-04-01'
+    evidence: this ticket is valid from April 1, 2028
+    certain: true
+  - kind: valid_until
+    date: '2028-04-30'
+    evidence: through April 30, 2028
+    certain: true
+- id: 17
+  document_type: event ticket
+  snippet: 'Willow Courtyard supper: event date May 6, 2028. Cancel by April 29, 2028 for a refund.'
+  facts:
+  - kind: event
+    date: '2028-05-06'
+    evidence: event date May 6, 2028
+    certain: true
+  - kind: cancel_by
+    date: '2028-04-29'
+    evidence: Cancel by April 29, 2028
+    certain: true
+- id: 18
+  document_type: event ticket
+  snippet: 'Update from Moss Lantern Festival: your ticket is now for June 17, 2028. The June 10 performance has been
+    cancelled.'
+  facts:
+  - kind: event
+    date: '2028-06-17'
+    evidence: your ticket is now for June 17, 2028
+    certain: true
+- id: 19
+  document_type: event ticket
+  snippet: 'Clover Field cinema: screening scheduled for July 8, 2028, weather permitting. We will confirm on the morning
+    of the screening.'
+  facts:
+  - kind: event
+    date: '2028-07-08'
+    evidence: screening scheduled for July 8, 2028, weather permitting
+    certain: false
+    reason: The screening is conditional on the weather and awaits confirmation.
+- id: 20
+  document_type: event ticket
+  snippet: 'Birch Lane Theatre voucher: valid until 30 days after activation. No activation date is shown on this copy.'
+  facts:
+  - kind: valid_until
+    date: null
+    evidence: valid until 30 days after activation
+    certain: false
+    reason: The deadline is relative to an activation date that is not supplied.
+- id: 21
+  document_type: lease
+  snippet: 'Lease between Rowan Vale and Alder Rooms: the term begins on September 1, 2028 and ends on August 31, 2029.'
+  facts:
+  - kind: lease_start
+    date: '2028-09-01'
+    evidence: the term begins on September 1, 2028
+    certain: true
+  - kind: lease_end
+    date: '2029-08-31'
+    evidence: ends on August 31, 2029
+    certain: true
+- id: 22
+  document_type: lease
+  snippet: 'Willow Court tenancy notice: rent is due on October 1, 2028. Written cancellation notice must arrive by September
+    15, 2028.'
+  facts:
+  - kind: payment_due
+    date: '2028-10-01'
+    evidence: rent is due on October 1, 2028
+    certain: true
+  - kind: cancel_by
+    date: '2028-09-15'
+    evidence: Written cancellation notice must arrive by September 15, 2028
+    certain: true
+- id: 23
+  document_type: lease
+  snippet: 'Draft from Fern Property Desk: proposed lease start November 1, 2028. The start date is not binding until
+    both parties sign.'
+  facts:
+  - kind: lease_start
+    date: '2028-11-01'
+    evidence: proposed lease start November 1, 2028. The start date is not binding until both parties sign
+    certain: false
+    reason: The unsigned draft explicitly says the proposed start is not binding.
+- id: 24
+  document_type: lease
+  snippet: 'Moss Yard workspace agreement: this lease expires on December 31, 2028. Renewal requests must reach Lena
+    Marsh by December 1, 2028.'
+  facts:
+  - kind: lease_end
+    date: '2028-12-31'
+    evidence: this lease expires on December 31, 2028
+    certain: true
+  - kind: renew_by
+    date: '2028-12-01'
+    evidence: Renewal requests must reach Lena Marsh by December 1, 2028
+    certain: true
+- id: 25
+  document_type: lease
+  snippet: 'Amendment from Clover Offices: the lease now ends on February 28, 2029 instead of January 31, 2029. All other
+    terms remain unchanged.'
+  facts:
+  - kind: lease_end
+    date: '2029-02-28'
+    evidence: the lease now ends on February 28, 2029 instead of January 31, 2029
+    certain: true
+- id: 26
+  document_type: lease
+  snippet: 'Reed House agreement: cancel by 60 days before the lease ends. The lease end date is missing from this extract.'
+  facts:
+  - kind: cancel_by
+    date: null
+    evidence: cancel by 60 days before the lease ends
+    certain: false
+    reason: The deadline is relative to the lease end, which is not given.
+- id: 27
+  document_type: lease
+  snippet: 'Juniper Rooms: renewal is on March 1, 2029. A later paragraph says, without explaining why, renewal is on
+    March 15, 2029.'
+  facts:
+  - kind: renewal
+    date: '2029-03-01'
+    evidence: renewal is on March 1, 2029
+    certain: false
+    reason: Two different renewal dates are stated without identifying which is current.
+  - kind: renewal
+    date: '2029-03-15'
+    evidence: renewal is on March 15, 2029
+    certain: false
+    reason: Two different renewal dates are stated without identifying which is current.
+- id: 28
+  document_type: subscription notice
+  snippet: 'Alder Letter subscription: your next renewal is April 12, 2028. Payment is due April 10, 2028.'
+  facts:
+  - kind: renewal
+    date: '2028-04-12'
+    evidence: your next renewal is April 12, 2028
+    certain: true
+  - kind: payment_due
+    date: '2028-04-10'
+    evidence: Payment is due April 10, 2028
+    certain: true
+- id: 29
+  document_type: subscription notice
+  snippet: 'Fern Pattern Club: your subscription renews on May 20, 2028. Cancel by May 13, 2028 to avoid renewal.'
+  facts:
+  - kind: renewal
+    date: '2028-05-20'
+    evidence: your subscription renews on May 20, 2028
+    certain: true
+  - kind: cancel_by
+    date: '2028-05-13'
+    evidence: Cancel by May 13, 2028 to avoid renewal
+    certain: true
+- id: 30
+  document_type: subscription notice
+  snippet: 'Willow Audio Library: your trial expires on June 2, 2028. Paid access begins on June 3, 2028 unless you cancel.'
+  facts:
+  - kind: expiry
+    date: '2028-06-02'
+    evidence: your trial expires on June 2, 2028
+    certain: true
+  - kind: subscription_start
+    date: '2028-06-03'
+    evidence: Paid access begins on June 3, 2028 unless you cancel
+    certain: false
+    reason: The start date is stated, but paid access is conditional on the subscription not being cancelled.
+- id: 31
+  document_type: subscription notice
+  snippet: 'Moss Sketch Circle: your renewal payment failed. The balance is due July 7, 2028. Access remains valid until
+    July 10, 2028.'
+  facts:
+  - kind: payment_due
+    date: '2028-07-07'
+    evidence: The balance is due July 7, 2028
+    certain: true
+  - kind: valid_until
+    date: '2028-07-10'
+    evidence: Access remains valid until July 10, 2028
+    certain: true
+- id: 32
+  document_type: subscription notice
+  snippet: 'Clover Journal: this letter was written on August 1, 2028. Your subscription renews in 30 days.'
+  facts:
+  - kind: document_date
+    date: '2028-08-01'
+    evidence: this letter was written on August 1, 2028
+    certain: true
+  - kind: renewal
+    date: null
+    evidence: Your subscription renews in 30 days
+    certain: false
+    reason: The wording is relative; it does not explicitly say whether to count from the letter date or receipt.
+- id: 33
+  document_type: subscription notice
+  snippet: 'Birch Notes service: your subscription expires on 2028-09-14. No renewal has been scheduled.'
+  facts:
+  - kind: expiry
+    date: '2028-09-14'
+    evidence: your subscription expires on 2028-09-14
+    certain: true
+- id: 34
+  document_type: subscription notice
+  snippet: 'Reed Map Collection: renewal date 09/10/2028. Dates in this notice use day/month/year.'
+  facts:
+  - kind: renewal
+    date: '2028-10-09'
+    evidence: renewal date 09/10/2028. Dates in this notice use day/month/year
+    certain: true
+- id: 35
+  document_type: appointment confirmation
+  snippet: Dear Rowan, your appointment with Oren Reed at Alder Dental Rooms is confirmed for October 18, 2028 at 09:30.
+  facts:
+  - kind: appointment
+    date: '2028-10-18'
+    evidence: your appointment with Oren Reed at Alder Dental Rooms is confirmed for October 18, 2028 at 09:30
+    certain: true
+- id: 36
+  document_type: appointment confirmation
+  snippet: Fern Repair Bench confirms your appointment on November 6, 2028. Cancel by November 3, 2028 to avoid the late
+    cancellation charge.
+  facts:
+  - kind: appointment
+    date: '2028-11-06'
+    evidence: your appointment on November 6, 2028
+    certain: true
+  - kind: cancel_by
+    date: '2028-11-03'
+    evidence: Cancel by November 3, 2028 to avoid the late cancellation charge
+    certain: true
+- id: 37
+  document_type: appointment confirmation
+  snippet: 'Willow Lodge booking for Rowan Vale: check-in is December 4, 2028 and check-out is December 7, 2028.'
+  facts:
+  - kind: check_in
+    date: '2028-12-04'
+    evidence: check-in is December 4, 2028
+    certain: true
+  - kind: check_out
+    date: '2028-12-07'
+    evidence: check-out is December 7, 2028
+    certain: true
+- id: 38
+  document_type: appointment confirmation
+  snippet: 'Moss Hearing Rooms: we are holding January 9, 2029 at 14:00 for you. Your appointment is not confirmed until
+    you accept.'
+  facts:
+  - kind: appointment
+    date: '2029-01-09'
+    evidence: we are holding January 9, 2029 at 14:00 for you. Your appointment is not confirmed until you accept
+    certain: false
+    reason: The appointment is a provisional hold awaiting acceptance.
+- id: 39
+  document_type: appointment confirmation
+  snippet: 'Correction from Clover Physio Rooms: your appointment is February 12, 2029 at 11:00, not February 5, 2029.
+    Please use the new date.'
+  facts:
+  - kind: appointment
+    date: '2029-02-12'
+    evidence: your appointment is February 12, 2029 at 11:00, not February 5, 2029
+    certain: true
+- id: 40
+  document_type: appointment confirmation
+  snippet: Juniper Survey Desk confirms your appointment for March 6 at 10:00. This copy has no year or issue date.
+  facts:
+  - kind: appointment
+    date: null
+    evidence: your appointment for March 6 at 10:00
+    certain: false
+    reason: The appointment year is not stated.
