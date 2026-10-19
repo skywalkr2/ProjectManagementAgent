@@ -1772,8 +1772,12 @@ plan (phase I, "The website").
 `::test_a_stale_owner_question_whose_action_is_gone_refuses_an_owner_plainly_and_can_be_dropped`,
 `::test_undoing_a_later_hold_keeps_the_owner_picked_earlier`); stale forms (`Sources.test.tsx` and `AiAccounts.test.tsx`,
 the fingerprint the form opened with); downloads (`tests/test_files.py::test_download_names_make_a_valid_header_for_any_letters`);
-Python 3.14 (`tests/test_annotations.py`, CI matrix). **Left:** item 7, the current-truth pass; an audit of fix-round
-and search retries against the task, record and day budgets; after a form's conflict, refreshing its untouched fields;
+Python 3.14 (`tests/test_annotations.py`, CI matrix). Item 7, the current-truth pass, done the same day (README, scope, charter, design 10.5 and 12.7/12.8 status, the
+setup-cost wording on screen and in the getting-started guide, risks R1, R2, R4 and A1 off the withdrawn dates, and a
+new risk R10 for dependability); its learning-acceptance finding stands as written above, for the owner. **Left:**
+the owner's question on what a go covers across retries (designer question F14), an audit of fix-round
+and search retries against the task, record and day budgets (done: each call is held to the limit and budgets are
+checked before every call); after a form's conflict, refreshing its untouched fields;
 removing old kept secret files when nothing refers to them.
 
 **Owner decisions waiting (from the reviews):** the product review's plan changes above; numeric dependability
