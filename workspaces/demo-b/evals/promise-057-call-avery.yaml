@@ -1,0 +1,46 @@
+id: promise-057-call-avery
+title: 'A promise made to the person: two promises with their own dates (Call Avery and Send Avery the estimate)'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll call you Friday and send the estimate Monday.
+expect:
+- op: action.add
+  owners: [PER-108]
+  promised_to: [PER-1]
+  text_has: [call]
+  due_words: Friday
+  due: '2026-11-06'
+- op: action.add
+  owners: [PER-108]
+  promised_to: [PER-1]
+  text_has: [estimate]
+  due_words: Monday
+  due: '2026-11-09'
+forbid:
+- op: event.add
+stub_answer:
+  summary: Two promises, each with its own date.
+  ops:
+  - op: action.add
+    text: Call Avery
+    owners: [Bram Foley]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Bram Foley
+    due_words: Friday
+    evidence:
+      quote: I'll call you Friday and send the estimate Monday.
+  - op: action.add
+    text: Send Avery the estimate
+    owners: [Bram Foley]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Bram Foley
+    due_words: Monday
+    evidence:
+      quote: I'll call you Friday and send the estimate Monday.

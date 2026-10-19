@@ -1,0 +1,35 @@
+id: promise-103-called-off-finish-brochure
+title: 'A promise is called off: explicitly cancels the earlier obligation'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Finish the brochure for Nessa
+    owners:
+    - person: PER-1
+    promised_to: [PER-103]
+    basis: said
+    due: '2026-11-12'
+    due_words: by November 12, 2026
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Nessa Ford <nessa@example.com>
+
+  Nessa, as agreed, we no longer need the brochure, so I'm cancelling that delivery.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+stub_answer:
+  summary: The promise is called off.
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: Nessa and Avery agreed the brochure is no longer needed
+    evidence:
+      quote: Nessa, as agreed, we no longer need the brochure, so I'm cancelling that delivery.

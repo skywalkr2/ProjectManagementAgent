@@ -1,0 +1,31 @@
+id: thread-t09-m1-promise
+title: 'A flexible review date (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Iona Crane <iona@example.com>
+  Subject: A flexible review date
+
+  I'll send the review early next week.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-109]
+  due_words: early next week
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Iona the review
+    owners: [Avery Lane]
+    promised_to: [Iona Crane]
+    basis: said
+    said_by: Avery Lane
+    due_words: early next week
+    evidence:
+      quote: I'll send the review early next week

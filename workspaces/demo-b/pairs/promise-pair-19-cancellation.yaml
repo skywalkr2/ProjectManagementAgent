@@ -1,0 +1,73 @@
+id: promise-pair-19-cancellation
+title: An explicit cancellation drops the matching promise instead of leaving it overdue
+skills: [use-lesson, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Prepare the workshop handouts
+      owners:
+      - person: PER-115
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-05'
+      due_words: by Thursday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Prepare the display boards
+      owners:
+      - person: PER-116
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-05'
+      due_words: by Thursday
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Please don't prepare the workshop handouts after all; we've canceled the session.
+  wrong:
+    summary: Nothing to record.
+    ops: []
+  correction:
+    kind: dropped  # the wrong answer recorded nothing, so the person drops the action themselves
+    note: I called that work off. Stop chasing Lena for it.
+    id: ACT-101
+  expect_proposal:
+  - op: lesson.add
+    text_has: [cancel|called off|drop]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    We no longer need the display boards, so please cancel that preparation.
+  expect:
+  - op: action.drop
+    id: ACT-102
+  forbid:
+  - op: action.close
+    id: ACT-102
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: An explicit cancellation should close the matching obligation rather than leave it overdue.
+    topic: cancellation
+    ops:
+    - op: lesson.add
+      text: An explicit cancellation drops the matching open promise rather than leaving it to become overdue.
+      guard: When the input calls off work an open action covers, propose action.drop with the words that say so.
+      evidence:
+        quote: I called that work off
+  later:
+    summary: The display-board preparation is called off.
+    ops:
+    - op: action.drop
+      id: ACT-102
+      reason: The display boards are no longer needed
+      evidence:
+        quote: We no longer need the display boards

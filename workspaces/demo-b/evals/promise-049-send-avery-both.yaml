@@ -1,0 +1,30 @@
+id: promise-049-send-avery-both
+title: 'A promise made to the person: Send Avery both data files'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Soren Lund <soren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send you both data files by November 25, 2026.
+expect:
+- op: action.add
+  owners: [PER-114]
+  promised_to: [PER-1]
+  due_words: by November 25, 2026
+  due: '2026-11-25'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Soren Lund promises: send Avery both data files.'
+  ops:
+  - op: action.add
+    text: Send Avery both data files
+    owners: [Soren Lund]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Soren Lund
+    due_words: by November 25, 2026
+    evidence:
+      quote: I'll send you both data files by November 25, 2026.

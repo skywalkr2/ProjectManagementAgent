@@ -1,0 +1,28 @@
+id: promise-064-keep-averys-draft
+title: 'A promise made to the person: Keep Avery''s draft confidential until it is published'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Mira Hale <mira@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll keep your draft confidential until you publish it.
+expect:
+- op: action.add
+  owners: [PER-101]
+  promised_to: [PER-1]
+  due_words: until you publish it
+  due: null
+stub_answer:
+  summary: 'Mira Hale promises: keep Avery''s draft confidential until it is published.'
+  ops:
+  - op: action.add
+    text: Keep Avery's draft confidential until it is published
+    owners: [Mira Hale]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Mira Hale
+    due_words: until you publish it
+    evidence:
+      quote: I'll keep your draft confidential until you publish it.

@@ -1,0 +1,53 @@
+id: thread-t02-m3-date-moved
+title: 'Bracken feedback (message m3): the date moves'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-05'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the Bracken Studio feedback
+    owners:
+    - person: PER-102
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-03'
+    due_words: by Tuesday
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Bracken feedback
+
+  Sorry, the review ran over. I'll send the feedback Friday morning instead.
+
+  --
+  Tavish
+
+  Avery <avery.lane@example.com> wrote:
+  > It's Wednesday and I haven't seen the feedback. Is there a new date?
+  >
+  > --
+  > Avery
+  >
+  > Tavish <tavish@example.com> wrote:
+  > > I'll send our Bracken Studio feedback by Tuesday.
+  > >
+  > > --
+  > > Tavish
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: Friday morning
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The date moves.
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: Friday morning
+    evidence:
+      quote: I'll send the feedback Friday morning instead

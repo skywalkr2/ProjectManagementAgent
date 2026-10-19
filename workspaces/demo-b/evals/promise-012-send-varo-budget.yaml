@@ -1,0 +1,30 @@
+id: promise-012-send-varo-budget
+title: 'The person''s own promise: Send Varo the budget'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Varo Stone <varo@example.com>
+
+  I'll send you the budget by November 25, 2026, Varo.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-111]
+  due_words: by November 25, 2026
+  due: '2026-11-25'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: send Varo the budget.'
+  ops:
+  - op: action.add
+    text: Send Varo the budget
+    owners: [Avery Lane]
+    promised_to: [Varo Stone]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 25, 2026
+    evidence:
+      quote: I'll send you the budget by November 25, 2026, Varo.

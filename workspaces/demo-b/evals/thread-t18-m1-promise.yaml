@@ -1,0 +1,50 @@
+id: thread-t18-m1-promise
+title: 'One delivery moves, another is waived (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Liora Marsh <liora@example.com>
+  Subject: One delivery moves, another is waived
+
+  I'll send the draft Tuesday and the printed copies Friday.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-105]
+  text_has: [draft]
+  due_words: Tuesday
+  due: '2026-11-03'
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-105]
+  text_has: [printed]
+  due_words: Friday
+  due: '2026-11-06'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Liora the draft
+    owners: [Avery Lane]
+    promised_to: [Liora Marsh]
+    basis: said
+    said_by: Avery Lane
+    due_words: Tuesday
+    evidence:
+      quote: I'll send the draft Tuesday and the printed copies Friday
+  - op: action.add
+    text: Send Liora the printed copies
+    owners: [Avery Lane]
+    promised_to: [Liora Marsh]
+    basis: said
+    said_by: Avery Lane
+    due_words: Friday
+    evidence:
+      quote: I'll send the draft Tuesday and the printed copies Friday

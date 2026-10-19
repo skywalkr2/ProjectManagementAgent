@@ -1,0 +1,48 @@
+id: thread-t10-m2-condition-met
+title: 'Waiting for board approval (message m2): the condition is met'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-03'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Varo the contract if the board approves the budget
+    owners:
+    - person: PER-1
+    promised_to: [PER-111]
+    basis: said
+    due: '2026-11-06'
+    due_words: Friday
+pasted: |-
+  From: Varo Stone <varo@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Waiting for board approval
+
+  The board approved the budget this morning. Please proceed.
+
+  --
+  Varo
+
+  Avery <avery.lane@example.com> wrote:
+  > If the board approves the budget, I'll send the contract Friday.
+  >
+  > --
+  > Avery
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The condition is met.
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: Varo says the board approved the budget this morning
+    evidence:
+      quote: The board approved the budget this morning

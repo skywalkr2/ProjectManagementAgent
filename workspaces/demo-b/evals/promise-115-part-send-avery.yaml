@@ -1,0 +1,37 @@
+id: promise-115-part-send-avery
+title: 'A promise is partly kept: results are delivered incompletely; do not close the obligation'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the survey results
+    owners:
+    - person: PER-105
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-12'
+    due_words: by November 12, 2026
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, the survey results are attached, but the regional breakdown is missing.
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: Part of the promise arrived.
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: The survey results
+    left: Send Avery the regional breakdown
+    evidence:
+      quote: Avery, the survey results are attached, but the regional breakdown is missing.

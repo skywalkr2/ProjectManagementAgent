@@ -1,0 +1,28 @@
+id: promise-068-resend-avery-link
+title: 'A promise made to the person: Resend Avery the link'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll resend the link now, Avery.
+expect:
+- op: action.add
+  owners: [PER-105]
+  promised_to: [PER-1]
+  due_words: now
+  due: null
+stub_answer:
+  summary: 'Liora Marsh promises: resend Avery the link.'
+  ops:
+  - op: action.add
+    text: Resend Avery the link
+    owners: [Liora Marsh]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Liora Marsh
+    due_words: now
+    evidence:
+      quote: I'll resend the link now, Avery.

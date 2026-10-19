@@ -1,0 +1,34 @@
+id: thread-t24-m1-promise
+title: 'A sarcastic line and a real date (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Varo Stone <varo@example.com>
+  Subject: A sarcastic line and a real date
+
+  Sure, I'll clone myself and finish a hundred pages tonight. Seriously, I'll send the first ten pages Friday.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-111]
+  due_words: Friday
+  due: '2026-11-06'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Varo the first ten pages
+    owners: [Avery Lane]
+    promised_to: [Varo Stone]
+    basis: said
+    said_by: Avery Lane
+    due_words: Friday
+    evidence:
+      quote: Seriously, I'll send the first ten pages Friday

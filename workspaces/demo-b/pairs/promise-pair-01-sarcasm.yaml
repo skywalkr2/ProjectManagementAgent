@@ -1,0 +1,51 @@
+id: promise-pair-01-sarcasm
+title: 'Sarcasm is not a promise: the sarcastic joke is corrected, and the next one is read as a joke'
+skills: [use-lesson, recording-only-what-matters]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Sure, I'll rebuild the entire website before lunch. And teach the printer to sing.
+  wrong:
+    summary: Avery promised to rebuild the website before lunch.
+    ops:
+    - op: action.add
+      text: Rebuild the entire website
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: before lunch
+      evidence:
+        quote: Sure, I'll rebuild the entire website before lunch
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: I was being sarcastic. I didn't agree to rebuild anything.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [sarcas|joke|literal]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Of course I'll proofread all 900 pages tonight, right after I move the moon.
+  forbid:
+  - op: action.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Treat clear sarcasm as uncertain intent rather than a firm commitment.
+    topic: sarcasm
+    ops:
+    - op: lesson.add
+      text: 'Clear sarcasm is not a firm commitment: a joke about an impossible task never becomes an action.'
+      guard: Do not add an action for sarcasm or an exaggerated joke; treat the speaker's intent as uncertain unless they
+        say it plainly.
+      evidence:
+        quote: I was being sarcastic
+  later:
+    summary: The line is sarcastic; nothing to record.
+    ops: []

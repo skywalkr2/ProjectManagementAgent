@@ -1,0 +1,14 @@
+id: promise-088-because-obviously-rebuild
+title: 'Not a promise: sarcastic capability claim, not a commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Because obviously I can rebuild the whole website in ten minutes.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: sarcastic capability claim, not a commitment.'
+  ops: []

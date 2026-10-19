@@ -1,0 +1,30 @@
+id: promise-066-cover-school-pickup
+title: 'A promise made to the person: Cover the school pickup for Avery'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Nessa Ford <nessa@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll cover the school pickup for you Thursday.
+expect:
+- op: action.add
+  owners: [PER-103]
+  promised_to: [PER-1]
+  due_words: Thursday
+  due: '2026-11-05'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Nessa Ford promises: cover the school pickup for Avery.'
+  ops:
+  - op: action.add
+    text: Cover the school pickup for Avery
+    owners: [Nessa Ford]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Nessa Ford
+    due_words: Thursday
+    evidence:
+      quote: I'll cover the school pickup for you Thursday.

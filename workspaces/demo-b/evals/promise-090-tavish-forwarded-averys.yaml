@@ -1,0 +1,25 @@
+id: promise-090-tavish-forwarded-averys
+title: 'Not a promise: forwarded quote repeats item 2; no new promise'
+skills: [new-message-only, recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Deliver the draft to Tavish
+    owners:
+    - person: PER-1
+    promised_to: [PER-102]
+    basis: said
+    due: '2026-11-10'
+    due_words: by November 10, 2026
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Tavish forwarded Avery's old line: 'I'll deliver the draft to Tavish by November 10, 2026.'
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: forwarded quote repeats item 2; no new promise.'
+  ops: []

@@ -1,0 +1,72 @@
+id: promise-pair-14-negation
+title: A negated promise is not a promise; a date someone can't make is news on the matching promise
+skills: [use-lesson, dates, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Deliver the revised copy to Avery
+      owners:
+      - person: PER-115
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-09'
+      due_words: by Monday
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    I won't be able to send the drawings on Thursday.
+  wrong:
+    summary: Avery promised to send the drawings on Thursday.
+    ops:
+    - op: action.add
+      text: Send the drawings
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: on Thursday
+      evidence:
+        quote: I won't be able to send the drawings on Thursday
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: I said I can't send them then. That date is no longer reliable.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [negat|can't|cannot|not able]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Lena Ashby <lena@example.com>
+
+    I can't deliver the revised copy by Monday.
+  expect:
+  - op: action.news
+    id: ACT-101
+  forbid:
+  - op: action.add
+  - op: action.move
+    id: ACT-101
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Read negation before interpreting an action and date as a promise.
+    topic: negation
+    ops:
+    - op: lesson.add
+      text: Read a negation ('can't', 'won't be able to') before treating an action and a date as a promise.
+      guard: When someone says they can't make a date, add news to the matching open promise; never make a promise from
+        it or invent a new date.
+      evidence:
+        quote: I said I can't send them then
+  later:
+    summary: Lena can't deliver by Monday; the open promise gets the news and no new date.
+    ops:
+    - op: action.news
+      id: ACT-101
+      text: Lena says she can't deliver the revised copy by Monday
+      evidence:
+        quote: I can't deliver the revised copy by Monday

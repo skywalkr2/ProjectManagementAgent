@@ -1,0 +1,57 @@
+id: thread-t07-m4-done
+title: 'Borrowed recorder (message m4): the promise is kept'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-05'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Return Zella's recorder
+    owners:
+    - person: PER-1
+    promised_to: [PER-107]
+    basis: said
+    due: '2026-11-10'
+    due_words: Tuesday
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Borrowed recorder
+
+  Got it back today, thanks. The case was there too.
+
+  --
+  Zella
+
+  Avery <avery.lane@example.com> wrote:
+  > Yes, I'll return it Tuesday instead.
+  >
+  > --
+  > Avery
+  >
+  > Zella <zella@example.com> wrote:
+  > > I'm away Saturday. Could you keep it until Tuesday?
+  > >
+  > > --
+  > > Zella
+  > >
+  > > Avery <avery.lane@example.com> wrote:
+  > > > I'll return your recorder Saturday.
+  > > >
+  > > > --
+  > > > Avery
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: Got it back today, thanks

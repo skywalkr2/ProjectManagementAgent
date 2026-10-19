@@ -1,0 +1,14 @@
+id: promise-079-iona-able-review
+title: 'Not a promise: question about capability, not a promise'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Would Iona be able to review this?
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: question about capability, not a promise.'
+  ops: []

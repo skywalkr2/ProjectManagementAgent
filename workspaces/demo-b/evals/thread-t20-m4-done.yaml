@@ -1,0 +1,57 @@
+id: thread-t20-m4-done
+title: 'A boundary into January (message m4): the promise is kept'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-12-31'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the signed form
+    owners:
+    - person: PER-107
+    promised_to: [PER-1]
+    basis: said
+    due: '2027-01-04'
+    due_words: January 4, 2027
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A boundary into January
+
+  The signed form is attached now.
+
+  --
+  Zella
+
+  Zella <zella@example.com> wrote:
+  > No, I'll send it January 4, 2027, instead.
+  >
+  > --
+  > Zella
+  >
+  > Avery <avery.lane@example.com> wrote:
+  > > Can you still make that date?
+  > >
+  > > --
+  > > Avery
+  > >
+  > > Zella <zella@example.com> wrote:
+  > > > I'll send the signed form by December 31, 2026.
+  > > >
+  > > > --
+  > > > Zella
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The signed form is attached now

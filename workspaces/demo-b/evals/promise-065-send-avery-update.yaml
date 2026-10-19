@@ -1,0 +1,26 @@
+id: promise-065-send-avery-update
+title: 'A promise made to the person: Send Avery an update'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send an update even if the review isn't finished.
+expect:
+- op: action.add
+  owners: [PER-102]
+  promised_to: [PER-1]
+  due: null
+stub_answer:
+  summary: 'Tavish Reeve promises: send Avery an update.'
+  ops:
+  - op: action.add
+    text: Send Avery an update
+    owners: [Tavish Reeve]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Tavish Reeve
+    evidence:
+      quote: I'll send an update even if the review isn't finished.

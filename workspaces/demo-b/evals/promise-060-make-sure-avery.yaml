@@ -1,0 +1,28 @@
+id: promise-060-make-sure-avery
+title: 'A promise made to the person: Make sure Avery has the slides before the presentation'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Varo Stone <varo@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll make sure you have the slides before your presentation.
+expect:
+- op: action.add
+  owners: [PER-111]
+  promised_to: [PER-1]
+  due_words: before your presentation
+  due: null
+stub_answer:
+  summary: 'Varo Stone promises: make sure Avery has the slides before the presentation.'
+  ops:
+  - op: action.add
+    text: Make sure Avery has the slides before the presentation
+    owners: [Varo Stone]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Varo Stone
+    due_words: before your presentation
+    evidence:
+      quote: I'll make sure you have the slides before your presentation.

@@ -1,0 +1,30 @@
+id: promise-011-email-two-sample
+title: 'The person''s own promise: Email the two sample layouts to Pella'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Pella Dunn <pella@example.com>
+
+  I'll email the two sample layouts to Pella by November 24, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-110]
+  due_words: by November 24, 2026
+  due: '2026-11-24'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: email the two sample layouts to Pella.'
+  ops:
+  - op: action.add
+    text: Email the two sample layouts to Pella
+    owners: [Avery Lane]
+    promised_to: [Pella Dunn]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 24, 2026
+    evidence:
+      quote: I'll email the two sample layouts to Pella by November 24, 2026.

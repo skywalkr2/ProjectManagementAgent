@@ -1,0 +1,37 @@
+id: promise-110-no-answer-send-varo
+title: 'A promise is not answered: acknowledges waiting without supplying the promised budget'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Varo the budget
+    owners:
+    - person: PER-1
+    promised_to: [PER-111]
+    basis: said
+    due: '2026-11-25'
+    due_words: by November 25, 2026
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Varo Stone <varo@example.com>
+
+  Varo, thanks for being patient.
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+stub_answer:
+  summary: The reply does not answer.
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: Avery thanked Varo for being patient but has not sent the budget
+    evidence:
+      quote: Varo, thanks for being patient.

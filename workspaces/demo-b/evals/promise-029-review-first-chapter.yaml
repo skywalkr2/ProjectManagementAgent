@@ -1,0 +1,26 @@
+id: promise-029-review-first-chapter
+title: 'The person''s own promise: Review the first chapter for Soren'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Soren Lund <soren@example.com>
+
+  Soren, I'll review the first chapter, but I cannot commit to the rest.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-114]
+  due: null
+stub_answer:
+  summary: 'Avery promises: review the first chapter for Soren.'
+  ops:
+  - op: action.add
+    text: Review the first chapter for Soren
+    owners: [Avery Lane]
+    promised_to: [Soren Lund]
+    basis: said
+    said_by: Avery Lane
+    evidence:
+      quote: Soren, I'll review the first chapter, but I cannot commit to the rest.

@@ -1,0 +1,82 @@
+id: promise-pair-18-date-correction
+title: A correction to an open promise's date moves that promise instead of adding another
+skills: [use-lesson, dates, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Send Avery the final layout
+      owners:
+      - person: PER-101
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-09'
+      due_words: by Monday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Send Avery the proof
+      owners:
+      - person: PER-117
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-05'
+      due_words: by Thursday
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+
+    Correction: I'll send the final layout on Wednesday, not Monday.
+  wrong:
+    summary: Kept Monday open and created a second delivery promise for Wednesday.
+    ops:
+    - op: action.add
+      text: Send the final layout
+      owners: [Mira Hale]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Mira Hale
+      due_words: Wednesday
+      evidence:
+        quote: I'll send the final layout on Wednesday
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: It's the same layout. Replace the old date instead of making a duplicate.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [same|replace|duplicate|correct]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Tess Calder <tess@example.com>
+
+    The proof I promised for Thursday will now arrive on Friday.
+  expect:
+  - op: action.move
+    id: ACT-102
+    due_words: on Friday
+  forbid:
+  - op: action.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: An explicit correction to a matching commitment updates its deadline rather than creating another obligation.
+    topic: date correction
+    ops:
+    - op: lesson.add
+      text: An explicit correction to a matching commitment changes its date; it never creates another obligation.
+      guard: Move the matching open action with action.move and the new date words; never add a second action for the same
+        thing.
+      evidence:
+        quote: It's the same layout
+  later:
+    summary: The proof's date moves from Thursday to Friday.
+    ops:
+    - op: action.move
+      id: ACT-102
+      due_words: on Friday
+      evidence:
+        quote: will now arrive on Friday

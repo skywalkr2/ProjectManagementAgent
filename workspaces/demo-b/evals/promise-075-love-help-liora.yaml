@@ -1,0 +1,14 @@
+id: promise-075-love-help-liora
+title: 'Not a promise: polite willingness without a concrete commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I'd love to help Liora sometime.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: polite willingness without a concrete commitment.'
+  ops: []

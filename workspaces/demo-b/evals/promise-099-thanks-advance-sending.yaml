@@ -1,0 +1,14 @@
+id: promise-099-thanks-advance-sending
+title: 'Not a promise: assumes a favor but supplies no evidence of acceptance'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Thanks in advance for sending the files, Iona.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: assumes a favor but supplies no evidence of acceptance.'
+  ops: []

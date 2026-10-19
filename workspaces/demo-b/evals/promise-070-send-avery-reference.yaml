@@ -1,0 +1,30 @@
+id: promise-070-send-avery-reference
+title: 'A promise made to the person: Send Avery the reference number'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send the reference number by close of business.
+expect:
+- op: action.add
+  owners: [PER-107]
+  promised_to: [PER-1]
+  due_words: by close of business
+  due: '2026-11-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Zella Brook promises: send Avery the reference number.'
+  ops:
+  - op: action.add
+    text: Send Avery the reference number
+    owners: [Zella Brook]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Zella Brook
+    due_words: by close of business
+    evidence:
+      quote: I'll send the reference number by close of business.

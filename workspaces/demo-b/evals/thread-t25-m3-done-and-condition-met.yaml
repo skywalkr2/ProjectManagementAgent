@@ -1,0 +1,79 @@
+id: thread-t25-m3-done-and-condition-met
+title: 'A forward with a new promise on top (message m3): the promise is kept; the condition is met'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-06'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the venue checklist
+    owners:
+    - person: PER-112
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-06'
+    due_words: Friday
+- kind: action
+  id: ACT-102
+  fields:
+    text: Review the venue checklist for Edda once it arrives
+    owners:
+    - person: PER-1
+    promised_to: [PER-112]
+    basis: said
+    due: '2026-11-09'
+    due_words: Monday
+pasted: |-
+  From: Edda Moss <edda@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A forward with a new promise on top
+
+  The checklist is attached, Avery.
+
+  --
+  Edda
+
+  Avery <avery.lane@example.com> wrote:
+  > I'll review it Monday once it arrives. Keeping your note below.
+  >
+  > Begin forwarded message:
+  > From: Edda <edda@example.com>
+  > Sent: Thursday
+  > To: Avery <avery.lane@example.com>
+  > Subject: Venue checklist
+  > I'll send you the venue checklist Friday.
+  >
+  > --
+  > Avery
+  >
+  > Edda <edda@example.com> wrote:
+  > > I'll send you the venue checklist Friday.
+  > >
+  > > --
+  > > Edda
+expect:
+- op: action.close
+  id: ACT-101
+- op: action.news
+  id: ACT-102
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.close
+  id: ACT-102
+- op: action.drop
+  id: ACT-102
+- op: action.add
+stub_answer:
+  summary: The promise is kept; the condition is met.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The checklist is attached, Avery
+  - op: action.news
+    id: ACT-102
+    text: The checklist has arrived
+    evidence:
+      quote: The checklist is attached, Avery

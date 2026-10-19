@@ -1,0 +1,30 @@
+id: promise-043-bring-averys-keys
+title: 'A promise made to the person: Bring Avery''s keys back'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll bring your keys back on November 17, 2026.
+expect:
+- op: action.add
+  owners: [PER-108]
+  promised_to: [PER-1]
+  due_words: November 17, 2026
+  due: '2026-11-17'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Bram Foley promises: bring Avery''s keys back.'
+  ops:
+  - op: action.add
+    text: Bring Avery's keys back
+    owners: [Bram Foley]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Bram Foley
+    due_words: November 17, 2026
+    evidence:
+      quote: I'll bring your keys back on November 17, 2026.

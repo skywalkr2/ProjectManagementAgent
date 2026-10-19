@@ -1,0 +1,30 @@
+id: promise-045-supply-portrait-biography
+title: 'A promise made to the person: Supply the portrait and biography to Avery'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Pella Dunn <pella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll supply the portrait and biography by November 19, 2026.
+expect:
+- op: action.add
+  owners: [PER-110]
+  promised_to: [PER-1]
+  due_words: by November 19, 2026
+  due: '2026-11-19'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Pella Dunn promises: supply the portrait and biography to Avery.'
+  ops:
+  - op: action.add
+    text: Supply the portrait and biography to Avery
+    owners: [Pella Dunn]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Pella Dunn
+    due_words: by November 19, 2026
+    evidence:
+      quote: I'll supply the portrait and biography by November 19, 2026.

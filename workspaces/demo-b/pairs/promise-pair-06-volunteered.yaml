@@ -1,0 +1,52 @@
+id: promise-pair-06-volunteered
+title: A commitment made on the person's behalf is not theirs until they accept it
+skills: [use-lesson, owners]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Lena Ashby <lena@example.com>
+
+    I told the client Avery would finish the audit by Monday.
+  wrong:
+    summary: Avery promised to finish the audit by Monday.
+    ops:
+    - op: action.add
+      text: Finish the audit
+      owners: [Avery Lane]
+      basis: said
+      said_by: Lena Ashby
+      due_words: by Monday
+      evidence:
+        quote: Avery would finish the audit by Monday
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: Lena volunteered me. I haven't agreed to that.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [behalf|volunteer|accept]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Dev Maran <dev@example.com>
+
+    I assured the committee Avery would prepare the slides tonight.
+  forbid:
+  - op: action.add
+    text_has: [slides]
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: A commitment made on someone's behalf needs their acceptance before becoming their own promise.
+    topic: volunteered
+    ops:
+    - op: lesson.add
+      text: A commitment someone else makes on a person's behalf needs that person's acceptance before it is their promise.
+      guard: Do not make an action for the person from what another person promised for them; leave it for the person to
+        accept.
+      evidence:
+        quote: Lena volunteered me
+  later:
+    summary: Dev made a commitment on Avery's behalf; it is not accepted.
+    ops: []

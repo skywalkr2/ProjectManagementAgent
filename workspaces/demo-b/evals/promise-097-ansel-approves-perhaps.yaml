@@ -1,0 +1,14 @@
+id: promise-097-ansel-approves-perhaps
+title: 'Not a promise: conditional possibility, not a conditional promise'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  If Ansel approves, we could perhaps start next week.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: conditional possibility, not a conditional promise.'
+  ops: []

@@ -1,0 +1,14 @@
+id: promise-092-template-says-send
+title: 'Not a promise: template text is not an actual commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  The template says, 'I'll send the report Friday'; replace that before sending.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: template text is not an actual commitment.'
+  ops: []

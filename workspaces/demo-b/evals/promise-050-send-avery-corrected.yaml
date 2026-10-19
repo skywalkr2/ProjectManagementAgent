@@ -1,0 +1,30 @@
+id: promise-050-send-avery-corrected
+title: 'A promise made to the person: Send Avery the corrected contract'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Mira Hale <mira@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send the corrected contract by November 26, 2026.
+expect:
+- op: action.add
+  owners: [PER-101]
+  promised_to: [PER-1]
+  due_words: by November 26, 2026
+  due: '2026-11-26'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Mira Hale promises: send Avery the corrected contract.'
+  ops:
+  - op: action.add
+    text: Send Avery the corrected contract
+    owners: [Mira Hale]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Mira Hale
+    due_words: by November 26, 2026
+    evidence:
+      quote: I'll send the corrected contract by November 26, 2026.

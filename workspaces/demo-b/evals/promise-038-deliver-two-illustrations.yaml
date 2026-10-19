@@ -1,0 +1,30 @@
+id: promise-038-deliver-two-illustrations
+title: 'A promise made to the person: Deliver the two illustrations to Avery'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Nessa Ford <nessa@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, I'll deliver the two illustrations by November 10, 2026.
+expect:
+- op: action.add
+  owners: [PER-103]
+  promised_to: [PER-1]
+  due_words: by November 10, 2026
+  due: '2026-11-10'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Nessa Ford promises: deliver the two illustrations to Avery.'
+  ops:
+  - op: action.add
+    text: Deliver the two illustrations to Avery
+    owners: [Nessa Ford]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Nessa Ford
+    due_words: by November 10, 2026
+    evidence:
+      quote: Avery, I'll deliver the two illustrations by November 10, 2026.

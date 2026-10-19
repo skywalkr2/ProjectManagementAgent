@@ -1,0 +1,30 @@
+id: promise-015-send-soren-research
+title: 'The person''s own promise: Send Soren the research notes'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Soren Lund <soren@example.com>
+
+  I'll send Soren the research notes by November 30, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-114]
+  due_words: by November 30, 2026
+  due: '2026-11-30'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: send Soren the research notes.'
+  ops:
+  - op: action.add
+    text: Send Soren the research notes
+    owners: [Avery Lane]
+    promised_to: [Soren Lund]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 30, 2026
+    evidence:
+      quote: I'll send Soren the research notes by November 30, 2026.

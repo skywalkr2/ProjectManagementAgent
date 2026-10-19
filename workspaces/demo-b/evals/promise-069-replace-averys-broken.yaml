@@ -1,0 +1,26 @@
+id: promise-069-replace-averys-broken
+title: 'A promise made to the person: Replace Avery''s broken mug'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I promise I'll replace the broken mug.
+expect:
+- op: action.add
+  owners: [PER-106]
+  promised_to: [PER-1]
+  due: null
+stub_answer:
+  summary: 'Ansel Wick promises: replace Avery''s broken mug.'
+  ops:
+  - op: action.add
+    text: Replace Avery's broken mug
+    owners: [Ansel Wick]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Ansel Wick
+    evidence:
+      quote: I promise I'll replace the broken mug.

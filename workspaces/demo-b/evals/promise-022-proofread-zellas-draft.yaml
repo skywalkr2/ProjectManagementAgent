@@ -1,0 +1,31 @@
+id: promise-022-proofread-zellas-draft
+title: 'The person''s own promise: Proofread Zella''s draft unless she withdraws it'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Zella Brook <zella@example.com>
+
+  Zella, I'll proofread it tonight unless you withdraw the draft.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-107]
+  text_has: [withdraw]
+  due_words: tonight
+  due: '2026-11-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: proofread Zella''s draft unless she withdraws it.'
+  ops:
+  - op: action.add
+    text: Proofread Zella's draft unless she withdraws it
+    owners: [Avery Lane]
+    promised_to: [Zella Brook]
+    basis: said
+    said_by: Avery Lane
+    due_words: tonight
+    evidence:
+      quote: Zella, I'll proofread it tonight unless you withdraw the draft.

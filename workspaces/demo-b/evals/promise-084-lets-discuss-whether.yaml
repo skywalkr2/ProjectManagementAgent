@@ -1,0 +1,14 @@
+id: promise-084-lets-discuss-whether
+title: 'Not a promise: discussion proposal, not assignment acceptance'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Let's discuss whether Jori should write the summary.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: discussion proposal, not assignment acceptance.'
+  ops: []

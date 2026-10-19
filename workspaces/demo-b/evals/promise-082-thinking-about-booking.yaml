@@ -1,0 +1,14 @@
+id: promise-082-thinking-about-booking
+title: 'Not a promise: intention under consideration'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I'm thinking about booking a room for Varo.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: intention under consideration.'
+  ops: []

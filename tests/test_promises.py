@@ -86,6 +86,26 @@ def test_a_promise_keeps_who_it_is_owed_to_how_it_is_known_and_its_date_from_the
     assert (made["promised_to"], made["basis"], made["said_by"]) == ([owner["id"]], "said", owner["id"])
 
 
+def test_a_promise_that_holds_only_once_something_happens_starts_on_hold(env):
+    _, _, store = env
+    owner = someone()
+    said = "Once the keys arrive I will send the floor plan."
+    answer(
+        {
+            "op": "action.add",
+            "text": "Send the floor plan",
+            "owners": [owner["id"]],
+            "promised_to": [owner["id"]],
+            "waiting_for": "the keys  arrive",
+            "evidence": {"quote": said},
+        }
+    )
+    (outcome,), _ = run(env, pasted=said)
+    made = made_action(store, outcome)
+    assert made["on_hold"]["waiting_for"] == "the keys arrive"
+    assert made["status"] == "open" and made["due"] is None
+
+
 @pytest.mark.parametrize(
     ("words", "due", "check"),
     [("next Friday", "2026-10-16", True), ("sometime soon", None, False), ("early next week", "2026-10-14", False)],

@@ -1,0 +1,28 @@
+id: promise-067-reply-avery-after
+title: 'A promise made to the person: Reply to Avery after speaking to the surveyor'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Oren Pike <oren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll reply as soon as I've spoken to the surveyor.
+expect:
+- op: action.add
+  owners: [PER-104]
+  promised_to: [PER-1]
+  due_words: as soon as I've spoken to the surveyor
+  due: null
+stub_answer:
+  summary: 'Oren Pike promises: reply to Avery after speaking to the surveyor.'
+  ops:
+  - op: action.add
+    text: Reply to Avery after speaking to the surveyor
+    owners: [Oren Pike]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Oren Pike
+    due_words: as soon as I've spoken to the surveyor
+    evidence:
+      quote: I'll reply as soon as I've spoken to the surveyor.

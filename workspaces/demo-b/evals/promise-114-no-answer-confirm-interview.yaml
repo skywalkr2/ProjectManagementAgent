@@ -1,0 +1,37 @@
+id: promise-114-no-answer-confirm-interview
+title: 'A promise is not answered: does not provide the promised interview time'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Confirm the interview time to Avery
+    owners:
+    - person: PER-104
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-11'
+    due_words: by November 11, 2026
+pasted: |-
+  From: Oren Pike <oren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  The interview sounds interesting, Avery.
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+stub_answer:
+  summary: The reply does not answer.
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: Oren said the interview sounds interesting but gave no time
+    evidence:
+      quote: The interview sounds interesting, Avery.

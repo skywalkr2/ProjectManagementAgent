@@ -1,0 +1,33 @@
+id: thread-t12-m1-promise
+title: 'No site access yet (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Jori Frame <jori@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: No site access yet
+
+  Once the keys arrive, I'll inspect the room.
+
+  --
+  Jori
+expect:
+- op: action.add
+  owners: [PER-113]
+  promised_to: [PER-1]
+  text_has: [key]
+  due_words: Once the keys arrive
+  due: null
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Inspect the room for Avery once the keys arrive
+    owners: [Jori Frame]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Jori Frame
+    due_words: Once the keys arrive
+    evidence:
+      quote: Once the keys arrive, I'll inspect the room

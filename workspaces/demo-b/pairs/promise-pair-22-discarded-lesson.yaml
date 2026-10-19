@@ -1,0 +1,68 @@
+id: promise-pair-22-discarded-lesson
+title: A lesson about sarcasm the person discards stays out of the next input's packet
+skills: [use-lesson, recording-only-what-matters]
+negative: true
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Sure, I'll rebuild the entire website before lunch. And teach the printer to sing.
+  wrong:
+    summary: Avery promised to rebuild the website before lunch.
+    ops:
+    - op: action.add
+      text: Rebuild the entire website
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: before lunch
+      evidence:
+        quote: Sure, I'll rebuild the entire website before lunch
+  correction:
+    kind: sent_back
+    note: I was being sarcastic. I didn't agree to rebuild anything.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [sarcas|joke|literal]
+  keep: discard
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+    To: Avery Lane <avery.lane@example.com>
+
+    I'll send you the files by Friday.
+  expect:
+  - op: action.add
+    owners: [PER-101]
+    promised_to: [PER-1]
+    text_has: [files]
+    due_words: by Friday
+    due: '2026-11-13'
+  forbid:
+  - op: event.add
+  packet_lacks: ['# Lessons', impossible task]
+ideal:
+  learn:
+    summary: Sarcasm is not a promise.
+    topic: sarcasm
+    ops:
+    - op: lesson.add
+      text: 'Clear sarcasm is not a firm commitment: a joke about an impossible task never becomes an action.'
+      guard: Do not add an action for sarcasm or an exaggerated joke.
+      evidence:
+        quote: I was being sarcastic
+  later:
+    summary: Mira will send the files by Friday.
+    ops:
+    - op: action.add
+      text: Send Avery the files
+      owners: [Mira Hale]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Mira Hale
+      due_words: by Friday
+      evidence:
+        quote: I'll send you the files by Friday.

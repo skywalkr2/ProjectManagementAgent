@@ -1,0 +1,65 @@
+id: promise-pair-11-vague-timing
+title: Vague timing stays as written and is not turned into a day
+skills: [use-lesson, dates]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+
+    I'll get the samples to you early next week.
+  wrong:
+    summary: Mira promised the samples by Monday.
+    ops:
+    - op: action.add
+      text: Send the samples
+      owners: [Mira Hale]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Mira Hale
+      due: '2026-11-09'
+      evidence:
+        quote: I'll get the samples to you early next week
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: She said early next week. Don't turn that into Monday.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [vague|exact|as written|early]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Tess Calder <tess@example.com>
+
+    I'll send the measurements toward the end of the month.
+  expect:
+  - op: action.add
+    owners: [PER-117]
+    promised_to: [PER-1]
+    due_words: toward the end of the month
+    due: null
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Keep vague timing as written instead of inventing an exact deadline.
+    topic: vague timing
+    ops:
+    - op: lesson.add
+      text: Vague timing such as 'early next week' is kept as the words the speaker used, never turned into a particular
+        day.
+      guard: Copy the speaker's own date words into due_words and give no date of your own.
+      evidence:
+        quote: She said early next week
+  later:
+    summary: Tess will send the measurements toward the end of the month; no exact date.
+    ops:
+    - op: action.add
+      text: Send the measurements
+      owners: [Tess Calder]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Tess Calder
+      due_words: toward the end of the month
+      evidence:
+        quote: I'll send the measurements toward the end of the month

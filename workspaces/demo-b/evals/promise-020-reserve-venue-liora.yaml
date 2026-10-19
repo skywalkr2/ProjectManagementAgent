@@ -1,0 +1,31 @@
+id: promise-020-reserve-venue-liora
+title: 'The person''s own promise: Reserve the venue for Liora if the deposit arrives'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Liora Marsh <liora@example.com>
+
+  Provided the deposit arrives, I'll reserve the venue for Liora tomorrow.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-105]
+  text_has: [deposit]
+  due_words: tomorrow
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: reserve the venue for Liora if the deposit arrives.'
+  ops:
+  - op: action.add
+    text: Reserve the venue for Liora if the deposit arrives
+    owners: [Avery Lane]
+    promised_to: [Liora Marsh]
+    basis: said
+    said_by: Avery Lane
+    due_words: tomorrow
+    evidence:
+      quote: Provided the deposit arrives, I'll reserve the venue for Liora tomorrow.

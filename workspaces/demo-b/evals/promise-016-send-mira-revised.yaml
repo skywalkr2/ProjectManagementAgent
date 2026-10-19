@@ -1,0 +1,27 @@
+id: promise-016-send-mira-revised
+title: 'The person''s own promise: Send Mira the revised outline'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Mira Hale <mira@example.com>
+
+  I'll send the revised outline early next week, Mira.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-101]
+  due_words: early next week
+stub_answer:
+  summary: 'Avery promises: send Mira the revised outline.'
+  ops:
+  - op: action.add
+    text: Send Mira the revised outline
+    owners: [Avery Lane]
+    promised_to: [Mira Hale]
+    basis: said
+    said_by: Avery Lane
+    due_words: early next week
+    evidence:
+      quote: I'll send the revised outline early next week, Mira.

@@ -1,0 +1,30 @@
+id: promise-008-return-zellas-recorder
+title: 'The person''s own promise: Return Zella''s recorder'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Zella Brook <zella@example.com>
+
+  I promise to return Zella's recorder by November 18, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-107]
+  due_words: by November 18, 2026
+  due: '2026-11-18'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: return Zella''s recorder.'
+  ops:
+  - op: action.add
+    text: Return Zella's recorder
+    owners: [Avery Lane]
+    promised_to: [Zella Brook]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 18, 2026
+    evidence:
+      quote: I promise to return Zella's recorder by November 18, 2026.

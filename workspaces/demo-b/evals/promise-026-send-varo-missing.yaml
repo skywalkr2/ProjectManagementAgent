@@ -1,0 +1,28 @@
+id: promise-026-send-varo-missing
+title: 'The person''s own promise: Send Varo the missing attachment'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Varo Stone <varo@example.com>
+
+  Yes, Varo, I'll send the missing attachment now.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-111]
+  due_words: now
+  due: null
+stub_answer:
+  summary: 'Avery promises: send Varo the missing attachment.'
+  ops:
+  - op: action.add
+    text: Send Varo the missing attachment
+    owners: [Avery Lane]
+    promised_to: [Varo Stone]
+    basis: said
+    said_by: Avery Lane
+    due_words: now
+    evidence:
+      quote: Yes, Varo, I'll send the missing attachment now.

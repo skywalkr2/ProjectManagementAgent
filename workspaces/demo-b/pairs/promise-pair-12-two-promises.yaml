@@ -1,0 +1,82 @@
+id: promise-pair-12-two-promises
+title: Two promises in one message are two actions, each with its own date
+skills: [use-lesson, dates, owners]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Oren Pike <oren@example.com>
+
+    I'll send the invoice tomorrow and the installation notes next Friday.
+  wrong:
+    summary: Found only the promise to send the invoice tomorrow.
+    ops:
+    - op: action.add
+      text: Send the invoice
+      owners: [Oren Pike]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Oren Pike
+      due_words: tomorrow
+      evidence:
+        quote: I'll send the invoice tomorrow
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: There are two promises here, with different deadlines.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [two|separate|each|distinct]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Lena Ashby <lena@example.com>
+
+    I'll confirm the venue on Monday and share the guest list on Thursday.
+  expect:
+  - op: action.add
+    owners: [PER-115]
+    promised_to: [PER-1]
+    text_has: [venue]
+    due_words: Monday
+    due: '2026-11-16'
+  - op: action.add
+    owners: [PER-115]
+    promised_to: [PER-1]
+    text_has: [guest]
+    due_words: Thursday
+    due: '2026-11-12'
+  forbid:
+  - op: event.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Separate distinct promised actions and retain each action's deadline.
+    topic: two promises
+    ops:
+    - op: lesson.add
+      text: A message that promises two things is two promises, each with its own deadline.
+      guard: Make one action for each promised thing and keep each one's own date words.
+      evidence:
+        quote: There are two promises here
+  later:
+    summary: Two promises by Lena, each with its own date.
+    ops:
+    - op: action.add
+      text: Confirm the venue
+      owners: [Lena Ashby]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Lena Ashby
+      due_words: Monday
+      evidence:
+        quote: I'll confirm the venue on Monday
+    - op: action.add
+      text: Share the guest list
+      owners: [Lena Ashby]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Lena Ashby
+      due_words: Thursday
+      evidence:
+        quote: share the guest list on Thursday

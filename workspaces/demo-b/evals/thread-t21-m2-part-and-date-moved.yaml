@@ -1,0 +1,55 @@
+id: thread-t21-m2-part-and-date-moved
+title: 'The quote and its missing detail (message m2): part of it arrives; the date moves'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-03'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the quote and the warranty terms
+    owners:
+    - person: PER-108
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-04'
+    due_words: within two working days
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: The quote and its missing detail
+
+  Here's the quote; I'll send the warranty terms Monday.
+
+  --
+  Bram
+
+  Bram <bram@example.com> wrote:
+  > I'll send the quote and warranty terms within two working days.
+  >
+  > --
+  > Bram
+expect:
+- op: action.part
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+  due_words: Monday
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: Part of it arrives; the date moves.
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: The quote
+    left: Send Avery the warranty terms
+    evidence:
+      quote: Here's the quote
+  - op: action.move
+    id: ACT-101
+    due_words: Monday
+    evidence:
+      quote: I'll send the warranty terms Monday

@@ -1,0 +1,30 @@
+id: promise-059-handle-booking-avery
+title: 'A promise made to the person: Handle the booking for Avery'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Pella Dunn <pella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Yes, Avery, I'll handle the booking by noon.
+expect:
+- op: action.add
+  owners: [PER-110]
+  promised_to: [PER-1]
+  due_words: by noon
+  due: '2026-11-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Pella Dunn promises: handle the booking for Avery.'
+  ops:
+  - op: action.add
+    text: Handle the booking for Avery
+    owners: [Pella Dunn]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Pella Dunn
+    due_words: by noon
+    evidence:
+      quote: Yes, Avery, I'll handle the booking by noon.

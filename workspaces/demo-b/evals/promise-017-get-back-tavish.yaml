@@ -1,0 +1,28 @@
+id: promise-017-get-back-tavish
+title: 'The person''s own promise: Get back to Tavish'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Tavish Reeve <tavish@example.com>
+
+  I'll get back to Tavish after the workshop.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-102]
+  due_words: after the workshop
+  due: null
+stub_answer:
+  summary: 'Avery promises: get back to Tavish.'
+  ops:
+  - op: action.add
+    text: Get back to Tavish
+    owners: [Avery Lane]
+    promised_to: [Tavish Reeve]
+    basis: said
+    said_by: Avery Lane
+    due_words: after the workshop
+    evidence:
+      quote: I'll get back to Tavish after the workshop.

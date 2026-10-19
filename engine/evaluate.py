@@ -14,7 +14,11 @@ kinds that are right but optional there, which weigh nothing. An expected op
 may name several kinds (`op: [fact, action.add]`) when the case checks something either of them can hold, and is met by
 any one of them. Wherever an expectation lists words (`text_has`, `topic_has`), a word with `|` is met by any one of its
 alternatives (`complet|finish|done`), each a case-insensitive part of the text. An expected `action.add` may also name
-`reply_has` (words in the drafted reply attached to the action) or `no_reply: true` (the action carries no draft).
+`reply_has` (words in the drafted reply attached to the action) or `no_reply: true` (the action carries no draft), and,
+for a promise (design 6.33), `promised_to` (the people it is owed to) and `due_words` (the words its date came from).
+An expected `action.move`, `action.part` or `action.news` names the action's `id`, and may name `due_words` (a move) or
+`text_has` (words in the op's own fields); an ending that waits only for the person's Keep counts as made, for what a
+case expects and for what it forbids.
 A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
 change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
 held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
@@ -643,6 +647,11 @@ def _matching(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -
     ]
 
 
+def _squeezed(words: Any) -> str:
+    """Words with their spaces and capitals ignored; empty when there are none."""
+    return " ".join(str(words or "").split()).lower()
+
+
 def _same_time(found: Any, wanted: Any) -> bool:
     """Whether two days or date-times are the same, however each was written."""
     if found is None or wanted is None:
@@ -672,9 +681,21 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             return False
         if "due" in e and a.get("due") != e["due"]:
             return False
+        if "promised_to" in e and sorted(a.get("promised_to") or []) != sorted(e["promised_to"]):
+            return False
+        if "due_words" in e and _squeezed(a.get("due_words")) != _squeezed(e["due_words"]):
+            return False
         return "status" not in e or a["status"] == e["status"]
     if op in ("action.close", "action.hold", "action.unhold", "action.drop", "question.drop", "question.done"):
         return o["op"]["id"] == e["id"]
+    if op in ("action.move", "action.part", "action.news"):
+        # An ending may still be waiting for the person's Keep, so it is read from the op, not from the record.
+        own = json.dumps({k: v for k, v in o["op"].items() if k != "evidence"})
+        return (
+            o["op"]["id"] == e["id"]
+            and ("due_words" not in e or _squeezed(o["op"].get("due_words")) == _squeezed(e["due_words"]))
+            and ("text_has" not in e or _has_words(own, e["text_has"]))
+        )
     if op == "record.set":
         same_field = o["op"]["id"] == e["id"] and o["op"]["field"] == e["field"]
         return same_field and ("value" not in e or str(o["op"]["value"]) == str(e["value"]))
@@ -778,7 +799,9 @@ def extras_of(
 def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, people_before: int) -> bool:
     if f.get("new_person"):
         return len(store.read().list("person")) > people_before
-    for o in _applied(outcomes, f["op"]):
+    # An ending waiting only for the person's Keep counts as made, as it does for what a case expects.
+    made = [o for o in outcomes if o["op"]["op"] == f["op"] and (o["status"] == "applied" or _awaits_keep(o))]
+    for o in made:
         if "id" in f and o["op"].get("id") != f["id"]:
             continue
         if f["op"] == "question.add" and "to" in f:
@@ -832,7 +855,21 @@ def _people_text(outcome: dict[str, Any], store: Store) -> str:
 def _summarize(outcome: dict[str, Any]) -> str:
     """One produced op in a few words: its name, the fields that decide a match, and what happened to it."""
     op = outcome["op"]
-    keys = ("to", "kind", "owners", "id", "due", "field", "person", "negative", "start", "end", "project")
+    keys = (
+        "to",
+        "kind",
+        "owners",
+        "promised_to",
+        "id",
+        "due",
+        "due_words",
+        "field",
+        "person",
+        "negative",
+        "start",
+        "end",
+        "project",
+    )
     fields = ", ".join(f"{k}={op[k]}" for k in keys if op.get(k) not in (None, [], ""))
     return f"{op['op']}({fields}) {outcome['status']}"
 

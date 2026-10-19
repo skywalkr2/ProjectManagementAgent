@@ -1,0 +1,51 @@
+id: promise-pair-09-hope
+title: A hope is not a firm commitment
+skills: [use-lesson, recording-only-what-matters]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    I hope to finish the report tomorrow.
+  wrong:
+    summary: Avery promised to finish the report tomorrow.
+    ops:
+    - op: action.add
+      text: Finish the report
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: tomorrow
+      evidence:
+        quote: I hope to finish the report tomorrow
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: That's a hope, not a deadline I committed to.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [hope|aspiration|firm]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    I'm hoping to clear the revisions by Wednesday.
+  forbid:
+  - op: action.add
+    text_has: [revision]
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Preserve the distinction between an aspiration and a firm commitment.
+    topic: hope
+    ops:
+    - op: lesson.add
+      text: '''I hope to'' and ''I''m hoping to'' express an aspiration, not a firm commitment.'
+      guard: Make an action only when the words commit to it outright; hopes and maybes stay unrecorded.
+      evidence:
+        quote: That's a hope, not a deadline
+  later:
+    summary: A tentative intention; no firm promise.
+    ops: []

@@ -1,0 +1,46 @@
+id: promise-023-send-bram-proposal
+title: 'The person''s own promise: two promises with their own dates (Send Bram the proposal and Send Bram the invoice)'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Bram Foley <bram@example.com>
+
+  I'll send Bram the proposal Friday and the invoice Monday.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-108]
+  text_has: [proposal]
+  due_words: Friday
+  due: '2026-11-06'
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-108]
+  text_has: [invoice]
+  due_words: Monday
+  due: '2026-11-09'
+forbid:
+- op: event.add
+stub_answer:
+  summary: Two promises, each with its own date.
+  ops:
+  - op: action.add
+    text: Send Bram the proposal
+    owners: [Avery Lane]
+    promised_to: [Bram Foley]
+    basis: said
+    said_by: Avery Lane
+    due_words: Friday
+    evidence:
+      quote: I'll send Bram the proposal Friday and the invoice Monday.
+  - op: action.add
+    text: Send Bram the invoice
+    owners: [Avery Lane]
+    promised_to: [Bram Foley]
+    basis: said
+    said_by: Avery Lane
+    due_words: Monday
+    evidence:
+      quote: I'll send Bram the proposal Friday and the invoice Monday.

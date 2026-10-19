@@ -1,0 +1,34 @@
+id: thread-t05-m1-promise
+title: 'Fern Assembly approval (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Fern Assembly approval
+
+  I'll confirm whether the £800 print quote is approved by Monday.
+
+  --
+  Liora
+expect:
+- op: action.add
+  owners: [PER-105]
+  promised_to: [PER-1]
+  due_words: by Monday
+  due: '2026-11-09'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Confirm to Avery whether the 800 pound print quote is approved
+    owners: [Liora Marsh]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Liora Marsh
+    due_words: by Monday
+    evidence:
+      quote: I'll confirm whether the £800 print quote is approved by Monday

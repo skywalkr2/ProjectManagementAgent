@@ -1,0 +1,30 @@
+id: promise-042-send-avery-receipts
+title: 'A promise made to the person: Send Avery the receipts'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send you the receipts by November 16, 2026.
+expect:
+- op: action.add
+  owners: [PER-107]
+  promised_to: [PER-1]
+  due_words: by November 16, 2026
+  due: '2026-11-16'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Zella Brook promises: send Avery the receipts.'
+  ops:
+  - op: action.add
+    text: Send Avery the receipts
+    owners: [Zella Brook]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Zella Brook
+    due_words: by November 16, 2026
+    evidence:
+      quote: I'll send you the receipts by November 16, 2026.

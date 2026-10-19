@@ -1,0 +1,28 @@
+id: promise-031-make-sure-tavish
+title: 'The person''s own promise: Make sure Tavish receives the handover'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Tavish Reeve <tavish@example.com>
+
+  I'll make sure Tavish receives the handover before his leave starts.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-102]
+  due_words: before his leave starts
+  due: null
+stub_answer:
+  summary: 'Avery promises: make sure Tavish receives the handover.'
+  ops:
+  - op: action.add
+    text: Make sure Tavish receives the handover
+    owners: [Avery Lane]
+    promised_to: [Tavish Reeve]
+    basis: said
+    said_by: Avery Lane
+    due_words: before his leave starts
+    evidence:
+      quote: I'll make sure Tavish receives the handover before his leave starts.

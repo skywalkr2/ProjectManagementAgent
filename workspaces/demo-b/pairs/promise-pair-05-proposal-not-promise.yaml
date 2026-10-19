@@ -1,0 +1,51 @@
+id: promise-pair-05-proposal-not-promise
+title: A proposed arrangement is not an accepted promise
+skills: [use-lesson, recording-only-what-matters]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Could I send you the outline on Friday instead?
+  wrong:
+    summary: Avery promised to send the outline on Friday.
+    ops:
+    - op: action.add
+      text: Send the outline
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: on Friday
+      evidence:
+        quote: Could I send you the outline on Friday instead
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: I'm asking whether Friday works, not confirming a new date.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [propos|ask|accept]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Would it work if I delivered the mockups next Tuesday?
+  forbid:
+  - op: action.add
+    text_has: [mockup]
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Distinguish a proposed arrangement from an accepted commitment.
+    topic: proposal not promise
+    ops:
+    - op: lesson.add
+      text: A question or proposal about a date is not a commitment until the other side accepts it.
+      guard: Do not make an action or move a date from a request such as 'could I' or 'would it work'; wait for the acceptance.
+      evidence:
+        quote: I'm asking whether Friday works
+  later:
+    summary: A proposed delivery date; no promise yet.
+    ops: []

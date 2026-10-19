@@ -1,0 +1,30 @@
+id: promise-032-try-new-export
+title: 'The person''s own promise: Try the new export settings and tell Nessa what happens'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Nessa Ford <nessa@example.com>
+
+  Nessa, I'll try the new export settings tonight and tell you what happens.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-103]
+  due_words: tonight
+  due: '2026-11-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: try the new export settings and tell Nessa what happens.'
+  ops:
+  - op: action.add
+    text: Try the new export settings and tell Nessa what happens
+    owners: [Avery Lane]
+    promised_to: [Nessa Ford]
+    basis: said
+    said_by: Avery Lane
+    due_words: tonight
+    evidence:
+      quote: Nessa, I'll try the new export settings tonight and tell you what happens.

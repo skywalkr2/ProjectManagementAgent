@@ -1,0 +1,30 @@
+id: promise-028-collect-jori-station
+title: 'The person''s own promise: Collect Jori from the station'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Jori Frame <jori@example.com>
+
+  I've agreed to collect Jori from the station tomorrow evening.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-113]
+  due_words: tomorrow evening
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: collect Jori from the station.'
+  ops:
+  - op: action.add
+    text: Collect Jori from the station
+    owners: [Avery Lane]
+    promised_to: [Jori Frame]
+    basis: said
+    said_by: Avery Lane
+    due_words: tomorrow evening
+    evidence:
+      quote: I've agreed to collect Jori from the station tomorrow evening.

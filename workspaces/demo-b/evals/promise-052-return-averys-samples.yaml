@@ -1,0 +1,28 @@
+id: promise-052-return-averys-samples
+title: 'A promise made to the person: Return Avery''s samples'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Nessa Ford <nessa@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll return the samples after the exhibition.
+expect:
+- op: action.add
+  owners: [PER-103]
+  promised_to: [PER-1]
+  due_words: after the exhibition
+  due: null
+stub_answer:
+  summary: 'Nessa Ford promises: return Avery''s samples.'
+  ops:
+  - op: action.add
+    text: Return Avery's samples
+    owners: [Nessa Ford]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Nessa Ford
+    due_words: after the exhibition
+    evidence:
+      quote: I'll return the samples after the exhibition.

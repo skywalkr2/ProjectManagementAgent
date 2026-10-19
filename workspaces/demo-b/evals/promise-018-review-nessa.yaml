@@ -1,0 +1,26 @@
+id: promise-018-review-nessa
+title: 'The person''s own promise: Review it for Nessa'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Nessa Ford <nessa@example.com>
+
+  Nessa, you have my word that I'll review it.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-103]
+  due: null
+stub_answer:
+  summary: 'Avery promises: review it for Nessa.'
+  ops:
+  - op: action.add
+    text: Review it for Nessa
+    owners: [Avery Lane]
+    promised_to: [Nessa Ford]
+    basis: said
+    said_by: Avery Lane
+    evidence:
+      quote: Nessa, you have my word that I'll review it.

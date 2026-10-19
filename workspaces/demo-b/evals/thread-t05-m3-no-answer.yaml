@@ -1,0 +1,54 @@
+id: thread-t05-m3-no-answer
+title: 'Fern Assembly approval (message m3): the reply doesn''t answer'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-11'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Confirm to Avery whether the 800 pound print quote is approved
+    owners:
+    - person: PER-105
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-09'
+    due_words: by Monday
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Fern Assembly approval
+
+  The layout looks lovely, Avery. Nice work.
+
+  --
+  Liora
+
+  Avery <avery.lane@example.com> wrote:
+  > Monday has passed. Is the quote approved?
+  >
+  > --
+  > Avery
+  >
+  > Liora <liora@example.com> wrote:
+  > > I'll confirm whether the £800 print quote is approved by Monday.
+  > >
+  > > --
+  > > Liora
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The reply doesn't answer.
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: Liora praised the layout but did not say whether the quote is approved
+    evidence:
+      quote: The layout looks lovely, Avery. Nice work

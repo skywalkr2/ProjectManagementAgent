@@ -1,0 +1,79 @@
+id: promise-pair-07-forwarded
+title: A forwarded promise stays with whoever made it and whoever it was made to
+skills: [use-lesson, new-message-only, owners]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Lena Ashby <lena@example.com>
+
+    For your awareness.
+
+    ---------- Forwarded message ---------
+    From: oren@example.com
+    To: lena@example.com
+    I'll send you the signed agreement on Thursday.
+  wrong:
+    summary: Lena promised Avery a signed agreement on Thursday.
+    ops:
+    - op: action.add
+      text: Send the signed agreement
+      owners: [Lena Ashby]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Lena Ashby
+      due_words: on Thursday
+      evidence:
+        quote: I'll send you the signed agreement on Thursday
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: Oren promised Lena, not me. Lena just forwarded it.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [forward|original|speaker]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+
+    Passing this along.
+
+    Begin forwarded message:
+    From: tess@example.com
+    To: mira@example.com
+    I'll deliver your prints on Saturday.
+  expect:
+  - op: action.add
+    owners: [PER-117]
+    promised_to: [PER-101]
+    text_has: [print]
+    due_words: Saturday
+    due: '2026-11-14'
+  forbid:
+  - op: event.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Keep a forwarded promise attached to its original speaker and recipient.
+    topic: forwarded
+    ops:
+    - op: lesson.add
+      text: A promise in a forwarded message belongs to the person who made it and the person it was made to, not to the
+        forwarder.
+      guard: Read the forwarded header for who said it and to whom; never make the forwarder the owner or the person the
+        recipient.
+      evidence:
+        quote: Oren promised Lena, not me
+  later:
+    summary: Tess promised Mira the prints on Saturday; Mira made no promise to the person.
+    ops:
+    - op: action.add
+      text: Deliver Mira's prints
+      owners: [Tess Calder]
+      promised_to: [Mira Hale]
+      basis: said
+      said_by: Tess Calder
+      due_words: Saturday
+      evidence:
+        quote: I'll deliver your prints on Saturday

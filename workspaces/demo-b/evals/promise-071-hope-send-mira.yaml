@@ -1,0 +1,14 @@
+id: promise-071-hope-send-mira
+title: 'Not a promise: hope is not a firm commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I hope to send Mira the outline Friday.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: hope is not a firm commitment.'
+  ops: []

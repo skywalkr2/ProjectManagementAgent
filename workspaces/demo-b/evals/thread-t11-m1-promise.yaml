@@ -1,0 +1,35 @@
+id: thread-t11-m1-promise
+title: 'A condition that never happens (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Edda Moss <edda@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A condition that never happens
+
+  If the venue approves access, I'll take the measurements tomorrow morning.
+
+  --
+  Edda
+expect:
+- op: action.add
+  owners: [PER-112]
+  promised_to: [PER-1]
+  text_has: [venue|access]
+  due_words: tomorrow morning
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Take the measurements for Avery if the venue approves access
+    owners: [Edda Moss]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Edda Moss
+    due_words: tomorrow morning
+    evidence:
+      quote: If the venue approves access, I'll take the measurements tomorrow morning

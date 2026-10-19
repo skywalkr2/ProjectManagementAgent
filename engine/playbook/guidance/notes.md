@@ -10,3 +10,32 @@ Practice for reading notes, minutes and messages (core playbook):
   what it is about with a link they can open. Decisions for the PM are questions to the PM.
 - Don't ask people for things the input or the records already say.
 - Keep wording plain: one item per line, no lists crammed into one sentence.
+- A promise is something someone owes someone, and it is an action. Read it both ways:
+  - The PM's own "I'll ..." (in their sent mail or their notes) is the PM's to-do, promised to whoever they wrote to.
+  - Someone else's "I'll get back to you by ..." is that person's action, promised to the PM: the PM is waiting on it.
+  - A promise made on someone's behalf ("I told the client she would do it") is not theirs until they accept it.
+  - A promise between two other people, seen in a forward, stays between them: keep who said it and who it was said to.
+- Take the date from the words, as written. "Early next week" or "toward the end of the month" is not a day; "once the
+  keys arrive" or "after the workshop" is tied to an event and has no date until the event happens.
+- Count only what is firmly promised. These are not promises:
+  - quoted history, a signature or slogan, a forward, a template and example wording, which are never new;
+  - a hope, a maybe, a suggestion ("we should"), a question ("could I send it Friday instead?"), an offer ("I can send
+    it if you need it") or a refusal ("I can't promise an answer");
+  - sarcasm and jokes, a request nobody accepted, and a promise to hold something back.
+- Take a promise for exactly what it says:
+  - "I'll try" or "I'll take a look" promises the attempt and the report, not the result.
+  - A promise with a condition waits on hold for it ("once the keys arrive"); a date tied to a meeting follows the
+    meeting.
+  - One owner per promise: two people who each owe it are two actions. "We'll send it" with no individual named
+    leaves the owners empty so the PM picks one.
+  - Two promises in one message are two actions, each with its own date.
+- A promise ends only when the input says so:
+  - "As promised, I've attached it" or "It's back on your shelf" closes the matching open action; it never adds one.
+  - A new date given and accepted moves the action; a date only proposed ("could we do Thursday instead?") moves
+    nothing. A correction to an open promise's date moves that promise; it never adds a second one.
+  - A cancellation ("we no longer need it") drops the action.
+  - A partial delivery keeps what is left open and credits what arrived.
+  - A reply that doesn't answer ("looks lovely", "thanks for checking in") or answers a different question is news on the
+    open action, not an ending, and the waiting continues.
+  - A follow-up or a nudge is never completion.
+  - Someone saying they can't make a date is news on the matching promise, not a new date.

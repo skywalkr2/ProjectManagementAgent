@@ -1,0 +1,14 @@
+id: promise-093-example-wording-call
+title: 'Not a promise: illustrative text, not a real action'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Example wording: 'I'll call you tomorrow.'
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: illustrative text, not a real action.'
+  ops: []

@@ -1,0 +1,30 @@
+id: promise-003-finish-brochure-nessa
+title: 'The person''s own promise: Finish the brochure for Nessa'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Nessa Ford <nessa@example.com>
+
+  Nessa, I'll finish the brochure by November 12, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-103]
+  due_words: by November 12, 2026
+  due: '2026-11-12'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: finish the brochure for Nessa.'
+  ops:
+  - op: action.add
+    text: Finish the brochure for Nessa
+    owners: [Avery Lane]
+    promised_to: [Nessa Ford]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 12, 2026
+    evidence:
+      quote: Nessa, I'll finish the brochure by November 12, 2026.

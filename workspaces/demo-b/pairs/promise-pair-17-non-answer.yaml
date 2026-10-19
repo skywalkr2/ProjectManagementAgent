@@ -1,0 +1,60 @@
+id: promise-pair-17-non-answer
+title: A reply that does not answer the question leaves it open
+skills: [use-lesson, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: question
+    id: Q-101
+    fields:
+      to: PER-115
+      title: Does the quote include travel?
+  - kind: question
+    id: Q-102
+    fields:
+      to: PER-104
+      title: How long is the warranty?
+  pasted: |-
+    From: Lena Ashby <lena@example.com>
+
+    You asked whether the quote includes travel. We always aim to keep our pricing competitive.
+  wrong:
+    summary: Marked the question about travel costs answered.
+    ops:
+    - op: question.done
+      id: Q-101
+      answer: The pricing is kept competitive.
+      evidence:
+        quote: We always aim to keep our pricing competitive
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: That doesn't tell me whether travel is included. I still need an answer.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [answer|actual question|unanswered]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Oren Pike <oren@example.com>
+
+    Regarding your question about the warranty length, customer satisfaction is very important to us.
+  forbid:
+  - op: question.done
+    id: Q-102
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: A reply resolves a request for information only if it answers the actual question.
+    topic: non answer
+    ops:
+    - op: lesson.add
+      text: A reply answers a question only if it gives the answer asked for; a vague or off-topic reply leaves the question
+        open.
+      guard: Close a question only when the reply states the fact asked about; otherwise leave it open.
+      evidence:
+        quote: That doesn't tell me whether travel is included
+  later:
+    summary: No warranty length was given; the question stays open.
+    ops: []

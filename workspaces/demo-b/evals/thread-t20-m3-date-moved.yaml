@@ -1,0 +1,53 @@
+id: thread-t20-m3-date-moved
+title: 'A boundary into January (message m3): the date moves'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-12-30'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the signed form
+    owners:
+    - person: PER-107
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-12-31'
+    due_words: by December 31, 2026
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A boundary into January
+
+  No, I'll send it January 4, 2027, instead.
+
+  --
+  Zella
+
+  Avery <avery.lane@example.com> wrote:
+  > Can you still make that date?
+  >
+  > --
+  > Avery
+  >
+  > Zella <zella@example.com> wrote:
+  > > I'll send the signed form by December 31, 2026.
+  > >
+  > > --
+  > > Zella
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: January 4, 2027
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The date moves.
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: January 4, 2027
+    evidence:
+      quote: I'll send it January 4, 2027, instead

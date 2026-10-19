@@ -1,0 +1,30 @@
+id: promise-006-call-ansel
+title: 'The person''s own promise: Call Ansel'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Ansel Wick <ansel@example.com>
+
+  I'll call Ansel on November 16, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-106]
+  due_words: November 16, 2026
+  due: '2026-11-16'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: call Ansel.'
+  ops:
+  - op: action.add
+    text: Call Ansel
+    owners: [Avery Lane]
+    promised_to: [Ansel Wick]
+    basis: said
+    said_by: Avery Lane
+    due_words: November 16, 2026
+    evidence:
+      quote: I'll call Ansel on November 16, 2026.

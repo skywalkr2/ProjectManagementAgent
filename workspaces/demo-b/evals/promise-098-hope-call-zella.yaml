@@ -1,0 +1,14 @@
+id: promise-098-hope-call-zella
+title: 'Not a promise: two tentative intentions; neither is a promise'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I hope to call Zella Friday, and maybe send Bram a note Monday.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: two tentative intentions; neither is a promise.'
+  ops: []

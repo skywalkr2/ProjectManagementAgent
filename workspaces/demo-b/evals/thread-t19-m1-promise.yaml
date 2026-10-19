@@ -1,0 +1,50 @@
+id: thread-t19-m1-promise
+title: 'Friendship and a library book (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Ansel Wick <ansel@example.com>
+  Subject: Friendship and a library book
+
+  I'll return your book tonight and call you tomorrow evening.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-106]
+  text_has: [book]
+  due_words: tonight
+  due: '2026-11-02'
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-106]
+  text_has: [call]
+  due_words: tomorrow evening
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Return Ansel's book
+    owners: [Avery Lane]
+    promised_to: [Ansel Wick]
+    basis: said
+    said_by: Avery Lane
+    due_words: tonight
+    evidence:
+      quote: I'll return your book tonight and call you tomorrow evening
+  - op: action.add
+    text: Call Ansel
+    owners: [Avery Lane]
+    promised_to: [Ansel Wick]
+    basis: said
+    said_by: Avery Lane
+    due_words: tomorrow evening
+    evidence:
+      quote: I'll return your book tonight and call you tomorrow evening

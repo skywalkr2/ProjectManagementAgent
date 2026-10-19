@@ -1,0 +1,57 @@
+id: thread-t08-m4-done
+title: 'Receipt bundle (message m4): the promise is kept'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-05'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the hotel receipt
+    owners:
+    - person: PER-108
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-02'
+    due_words: by close of business
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Receipt bundle
+
+  Here's the hotel receipt as well. That should be the full set.
+
+  --
+  Bram
+
+  Bram <bram@example.com> wrote:
+  > The train receipt is attached; the hotel is still looking for theirs.
+  >
+  > --
+  > Bram
+  >
+  > Avery <avery.lane@example.com> wrote:
+  > > Please include both so I can finish the expenses.
+  > >
+  > > --
+  > > Avery
+  > >
+  > > Bram <bram@example.com> wrote:
+  > > > I'll send the train and hotel receipts by close of business.
+  > > >
+  > > > --
+  > > > Bram
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: Here's the hotel receipt as well

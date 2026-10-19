@@ -268,12 +268,34 @@ def test_old_backups_are_pruned(env, tmp_path):
 # ---- evaluation ------------------------------------------------------------------------------------------------------
 
 
+#: The cases run in this many shares per workspace, so a parallel run spreads them.
+SHARES = 6
+
+
+def _share(template, n: int) -> list[str]:
+    ids = [c["id"] for c in [*load_cases(template), *load_pack_cases(template)]]
+    return ids[n::SHARES]
+
+
 @pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=lambda p: p.name)
-def test_every_case_passes_with_its_ideal_answer(template):
-    report = evaluate(template, stub=True, runs=1, env={})
+@pytest.mark.parametrize("n", range(SHARES))
+def test_every_case_passes_with_its_ideal_answer(template, n):
+    only = _share(template, n)
+    if not only:
+        return
+    report = evaluate(template, stub=True, runs=1, env={}, only=only)
     failing = {r.case: r.missing + r.forbidden + r.extra + [r.error or ""] for r in report.results if not r.passed}
     assert failing == {}
-    assert len(report.cases()) == len(load_cases(template)) + len(load_pack_cases(template)) >= 10
+    assert sorted(report.cases()) == sorted(only)
+
+
+@pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=lambda p: p.name)
+def test_the_shares_cover_every_case_once(template):
+    shared = [i for n in range(SHARES) for i in _share(template, n)]
+    assert (
+        sorted(shared) == sorted({*shared})
+        and len(shared) == len(load_cases(template)) + len(load_pack_cases(template)) >= 10
+    )
 
 
 def test_a_wrong_answer_fails_the_case(monkeypatch):

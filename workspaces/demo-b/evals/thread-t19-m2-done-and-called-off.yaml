@@ -1,0 +1,64 @@
+id: thread-t19-m2-done-and-called-off
+title: 'Friendship and a library book (message m2): the promise is kept; the promise is called off'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-03'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Return Ansel's book
+    owners:
+    - person: PER-1
+    promised_to: [PER-106]
+    basis: said
+    due: '2026-11-02'
+    due_words: tonight
+- kind: action
+  id: ACT-102
+  fields:
+    text: Call Ansel
+    owners:
+    - person: PER-1
+    promised_to: [PER-106]
+    basis: said
+    due: '2026-11-03'
+    due_words: tomorrow evening
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Friendship and a library book
+
+  The book is back on my shelf, thanks. I can't talk tomorrow; let's drop the call.
+
+  --
+  Ansel
+
+  Avery <avery.lane@example.com> wrote:
+  > I'll return your book tonight and call you tomorrow evening.
+  >
+  > --
+  > Avery
+expect:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-102
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.close
+  id: ACT-102
+- op: action.add
+stub_answer:
+  summary: The promise is kept; the promise is called off.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The book is back on my shelf
+  - op: action.drop
+    id: ACT-102
+    reason: Ansel can't talk tomorrow and the call was dropped
+    evidence:
+      quote: let's drop the call

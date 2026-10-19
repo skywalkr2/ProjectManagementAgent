@@ -1,0 +1,14 @@
+id: promise-083-planned-call-edda
+title: 'Not a promise: past intention without a commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I planned to call Edda yesterday, but never agreed to do so.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: past intention without a commitment.'
+  ops: []

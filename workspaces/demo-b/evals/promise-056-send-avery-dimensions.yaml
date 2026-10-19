@@ -1,0 +1,31 @@
+id: promise-056-send-avery-dimensions
+title: 'A promise made to the person: Send Avery the dimensions if the site is accessible'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send the dimensions tomorrow if the site is accessible.
+expect:
+- op: action.add
+  owners: [PER-107]
+  promised_to: [PER-1]
+  text_has: [site]
+  due_words: tomorrow
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Zella Brook promises: send Avery the dimensions if the site is accessible.'
+  ops:
+  - op: action.add
+    text: Send Avery the dimensions if the site is accessible
+    owners: [Zella Brook]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Zella Brook
+    due_words: tomorrow
+    evidence:
+      quote: I'll send the dimensions tomorrow if the site is accessible.

@@ -1,0 +1,46 @@
+id: thread-t03-m2-called-off
+title: 'Copper Finch launch flyer (message m2): the promise is called off'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-03'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Finish the Copper Finch launch flyer for Nessa
+    owners:
+    - person: PER-1
+    promised_to: [PER-103]
+    basis: said
+    due: '2026-11-20'
+    due_words: by November 20, 2026
+pasted: |-
+  From: Nessa Ford <nessa@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Copper Finch launch flyer
+
+  We've called off the launch. Please cancel the flyer; we don't need it.
+
+  --
+  Nessa
+
+  Avery <avery.lane@example.com> wrote:
+  > I'll finish the Copper Finch launch flyer by November 20, 2026.
+  >
+  > --
+  > Avery
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is called off.
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: Nessa called off the launch and no longer needs the flyer
+    evidence:
+      quote: Please cancel the flyer; we don't need it

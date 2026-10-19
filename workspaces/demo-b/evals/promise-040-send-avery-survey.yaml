@@ -1,0 +1,30 @@
+id: promise-040-send-avery-survey
+title: 'A promise made to the person: Send Avery the survey results'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send the survey results to you by November 12, 2026.
+expect:
+- op: action.add
+  owners: [PER-105]
+  promised_to: [PER-1]
+  due_words: by November 12, 2026
+  due: '2026-11-12'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Liora Marsh promises: send Avery the survey results.'
+  ops:
+  - op: action.add
+    text: Send Avery the survey results
+    owners: [Liora Marsh]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Liora Marsh
+    due_words: by November 12, 2026
+    evidence:
+      quote: I'll send the survey results to you by November 12, 2026.

@@ -1,0 +1,61 @@
+id: thread-t06-m3-done
+title: 'Two deliveries for Paper Orchard (message m3): the promise is kept'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Pella the outline
+    owners:
+    - person: PER-1
+    promised_to: [PER-110]
+    basis: said
+    due: '2026-11-06'
+    due_words: Friday
+- kind: action
+  id: ACT-102
+  fields:
+    text: Send Pella the invoice
+    owners:
+    - person: PER-1
+    promised_to: [PER-110]
+    basis: said
+    due: '2026-11-09'
+    due_words: Monday
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Pella Dunn <pella@example.com>
+  Subject: Two deliveries for Paper Orchard
+
+  The outline is attached. The invoice will follow on Monday as promised.
+
+  --
+  Avery
+
+  Pella <pella@example.com> wrote:
+  > That works. Please keep the invoice separate.
+  >
+  > --
+  > Pella
+  >
+  > Avery <avery.lane@example.com> wrote:
+  > > I'll send the outline Friday and the invoice Monday.
+  > >
+  > > --
+  > > Avery
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The outline is attached

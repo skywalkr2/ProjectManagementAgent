@@ -1,0 +1,30 @@
+id: promise-061-take-look-avery
+title: 'A promise made to the person: Take a look at it for Avery, with no fix promised'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Edda Moss <edda@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll take a look tonight, though I can't promise a fix.
+expect:
+- op: action.add
+  owners: [PER-112]
+  promised_to: [PER-1]
+  due_words: tonight
+  due: '2026-11-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Edda Moss promises: take a look at it for Avery, with no fix promised.'
+  ops:
+  - op: action.add
+    text: Take a look at it for Avery, with no fix promised
+    owners: [Edda Moss]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Edda Moss
+    due_words: tonight
+    evidence:
+      quote: I'll take a look tonight, though I can't promise a fix.

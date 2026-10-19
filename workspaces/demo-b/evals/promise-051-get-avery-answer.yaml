@@ -1,0 +1,27 @@
+id: promise-051-get-avery-answer
+title: 'A promise made to the person: Get Avery an answer'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll get you an answer early next week.
+expect:
+- op: action.add
+  owners: [PER-102]
+  promised_to: [PER-1]
+  due_words: early next week
+stub_answer:
+  summary: 'Tavish Reeve promises: get Avery an answer.'
+  ops:
+  - op: action.add
+    text: Get Avery an answer
+    owners: [Tavish Reeve]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Tavish Reeve
+    due_words: early next week
+    evidence:
+      quote: I'll get you an answer early next week.

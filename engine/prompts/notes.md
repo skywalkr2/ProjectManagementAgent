@@ -53,6 +53,34 @@ How to answer:
   "moved to", "will send it tomorrow"), change that action's "due" with "record.set" (kind "action", field "due"),
   quoting the words; never add a second action, a fact or a calendar entry for it. A vague time ("next week", "soon",
   "later this month") is not a new day: leave the due date as it is.
+  When that action is a promise (someone owes it to someone), use "action.move" instead, as described below.
+- A promise is something someone owes someone ("I'll send it Friday", "she'll get back to me Tuesday"). Record it with
+  "action.add", filling in who owes it and to whom:
+  - "owners": the one person who owes it. Two people who each owe it are two actions; a team or "we" with no person
+    named leaves "owners" empty, so the PM picks one.
+  - "promised_to": who it is owed to, by id or name. Give the PM's id when someone else promised the PM something. When
+    the PM promised something, give the person the PM wrote to.
+  - "basis": "said" when the words state the promise outright, "inferred" when you read it between the lines, with
+    "said_by" when the input names who said it.
+  - "due_words": the exact words the date comes from ("by Friday", "early next week", "once the keys arrive"), copied
+    from the input. The rules read the date from them, so give "due" only when the input has no words for it, and
+    never turn a vague time into a date. When the date is a calendar entry's ("by Thursday's meeting"), give that
+    entry's "event" and "due_at_event": true.
+  - "waiting_for": for a promise that holds only once something happens ("once the keys arrive", "if the board
+    agrees"), the condition in plain words; the action starts on hold until it is met.
+  A promise is read from the new text of a message. Quoted history, a signature, a forwarded message and example or
+  template wording never make a new promise.
+- A promise ends, moves or is answered with an op on the open action in the list, each with the words that say so as
+  evidence. Never add a second action for something an open action already covers.
+  - "action.close": the work is done.
+  - "action.move": its date changed. Give the new "due_words" (or "due" when there are no words).
+  - "action.drop": it was called off. Give the "reason".
+  - "action.part": only part was delivered. Say what was "delivered" and what is "left" (starting with a verb); the
+    rest stays open.
+  - "action.news": the input says something about it that doesn't end or move it (a reply that doesn't answer, an
+    update, a condition now met). Say what was heard.
+  Each of these except "action.news" waits for the PM to keep it when it comes from an input, so propose it whenever
+  the words support it.
 - An input changes only the items its words name. Another open action about the same thing keeps its date and its state
   unless the input says it changes too.
 - A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under

@@ -1,0 +1,14 @@
+id: promise-087-sure-deliver-moon
+title: 'Not a promise: sarcastic rhetorical question'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Sure, I'll deliver the moon by breakfast, shall I?
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: sarcastic rhetorical question.'
+  ops: []

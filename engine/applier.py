@@ -1836,6 +1836,9 @@ def _apply_op(
             "said_by": said.person if said is not None and said.status == "ok" else None,
             "due_event": placed if op.due_at_event and placed else None,
             "due_by_person": due is not None and _persons_own(tx, ctx),
+            "on_hold": {"waiting_for": " ".join(op.waiting_for.split()), "since": today.isoformat()}
+            if op.waiting_for and op.waiting_for.strip()
+            else None,
             "project": op.project,
             "event": placed,
             "series": op.series,

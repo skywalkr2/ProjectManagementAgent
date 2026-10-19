@@ -1,0 +1,30 @@
+id: promise-009-send-invoice-bram
+title: 'The person''s own promise: Send the invoice to Bram'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Bram Foley <bram@example.com>
+
+  I'll send the invoice to Bram on November 19, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-108]
+  due_words: November 19, 2026
+  due: '2026-11-19'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: send the invoice to Bram.'
+  ops:
+  - op: action.add
+    text: Send the invoice to Bram
+    owners: [Avery Lane]
+    promised_to: [Bram Foley]
+    basis: said
+    said_by: Avery Lane
+    due_words: November 19, 2026
+    evidence:
+      quote: I'll send the invoice to Bram on November 19, 2026.

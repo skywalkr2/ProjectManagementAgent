@@ -1,0 +1,30 @@
+id: promise-041-return-averys-camera
+title: 'A promise made to the person: Return Avery''s camera'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll return your camera by November 13, 2026, Avery.
+expect:
+- op: action.add
+  owners: [PER-106]
+  promised_to: [PER-1]
+  due_words: by November 13, 2026
+  due: '2026-11-13'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Ansel Wick promises: return Avery''s camera.'
+  ops:
+  - op: action.add
+    text: Return Avery's camera
+    owners: [Ansel Wick]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Ansel Wick
+    due_words: by November 13, 2026
+    evidence:
+      quote: I'll return your camera by November 13, 2026, Avery.

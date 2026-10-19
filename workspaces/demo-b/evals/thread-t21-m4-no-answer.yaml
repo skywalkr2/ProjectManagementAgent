@@ -1,0 +1,60 @@
+id: thread-t21-m4-no-answer
+title: 'The quote and its missing detail (message m4): the reply doesn''t answer'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-05'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the warranty terms
+    owners:
+    - person: PER-108
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-09'
+    due_words: Monday
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: The quote and its missing detail
+
+  We use excellent materials.
+
+  --
+  Bram
+
+  Avery <avery.lane@example.com> wrote:
+  > Thanks for the quote. Please include the warranty terms when you can.
+  >
+  > --
+  > Avery
+  >
+  > Bram <bram@example.com> wrote:
+  > > Here's the quote; I'll send the warranty terms Monday.
+  > >
+  > > --
+  > > Bram
+  > >
+  > > Bram <bram@example.com> wrote:
+  > > > I'll send the quote and warranty terms within two working days.
+  > > >
+  > > > --
+  > > > Bram
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The reply doesn't answer.
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: Bram wrote about the materials but did not send the warranty terms
+    evidence:
+      quote: We use excellent materials

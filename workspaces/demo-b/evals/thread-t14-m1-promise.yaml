@@ -1,0 +1,34 @@
+id: thread-t14-m1-promise
+title: 'An old promise quoted twice (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Mira Hale <mira@example.com>
+  Subject: An old promise quoted twice
+
+  I'll send the risk summary by Wednesday.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-101]
+  due_words: by Wednesday
+  due: '2026-11-04'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Mira the risk summary
+    owners: [Avery Lane]
+    promised_to: [Mira Hale]
+    basis: said
+    said_by: Avery Lane
+    due_words: by Wednesday
+    evidence:
+      quote: I'll send the risk summary by Wednesday

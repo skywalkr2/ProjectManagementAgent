@@ -1,0 +1,28 @@
+id: promise-035-send-ansel-spreadsheet
+title: 'The person''s own promise: Send Ansel the spreadsheet'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Ansel Wick <ansel@example.com>
+
+  Fine, Ansel, I'll actually send the spreadsheet by five; no more jokes.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-106]
+  due_words: by five
+  due: null
+stub_answer:
+  summary: 'Avery promises: send Ansel the spreadsheet.'
+  ops:
+  - op: action.add
+    text: Send Ansel the spreadsheet
+    owners: [Avery Lane]
+    promised_to: [Ansel Wick]
+    basis: said
+    said_by: Avery Lane
+    due_words: by five
+    evidence:
+      quote: Fine, Ansel, I'll actually send the spreadsheet by five; no more jokes.

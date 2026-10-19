@@ -1,0 +1,59 @@
+id: thread-t13-m3-part
+title: 'Inline answers on the handover (message m3): part of it arrives'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Confirm the handover date and send Avery the checklist
+    owners:
+    - person: PER-114
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-06'
+    due_words: by Friday
+pasted: |-
+  From: Soren Lund <soren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Inline answers on the handover
+
+  > Please confirm that first.
+  The handover is November 24, 2026.
+  > I still need the checklist too.
+  The checklist isn't finished.
+
+  --
+  Soren
+
+  Avery <avery.lane@example.com> wrote:
+  > > I'll confirm the handover date
+  > Please confirm that first.
+  > > and send the checklist by Friday.
+  > I still need the checklist too.
+  >
+  > --
+  > Avery
+  >
+  > Soren <soren@example.com> wrote:
+  > > I'll confirm the handover date and send the checklist by Friday.
+  > >
+  > > --
+  > > Soren
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: Part of it arrives.
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: The handover date
+    left: Send Avery the handover checklist
+    evidence:
+      quote: The checklist isn't finished

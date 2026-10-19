@@ -1,0 +1,51 @@
+id: promise-pair-10-suggestion
+title: A suggestion nobody accepted is not a promise
+skills: [use-lesson, owners]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    We should send the client a summary next week.
+  wrong:
+    summary: Avery promised to send a summary next week.
+    ops:
+    - op: action.add
+      text: Send the client a summary
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: next week
+      evidence:
+        quote: We should send the client a summary next week
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: I'm suggesting something we might do. Nobody has taken it on.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [suggest|accept|owner]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    We ought to organize a review before Friday.
+  forbid:
+  - op: action.add
+    text_has: [review]
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Suggestions do not establish an owner or commitment without acceptance.
+    topic: suggestion
+    ops:
+    - op: lesson.add
+      text: A suggestion ('we should', 'we ought to') sets no owner and no commitment until someone accepts it.
+      guard: Do not make an action from a suggestion; wait until someone takes it on.
+      evidence:
+        quote: I'm suggesting something we might do
+  later:
+    summary: A suggestion to organize a review; nobody has taken it on.
+    ops: []

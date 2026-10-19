@@ -1,0 +1,35 @@
+id: promise-108-called-off-send-invoice
+title: 'A promise is called off: the invoice obligation is explicitly withdrawn'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send the invoice to Bram
+    owners:
+    - person: PER-1
+    promised_to: [PER-108]
+    basis: said
+    due: '2026-11-19'
+    due_words: November 19, 2026
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Bram Foley <bram@example.com>
+
+  Bram, you've waived the invoice, so I won't send one.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+stub_answer:
+  summary: The promise is called off.
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: Bram waived the invoice, so none will be sent
+    evidence:
+      quote: Bram, you've waived the invoice, so I won't send one.

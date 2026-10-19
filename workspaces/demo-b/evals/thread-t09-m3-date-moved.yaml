@@ -1,0 +1,53 @@
+id: thread-t09-m3-date-moved
+title: 'A flexible review date (message m3): the date moves'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Iona the review
+    owners:
+    - person: PER-1
+    promised_to: [PER-109]
+    basis: said
+    due: '2026-11-11'
+    due_words: early next week
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Iona Crane <iona@example.com>
+  Subject: A flexible review date
+
+  Agreed, I'll send it Thursday at 3pm.
+
+  --
+  Avery
+
+  Iona <iona@example.com> wrote:
+  > Could we make that Thursday at 3pm instead?
+  >
+  > --
+  > Iona
+  >
+  > Avery <avery.lane@example.com> wrote:
+  > > I'll send the review early next week.
+  > >
+  > > --
+  > > Avery
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: Thursday at 3pm
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The date moves.
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: Thursday at 3pm
+    evidence:
+      quote: Agreed, I'll send it Thursday at 3pm

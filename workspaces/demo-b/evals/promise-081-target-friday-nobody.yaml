@@ -1,0 +1,14 @@
+id: promise-081-target-friday-nobody
+title: 'Not a promise: explicitly unaccepted target'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  The target is Friday, but nobody has agreed to it.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: explicitly unaccepted target.'
+  ops: []

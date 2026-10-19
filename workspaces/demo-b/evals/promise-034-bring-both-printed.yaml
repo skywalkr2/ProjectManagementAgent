@@ -1,0 +1,30 @@
+id: promise-034-bring-both-printed
+title: 'The person''s own promise: Bring both printed copies to Liora'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Liora Marsh <liora@example.com>
+
+  Liora, I'll bring both printed copies on Thursday.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-105]
+  due_words: Thursday
+  due: '2026-11-05'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: bring both printed copies to Liora.'
+  ops:
+  - op: action.add
+    text: Bring both printed copies to Liora
+    owners: [Avery Lane]
+    promised_to: [Liora Marsh]
+    basis: said
+    said_by: Avery Lane
+    due_words: Thursday
+    evidence:
+      quote: Liora, I'll bring both printed copies on Thursday.

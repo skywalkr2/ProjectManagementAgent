@@ -1,0 +1,28 @@
+id: promise-033-reply-oren-after
+title: 'The person''s own promise: Reply to Oren after receiving the files'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Oren Pike <oren@example.com>
+
+  I'll reply to Oren within two working days of receiving the files.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-104]
+  due_words: within two working days of receiving the files
+  due: null
+stub_answer:
+  summary: 'Avery promises: reply to Oren after receiving the files.'
+  ops:
+  - op: action.add
+    text: Reply to Oren after receiving the files
+    owners: [Avery Lane]
+    promised_to: [Oren Pike]
+    basis: said
+    said_by: Avery Lane
+    due_words: within two working days of receiving the files
+    evidence:
+      quote: I'll reply to Oren within two working days of receiving the files.

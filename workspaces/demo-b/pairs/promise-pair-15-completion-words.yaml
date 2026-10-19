@@ -1,0 +1,79 @@
+id: promise-pair-15-completion-words
+title: '''As promised, I''ve attached it'' ends the matching promise and starts none'
+skills: [use-lesson, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Send Avery the signed form
+      owners:
+      - person: PER-104
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Send Avery the measurements
+      owners:
+      - person: PER-117
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  pasted: |-
+    From: Oren Pike <oren@example.com>
+
+    As promised, I've attached the signed form.
+  wrong:
+    summary: Created an open promise to send the signed form.
+    ops:
+    - op: action.add
+      text: Send the signed form
+      owners: [Oren Pike]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Oren Pike
+      evidence:
+        quote: As promised, I've attached the signed form
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: He says he's already sent it. Mark the matching promise done, if the attachment is there.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [complet|done|already|delivered]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Tess Calder <tess@example.com>
+
+    Here are the measurements I said I'd send.
+  expect:
+  - op: action.close
+    id: ACT-102
+  forbid:
+  - op: action.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Completion language should resolve an existing commitment, with delivery verified where possible.
+    topic: completion words
+    ops:
+    - op: lesson.add
+      text: Completion language ('as promised, I've attached') closes the matching open promise; it never makes a new one.
+      guard: Close the matching open action with the words that say it was delivered; never add an action for something
+        already sent.
+      evidence:
+        quote: He says he's already sent it
+  later:
+    summary: The measurements promise is delivered.
+    ops:
+    - op: action.close
+      id: ACT-102
+      evidence:
+        quote: Here are the measurements I said I'd send

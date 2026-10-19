@@ -1,0 +1,47 @@
+id: thread-t22-m2-part
+title: 'A corrected file still has work left (message m2): part of it arrives'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-03'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Iona the corrected report
+    owners:
+    - person: PER-1
+    promised_to: [PER-109]
+    basis: said
+    due: '2026-11-06'
+    due_words: by Friday at 5pm
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Iona Crane <iona@example.com>
+  Subject: A corrected file still has work left
+
+  The revised report is attached, but I haven't corrected the totals yet.
+
+  --
+  Avery
+
+  Avery <avery.lane@example.com> wrote:
+  > I'll send the corrected report by Friday at 5pm.
+  >
+  > --
+  > Avery
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: Part of it arrives.
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: The revised report
+    left: Correct the totals and send Iona the completed report
+    evidence:
+      quote: The revised report is attached, but I haven't corrected the totals yet

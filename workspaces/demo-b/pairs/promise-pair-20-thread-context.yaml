@@ -1,0 +1,62 @@
+id: promise-pair-20-thread-context
+title: A promise whose deliverable is only named earlier in the thread is read from that context
+skills: [use-lesson, new-message-only, owners]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Yes, Friday works. I'll have it ready then.
+  wrong:
+    summary: Nothing to record.
+    ops: []
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: We were discussing the revised proposal. 'It' means that proposal.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [context|thread|deliverable|refer]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Tuesday is fine. I'll bring them along.
+
+    > From: mira@example.com
+    > Can you bring the printed seating plans to our meeting?
+  expect:
+  - op: action.add
+    owners: [PER-1]
+    promised_to: [PER-101]
+    text_has: [seating]
+    due_words: Tuesday
+    due: '2026-11-10'
+  forbid:
+  - op: event.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Use clear thread context to resolve a promised deliverable, but ask when the reference is ambiguous.
+    topic: thread context
+    ops:
+    - op: lesson.add
+      text: Use the thread's earlier messages to find what 'it' refers to in a promise; ask who or what when the reference
+        is unclear.
+      guard: Read the quoted context to name the deliverable; when it is ambiguous, ask instead of guessing.
+      evidence:
+        quote: '''It'' means that proposal'
+  later:
+    summary: The person will bring the printed seating plans on Tuesday.
+    ops:
+    - op: action.add
+      text: Bring the printed seating plans to the meeting
+      owners: [Avery Lane]
+      promised_to: [Mira Hale]
+      basis: said
+      said_by: Avery Lane
+      due_words: Tuesday
+      evidence:
+        quote: I'll bring them along

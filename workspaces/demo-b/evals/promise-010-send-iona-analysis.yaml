@@ -1,0 +1,30 @@
+id: promise-010-send-iona-analysis
+title: 'The person''s own promise: Send Iona the analysis'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Iona Crane <iona@example.com>
+
+  I've committed to sending Iona the analysis by November 23, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-109]
+  due_words: by November 23, 2026
+  due: '2026-11-23'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: send Iona the analysis.'
+  ops:
+  - op: action.add
+    text: Send Iona the analysis
+    owners: [Avery Lane]
+    promised_to: [Iona Crane]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 23, 2026
+    evidence:
+      quote: I've committed to sending Iona the analysis by November 23, 2026.

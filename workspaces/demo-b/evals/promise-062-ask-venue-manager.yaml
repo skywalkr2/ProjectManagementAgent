@@ -1,0 +1,27 @@
+id: promise-062-ask-venue-manager
+title: 'A promise made to the person: Ask the venue manager and report back to Avery'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Jori Frame <jori@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll ask the venue manager and report back within two working days.
+expect:
+- op: action.add
+  owners: [PER-113]
+  promised_to: [PER-1]
+  due_words: within two working days
+stub_answer:
+  summary: 'Jori Frame promises: ask the venue manager and report back to Avery.'
+  ops:
+  - op: action.add
+    text: Ask the venue manager and report back to Avery
+    owners: [Jori Frame]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Jori Frame
+    due_words: within two working days
+    evidence:
+      quote: I'll ask the venue manager and report back within two working days.

@@ -1,0 +1,14 @@
+id: promise-078-send-bram-agenda
+title: 'Not a promise: request; Avery has not accepted it'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Can you send Bram the agenda Monday?
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: request; Avery has not accepted it.'
+  ops: []

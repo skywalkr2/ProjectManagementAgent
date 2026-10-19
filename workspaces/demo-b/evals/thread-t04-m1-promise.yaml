@@ -1,0 +1,34 @@
+id: thread-t04-m1-promise
+title: 'Mossgate identity files (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Oren Pike <oren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Mossgate identity files
+
+  I'll send you the logo files and the usage guide by Thursday.
+
+  --
+  Oren
+expect:
+- op: action.add
+  owners: [PER-104]
+  promised_to: [PER-1]
+  due_words: by Thursday
+  due: '2026-11-05'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Avery the logo files and the usage guide
+    owners: [Oren Pike]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Oren Pike
+    due_words: by Thursday
+    evidence:
+      quote: I'll send you the logo files and the usage guide by Thursday

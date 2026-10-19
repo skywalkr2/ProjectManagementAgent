@@ -297,6 +297,16 @@ def test_a_quote_that_addresses_the_person_is_one_the_person_owes(env, words):
     assert result == ["applied"]
 
 
+def test_another_teams_promise_to_the_person_is_one_the_person_waits_on(env):
+    _, cfg, store = env
+    them = outsider(cfg)
+    quote = f"{them['full_name']} will send the revised plan by Oct 20"
+    op = action(cfg, them, quote, PLAIN, promised_to=[pm_of(cfg)])
+    assert not problems(env, op, quote, "other-team-item")
+    _, result = from_input(env, [op], quote)
+    assert result == ["applied"]
+
+
 @pytest.mark.parametrize("words", ["we", "us", "our"])
 def test_the_we_words_are_the_senders_own_team_and_are_not_owed_by_the_person(env, words):
     _, cfg, store = env

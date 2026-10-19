@@ -1,0 +1,14 @@
+id: promise-085-sorens-deadline-monday
+title: 'Not a promise: hypothetical plan without commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Soren's deadline would be Monday if we chose that option.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: hypothetical plan without commitment.'
+  ops: []

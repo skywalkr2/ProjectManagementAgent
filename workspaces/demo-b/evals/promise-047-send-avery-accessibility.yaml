@@ -1,0 +1,30 @@
+id: promise-047-send-avery-accessibility
+title: 'A promise made to the person: Send Avery the accessibility review'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Edda Moss <edda@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send the accessibility review to you by November 23, 2026.
+expect:
+- op: action.add
+  owners: [PER-112]
+  promised_to: [PER-1]
+  due_words: by November 23, 2026
+  due: '2026-11-23'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Edda Moss promises: send Avery the accessibility review.'
+  ops:
+  - op: action.add
+    text: Send Avery the accessibility review
+    owners: [Edda Moss]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Edda Moss
+    due_words: by November 23, 2026
+    evidence:
+      quote: I'll send the accessibility review to you by November 23, 2026.

@@ -1,0 +1,14 @@
+id: promise-086-great-just-clone
+title: 'Not a promise: sarcastic impossibility, not a literal promise'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Great, I'll just clone myself and finish forty reports tonight.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: sarcastic impossibility, not a literal promise.'
+  ops: []

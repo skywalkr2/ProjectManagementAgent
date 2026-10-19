@@ -1,0 +1,23 @@
+id: promise-007-book-studio-november
+title: 'The person''s own promise: Book the studio for November 20, 2026'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I'll book the studio for November 20, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  due: null
+stub_answer:
+  summary: 'Avery promises: book the studio for November 20, 2026.'
+  ops:
+  - op: action.add
+    text: Book the studio for November 20, 2026
+    owners: [Avery Lane]
+    basis: said
+    said_by: Avery Lane
+    evidence:
+      quote: I'll book the studio for November 20, 2026.

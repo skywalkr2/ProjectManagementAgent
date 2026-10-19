@@ -1,0 +1,14 @@
+id: promise-095-please-dont-assume
+title: 'Not a promise: explicitly rejects an inference of commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Please don't assume I'll attend Oren's meeting.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: explicitly rejects an inference of commitment.'
+  ops: []

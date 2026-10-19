@@ -1,0 +1,47 @@
+id: thread-t15-m2-done
+title: 'A promise-like signature (message m2): the promise is kept'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-03'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Tavish the access code
+    owners:
+    - person: PER-1
+    promised_to: [PER-102]
+    basis: said
+    due: '2026-11-02'
+    due_words: by noon
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A promise-like signature
+
+  The access code came through, thanks.
+
+  --
+  Tavish
+
+  Avery <avery.lane@example.com> wrote:
+  > I'll send your access code by noon.
+  >
+  > --
+  > Avery
+  > I promise clear thinking and prompt service.
+  > avery.lane@example.com
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The access code came through

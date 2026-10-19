@@ -1,0 +1,14 @@
+id: promise-077-sounds-good-zella
+title: 'Not a promise: ambiguous acknowledgment does not establish a new commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Sounds good, Zella.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: ambiguous acknowledgment does not establish a new commitment.'
+  ops: []

@@ -1,0 +1,26 @@
+id: promise-053-review-averys-application
+title: 'A promise made to the person: Review Avery''s application'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Oren Pike <oren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  You can count on me to review your application, Avery.
+expect:
+- op: action.add
+  owners: [PER-104]
+  promised_to: [PER-1]
+  due: null
+stub_answer:
+  summary: 'Oren Pike promises: review Avery''s application.'
+  ops:
+  - op: action.add
+    text: Review Avery's application
+    owners: [Oren Pike]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Oren Pike
+    evidence:
+      quote: You can count on me to review your application, Avery.

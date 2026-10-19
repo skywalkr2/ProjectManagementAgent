@@ -1,0 +1,35 @@
+id: promise-118-called-off-bring-averys
+title: 'A promise is called off: reports withdrawal of the return obligation'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Bring Avery's keys back
+    owners:
+    - person: PER-108
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-17'
+    due_words: November 17, 2026
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, you said to keep the spare keys, so the return is cancelled.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+stub_answer:
+  summary: The promise is called off.
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: Avery said to keep the spare keys, so the return is cancelled
+    evidence:
+      quote: Avery, you said to keep the spare keys, so the return is cancelled.

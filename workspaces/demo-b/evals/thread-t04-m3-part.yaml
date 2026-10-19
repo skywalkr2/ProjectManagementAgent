@@ -1,0 +1,53 @@
+id: thread-t04-m3-part
+title: 'Mossgate identity files (message m3): part of it arrives'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the logo files and the usage guide
+    owners:
+    - person: PER-104
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-05'
+    due_words: by Thursday
+pasted: |-
+  From: Oren Pike <oren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Mossgate identity files
+
+  The logo files are attached. The usage guide isn't ready yet.
+
+  --
+  Oren
+
+  Avery <avery.lane@example.com> wrote:
+  > Thanks; I need both before the handover.
+  >
+  > --
+  > Avery
+  >
+  > Oren <oren@example.com> wrote:
+  > > I'll send you the logo files and the usage guide by Thursday.
+  > >
+  > > --
+  > > Oren
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: Part of it arrives.
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: The logo files
+    left: Send Avery the usage guide
+    evidence:
+      quote: The logo files are attached. The usage guide isn't ready yet

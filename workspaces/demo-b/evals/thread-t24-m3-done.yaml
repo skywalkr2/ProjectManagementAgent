@@ -1,0 +1,51 @@
+id: thread-t24-m3-done
+title: 'A sarcastic line and a real date (message m3): the promise is kept'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Varo the first ten pages
+    owners:
+    - person: PER-1
+    promised_to: [PER-111]
+    basis: said
+    due: '2026-11-06'
+    due_words: Friday
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Varo Stone <varo@example.com>
+  Subject: A sarcastic line and a real date
+
+  The first ten pages are attached.
+
+  --
+  Avery
+
+  Varo <varo@example.com> wrote:
+  > Ten pages Friday is enough. No cloning required.
+  >
+  > --
+  > Varo
+  >
+  > Avery <avery.lane@example.com> wrote:
+  > > Sure, I'll clone myself and finish a hundred pages tonight. Seriously, I'll send the first ten pages Friday.
+  > >
+  > > --
+  > > Avery
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The first ten pages are attached

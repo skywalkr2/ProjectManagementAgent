@@ -1,0 +1,14 @@
+id: promise-100-pella-usually-replies
+title: 'Not a promise: habit or expectation, not an individual commitment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Pella usually replies within a day.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: habit or expectation, not an individual commitment.'
+  ops: []

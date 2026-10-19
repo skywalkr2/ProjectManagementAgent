@@ -1,0 +1,56 @@
+id: thread-t18-m2-called-off
+title: 'One delivery moves, another is waived (message m2): the promise is called off'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-03'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Liora the draft
+    owners:
+    - person: PER-1
+    promised_to: [PER-105]
+    basis: said
+    due: '2026-11-03'
+    due_words: Tuesday
+- kind: action
+  id: ACT-102
+  fields:
+    text: Send Liora the printed copies
+    owners:
+    - person: PER-1
+    promised_to: [PER-105]
+    basis: said
+    due: '2026-11-06'
+    due_words: Friday
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: One delivery moves, another is waived
+
+  Please cancel the printed copies. Could the draft come Thursday instead?
+
+  --
+  Liora
+
+  Avery <avery.lane@example.com> wrote:
+  > I'll send the draft Tuesday and the printed copies Friday.
+  >
+  > --
+  > Avery
+expect:
+- op: action.drop
+  id: ACT-102
+forbid:
+- op: action.close
+  id: ACT-102
+- op: action.add
+stub_answer:
+  summary: The promise is called off.
+  ops:
+  - op: action.drop
+    id: ACT-102
+    reason: Liora asked to cancel the printed copies
+    evidence:
+      quote: Please cancel the printed copies

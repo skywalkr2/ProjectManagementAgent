@@ -1,0 +1,14 @@
+id: promise-073-maybe-friday-nessas
+title: 'Not a promise: tentative timing, not a promise'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Maybe Friday for Nessa's draft?
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: tentative timing, not a promise.'
+  ops: []

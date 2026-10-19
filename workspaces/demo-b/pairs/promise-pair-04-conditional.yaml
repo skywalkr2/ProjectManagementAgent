@@ -1,0 +1,64 @@
+id: promise-pair-04-conditional
+title: A promise that depends on a condition keeps its condition
+skills: [use-lesson, owners]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    If Mira approves the budget, I'll book the studio on Thursday.
+  wrong:
+    summary: Avery must book the studio on Thursday.
+    ops:
+    - op: action.add
+      text: Book the studio
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: on Thursday
+      evidence:
+        quote: I'll book the studio on Thursday
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: Only if Mira approves the budget. That hasn't happened yet.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [condition|only if|approv]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    If the samples pass inspection, I'll place the order tomorrow.
+  expect:
+  - op: action.add
+    owners: [PER-1]
+    text_has: [sample|inspect]
+    due_words: tomorrow
+    due: '2026-11-10'
+  forbid:
+  - op: event.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Preserve a promise's condition and do not present it as unconditional.
+    topic: conditional
+    ops:
+    - op: lesson.add
+      text: A promise with an 'if' keeps its condition in the action and is not unconditional.
+      guard: Write the condition into the action's text; never present a conditional promise as a plain to-do.
+      evidence:
+        quote: Only if Mira approves the budget
+  later:
+    summary: A conditional promise to order tomorrow if the samples pass inspection.
+    ops:
+    - op: action.add
+      text: Place the order tomorrow if the samples pass inspection
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: tomorrow
+      evidence:
+        quote: I'll place the order tomorrow

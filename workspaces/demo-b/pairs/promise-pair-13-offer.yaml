@@ -1,0 +1,51 @@
+id: promise-pair-13-offer
+title: An offer of help is not a delivery promise
+skills: [use-lesson, recording-only-what-matters]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+
+    I can send the source files if you need them.
+  wrong:
+    summary: Mira promised to send the source files.
+    ops:
+    - op: action.add
+      text: Send the source files
+      owners: [Mira Hale]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Mira Hale
+      evidence:
+        quote: I can send the source files if you need them
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: She's offering. I haven't asked her to send them.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [offer|accept|ask]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Dev Maran <dev@example.com>
+
+    I could review your draft if that would help.
+  forbid:
+  - op: action.add
+    text_has: [review|draft]
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: An offer of help is not an active delivery commitment until its condition is met or accepted.
+    topic: offer
+    ops:
+    - op: lesson.add
+      text: An offer ('I can', 'I could') is not a delivery commitment until it is accepted.
+      guard: Do not make an action from an offer of help; wait until the person asks for it.
+      evidence:
+        quote: She's offering
+  later:
+    summary: An offer to review the draft; nothing is promised yet.
+    ops: []

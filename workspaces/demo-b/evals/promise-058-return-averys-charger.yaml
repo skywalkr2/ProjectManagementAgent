@@ -1,0 +1,46 @@
+id: promise-058-return-averys-charger
+title: 'A promise made to the person: two promises with their own dates (Return Avery''s charger and Email Avery the notes)'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Iona Crane <iona@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll return your charger tonight and email the notes tomorrow.
+expect:
+- op: action.add
+  owners: [PER-109]
+  promised_to: [PER-1]
+  text_has: [charger]
+  due_words: tonight
+  due: '2026-11-02'
+- op: action.add
+  owners: [PER-109]
+  promised_to: [PER-1]
+  text_has: [notes]
+  due_words: tomorrow
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: Two promises, each with its own date.
+  ops:
+  - op: action.add
+    text: Return Avery's charger
+    owners: [Iona Crane]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Iona Crane
+    due_words: tonight
+    evidence:
+      quote: I'll return your charger tonight and email the notes tomorrow.
+  - op: action.add
+    text: Email Avery the notes
+    owners: [Iona Crane]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Iona Crane
+    due_words: tomorrow
+    evidence:
+      quote: I'll return your charger tonight and email the notes tomorrow.

@@ -1,0 +1,31 @@
+id: promise-019-send-contract-oren
+title: 'The person''s own promise: Send the contract to Oren if the committee approves'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Oren Pike <oren@example.com>
+
+  If the committee approves, I'll send the contract to Oren on Friday.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-104]
+  text_has: [committee]
+  due_words: Friday
+  due: '2026-11-06'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: send the contract to Oren if the committee approves.'
+  ops:
+  - op: action.add
+    text: Send the contract to Oren if the committee approves
+    owners: [Avery Lane]
+    promised_to: [Oren Pike]
+    basis: said
+    said_by: Avery Lane
+    due_words: Friday
+    evidence:
+      quote: If the committee approves, I'll send the contract to Oren on Friday.

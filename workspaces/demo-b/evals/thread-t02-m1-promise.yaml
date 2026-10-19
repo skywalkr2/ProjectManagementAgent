@@ -1,0 +1,34 @@
+id: thread-t02-m1-promise
+title: 'Bracken feedback (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Bracken feedback
+
+  I'll send our Bracken Studio feedback by Tuesday.
+
+  --
+  Tavish
+expect:
+- op: action.add
+  owners: [PER-102]
+  promised_to: [PER-1]
+  due_words: by Tuesday
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Avery the Bracken Studio feedback
+    owners: [Tavish Reeve]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Tavish Reeve
+    due_words: by Tuesday
+    evidence:
+      quote: I'll send our Bracken Studio feedback by Tuesday

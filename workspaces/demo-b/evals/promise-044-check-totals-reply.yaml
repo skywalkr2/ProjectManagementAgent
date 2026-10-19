@@ -1,0 +1,30 @@
+id: promise-044-check-totals-reply
+title: 'A promise made to the person: Check the totals and reply to Avery'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Iona Crane <iona@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll check the totals and reply by November 18, 2026.
+expect:
+- op: action.add
+  owners: [PER-109]
+  promised_to: [PER-1]
+  due_words: by November 18, 2026
+  due: '2026-11-18'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Iona Crane promises: check the totals and reply to Avery.'
+  ops:
+  - op: action.add
+    text: Check the totals and reply to Avery
+    owners: [Iona Crane]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Iona Crane
+    due_words: by November 18, 2026
+    evidence:
+      quote: I'll check the totals and reply by November 18, 2026.

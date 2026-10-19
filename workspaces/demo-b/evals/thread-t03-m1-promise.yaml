@@ -1,0 +1,34 @@
+id: thread-t03-m1-promise
+title: 'Copper Finch launch flyer (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Nessa Ford <nessa@example.com>
+  Subject: Copper Finch launch flyer
+
+  I'll finish the Copper Finch launch flyer by November 20, 2026.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-103]
+  due_words: by November 20, 2026
+  due: '2026-11-20'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Finish the Copper Finch launch flyer for Nessa
+    owners: [Avery Lane]
+    promised_to: [Nessa Ford]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 20, 2026
+    evidence:
+      quote: I'll finish the Copper Finch launch flyer by November 20, 2026

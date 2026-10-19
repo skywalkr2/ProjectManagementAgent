@@ -1,0 +1,33 @@
+id: promise-101-done-send-proposal
+title: 'A promise is kept: reports delivery of the promised proposal'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send the proposal to Mira
+    owners:
+    - person: PER-1
+    promised_to: [PER-101]
+    basis: said
+    due: '2026-11-06'
+    due_words: by November 6, 2026
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Mira Hale <mira@example.com>
+
+  Mira, I've attached the proposal I promised.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: Mira, I've attached the proposal I promised.

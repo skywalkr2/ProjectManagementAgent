@@ -1,0 +1,53 @@
+id: thread-t08-m3-part
+title: 'Receipt bundle (message m3): part of it arrives'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the train and hotel receipts
+    owners:
+    - person: PER-108
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-02'
+    due_words: by close of business
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Receipt bundle
+
+  The train receipt is attached; the hotel is still looking for theirs.
+
+  --
+  Bram
+
+  Avery <avery.lane@example.com> wrote:
+  > Please include both so I can finish the expenses.
+  >
+  > --
+  > Avery
+  >
+  > Bram <bram@example.com> wrote:
+  > > I'll send the train and hotel receipts by close of business.
+  > >
+  > > --
+  > > Bram
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: Part of it arrives.
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: The train receipt
+    left: Send Avery the hotel receipt
+    evidence:
+      quote: The train receipt is attached; the hotel is still looking for theirs

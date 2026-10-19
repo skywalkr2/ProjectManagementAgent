@@ -1,0 +1,122 @@
+# Shared starting people for the promise cases and pairs (design 6.33): fictional, example.com addresses.
+# The person this workspace is for is PER-1; everyone else the cases name is here. All are on the person's team,
+# so these cases test reading promises, not the scope check for items owned by another team.
+- kind: person
+  id: PER-101
+  fields:
+    full_name: Mira Hale
+    team: TEAM-1
+    how_to_reach:
+      email: mira@example.com
+- kind: person
+  id: PER-102
+  fields:
+    full_name: Tavish Reeve
+    team: TEAM-1
+    how_to_reach:
+      email: tavish@example.com
+- kind: person
+  id: PER-103
+  fields:
+    full_name: Nessa Ford
+    team: TEAM-1
+    how_to_reach:
+      email: nessa@example.com
+- kind: person
+  id: PER-104
+  fields:
+    full_name: Oren Pike
+    team: TEAM-1
+    how_to_reach:
+      email: oren@example.com
+- kind: person
+  id: PER-105
+  fields:
+    full_name: Liora Marsh
+    team: TEAM-1
+    how_to_reach:
+      email: liora@example.com
+- kind: person
+  id: PER-106
+  fields:
+    full_name: Ansel Wick
+    team: TEAM-1
+    how_to_reach:
+      email: ansel@example.com
+- kind: person
+  id: PER-107
+  fields:
+    full_name: Zella Brook
+    team: TEAM-1
+    how_to_reach:
+      email: zella@example.com
+- kind: person
+  id: PER-108
+  fields:
+    full_name: Bram Foley
+    team: TEAM-1
+    how_to_reach:
+      email: bram@example.com
+- kind: person
+  id: PER-109
+  fields:
+    full_name: Iona Crane
+    team: TEAM-1
+    how_to_reach:
+      email: iona@example.com
+- kind: person
+  id: PER-110
+  fields:
+    full_name: Pella Dunn
+    team: TEAM-1
+    how_to_reach:
+      email: pella@example.com
+- kind: person
+  id: PER-111
+  fields:
+    full_name: Varo Stone
+    team: TEAM-1
+    how_to_reach:
+      email: varo@example.com
+- kind: person
+  id: PER-112
+  fields:
+    full_name: Edda Moss
+    team: TEAM-1
+    how_to_reach:
+      email: edda@example.com
+- kind: person
+  id: PER-113
+  fields:
+    full_name: Jori Frame
+    team: TEAM-1
+    how_to_reach:
+      email: jori@example.com
+- kind: person
+  id: PER-114
+  fields:
+    full_name: Soren Lund
+    team: TEAM-1
+    how_to_reach:
+      email: soren@example.com
+- kind: person
+  id: PER-115
+  fields:
+    full_name: Lena Ashby
+    team: TEAM-1
+    how_to_reach:
+      email: lena@example.com
+- kind: person
+  id: PER-116
+  fields:
+    full_name: Dev Maran
+    team: TEAM-1
+    how_to_reach:
+      email: dev@example.com
+- kind: person
+  id: PER-117
+  fields:
+    full_name: Tess Calder
+    team: TEAM-1
+    how_to_reach:
+      email: tess@example.com

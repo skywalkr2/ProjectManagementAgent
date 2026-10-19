@@ -1,0 +1,34 @@
+id: thread-t16-m1-promise
+title: 'A mobile reply is not the answer (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Nessa Ford <nessa@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A mobile reply is not the answer
+
+  I'll confirm the delivery address by Thursday.
+
+  --
+  Nessa
+expect:
+- op: action.add
+  owners: [PER-103]
+  promised_to: [PER-1]
+  due_words: by Thursday
+  due: '2026-11-05'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Confirm the delivery address to Avery
+    owners: [Nessa Ford]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Nessa Ford
+    due_words: by Thursday
+    evidence:
+      quote: I'll confirm the delivery address by Thursday

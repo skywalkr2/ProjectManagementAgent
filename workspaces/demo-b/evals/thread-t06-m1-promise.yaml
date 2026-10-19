@@ -1,0 +1,50 @@
+id: thread-t06-m1-promise
+title: 'Two deliveries for Paper Orchard (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Pella Dunn <pella@example.com>
+  Subject: Two deliveries for Paper Orchard
+
+  I'll send the outline Friday and the invoice Monday.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-110]
+  text_has: [outline]
+  due_words: Friday
+  due: '2026-11-06'
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-110]
+  text_has: [invoice]
+  due_words: Monday
+  due: '2026-11-09'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Pella the outline
+    owners: [Avery Lane]
+    promised_to: [Pella Dunn]
+    basis: said
+    said_by: Avery Lane
+    due_words: Friday
+    evidence:
+      quote: I'll send the outline Friday and the invoice Monday
+  - op: action.add
+    text: Send Pella the invoice
+    owners: [Avery Lane]
+    promised_to: [Pella Dunn]
+    basis: said
+    said_by: Avery Lane
+    due_words: Monday
+    evidence:
+      quote: I'll send the outline Friday and the invoice Monday

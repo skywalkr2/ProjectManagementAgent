@@ -1,0 +1,76 @@
+id: promise-pair-02-quoted-history
+title: A promise quoted under a new message is not counted again
+skills: [use-lesson, new-message-only]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Send the estimate to Mira
+      owners:
+      - person: PER-1
+      promised_to: [PER-101]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Share the draft with Mira
+      owners:
+      - person: PER-1
+      promised_to: [PER-101]
+      basis: said
+      due_words: on Thursday
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Thanks for checking.
+
+    > I'll send the estimate by Friday.
+  wrong:
+    summary: Created a new promise to send the estimate by Friday.
+    ops:
+    - op: action.add
+      text: Send the estimate
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: by Friday
+      evidence:
+        quote: I'll send the estimate by Friday
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: That's my old message underneath. Don't count it again.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [quot|history|duplicate|again]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+
+    Any update?
+
+    On Tuesday, Avery wrote:
+    > I'll share the draft on Thursday.
+  forbid:
+  - op: action.add
+    text_has: [draft|share]
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Quoted history can identify an existing promise but must not create a duplicate.
+    topic: quoted history
+    ops:
+    - op: lesson.add
+      text: Quoted history can identify an existing promise but never creates a second one.
+      guard: Make an action only from the new text of a message; match quoted words to the open action they repeat.
+      evidence:
+        quote: That's my old message underneath
+  later:
+    summary: Mira asks for an update; the quoted draft promise is already open.
+    ops: []

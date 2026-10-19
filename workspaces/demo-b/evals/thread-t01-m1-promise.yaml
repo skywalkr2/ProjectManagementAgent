@@ -1,0 +1,34 @@
+id: thread-t01-m1-promise
+title: 'Alderline proposal (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Mira Hale <mira@example.com>
+  Subject: Alderline proposal
+
+  Mira, I'll send the Alderline proposal by Friday at noon.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-101]
+  due_words: by Friday at noon
+  due: '2026-11-06'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Mira the Alderline proposal
+    owners: [Avery Lane]
+    promised_to: [Mira Hale]
+    basis: said
+    said_by: Avery Lane
+    due_words: by Friday at noon
+    evidence:
+      quote: I'll send the Alderline proposal by Friday at noon

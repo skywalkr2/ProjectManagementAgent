@@ -283,6 +283,12 @@ class ActionAddOp(OpModel):
         description="For a promise: said, when someone said it outright; inferred, when you read it between the lines.",
     )
     said_by: str | None = Field(None, description="Who said it, by name or id, when the input names them.")
+    waiting_for: str | None = Field(
+        None,
+        max_length=200,
+        description="For a promise that holds only once something happens ('once the keys arrive', 'if the board "
+        "agrees'): the condition, in plain words. The action starts on hold until it is met.",
+    )
     due_at_event: bool = Field(
         False,
         description="The date is the calendar entry's in `event` ('by Thursday's meeting', 'after the review'): it is "

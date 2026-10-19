@@ -1,0 +1,30 @@
+id: promise-004-send-oren-logo
+title: 'The person''s own promise: Send Oren the logo files and the usage guide'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Oren Pike <oren@example.com>
+
+  I'll send Oren the logo files and usage guide by November 13, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-104]
+  due_words: by November 13, 2026
+  due: '2026-11-13'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: send Oren the logo files and the usage guide.'
+  ops:
+  - op: action.add
+    text: Send Oren the logo files and the usage guide
+    owners: [Avery Lane]
+    promised_to: [Oren Pike]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 13, 2026
+    evidence:
+      quote: I'll send Oren the logo files and usage guide by November 13, 2026.

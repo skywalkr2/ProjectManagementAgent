@@ -1,0 +1,29 @@
+id: promise-021-send-ansel-estimate
+title: 'The person''s own promise: Send Ansel the estimate once the measurements arrive'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Ansel Wick <ansel@example.com>
+
+  I'll send Ansel the estimate when the measurements arrive.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-106]
+  text_has: [measurement]
+  due_words: when the measurements arrive
+  due: null
+stub_answer:
+  summary: 'Avery promises: send Ansel the estimate once the measurements arrive.'
+  ops:
+  - op: action.add
+    text: Send Ansel the estimate once the measurements arrive
+    owners: [Avery Lane]
+    promised_to: [Ansel Wick]
+    basis: said
+    said_by: Avery Lane
+    due_words: when the measurements arrive
+    evidence:
+      quote: I'll send Ansel the estimate when the measurements arrive.

@@ -1,0 +1,52 @@
+id: thread-t11-m3-called-off
+title: 'A condition that never happens (message m3): the promise is called off'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Take the measurements for Avery if the venue approves access
+    owners:
+    - person: PER-112
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-03'
+    due_words: tomorrow morning
+pasted: |-
+  From: Edda Moss <edda@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A condition that never happens
+
+  They refused access, and we've dropped the measurement visit entirely.
+
+  --
+  Edda
+
+  Avery <avery.lane@example.com> wrote:
+  > Any news from the venue?
+  >
+  > --
+  > Avery
+  >
+  > Edda <edda@example.com> wrote:
+  > > If the venue approves access, I'll take the measurements tomorrow morning.
+  > >
+  > > --
+  > > Edda
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is called off.
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: The venue refused access and the measurement visit was dropped
+    evidence:
+      quote: They refused access, and we've dropped the measurement visit entirely

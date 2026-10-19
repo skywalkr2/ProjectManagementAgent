@@ -1880,6 +1880,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `promised_to` | list[str] | `[]` | For a promise: the people it was promised to, each by name or id (the person this app is for, when someone else promised them something). Empty for a plain to-do. |
 | `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said, when someone said it outright; inferred, when you read it between the lines. |
 | `said_by` | str \| None | `None` | Who said it, by name or id, when the input names them. |
+| `waiting_for` | str \| None | `None` | For a promise that holds only once something happens ('once the keys arrive', 'if the board agrees'): the condition, in plain words. The action starts on hold until it is met. |
 | `due_at_event` | bool | `False` | The date is the calendar entry's in `event` ('by Thursday's meeting', 'after the review'): it is due on the entry's day and moves when the entry moves. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |

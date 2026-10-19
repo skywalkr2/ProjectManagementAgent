@@ -1,0 +1,37 @@
+id: promise-102-moved-deliver-draft
+title: 'A promise moves: explicitly replaces the earlier deadline'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Deliver the draft to Tavish
+    owners:
+    - person: PER-1
+    promised_to: [PER-102]
+    basis: said
+    due: '2026-11-10'
+    due_words: by November 10, 2026
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Tavish Reeve <tavish@example.com>
+
+  Tavish, the draft will arrive November 12, 2026, instead of November 10.
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: November 12, 2026
+forbid:
+- op: action.add
+- op: action.close
+  id: ACT-101
+stub_answer:
+  summary: The date changed.
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: November 12, 2026
+    evidence:
+      quote: Tavish, the draft will arrive November 12, 2026, instead of November 10.

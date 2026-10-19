@@ -1,0 +1,65 @@
+id: promise-pair-03-we-means-team
+title: A promise made as 'we' keeps no single owner and is held for Pick an owner
+skills: [use-lesson, owners]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    We'll send the proposal on Friday.
+  wrong:
+    summary: Assigned the entire proposal commitment to Avery.
+    ops:
+    - op: action.add
+      text: Send the proposal
+      owners: [Avery Lane]
+      basis: said
+      said_by: Avery Lane
+      due_words: on Friday
+      evidence:
+        quote: We'll send the proposal on Friday
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: By 'we' I mean our project team. Don't make me the sole owner.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [we|collective|team|shared]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    We'll get the revised drawings to you on Monday.
+  expect:
+  - op: action.add
+    owners: []
+    text_has: [drawings]
+    due_words: Monday
+    due: '2026-11-16'
+    status: held
+  forbid:
+  - op: event.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Keep collective ownership when a message says 'we' and names no individual owner.
+    topic: we means team
+    ops:
+    - op: lesson.add
+      text: When a message says 'we' and names no one, the promise is shared and has no individual owner.
+      guard: Leave the owners empty for a 'we' promise so the person is asked to pick one; never assign it to the writer.
+      evidence:
+        quote: By 'we' I mean our project team
+  later:
+    summary: A shared promise to send the revised drawings; nobody is named, so it waits for an owner.
+    ops:
+    - op: action.add
+      text: Send the revised drawings
+      owners: []
+      basis: said
+      said_by: Avery Lane
+      due_words: Monday
+      evidence:
+        quote: We'll get the revised drawings to you on Monday

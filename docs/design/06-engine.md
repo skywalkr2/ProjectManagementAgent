@@ -2735,7 +2735,10 @@ promises both ways, the sent folder offered as a source, the line for a promise 
 **From three weeks of running** (the designer's S1-1 notes, 2026-10-19, `docs/project/designer-s1-1-notes-2026-10-19.md`):
 - **On hold until a trigger** is its own state: `action.hold` stores what it waits for, and a held promise is out of due
   and overdue everywhere. Taking it off hold can carry its new date (`action.unhold` with `due_words`), as one step;
-  read from an input, it waits for the person's Keep like any date change.
+  read from an input, it waits for the person's Keep like any date change. A promise that holds only once something
+  happens ("once the keys arrive") is added on hold from the start (`action.add` with `waiting_for`).
+- **Owed to the person, whatever the team:** a promise made to the person by someone on another team is one they wait
+  on, so the other-team check (6.18) lets it through (`tests/test_scope_slice.py`).
 - **Due at a meeting:** `action.add` with `due_at_event` and its `event` is due on the entry's day (`due_event`) and moves
   when the entry moves (`event.set`, or the person's own edit), as a date-only move with no news.
 - **The chase clock:** a promise owed to the person gets a line only after `steward.chase_undated_days` (14) days with no

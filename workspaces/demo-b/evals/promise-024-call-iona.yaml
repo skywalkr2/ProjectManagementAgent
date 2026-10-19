@@ -1,0 +1,46 @@
+id: promise-024-call-iona
+title: 'The person''s own promise: two promises with their own dates (Call Iona and Deliver Iona''s report)'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Iona Crane <iona@example.com>
+
+  I'll call Iona tomorrow and deliver her report by November 30, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-109]
+  text_has: [call]
+  due_words: tomorrow
+  due: '2026-11-03'
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-109]
+  text_has: [report]
+  due_words: by November 30, 2026
+  due: '2026-11-30'
+forbid:
+- op: event.add
+stub_answer:
+  summary: Two promises, each with its own date.
+  ops:
+  - op: action.add
+    text: Call Iona
+    owners: [Avery Lane]
+    promised_to: [Iona Crane]
+    basis: said
+    said_by: Avery Lane
+    due_words: tomorrow
+    evidence:
+      quote: I'll call Iona tomorrow and deliver her report by November 30, 2026.
+  - op: action.add
+    text: Deliver Iona's report
+    owners: [Avery Lane]
+    promised_to: [Iona Crane]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 30, 2026
+    evidence:
+      quote: I'll call Iona tomorrow and deliver her report by November 30, 2026.

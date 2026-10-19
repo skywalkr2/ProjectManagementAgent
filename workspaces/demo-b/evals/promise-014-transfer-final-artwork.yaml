@@ -1,0 +1,30 @@
+id: promise-014-transfer-final-artwork
+title: 'The person''s own promise: Transfer the final artwork to Jori'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Jori Frame <jori@example.com>
+
+  I'll transfer the final artwork to Jori by November 27, 2026.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-113]
+  due_words: by November 27, 2026
+  due: '2026-11-27'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: transfer the final artwork to Jori.'
+  ops:
+  - op: action.add
+    text: Transfer the final artwork to Jori
+    owners: [Avery Lane]
+    promised_to: [Jori Frame]
+    basis: said
+    said_by: Avery Lane
+    due_words: by November 27, 2026
+    evidence:
+      quote: I'll transfer the final artwork to Jori by November 27, 2026.

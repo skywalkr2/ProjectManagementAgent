@@ -1,0 +1,51 @@
+id: thread-t01-m3-done
+title: 'Alderline proposal (message m3): the promise is kept'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Mira the Alderline proposal
+    owners:
+    - person: PER-1
+    promised_to: [PER-101]
+    basis: said
+    due: '2026-11-06'
+    due_words: by Friday at noon
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Mira Hale <mira@example.com>
+  Subject: Alderline proposal
+
+  The proposal is attached, including the budget section. Thanks for waiting.
+
+  --
+  Avery
+
+  Mira <mira@example.com> wrote:
+  > Perfect; the budget section is the bit we need most.
+  >
+  > --
+  > Mira
+  >
+  > Avery <avery.lane@example.com> wrote:
+  > > Mira, I'll send the Alderline proposal by Friday at noon.
+  > >
+  > > --
+  > > Avery
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The proposal is attached, including the budget section

@@ -1,0 +1,25 @@
+id: promise-091-miras-quoted-message
+title: 'Not a promise: quoted promise from item 36 is not a second promise'
+skills: [new-message-only, recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery our feedback
+    owners:
+    - person: PER-101
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-03'
+    due_words: by Tuesday
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Mira's quoted message says, 'Avery, I'll send our feedback by Tuesday.'
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: quoted promise from item 36 is not a second promise.'
+  ops: []

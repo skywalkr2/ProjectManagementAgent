@@ -1,0 +1,26 @@
+id: promise-063-send-avery-first
+title: 'A promise made to the person: Send Avery the first chapter, without the appendix'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Soren Lund <soren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll send the first chapter; the appendix isn't included.
+expect:
+- op: action.add
+  owners: [PER-114]
+  promised_to: [PER-1]
+  due: null
+stub_answer:
+  summary: 'Soren Lund promises: send Avery the first chapter, without the appendix.'
+  ops:
+  - op: action.add
+    text: Send Avery the first chapter, without the appendix
+    owners: [Soren Lund]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Soren Lund
+    evidence:
+      quote: I'll send the first chapter; the appendix isn't included.

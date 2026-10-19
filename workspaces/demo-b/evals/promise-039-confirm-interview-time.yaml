@@ -1,0 +1,30 @@
+id: promise-039-confirm-interview-time
+title: 'A promise made to the person: Confirm the interview time to Avery'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Oren Pike <oren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll confirm the interview time by November 11, 2026.
+expect:
+- op: action.add
+  owners: [PER-104]
+  promised_to: [PER-1]
+  due_words: by November 11, 2026
+  due: '2026-11-11'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Oren Pike promises: confirm the interview time to Avery.'
+  ops:
+  - op: action.add
+    text: Confirm the interview time to Avery
+    owners: [Oren Pike]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Oren Pike
+    due_words: by November 11, 2026
+    evidence:
+      quote: I'll confirm the interview time by November 11, 2026.

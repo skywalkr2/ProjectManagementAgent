@@ -1,0 +1,34 @@
+id: thread-t08-m1-promise
+title: 'Receipt bundle (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Receipt bundle
+
+  I'll send the train and hotel receipts by close of business.
+
+  --
+  Bram
+expect:
+- op: action.add
+  owners: [PER-108]
+  promised_to: [PER-1]
+  due_words: by close of business
+  due: '2026-11-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Avery the train and hotel receipts
+    owners: [Bram Foley]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Bram Foley
+    due_words: by close of business
+    evidence:
+      quote: I'll send the train and hotel receipts by close of business

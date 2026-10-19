@@ -1,0 +1,29 @@
+id: promise-055-inspect-room-avery
+title: 'A promise made to the person: Inspect the room for Avery once the keys are received'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Once I receive the keys, I'll inspect the room for you.
+expect:
+- op: action.add
+  owners: [PER-106]
+  promised_to: [PER-1]
+  text_has: [key]
+  due_words: Once I receive the keys
+  due: null
+stub_answer:
+  summary: 'Ansel Wick promises: inspect the room for Avery once the keys are received.'
+  ops:
+  - op: action.add
+    text: Inspect the room for Avery once the keys are received
+    owners: [Ansel Wick]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Ansel Wick
+    due_words: Once I receive the keys
+    evidence:
+      quote: Once I receive the keys, I'll inspect the room for you.

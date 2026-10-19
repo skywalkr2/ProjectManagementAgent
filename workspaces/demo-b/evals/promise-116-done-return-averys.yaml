@@ -1,0 +1,33 @@
+id: promise-116-done-return-averys
+title: 'A promise is kept: reports completion of the camera return'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Return Avery's camera
+    owners:
+    - person: PER-106
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-13'
+    due_words: by November 13, 2026
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, your camera is back in its case at your desk.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: Avery, your camera is back in its case at your desk.

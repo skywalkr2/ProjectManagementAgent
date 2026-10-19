@@ -1,0 +1,14 @@
+id: promise-096-cant-promise-liora
+title: 'Not a promise: explicit refusal to commit'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I can't promise Liora an answer this week.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: explicit refusal to commit.'
+  ops: []

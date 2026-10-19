@@ -1,0 +1,16 @@
+id: promise-030-wont-send-mira
+title: 'Not a promise: a promise to hold back gives nothing to do or wait for; the open question is Mira''s approval, if
+  asked'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  I won't send Mira the draft until she approves the outline.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: a promise to hold back gives nothing to do or wait for; the open question is Mira''s approval,
+    if asked.'
+  ops: []

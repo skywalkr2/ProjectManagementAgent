@@ -1,0 +1,37 @@
+id: promise-117-moved-send-avery
+title: 'A promise moves: explicit replacement of receipt delivery date'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the receipts
+    owners:
+    - person: PER-107
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-16'
+    due_words: by November 16, 2026
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, the receipts will come November 19, 2026, not November 16.
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: November 19, 2026
+forbid:
+- op: action.add
+- op: action.close
+  id: ACT-101
+stub_answer:
+  summary: The date changed.
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: November 19, 2026
+    evidence:
+      quote: Avery, the receipts will come November 19, 2026, not November 16.

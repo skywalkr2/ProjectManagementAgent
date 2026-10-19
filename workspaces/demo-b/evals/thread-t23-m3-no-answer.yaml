@@ -1,0 +1,54 @@
+id: thread-t23-m3-no-answer
+title: 'A deadline hidden behind enthusiasm (message m3): the reply doesn''t answer'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Confirm to Avery whether the room is booked
+    owners:
+    - person: PER-110
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-02'
+    due_words: by end of day
+pasted: |-
+  From: Pella Dunn <pella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A deadline hidden behind enthusiasm
+
+  Everyone is really excited about the workshop!
+
+  --
+  Pella
+
+  Avery <avery.lane@example.com> wrote:
+  > Is the room booked? We need a definite yes or no.
+  >
+  > --
+  > Avery
+  >
+  > Pella <pella@example.com> wrote:
+  > > I'll confirm whether the room is booked by end of day.
+  > >
+  > > --
+  > > Pella
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The reply doesn't answer.
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: Pella said everyone is excited but did not say whether the room is booked
+    evidence:
+      quote: Everyone is really excited about the workshop

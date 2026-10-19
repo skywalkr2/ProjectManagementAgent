@@ -1,0 +1,37 @@
+id: promise-119-part-check-totals
+title: 'A promise is partly kept: checking is done; the promised substantive reply remains outstanding'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Check the totals and reply to Avery
+    owners:
+    - person: PER-109
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-18'
+    due_words: by November 18, 2026
+pasted: |-
+  From: Iona Crane <iona@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, I checked the totals, but I haven't sent you the findings yet.
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: Part of the promise arrived.
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: The check of the totals
+    left: Reply to Avery with the findings
+    evidence:
+      quote: Avery, I checked the totals, but I haven't sent you the findings yet.

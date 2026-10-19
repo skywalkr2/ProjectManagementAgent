@@ -1,0 +1,59 @@
+id: thread-t25-m2-promise
+title: 'A forward with a new promise on top (message m2): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-05'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the venue checklist
+    owners:
+    - person: PER-112
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-06'
+    due_words: Friday
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Edda Moss <edda@example.com>
+  Subject: A forward with a new promise on top
+
+  I'll review it Monday once it arrives. Keeping your note below.
+
+  Begin forwarded message:
+  From: Edda <edda@example.com>
+  Sent: Thursday
+  To: Avery <avery.lane@example.com>
+  Subject: Venue checklist
+  I'll send you the venue checklist Friday.
+
+  --
+  Avery
+
+  Edda <edda@example.com> wrote:
+  > I'll send you the venue checklist Friday.
+  >
+  > --
+  > Edda
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-112]
+  text_has: [arriv]
+  due_words: Monday
+  due: '2026-11-09'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Review the venue checklist for Edda once it arrives
+    owners: [Avery Lane]
+    promised_to: [Edda Moss]
+    basis: said
+    said_by: Avery Lane
+    due_words: Monday
+    evidence:
+      quote: I'll review it Monday once it arrives

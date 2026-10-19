@@ -1,0 +1,85 @@
+id: promise-pair-16-partial-delivery
+title: A partial delivery keeps the undelivered part open
+skills: [use-lesson, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Send Avery the three illustrations
+      owners:
+      - person: PER-101
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-09'
+      due_words: by Monday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Send Avery the four reference sheets
+      owners:
+      - person: PER-116
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-09'
+      due_words: by Monday
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+
+    I've attached the first two illustrations. The last one will follow on Tuesday.
+  wrong:
+    summary: Marked the promise to deliver three illustrations complete.
+    ops:
+    - op: action.close
+      id: ACT-101
+      evidence:
+        quote: I've attached the first two illustrations
+  correction:
+    kind: declined  # a held ending: declining takes no words, so the lesson rests on the mail
+    note: Only two arrived. Keep the third open for Tuesday.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [partial|part|remain|left|delivered]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Dev Maran <dev@example.com>
+
+    Three of the four reference sheets are attached; I'll send the fourth tomorrow.
+  expect:
+  - op: action.part
+    id: ACT-102
+  - op: action.move
+    id: ACT-102
+    due_words: tomorrow
+  forbid:
+  - op: action.close
+    id: ACT-102
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Partial delivery resolves only the delivered portion of a promise.
+    topic: partial delivery
+    ops:
+    - op: lesson.add
+      text: A partial delivery resolves only the delivered part of a promise; what is left stays open.
+      guard: Record what arrived and what is left with action.part; never close a promise when part of it is missing.
+      evidence:
+        quote: I've attached the first two illustrations
+  later:
+    summary: Three sheets arrived; the fourth is due tomorrow.
+    ops:
+    - op: action.part
+      id: ACT-102
+      delivered: Three of the four reference sheets
+      left: Send Avery the fourth reference sheet
+      evidence:
+        quote: Three of the four reference sheets are attached
+    - op: action.move
+      id: ACT-102
+      due_words: tomorrow
+      evidence:
+        quote: I'll send the fourth tomorrow

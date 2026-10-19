@@ -1,0 +1,33 @@
+id: promise-111-done-send-avery
+title: 'A promise is kept: reports fulfillment of the feedback promise'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery our feedback
+    owners:
+    - person: PER-101
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-03'
+    due_words: by Tuesday
+pasted: |-
+  From: Mira Hale <mira@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, our feedback is attached, as promised.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: Avery, our feedback is attached, as promised.

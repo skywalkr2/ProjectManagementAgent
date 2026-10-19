@@ -1,0 +1,34 @@
+id: thread-t22-m1-promise
+title: 'A corrected file still has work left (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Iona Crane <iona@example.com>
+  Subject: A corrected file still has work left
+
+  I'll send the corrected report by Friday at 5pm.
+
+  --
+  Avery
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-109]
+  due_words: by Friday at 5pm
+  due: '2026-11-06'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Iona the corrected report
+    owners: [Avery Lane]
+    promised_to: [Iona Crane]
+    basis: said
+    said_by: Avery Lane
+    due_words: by Friday at 5pm
+    evidence:
+      quote: I'll send the corrected report by Friday at 5pm

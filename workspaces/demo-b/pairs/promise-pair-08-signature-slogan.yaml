@@ -1,0 +1,58 @@
+id: promise-pair-08-signature-slogan
+title: A slogan in a signature is not a promise
+skills: [use-lesson, new-message-only]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Lena Ashby <lena@example.com>
+
+    Thanks for the update.
+
+    --
+    Lena
+    We promise delivery beyond expectations.
+  wrong:
+    summary: Lena promised to deliver the project.
+    ops:
+    - op: action.add
+      text: Deliver the project
+      owners: [Lena Ashby]
+      promised_to: [Avery Lane]
+      basis: said
+      said_by: Lena Ashby
+      evidence:
+        quote: We promise delivery beyond expectations
+  correction:
+    kind: sent_back  # the wrong op was applied; send-back keeps the person's own words, which undone does not
+    note: That's her signature slogan. It isn't a project commitment.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [signature|slogan]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Oren Pike <oren@example.com>
+
+    Received, thank you.
+
+    --
+    Oren
+    Your success, delivered every day.
+  forbid:
+  - op: action.add
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Do not extract task promises from signature slogans.
+    topic: signature slogan
+    ops:
+    - op: lesson.add
+      text: Wording in a signature or slogan is not a task promise.
+      guard: Never make an action from a signature block or a company slogan.
+      evidence:
+        quote: That's her signature slogan
+  later:
+    summary: The delivery wording is a signature slogan; nothing to record.
+    ops: []

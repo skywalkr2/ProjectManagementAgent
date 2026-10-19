@@ -253,6 +253,66 @@ def test_forbid_can_name_an_id_and_only_that_id_is_forbidden(monkeypatch):
     assert run_edited(monkeypatch, DEMO_A, case["id"]).passed
 
 
+def promise_case(kind):
+    """The first case whose ideal answer is one op of this kind: a promise (it names who it is owed to and the words its
+    date came from), or an ending."""
+
+    def fits(case):
+        ops = case["stub_answer"]["ops"]
+        promise = kind != "action.add" or bool(ops) and {"promised_to", "due_words"} <= set(ops[0])
+        return [o["op"] for o in ops] == [kind] and promise
+
+    return next(c for c in load_cases(DEMO_B) if fits(c))
+
+
+def test_a_promise_is_matched_on_who_it_is_owed_to_and_the_words_its_date_came_from(monkeypatch):
+    case = promise_case("action.add")
+    (ideal,) = case["stub_answer"]["ops"]
+    assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
+    people = [p["full_name"] for p in fixture_records(DEMO_B, "person")]
+    other = next(name for name in people if name not in ideal["promised_to"])
+    wrong_to = {**case["stub_answer"], "ops": [{**ideal, "promised_to": [other]}]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=wrong_to)
+    assert not result.passed and any("promised_to" in m for m in result.missing)
+    # Other words give the same day, so the date matches; the words themselves are still checked.
+    words = ideal["due_words"]
+    same_day = words[3:] if words.startswith("by ") else f"by {words}"
+    wrong_words = {**case["stub_answer"], "ops": [{**ideal, "due_words": same_day}]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=wrong_words)
+    assert not result.passed and any("due_words" in m for m in result.missing)
+    spaced = {**case["stub_answer"], "ops": [{**ideal, "due_words": "  " + ideal["due_words"].upper() + " "}]}
+    assert run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=spaced).passed
+
+
+@pytest.mark.parametrize("kind", ["action.move", "action.part", "action.news"])
+def test_an_ending_that_waits_for_the_persons_keep_is_matched_on_the_action_and_its_own_fields(monkeypatch, kind):
+    case = promise_case(kind)
+    (ideal,) = case["stub_answer"]["ops"]
+    assert run_edited(monkeypatch, DEMO_B, case["id"]).passed  # held for Keep, yet it counts as made
+    elsewhere = {**case["stub_answer"], "ops": [{**ideal, "id": "ACT-1"}]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=elsewhere)
+    assert not result.passed and result.missing
+    if kind == "action.move":
+        moved = {**case["stub_answer"], "ops": [{**ideal, "due_words": "next Thursday"}]}
+        result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=moved)
+        assert not result.passed and any("due_words" in m for m in result.missing)
+    else:
+        words = "no such words"
+        result = run_edited(monkeypatch, DEMO_B, case["id"], expect=[{**case["expect"][0], "text_has": [words]}])
+        assert not result.passed and any(words in m for m in result.missing)
+        right = ideal["delivered"] if kind == "action.part" else ideal["text"]
+        has = [{**case["expect"][0], "text_has": [right.split()[0]]}]
+        assert run_edited(monkeypatch, DEMO_B, case["id"], expect=has).passed
+
+
+def test_a_forbidden_ending_is_caught_while_it_waits_for_the_persons_keep(monkeypatch):
+    case = promise_case("action.news")
+    target = case["stub_answer"]["ops"][0]["id"]
+    close = {"op": "action.close", "id": target, "evidence": case["stub_answer"]["ops"][0]["evidence"]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, close))
+    assert not result.passed and result.forbidden == [f"op=action.close, id={target}"]
+
+
 def test_a_fact_is_matched_on_the_day_it_is_as_of(monkeypatch):
     case = case_of(DEMO_A, "reported-earlier-day")
     typed_day = str(case["received"])

@@ -1,0 +1,14 @@
+id: promise-080-pella-probably-finish
+title: 'Not a promise: speculation about another person'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Pella could probably finish by Thursday.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: speculation about another person.'
+  ops: []

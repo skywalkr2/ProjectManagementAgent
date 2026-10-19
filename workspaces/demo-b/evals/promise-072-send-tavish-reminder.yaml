@@ -1,0 +1,14 @@
+id: promise-072-send-tavish-reminder
+title: 'Not a promise: suggestion, not an accepted assignment'
+skills: [recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  We should send Tavish a reminder.
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: suggestion, not an accepted assignment.'
+  ops: []

@@ -88,7 +88,9 @@ def _another_teams(op: ActionAddOp, view: Any, people: Any) -> bool:
 
 def _owed(op: ActionAddOp, view: Any, people: Any, language: Any) -> bool:
     """Whether the words an action quotes are a request addressed to the person: a word of `owed_words`, or the
-    person's name or their team's followed by a request word."""
+    person's name or their team's followed by a request word, or a promise made to the person."""
+    if any(people.resolve(name).person == people.pm for name in op.promised_to):
+        return True
     quote = op.evidence.quote
     if any(_has_word(quote, word) for word in language.owed_words if word):
         return True

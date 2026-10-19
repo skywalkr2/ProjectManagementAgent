@@ -1,0 +1,26 @@
+id: promise-027-return-eddas-library
+title: 'The person''s own promise: Return Edda''s library book'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+note: 'Note to self: return Edda''s library book by December 2, 2026.'
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-112]
+  due_words: by December 2, 2026
+  due: '2026-12-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Avery promises: return Edda''s library book.'
+  ops:
+  - op: action.add
+    text: Return Edda's library book
+    owners: [Avery Lane]
+    promised_to: [Edda Moss]
+    basis: said
+    said_by: Avery Lane
+    due_words: by December 2, 2026
+    evidence:
+      quote: 'Note to self: return Edda''s library book by December 2, 2026.'

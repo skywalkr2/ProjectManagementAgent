@@ -1,0 +1,37 @@
+id: promise-112-moved-send-avery
+title: 'A promise moves: replaces the agreement delivery deadline'
+skills: [close-right-item, owners]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Avery the signed agreement
+    owners:
+    - person: PER-102
+    promised_to: [PER-1]
+    basis: said
+    due: '2026-11-06'
+    due_words: by November 6, 2026
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, I'll send the signed agreement on November 9, 2026, instead of November 6.
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: November 9, 2026
+forbid:
+- op: action.add
+- op: action.close
+  id: ACT-101
+stub_answer:
+  summary: The date changed.
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: November 9, 2026
+    evidence:
+      quote: Avery, I'll send the signed agreement on November 9, 2026, instead of November 6.

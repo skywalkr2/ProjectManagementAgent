@@ -1,0 +1,31 @@
+id: promise-054-release-photographs-avery
+title: 'A promise made to the person: Release the photographs to Avery if the board approves'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  If the board approves, I'll release the photographs Friday.
+expect:
+- op: action.add
+  owners: [PER-105]
+  promised_to: [PER-1]
+  text_has: [board]
+  due_words: Friday
+  due: '2026-11-06'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Liora Marsh promises: release the photographs to Avery if the board approves.'
+  ops:
+  - op: action.add
+    text: Release the photographs to Avery if the board approves
+    owners: [Liora Marsh]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Liora Marsh
+    due_words: Friday
+    evidence:
+      quote: If the board approves, I'll release the photographs Friday.

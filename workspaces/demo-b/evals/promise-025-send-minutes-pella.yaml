@@ -1,0 +1,28 @@
+id: promise-025-send-minutes-pella
+title: 'The person''s own promise: Send the minutes to Pella'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Pella Dunn <pella@example.com>
+
+  Pella, I can take responsibility for sending the minutes; I'll do it by lunch.
+expect:
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-110]
+  due_words: by lunch
+  due: null
+stub_answer:
+  summary: 'Avery promises: send the minutes to Pella.'
+  ops:
+  - op: action.add
+    text: Send the minutes to Pella
+    owners: [Avery Lane]
+    promised_to: [Pella Dunn]
+    basis: said
+    said_by: Avery Lane
+    due_words: by lunch
+    evidence:
+      quote: Pella, I can take responsibility for sending the minutes; I'll do it by lunch.

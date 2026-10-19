@@ -1,0 +1,31 @@
+id: thread-t21-m1-promise
+title: 'The quote and its missing detail (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: The quote and its missing detail
+
+  I'll send the quote and warranty terms within two working days.
+
+  --
+  Bram
+expect:
+- op: action.add
+  owners: [PER-108]
+  promised_to: [PER-1]
+  due_words: within two working days
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Send Avery the quote and the warranty terms
+    owners: [Bram Foley]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Bram Foley
+    due_words: within two working days
+    evidence:
+      quote: I'll send the quote and warranty terms within two working days

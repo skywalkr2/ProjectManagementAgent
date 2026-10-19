@@ -1,0 +1,34 @@
+id: thread-t23-m1-promise
+title: 'A deadline hidden behind enthusiasm (message m1): a promise is made'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Pella Dunn <pella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A deadline hidden behind enthusiasm
+
+  I'll confirm whether the room is booked by end of day.
+
+  --
+  Pella
+expect:
+- op: action.add
+  owners: [PER-110]
+  promised_to: [PER-1]
+  due_words: by end of day
+  due: '2026-11-02'
+forbid:
+- op: event.add
+stub_answer:
+  summary: A promise is made.
+  ops:
+  - op: action.add
+    text: Confirm to Avery whether the room is booked
+    owners: [Pella Dunn]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Pella Dunn
+    due_words: by end of day
+    evidence:
+      quote: I'll confirm whether the room is booked by end of day

@@ -1,0 +1,25 @@
+id: promise-089-quoted-earlier-avery
+title: 'Not a promise: quote repeats item 1; do not count it again'
+skills: [new-message-only, recording-only-what-matters]
+received: '2026-11-02'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send the proposal to Mira
+    owners:
+    - person: PER-1
+    promised_to: [PER-101]
+    basis: said
+    due: '2026-11-06'
+    due_words: by November 6, 2026
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+
+  Quoted earlier from Avery: 'Mira, I'll send the proposal by November 6, 2026.'
+forbid:
+- op: action.add
+stub_answer:
+  summary: 'Nothing to record: quote repeats item 1; do not count it again.'
+  ops: []

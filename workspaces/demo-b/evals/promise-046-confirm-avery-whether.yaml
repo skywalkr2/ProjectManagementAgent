@@ -1,0 +1,30 @@
+id: promise-046-confirm-avery-whether
+title: 'A promise made to the person: Confirm to Avery whether the purchase is authorized'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Varo Stone <varo@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  I'll confirm whether the purchase is authorized by November 20, 2026.
+expect:
+- op: action.add
+  owners: [PER-111]
+  promised_to: [PER-1]
+  due_words: by November 20, 2026
+  due: '2026-11-20'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Varo Stone promises: confirm to Avery whether the purchase is authorized.'
+  ops:
+  - op: action.add
+    text: Confirm to Avery whether the purchase is authorized
+    owners: [Varo Stone]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Varo Stone
+    due_words: by November 20, 2026
+    evidence:
+      quote: I'll confirm whether the purchase is authorized by November 20, 2026.

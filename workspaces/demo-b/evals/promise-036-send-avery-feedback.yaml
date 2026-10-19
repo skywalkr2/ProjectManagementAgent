@@ -1,0 +1,30 @@
+id: promise-036-send-avery-feedback
+title: 'A promise made to the person: Send Avery our feedback'
+skills: [owners, dates, evidence]
+received: '2026-11-02'
+given_file: promise-people.yaml
+pasted: |-
+  From: Mira Hale <mira@example.com>
+  To: Avery Lane <avery.lane@example.com>
+
+  Avery, I'll send our feedback by Tuesday.
+expect:
+- op: action.add
+  owners: [PER-101]
+  promised_to: [PER-1]
+  due_words: by Tuesday
+  due: '2026-11-03'
+forbid:
+- op: event.add
+stub_answer:
+  summary: 'Mira Hale promises: send Avery our feedback.'
+  ops:
+  - op: action.add
+    text: Send Avery our feedback
+    owners: [Mira Hale]
+    promised_to: [Avery Lane]
+    basis: said
+    said_by: Mira Hale
+    due_words: by Tuesday
+    evidence:
+      quote: Avery, I'll send our feedback by Tuesday.

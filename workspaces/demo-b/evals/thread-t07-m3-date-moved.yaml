@@ -1,0 +1,53 @@
+id: thread-t07-m3-date-moved
+title: 'Borrowed recorder (message m3): the date moves'
+skills: [owners, dates, close-right-item, new-message-only]
+received: '2026-11-04'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Return Zella's recorder
+    owners:
+    - person: PER-1
+    promised_to: [PER-107]
+    basis: said
+    due: '2026-11-07'
+    due_words: Saturday
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Zella Brook <zella@example.com>
+  Subject: Borrowed recorder
+
+  Yes, I'll return it Tuesday instead.
+
+  --
+  Avery
+
+  Zella <zella@example.com> wrote:
+  > I'm away Saturday. Could you keep it until Tuesday?
+  >
+  > --
+  > Zella
+  >
+  > Avery <avery.lane@example.com> wrote:
+  > > I'll return your recorder Saturday.
+  > >
+  > > --
+  > > Avery
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: Tuesday
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The date moves.
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: Tuesday
+    evidence:
+      quote: Yes, I'll return it Tuesday instead
