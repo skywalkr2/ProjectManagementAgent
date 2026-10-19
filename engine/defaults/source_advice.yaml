@@ -1,0 +1,12 @@
+# What to do about a source that can't be read, one sentence per wording key. A connector names one with
+# `ConnectorError(..., advice_key=...)`. These are the same sentences as in the screen's wording sheet
+# (`web/src/wording/en.json`), kept here for the places the server writes a sentence itself (a question to the person,
+# the result of Check now); a test checks the two stay the same.
+sources.advice.check_credentials: "Check the user name and password in this source's settings (Change, on Sources). If the service wants an app password, make one on its website and type it in the password box there. It is read again on its next turn."
+sources.advice.check_password: "The password was not accepted. Type it again in the password box in this source's settings (Change, on Sources). It is read again on its next turn."
+sources.advice.create_app_password: "This service wants an app password, not your usual one. Make one in your account on its website, then type it in the password box in this source's settings (Change, on Sources). It is read again on its next turn."
+sources.advice.unlock_account: "The service has locked this account. Unlock it on the service's website; it is read again on its next turn."
+sources.advice.check_sign_in_method: "The service has turned off this way of reading mail. Turn it on in your account on its website, or ask whoever runs it. It is read again on its next turn."
+sources.advice.retry_later: "The service is busy. It is tried again on its schedule."
+sources.advice.check_secure_connection: "The service wants a secure connection that this source isn't using. Check the server and port in this source's settings (Change, on Sources)."
+sources.advice.review_server_message: "Read what the service said, then check the user name and password in this source's settings (Change, on Sources). It is read again on its next turn."

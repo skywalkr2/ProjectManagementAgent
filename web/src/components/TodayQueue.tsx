@@ -292,7 +292,12 @@ function QueueRow(props: {
       case "review": {
         const kinds = REVIEW_KINDS.filter((k) => ((line.outcome ?? {})[k] ?? 0) > 0);
         const done = kinds.reduce((n, k) => n + ((line.outcome ?? {})[k] ?? 0), 0);
-        const title = kinds.length === 1 ? tn(`queue.review.${kinds[0]}`, done) : tn("queue.review.things", line.count);
+        const refusedOnly = done === 0 && kinds.length === 0 && ((line.outcome ?? {}).refused ?? 0) > 0 && !((line.outcome ?? {}).held ?? 0);
+        const title = refusedOnly
+          ? tn("queue.review.refused_only", line.count)
+          : kinds.length === 1
+            ? tn(`queue.review.${kinds[0]}`, done)
+            : tn("queue.review.things", line.count);
         const held = (line.outcome ?? {}).held ?? 0;
         return {
           pill: t("queue.pill.review"),

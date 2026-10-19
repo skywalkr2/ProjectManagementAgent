@@ -4,10 +4,10 @@
   display: inline-flex; align-items: center; gap: var(--space-2); flex: 0 1 auto; min-width: 0;
   height: var(--btn-h-sm); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-full); background: transparent;
   color: var(--text-muted); font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm);
-  white-space: nowrap; cursor: pointer;
+  white-space: nowrap; cursor: pointer; overflow: hidden;
 }
 .line:hover { background: var(--surface-sunk); }
-.name { font-weight: var(--weight-semibold); color: var(--text); }
+.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: var(--weight-semibold); color: var(--text); }
 .say { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .line[data-tone="warn"] .name, .line[data-tone="warn"] .say, .line[data-tone="warn"] svg { color: var(--warn); }
 .line[data-tone="bad"] .name, .line[data-tone="bad"] .say, .line[data-tone="bad"] svg { color: var(--danger); }

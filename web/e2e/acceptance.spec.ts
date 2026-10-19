@@ -962,13 +962,13 @@ test.describe.serial("acceptance scenario", () => {
     // Not started yet: Stages offers the first stage, Today stays quiet about it.
     await go(page, "Today");
     await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
-    await expect(page.locator("[data-row]", { hasText: `${item.title} is ready for` })).toHaveCount(0);
+    await expect(page.locator("[data-row]", { hasText: `${item.title} can move to` })).toHaveCount(0);
     await go(page, "Stages");
     await row.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
     await expect(row.locator(".kind")).toHaveText(item.next!.label);
 
     await go(page, "Today");
-    const ready = page.locator("[data-row]", { hasText: `${item.title} is ready for ${following.label}` });
+    const ready = page.locator("[data-row]", { hasText: `${item.title} can move to ${following.label}` });
     await expect(ready).toBeVisible();
     await ready.getByRole("button", { name: `Move to ${following.label}` }).click();
     await expect(ready).toHaveCount(0);

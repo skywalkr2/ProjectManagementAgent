@@ -188,6 +188,11 @@ test("a review card is titled by what it holds", async () => {
   expect(within(row("review")).getByText(/1 waits for you/)).toBeInTheDocument();
 });
 
+test("a review card whose every change was refused says so instead of counting nothing", async () => {
+  show([line("review", { key: "review:REQ-3", count: 2, request: "REQ-3", changeset: "CS-3", outcome: { refused: 2 } })]);
+  expect(await screen.findByText("See why 2 things Helper found couldn't be recorded")).toBeInTheDocument();
+});
+
 test("All looks good acts at once on the whole review card, with Undo", async () => {
   const user = userEvent.setup();
   const { calls } = show([review], {

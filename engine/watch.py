@@ -19,8 +19,11 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic import ValidationError
 
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
@@ -100,7 +103,7 @@ def problem_text(store: Any, source: str) -> str | None:
     if last is None or last.data["outcome"] != "failed":
         return None
     kind = last.data.get("error_kind") or ""
-    return f"{last.data.get('error') or kind}. {WHAT_TO_DO.get(kind, '')}".strip()
+    return _problem(last.data.get("error") or kind, advice_for(kind, last.data.get("error_advice")))
 
 
 def last_read(store: Any, source: str) -> Any | None:
@@ -185,6 +188,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
             outcome,
             error_kind=err.kind if outcome == "failed" else None,
             error=err.detail or None,
+            error_advice=err.advice_key if outcome == "failed" else None,
             **({"retry_at": (now + timedelta(seconds=wait)).isoformat()} if outcome == "throttled" else {}),
         )
         problem = None
@@ -704,10 +708,32 @@ WHAT_TO_DO = {
 }
 
 
+ADVICE_FILE = Path(__file__).parent / "defaults" / "source_advice.yaml"
+
+
+@lru_cache(maxsize=1)
+def _advice() -> dict[str, str]:
+    return yaml.safe_load(ADVICE_FILE.read_text(encoding="utf-8")) or {}
+
+
+def advice_for(kind: str, advice_key: str | None = None) -> str:
+    """What to do about a source that failed: the sentence the connector named by wording key, else the kind's usual
+    one. The screen words the same key from its own sheet."""
+    if advice_key and advice_key in _advice():
+        return _advice()[advice_key]
+    return WHAT_TO_DO.get(kind, "")
+
+
+def _problem(what: str, advice: str) -> str:
+    """What went wrong and what to do, as sentences (no second full stop when the words already end one)."""
+    what = what if what.endswith((".", "!", "?")) else what + "."
+    return f"{what} {advice}".strip()
+
+
 def _maybe_ask(store: Any, cfg: Any, source: Any, err: ConnectorError) -> str:
     """The problem in words; at the configured count of failures in a row, one question to the person."""
     where = source.label or source.id
-    problem = f"{where} can't be read: {err.detail or err.kind}. {WHAT_TO_DO.get(err.kind, '')}".strip()
+    problem = _problem(f"{where} can't be read: {err.detail or err.kind}", advice_for(err.kind, err.advice_key))
     if failures_in_a_row(store, source.id) != cfg.watch.failures_before_asking:
         return problem
     pm = cfg.workspace.user.person

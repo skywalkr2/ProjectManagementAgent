@@ -115,7 +115,9 @@ class ConnectorError(Exception):
     offline (no network here: never counted as a failure), or throttled (the service asked to wait: `retry_after`
     seconds; the source isn't read again before then, and it isn't counted as a failure). When the web client raised
     it from an answer, `status`, `headers` and `body` (its text, at most 20 KB) are the service's own, and `json()`
-    parses the body, so a connector can read the service's error code and raise a better kind itself."""
+    parses the body, so a connector can read the service's error code and raise a better kind itself. `advice_key`
+    names, in the screen's wording sheet, a sentence that says what the person should do about it (it replaces the
+    kind's usual advice); leave it out to use the kind's."""
 
     def __init__(
         self,
@@ -126,8 +128,10 @@ class ConnectorError(Exception):
         status: int | None = None,
         headers: dict[str, str] | None = None,
         body: str | None = None,
+        advice_key: str | None = None,
     ):
         self.kind = kind
+        self.advice_key = advice_key
         self.detail = detail[:500]
         self.retry_after = retry_after
         self.status = status

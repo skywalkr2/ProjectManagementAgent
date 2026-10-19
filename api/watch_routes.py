@@ -87,7 +87,10 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             author_name=author_names().get(source.author or ""),
             items=len(items),
             last=WatchRunView(
-                **{k: last.data.get(k) for k in ("outcome", "error_kind", "error", "new", "changed", "removed")},
+                **{
+                    k: last.data.get(k)
+                    for k in ("outcome", "error_kind", "error", "error_advice", "new", "changed", "removed")
+                },
                 started_at=str(last.data["started_at"]),
                 retry_at=str(last.data["retry_at"]) if last.data.get("retry_at") else None,
             )

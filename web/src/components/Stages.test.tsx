@@ -65,7 +65,7 @@ test("a ready item shows where it is and one action to move on, and moving offer
   renderApp(<Stages />);
   const alpha = await screen.findByRole("listitem", { name: "Alpha item" });
   expect(within(alpha).getByText("Second step")).toBeInTheDocument();
-  expect(within(alpha).getByText("Ready for Third step")).toBeInTheDocument();
+  expect(within(alpha).getByText("Can move to Third step")).toBeInTheDocument();
   expect(within(row("Gamma item")).getByText("Not started")).toBeInTheDocument();
   await user.click(within(alpha).getByRole("button", { name: "Move to Third step" }));
   await waitFor(() =>
@@ -84,7 +84,7 @@ test("a blocked item lists each failed check and has no move button", async () =
   fakeApi({ "GET stages/records": () => [blocked], "GET stages/requests": () => [] });
   renderApp(<Stages />);
   const beta = await screen.findByRole("listitem", { name: "Beta item" });
-  expect(within(beta).getByText("Not ready for Second step yet")).toBeInTheDocument();
+  expect(within(beta).getByText("Can't move to Second step yet")).toBeInTheDocument();
   expect(within(beta).getByText("Before it can move to Second step:")).toBeInTheDocument();
   expect(within(beta).getByText("Add the missing text first.")).toBeInTheDocument();
   expect(within(beta).queryByText("Already fine.")).toBeNull();
@@ -167,7 +167,7 @@ test("Today lists tasks waiting for a go and items ready to move on, never inter
   expect(within(go).getByText("About $0.40")).toBeInTheDocument();
   expect(screen.queryByText(/unnamed-kind/)).toBeNull();
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
-  const moveRow = screen.getByRole("listitem", { name: "Alpha item is ready for Third step" });
+  const moveRow = screen.getByRole("listitem", { name: "Alpha item can move to Third step" });
   expect(screen.queryByText("Nothing needs a look right now.")).toBeNull();
   await user.click(within(go).getByRole("button", { name: "Go" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST requests/R-1/go")?.body).toEqual({ read_version: 2 }));
@@ -220,4 +220,35 @@ test("a plugin's actions for an item are in its menu after the stage items, and 
     target: { kind: "project", id: "A-1" },
     choices: {},
   });
+});
+
+test("a stage whose own name starts with 'Ready for' is never repeated in the lines about it", async () => {
+  const review = { id: "review", label: "Ready for review" };
+  const item = view("A-4", "Delta item", { next: review, stages: [...stages, review] });
+  const waiting = view("A-5", "Echo item", { current: "first", current_label: "First step", next: review, stages: [...stages, review], ready: false, checks: [{ id: "one", passed: false, reason: "Add the missing text first." }] });
+  fakeApi({
+    "GET changes": () => [],
+    "GET stages/records": () => [item, waiting],
+    "GET stages/ready": () => [item],
+    "GET stages/requests": () => [],
+  });
+  renderApp(<WhatChanged />);
+  await screen.findByRole("listitem", { name: "Delta item can move to Ready for review" });
+  expect(document.body.textContent).not.toMatch(/ready for ready for/i);
+});
+
+test("the stage list says it can move to the next stage, not that it is ready for it", async () => {
+  const review = { id: "review", label: "Ready for review" };
+  fakeApi({
+    "GET stages/records": () => [
+      view("A-4", "Delta item", { next: review, stages: [...stages, review] }),
+      view("A-5", "Echo item", { current: "first", current_label: "First step", next: review, stages: [...stages, review], ready: false }),
+    ],
+    "GET stages/requests": () => [],
+  });
+  renderApp(<Stages />);
+  await screen.findByRole("listitem", { name: "Delta item" });
+  expect(screen.getByText("Can move to Ready for review")).toBeInTheDocument();
+  expect(screen.getByText("Can't move to Ready for review yet")).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/ready for ready for/i);
 });

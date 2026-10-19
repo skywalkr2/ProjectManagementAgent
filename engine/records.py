@@ -729,6 +729,9 @@ class WatchRun(Record):
         description="For a failed read: auth, no_access, not_found, outage, or addon (its add-on isn't running).",
     )
     error: str | None = Field(None, description="What went wrong, in the connector's words.")
+    error_advice: str | None = Field(
+        None, description="For a failed read: the wording key of the advice the connector gave, if it gave one."
+    )
     new: int = Field(0, description="Items handed in as new.")
     changed: int = Field(0, description="Items handed in as changed.")
     removed: int = Field(0, description="Items handed in as gone.")

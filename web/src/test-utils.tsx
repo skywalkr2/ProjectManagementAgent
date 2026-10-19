@@ -28,7 +28,8 @@ export function fakeApi(routes: Routes) {
     calls.push({ route, body, headers: init?.headers });
     const handler = routes[route];
     if (!handler) return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
-    const answer = handler(body);
+    // A handler may answer later (a promise), to stand for a slow server.
+    const answer = await handler(body);
     if (answer instanceof Refuse) return new Response(JSON.stringify({ detail: answer.detail }), { status: answer.status, headers: answer.headers });
     return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
   });

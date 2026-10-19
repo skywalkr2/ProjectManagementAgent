@@ -105,12 +105,14 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   const navView: View = view === "settings/ai-compare" ? "settings" : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
-  // been closed or finished, and setup is not done). A person who arrives at another screen is not taken from it.
+  // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened
+  // something on Today (the hand-in box, Ask, help or feedback), is not taken from it, so nothing they typed is lost.
   const autoOpened = useRef(false);
   useEffect(() => {
     if (autoOpened.current || !setup.data) return;
     autoOpened.current = true;
-    if (setup.data.walkthrough?.open && shown.type === "core" && shown.view === "today") setView("setup");
+    const busy = handIn || ask !== null || help || feedback;
+    if (setup.data.walkthrough?.open && shown.type === "core" && shown.view === "today" && !busy) setView("setup");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup.data]);
   const handlers = useMemo(

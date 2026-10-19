@@ -225,6 +225,15 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   - **Python 3.14:** class-local annotations are read the same way on 3.12 to 3.14 (`engine/annotations.py`); the
     plugin guide renders one spelling of each type; CI runs 3.14.
   **Impact:** none to scope; open promise P23 keeps the current-truth docs pass and the retry-and-budget audit.
+- **Also (2026-10-19): what the owner's Today screenshot showed (P19), built.** No screen is wider than the window at
+  390 to 1920 pixels, with long unbroken text breaking wherever outside or server text shows. A connector's error may
+  name a wording key of advice (plugin API 0.3.80), which the mailbox uses for a classified sign-in refusal; the
+  server's words show quoted and redacted to domains. A review line never counts zero, and when every change was
+  refused it counts those ("See why 2 things … couldn't be recorded") so the work never waits without a line. The
+  stage line reads "… can move to {stage}". Found on the way: when the setup state arrived late, the walkthrough opened
+  by itself over a hand-in the person had already started and lost what they typed; it no longer opens over anything
+  the person has open (`Walkthrough.test.tsx`, "it does not take the person from a hand-in they already started").
+  **Impact:** P19 leaves the open promises.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

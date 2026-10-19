@@ -2240,6 +2240,11 @@ class WatchRunView(BaseModel):
     retry_at: str | None = Field(None, description="For a throttled read: not read again before this time.")
     error_kind: str | None = None
     error: ScreenText | None = None
+    error_advice: str | None = Field(
+        None,
+        description="For a failed read: the wording key of what to do about it, when the connector named one. The "
+        "screen words it from its sheet; without one the kind's usual advice applies.",
+    )
     new: int = 0
     changed: int = 0
     removed: int = 0

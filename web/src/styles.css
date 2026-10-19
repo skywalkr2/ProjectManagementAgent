@@ -36,7 +36,7 @@ main p { max-width: var(--measure); }
 .btn.quiet:disabled { background: transparent; border-color: transparent; }
 
 /* Page: the content area fills its width; only running prose is limited, by the measure */
-.panel-section { display: grid; gap: var(--space-3); min-width: 0; }
+.panel-section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); min-width: 0; }
 .heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
 .heading h1 { font-size: var(--text-xl); line-height: var(--lh-xl); }
 .heading h2 { font-size: var(--text-lg); line-height: var(--lh-lg); }
@@ -58,7 +58,7 @@ main p { max-width: var(--measure); }
 .row > .kind { justify-self: start; }
 .row.single { grid-template-columns: minmax(0, 1fr); }
 .row.pair { grid-template-columns: minmax(0, 1fr) auto; }
-.plain-list { list-style: disc; margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); }
+.plain-list { list-style: disc; margin: 0; padding-left: var(--space-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 .own-steps { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); }
 .plain-list .title { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .plain-list .meta { display: block; color: var(--text-muted); font-size: var(--text-sm); }
@@ -78,7 +78,8 @@ main p { max-width: var(--measure); }
 .expander { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%; }
 .expander:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
 .expander:hover strong { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
-.body { border-top: 1px solid var(--border); padding: var(--space-3) var(--space-4) var(--space-4); display: grid; gap: var(--space-3); }
+/* Text from outside breaks anywhere rather than widen the screen: a line's open body and its children share this. */
+.body { border-top: 1px solid var(--border); padding: var(--space-3) var(--space-4) var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); overflow-wrap: anywhere; }
 .your-note { border-left: 3px solid var(--accent); padding-left: var(--space-3); }
 .your-note p { white-space: pre-wrap; }
 .assistant-summary { border-left: 3px solid var(--border); padding-left: var(--space-3); }
@@ -100,7 +101,7 @@ main p { max-width: var(--measure); }
 .origin { font-size: var(--text-sm); }
 .name { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .name p { margin: 0; }
-.problem-note { border-left: 3px solid var(--danger); padding-left: var(--space-3); color: var(--danger); font-size: var(--text-sm); }
+.problem-note { border-left: 3px solid var(--danger); padding-left: var(--space-3); color: var(--danger); font-size: var(--text-sm); min-width: 0; overflow-wrap: anywhere; }
 .full { grid-column: 1 / -1; }
 .because { grid-column: 1 / -1; font-size: var(--text-sm); color: var(--text-muted); }
 .because button { border: 0; background: none; padding: 0; color: var(--accent-text); cursor: pointer; font-size: var(--text-sm); text-decoration: underline; text-underline-offset: 2px; }
@@ -111,7 +112,7 @@ main p { max-width: var(--measure); }
 .source mark, mark { background: var(--mark); color: var(--mark-text); padding: 0 var(--space-1); border-radius: var(--radius-sm); text-decoration: underline; text-decoration-thickness: 2px; }
 .tag { display: inline-block; font-size: var(--text-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); padding: 0 var(--space-2); background: var(--warn-soft); color: var(--warn); margin-left: var(--space-2); }
 .domain { color: var(--text-muted); font-size: var(--text-xs); }
-.safe-text { display: grid; gap: var(--space-1); }
+.safe-text { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
 .safe-text ul { margin: 0; padding-left: var(--space-5); }
 a { color: var(--accent-text); }
 

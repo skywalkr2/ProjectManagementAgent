@@ -135,6 +135,38 @@ def body_text(message: EmailMessage) -> str:
     return text if len(text) <= MAX_TEXT else text[:MAX_TEXT] + "\n(cut: the message is longer)"
 
 
+#: The kind of failure each classified refusal is, for the kinds a connector can raise.
+_REFUSAL_KINDS = {
+    "credentials_refused": "auth",
+    "wrong_password": "auth",
+    "app_password_needed": "auth",
+    "account_locked": "auth",
+    "sign_in_method_off": "no_access",
+    "server_busy": "outage",
+    "secure_connection_failed": "no_access",
+    "unknown": "auth",
+}
+#: The most of the server's own words kept in the problem.
+_SAID_MAX = 300
+
+
+def _refusal(err: imaplib.IMAP4.error, host: str) -> ConnectorError:
+    """The error for a refused sign-in: the cause by rules, the advice as a wording key, and the server's own words
+    only as quoted text (addresses in them already shortened to their domain)."""
+    from engine.connectors.imap_refusal import imap_problem
+
+    problem = imap_problem(err.args[0] if err.args else "", host)
+    said = " ".join(problem.text.split())
+    if len(said) > _SAID_MAX:
+        said = said[:_SAID_MAX].rstrip() + "…"
+    detail = "the mail server refused the sign-in" + (f"; it said \u201c{said}\u201d." if said else ".")
+    return ConnectorError(
+        _REFUSAL_KINDS[problem.kind],  # type: ignore[arg-type]
+        detail,
+        advice_key=f"sources.advice.{problem.advice_key}",
+    )
+
+
 def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: ConnectorContext) -> Poll:
     from engine.secrets import SecretError, resolve_secret
 
@@ -152,7 +184,7 @@ def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: Conn
         try:
             server.login(settings.user, password or "")
         except imaplib.IMAP4.error as err:
-            raise ConnectorError("auth", f"the mail server refused the sign-in: {err}") from None
+            raise _refusal(err, settings.host) from None
         status, data = server.select(_quoted(settings.folder), readonly=True)
         if status != "OK":
             raise ConnectorError("not_found", f"there is no folder {settings.folder}")

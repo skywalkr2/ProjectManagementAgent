@@ -13229,6 +13229,18 @@
             ],
             "title": "Error"
           },
+          "error_advice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a failed read: the wording key of what to do about it, when the connector named one. The screen words it from its sheet; without one the kind's usual advice applies.",
+            "title": "Error Advice"
+          },
           "error_kind": {
             "anyOf": [
               {

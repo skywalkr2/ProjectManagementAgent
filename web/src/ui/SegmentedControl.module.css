@@ -1,5 +1,5 @@
 /* One segmented control for two to four filters: a sunken track, the selected segment raised on the surface. */
-.track { display: inline-flex; gap: var(--space-1); padding: var(--space-1); background: var(--surface-sunk); border-radius: var(--radius-md); }
+.track { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: var(--space-1); padding: var(--space-1); background: var(--surface-sunk); border-radius: var(--radius-md); }
 .segment {
   display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 0 var(--space-3);
   border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer;

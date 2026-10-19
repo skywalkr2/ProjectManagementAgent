@@ -6,6 +6,10 @@
 @media (min-width: 1680px) {
   .today { grid-template-columns: minmax(560px, 1fr) var(--detail-w) var(--rail-w); }
 }
+/* The rail beside the queue is one column that may shrink below its content; a tablet puts it under the queue in two. */
+@media (min-width: 1024px) {
+  .rail { grid-template-columns: minmax(0, 1fr); }
+}
 /* Tablet: the rail goes under the queue, in two columns. Phone: in one. */
 @media (max-width: 1023px) {
   .today { grid-template-columns: minmax(0, 1fr); }
@@ -48,6 +52,7 @@
 .inspectorEmpty { margin: 0; padding: var(--space-6) var(--space-4); color: var(--text-muted); font-size: var(--text-sm); }
 
 /* The rail */
-.rail { display: grid; gap: var(--gutter); align-content: start; min-width: 0; }
+.rail { display: grid; gap: var(--gutter); align-content: start; min-width: 0; overflow-wrap: anywhere; }
+.rail > * { min-width: 0; }
 .railBody { padding: var(--space-2) var(--space-3); display: grid; align-content: start; gap: var(--space-3); }
 .railFoot { border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); }

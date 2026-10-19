@@ -10,6 +10,7 @@ import { useAct } from "../lib/act";
 import { whenText as when } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { projectChoices } from "../lib/project-choices";
+import { failureText } from "../lib/sources";
 import { addonLabel, formValues, nest, prefill, type Draft } from "../lib/settings";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
@@ -51,9 +52,9 @@ export function lastReadText(source: Source, t: T): string {
 }
 
 /** Why a source can't be read, while its last read failed. */
-export function problemOf(source: Source, t: T): string | null {
+export function problemOf(source: Source, t: T, has: (key: string) => boolean): string | null {
   if (source.last?.outcome !== "failed") return null;
-  return source.problem || source.last.error || t("sources.problem_generic");
+  return failureText(source, t, has) || t("sources.problem_generic");
 }
 
 type Form = { type: "add"; plugin: string | null } | { type: "change"; id: string };
@@ -200,7 +201,7 @@ function SourceRow(props: {
   onChange: () => void;
   onChanged: () => void;
 }) {
-  const { t, tn } = useWords();
+  const { t, tn, has } = useWords();
   const act = useAct();
   const client = useQueryClient();
   const save = useSourceSave();
@@ -208,7 +209,7 @@ function SourceRow(props: {
   const { source } = props;
   const titleId = `source-${source.id}`;
   const menuId = `${titleId}-menu`;
-  const problem = problemOf(source, t);
+  const problem = problemOf(source, t, has);
   const lastWhen = source.read_at ? when(source.read_at) : "";
   const lastWords = lastReadText(source, t);
 
@@ -221,7 +222,7 @@ function SourceRow(props: {
         client.setQueryData<Source[]>(["watch"], (all) => all?.map((s) => (s.id === fresh.id ? fresh : s)));
         return fresh;
       },
-      (fresh) => ({ message: t("sources.read_toast", { label: fresh.label, result: problemOf(fresh, t) ?? lastReadText(fresh, t) }) }),
+      (fresh) => ({ message: t("sources.read_toast", { label: fresh.label, result: problemOf(fresh, t, has) ?? lastReadText(fresh, t) }) }),
     );
     setBusy(false);
   };

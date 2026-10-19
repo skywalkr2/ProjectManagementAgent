@@ -224,11 +224,14 @@ test.describe.serial("journeys", () => {
     const handIn = async (text: string, firstLine: string) => {
       await page.getByRole("link", { name: /^Today/ }).first().click();
       const lines = page.locator('[data-queue-line="review"], [data-queue-line="who_is"]');
-      const before = await lines.count();
+      // A new line, not a higher count: a line whose work was all undone leaves Today at the same time.
+      const before = await lines.allInnerTexts();
       await page.getByRole("button", { name: "Hand something in" }).first().click();
       await page.getByLabel("Paste or type it here").fill(text);
       await page.getByRole("button", { name: "Hand in", exact: true }).click();
-      await expect.poll(() => lines.count(), { timeout: 30_000 }).toBeGreaterThan(before);
+      await expect
+        .poll(async () => (await lines.allInnerTexts()).some((line) => !before.includes(line)), { timeout: 30_000 })
+        .toBe(true);
       await page.getByRole("link", { name: /^What changed/ }).first().click();
       const row = page.locator("li.line", { hasText: firstLine });
       await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 30_000 });

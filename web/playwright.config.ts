@@ -1,13 +1,18 @@
-// Browser tests: the acceptance scenario at the root path and under a nested base path, with accessibility checks.
+// Browser tests: the acceptance scenario at the root path and under a nested base path, with accessibility checks, and
+// the layout check (no screen wider than the window).
 // Build the UI first (npm run build); each project starts its own server from the repository root.
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
+// PW_PORT_OFFSET moves every port the tests use by that much, so two runs (two checkouts) can share a computer.
+const offset = Number(process.env.PW_PORT_OFFSET) || 0;
 const servers = [
-  { name: "root", port: 8781, base: "/" },
-  { name: "nested", port: 8782, base: "/admin" },
+  { name: "root", port: 8781 + offset, base: "/" },
+  { name: "nested", port: 8782 + offset, base: "/admin" },
 ];
+// The layout check has a server of its own, because it holds long made-up text that the other scenarios must not see.
+const layout = { port: 8786 + offset };
 
 // The journeys start the app as a person does (a new workspace, then the serve command) beside a process that plays the
 // outside services; each pair works in one state folder that the start-up script clears. Two pairs: one for the
@@ -16,10 +21,10 @@ const servers = [
 // whose workspace has nothing and whose catalog offers the mail add-on. The services answer over HTTPS
 // as well, with a certificate from a throwaway authority that the app trusts through its environment.
 const pair = (port: number, fakePort: number, httpsPort: number) => ({
-  port,
-  fakePort,
-  httpsPort,
-  state: join(tmpdir(), `cockpit-journeys-${port}`),
+  port: port + offset,
+  fakePort: fakePort + offset,
+  httpsPort: httpsPort + offset,
+  state: join(tmpdir(), `cockpit-journeys-${port + offset}`),
 });
 const journeys = pair(8783, 8790, 8791);
 const mail = pair(8784, 8792, 8793);
@@ -73,6 +78,7 @@ export default defineConfig({
         { name: `${s.name}-shell`, testMatch: /shell\.spec\.ts/, use, dependencies: [s.name] },
       ];
     }),
+    { name: "layout", testMatch: /layout\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
     {
       name: "journeys",
       testMatch: /journeys\.spec\.ts/,
@@ -99,6 +105,13 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
     })),
+    {
+      command: `uv run python -m tests.e2e_server --port ${layout.port} --base-path / --layout-stress`,
+      cwd: "..",
+      url: `http://127.0.0.1:${layout.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
     freshServer(journeys, "--add-ons"),
     fakeServices(journeys),
     freshServer(mail, "--mail"),

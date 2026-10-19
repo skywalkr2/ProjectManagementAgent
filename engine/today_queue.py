@@ -491,12 +491,17 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 continue
             word = _OUTCOME.get((o.get("op") or {}).get("op", ""), "other")
             outcome[word] = outcome.get(word, 0) + 1
+        counted = sum(1 for o in cs.get("ops", []) if o.get("status") in ("applied", "held"))
+        if not counted and not outcome.get("refused"):
+            continue  # nothing applied, held or refused, so nothing to look over
+        # When everything was refused, the line counts what was refused, so the work never waits without a line.
+        counted = counted or outcome["refused"]
         lines.append(
             Line(
                 key=f"review:{req.id}",
                 group="review",
                 kind="review",
-                count=sum(1 for o in cs.get("ops", []) if o.get("status") in ("applied", "held")),
+                count=counted,
                 title=title(d, cs),
                 request=req.id,
                 changeset=d["changeset"],
@@ -643,6 +648,8 @@ def _borrow_questions(ws: Any, store: Any, cfg: Any, now: datetime, requests: di
         ref, _ = offered
         provider, _, model = ref.partition("/")
         takes = [r for r in reqs if _fits(cfg, provider, _data_level(store, r.data))]
+        if not takes:
+            continue  # nothing the account could take, so nothing to ask about
         priced: list[float] = []
         # An estimate builds the request's packet, so it is kept with the store for as long as the request, its
         # price and the account stay as they are.

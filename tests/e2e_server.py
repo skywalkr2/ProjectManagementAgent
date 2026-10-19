@@ -32,16 +32,87 @@ from tests.conftest import DEMO_B, fixture_records
 from tests.roundtrip import round_trip
 
 TOKEN = "e2e-token"
+LAYOUT_FIXTURE = Path(__file__).parents[1] / "web" / "e2e" / "fixtures" / "layout-strings.json"
 
 # The browser tests run with the wording check on, so a message that names a file, a key or a command fails there too.
 os.environ["COCKPIT_CHECK_WORDING"] = "1"
+
+
+#: The layout check's sources: a mailbox and a calendar that failed to be read, so Today's right column has problems.
+LAYOUT_SOURCES = [
+    {
+        "id": "layout-mail",
+        "connector": "mailbox",
+        "label": "Work mail",
+        "every_minutes": 43200,
+        "settings": {"host": "mail.example.com", "user": "rowan@example.com", "password": "env:LAYOUT_PASSWORD"},
+    },
+    {
+        "id": "layout-calendar",
+        "connector": "calendar",
+        "label": "Work calendar",
+        "every_minutes": 43200,
+        "settings": {"address": "env:LAYOUT_CALENDAR"},
+    },
+]
+
+
+def layout_strings() -> dict[str, str]:
+    """Long unbroken made-up strings from the shared layout fixture, by the place each is put."""
+    found = {s["id"]: s["text"] for s in json.loads(LAYOUT_FIXTURE.read_text(encoding="utf-8"))}
+    return {
+        "title": found["token-02"],
+        "note": found["web-02"] + " " + found["path-02"],
+        "name": found["email-03"],
+        "summary": found["token-06"],
+        "refusal": found["mail-01"],
+        "question": found["invisible-03"],
+    }
+
+
+def seed_layout(store, cfg, stress: dict[str, str]) -> None:
+    """Records and a failed read that hold the long strings, so every screen has some to lay out."""
+    from datetime import UTC, datetime
+
+    from engine.storage import WriteContext
+
+    pm = cfg.workspace.user.person
+    ctx = WriteContext(actor="pm", trust="trusted", op="e2e.layout")
+    with store.transaction() as tx:
+        tx.create("project", {"name": stress["title"], "summary": stress["summary"]}, ctx)
+        tx.create("person", {"full_name": stress["name"], "role": stress["summary"]}, ctx)
+        if pm:
+            tx.create(
+                "question",
+                {"to": pm, "title": stress["title"], "text": stress["question"], "kind": "decision"},
+                ctx,
+            )
+        now = datetime.now(UTC).isoformat()
+        for source in LAYOUT_SOURCES:
+            tx.create(
+                "watch_run",
+                {
+                    "source": source["id"],
+                    "started_at": now,
+                    "outcome": "failed",
+                    "error_kind": "auth",
+                    "error": stress["refusal"],
+                },
+                WriteContext(actor="watcher", trust="trusted", op="watch.run"),
+            )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--base-path", default="/")
+    parser.add_argument(
+        "--layout-stress",
+        action="store_true",
+        help="hold long unbroken made-up text in titles, a Today row, a failing source and a note",
+    )
     args = parser.parse_args()
+    stress = layout_strings() if args.layout_stress else {}
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
     ws = init_workspace(tmp / "ws", template=DEMO_B, git=False)
@@ -61,6 +132,9 @@ def main() -> None:
             {"id": "complete", "label": "Complete"},
         ],
     }
+    if stress:
+        flags["storage.backups.automatic"] = False
+        flags["watch.sources"] = LAYOUT_SOURCES
     cfg = ws.config(env={}, flags=flags)
     cases = load_cases(DEMO_B)
     project = fixture_records(DEMO_B, "project")[0]["id"]
@@ -73,12 +147,17 @@ def main() -> None:
                 return json.dumps(case["stub_answer"])
         # A note that says it belongs to a project is filed under the fixture's first one; any other is filed loose.
         note = {"op": "note", "text": "Noted.", **({"project": project} if "under the project" in request else {})}
+        if stress:
+            note["text"] = stress["note"]
+            return json.dumps({"summary": "Filed as a note.", "topic": stress["title"], "ops": [note]})
         return json.dumps({"summary": "Filed as a note.", "ops": [note]})
 
     set_responder(responder)
     app = create_app(ws, cfg, TOKEN, start_worker=True)
 
     store = app.state.store
+    if stress:
+        seed_layout(store, cfg, stress)
     folder_targets = list(cfg.storage.backups.targets)
 
     async def case_list(_request):

@@ -10,6 +10,15 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.80 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.
+
+- **Advice with a connector's error:** `ConnectorError(kind, detail, advice_key=...)` may name a wording key that says
+  what the person should do (an app password, a locked account); the source's problem on screen uses it instead of the
+  kind's default advice. The key and its text come from the core's wording sheet.
+- **Types in this guide** are written one way on every supported Python (`X | None`, `list[X]`, bare class names).
+
 ## What 0.3.79 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.

@@ -178,3 +178,41 @@ def test_the_live_stream_names_the_kinds_written(api):
     hand_in(client, base, worker, "production-checkin")
     after, kinds = store.read().changed_kinds(position)
     assert after > position and {"request", "changeset", "action"} <= set(kinds)
+
+
+def test_work_whose_every_change_was_refused_keeps_a_line_that_counts_the_refused(api):
+    """A review line never counts zero: when every change was refused it counts those, so the work still has a line;
+    with nothing applied, held or refused there is no line at all."""
+    from engine.storage import WriteContext
+
+    client, base, worker = api
+    store = client.app_store
+    request = hand_in(client, base, worker, "production-checkin", topic="production check-in notes")
+    before = [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "review"]
+    assert [line["request"] for line in before] == [request] and before[0]["count"] > 0
+
+    changeset = before[0]["changeset"]
+    found = store.read().get("changeset", changeset)
+    refused = [{**o, "status": "refused"} for o in found.data["ops"]]
+    with store.transaction() as tx:
+        tx.update(
+            "changeset",
+            changeset,
+            {"ops": refused},
+            WriteContext(actor="engine", trust="trusted", op="test.queue"),
+            read_version=found.version,
+        )
+    lines = client.get(f"{base}/today/queue").json()
+    (line,) = [line for line in lines if line["kind"] == "review"]
+    assert line["count"] == len(refused) and line["outcome"]["refused"] == len(refused)
+    assert all(line["count"] > 0 for line in lines if line.get("count") is not None and line["kind"] != "rule_review")
+    found = store.read().get("changeset", changeset)
+    with store.transaction() as tx:
+        tx.update(
+            "changeset",
+            changeset,
+            {"ops": []},
+            WriteContext(actor="engine", trust="trusted", op="test.queue"),
+            read_version=found.version,
+        )
+    assert not [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "review"]

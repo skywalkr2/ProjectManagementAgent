@@ -235,6 +235,39 @@ describe("opening", () => {
     expect(window.location.hash).not.toBe("#setup");
   });
 
+  test("it does not take the person from a hand-in they already started when setup is read late", async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => {};
+    const late = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const base = routes();
+    fakeApi({
+      ...base,
+      "GET setup": async () => {
+        await late;
+        return base["GET setup"]();
+      },
+      "GET panels": () => [],
+      "GET asks": () => [],
+      "GET changes": () => [],
+      "GET followups": () => [],
+      "GET runtime-config": () => ({ instance: null }),
+      "GET today/agenda": () => [],
+      "GET today/todo": () => [],
+      "GET today/arrived": () => ({ items: [], left_out: 0 }),
+      "GET projects": () => [],
+    });
+    renderApp(<App rc={rcFixture()} />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Hand something in" })[0]);
+    await user.type(await screen.findByLabelText("Paste or type it here"), "Minutes from the call.");
+    release();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByRole("heading", { name: "Set up your workspace" })).toBeNull();
+    expect(screen.getByLabelText("Paste or type it here")).toHaveValue("Minutes from the call.");
+  });
+
   test("it resumes at the screen the server kept", async () => {
     fakeApi(routes({}, CORE.map((id) => step(id)), { step: "backup" }));
     open();

@@ -113,12 +113,12 @@ function useSourceState(
   label: string,
   kind: "mail" | "calendar",
 ): { button?: { label: string; run: () => void }; note?: string; problems: string[] } {
-  const { t } = useWords();
+  const { t, has } = useWords();
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   if (!watch.data) return { problems: [] };
   if (!anyReading(watch.data)) return onAdd ? { button: { label, run: onAdd }, problems: [] } : { problems: [] };
   // A source that couldn't be read is said so, with why and what to do, and never leaves the card looking up to date.
-  const problems = failedReads(watch.data, kind).map((source) => readProblem(source, t));
+  const problems = failedReads(watch.data, kind).map((source) => readProblem(source, t, has));
   if (problems.length > 0) return { problems };
   const last = latestRead(watch.data);
   return { note: last ? t("today.checked", { when: when(last) }) : t("today.not_checked"), problems };
