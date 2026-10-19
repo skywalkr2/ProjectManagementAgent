@@ -1663,7 +1663,9 @@ class QueueLineView(BaseModel):
     in `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`
     as written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No
     reply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with
-    Undo); `unfiled` is
+    Undo); `since_yesterday` is what the assistant or a rule did that the person hasn't looked over, one line for all
+    of it (`count` entries, counted by act in `outcome`; Look over opens GET /api/since-yesterday, and opening it is
+    POST /api/since-yesterday/seen); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1706,6 +1708,7 @@ class QueueLineView(BaseModel):
         "nudge",
         "unfiled",
         "moved",
+        "since_yesterday",
     ]
     count: int
     text: str | None = Field(None, description="The decision, question, name or held item in one line.")
@@ -2994,6 +2997,56 @@ class SilentCloseSeen(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ref: str = Field(description="The close's `ref`, from the list.")
+
+
+class SinceEntryView(BaseModel):
+    """One thing the assistant or a rule did since yesterday (design 6.32, 6.35), the newest thing done to its record.
+    The screen words it from `act`, `title` and `because`: `quote` is the exact words it rested on, said by `said_by`
+    (a person's id when they are a known person) under `said_by_name`, their name or the sender as written; `by_you`
+    when it was the person themselves), `reason` the rule's own words (or the assistant's, for a
+    drop), `day` the date a move or a reply carries and `detail` what was heard (news, a delivered part, an answer).
+    `seen` follows the silent-close rule for closes and is whether the person looked the change over for the rest.
+    `undo` says how to put it back: `changeset` (POST /api/changesets/{changeset}/undo with `ops: [op]`),
+    `closer_look` (POST /api/requests/{request}/closer-look with `version`) or `set_aside` (POST
+    /api/set-aside/{snapshot}/work with `version`); none when it can no longer be put back."""
+
+    ref: str
+    act: Literal["added", "closed", "moved", "merged", "dropped", "set_aside", "news"]
+    title: str
+    when: str
+    because: Literal["said", "rule", "sorting", "replied", "meeting"]
+    seen: bool
+    undo: Literal["changeset", "closer_look", "set_aside"] | None = None
+    quote: str | None = None
+    said_by: str | None = None
+    said_by_name: str | None = None
+    by_you: bool = False
+    reason: str | None = None
+    day: date | None = None
+    detail: str | None = None
+    record: RecordRef | None = Field(None, description="The action or question it is about, which the screen opens.")
+    changeset: str | None = None
+    op: int | None = None
+    request: str | None = None
+    snapshot: str | None = None
+    version: int | None = Field(None, description="The version of the request or mail item read, for its undo.")
+
+
+class SinceYesterdayView(BaseModel):
+    """What changed since yesterday as drawn at `as_of`, newest first, from `since` (the start of the previous day on
+    the person's clock, or when they last opened this list, if later). `unseen` counts the entries not yet seen.
+    Opening the list is POST /api/since-yesterday/seen with `as_of`, which marks everything made up to then as seen."""
+
+    as_of: datetime
+    since: datetime
+    unseen: int
+    entries: list[SinceEntryView]
+
+
+class SinceSeen(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    until: datetime = Field(description="The `as_of` of the list the person opened.")
 
 
 class SetAsideView(BaseModel):

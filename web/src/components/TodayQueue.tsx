@@ -456,6 +456,15 @@ function useTitleWords(): (title: ItemTitle | null | undefined) => string {
   };
 }
 
+/** What the line for the changes since yesterday counted, in plain words: "3 closed, 2 moved, 4 new". */
+const SINCE_ACTS = ["closed", "moved", "added", "merged", "dropped", "set_aside", "news"] as const;
+
+function sinceWords(line: QueueLine, t: (key: string, vars?: Record<string, string | number>) => string): string {
+  return SINCE_ACTS.filter((k) => ((line.outcome ?? {})[k] ?? 0) > 0)
+    .map((k) => t(`queue.since.count.${k}`, { n: (line.outcome ?? {})[k] ?? 0 }))
+    .join(", ");
+}
+
 /** What a review line counted, by the kinds of thing the assistant did. */
 const REVIEW_KINDS = ["actions_added", "actions_closed", "questions", "notes", "recorded", "people", "projects", "drafts"] as const;
 
@@ -543,6 +552,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return digestTitle(line, t);
       case "reply":
         return replyTitle(line, t);
+      case "since_yesterday":
+        return t("queue.since.title");
       default:
         return line.text ?? line.kind;
     }
@@ -830,6 +841,15 @@ function QueueRow(props: {
         return { pill: t("queue.pill.reminder"), tone: "neutral", meta: undefined, primary: null, menu: [] };
       case "reply":
         return { pill: t("queue.pill.reply"), tone: "warn", meta: meta(), primary: replyRow.primary, menu: replyRow.menu };
+      case "since_yesterday":
+        // Look over opens the list, and opening it is what marks it seen: the line goes until something new happens.
+        return {
+          pill: t("queue.pill.since"),
+          tone: "neutral",
+          meta: sinceWords(line, t),
+          primary: { label: t("queue.since.open"), run: () => props.handlers.onOpenView?.("work/since") },
+          menu: [],
+        };
       default:
         // A kind the screen has no words for yet still shows, so nothing the engine ranks is hidden.
         return { pill: "", tone: "neutral", meta: meta(line.waiting), primary: null, menu: [] };

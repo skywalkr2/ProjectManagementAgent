@@ -1033,6 +1033,12 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Drafts to others (6.35) | Only openable links were checked | The `bookkeeping` lint (record ids, `language.internal_terms`) and the `long-quote` lint (`checks.tuning.long_quote.max_words`) on questions to someone else and drafted replies. Built: `tests/test_reader_checks.py` |
 
+## 105. What changed since yesterday (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| What changed since yesterday (6.32, 6.35) | Closes the person hadn't seen were listed on Sources; everything else the assistant did was found by opening each change on What changed | One list of what the assistant or a rule did since the start of the previous day (the person's time zone) or since they last opened it, newest first, one entry for each record: the act, the record's words, the reason with the quote and who said it, seen or not, and the op to undo. The person's own changes and held items are not in it. The Today line `Look over what changed since yesterday` (risk group, below promises) counts what is unseen in plain words and goes when the list is opened; the "Since yesterday" screen has Open on each row and Undo in its menu. The last look is a new core record `look`, one for each person, only moving forward; a change the engine makes by its own rules records `by_rule`. Built: `tests/test_since_yesterday.py`, `web/src/components/SinceYesterday.test.tsx`, `web/src/components/TodaySince.test.tsx` |
+
 ## 104. Replies owed, and how they end (2026-10-19)
 
 | Where | Before | Now |

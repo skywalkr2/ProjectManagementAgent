@@ -23,6 +23,9 @@ from engine.reply_split import split_message
 #: What the rules say that means no reply is owed. Anything else (a question for someone else, a request phrased
 #: without a question, a waiting period) is left to the reading step, never refused here.
 NO_REPLY = ("automatic", "sent_by_you", "no_reply_needed")
+#: What the change that ends a reply owed records as the rule that made it, so a list of what was done without the
+#: person can say a rule did it.
+ANSWERED_RULE = "reply_answered"
 _HEADER = re.compile(r"^([A-Za-z][A-Za-z-]*):[ \t]*(.*)$")
 _WRAPPERS = ("New in ", "Changed in ")
 #: Where a reply owed whose message is gone sorts: first, as the one waiting longest.
@@ -343,7 +346,7 @@ def close_answered(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -
             Inputs(request.id, source.id, text, "", "untrusted"),
             reporter=people.pm,
         )
-        cs_id = apply_changeset(changeset, [], ctx, run=None, now=now)
+        cs_id = apply_changeset(changeset, [], ctx, run=None, now=now, extra={"by_rule": ANSWERED_RULE})
         with store.transaction() as tx:
             current = tx.get("request", request.id)
             tx.update(

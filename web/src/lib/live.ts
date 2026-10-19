@@ -47,6 +47,8 @@ const AFFECTS: Record<string, string[]> = {
   value_list: ["lists", "settings", "people", "projects"],
   // The audit trail has no screen yet, so writing an entry refreshes nothing.
   audit_entry: [],
+  // Opening the list of what changed since yesterday clears Today's line for it. The list itself is kept as it was drawn.
+  look: ["today"],
 };
 
 /** The query keys' first parts to refresh for the kinds of record written, or null to refresh everything: an empty list

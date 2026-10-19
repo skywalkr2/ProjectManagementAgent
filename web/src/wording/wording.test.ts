@@ -66,6 +66,8 @@ test("key families built at run time are complete", () => {
     ...(s.AskView.properties.state.enum ?? []).map((x) => `ask.state.${x}`),
     ...(s.AutoClosedView.properties.change.enum ?? []).map((x) => `sources.closed.change.${x}`),
     ...(s.SilentCloseView.properties.how.enum ?? []).map((x) => `sources.silent.how.${x}`),
+    ...(s.SinceEntryView.properties.act.enum ?? []).flatMap((x) => [`since.act.${x}`, `queue.since.count.${x}`]),
+    ...(s.SinceEntryView.properties.because.enum ?? []).map((x) => `since.why.${x}`),
     ...(s.SettingProposalView.properties.status.enum ?? []).filter((x) => x !== "open").map((x) => `ask.proposal.${x}`),
     ...(s.ReportView.properties.status.enum ?? []).filter((x) => x !== "draft").map((x) => `ask.report_status.${x}`),
     ...(s.SignInView.properties.status.enum ?? []).map((x) => `sign_in.status.${x}`),

@@ -861,6 +861,21 @@ class SettingChange(Record):
     at: datetime = Field(description="When it was changed.")
 
 
+class Look(Record):
+    """When a person last opened the list of what changed since yesterday: everything made before that moment counts as
+    seen, and the list begins there when that is later than the start of the previous day. One record for each person;
+    it only ever moves forward, and nothing but opening the list writes it."""
+
+    record_kind: ClassVar[str] = "look"
+    prefix: ClassVar[str] = "LOOK"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("person",),)
+
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The person who looked; none when the workspace names no person yet."
+    )
+    at: datetime = Field(description="The moment the list was drawn that the person then opened.")
+
+
 class AuditEntry(Record):
     """One sign-in, sign-out or turning an add-on on or off, made from the screens. The engine writes it as it happens;
     nothing changes it. It never holds a token, a secret or the signed-in account's name."""
@@ -1177,6 +1192,12 @@ class Changeset(Record):
         None,
         description="The name of the AI account when this was the first run on an account that stands in a "
         "fallback chain, so its cards can say so.",
+    )
+    by_rule: str | None = Field(
+        None,
+        description="For a change the engine made by its own rules, from what came in and with no run of the assistant "
+        "(a reply owed closed by the person's own sent mail): the name of the rule, so a list of what was done without "
+        "the person can say a rule did it.",
     )
     created_at: datetime = Field(description="When the changeset was recorded.")
 
@@ -1801,6 +1822,7 @@ REGISTRY: dict[str, type[Record]] = {
         ToolRun,
         JobRun,
         SettingChange,
+        Look,
         AuditEntry,
         Answer,
         SettingProposal,
@@ -1836,6 +1858,7 @@ KNOWLEDGE_REFERENCES: list[tuple[str, str]] = [
 
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
 REFERENCES: dict[str, list[tuple[str, str]]] = {
+    "look": [("person", "person")],
     "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],
     "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],

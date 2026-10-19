@@ -2942,6 +2942,20 @@ in its request today.
 assistant's own voice ("Closed the floor plan promise: the owner said it was sent"), and anything the assistant closed,
 moved or merged without the person seeing it is one step from the line: the record, its evidence and its Undo.
 
+*Built so far (S1-2, the list and its line):* `engine/since_yesterday.py` lists what the assistant or a rule did since
+the start of the previous day in the person's time zone, or since they last opened the list when that is later, newest
+first and one entry for each record: added, closed, moved, merged, dropped, set aside or news heard, the record's words,
+the reason with the exact quote and who said it, whether the person has seen it (closes by the silent-close rule of
+`engine/closes.py`, anything else once the change is looked over), and the change and op, rule's close or mail to undo.
+The person's own changes, held items and ops released from held are left out. Changes the rules make say so: a reply
+owed closed by the person's sent mail ("you replied on <day>", the change carries `by_rule`) and a promise whose date
+followed its meeting. The last look is one small `look` record for each person that only moves forward. One Today line,
+`Look over what changed since yesterday`, with the counts in plain words, sits in the risk group below promises, goes
+when the list is opened (`GET /api/since-yesterday`, then `POST /api/since-yesterday/seen` with the moment it was drawn,
+so a change that arrived meanwhile is not swallowed) and comes back with the next change. The "Since yesterday" screen
+(from the line and from What changed) has Open on each row and Undo in its menu. Built: `tests/test_since_yesterday.py`,
+`web/src/components/SinceYesterday.test.tsx`, `web/src/components/TodaySince.test.tsx`.
+
 **Work the assistant releases on its own keeps the person's hours (S1-3).** Anything the assistant releases without
 the person's act at that moment (new lines it adds to Today, a reminder it set itself, a notification, work held until
 an event that comes in at night) waits for the person's working hours, and never lands in quiet hours (both are the

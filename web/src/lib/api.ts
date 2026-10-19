@@ -82,6 +82,8 @@ export const api = {
   handInRecent: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/recent`),
   autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
   silentCloses: () => call<S["SilentClosesView"]>("GET", "silent-closes"),
+  sinceYesterday: () => call<S["SinceYesterdayView"]>("GET", "since-yesterday"),
+  sinceSeen: (until: string) => call<S["Ok"]>("POST", "since-yesterday/seen", { until } satisfies S["SinceSeen"]),
   closeSeen: (ref: string) => call<S["Created"]>("POST", "silent-closes/seen", { ref } satisfies S["SilentCloseSeen"]),
   closerLook: (req: string, readVersion: number) =>
     call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),

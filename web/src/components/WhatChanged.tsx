@@ -121,6 +121,11 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
     <section className={props.compact ? "panel-section compact" : "panel-section"} aria-labelledby="changes-title">
       <div className="heading">
         <Heading id="changes-title">{t("changes.title")}</Heading>
+        {!props.compact && (
+          <a className="btn" href={viewHref("work/since")}>
+            {t("changes.since")}
+          </a>
+        )}
         <div className="filters" role="group" aria-label={t("changes.filter")}>
           {filters.map((f) => (
             <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>

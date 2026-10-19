@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from engine import held_ask, move_groups, promises, reminder_lines, reply_lines, source_intake, watch
+from engine import held_ask, move_groups, promises, reminder_lines, reply_lines, since_yesterday, source_intake, watch
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -93,8 +93,9 @@ class Line:
     or, by the person's choice, were missed while the computer slept, arriving together: `reminders` lists each with
     its action, words and `at`, and `late` says which of the two it is), reply (a reply owed, one open action: its id in
     `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`
-    as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest first), send
-    or nudge.
+    as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest first),
+    since_yesterday (what the assistant or a rule did that the person hasn't looked over, one line for all of it:
+    `count` entries, counted by act in `outcome`; Look over opens the list), send or nudge.
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
     one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
@@ -635,6 +636,21 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # What the assistant or a rule did since yesterday that the person hasn't looked over: one line, in the risk group
+    # below promises, which goes when the list is opened and comes back with the next change.
+    done = since_yesterday.build(ws, reader, cfg, people, now)
+    if done.unseen:
+        lines.append(
+            Line(
+                key="since_yesterday",
+                group="risk",
+                kind="since_yesterday",
+                count=len(done.unseen),
+                outcome=done.counts(),
+                since=min(e.when for e in done.unseen),
+            )
+        )
+
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
     for action in reader.list("action"):
@@ -949,6 +965,7 @@ _KIND_ORDER = {
     "reminder": 0,
     "reminder_digest": 1,
     "reply": -1,
+    "since_yesterday": 3,
     "account_check": 1,
     "switch_failed": 1,
     "credential": 1,

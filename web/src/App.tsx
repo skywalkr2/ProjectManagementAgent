@@ -36,6 +36,7 @@ import { StyleGuide } from "./components/StyleGuide";
 import { Stages } from "./components/Stages";
 import { Today } from "./components/Today";
 import { ShortcutHelp } from "./components/ShortcutHelp";
+import { SinceYesterday } from "./components/SinceYesterday";
 import { WhatChanged } from "./components/WhatChanged";
 import { Walkthrough } from "./components/Walkthrough";
 import { BottomBar } from "./shell/BottomBar";
@@ -189,6 +190,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         );
       case "work/changed":
         return <WhatChanged onOpenGuide={openGuide} />;
+      case "work/since":
+        return <SinceYesterday onOpenRecord={openRecord} />;
       case "work/followups":
         return <FollowUps />;
       case "work/outgoing":
