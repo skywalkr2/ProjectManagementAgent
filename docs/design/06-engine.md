@@ -2873,16 +2873,27 @@ The designer's notes for S1-2, S1-3 and S2 from their running version
 
 **Learning from the sent version (S1-2).** The person's sent message is the best teacher a draft gets, and it is
 already in the configured sent folder.
-- When the sent folder is read, a sent message is matched to the draft it came from: same thread and recipients, and
-  text at least `drafts.sent_match.similarity` alike (a setting). A match is one-to-one; nothing is matched by the
-  model.
+- When the sent folder is read, a sent message is matched to the draft it came from: the same recipient, sent within
+  `steward.sent_match.window_days` (a setting, 7) after the draft was copied, and text at least
+  `steward.sent_match.similarity` alike (a setting, 0.6; the share of words the two have in common). A match is
+  one-to-one, the newest unmatched copy first; nothing is matched by the model.
 - The difference between the draft and what was sent is recorded as a style signal (6.22, the correction kind
   "edited before sending"): names replaced with roles, a promise cut, a softer opening. It becomes a proposed style
   note through the usual learning loop, never a rule on its own. This is the style pair, brought forward from L-more.
 - A matched sent message ends the reply owed it answered, credited to the person, with the sent message as evidence.
-- A draft the person copied that has no matching sent message after `drafts.sent_match.ask_after_days` (a setting,
-  2 by default) becomes one question: "Did this go out another way?", with *Yes, another way*, *Not sent* and *Still
-  to send*. A draft the person never copied asks nothing.
+- A draft the person copied that has no matching sent message after `steward.sent_match.ask_after_days` (a setting,
+  2 by default) becomes one Today line: "Did your message to <name> go out?", with *Yes, another way*, *Not sent* and
+  *Still to send*. A draft the person never copied asks nothing, and so does a person with no sent folder being read.
+
+*Built so far (S1-2, learning from the sent version):* each copy of a follow-up or a drafted reply is kept as a `copy`
+record with the text exactly as copied; the sent folder's messages are matched to copies by rules in the pass that ends
+replies owed; a differing pair records `draft_edited` with the sent text and an identical one records nothing; and the
+unsent line has its three answers, each with Undo (`tests/test_sent_version.py`,
+`web/src/components/TodaySentCheck.test.tsx`); the style pair is `workspaces/demo-b/pairs/sent-version-roles.yaml` (the
+correction kind `sent_version`, `tests/test_pairs.py`). Left: a follow-up message to chase (`mark_followed_up`) is not
+kept as a copy yet; and a copy for a sender nobody knows is kept but never matched. Style notes now reach a run's
+packet as "How to write for them": those for the people the input names, and those for a kind of audience in words
+(`engine/knowledge_section.py`; the pair checks the heading reaches the later draft's packet).
 
 **What a draft to someone else carries (S1-2).** A message drafted for another person carries only what they need.
 These are lints on every draft addressed to someone other than the person (severity in `config/checks.yaml`; one

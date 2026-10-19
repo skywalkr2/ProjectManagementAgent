@@ -256,18 +256,21 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     if taking_in:
         result.taken_in = source_intake.take_in(ws, store, cfg, source, now, router, back_to)
     _close_question(store, source.id)
-    _end_replies(ws, store, cfg, now)
+    _after_mail(ws, store, cfg, now)
     result.outcome = "baseline" if baseline else "ok"
     return result
 
 
-def _end_replies(ws: Any, store: Any, cfg: Any, now: datetime) -> None:
-    """After mail is taken in, end the replies owed that the person's own sent mail has answered (design 6.35). The
-    rules do it, never the assistant, and a failure here never fails the read."""
-    from engine import reply_lines
+def _after_mail(ws: Any, store: Any, cfg: Any, now: datetime) -> None:
+    """After mail is taken in, use what the person's own sent mail shows (design 6.35): end the replies owed it has
+    answered, and match each sent message to the message they copied, recording what they changed before sending. The
+    rules do both, never the assistant, and a failure here never fails the read."""
+    from engine import reply_lines, sent_version
 
     with contextlib.suppress(StoreError):
         reply_lines.close_answered(ws, store, cfg, now)
+    with contextlib.suppress(StoreError):
+        sent_version.match_sent(ws, store, cfg, now)
 
 
 def _poll(store: Any, connector: Connector, settings: Any, state: dict[str, Any], ws: Any) -> Any:
@@ -867,7 +870,7 @@ def hand_in_recent(
     never handed in twice."""
     with _read_lock(ws, source_id):
         made = _hand_in_recent(ws, store, cfg, source_id, now, router)
-        _end_replies(ws, store, cfg, now or datetime.now(UTC))
+        _after_mail(ws, store, cfg, now or datetime.now(UTC))
         return made
 
 
@@ -881,7 +884,7 @@ def hand_in_snapshot(ws: Any, store: Any, cfg: Any, snapshot_id: str, now: datet
     with _read_lock(ws, source.id):
         with store.transaction() as tx:
             made = hand_in_snapshot_in(ws, store, tx, cfg, snapshot_id, now)
-        _end_replies(ws, store, cfg, now or datetime.now(UTC))
+        _after_mail(ws, store, cfg, now or datetime.now(UTC))
         return made
 
 

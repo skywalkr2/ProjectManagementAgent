@@ -2066,6 +2066,33 @@ class RemindersSettings(ConfigModel):
         return self
 
 
+class SentMatchSettings(ConfigModel):
+    window_days: int = Field(
+        7,
+        ge=1,
+        le=60,
+        description="A message you sent is matched to a message you copied from the app only when it went to the same "
+        "person within this many days after you copied it. The difference between the two is what the assistant "
+        "learns your wording from.",
+    )
+    similarity: float = Field(
+        0.6,
+        ge=0.1,
+        le=1.0,
+        description="How alike a sent message and a copied one must be, from 0 to 1 (the share of their words they "
+        "have in common), for them to count as the same message. Lower matches messages you rewrote heavily; higher "
+        "only matches those you hardly changed.",
+    )
+    ask_after_days: int = Field(
+        2,
+        ge=1,
+        le=60,
+        description="A message you copied that no sent message matches gets one line on Today asking whether it went "
+        "out, after this many days. Only when a mailbox's sent folder is being read. Still to send asks again after "
+        "the same number of days.",
+    )
+
+
 class StewardFile(FileModel):
     default_stance: Literal["manage", "alongside", "report_to", "watch"] = Field(
         "alongside",
@@ -2102,6 +2129,11 @@ class StewardFile(FileModel):
         description="Two messages with the same subject and a person in common count as one conversation when they "
         "are no more than this many days apart and carry no thread headers. It decides whether a message you sent "
         "answers a reply you owe.",
+    )
+    sent_match: SentMatchSettings = Field(
+        default_factory=SentMatchSettings,
+        description="How a message you sent is matched to the one you copied from the app, and when you are asked "
+        "whether a copied message went out.",
     )
 
 

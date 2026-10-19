@@ -1771,6 +1771,43 @@ class Signal(Record):
 
 
 #: Record kind to its model. The order is the export order.
+class Copy(Record):
+    """A message the person copied to send, kept exactly as copied: who it was for, when, and the questions and actions
+    it covered. It is what the sent message is matched against (6.35): the difference between the two is what the person
+    changed before sending. The engine writes it when a follow-up is marked as sent and when a drafted reply is copied;
+    the person settles it when the message went out another way or never went."""
+
+    record_kind: ClassVar[str] = "copy"
+    prefix: ClassVar[str] = "COPY"
+
+    kind: Literal["follow_up", "reply"] = Field(
+        description="follow_up: the message to one person that lists their questions and actions; reply: the drafted "
+        "reply to a message that asked the person something."
+    )
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None,
+        description="The person it was for; none when the reply is to a sender nobody knows (it is never matched).",
+    )
+    text: str = Field(description="The message exactly as copied.")
+    at: datetime = Field(description="When it was copied; copying the same message again moves it forward.")
+    questions: list[Annotated[str, RefTo("question")]] = Field(
+        default_factory=list, description="The questions the message covered."
+    )
+    actions: list[Annotated[str, RefTo("action")]] = Field(
+        default_factory=list, description="The actions the message covered (for a reply, the one it answers)."
+    )
+    sent_source: Annotated[str | None, RefTo("source")] = Field(
+        None, description="The sent message it was matched to, once there is one."
+    )
+    matched_at: datetime | None = Field(None, description="When it was matched to a sent message.")
+    settled: Literal["sent_another_way", "not_sent"] | None = Field(
+        None, description="The person's own answer to whether it went out, when no sent message was found."
+    )
+    ask_again_at: datetime | None = Field(
+        None, description="When to ask again whether it went out, after the person said it is still to send."
+    )
+
+
 class ValueList(Record):
     """A list of the values a field may take, shown as a dropdown (design 5.1). The core and plugins ship its first
     values; the person adds, renames and retires values with `list.add`, `list.rename` and `list.retire`. A retired
@@ -1837,6 +1874,7 @@ REGISTRY: dict[str, type[Record]] = {
         TextVersion,
         WorkingCopy,
         ValueList,
+        Copy,
     )
 }
 
@@ -1864,6 +1902,7 @@ KNOWLEDGE_REFERENCES: list[tuple[str, str]] = [
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "look": [("person", "person")],
+    "copy": [("person", "person"), ("questions[]", "question"), ("actions[]", "action"), ("sent_source", "source")],
     "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],
     "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],

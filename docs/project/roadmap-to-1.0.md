@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 148, each in exactly one batch; 206 done items are in `roadmap-done.md`.
+- **Open items:** 146, each in exactly one batch; 208 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -59,7 +59,7 @@ keep each item's full text.
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (3 open items; size: about two and a half days)
+2. **S1-2 What the person owes and misses** (2 open items; size: about two and a half days)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
     - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
@@ -156,7 +156,7 @@ keep each item's full text.
     - *Covers:* the items of C3c (phase P)
     - *Exit:* each pack drafts what its role writes, works alone, and hands off through versioned interfaces.
 
-25. **L-more The rest of learning (refined when reached)** (12 open items; size: about 4 sessions, as the phase states)
+25. **L-more The rest of learning (refined when reached)** (11 open items; size: about 4 sessions, as the phase states)
     - *Covers:* the items of phase L-more
     - *Exit:* each item's own test; it runs beside real use after the packs.
 
@@ -538,12 +538,6 @@ proves it on a week of real use, and only then goes on:
   memory, areas of life, capture from anywhere and the conversation.
 
 S1. **Promises, and how they end:**
-- [ ] [S1-2] **Learning from the sent version** (the designer's notes, 2026-10-19; design 6.35; the style pair, moved here
-  from L-more): a sent message is matched one-to-one to its draft (thread, recipients, `drafts.sent_match.similarity`);
-  the difference is a style signal ("edited before sending") that proposes a style note through the learning loop; a
-  copied draft not found sent after `drafts.sent_match.ask_after_days` asks once whether it went out another way. Exit:
-  a learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft,
-  and a journey test of the copied-but-not-sent question.
 - [ ] [S1-2] **What a draft to someone else carries** (the designer's notes, 2026-10-19; design 6.35): lints on every draft
   to someone other than the person: no bookkeeping (the wording sheet's internal terms), only openable links, quotes of
   the reader's own words at most `drafts.max_quote_words`, and never singling a person out in a group draft (a
@@ -1022,8 +1016,6 @@ private repository and builder like the other packs, and works with the project 
 ## Phase L-more: the rest of learning
 
 After the packs, beside real use (owner, 2026-10-12). None of it is needed for the loop to work. Each item has its own test.
-- [ ] [L-more] **The style pair** (moved from L4): *moved to S1-2 as "Learning from the sent version" (the designer's notes,
-  2026-10-19); this line stays as a pointer.*
 - [ ] [L-more] **Loading a shared lessons file** (moved from L4, with Take my lessons): the injected-import pair runs through the
   real loader, and an injected entry loads as proposed.
 - [ ] [L-more] **Review earned per kind of change** (owner, 2026-10-13: "over time the AI should learn what can be auto AI

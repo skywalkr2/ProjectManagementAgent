@@ -1884,6 +1884,23 @@ A list of the values a field may take, shown as a dropdown (design 5.1). The cor
 | `values` | list[str] | `[]` | The values offered, in the order shown. |
 | `retired` | list[str] | `[]` | Values no longer offered that records may still hold. |
 
+### `copy` (COPY-n)
+
+A message the person copied to send, kept exactly as copied: who it was for, when, and the questions and actions it covered. It is what the sent message is matched against (6.35): the difference between the two is what the person changed before sending. The engine writes it when a follow-up is marked as sent and when a drafted reply is copied; the person settles it when the message went out another way or never went.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `kind` | Literal['follow_up', 'reply'] | required | follow_up: the message to one person that lists their questions and actions; reply: the drafted reply to a message that asked the person something. |
+| `person` | str \| None | `None` | The person it was for; none when the reply is to a sender nobody knows (it is never matched). |
+| `text` | str | required | The message exactly as copied. |
+| `at` | datetime | required | When it was copied; copying the same message again moves it forward. |
+| `questions` | list[Annotated[str, RefTo(kind='question')]] | `[]` | The questions the message covered. |
+| `actions` | list[Annotated[str, RefTo(kind='action')]] | `[]` | The actions the message covered (for a reply, the one it answers). |
+| `sent_source` | str \| None | `None` | The sent message it was matched to, once there is one. |
+| `matched_at` | datetime \| None | `None` | When it was matched to a sent message. |
+| `settled` | Literal['sent_another_way', 'not_sent'] \| None | `None` | The person's own answer to whether it went out, when no sent message was found. |
+| `ask_again_at` | datetime \| None | `None` | When to ask again whether it went out, after the person said it is still to send. |
+
 ## Core ops
 
 Fields of each core op, for actions and task kinds that use them.

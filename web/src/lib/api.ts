@@ -190,6 +190,11 @@ export const api = {
   dropAction: (a: string, reason: string) => call<S["Applied"]>("POST", `actions/${id(a)}/drop`, { reason }),
   reviewReply: (a: string, body: S["ActionReplyIn"]) => call<S["Applied"]>("POST", `actions/${id(a)}/reply`, body),
   answeredAnotherWay: (a: string, body: S["AnsweredAnotherWayIn"]) => call<S["Applied"]>("POST", `replies/${id(a)}/answered`, body),
+  /** Keep the drafted reply as the person copied it, so the message they send can be matched to it. */
+  replyCopied: (a: string) => call<S["Copied"]>("POST", `replies/${id(a)}/copied`),
+  /** The answer to "Did your message go out?"; the result is what Undo takes. */
+  settleCopy: (c: string, how: S["CopyAnswer"]["how"]) => call<S["CopySettled"]>("POST", `copies/${id(c)}/settle`, { how }),
+  unsettleCopy: (c: string, body: S["CopySettled"]) => call<S["Ok"]>("POST", `copies/${id(c)}/unsettle`, body),
   /** Add an action waiting for an owner to the open action it nearly repeats; `readVersion` is that action's version as read. */
   foldAction: (cs: string, index: number, into: string, readVersion: number) =>
     call<S["Applied"]>("POST", `changesets/${id(cs)}/ops/${index}/fold`, { into, read_version: readVersion }),

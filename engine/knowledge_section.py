@@ -26,6 +26,7 @@ HEADINGS = {
     "input_rules": "# Standing rules for this input",
     "input_lessons": "# Lessons for this input",
     "routing": "# Who answers what",
+    "style": "# How to write for them",
     "input_glossary": "# Terms this input uses",
     "facts": "# Facts recorded for this input's projects",
 }
@@ -342,6 +343,17 @@ def per_input_section(
         if about_input:
             routing.append((entry, _entry_line(entry)))
     add(HEADINGS["routing"], routing)
+
+    # Style notes for the people this input names, and those for a kind of audience in words (design 6.22).
+    style = []
+    for note in _active(view, "style_note"):
+        scope = _scope(note)
+        if not passes(note, scope):
+            continue
+        audience = str(note.data.get("audience") or "")
+        if view.get("person", audience) is None or audience in people_set:
+            style.append((note, _entry_line(note)))
+    add(HEADINGS["style"], style)
 
     whole = {
         s.id

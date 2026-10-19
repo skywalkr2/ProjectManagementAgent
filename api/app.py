@@ -36,6 +36,7 @@ from api.reply_routes import build_reply_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
 from api.screen_text import refusal
+from api.sent_routes import build_sent_router
 from api.setup_routes import build_setup_router
 from api.sign_in_routes import build_sign_in_router
 from api.since_routes import build_since_router
@@ -297,6 +298,7 @@ def create_app(
     inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
     inner.include_router(build_since_router(ws, cfg, store, events, worker))
     inner.include_router(build_reply_router(ws, cfg, store, events, worker))
+    inner.include_router(build_sent_router(cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))

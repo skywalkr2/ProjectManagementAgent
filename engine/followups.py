@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
-from engine import learn
+from engine import learn, sent_version
 from engine.cleaning import normalize
 from engine.config import Config
 from engine.dispatcher import signal
@@ -300,14 +300,25 @@ def mark_sent(
             changeset=changeset,
             run=run,
         )
+    if counts["questions"] or counts["actions"]:
+        # What the person copied is kept as it was used, for matching the message that reaches the sent folder.
+        sent_version.record_copy(
+            store,
+            "follow_up",
+            person,
+            current.message if sent_text is None else sent_text,
+            questions=counts["question_ids"],
+            actions=counts["action_ids"],
+            now=now,
+        )
     return counts
 
 
-def _written_by(store: Store, question_ids: list[str]) -> tuple[str | None, str | None]:
-    """The changeset and the AI run that wrote these questions, when they all came from the same one; None for what
-    they don't share (questions from different runs, or made by no run)."""
+def _written_by(store: Store, question_ids: list[str], kind: str = "question") -> tuple[str | None, str | None]:
+    """The changeset and the AI run that wrote these questions (or, with `kind`, these records), when they all came from
+    the same one; None for what they don't share (records from different runs, or made by no run)."""
     view = store.read()
-    made = [next((e["changeset"] for e in view.ledger(kind="question", record_id=qid)), None) for qid in question_ids]
+    made = [next((e["changeset"] for e in view.ledger(kind=kind, record_id=qid)), None) for qid in question_ids]
     runs = []
     for changeset in made:
         record = view.get("changeset", changeset) if changeset else None
@@ -315,9 +326,13 @@ def _written_by(store: Store, question_ids: list[str]) -> tuple[str | None, str 
     return (made[0] if len(set(made)) == 1 else None), (runs[0] if len(set(runs)) == 1 else None)
 
 
-def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: list[str]) -> None:
-    """Undo a Mark sent: the questions are open again and the person is no longer marked as told. If the message was
-    edited before it was marked sent, what the assistant would have learned from the edit is dropped with it."""
+def unmark_sent(
+    store: Store, person: str, question_ids: list[str], action_ids: list[str], *, forget_copy: bool = True
+) -> None:
+    """Undo a Mark sent: the questions are open again and the person is no longer marked as told, and the copy it kept
+    is forgotten unless `forget_copy` is False (the person's own answer that it never went keeps it, settled). If the
+    message was edited before it was marked sent, what the assistant would have learned from the edit is dropped with
+    it."""
     view = store.read()
     stamps = [
         found.data["sent_at"]
@@ -334,6 +349,8 @@ def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: 
             if rec is not None and person in rec.data.get("told", {}):
                 told = {k: v for k, v in rec.data["told"].items() if k != person}
                 tx.update("action", aid, {"told": told}, _PM, read_version=rec.version)
+    if forget_copy:
+        sent_version.forget_copy(store, person, question_ids, action_ids)
     if stamps:
         learn.net_out(store, "draft_edited", [person], at=stamps)
 

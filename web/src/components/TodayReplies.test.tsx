@@ -114,6 +114,21 @@ test("copying a draft that is already reviewed approves nothing again", async ()
   expect(calls.some((c) => c.route === "POST actions/ACT-1/reply")).toBe(false);
 });
 
+test("every copy is kept as copied, a reviewed draft's included, so the message sent can be matched to it", async () => {
+  const user = userEvent.setup();
+  const calls = show([reply({ reply_reviewed: true })], { "POST replies/ACT-1/copied": () => ({ id: "COPY-1" }) });
+  await user.click(within(await rowOf()).getByRole("button", { name: "Copy reply" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST replies/ACT-1/copied")).toHaveLength(1));
+});
+
+test("if the copy can't be kept the draft is still on the clipboard and nothing is shown as wrong", async () => {
+  const user = userEvent.setup();
+  show([reply({ reply_reviewed: true })]);
+  await user.click(within(await rowOf()).getByRole("button", { name: "Copy reply" }));
+  expect(await navigator.clipboard.readText()).toBe(DRAFT);
+  expect(await screen.findByText("Copied. Paste it into your reply.")).toBeInTheDocument();
+});
+
 test("if the browser blocks copying, nothing is approved and the person is told", async () => {
   const user = userEvent.setup();
   const calls = show([reply()]);

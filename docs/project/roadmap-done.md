@@ -1809,6 +1809,14 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **The style pair** (moved from L4): *moved to S1-2 as "Learning from the sent version" (the designer's notes,
+  2026-10-19); this line stays as a pointer.* *Built (S1-2):* the pair `sent-version-roles` (`tests/test_pairs.py`).
+- [x] **Learning from the sent version** (the designer's notes, 2026-10-19; design 6.35; the style pair, moved here
+  from L-more): a sent message is matched one-to-one to its draft (thread, recipients, `steward.sent_match.similarity`);
+  the difference is a style signal ("edited before sending") that proposes a style note through the learning loop; a
+  copied draft not found sent after `steward.sent_match.ask_after_days` asks once whether it went out another way. Exit:
+  a learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft,
+  and a journey test of the copied-but-not-sent question. *Built (S1-2):* `tests/test_sent_version.py`, `TodaySentCheck.test.tsx`, the pair `sent-version-roles` (`tests/test_pairs.py`); style notes reach the packet (`engine/knowledge_section.py`). Left: a chase message isn't kept as a copy; a copy for an unknown sender is never matched.
 - [x] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence. *Built (S1-2):* `tests/test_missed_one.py`, `MissedOne.test.tsx` (the header on every screen, the phone's More sheet, a quiet Today and an empty Since yesterday; a `missed` signal the learning reads at once; the count per person per week in `GET /api/quality`). Left: the Quality screen (with S1-3's instruments), the evening wrap-up (S2), and a golden case for a missed-one note.
 - [x] **A stance per person** (the designer's lessons, 2026-10-19; design 6.34): the stance field from a value list
   with meanings (I manage them, I work alongside them, I report to them, I only watch; `track_only` becomes the last),

@@ -13,7 +13,17 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from engine import held_ask, move_groups, promises, reminder_lines, reply_lines, since_yesterday, source_intake, watch
+from engine import (
+    held_ask,
+    move_groups,
+    promises,
+    reminder_lines,
+    reply_lines,
+    sent_version,
+    since_yesterday,
+    source_intake,
+    watch,
+)
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -96,6 +106,9 @@ class Line:
     its action, words and `at`, and `late` says which of the two it is), reply (a reply owed, one open action: its id in
     `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`
     as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest first),
+    sent_check (a message the person copied that no sent message has matched, asked about once a sent folder is
+    being read: its copy's id in `sent_copy`, who it was for in `person`, what it covered in `questions` and
+    `actions`),
     since_yesterday (what the assistant or a rule did that the person hasn't looked over, one line for all of it:
     `count` entries, counted by act in `outcome`; Look over opens the list), send or nudge.
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
@@ -158,6 +171,7 @@ class Line:
     reply_reviewed: bool | None = None
     sender: str | None = None
     stance: str | None = None
+    sent_copy: str | None = None
     since: str = ""
 
 
@@ -644,6 +658,21 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # A message the person copied that no sent message matched, asked about once, only while a sent folder is read.
+    for item in sent_version.unsent(reader, cfg, now):
+        lines.append(
+            Line(
+                key=f"sent_check:{item.copy}",
+                group="send",
+                kind="sent_check",
+                person=item.person,
+                questions=item.questions,
+                actions=item.actions,
+                sent_copy=item.copy,
+                since=item.at.isoformat(),
+            )
+        )
+
     # What the assistant or a rule did since yesterday that the person hasn't looked over: one line, in the risk group
     # below promises, which goes when the list is opened and comes back with the next change.
     done = since_yesterday.build(ws, reader, cfg, people, now)
@@ -975,6 +1004,7 @@ _KIND_ORDER = {
     "reminder": 0,
     "reminder_digest": 1,
     "reply": -1,
+    "sent_check": 2,
     "since_yesterday": 3,
     "account_check": 1,
     "switch_failed": 1,

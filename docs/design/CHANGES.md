@@ -1033,6 +1033,16 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Drafts to others (6.35) | Only openable links were checked | The `bookkeeping` lint (record ids, `language.internal_terms`) and the `long-quote` lint (`checks.tuning.long_quote.max_words`) on questions to someone else and drafted replies. Built: `tests/test_reader_checks.py` |
 
+## 108. Learning from the sent version (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| What was copied (5.0, 6.35) | Nothing kept the text the person copied, or when | A `copy` record (COPY) keeps it exactly as copied: who it was for, when, and the question and action ids it covered. A follow-up marked as sent keeps one (taking the mark back forgets it); copying a drafted reply keeps one (`POST /api/replies/{id}/copied`, called by Copy reply even for a reviewed draft); copying the same message again moves the same copy forward. It is exported and imported like other records. Built: `tests/test_sent_version.py` |
+| Matching the sent message (6.35) | A sent message only ended a reply owed it answered | In the same pass after a read that ends replies owed, each sent message not yet matched takes, by rules alone, the newest copy for the same recipient that was copied before it and no more than `steward.sent_match.window_days` (7) earlier and is at least `steward.sent_match.similarity` (0.6) alike (the applier's word-overlap measure); one message to one copy. Built: `tests/test_sent_version.py` |
+| A style signal (6.22, 6.35) | An edit made in the app was the only `draft_edited` | A matched pair whose texts differ records `draft_edited` with the sent text, naming the person, the questions and actions covered and the copy; the same text records nothing. The learning loop proposes a style note by its usual path. Learning pair `sent-version-roles` uses a new correction kind `sent_version`. Built: `tests/test_sent_version.py`, `tests/test_pairs.py` |
+| Copied but not found sent (6.35) | No line | After `steward.sent_match.ask_after_days` (2) with no match, one Today line, "Did your message to <name> go out?", only while a sent folder is being read: *Yes, another way* settles the copy, *Not sent* puts its questions back as unsent (settling it), *Still to send* asks again after the same number of days; each with Undo (`POST /api/copies/{id}/settle` and `unsettle`). Built: `tests/test_sent_version.py`, `web/src/components/TodaySentCheck.test.tsx` |
+| Settings (4.0) | | `steward.sent_match.window_days`, `similarity` and `ask_after_days`, in `steward.yaml` with the other steward settings (the design had named them `drafts.sent_match.*`); plain labels in Settings |
+
 ## 107. Missed one (2026-10-19)
 
 | Where | Before | Now |

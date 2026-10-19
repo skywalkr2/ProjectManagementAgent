@@ -23,11 +23,13 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
       then: [{received, <input keys>, answer: {...}, label}]    # more inputs after it, with fixed answers
       correction:             # what the person does, through the same code the screens use
         kind: sent_back | undone | declined | answered | moved | dropped | picked_owner | not_a_project | part_of |
-              new_person | set_aside | asked | changed
+              new_person | set_aside | asked | changed | sent_version
         note: ...             # the person's words; of: <label> (default: the first input's change)
         # moved/picked_owner/answered/dropped/asked/changed name a record: id or @action, @question, @event, @fact,
         # @held_question (the first one the input's change made); person / into / form / as the kind needs;
         # changed also gives `fields`, the person's own new values for it (a calendar entry's day, an action's due)
+        # sent_version names a reply owed (`id`) whose draft the person copied; `note` is the message they actually
+        # sent, which reaches the sent folder and is matched to the copy by the same rules as in the app
       expect_proposal: none | [{op, text_has, person, team, topic_has, negative, term, audience, origin, trust,
                                 projects, scope, optional}]
                               # a `text_has` / `topic_has` word with `|` is met by any one of its alternatives
@@ -131,6 +133,7 @@ CORRECTIONS = (
     "set_aside",
     "asked",
     "changed",
+    "sent_version",
 )
 #: The corrections that act on an earlier change, so they need one to exist.
 CHANGE_CORRECTIONS = frozenset({"sent_back", "undone", "declined", "not_a_project", "part_of", "set_aside"})
@@ -521,6 +524,8 @@ class _Play:
                     "read_version": found.version,
                 }
                 apply_as_person(self.store, cfg, [op], "Changed on screen")
+            elif kind == "sent_version":
+                self._sent_version(ref("id"), note, when)
             elif kind == "set_aside":
                 request = self.store.read().get("changeset", cs).data["request"]
                 self._set_aside(request)
@@ -528,6 +533,47 @@ class _Play:
         except StoreError as err:
             raise _Stop(f"the correction {kind} was refused: {err}") from None
         return [s.id for s in self.store.read().list("signal") if s.id not in before]
+
+    def _sent_version(self, action_id: str, sent_text: str, when: datetime) -> None:
+        """The person copied the drafted reply of a reply owed and sent `sent_text` instead: the copy is kept, the sent
+        message arrives in the sent folder a little later, and the matcher the app runs after each read records what
+        differs."""
+        from engine import sent_version, watch
+
+        found = self.store.read().get("action", action_id)
+        if found is None or not found.data.get("reply") or not found.data.get("asker"):
+            raise _Stop(f"{action_id} has no drafted reply to a known person to compare with")
+        asker = self.store.read().get("person", found.data["asker"])
+        address = next(iter((asker.data.get("how_to_reach") or {}).values()), None) if asker is not None else None
+        if address is None:
+            raise _Stop(f"{found.data['asker']} has no address to send to")
+        sent_version.record_copy(
+            self.store, "reply", found.data["asker"], found.data["reply"], actions=[action_id], now=when
+        )
+        arrives = when + timedelta(minutes=10)
+        text = f"From: The person\nTo: {address}\nSubject: Re: {found.data['text']}\n\n{sent_text}"
+        with self.store.transaction() as tx:
+            tx.create(
+                "source",
+                {
+                    "received_at": arrives.isoformat(),
+                    "sent_at": arrives.isoformat(),
+                    "kind": "watched:mailbox",
+                    "title": found.data["text"],
+                    "content_hash": watch._keep_text(self.ws, text),
+                    "trust": "untrusted",
+                    "watched": {
+                        "source": "sent",
+                        "key": f"<sent-{action_id}@example.com>",
+                        "change": "new",
+                        "by_you": True,
+                        "by_us": False,
+                    },
+                },
+                _PERSON,
+            )
+        if not sent_version.match_sent(self.ws, self.store, self.fixed, arrives):
+            raise _Stop("the sent message was not matched to the copy")
 
     def _set_aside(self, request: str) -> None:
         with self.store.transaction() as tx:

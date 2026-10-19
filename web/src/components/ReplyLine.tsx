@@ -47,6 +47,9 @@ export function useReplyChoices(line: Line, onClosed?: () => void): ReplyChoices
       push({ message: t("toast.copy_blocked") });
       return;
     }
+    // The copy is kept as it was copied, so the message that is sent can be matched to it; a failure to keep it never
+    // stops the copy.
+    void api.replyCopied(action).catch(() => undefined);
     // Copying is what approves the draft as it is; one already reviewed has nothing more to approve.
     if (line.reply_reviewed) {
       push({ message: t("queue.reply.copied_toast") });

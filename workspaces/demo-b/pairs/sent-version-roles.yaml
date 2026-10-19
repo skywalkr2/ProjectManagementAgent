@@ -1,0 +1,83 @@
+id: sent-version-roles
+title: A sent version that names roles and cuts a promise teaches a style note, and the next reply is drafted that way
+skills: [use-lesson]
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  given_file: promise-people.yaml
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+    To: The person <the.person@example.com>
+    Subject: Interior proofs
+
+    Can you tell me when the interior proofs will ship, and who sends the cover files?
+  wrong:
+    summary: Mira asks when the proofs ship and who sends the cover files; a reply is owed.
+    ops:
+    - op: action.add
+      text: Tell Mira when the interior proofs ship and who sends the cover files
+      owners: [PER-1]
+      reply_owed: true
+      reply: |-
+        Hi Mira,
+
+        Thanks for asking. The interior proofs ship on November 3, straight from the printer's published schedule, and nothing has moved since last week. Theo Brandt will send you the cover files this week, and I promise to confirm the printer slot with Tavish Reeve by Friday.
+
+        Thanks
+      evidence:
+        quote: Can you tell me when the interior proofs will ship
+  correction:
+    kind: sent_version  # the person copied the draft, then sent this instead; the matcher records the difference
+    # (it counts as the same message only while it is alike enough, `steward.sent_match.similarity`, so the edit is modest)
+    id: '@action'
+    note: |-
+      Hi Mira,
+
+      Thanks for asking. The interior proofs ship on November 3, straight from the printer's published schedule, and nothing has moved since last week. The cover designer will send you the cover files this week.
+
+      Thanks
+  expect_proposal:
+  - op: style.add
+    audience: PER-101
+    text_has: [role]
+  keep: true
+later:
+  received: '2026-10-19'
+  project: PRJ-1
+  pasted: |-
+    From: Mira Hale <mira@example.com>
+    To: The person <the.person@example.com>
+    Subject: Revised map
+
+    Who should I send the revised map to, and when will the printer have it?
+  expect:
+  - op: action.add
+    owners: [PER-1]
+    reply_has: [editor]  # the draft names the role, as the sent version did
+  packet_has: ['# How to write for them']  # the style note learned from the sent version reaches the next draft
+ideal:
+  learn:
+    summary: Mira gets roles instead of names, and no promises the person did not make.
+    topic: writing to Mira
+    ops:
+    - op: style.add
+      audience: PER-101
+      observation: Refers to colleagues by their role, not their name, and makes no promise the person has not made.
+      text: When writing to Mira, name a colleague by their role (the cover designer) and leave out promises you have not made.
+      evidence:
+        quote: The cover designer will send you the cover files
+  later:
+    summary: Mira asks who gets the revised map and when the printer has it; a reply is owed.
+    ops:
+    - op: action.add
+      text: Tell Mira who gets the revised map and when the printer has it
+      owners: [PER-1]
+      reply_owed: true
+      reply: |-
+        Hi Mira,
+
+        Send the revised map to the production editor, who passes it to the printer.
+
+        Thanks
+      evidence:
+        quote: Who should I send the revised map to

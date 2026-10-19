@@ -145,6 +145,33 @@ class AnsweredAnotherWayIn(BaseModel):
     )
 
 
+class Copied(BaseModel):
+    id: str = Field(description="The id of the copy kept: the drafted reply as the person copied it.")
+
+
+class CopyAnswer(BaseModel):
+    how: Literal["sent_another_way", "not_sent", "still_to_send"] = Field(
+        description="The person's answer to whether a message they copied went out: sent_another_way settles it, "
+        "not_sent puts its questions back as unsent and settles it, still_to_send asks again after the configured "
+        "number of days."
+    )
+
+
+class CopySettled(BaseModel):
+    """What an answer changed, and what `POST /api/copies/{id}/unsettle` takes to put it back (Undo)."""
+
+    settled: Literal["sent_another_way", "not_sent"] | None = Field(
+        None, description="What the copy said before the answer."
+    )
+    ask_again_at: datetime | None = Field(None, description="When it was to be asked about again, before the answer.")
+    sent_at: dict[str, str | None] = Field(
+        default_factory=dict, description="The questions a Not sent put back, each with when it had been sent."
+    )
+    told: dict[str, str] = Field(
+        default_factory=dict, description="The actions a Not sent took the person's told day off, each with that day."
+    )
+
+
 class ActionReplyIn(BaseModel):
     text: str | None = Field(
         None,
@@ -1677,9 +1704,12 @@ class QueueLineView(BaseModel):
     in `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`
     as written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No
     reply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with
-    Undo); `since_yesterday` is what the assistant or a rule did that the person hasn't looked over, one line for all
-    of it (`count` entries, counted by act in `outcome`; Look over opens GET /api/since-yesterday, and opening it is
-    POST /api/since-yesterday/seen); `unfiled` is
+    Undo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it
+    was for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,
+    each undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent
+    message has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked
+    over, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET
+    /api/since-yesterday, and opening it is POST /api/since-yesterday/seen); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1708,6 +1738,7 @@ class QueueLineView(BaseModel):
         "reminder",
         "reminder_digest",
         "reply",
+        "sent_check",
         "account_check",
         "switch_failed",
         "credential",
@@ -1889,6 +1920,9 @@ class QueueLineView(BaseModel):
         None,
         description="For a promise line someone else owes: who they are to the person (design 6.34). The screen says "
         "Chase for manage and alongside, and Waiting on, with no follow-up, for report_to; null for the person's own.",
+    )
+    sent_copy: str | None = Field(
+        None, description="For a sent_check line: the id of the copy the person is asked about."
     )
     after_move: AfterMove | None = Field(
         None,

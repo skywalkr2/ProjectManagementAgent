@@ -27,6 +27,7 @@ import { NothingNeedsYou } from "./Coverage";
 import { usePromiseChoices } from "./PromiseLine";
 import { ReminderItems, digestTitle, reminderTitle, useReminderChoices, useReminderNotices } from "./ReminderLine";
 import { ReplyDraft, replyTitle, useReplyChoices } from "./ReplyLine";
+import { sentCheckTitle, useSentCheckChoices } from "./SentCheckLine";
 import { LearnedLine, isLearned } from "./LearnedToday";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
@@ -562,6 +563,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return digestTitle(line, t);
       case "reply":
         return replyTitle(line, t);
+      case "sent_check":
+        return sentCheckTitle(line, t);
       case "since_yesterday":
         return t("queue.since.title");
       default:
@@ -610,6 +613,7 @@ function QueueRow(props: {
   const show: MenuAction = { id: "look", label: t("queue.look_closer"), run: choose };
   const promiseRow = usePromiseChoices(line, () => ref.current?.focus());
   const replyRow = useReplyChoices(line, () => ref.current?.focus());
+  const sentRow = useSentCheckChoices(line);
   const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
 
   const what = titleWords(line.title);
@@ -851,6 +855,8 @@ function QueueRow(props: {
         return { pill: t("queue.pill.reminder"), tone: "neutral", meta: undefined, primary: null, menu: [] };
       case "reply":
         return { pill: t("queue.pill.reply"), tone: "warn", meta: meta(), primary: replyRow.primary, menu: replyRow.menu };
+      case "sent_check":
+        return { pill: t("queue.pill.sent_check"), tone: "warn", meta: meta(), primary: sentRow.primary, menu: sentRow.menu };
       case "since_yesterday":
         // Look over opens the list, and opening it is what marks it seen: the line goes until something new happens.
         return {
