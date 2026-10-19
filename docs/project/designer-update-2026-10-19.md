@@ -169,3 +169,10 @@ untouched fields are refreshed from what is saved now, and fields the person cha
 **F13. Old kept passwords.** Overnight, a changed password or key is kept beside the old one so Undo works. The old
 files stay in the private keys folder. *Default:* an old kept secret that no setting refers to is removed after 30 days
 (a setting), and removing a source or account removes its kept secrets at once, with a line saying so.
+
+**F14. What a go on spending covers.** Overnight, every account a request reaches was held to the amount the person
+allowed, per call. But the estimate the person says yes to is for one call, and a request can make several: a fix round
+when checks fail, then one on a stronger tier (up to four calls with today's settings), plus searches. The daily and
+per-kind budgets still stop runs once they're reached. *Default:* the estimate shown is for the whole request, as a
+range ("about $0.04, up to $0.16 if it needs another try"). The request's calls together stop at the upper figure, and
+a further call that would pass it waits for another go.
