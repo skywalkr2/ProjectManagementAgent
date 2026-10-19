@@ -8,7 +8,7 @@ import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
 import { recordView, viewHref } from "../lib/views";
-import { useEstimate } from "../lib/money";
+import { useEstimate, useSpent } from "../lib/money";
 import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
@@ -198,6 +198,7 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
   const act = useAct();
   const afterSave = useAfterSave();
   const estimate = useEstimate();
+  const spentLine = useSpent();
   const { setAside: moveToFolder } = useSetAside();
   const { item } = props;
   const gated = waitsForGo(item);
@@ -338,6 +339,9 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
             </div>
           )}
           {item.waiting && item.state !== "review" && <p className="hint">{item.waiting}</p>}
+          {(item.state === "review" || item.state === "done") && spentLine(item.spent_usd, item.range_usd) && (
+            <p className="hint">{spentLine(item.spent_usd, item.range_usd)}</p>
+          )}
           {cs && cs.summary.trim() && (
             <div className="assistant-summary">
               <span className="what">{t("changes.summary_label")}</span>

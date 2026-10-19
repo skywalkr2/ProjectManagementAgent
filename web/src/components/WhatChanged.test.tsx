@@ -4,7 +4,7 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { revealOrKeep } from "../lib/reveal";
 import { fakeApi, renderApp } from "../test-utils";
-import { WhatChanged } from "./WhatChanged";
+import { ChangeRow, WhatChanged } from "./WhatChanged";
 
 function change(id: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem"] {
   return {
@@ -406,4 +406,15 @@ test("an item that was not applied has no Change this", async () => {
   await user.click(await screen.findByRole("button", { name: "More actions for Proof copies ship Nov 5" }));
   expect(await screen.findByRole("menuitem", { name: "Show source" })).toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Change this" })).toBeNull();
+});
+
+test("a finished item shows what it cost beside its estimate", async () => {
+  fakeApi({});
+  const item = change("REQ-1", { state: "done", spent_usd: 0.03, range_usd: [0.02, 0.08] });
+  renderApp(
+    <ol>
+      <ChangeRow item={item} reveal={0} open />
+    </ol>,
+  );
+  expect(await screen.findByText("Cost $0.03, estimated at $0.02 to $0.08")).toBeInTheDocument();
 });

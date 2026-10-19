@@ -165,6 +165,7 @@ from engine.dispatcher import (
     looks_good,
     retry,
     send_back,
+    spent_by_request,
     undismiss,
     undo_changeset,
     waits_on_first_go,
@@ -1298,6 +1299,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
         sources = {s.id: s.data for s in store.read().list("source")}
         kinds = watched_kinds(store.read())
+        spent = spent_by_request(store.read())
         mail = {
             (s.data["source"], s.data["key"]): s.id
             for s in store.read().list("snapshot")
@@ -1348,6 +1350,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     stage_task=bool(d.get("stage_start")),
                     first_go=waits_on_first_go(d),
                     estimate_usd=d.get("estimate_usd"),
+                    range_usd=d.get("range_usd"),
+                    spent_usd=spent.get(req.id),
                     refused=d["state"] == "needs_you" and _last_refused(req.id),
                     cause=_cause_view(d),
                     follows=d.get("follows"),

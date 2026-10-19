@@ -3174,6 +3174,21 @@
             ],
             "title": "Note"
           },
+          "range_usd": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the whole request was estimated to cost, low and high; none when it couldn't be priced.",
+            "title": "Range Usd"
+          },
           "redoes": {
             "anyOf": [
               {
@@ -3213,6 +3228,18 @@
               }
             ],
             "title": "Source Title"
+          },
+          "spent_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What its AI work has cost so far, leaving out runs an outage cut off; none when nothing priced ran.",
+            "title": "Spent Usd"
           },
           "stage_task": {
             "default": false,

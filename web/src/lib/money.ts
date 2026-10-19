@@ -21,6 +21,19 @@ export function useEstimate() {
     usd == null ? null : usd < 0.005 ? t("cost.under_cent") : t("cost.about", { amount: money(usd) });
 }
 
+/** What a finished request cost beside what it was estimated to cost, or null when nothing priced ran. */
+export function useSpent() {
+  const { t } = useWords();
+  const money = useMoney();
+  return (spent: number | null | undefined, range: number[] | null | undefined) => {
+    if (spent == null) return null;
+    const [low, high] = range ?? [];
+    if (low == null) return t("cost.spent", { spent: money(spent) });
+    if (high == null || money(high) === money(low)) return t("cost.spent_estimated", { spent: money(spent), low: money(low) });
+    return t("cost.spent_range", { spent: money(spent), low: money(low), high: money(high) });
+  };
+}
+
 /** An amount with at least two significant digits, so a small price is not lost to rounding: 0.004 stays 0.004. */
 export function useSmallMoney() {
   const { t } = useWords();

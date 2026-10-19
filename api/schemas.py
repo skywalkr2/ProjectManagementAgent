@@ -529,6 +529,14 @@ class ChangeItem(BaseModel):
         False, description="The request waits for the person's first go in the workspace, which starts every such run."
     )
     estimate_usd: float | None = Field(None, description="What the run was estimated to cost when it asked for a go.")
+    range_usd: list[float] | None = Field(
+        None, description="What the whole request was estimated to cost, low and high; none when it couldn't be priced."
+    )
+    spent_usd: float | None = Field(
+        None,
+        description="What its AI work has cost so far, leaving out runs an outage cut off; none when nothing priced "
+        "ran.",
+    )
     refused: bool = Field(
         False, description="The account declined it under its own policy; it can be sent to another account."
     )

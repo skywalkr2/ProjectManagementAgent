@@ -944,6 +944,16 @@ class Request(Record):
         description="Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm.",
     )
     estimate_usd: float | None = Field(None, description="What the run was estimated to cost when it asked for a go.")
+    range_usd: list[float] | None = Field(
+        None,
+        description="What the whole request was estimated to cost, low and high, with its fix rounds, searches and "
+        "the stronger model, when it was last dispatched; none when it can't be priced.",
+    )
+    spend_cap_usd: float | None = Field(
+        None,
+        description="The most the request may spend in all under the person's go: what it had spent before the go "
+        "plus the high figure; none until the first dispatch after a go.",
+    )
     note: str | None = Field(None, description="The person's own words that came with the request.")
     source: str | None = Field(None, description="The id of the source the request is about, if any.")
     origin: Literal["pm", "input", "schedule"] = Field(

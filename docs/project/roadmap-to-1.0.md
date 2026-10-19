@@ -2186,8 +2186,9 @@ S1. **Promises, and how they end:**
 - [ ] **A newly added source is taken in quietly** (designer F6): one summary line and a list to review, every open item
   followed whatever its age.
 - [ ] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence.
-- [ ] **A request's spending as a range** (designer F14): the estimate covers the whole request with its retries and the
+- [x] **A request's spending as a range** (designer F14): the estimate covers the whole request with its retries and the
   stronger model, stops at the upper figure, outage retries are free, and the finished item shows what was spent.
+  *Built (S1):* `tests/test_pipeline.py`, `WhatChanged.test.tsx`. Left: a resumed request starts again from its first call.
 - [ ] **The gate week's instruments** (design 6.32 measures): silent closes, missed out of present (against the owner's
   own list), wrong endings, Missed-one per week, the replay set.
 

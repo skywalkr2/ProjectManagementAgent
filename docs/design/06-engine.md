@@ -1592,6 +1592,15 @@ never something that happens to them:
 - **Waiting for a go.** Anything above `budgets.confirm_above_usd` asks first; `budgets.confirm_unpriced` makes runs whose cost
   can't be estimated (a subscription) ask too, so spending stays the person's choice even where "ask above an amount" never
   asks; plugin work can be declared to always wait for the go.
+- **A request's spending as a range** (designer F14; built in S1, `engine/dispatcher.py` `request_range`, `_Budget`): each
+  dispatch estimates the whole request, low (one call on its tier) and high (every fix round and search round on that tier,
+  and the same on the stronger tier when it may take over; a stronger tier with no price adds nothing). The go asks on the
+  low figure as before and shows both ("About $0.04, at most $0.40."). All of a request's calls together are held to one
+  amount: without a go, `budgets.confirm_above_usd`; with a go, what it had spent before plus the high figure, fixed at the
+  first dispatch after the go so a retry doesn't widen it. A call the rest of that amount can't cover isn't made: the
+  request stops with what it spent and waits for another go, which covers a fresh amount. Runs an outage cut off (no
+  network, or a run that did no work) don't count. The finished item shows what it cost beside the range. A call whose
+  provider reports no token counts has no known cost and counts nothing, as in the usage reports.
 
 **Data handling.** Each provider has `allowed_data` levels. Inputs marked restricted only go to providers allowed to see them; if
 none is, the request goes to the PM instead. Secrets come from secret references (Part 12), never from config files.
@@ -2553,7 +2562,7 @@ in running. Not yet built; phase S builds them with named tests.
   outside content can't change a recipient or add an act. Plugins stay trusted code.
 - **Spending on a request** is estimated as a range for the whole request (retries and the stronger model included), stops at
   the upper figure and waits for another go beyond it; retries caused by an outage don't count; the finished item shows
-  what was actually spent beside the estimate.
+  what was actually spent beside the estimate. *Built (S1):* 6.16 "A request's spending as a range".
 - **A refused form save** refreshes the fields the person didn't touch and lists what changed underneath them ("refreshed:
   daily budget is now $2, changed elsewhere at 9:14").
 - **Kept secrets** that nothing refers to are removed after 30 days, and with their source or account, never while an Undo

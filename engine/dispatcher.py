@@ -8,6 +8,7 @@ import logging
 import re
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -204,8 +205,13 @@ def process(
     use = req.data.get("use")
     content = content_levels(store, req.data)
     independent = independence(store, cfg, req.data)
-    estimate = router.estimate(
-        packet.task, tier=tier, data_level=level, use=use, content=content, independent=independent
+    # The person's pick of account is theirs: no escalation away from it.
+    stronger = escalation_tier(cfg, tier) if use is None else None
+    estimate, high = request_range(
+        cfg, router, packet.task, tier, stronger, data_level=level, use=use, content=content, independent=independent
+    )
+    _set(
+        store, request_id, range_usd=[round(estimate, 4), round(high or estimate, 4)] if estimate is not None else None
     )
     budgets = cfg.ai.budgets
     if estimate is not None and estimate > budgets.per_run_usd:
@@ -244,7 +250,7 @@ def process(
             state="needs_you",
             approval="required",
             estimate_usd=round(estimate, 4),
-            waiting=f"About ${estimate:.2f}. Waiting for you to start it.",
+            waiting=f"{about(estimate, high)} Waiting for you to start it.",
         )
         return None
     kind = store.plugins.task_kind(req.data["task"])
@@ -274,12 +280,22 @@ def process(
     # Every account a run may reach (a backup, a fix round, an escalation) is held to this: the per-run limit, and
     # the amount that needs the person's go, or the estimate they said yes to. An unpriced account runs only when
     # unpriced runs need no go, or the go they gave was for an unpriced run.
+    # The whole request is held to one amount too: without a go, the amount that needs one; with a go, what was spent
+    # before it plus the high figure the person said yes to, fixed at the first dispatch after the go so a retry
+    # doesn't widen it. A request that reaches it stops for another go.
     granted = req.data.get("approval") == "granted"
     spend_limit = budgets.per_run_usd
-    if not granted:
+    cap = budgets.confirm_above_usd
+    if granted:
+        cap = req.data.get("spend_cap_usd")
+        if cap is None:
+            cap = request_spent(store, request_id) + max(budgets.confirm_above_usd, high or estimate or 0.0)
+            _set(store, request_id, spend_cap_usd=round(cap, 4))
+        if estimate is not None:
+            spend_limit = min(spend_limit, max(budgets.confirm_above_usd, estimate))
+    else:
         spend_limit = min(spend_limit, budgets.confirm_above_usd)
-    elif estimate is not None:
-        spend_limit = min(spend_limit, max(budgets.confirm_above_usd, estimate))
+    budget = _Budget(request_id, spend_limit, cap, granted)
     unpriced_ok = not budgets.confirm_unpriced or (granted and estimate is None)
     first = _rounds(
         store,
@@ -297,20 +313,18 @@ def process(
         independent,
         offline_known=waited,
         ws=ws,
-        spend_limit=spend_limit,
+        budget=budget,
         unpriced_ok=unpriced_ok,
     )
     if first.abandoned:
         return None
     outcome = first
-    # The person's pick of account is theirs: no escalation away from it.
-    stronger = escalation_tier(cfg, tier) if use is None else None
     second_estimate = (
         router.estimate(packet.task, tier=stronger, data_level=level, content=content, independent=independent)
         if first.escalate and stronger
         else None
     )
-    within = second_estimate <= spend_limit if second_estimate is not None else unpriced_ok
+    within = second_estimate <= budget.limit(store) if second_estimate is not None else unpriced_ok
     if first.escalate and stronger and stronger != tier and within and not _closed(store, request_id):
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
         second = _rounds(
@@ -329,7 +343,7 @@ def process(
             independent,
             offline_known=waited,
             ws=ws,
-            spend_limit=spend_limit,
+            budget=budget,
             unpriced_ok=unpriced_ok,
         )
         if second.abandoned:
@@ -560,6 +574,70 @@ class _Outcome:
     fallback: str | None = None  # the account that answered, when it stands in a tier's fallback chain
 
 
+#: Run errors from no network or a run that did no work: what they cost is not the request's.
+OUTAGE_KINDS = frozenset({"offline", "no_work"})
+
+
+def _counts(run: Any) -> bool:
+    return not run.data.get("no_work") and run.data.get("error_kind") not in OUTAGE_KINDS
+
+
+def request_spent(store: Store, request_id: str) -> float:
+    """What the AI work on a request has cost so far, leaving out runs an outage cut off."""
+    return sum(
+        run.data.get("cost_usd") or 0.0 for run in store.read().find("run", {"request": request_id}) if _counts(run)
+    )
+
+
+def spent_by_request(view: Any) -> dict[str, float]:
+    """What each request's AI work has cost, as `request_spent` counts it, for every request with a priced run."""
+    spent: dict[str, float] = {}
+    for run in view.list("run"):
+        if run.data.get("request") and run.data.get("cost_usd") is not None and _counts(run):
+            spent[run.data["request"]] = spent.get(run.data["request"], 0.0) + run.data["cost_usd"]
+    return spent
+
+
+def request_range(
+    cfg: Config, router: Router, task: AiTask, tier: str, stronger: str | None, **where: Any
+) -> tuple[float | None, float | None]:
+    """What a whole request may cost, low and high: low is one call on its tier; high adds every fix round and search
+    round on that tier and, when a stronger tier may take over, the same on that tier. (None, None) when the first
+    call can't be priced; a stronger tier that can't be priced adds nothing to high."""
+    low = router.estimate(task, tier=tier, **where)
+    if low is None:
+        return None, None
+    calls = 1 + cfg.dispatch.fix_rounds + cfg.dispatch.knowledge.search_rounds
+    high = low * calls
+    if stronger and stronger != tier and where.get("use") is None:
+        second = router.estimate(task, tier=stronger, **{k: v for k, v in where.items() if k != "use"})
+        high += (second or 0.0) * calls
+    return low, high
+
+
+@dataclass
+class _Budget:
+    """What a request may still spend: each call at most `per_call`, and all of its calls together at most `cap`
+    (the amount that needs the person's go, or what their go covered). Outage runs don't count."""
+
+    request_id: str
+    per_call: float
+    cap: float
+    granted: bool
+
+    def limit(self, store: Store) -> float:
+        return max(0.0, min(self.per_call, self.cap - request_spent(store, self.request_id)))
+
+    def reached(self, store: Store) -> bool:
+        """Whether what is left of the whole request's amount, not the per-call limit, is what stops the next call."""
+        return self.cap - request_spent(store, self.request_id) < self.per_call
+
+    def stop(self, store: Store) -> str:
+        spent = request_spent(store, self.request_id)
+        allowed = "your go covered" if self.granted else "it may spend without your go"
+        return f"Spent ${spent:.2f} of the ${self.cap:.2f} {allowed}. Give another go to finish it."
+
+
 def search_request(text: str) -> workspace_search.Query | None:
     """What an answer asks to search for, when it is a search request instead of ops: an object with a `search` and no
     ops. None for any other answer."""
@@ -584,11 +662,12 @@ def _call(
     content: frozenset[str],
     independent: Independence | None,
     offline_known: bool,
-    spend_limit: float | None = None,
+    budget: _Budget | None = None,
     unpriced_ok: bool = True,
 ) -> object | None:
     """One call, recording its run id on `out`. Returns the result, or None when the call ended the work: `out` then
-    holds why."""
+    holds why. A call the request's remaining amount can't cover stops it for another go."""
+    spend_limit = budget.limit(store) if budget is not None else None
     try:
         result, choice, out.run_id = router.call(
             task,
@@ -609,7 +688,10 @@ def _call(
         # No account could be reached at all: the work waits for the network, which is no failure and no try.
         out.stop, out.cause = OFFLINE_WAITING, {"kind": "offline"}
     except (BudgetReached, NoProvider) as err:
-        out.stop, out.cause = str(err), _data_level_cause(err)
+        if isinstance(err, BudgetReached) and budget is not None and budget.reached(store):
+            out.stop, out.cause = budget.stop(store), {"kind": "spend_cap"}
+        else:
+            out.stop, out.cause = str(err), _data_level_cause(err)
     except AiError as err:
         if err.kind == "no_work":
             # The run did no work: it is no answer to send back, no failure of the model and no try.
@@ -670,7 +752,7 @@ def _rounds(
     independent: Independence | None = None,
     offline_known: bool = False,
     ws: Workspace | None = None,
-    spend_limit: float | None = None,
+    budget: _Budget | None = None,
     unpriced_ok: bool = True,
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
@@ -697,7 +779,7 @@ def _rounds(
             content,
             independent,
             offline_known,
-            spend_limit,
+            budget,
             unpriced_ok,
         )
         if result is None:
@@ -728,11 +810,13 @@ def _rounds(
                 ctx.inputs.trust = "untrusted"  # what comes back from outside content keeps everything after it so
             shown = shown + "\n\n" + workspace_search.render(hits, query, searches, limits.search_rounds - searches)
             task = replace(task, request=shown)
-            if spend_limit is not None:
+            if budget is not None:
                 again = router.estimate(
                     task, tier=tier, data_level=data_level, use=use, content=content, independent=independent
                 )
-                if again is not None and again > spend_limit:
+                if again is not None and again > budget.limit(store):
+                    if budget.reached(store):
+                        return _Outcome(run_id=out.run_id, stop=budget.stop(store), cause={"kind": "spend_cap"})
                     return _Outcome(
                         run_id=out.run_id,
                         stop=f"Searching first would make this cost about ${again:.2f}, above the amount you allowed. "
@@ -750,7 +834,7 @@ def _rounds(
                 content,
                 independent,
                 offline_known,
-                spend_limit,
+                budget,
                 unpriced_ok,
             )
             if result is None:
@@ -1206,11 +1290,22 @@ def stop_or_retry(store: Store, cfg: Config, request_id: str, outcome: _Outcome,
 
 def needs_you(store: Store, request_id: str, why: str, cause: dict | None = None) -> None:
     """Stop a request for the person, with why in plain words and, when the screen can offer an action that clears it,
-    the cause. A request that is closed or was replaced by a later attempt is not stopped again."""
+    the cause. A request that is closed or was replaced by a later attempt is not stopped again. One that reached
+    the amount it may spend waits for another go, which covers a fresh amount."""
     if _closed(store, request_id):
+        return None
+    if cause is not None and cause.get("kind") == "spend_cap":
+        _set(store, request_id, state="needs_you", waiting=why, approval="required", spend_cap_usd=None)
         return None
     _set(store, request_id, state="needs_you", waiting=why, cause=cause)
     return None
+
+
+def about(low: float, high: float | None) -> str:
+    """A request's cost in words: one figure when the high one adds nothing, else the range."""
+    if high is None or round(high, 2) <= round(low, 2):
+        return f"About ${low:.2f}."
+    return f"About ${low:.2f}, at most ${high:.2f}."
 
 
 def grant_first_go(store: Store) -> int:

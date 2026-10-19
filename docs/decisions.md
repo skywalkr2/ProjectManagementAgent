@@ -318,6 +318,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   person makes or confirms isn't stopped by their rule. Decided by the main session, within the designer's point 4.
   **Impact:** design 6.22 (CHANGES.md section 90); the decision of 2026-10-16 that a failing check changes nothing is
   superseded.
+- **Also (2026-10-19): a request's spending as a range (S1, designer F14).** The go is still asked on the likely figure
+  (one call), and shows the most the request could cost; the stop is on the whole request's total, at the amount that
+  needs a go or at what the go covered. Asking on the high figure would ask for most small runs and teach the person to
+  press Go without reading. Decided by the main session.
+  **Impact:** design 6.16 (CHANGES.md section 91).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

@@ -788,3 +788,62 @@ def test_an_action_given_an_owner_by_pick_an_owner_can_be_undone(env):
     report = undo_changeset(store, cs_id, [0])
     assert report.restored == [0], report.skipped
     assert store.read().get("action", outcome["records"][0]["id"]) is None
+
+
+def test_a_request_without_a_go_stops_at_the_amount_that_needs_one_across_its_fix_rounds(env, monkeypatch):
+    """Each call alone is under the amount, but the request as a whole may not pass it without the person's go."""
+    from engine.dispatcher import request_spent
+
+    ws, cfg, store = env
+    _priced(cfg, input_per_million=50.0, output_per_million=50.0)
+    cfg.ai.budgets.per_run_usd = 10.0
+    router = Router(cfg, store, env={})
+    pasted = "The printer says proof copies will ship on November 5."
+    first = hand_in(ws, store, note="", pasted=pasted, now=NOW)
+    answers({"summary": "Nothing.", "ops": []})
+    process(ws, store, cfg, router, first.request, now=NOW)
+    one = store.read().get("request", first.request).data["range_usd"][0]
+    monkeypatch.setattr(Router, "_cost", lambda self, choice, result: one)  # each call costs what one is estimated at
+    bad = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "words nobody wrote"}}]}
+    asked = answers(bad, bad, bad)
+    cfg.ai.budgets.confirm_above_usd = one * 1.5
+    again = hand_in(ws, store, note="", pasted=pasted.replace("5", "6"), now=NOW)
+    assert process(ws, store, cfg, router, again.request, now=NOW) is None
+    request = store.read().get("request", again.request)
+    assert len(asked) == 1  # the fix round would pass the amount: it waits for a go instead
+    assert request.data["state"] == "needs_you" and request.data["approval"] == "required"
+    assert "Give another go to finish it" in request.data["waiting"]
+    assert request_spent(store, again.request) == pytest.approx(one)
+
+
+def test_the_go_shows_the_whole_requests_range_and_fixes_what_it_may_spend(env):
+    from engine.stages import approve_stage_request
+
+    ws, cfg, store = env
+    _priced(cfg, input_per_million=50.0, output_per_million=50.0)
+    cfg.ai.budgets.confirm_above_usd, cfg.ai.budgets.per_run_usd = 0.01, 10.0
+    answers({"summary": "Nothing.", "ops": []})
+    handed, _ = run(env, "The printer says proof copies will ship on November 5.")
+    request = store.read().get("request", handed.request)
+    low, high = request.data["range_usd"]
+    assert low == request.data["estimate_usd"] and high > low
+    assert f"at most ${high:.2f}" in request.data["waiting"]
+    approve_stage_request(store, handed.request, request.version)
+    process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
+    assert store.read().get("request", handed.request).data["spend_cap_usd"] == pytest.approx(high, abs=1e-3)
+
+
+def test_what_an_outage_cut_off_is_not_the_requests_cost(env):
+    from engine.dispatcher import request_spent
+
+    _, _, store = env
+    base = {"task": "notes", "provider": "stub", "model": "stub", "tier": "routine", "started_at": NOW.isoformat()}
+    with store.transaction() as tx:
+        for extra in (
+            {"cost_usd": 0.05, "outcome": "ok"},
+            {"cost_usd": 0.04, "outcome": "error", "error_kind": "offline"},
+            {"cost_usd": 0.03, "outcome": "error", "no_work": True},
+            {"cost_usd": 0.02, "outcome": "invalid_output"},
+        ):
+            tx.create("run", {**base, "request": "REQ-9", **extra}, WriteContext("engine", "trusted", "test"))
+    assert request_spent(store, "REQ-9") == pytest.approx(0.07)

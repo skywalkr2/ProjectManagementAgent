@@ -1026,6 +1026,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 91. A request's spending as a range (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Spending on a request (6.16, 6.32) | Each call was held to the amount needing a go, so fix rounds, searches and the stronger model together could pass it | One range for the whole request; all its calls together held to the amount (without a go) or what the go covered; reaching it stops for another go; outage runs free; the finished item shows the cost beside the range. Built: `tests/test_pipeline.py`, `web/src/components/WhatChanged.test.tsx` |
+
 ## 90. A rule's check runs before the change applies (2026-10-19)
 
 | Where | Before | Now |
