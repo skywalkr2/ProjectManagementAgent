@@ -40,7 +40,11 @@ def _addresses(value: str | Address | Sequence[str | Address]) -> tuple[Address,
         elif isinstance(entry, str):
             if "\r" in entry or "\n" in entry:
                 raise ValueError("Address headers must not contain line breaks")
-            header = HeaderRegistry()("To", entry)
+            try:
+                header = HeaderRegistry()("To", entry)
+            except IndexError:
+                # Older Python versions' address parser fails this way on an address that ends at the "@".
+                raise ValueError("Supply explicit, valid mailboxes") from None
             if header.defects or any(group.display_name is not None for group in header.groups):
                 raise ValueError("Supply explicit, valid mailboxes rather than an address group")
             parsed = header.addresses

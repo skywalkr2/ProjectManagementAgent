@@ -4,8 +4,8 @@ Open questions from the build, written so each can be answered on its own. Each 
 default the build follows if the answer is "yes, that's fine". Answered questions move to `docs/decisions.md` and
 leave this list.
 
-**Open: F1 to F14 (2026-10-19)**, in `designer-update-2026-10-19.md` with what changed since the last round. Each
-there says what the app does today and the default the build follows if the answer is "yes, that's fine":
+**Answered: F1 to F14 (2026-10-19)**, yes to all with additions, in `designer-answers-2026-10-19.md`; folded into design
+6.32 and the roadmap. The questions were in `designer-update-2026-10-19.md`, each saying what the app does today and the default the build follows if the answer is "yes, that's fine":
 F1 gate phase S on a week of real mail; F2 hold the broader steward features behind it; F3 how "dependable" is measured;
 F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first run; F7 tests for approved sending;
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and

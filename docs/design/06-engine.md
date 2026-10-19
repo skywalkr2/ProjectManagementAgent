@@ -2485,3 +2485,39 @@ people and details, and never acts in their name without their yes on the exact 
 - **Not in 1.0:** a third-party push service (a companion phone app comes after 1.0), a bank or any financial account. The details of each item are designed in its own section when its wave starts; the proposal is
   `docs/project/steward-proposal.md`.
 
+### Dependability, from the designer's answers (2026-10-19)
+
+The functional designer's answers to F1 to F14 (`docs/project/designer-answers-2026-10-19.md`), drawn from what went wrong
+in running. Not yet built; phase S builds them with named tests.
+- **Records join by id, never by a display name.** Anything that names a record to follow (a watch list, a rule, a filter)
+  holds its id, so a rename never detaches it.
+- **No close goes unseen.** Every item the assistant or a rule closes or sets aside without the person seeing it is counted
+  and can be reviewed ("silent closes"), and the count is one of the dependability measures.
+- **An outage is not a failure.** With the computer asleep or no network, work waits and runs when the network is back. A
+  run that did no work (cut off, or a runner that only printed a sign-in banner) is not an attempt, is never sent back as
+  a mistake, and doesn't count against the request's spending figure.
+- **A newly added source is taken in quietly.** Nothing in it is reported as new: one summary line ("found 12 open promises
+  in the last 14 days") and a list to review. Every open item in it is followed from then on, whatever its age; age decides
+  only whether it is raised as news.
+- **Coverage on Today.** "Couldn't read" and "read, nothing new" are different words and never share a color. A source that
+  has failed for longer than its usual gap becomes a line for the person ("work mail hasn't been read since yesterday
+  6 PM: sign in again?"). A day whose right top line is "nothing needs you, and here is what was read" is a test case.
+- **Missed one** is reachable wherever the person is looking, the evening wrap-up included ("anything I missed today?"),
+  and accepts a plain sentence with no source.
+- **Measures** (the gate week, the tester group, the Quality screen): missed out of present; wrong out of proposed; wrong
+  endings, a nudge treated as done included (chasing someone else's promise doesn't fulfill it); silent closes out of all
+  closes; changed dates, cancellations, partial deliveries and owner changes handled; review time; sources not read; and
+  "Missed one" per person per week, which should fall from week one to week two. Counts with their denominators; a
+  held-out set; and a replay set where each real miss becomes a case (starting state, the person's action, expected end).
+- **Sending (S1b) is accepted only on named tests:** exact content and recipients; an approval goes stale when the draft,
+  its recipients or its inputs change, a restart that re-resolved addresses or updated a template included; never twice
+  after a timeout, retry or restart; after a closed lid or lost network mid-send, the result is checked with the service
+  before anything is retried, and an uncertain result shows as uncertain, never as sent; a withdrawn sign-in stops plainly;
+  outside content can't change a recipient or add an act. Plugins stay trusted code.
+- **Spending on a request** is estimated as a range for the whole request (retries and the stronger model included), stops at
+  the upper figure and waits for another go beyond it; retries caused by an outage don't count; the finished item shows
+  what was actually spent beside the estimate.
+- **A refused form save** refreshes the fields the person didn't touch and lists what changed underneath them ("refreshed:
+  daily budget is now $2, changed elsewhere at 9:14").
+- **Kept secrets** that nothing refers to are removed after 30 days, and with their source or account, never while an Undo
+  still points at one.

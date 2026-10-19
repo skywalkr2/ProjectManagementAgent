@@ -1026,6 +1026,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 85. The functional designer's answers to F1 to F14 (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Phase S (6.32) | Every steward feature in about six sessions | A first slice, then a gate week on the owner's own mail before the rest; sending (S1b) waits for the gate |
+| Dependability (6.32) | Measures named, no rules for outages, renames or quiet intake | Records join by id; silent closes counted; an outage is not a failure; a new source is taken in quietly; coverage words; "Missed one" anywhere |
+| Measures (6.20, 6.32) | Found and kept, false alerts, review time | Missed out of present, wrong out of proposed, wrong endings (a nudge isn't done), silent closes, Missed-one per week, a replay set |
+| Sending (6.12, 6.32) | Exact content approved | Plus stale approvals, never twice, check with the service after a cut-off, uncertain shown as uncertain |
+| Spending (6.16) | A go covers one call's estimate | A range for the whole request; outage retries free; actual spend shown |
+
+All *not yet built*: the roadmap's phase S and tester milestone carry them.
+
 ## 84. The Settings rework and the screen wording review (2026-10-19)
 
 | Where | Before | Now |

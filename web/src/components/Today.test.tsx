@@ -484,6 +484,19 @@ test("the list holds still while the pointer is over it, and the new lines come 
   expect(screen.queryByRole("button", { name: "Show 1 new item" })).toBeNull();
 });
 
+test("an empty list holds nothing: the first lines come straight in even with the cursor in the queue", async () => {
+  let lines: typeof decision[] = [];
+  const { refresh } = show([], { "GET today/queue": () => lines });
+  const needs = await screen.findByRole("heading", { level: 2, name: "Needs you" });
+  const region = needs.closest("section") ?? needs.parentElement!;
+  region.setAttribute("tabindex", "-1");
+  region.focus();
+  lines = [decision, review];
+  await refresh();
+  expect(await screen.findByText(/Look over 3 to-dos/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /^Show \d+ new/ })).toBeNull();
+});
+
 test("with nothing holding the list new lines appear at once", async () => {
   let lines = [decision];
   const { refresh } = show([], { "GET today/queue": () => lines });

@@ -38,7 +38,14 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
   phase S (the daily steward), then phase I (the Windows and macOS installers), then phase C (the writing pack, finished completely first), then phase P (the project management
   and publishing packs), then the owner's sign-off (D).
 - **When the owner uses it** (owner, 2026-10-15): the owner tests it after phase B and starts real use once the writing
-  pack is complete (end of phase C). There is no go/no-go date: the 2026-10-30 one was set aside on 2026-10-09 and
+  pack is complete (end of phase C). Confirmed by the owner (2026-10-19): real use starts once the writing pack is complete. Phase S's gate week is the
+  measured trial of the core on the owner's personal mail (R9 rules out work mail), before testers.
+- **The first milestone** (owner, 2026-10-19): the core complete, with full UI and code reviews approved, and the
+  installers (phases B, S and I). **The order** (main session, within that): phase B wave 4, then S1 with outage handling
+  and a rule's check before applying brought forward from phase E, then B's waves 5 and 6 built to S's shape, then the gate
+  week, then the rest of S, then I. **1.0** is a moving target until the owner finalizes scope: every plugin pack is
+  designed before plugin API 1.0, so the API holds the base any pack could need. The owner tries the app in the evenings
+  as it goes. There is no go/no-go date: the 2026-10-30 one was set aside on 2026-10-09 and
   2026-10-12, and stays set aside.
 - **Plugin API:** 0.3.79 (see the table below).
 
@@ -2090,6 +2097,21 @@ Guide sections for promises, the brief, reminders, bills, bookings and acting af
 (`docs/project/steward-guide-sections.md`); each moves into `engine/guide/guide.md` in the change that builds its
 feature, never before, since the guide is what the assistant answers from.
 
+**The gate (functional designer's F1 and F2, 2026-10-19; design 6.32 "Dependability").** Phase S builds a first slice,
+proves it on a week of real use, and only then goes on:
+- **The first slice (S1):** promises and how they end, reminders, replies owed, one plain "what changed since yesterday"
+  line, the coverage line, "Missed one", the quiet first run, and outage handling brought forward from phase E (work waits
+  for the network; a run that did no work isn't an attempt). A rule's check before the change applies (from phase E) is
+  needed before S1b at the latest. **Estimated alone: about 4 sessions** (connecting the fifteen rule modules into intake,
+  the promise records and endings, the coverage line, "Missed one", the quiet first run, outage waiting, the replay set),
+  then the gate week.
+- **The gate week:** the owner's personal mail (R9 rules out work mail); at least one closed-lid night and one network drop;
+  the owner writes down each promise they notice before looking at the assistant's list, as the independent list; two
+  days are measured first and the thresholds set from what was seen, then the counted week. Pass on the owner's
+  thresholds for the measures in design 6.32.
+- **Behind the gate:** S1b (sending and calendar acts: the riskiest part, so it waits), the brief, meeting prep, people
+  memory, areas of life, capture from anywhere and the conversation.
+
 S1. **Promises, and how they end:**
 - [ ] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
   folder is offered as a source when a mailbox is connected): "I'll send it Friday" is the person's to-do; "they'll get
@@ -2220,7 +2242,9 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S, about 2 sessions)
 
-**The tester milestone (owner, 2026-10-18).** A small invited group tests the installers with the mail and calendar
+**The tester milestone (owner, 2026-10-18; designer's F8 and plan point 5, 2026-10-19).** Measured also by how many
+items each tester brings back through "Missed one" per week, which should fall from week one to week two. The invitation
+says personal mail, or work mail only with the employer's OK (risk R14). A small invited group tests the installers with the mail and calendar
 add-on. Gated on: every integrity defect in phase B's first items fixed with its test; the installers built and tried
 on a clean Mac and a clean Windows computer with the same journey (install, connect mail, a first result, Undo,
 reopen); and the owner's thresholds for missed and false promises set before the run.

@@ -256,6 +256,25 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   `ai.yaml`: `tasks.<kind>.tier`, `tiers.<tier>.escalate_to`, `routing`), so Settings gets a section for it under AI
   accounts. Escalation stays tied to failed checks, never to a model's own confidence.
   **Impact:** open promise P27; design 7.9 gains the section when it is built.
+- **Also (2026-10-19): the functional designer's answers to F1 to F14.** Yes to all, with additions from running
+  (`docs/project/designer-answers-2026-10-19.md`): phase S gates on a week of real use (with a closed-lid night and a network
+  drop) before the rest, sending included; records join by id; unseen closes are counted; an outage is not a failure; a new
+  source is taken in quietly; "Missed one" from anywhere; the measures widened (silent closes, a nudge isn't done, Missed-one
+  per week, a replay set); sending's tests widened; a request's spending is a range with outage retries free and actual
+  spend shown; refused forms list what changed underneath; kept secrets wait for any Undo.
+  **Impact:** design 6.32 "Dependability" and CHANGES.md section 85; the roadmap's phase S gains the gate and an S1
+  estimate of about 4 sessions; risks R11 to R14. Four plan points need the owner (open promise P28): when real use starts,
+  what 1.0 is, the order of phase B's remaining Today work against S1, and bringing outage handling and the rule check
+  before applying from phase E into S.
+- **Also (2026-10-19): the owner's calls on the designer's plan points (P28).** (1) The first milestone is the core
+  complete, with full UI and code reviews approved, and the installers. (2) The owner's own real use starts once the
+  writing pack is complete; phase S's gate week stays as the measured trial of the core on the owner's personal mail
+  before testers, not the start of daily use. (3) 1.0 is a moving target until the owner finalizes scope: every plugin
+  pack is designed before plugin API 1.0, so the API holds the base any pack could need. (4) Bringing items forward is the
+  main session's call within that: outage handling and a rule's check before the change applies move from phase E into
+  phase S1; after phase B wave 4 (in progress), S1 goes before B's waves 5 and 6 so Today is designed once, and those
+  waves are then built to S's shape. The owner tries the app in the evenings as it goes rather than holding all feedback.
+  **Impact:** the roadmap's order and "When the owner uses it" updated; open promise P28 closed.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

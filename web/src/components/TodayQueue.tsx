@@ -92,7 +92,8 @@ export function TodayQueue(props: {
   const onScreen = useRef(false); // the lines have been drawn once; before that there is nothing to hold still
   // While the person is working in the list it keeps what is on screen even in the render that brings the new data, so a row
   // under the cursor is never replaced; the effect below keeps that as the state once the data has changed.
-  const holding = frozen ?? (working.current.held && onScreen.current ? shownKeys.current : null);
+  // An empty list has nothing to hold still: new lines then come straight in.
+  const holding = frozen ?? (working.current.held && onScreen.current && shownKeys.current.length > 0 ? shownKeys.current : null);
   type Shown = { line: QueueLine; ghost: boolean };
   const display: Shown[] =
     holding === null
@@ -109,7 +110,7 @@ export function TodayQueue(props: {
     if (!queue.data) return;
     const keys = new Set(queue.data.map((line) => line.key));
     let after = [...keys];
-    if (!working.current.held) {
+    if (!working.current.held || (frozen ?? shownKeys.current).length === 0) {
       setFrozen(null);
     } else {
       const base = frozen ?? shownKeys.current;

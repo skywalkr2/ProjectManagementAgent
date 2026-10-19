@@ -11,8 +11,9 @@ const strings: Record<string, string> = Object.fromEntries(
   ),
 );
 
-/** 1512 x 982 is the owner's laptop; the others are a phone, a tablet and three desktops. */
+/** 1512 x 982 is the owner's laptop; the others are two phones, a tablet and three desktops. */
 const SIZES = [
+  { width: 360, height: 740 },
   { width: 390, height: 844 },
   { width: 768, height: 1024 },
   { width: 1024, height: 768 },
@@ -115,6 +116,14 @@ test.describe("no screen is wider than the window", () => {
         await screen.ready(page);
         const found = await overflow(page);
         if (tooWide(found)) wide.push(`${screen.name} at ${size.width}: ${JSON.stringify(found)}`);
+        if (size === SIZES[0]) {
+          // Another computer's fonts may run wider than this one's: at the narrowest width, measure again with the text
+          // set a little wider, so a row that only just fits here is caught before it overflows there.
+          await page.evaluate(() => document.querySelectorAll<HTMLElement>("body *").forEach((e) => (e.style.letterSpacing = "0.08em")));
+          const wider = await overflow(page);
+          if (tooWide(wider)) wide.push(`${screen.name} at ${size.width} with wider text: ${JSON.stringify(wider)}`);
+          await page.evaluate(() => document.querySelectorAll<HTMLElement>("body *").forEach((e) => (e.style.letterSpacing = "")));
+        }
       }
       // The details pane: the review line opened to look closer, beside the queue or in place of its row.
       await page.evaluate(() => {
