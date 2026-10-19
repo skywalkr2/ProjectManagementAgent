@@ -96,7 +96,10 @@ async function handIn(page: Page, c: Case) {
   // The result is a line of Today's queue as soon as the assistant has made it; the card itself is read on What changed.
   await go(page, "Today");
   const reviews = page.locator('[data-queue-line="review"]');
-  const before = await reviews.count();
+  // Count only once the screen shows what the server holds: right after opening Today the list may not have loaded yet.
+  const lines: Array<{ kind: string }> = await (await page.request.get("api/today/queue")).json();
+  const before = lines.filter((line) => line.kind === "review").length;
+  await expect(reviews).toHaveCount(before, { timeout: 20_000 });
   await page.getByRole("button", { name: "Hand something in" }).first().click();
   const box = page.getByLabel("Paste or type it here");
   if (c.pasted) {

@@ -34,7 +34,7 @@ DOMAIN_ENDINGS = frozenset(
     }
 )  # fmt: skip
 _BARE_HOST = r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+"
-_BARE_DOMAIN = re.compile(rf"(?<![\w./@:-])({_BARE_HOST})(?::\d+)?((?:[/?#]{_BODY}{_TRAILING})?)")
+_BARE_DOMAIN = re.compile(rf"(?<![\w./@:-])({_BARE_HOST})(?![\w])(?::\d+)?((?:[/?#]{_BODY}{_TRAILING})?)")
 
 
 def _bare_domain(match: re.Match[str]) -> str:
