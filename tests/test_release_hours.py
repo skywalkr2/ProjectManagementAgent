@@ -303,3 +303,12 @@ def test_a_line_with_a_day_but_no_moment_of_arrival_is_never_held(env):
     assert release_hours._moment(at(MONDAY, 23).isoformat()) == at(MONDAY, 23)
     # A promise, an overdue day or a send line is built from days passing, so it shows whenever the person looks.
     assert not {"promise", "overdue", "send", "nudge", "reminder", "restart", "paused"} & release_hours.HELD_KINDS
+
+
+def test_work_the_person_gave_their_go_to_shows_when_it_is_done_even_at_night(env):
+    _, _, store = env
+    request = asks_go(store, at(MONDAY, 23))
+    with store.transaction() as tx:
+        cur = tx.get("request", request)
+        tx.update("request", request, {"approval": "granted"}, _TEST, read_version=cur.version)
+    assert [x.request for x in lines(env, at(MONDAY, 23, 30))] == [request]

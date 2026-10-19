@@ -81,6 +81,8 @@ def causes(
         if line.kind not in HELD_KINDS:
             continue
         request = requests.get(line.request or "") or by_changeset.get(line.changeset or "")
+        if request is not None and request.data.get("approval") == "granted":
+            continue  # work the person gave their go to is what they asked for, so it shows when it is done
         if request is not None:
             at = _from_request(request, sources)
         else:
