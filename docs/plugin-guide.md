@@ -1172,6 +1172,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `notes` | str \| None | `None` | Extra detail about the action. |
 | `reply` | str \| None | `None` | The reply the assistant drafted for a question someone asked the person, ready to copy. Empty when no recorded fact holds the answer; the action's text then says what is missing. |
 | `reply_reviewed` | bool | `False` | False until the person approves the drafted reply or writes their own; a reply that is not reviewed is shown as a draft. |
+| `remind_at` | AwareDatetime \| None | `None` | When to remind the person of it, as a moment with its time zone. The person sets it, and moves it when they snooze; the reminder is a line on Today while the action is open and not on hold, and it is never a correction of the assistant's work. |
 | `on_hold` | OnHold \| None | see below | Set while the action waits for something outside the person's control; the person sets and clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due date for when it comes off hold. |
 | `on_hold.waiting_for` | str | required | What it waits for, in plain words. |
 | `on_hold.since` | date | required | The day it was put on hold. |

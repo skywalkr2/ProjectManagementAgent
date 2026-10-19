@@ -797,3 +797,22 @@ test("a choice setting that doesn't name a list keeps its own order and wording"
   const select = await screen.findByLabelText("What demo.mode does");
   expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["person", "rule"]);
 });
+
+test("the Today section holds the reminder settings as lists, and the button that asks the browser for notifications", async () => {
+  const user = userEvent.setup();
+  const request = vi.fn(async () => "granted");
+  vi.stubGlobal("Notification", Object.assign(function Notification() {}, { permission: "default", requestPermission: request }));
+  api([
+    ...ITEMS,
+    item("steward.reminders.quiet_start", { group: "steward.reminders", type: "choice", options: ["20:00", "21:00"], value: "21:00", default: "21:00", choices: "times_of_day" }),
+    item("steward.reminders.working_first_day", { group: "steward.reminders", type: "choice", options: ["monday", "tuesday"], value: "monday", default: "monday" }),
+  ]);
+  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  expect(await screen.findByRole("combobox", { name: "Quiet hours start" })).toHaveValue("21:00");
+  const first = screen.getByRole("combobox", { name: "First working day" });
+  expect(within(first).getAllByRole("option").map((o) => o.textContent)).toEqual(["Monday", "Tuesday"]);
+  expect(request).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Allow notifications" }));
+  expect(request).toHaveBeenCalledTimes(1);
+  vi.unstubAllGlobals();
+});

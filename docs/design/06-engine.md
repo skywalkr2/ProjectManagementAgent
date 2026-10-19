@@ -2678,6 +2678,27 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
 - **Kept secrets** that nothing refers to are removed after 30 days, and with their source or account, never while an Undo
   still points at one.
 
+*Built so far (S1-2, reminders at a time, in the app):* an action carries an optional `remind_at` (a moment with its time
+zone). The person sets it from the to-do's menu ("Remind me…", a day and time box; "Change reminder…" and "Remove
+reminder" once set) or moves it with a snooze, always their own `record.edit` with Undo; it is not in the edited fields
+of `engine/learn.py`, so it is never a correction of the assistant (`tests/test_reminder_lines.py`,
+`web/src/components/TodayReminders.test.tsx`). The settings are `steward.reminders.*` in `steward.yaml`, picked from
+lists and live (no restart): the working day's start and end and its first and last day (09:00 to 17:30, Monday to
+Friday), quiet hours (21:00 to 07:00, which may cross midnight), how reminders missed while the computer slept arrive
+(`each` or `summary`), how far Later today and This evening reach, and how long after its time an unshown reminder counts
+as late; working hours that end before they start, and quiet hours with equal ends, are refused in plain words
+(`tests/test_reminder_lines.py`). When a reminder reaches the person is decided by `engine/reminders.py` through
+`engine/reminder_lines.py`: an open action that is not on hold, whose `remind_at` has come, is one Today line,
+`{task} · due now`; one that came due and was not shown for the late-after time (the app or the computer was not running)
+is `{task} · late: due {time}, while this computer was asleep`, shown at once and never dropped; reminders that fell in
+quiet hours wait, then arrive together as "Saved during quiet hours" with `{task} · was due {day and time}`, and with
+`summary` the late ones are one line too. Each line has Done first and Snooze in its menu with In 1 hour, Later today,
+This evening, Tomorrow morning, Next week (each with the time it moves to, a choice with no time left today left out)
+and Pick a time…. A line that appears while the app is open is also one browser notification with its words, once the
+person has allowed them from the button in Settings (the browser is never asked on load). Not built yet: the reminder in
+the person's own calendar or mailed to them (the publisher, S1b), and desktop notifications from the tray (phase I). A
+reminder is marked late by how long ago it came due, since the engine does not yet know when the computer slept.
+
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 
 A promise is something someone owes someone: "I'll send it Friday" is the person's own; "they'll get back to me Tuesday"

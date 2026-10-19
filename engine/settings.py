@@ -297,6 +297,11 @@ def _time_zones() -> list[str]:
         return []
 
 
+def _times_of_day() -> list[str]:
+    """The times of a day every quarter hour, as 24-hour clock text, for a setting that holds one."""
+    return [f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in (0, 15, 30, 45)]
+
+
 LANGUAGES_FILE = Path(__file__).parent / "defaults" / "languages.yaml"
 
 
@@ -308,7 +313,7 @@ def _languages() -> list[str]:
 
 #: Lists of choices a text setting can name (`json_schema_extra={"choices": ...}`), so the screens offer a list
 #: instead of a box to type in.
-CHOICE_LISTS = {"time_zones": _time_zones, "languages": _languages}
+CHOICE_LISTS = {"time_zones": _time_zones, "languages": _languages, "times_of_day": _times_of_day}
 
 
 def _source(dotted: str, sources: dict[str, str]) -> str:

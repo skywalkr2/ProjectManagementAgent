@@ -98,6 +98,11 @@ def _allowed(value: datetime, hours: WorkingHours | None, quiet: QuietHours | No
     return not (clock >= quiet.start or clock < quiet.end)
 
 
+def in_quiet_hours(value: datetime, quiet: QuietHours | None) -> bool:
+    """Whether a moment's own local clock time falls inside quiet hours (which may cross midnight)."""
+    return quiet is not None and not _allowed(value, None, quiet)
+
+
 def _permitted(value: datetime, zone: tzinfo, hours: WorkingHours | None, quiet: QuietHours | None) -> datetime:
     local = value.astimezone(zone)
     if _allowed(local, hours, quiet):

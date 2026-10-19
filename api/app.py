@@ -31,6 +31,7 @@ from api.pack_routes import build_pack_router
 from api.promise_routes import build_promise_router
 from api.quality_routes import build_quality_router
 from api.records_routes import build_records_router
+from api.reminder_routes import build_reminder_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
 from api.screen_text import refusal
@@ -291,6 +292,7 @@ def create_app(
     inner.include_router(build_ask_router(ws, cfg, store, events, worker))
     inner.include_router(build_correction_router(ws, cfg, store, events, worker))
     inner.include_router(build_promise_router(ws, cfg, store, events, worker))
+    inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))

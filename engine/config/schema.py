@@ -1955,6 +1955,81 @@ class WatchFile(FileModel):
 # ---- config/steward.yaml ---------------------------------------------------------------------------------------------
 
 
+WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+_CLOCK = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+class RemindersSettings(ConfigModel):
+    working_start: str = Field(
+        "09:00",
+        description="The time the working day starts. A reminder set for earlier waits until then, and Tomorrow "
+        "morning snoozes to it.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    working_end: str = Field(
+        "17:30",
+        description="The time the working day ends. A reminder set for later waits for the next working day, and Later "
+        "today is left out of the snooze choices once it would fall after it.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    working_first_day: Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] = Field(
+        "monday", description="The first day of the working week. Next week snoozes to this day."
+    )
+    working_last_day: Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] = Field(
+        "friday",
+        description="The last day of the working week. The days between the first and the last are working days.",
+    )
+    quiet_start: str = Field(
+        "21:00",
+        description="The time quiet hours start. A reminder that falls in quiet hours waits and arrives with the "
+        "others that waited, once they end.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    quiet_end: str = Field(
+        "07:00",
+        description="The time quiet hours end. They may start in the evening and end the next morning.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    missed: Literal["each", "summary"] = Field(
+        "each",
+        description="How reminders that came due while this computer was asleep arrive on waking. each: one line for "
+        "each. summary: one line listing them.",
+    )
+    later_today_hours: int = Field(
+        3, ge=1, le=12, description="How many hours from now Later today snoozes to, when that is still a working time."
+    )
+    evening: str = Field(
+        "18:00",
+        description="The time This evening snoozes to.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    late_after_minutes: int = Field(
+        5,
+        ge=1,
+        le=1440,
+        description="A reminder that came due this long ago or more, without being shown, is marked late: the app or "
+        "the computer was not running when it came due.",
+    )
+
+    @field_validator("working_start", "working_end", "quiet_start", "quiet_end", "evening", mode="before")
+    @classmethod
+    def _a_time_of_day(cls, value: Any) -> Any:
+        # An unquoted 17:30 is read by a YAML file as the number of minutes it is; give it back as the clock time.
+        if isinstance(value, int) and not isinstance(value, bool) and 0 <= value < 24 * 60:
+            value = f"{value // 60:02d}:{value % 60:02d}"
+        if not isinstance(value, str) or not _CLOCK.match(value):
+            raise ValueError("pick a time of day, such as 09:00")
+        return value
+
+    @model_validator(mode="after")
+    def _hours_make_sense(self) -> RemindersSettings:
+        if self.working_start >= self.working_end:
+            raise ValueError("working hours must end after they start: pick a later end or an earlier start")
+        if self.quiet_start == self.quiet_end:
+            raise ValueError("quiet hours can't start and end at the same time: pick two different times")
+        return self
+
+
 class StewardFile(FileModel):
     default_stance: Literal["manage", "alongside", "report_to", "watch"] = Field(
         "alongside",
@@ -1980,6 +2055,9 @@ class StewardFile(FileModel):
         le=365,
         description="A promise someone owes the person that has a date gets a line on Today only from this many days "
         "before its date, and once the date has passed. Nothing is shown while it is on hold.",
+    )
+    reminders: RemindersSettings = Field(
+        default_factory=RemindersSettings, description="When a reminder on a dated thing reaches the person."
     )
 
 

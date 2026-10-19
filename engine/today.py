@@ -233,6 +233,7 @@ class Todo:
     due: date | None
     overdue: bool
     on_hold: str | None = None
+    remind_at: datetime | None = None
 
 
 def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
@@ -258,6 +259,9 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
                 due=due,
                 overdue=due is not None and due < today_here and not hold,
                 on_hold=hold["waiting_for"] if hold else None,
+                remind_at=datetime.fromisoformat(str(data["remind_at"])).astimezone(zone(cfg))
+                if data.get("remind_at")
+                else None,
             )
         )
     return sorted(found, key=lambda t: (t.due is None, t.due or today_here, t.text))

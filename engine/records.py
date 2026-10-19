@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Annotated, Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 
 class Record(BaseModel):
@@ -420,6 +420,12 @@ class Action(Record):
         False,
         description="False until the person approves the drafted reply or writes their own; a reply that is not "
         "reviewed is shown as a draft.",
+    )
+    remind_at: AwareDatetime | None = Field(
+        None,
+        description="When to remind the person of it, as a moment with its time zone. The person sets it, and moves it "
+        "when they snooze; the reminder is a line on Today while the action is open and not on hold, and it is never a "
+        "correction of the assistant's work.",
     )
     on_hold: OnHold | None = Field(
         None,

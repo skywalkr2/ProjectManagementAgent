@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from engine import held_ask, move_groups, promises, source_intake, watch
+from engine import held_ask, move_groups, promises, reminder_lines, source_intake, watch
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -86,7 +86,12 @@ class Line:
     and what to do, and `waiting_since` when it was last read, or first tried when it never was), promise (one open
     action that needs a look: its id in `actions`, its words in `text`, its day in `due` (none when undated),
     `waiting_days` (days past its date, below zero while the date is ahead, or days with nothing heard when undated),
-    and in `person` the one to chase, none when it is the person's own), send or nudge.
+    and in `person` the one to chase, none when it is the person's own), reminder (an open action whose reminder has
+    reached the person: its id in `actions`, its words in `text`, the moment it was set for in `at` on the person's
+    clock, `late` when it came due while the app or the computer was not running, and in `snoozes` the choices that
+    still have a time, each `choice` with the `at` it resolves to), reminder_digest (reminders that fell in quiet hours,
+    or, by the person's choice, were missed while the computer slept, arriving together: `reminders` lists each with
+    its action, words and `at`, and `late` says which of the two it is), send or nudge.
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
     one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
@@ -139,6 +144,10 @@ class Line:
     credential_name: str | None = None
     places: list[str] = field(default_factory=list)
     names: list[str] = field(default_factory=list)
+    at: str | None = None
+    late: bool | None = None
+    snoozes: list[dict[str, str]] = field(default_factory=list)
+    reminders: list[dict[str, str]] = field(default_factory=list)
     since: str = ""
 
 
@@ -561,6 +570,45 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # Reminders that have reached the person: one line each, and the ones that waited (quiet hours, or a summary of
+    # those missed while the computer slept) together as one.
+    here = zone(cfg)
+    snoozes = [{"choice": choice, "at": at.isoformat()} for choice, at in reminder_lines.choices(cfg, now)]
+    reminded = reminder_lines.plan(reader, cfg, now)
+    for item in [*reminded.now, *reminded.late]:
+        lines.append(
+            Line(
+                key=f"reminder:{item.action}",
+                group="risk",
+                kind="reminder",
+                text=item.text,
+                subject=item.text,
+                project=item.project,
+                actions=[item.action],
+                at=item.due.isoformat(),
+                late=item in reminded.late,
+                snoozes=snoozes,
+                since=item.at.isoformat(),
+            )
+        )
+    for key, group, late in (("quiet", reminded.kept, False), ("missed", reminded.missed, True)):
+        if group:
+            lines.append(
+                Line(
+                    key=f"reminder_digest:{key}",
+                    group="risk",
+                    kind="reminder_digest",
+                    count=len(group),
+                    late=late,
+                    snoozes=snoozes,
+                    actions=[x.action for x in group],
+                    reminders=[
+                        {"action": x.action, "text": x.text, "at": x.due.astimezone(here).isoformat()} for x in group
+                    ],
+                    since=min(x.at for x in group).isoformat(),
+                )
+            )
+
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
     for action in reader.list("action"):
@@ -872,6 +920,8 @@ _KIND_ORDER = {
     "offline": 1,
     "overdue": 2,
     "promise": 2,
+    "reminder": 0,
+    "reminder_digest": 1,
     "account_check": 1,
     "switch_failed": 1,
     "credential": 1,

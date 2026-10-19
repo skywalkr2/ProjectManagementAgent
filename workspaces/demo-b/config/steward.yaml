@@ -3,3 +3,14 @@ chase_undated_days: 10   # a waiting-on with no date gets a line after this many
 chase_dated_days: 5   # a dated waiting-on gets a line from this many days before its date
 default_stance: alongside   # who a new person is to you until you say otherwise
 tracks: [dates, decisions, design]   # what you track: no question is drafted about anything else
+reminders:
+  working_start: "08:30"   # the working day starts; an earlier reminder waits until then
+  working_end: "16:30"   # the working day ends; a later reminder waits for the next working day
+  working_first_day: monday   # the first working day of the week
+  working_last_day: friday   # the last working day of the week
+  quiet_start: "20:00"   # quiet hours start; reminders in them wait and arrive together afterwards
+  quiet_end: "08:00"   # quiet hours end, which may be the next morning
+  missed: summary   # reminders missed while the computer slept: each (one line each) or summary (one line)
+  later_today_hours: 2   # hours from now that Later today snoozes to
+  evening: "17:30"   # the time This evening snoozes to
+  late_after_minutes: 10   # how long after its time a reminder not yet shown is marked late

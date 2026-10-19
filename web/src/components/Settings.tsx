@@ -18,6 +18,7 @@ import { AiRouting } from "./AiRouting";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
+import { NotifyPermission } from "./NotifyPermission";
 import { SettingRow } from "./SettingRow";
 import { SyncPanel } from "./SyncPanel";
 import { ValueLists } from "./ValueLists";
@@ -333,6 +334,7 @@ export function Settings(props: {
       <>
         {heading(section)}
         {form(section)}
+        {section === "today" && <NotifyPermission />}
         {section === "backups" && (
           <>
             <SyncPanel />

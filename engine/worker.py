@@ -53,6 +53,7 @@ LIVE_KEYS = (
     "storage.files.read_max_mb",
     "storage.files.read_max_chars",
     "watch.",
+    "steward.",
     "workspace.plugins.catalog.",
     "language.bare_confirmation_words",
     "language.rule_report_phrases",

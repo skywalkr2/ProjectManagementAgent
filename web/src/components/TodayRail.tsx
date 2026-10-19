@@ -14,6 +14,7 @@ import { useDropAction } from "./DropAction";
 import { HoldPill, useHold } from "./OnHold";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
+import { dateAndTime, useRemindMe } from "./ReminderLine";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import styles from "./Today.module.css";
@@ -362,7 +363,8 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
   const hold = useHold({ id: item.action, on_hold: item.on_hold });
   const change = useChangeThis({ kind: "action", id: item.action }, () => row.current?.focus());
   const drop = useDropAction({ id: item.action }, () => row.current?.focus());
-  const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : ""]
+  const remind = useRemindMe(item.action, item.remind_at, () => row.current?.focus());
+  const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : "", item.remind_at ? t("today.todo.reminder", { when: dateAndTime(item.remind_at) }) : ""]
     .filter(Boolean)
     .join(" · ");
   const done = (note?: string) =>
@@ -398,7 +400,7 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
         {meta && <div className="tb-meta">{meta}</div>}
         <OriginLink origin={item.origin} />
       </div>
-      <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry, drop.entry]} />
+      <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, ...remind.entries, hold.entry, change.entry, drop.entry]} />
       {noting && (
         <NoteBox
           sends={[{ label: t("followups.mark_done"), run: done }]}
@@ -409,6 +411,7 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
         />
       )}
       {hold.form}
+      {remind.form}
       {change.form}
       {drop.form}
       <LearnedLines records={[item.action]} />

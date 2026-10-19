@@ -271,6 +271,7 @@ export const api = {
   listRetire: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/retire`, { value }),
   editRecord: (body: S["RecordEdit"]) => call<S["Applied"]>("POST", "records/edit", body),
   /** Why a promise exists: its words, who owes it to whom, its day, how it is known and what was heard since. */
+  remind: (action: string, body: S["ReminderIn"]) => call<S["Applied"]>("POST", `reminders/${id(action)}`, body),
   promise: (action: string) => call<S["PromiseView"]>("GET", `promises/${id(action)}`),
   correctPromise: (action: string, body: S["PromiseCorrection"]) => call<S["Applied"]>("POST", `promises/${id(action)}/correct`, body),
   kindView: (kind: string) => call<S["KindView"]>("GET", `kinds/${named(kind)}`),

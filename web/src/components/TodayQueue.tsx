@@ -25,10 +25,12 @@ import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { NothingNeedsYou } from "./Coverage";
 import { usePromiseChoices } from "./PromiseLine";
+import { ReminderItems, digestTitle, reminderTitle, useReminderChoices, useReminderNotices } from "./ReminderLine";
 import { LearnedLine, isLearned } from "./LearnedToday";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import type { MenuGroup } from "../ui/MenuButton";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { LineDetail, opensItems } from "./TodayDetail";
 import styles from "./Today.module.css";
@@ -68,6 +70,7 @@ export function TodayQueue(props: {
   const plugins = usePluginToday(props.handlers.onOpenRecord);
   const pane = useRef<HTMLDivElement>(null);
   const lines = queue.data ?? [];
+  useReminderNotices(queue.data);
 
   // The list holds still while the person is working in it: keyboard focus or the pointer in the queue or the inspector, or
   // a line open under itself. New lines wait behind "N new · Show". A line settled somewhere else stays in place, struck
@@ -436,6 +439,8 @@ interface Described {
   /** The other answer to a question the line asks, as a visible button (7.6: a held line may show two). */
   other?: { label: string; run: () => void };
   menu: MenuAction[];
+  /** Further titled groups of choices in the menu (a reminder's snooze choices). */
+  groups?: MenuGroup[];
 }
 
 type ItemTitle = S["ItemTitle"];
@@ -531,6 +536,10 @@ export function useLineTitle(): (line: QueueLine) => string {
         if (!line.due) return tn("queue.promise.chase_undated", line.waiting_days ?? 0, { ...vars, n: line.waiting_days ?? 0 });
         return t(line.person ? "queue.promise.chase" : "queue.promise.own", vars);
       }
+      case "reminder":
+        return reminderTitle(line, t);
+      case "reminder_digest":
+        return digestTitle(line, t);
       default:
         return line.text ?? line.kind;
     }
@@ -576,6 +585,7 @@ function QueueRow(props: {
   };
   const show: MenuAction = { id: "look", label: t("queue.look_closer"), run: choose };
   const promiseRow = usePromiseChoices(line, () => ref.current?.focus());
+  const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
 
   const what = titleWords(line.title);
   const title = lineTitle(line);
@@ -803,6 +813,17 @@ function QueueRow(props: {
           menu: [show, ...promiseRow.menu],
         };
       }
+      case "reminder":
+        return {
+          pill: t("queue.pill.reminder"),
+          tone: line.late ? "danger" : "warn",
+          meta: undefined,
+          primary: { label: t("queue.reminder.done"), run: reminderRow.done },
+          menu: [],
+          groups: reminderRow.groups,
+        };
+      case "reminder_digest":
+        return { pill: t("queue.pill.reminder"), tone: "neutral", meta: undefined, primary: null, menu: [] };
       default:
         // A kind the screen has no words for yet still shows, so nothing the engine ranks is hidden.
         return { pill: "", tone: "neutral", meta: meta(line.waiting), primary: null, menu: [] };
@@ -870,9 +891,11 @@ function QueueRow(props: {
       }
       meta={d.meta || undefined}
       primary={primary}
-      menu={d.menu.length > 0 ? <RowMenu label={title} actions={d.menu} /> : undefined}
+      menu={d.menu.length > 0 || (d.groups?.length ?? 0) > 0 ? <RowMenu label={title} actions={d.menu} groups={d.groups} /> : undefined}
       onClick={onClick}
     >
+      {line.kind === "reminder_digest" && <ReminderItems line={line} />}
+      {line.kind === "reminder" && reminderRow.form}
       {(inPlace || promiseRow.form) && (
         <>
           {inPlace && (

@@ -1228,6 +1228,21 @@ class Applied(BaseModel):
     changeset: str
 
 
+class ReminderIn(BaseModel):
+    """The person's own change to an action's reminder: a snooze choice, or a time they picked (one without a zone is
+    on their own clock). Neither clears the reminder."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    choice: Literal["in 1 hour", "later today", "this evening", "tomorrow morning", "next week"] | None = Field(
+        None, description="A snooze choice, moved to the time it resolves to now."
+    )
+    at: datetime | None = Field(None, description="The time the person picked, which must still be ahead.")
+    read_version: int | None = Field(
+        None, ge=1, description="The action's version the person saw; the latest if unset."
+    )
+
+
 class WorkingCopyFormatView(BaseModel):
     name: str
     label: str
@@ -1455,6 +1470,9 @@ class TodoView(BaseModel):
     overdue: bool = Field(description="Whether it is past its due date; never true while it is on hold.")
     on_hold: str | None = Field(None, description="What it waits for while it is on hold; its due date is kept.")
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
+    remind_at: datetime | None = Field(
+        None, description="When the person asked to be reminded of it, on their own clock (their time zone)."
+    )
 
 
 class HeldAsk(BaseModel):
@@ -1554,6 +1572,17 @@ class AfterMove(BaseModel):
     others: list[str] = Field(default_factory=list)
 
 
+class SnoozeChoiceView(BaseModel):
+    choice: Literal["in 1 hour", "later today", "this evening", "tomorrow morning", "next week"]
+    at: datetime = Field(description="The moment the choice moves the reminder to, on the person's own clock.")
+
+
+class ReminderItemView(BaseModel):
+    action: str
+    text: str
+    at: datetime = Field(description="When the reminder was set for, on the person's own clock.")
+
+
 class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
@@ -1584,7 +1613,12 @@ class QueueLineView(BaseModel):
     nothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is
     undated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and
     `person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET
-    /api/promises/{id} says why it exists); `unfiled` is
+    /api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id
+    in `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the
+    app or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it
+    moves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown
+    together: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while
+    the computer slept (`late` true), each in `reminders`; `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1610,6 +1644,8 @@ class QueueLineView(BaseModel):
         "offline",
         "overdue",
         "promise",
+        "reminder",
+        "reminder_digest",
         "account_check",
         "switch_failed",
         "credential",
@@ -1757,6 +1793,23 @@ class QueueLineView(BaseModel):
         None,
         description="For an owner line: who the routing entries suggest owns the action and why, and the nearest open "
         "action to fold it into; none when nothing applies.",
+    )
+    at: datetime | None = Field(
+        None, description="For a reminder line: when it was set for, on the person's own clock (their time zone)."
+    )
+    late: bool | None = Field(
+        None,
+        description="For a reminder line: true when it came due while the app or the computer was not running. For a "
+        "reminder_digest line: true when it lists reminders missed while the computer slept, false when it lists "
+        "those that waited for quiet hours to end.",
+    )
+    snoozes: list[SnoozeChoiceView] = Field(
+        default_factory=list,
+        description="For a reminder line: the snooze choices that still have a time, in order, each with the moment it "
+        "resolves to. A choice with no time left today is not listed.",
+    )
+    reminders: list[ReminderItemView] = Field(
+        default_factory=list, description="For a reminder_digest line: the reminders it lists, oldest first."
     )
     after_move: AfterMove | None = Field(
         None,
@@ -2124,7 +2177,9 @@ class SettingItem(BaseModel):
         "GET /api/plugins. None for the app's own settings.",
     )
     choices: str | None = Field(
-        None, description="The name of the list a choice setting picks from (time_zones, languages), when it has one."
+        None,
+        description="The name of the list a choice setting picks from (time_zones, languages, times_of_day), when it "
+        "has one.",
     )
     secret: bool | None = Field(
         None,

@@ -1038,6 +1038,14 @@ yet follow, that it is *designed*, with its phase.
 | Where | Before | Now |
 |---|---|---|
 | Stance (6.34) | Designed as a value list with `people.default_stance` | Four fixed meanings on the person (`stance`), worded on screen; `steward.default_stance` and `steward.tracks`; `asks_about` on `question.add`; the `stance` lint held after one return; the people list in packets says who each person is to the person. Built: `tests/test_stance.py` |
+## 100. Reminders at a time, in the app (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Reminders (6.32) | Rules only (`engine/reminders.py`), called by nothing | An action's `remind_at`, set or snoozed by the person with Undo and no learning signal; a Today line `{task} · due now`, a late line for one that came due unseen, one "Saved during quiet hours" line for those that waited, each with Done and a Snooze menu showing the time each choice moves to. Built: `tests/test_reminder_lines.py`, `web/src/components/TodayReminders.test.tsx` |
+| Settings (4.0, 6.32) | None for working or quiet hours | `steward.reminders.*`: working hours and days, quiet hours, how missed ones arrive, Later today and This evening, how late counts as late; picked from lists, live, refused in plain words when working hours end before they start |
+| Notifications (6.32) | None | A browser notification for a reminder line that appears while the app is open, asked for only from a button in Settings |
+| Not yet | | The reminder in the person's own calendar or by mail (S1b); desktop notifications from the tray (phase I) |
 
 ## 99. The designer's review of 6.33 and 6.35 (2026-10-19)
 
