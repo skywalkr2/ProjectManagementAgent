@@ -276,12 +276,17 @@ test.describe("screen use and the shell", () => {
       await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
       // At the end of the screen, where its buttons are, pressing the undo key with nothing to undo says so in a toast.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      // The cursor starts in the screen's first field, where a shortcut key would type; wait for it to land there (the
-      // screen focuses its field once its data has loaded), then leave the field.
+      // The screen puts the cursor in its first field once its data has loaded, or on itself when it has no field;
+      // wait for it to land in the screen, then leave any field, where a shortcut key would type.
       await expect
-        .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")), {
-          timeout: 15_000, // the screen loads its accounts and models before it focuses; a busy server takes longer
-        })
+        .poll(
+          () =>
+            page.evaluate(() => {
+              const screen = document.querySelector("main");
+              return !!screen && !!document.activeElement && screen.contains(document.activeElement);
+            }),
+          { timeout: 15_000 },
+        )
         .toBe(true);
       await main.getByRole("heading", { level: 2, name: "Your AI account" }).click();
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -607,9 +612,14 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     const list = (await nav.boundingBox())!;
     expect(list.x + list.width).toBeLessThan(wide.field.x + 1);
     await page.setViewportSize({ width: 390, height: 844 });
-    const narrow = { field: (await row.locator("[data-main]").boundingBox())!, help: (await row.locator("[data-help]").boundingBox())! };
-    expect(narrow.help.y).toBeGreaterThan(narrow.field.y + narrow.field.height - 1);
-    expect((await nav.boundingBox())!.y + (await nav.boundingBox())!.height).toBeLessThan(narrow.field.y + 1);
+    // Measured once the narrow layout has settled: the help under its field, the section list above them.
+    const stacked = async () => {
+      const field = (await row.locator("[data-main]").boundingBox())!;
+      const help = (await row.locator("[data-help]").boundingBox())!;
+      const sections = (await nav.boundingBox())!;
+      return help.y > field.y + field.height - 1 && sections.y + sections.height < field.y + 1;
+    };
+    await expect.poll(stacked).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
