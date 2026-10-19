@@ -37,6 +37,7 @@ from api.reply_routes import build_reply_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
 from api.screen_text import refusal
+from api.secret_routes import build_secret_router
 from api.sent_routes import build_sent_router
 from api.setup_routes import build_setup_router
 from api.sign_in_routes import build_sign_in_router
@@ -293,6 +294,7 @@ def create_app(
 
     inner.include_router(build_router(ws, cfg, store, events, worker))
     inner.include_router(build_setup_router(ws, cfg, store, events, worker))
+    inner.include_router(build_secret_router(ws, cfg, store, events, worker))
     inner.include_router(build_first_promises_router(ws, cfg, store, events, worker))
     inner.include_router(build_ask_router(ws, cfg, store, events, worker))
     inner.include_router(build_correction_router(ws, cfg, store, events, worker))

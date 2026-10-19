@@ -71,13 +71,8 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 at = at.get(part) if isinstance(at, dict) else None
             if not isinstance(at, str) or not at:
                 continue
-            scheme, _, name = at.partition(":")
-            if setup.kept_here(ws, at):
-                out.append(SourceSecretView(field=field, where="kept"))
-            elif scheme in ("env", "file"):
-                out.append(SourceSecretView(field=field, where=scheme, name=name))
-            else:
-                out.append(SourceSecretView(field=field, where="other"))
+            where, name = setup.secret_where(ws, at)
+            out.append(SourceSecretView(field=field, where=where, name=name))
         return out
 
     def view(source: object) -> WatchSourceView:

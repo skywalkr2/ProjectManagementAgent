@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 115. Add-on keys and the backup key typed on the screen (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Settings and Add-ons (4.0, 7.9) | An add-on's own secrets (`workspace.plugins.secrets`) and the backup key (`storage.backups.encrypt`) were references to name by hand | Each secret an add-on declares is a password box in its Settings section and on its Add-ons row ("Kept on this computer", Replace, "Read from …"), kept in the private keys folder (0700, file 0600) with only the `file:` reference written; `GET /api/addon-secrets`, `POST /api/addons/{plugin}/secrets/{secret}`. Built: `tests/test_typed_secrets.py`, `web/src/components/KeptSecrets.test.tsx` |
+| Backup key (4.15, 7.9) | A reference box | A password box with a plain warning that a lost key means unreadable backups, and "Make one for me" (a strong key made with the standard library, kept like a typed one, shown once in that one answer and never logged or written elsewhere); `GET/POST /api/backup-key`. A replaced key stays on disk beside the new one. A hosted app refuses a typed or made key and takes where it is kept. Built: `tests/test_typed_secrets.py::test_make_one_for_me_keeps_a_strong_key_and_shows_it_once_in_that_answer_only` |
+| Mailbox and calendar sources (6.2, 4.0) | Covered by the source form (P16) but the calendar's private link had no test of its own | The mailbox password and the calendar's link (a typed link and a file on this computer are exclusive) are shown by test to be kept 0600, written only as references, and absent from the settings, the database (ledger included) and every answer. Built: `tests/test_typed_secrets.py::test_the_mailbox_password_and_the_calendars_private_address_are_typed_kept_and_never_written_elsewhere`, `tests/test_typed_secrets.py::test_a_calendar_takes_a_typed_address_or_a_file_on_this_computer_not_both` |
+| Undo (4.22) | The general save took no add-on secret key | `workspace.plugins.secrets.` is accepted by the general save, so Undo of a typed add-on key works. Not built: cleaning up kept secrets nothing refers to (wave 6) |
+
 ## 114. Calendars from .ics, full featured (2026-10-19)
 
 | Where | Before | Now |

@@ -104,8 +104,8 @@ DOMAIN_OFFER_AT = 3
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
 #: The keys the guided routes write (an AI account, a backup folder, the sources, sorting rules, add-ons on or off, a
-#: release's read token, the person's own name). The general save accepts them too, because a screen's Undo saves the
-#: values from before there.
+#: release's read token, an add-on's secret, the person's own name). The general save accepts them too, because a
+#: screen's Undo saves the values from before there.
 GUIDED = (
     "ai.providers.",
     "ai.tiers.",
@@ -114,6 +114,7 @@ GUIDED = (
     "watch.triage",
     "workspace.plugins.enabled",
     "workspace.plugins.catalog.release_tokens",
+    "workspace.plugins.secrets.",
     "workspace.user.",
 )
 

@@ -449,6 +449,17 @@ def kept_here(ws: Any, reference: str | None) -> bool:
         return False
 
 
+def secret_where(ws: Any, reference: str | None) -> tuple[str, str | None]:
+    """Where a secret reference is read from, for a screen: ("none", None) for no reference, ("kept", None) for a value
+    this app keeps in its own private folder, ("env", variable name), ("file", path) or ("other", None)."""
+    if not reference:
+        return "none", None
+    if kept_here(ws, reference):
+        return "kept", None
+    scheme, _, name = reference.partition(":")
+    return (scheme, name) if scheme in ("env", "file") else ("other", None)
+
+
 def unused_secret_name(ws: Any, name: str) -> str:
     """The name, or the name with the next free number, that no kept secret has yet. A pasted value is kept under a
     name of its own, so a refused save never touches the value in use, and Undo's earlier reference still works."""

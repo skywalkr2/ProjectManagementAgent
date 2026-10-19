@@ -323,6 +323,15 @@ export const api = {
   removeCatalog: (address: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", "packs/catalogs/remove", { address, fingerprint } satisfies S["CatalogAddress"]),
   giveReadToken: (name: string, body: S["PackTokenIn"]) => call<S["SettingsSaved"]>("POST", `packs/${id(name)}/token`, body),
+  /** The secrets each running add-on says it needs, and where each is read from; never a value. */
+  addonSecrets: () => call<S["AddonSecretsView"][]>("GET", "addon-secrets"),
+  /** Gives one secret an add-on needs, typed (kept on this computer) or as where it is kept. */
+  giveAddonSecret: (plugin: string, secret: string, body: S["AddonSecretIn"]) =>
+    call<S["SettingsSaved"]>("POST", `addons/${id(plugin)}/secrets/${id(secret)}`, body),
+  /** Where the key that locks the backups is read from; never the key. */
+  backupKey: () => call<S["BackupKeyView"]>("GET", "backup-key"),
+  /** Gives the backup key: typed, made by the app (shown once in the answer's `made`), or as where it is kept. */
+  setBackupKey: (body: S["BackupKeyIn"]) => call<S["BackupKeySaved"]>("POST", "backup-key", body),
   /** Installs (or updates) an add-on from the release its catalog entry names. It isn't turned on, and it is used after a restart. */
   installPack: (name: string) => call<S["PackInstalled"]>("POST", `packs/${id(name)}/install`),
   /** Takes away an add-on the app installed from the screen; it has to be off first. Used after a restart. */

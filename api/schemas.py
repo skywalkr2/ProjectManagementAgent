@@ -3452,6 +3452,72 @@ class PackTokenIn(BaseModel):
     fingerprint: str
 
 
+class AddonSecretView(BaseModel):
+    """One secret an add-on says it needs, and where it is read from now, never its value."""
+
+    secret: str = Field(description="The secret's name, as the add-on's manifest declares it.")
+    where: Literal["none", "kept", "env", "file", "other"] = Field(
+        description="none: not set; kept: typed on this screen and kept by the app on this computer; env: read from a "
+        "named environment variable; file: read from a file of the person's own; other: another way of keeping it."
+    )
+    name: str | None = Field(None, description="The variable's name, or the file's path; empty otherwise.")
+
+
+class AddonSecretsView(BaseModel):
+    """The secrets one running add-on declares (`requires.secrets`)."""
+
+    plugin: str
+    secrets: list[AddonSecretView]
+
+
+class AddonSecretIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: str | None = Field(
+        None,
+        description="The secret typed on the screen. A local app keeps it in its private folder and writes only where "
+        "it is kept into the settings; a hosted app refuses it. Never stored in the settings or sent back.",
+    )
+    reference: str | None = Field(None, description="Where the secret is kept instead: env:NAME or file:/path.")
+    fingerprint: str
+
+
+class BackupKeyView(BaseModel):
+    """Where the key that encrypts the backups is read from, never the key."""
+
+    where: Literal["none", "kept", "env", "file", "other"] = Field(
+        description="none: backups aren't encrypted; kept: typed or made on this screen and kept by the app on this "
+        "computer; env: read from a named environment variable; file: read from a file of the person's own; other: "
+        "another way of keeping it."
+    )
+    name: str | None = Field(None, description="The variable's name, or the file's path; empty otherwise.")
+
+
+class BackupKeyIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: str | None = Field(
+        None,
+        description="The key typed on the screen. A local app keeps it in its private folder and writes only where it "
+        "is kept; a hosted app refuses it. Never stored in the settings or sent back.",
+    )
+    reference: str | None = Field(None, description="Where the key is kept instead: env:NAME or file:/path.")
+    make: bool | None = Field(
+        None,
+        description="Make a strong key, keep it as a typed one is kept, and show it once in this answer (`made`). A "
+        "hosted app refuses.",
+    )
+    fingerprint: str
+
+
+class BackupKeySaved(SettingsSaved):
+    made: str | None = Field(
+        None,
+        description="The key that was just made, for the person to copy. It is in this one answer and nowhere else: "
+        "never in a later answer, the settings, the ledger or a log.",
+    )
+
+
 class PacksView(BaseModel):
     enabled: bool = Field(description="The catalog is on in this workspace.")
     feeds: list[PackFeedView]

@@ -18,6 +18,7 @@ import { AiRouting } from "./AiRouting";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
+import { AddonSecrets, BackupKey } from "./KeptSecrets";
 import { NotifyPermission } from "./NotifyPermission";
 import { SettingRow } from "./SettingRow";
 import { SyncPanel } from "./SyncPanel";
@@ -60,6 +61,8 @@ export function Settings(props: {
   const lists = useValueLists();
   const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
   const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
+  // The add-ons that need keys: each gets password boxes in its own section.
+  const keyed = useQuery({ queryKey: ["addon-secrets"], queryFn: api.addonSecrets });
   // The form that adds an AI account opens here, as a drawer, so the person never leaves Settings for it.
   const [adding, setAdding] = useState(false);
   const [addDirty, setAddDirty] = useState(false);
@@ -82,9 +85,13 @@ export function Settings(props: {
 
   const everything = settings.data?.items ?? [];
   const canList = useFolderListing(everything.some((i) => i.picker));
-  const listed = navSections(everything, { lists: (lists.data?.length ?? 0) > 0, files: (forms.data?.length ?? 0) > 0 });
+  const listed = navSections(everything, {
+    lists: (lists.data?.length ?? 0) > 0,
+    files: (forms.data?.length ?? 0) > 0,
+    keyed: (keyed.data ?? []).filter((a) => a.secrets.length > 0).map((a) => a.plugin),
+  });
   const wanted = props.section ?? chosen;
-  const loaded = settings.isSuccess && !lists.isPending && !forms.isPending;
+  const loaded = settings.isSuccess && !lists.isPending && !forms.isPending && !keyed.isPending;
   // An address naming a section that has nothing to show (an add-on turned off) opens the first one.
   const section: SettingsSection = !loaded || listed.includes(wanted) ? wanted : "you";
   const label = (s: SettingsSection) => (s.startsWith("addon/") ? addonLabel(s.slice("addon/".length), t, has) : t(`settings.section.${s}`));
@@ -336,9 +343,11 @@ export function Settings(props: {
       <>
         {heading(section)}
         {form(section)}
+        {section.startsWith("addon/") && <AddonSecrets plugin={section.slice("addon/".length)} name={label(section)} />}
         {section === "today" && <NotifyPermission />}
         {section === "backups" && (
           <>
+            <BackupKey />
             <SyncPanel />
             <JobsPanel />
           </>

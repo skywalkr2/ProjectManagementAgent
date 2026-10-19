@@ -49,6 +49,14 @@ The goal: a person changes how their installation looks, behaves, runs and is se
   source's form shows a password box for it ("Type or paste it") with "Where it is kept instead" as the second choice; a kept
   one reads "Kept on this computer" with Replace, and a named place reads "Read from …", never a value (decisions, 2026-10-16,
   "A password typed on the screen is kept in the private keys folder"). A hosted app shows only the second choice.
+  *Built so far:* a source's own settings (the mailbox's password, the calendar's private link) and an add-on's release read
+  token (`tests/test_typed_secrets.py`, `web/src/components/Sources.test.tsx`); each secret an add-on declares in
+  `requires.secrets`, shown as a password box in that add-on's Settings section and on its row of the Add-ons screen, kept as
+  `addon-<add-on>-<secret>` with only the `file:` reference written to `workspace.plugins.secrets.<add-on>.<secret>`; and the
+  backup key (`storage.backups.encrypt`) with a plain warning that a lost key means unreadable backups and "Make one for me",
+  which makes a strong key, keeps it, and shows it once in that one answer (`tests/test_typed_secrets.py`,
+  `web/src/components/KeptSecrets.test.tsx`). A replaced value is kept in a new file beside the old, so Undo and backups
+  already made still work. A kept secret nothing refers to any more is not cleaned up yet (designer wave 6).
 - **Settings guide the person** (decisions, 2026-10-11). A setting that turns a feature on comes first in its group, and the
   settings it governs are greyed out while it is off (`enabled_by` in the schema). A folder is chosen with a folder picker
   (`picker`), a choice from a dropdown; typing a path or a value is the fallback, not the way.
@@ -581,7 +589,10 @@ Built keys:
 `backups.encrypt` (**built**, L5; `tests/test_backup_encryption.py::test_every_file_of_an_encrypted_copy_is_sealed`): an `env:` or `file:` key reference; when set, every backup copy is sealed (AES-GCM in
 chunks, a key derived per backup, each chunk bound to its path and place), `cockpit restore --backup` asks for the key and
 refuses a wrong one before writing anything, and the backup line says the backup is encrypted. A lost key means a backup
-that can't be read, and the description says so. File names and the folder layout are not hidden.
+that can't be read, and the description says so. File names and the folder layout are not hidden. The key can be typed in
+Settings (kept on this computer as `backup-key`, the setting holding only its `file:` reference) or made by the app with
+"Make one for me", which shows it once; a replaced key stays on disk beside the new one, because backups already made need it
+(`tests/test_typed_secrets.py`).
 `files.read_max_mb` (25) and `files.read_max_chars` (30000): the largest file read as text, and how much of its text a
 packet carries.
 
@@ -795,9 +806,11 @@ Some state belongs to one computer or one person and is never in the config file
 the workspace's private folder, `<workspace>/.cockpit/`, which the workspace's git ignores:
 
 - the install token the browser presents in local mode;
-- keys pasted on a screen (an AI account's key, a source's password or private address, an add-on's release read token, a plugin's
-  app registration, a secret a plugin keeps), each a file in `.cockpit/keys/` readable by its owner only (the folder too),
-  named from what it is for (`source-<source id>-<field>`, `release-token-<host>`), referred to from config as `file:`; a hosted app takes keys only from its environment (Part 12);
+- keys pasted on a screen (an AI account's key, a source's password or private address, an add-on's release read token, a secret
+  an add-on declares, the backup key, a plugin's app registration, a secret a plugin keeps), each a file in `.cockpit/keys/`
+  readable by its owner only (the folder too), named from what it is for (`source-<source id>-<field>`,
+  `release-token-<host>`, `addon-<add-on>-<secret>`, `backup-key`), referred to from config as `file:`; a hosted app takes keys
+  only from its environment (Part 12);
 - the tokens of each sign-in (6.27), beside the plugin's other kept secrets;
 - where each outside program is found, per plugin tool (`.cockpit/tools.yaml`); two computers can differ;
 - which setup steps were skipped, the result of the last backup per target, and which sign-ins have already had their sources

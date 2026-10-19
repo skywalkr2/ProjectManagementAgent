@@ -29,8 +29,9 @@ export function sectionOfItem(item: Pick<Item, "group" | "plugin">): SettingsSec
 }
 
 /** Settings that a part of their section edits in its own way, so they aren't also listed as rows: the tier each kind of
- * work uses, what a tier tries once more on, and the routing rules (Which model does what). */
-const OWN_PART = ["ai.tasks", "ai.tiers", "ai.routing"];
+ * work uses, what a tier tries once more on, the routing rules (Which model does what), the backup key and the keys an
+ * add-on needs (password boxes of their own). */
+const OWN_PART = ["ai.tasks", "ai.tiers", "ai.routing", "storage.backups.encrypt", "workspace.plugins.secrets"];
 
 /** Whether a setting is listed as a row of its own. */
 export const isListed = (item: Pick<Item, "key">): boolean => !OWN_PART.includes(item.key);
@@ -43,8 +44,10 @@ export function sectionItems(items: Item[], section: SettingsSection): Item[] {
 
 /** The sections to list down the side, in order: the basic ones first, then Lists and the add-on files where there are
  * some, Advanced, then one for each add-on that has settings. AI accounts is always there, for its list of accounts. */
-export function navSections(items: Item[], has: { lists: boolean; files: boolean }): SettingsSection[] {
+export function navSections(items: Item[], has: { lists: boolean; files: boolean; keyed?: string[] }): SettingsSection[] {
   const present = new Set(items.map(sectionOfItem));
+  // An add-on that needs keys has a section for them even when it has no settings of its own.
+  for (const plugin of has.keyed ?? []) present.add(`addon/${plugin}`);
   const out: SettingsSection[] = [];
   for (const id of SETTINGS_SECTIONS) {
     const shown = id === "ai" || (id === "lists" ? has.lists : id === "files" ? has.files : present.has(id));

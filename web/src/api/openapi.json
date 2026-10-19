@@ -589,6 +589,106 @@
         "title": "ActivityEntry",
         "type": "object"
       },
+      "AddonSecretIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the secret is kept instead: env:NAME or file:/path.",
+            "title": "Reference"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The secret typed on the screen. A local app keeps it in its private folder and writes only where it is kept into the settings; a hosted app refuses it. Never stored in the settings or sent back.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "AddonSecretIn",
+        "type": "object"
+      },
+      "AddonSecretView": {
+        "description": "One secret an add-on says it needs, and where it is read from now, never its value.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The variable's name, or the file's path; empty otherwise.",
+            "title": "Name"
+          },
+          "secret": {
+            "description": "The secret's name, as the add-on's manifest declares it.",
+            "title": "Secret",
+            "type": "string"
+          },
+          "where": {
+            "description": "none: not set; kept: typed on this screen and kept by the app on this computer; env: read from a named environment variable; file: read from a file of the person's own; other: another way of keeping it.",
+            "enum": [
+              "none",
+              "kept",
+              "env",
+              "file",
+              "other"
+            ],
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "where"
+        ],
+        "title": "AddonSecretView",
+        "type": "object"
+      },
+      "AddonSecretsView": {
+        "description": "The secrets one running add-on declares (`requires.secrets`).",
+        "properties": {
+          "plugin": {
+            "title": "Plugin",
+            "type": "string"
+          },
+          "secrets": {
+            "items": {
+              "$ref": "#/components/schemas/AddonSecretView"
+            },
+            "title": "Secrets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "plugin",
+          "secrets"
+        ],
+        "title": "AddonSecretsView",
+        "type": "object"
+      },
       "AfterMove": {
         "description": "The move a question (or a group of them) came after (design 7.7): the record that moved, by its own name, the day\nit moved to and whether that is earlier than where it was. `others` names the people the same follow-on run asked\nquestions of; those wait in Follow-ups.",
         "properties": {
@@ -2999,6 +3099,130 @@
           "fingerprint"
         ],
         "title": "BackupFolderAdd",
+        "type": "object"
+      },
+      "BackupKeyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "make": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Make a strong key, keep it as a typed one is kept, and show it once in this answer (`made`). A hosted app refuses.",
+            "title": "Make"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the key is kept instead: env:NAME or file:/path.",
+            "title": "Reference"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The key typed on the screen. A local app keeps it in its private folder and writes only where it is kept; a hosted app refuses it. Never stored in the settings or sent back.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "BackupKeyIn",
+        "type": "object"
+      },
+      "BackupKeySaved": {
+        "properties": {
+          "changes": {
+            "description": "What changed, for the read-back and Undo.",
+            "items": {
+              "$ref": "#/components/schemas/SettingChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "made": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The key that was just made, for the person to copy. It is in this one answer and nowhere else: never in a later answer, the settings, the ledger or a log.",
+            "title": "Made"
+          },
+          "needs_restart": {
+            "description": "These settings take effect after a restart. Nothing restarts until the person chooses to: ask them first, then POST /api/restart. False when the change is in use already (AI accounts are).",
+            "title": "Needs Restart",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "changes",
+          "fingerprint",
+          "needs_restart"
+        ],
+        "title": "BackupKeySaved",
+        "type": "object"
+      },
+      "BackupKeyView": {
+        "description": "Where the key that encrypts the backups is read from, never the key.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The variable's name, or the file's path; empty otherwise.",
+            "title": "Name"
+          },
+          "where": {
+            "description": "none: backups aren't encrypted; kept: typed or made on this screen and kept by the app on this computer; env: read from a named environment variable; file: read from a file of the person's own; other: another way of keeping it.",
+            "enum": [
+              "none",
+              "kept",
+              "env",
+              "file",
+              "other"
+            ],
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "where"
+        ],
+        "title": "BackupKeyView",
         "type": "object"
       },
       "BackupStatus": {
@@ -18025,6 +18249,88 @@
         "summary": "Action Taken Off Hold"
       }
     },
+    "/api/addon-secrets": {
+      "get": {
+        "description": "Each running add-on's declared secrets and where each is read from now; never a value.",
+        "operationId": "addon_secrets_api_addon_secrets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AddonSecretsView"
+                  },
+                  "title": "Response Addon Secrets Api Addon Secrets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Addon Secrets"
+      }
+    },
+    "/api/addons/{plugin}/secrets/{secret}": {
+      "post": {
+        "description": "Give one secret an add-on declares, with Undo: typed (kept on this computer, a local app only) or as\nwhere it is kept. The settings hold only where.",
+        "operationId": "addon_secret_api_addons__plugin__secrets__secret__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plugin",
+            "required": true,
+            "schema": {
+              "title": "Plugin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "secret",
+            "required": true,
+            "schema": {
+              "title": "Secret",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddonSecretIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Addon Secret"
+      }
+    },
     "/api/ai/accounts": {
       "get": {
         "description": "The AI accounts in the settings, as they are on disk now; never a key.",
@@ -18904,6 +19210,62 @@
           }
         },
         "summary": "Backup Now"
+      }
+    },
+    "/api/backup-key": {
+      "get": {
+        "description": "Where the key that encrypts the backups is read from; never the key.",
+        "operationId": "backup_key_api_backup_key_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupKeyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Backup Key"
+      },
+      "post": {
+        "description": "Give the key that encrypts the backups, with Undo: typed, made by the app, or as where it is kept. A local\napp keeps a typed or made key on this computer. Backups already made stay sealed with the key they were made\nwith, so an earlier key is kept, not replaced.",
+        "operationId": "backup_key_set_api_backup_key_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupKeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupKeySaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backup Key Set"
       }
     },
     "/api/changes": {

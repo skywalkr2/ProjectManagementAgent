@@ -364,6 +364,8 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .catalog-add, .token-prompt { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
 .secret-field { display: grid; gap: var(--space-1); }
 .secret-field input { max-width: var(--field-max); }
+.kept-secrets, .kept-secret, .made-key { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
+.made-key input { max-width: var(--field-max); font-family: var(--mono, monospace); }
 .feed-notes { font-size: var(--text-xs); color: var(--text-muted); }
 .feed-notes summary { cursor: pointer; }
 

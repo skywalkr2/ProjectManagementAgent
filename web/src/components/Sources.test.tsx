@@ -805,6 +805,26 @@ describe("a secret setting typed on the screen", () => {
     expect(post(calls, "POST watch/sources/a")).not.toHaveProperty("secrets");
   });
 
+  test("a calendar's private address is a password box beside the file choice, and what is typed goes apart from the settings", async () => {
+    const user = userEvent.setup();
+    const CALENDAR = kind("calendar", "A calendar", null, [
+      field("address", "text", { secret: true, description: "The calendar's link." }),
+      field("file", "text", { picker: "file", file_types: [".ics"], description: "A calendar file on this computer." }),
+    ]);
+    const address = "https" + "://calendar.example.com/private/token-9.ics";
+    const calls = open([], [], { ...routes(), "GET watch/kinds": () => [CALENDAR] }).calls;
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    const box = await screen.findByLabelText("The calendar's link.");
+    expect(box).toHaveAttribute("type", "password");
+    await user.type(box, address);
+    await user.click(screen.getByRole("button", { name: "Add source" }));
+    await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
+    const sent = post(calls, "POST watch/sources") as { settings: Record<string, unknown>; secrets: Record<string, string> };
+    expect(sent.secrets).toEqual({ address });
+    expect(sent.settings).not.toHaveProperty("address");
+    expect(JSON.stringify(sent.settings)).not.toContain(address);
+  });
+
   test("on a hosted app only the box for where it is kept is offered", async () => {
     const user = userEvent.setup();
     open([], [], routes(false));

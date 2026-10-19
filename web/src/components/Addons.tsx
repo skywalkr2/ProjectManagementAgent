@@ -30,6 +30,7 @@ import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { domainOf } from "./SafeText";
 import { SecretField } from "./SecretField";
+import { AddonSecrets } from "./KeptSecrets";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -819,6 +820,7 @@ function InstalledRow(props: { item: Installed; index: number }) {
             </p>
           )}
           <WhatLines what={item.what} base={base} />
+          {item.state === "enabled" && <AddonSecrets plugin={item.name} />}
         </div>
         <div className="acts">
           <SwitchButton on={isOn} label={item.name} busy={power.busy} onRun={() => void power.run(!isOn)} />
