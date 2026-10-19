@@ -24,7 +24,7 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
   since 2026-10-18 evening. Phase B waves 3 and 4 are built (Today follow-ups, P19, the UI designer's answers 27 to 38,
   Settings saved as made, the wording review, the records screens, P13, P14), and "Which model does what" with
   suggestions from the measurements (P27). The functional designer's answers F1 to F14 are folded into design 6.32 and
-  phase S's gate. In progress: S1's outage handling and coverage line. Owner action tonight: re-run the learning tests
+  phase S's gate. S1's outage handling and coverage line are built. Owner action tonight: re-run the learning tests
   (O3) after setting the model choices.
 - **Left in phase B:** waves 5 and 6 (below), built to phase S's shape after S1; the partial items below say what is left.
 - **Every unchecked item has its place in this order:** B (wave 4 done) → S1 → B waves 5 and 6 → the gate week → the rest
@@ -2171,12 +2171,13 @@ S1. **Promises, and how they end:**
 - [ ] **A first success in five minutes:** the walkthrough connects one mailbox and an AI account, looks back over the
   last two weeks of the person's own mail (estimate first), and shows a handful of real open promises with one follow-up
   ready, before any project, area, pack or extra account is asked about.
-- [ ] **An outage is not a failure** (moved from phase E's governor, 2026-10-19; design 6.32): work waits for the network,
+- [x] **An outage is not a failure** (moved from phase E's governor, 2026-10-19; design 6.32): work waits for the network,
   a run that did no work isn't an attempt and costs nothing against the request, a cut-off run is never "couldn't
-  finish". *In progress.*
-- [ ] **The coverage line on Today** (designer F4, F9): what was read and when, "couldn't read" and "nothing new" in
+  finish". *Built (S1):* `tests/test_silent_stops.py`, `tests/test_cli_agent.py`, `tests/test_drafts.py`. Left: a resumed
+  request starts again from its first call.
+- [x] **The coverage line on Today** (designer F4, F9): what was read and when, "couldn't read" and "nothing new" in
   different words, a source failed longer than its usual gap as a line for the person, an honest empty Today.
-  *In progress.*
+  *Built (S1):* `tests/test_watch.py`, `coverage.test.ts`, `Coverage.test.tsx`, `Today.test.tsx`, `HeldLines.test.tsx`.
 - [ ] **A rule's check runs before the change applies** (moved from phase E, 2026-10-19): today a rule's check runs after
   the change is written and is only counted (`engine/stages.py` `output_check_ran`); it moves into the applier, and a
   failing check holds the change (an outward act is refused). Needed before S1b.

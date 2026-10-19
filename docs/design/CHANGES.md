@@ -1026,6 +1026,22 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 89. Coverage on Today (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Today's heading and empty queue (7.7, 6.32) | "Nothing needs you" whatever the sources did | A coverage line (what was read, when, and each source that couldn't be read, since when); an empty Today says "Nothing needs you · Read 3 sources, last at 7:40 AM", and "Nothing found that needs you" with the unread sources named when any couldn't be read. "Couldn't read" and "read, nothing new" differ in words and style. Built: `web/src/components/Coverage.test.tsx`, `web/src/components/Today.test.tsx` |
+| A source that stays unread (6.4, 6.32) | A question after `failures_before_asking` failures, and a note on the rail's cards | Also, past `watch.unread_gap_factor` (2) times the source's own interval, one risk line `source_unread` that starts with what to do and stands in for that question; no-network tries never count. Built: `tests/test_watch.py`, `web/src/shell/HeldLines.test.tsx` |
+## 88. A run that did no work is not an attempt (2026-10-19)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| A command-line agent that failed with nothing on its error stream | `other`: retried and counted, and shown as "couldn't finish" with its banner as the reason | `no_work`: no attempt, no retry used, no fix round, never shown with the banner; waits and runs again, and after `dispatch.no_work_tries` comes to the person in plain words (6.16, 6.32). `errors.no_work` patterns and the `no_work` exit code let an account name its banner. Built: `tests/test_cli_agent.py::test_a_run_that_only_printed_a_banner_did_no_work_whatever_the_banner_says`, `tests/test_silent_stops.py::test_a_run_that_did_no_work_is_no_attempt_no_retry_no_fix_round_and_never_quotes_its_banner` |
+| A call the computer's sleep cut off | `timeout` or `provider_down`: a retry was counted | `no_work` when the wall clock ran ahead of the time awake by more than `dispatch.sleep_gap_seconds`. Built: `tests/test_silent_stops.py::test_a_call_the_computer_sleeping_cut_off_did_no_work_and_a_slow_one_did_not` |
+| The run record | Nothing said whether it did any work | `no_work`; left out of the day's counts, of "failing" and of spending |
+| A network loss in the middle of a request | The look counted an attempt; a loss on the stronger tier's re-run ended on the first answer's problems; a loss while a cut-off draft was continued stopped the request with "couldn't be continued" | No attempt used, the request waits and starts afresh with every fix round. Built: `tests/test_silent_stops.py::test_a_network_lost_in_a_fix_round_waits_for_it_and_the_outage_uses_nothing_up`, `::test_a_network_lost_on_the_stronger_tier_waits_instead_of_ending_on_the_first_answer`, `tests/test_drafts.py::test_a_continuation_that_finds_no_network_waits_for_it_and_files_nothing_yet` |
+| Settings | n/a | `dispatch.no_work_tries`, `dispatch.sleep_gap_seconds`, `ai.providers.<account>.agent.errors.no_work`, with descriptions and demo values (4.9) |
+
 ## 87. Which model does what, on the Settings screen (2026-10-19)
 
 | Where | Before | Now |

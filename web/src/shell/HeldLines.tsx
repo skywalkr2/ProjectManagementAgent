@@ -11,6 +11,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useAccountNames } from "../lib/account-names";
+import { whenWords } from "../lib/coverage";
 import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
@@ -26,7 +27,7 @@ import styles from "./HeldLines.module.css";
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "extractor", "rule_review", "catch_up_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "extractor", "source_unread", "rule_review", "catch_up_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -40,6 +41,7 @@ export function HeldLine(props: {
   onOpenRules?: () => void;
   onOpenKnowledge?: () => void;
   onAddAccount?: () => void;
+  onOpenSources?: () => void;
 }) {
   const { line } = props;
   switch (line.kind) {
@@ -59,6 +61,8 @@ export function HeldLine(props: {
       return <SwitchFailedLine line={line} />;
     case "extractor":
       return <ExtractorLine line={line} />;
+    case "source_unread":
+      return <SourceUnreadLine line={line} onOpen={props.onOpenSources} />;
     case "rule_review":
       return <RuleReviewLine line={line} onOpen={props.onOpenRules} onOpenKnowledge={props.onOpenKnowledge} />;
     case "no_account":
@@ -373,6 +377,32 @@ function ExtractorLine(props: { line: Line }) {
         <p className={styles.text}>{t("queue.extractor", { kind: named, reason: line.text ?? "" })}</p>
         <p className={styles.sub}>{t("queue.extractor.sub")}</p>
       </div>
+    </section>
+  );
+}
+
+/** A source that has failed for longer than its usual gap: what to do about it, since when it hasn't been read, and why;
+ * one button, to the screen where it is signed in again or changed. It goes once the source is read again. */
+function SourceUnreadLine(props: { line: Line; onOpen?: () => void }) {
+  const { t, has } = useWords();
+  const { line } = props;
+  const kind = `queue.source_unread.${line.problem_kind ?? ""}`;
+  const key = line.problem_kind && has(kind) ? kind : "queue.source_unread.other";
+  const since = line.waiting_since ? whenWords(line.waiting_since, new Date(), t, true) : "";
+  return (
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.source_unread.label")} data-queue-line="source_unread">
+      <Pill tone="warn">{t("queue.source_unread.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t(key, { label: line.subject ?? "", when: since })}</p>
+        {line.text && <p className={styles.sub}>{line.text}</p>}
+      </div>
+      {props.onOpen && (
+        <div className={styles.actions}>
+          <Button size="sm" variant="primary" data-key="primary" onClick={props.onOpen}>
+            {t("queue.source_unread.open")}
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

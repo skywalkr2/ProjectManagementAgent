@@ -216,7 +216,9 @@ class CliAgentAdapter:
     # ---- errors -----------------------------------------------------------------------------------------------------
 
     def classify_error(self, exit_code: int | None, error_stream: str, transport_error: str | None) -> AiError:
-        """What a failed run means, from the program's exit code and error stream only."""
+        """What a failed run means, from the program's exit code and error stream only. A failure with nothing on the
+        error stream, one the account's patterns call a banner, or one ended by a signal is `no_work`: the program
+        ran but did nothing."""
         tail = (error_stream or "")[-ERROR_TAIL:]
         if transport_error:
             return AiError("provider_down", transport_error)
@@ -233,7 +235,15 @@ class CliAgentAdapter:
             kind = next(
                 (name for name, pats in COMMON_ERRORS.items() if any(re.search(p, tail, re.I) for p in pats)), None
             )
-        detail = tail.strip() or f"the agent stopped with exit code {exit_code}"
+        if kind is None and (
+            any(re.search(p, tail, re.I) for p in errors.no_work)
+            or not tail.strip()
+            or (exit_code is not None and exit_code < 0)
+        ):
+            # The program ran and failed with nothing to say on its error stream (or only the account's own banner
+            # wording, or was ended by a signal): it did no work. That is no answer of the model's and no try.
+            kind = "no_work"
+        detail = tail.strip() or f"the agent stopped with exit code {exit_code} and said nothing"
         if kind == "auth":
             return AiError("auth", detail, hint=self.sign_in_hint() or None)
         wait = _reset_seconds(tail, errors.reset) if kind in ("quota", "rate_limited") else None

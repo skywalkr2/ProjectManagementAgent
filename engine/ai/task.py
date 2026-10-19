@@ -16,9 +16,15 @@ ErrorKind = Literal[
     "no_output",  # the program finished without error but gave no answer
     "provider_down",
     "offline",  # no connection could be made at all; any answer from the service, even a failure, is not this
+    "no_work",  # the run did no work: cut off by the computer sleeping, or a program that only printed a banner
     "refused",
     "other",
 ]
+
+
+#: Failed runs that say nothing about an account or the model's work: no connection could be made, or the run did
+#: nothing. They are no try, never a mistake, and are left out of counts of how an account is doing.
+NO_WORK_KINDS = ("offline", "no_work")
 
 
 @dataclass(frozen=True)

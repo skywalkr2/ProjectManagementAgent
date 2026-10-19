@@ -602,3 +602,112 @@ def test_the_test_only_kind_is_not_offered_but_a_source_set_up_with_it_still_rea
     assert {k["name"] for k in kinds} >= {name for name, kind in CORE.items() if not kind.test_only}
     shown = c.get(f"{api}/watch").json()
     assert [(s["id"], s["connector"], s["connector_label"]) for s in shown] == [("s", stand_in.name, stand_in.label)]
+
+
+def unread_lines(ws, store, cfg, now):
+    from engine.today_queue import queue
+
+    return [line for line in queue(ws, store, cfg, now) if line.kind == "source_unread"]
+
+
+def test_a_source_failing_longer_than_its_gap_is_a_line_for_the_person(tmp_path):
+    from engine.watch import refresh
+
+    ws, cfg, store = make(
+        tmp_path,
+        [{"id": "s", "connector": "fake", "label": "Board", "every_minutes": 30, "settings": {"error": "auth"}}],
+    )
+    try:
+        assert cfg.watch.unread_gap_factor == 2
+        refresh(ws, store, cfg, "s", NOW)
+        assert unread_lines(ws, store, cfg, NOW + timedelta(minutes=59)) == []  # within twice its own gap
+        (line,) = unread_lines(ws, store, cfg, NOW + timedelta(minutes=61))
+        assert (line.group, line.source, line.subject, line.problem_kind) == ("risk", "s", "Board", "auth")
+        assert "Sign in" in (line.text or "")  # what went wrong and what to do, as the source's problem says it
+        assert datetime.fromisoformat(line.waiting_since) == NOW  # never read: since its first try
+    finally:
+        store.close()
+
+
+def test_the_gap_factor_is_a_setting_and_a_good_read_ends_the_line(tmp_path):
+    from engine.watch import refresh
+
+    ws, cfg, store = make(
+        tmp_path,
+        [{"id": "s", "connector": "fake", "label": "Board", "every_minutes": 30, "settings": {"error": "auth"}}],
+        unread_gap_factor=1,
+    )
+    try:
+        refresh(ws, store, cfg, "s", NOW)
+        assert unread_lines(ws, store, cfg, NOW + timedelta(minutes=29)) == []
+        assert len(unread_lines(ws, store, cfg, NOW + timedelta(minutes=31))) == 1
+        store.close()
+        (ws.config_dir / "watch.yaml").write_text(
+            yaml.safe_dump({"version": 1, "sources": [{"id": "s", "connector": "fake", "label": "Board"}]})
+        )
+        from engine.storage import Store
+
+        cfg = load_config(ws.config_dir, env={})
+        store = Store(ws.db_path, cfg=cfg)
+        assert refresh(ws, store, cfg, "s", NOW + timedelta(hours=2)).outcome == "baseline"
+        assert unread_lines(ws, store, cfg, NOW + timedelta(hours=2)) == []
+    finally:
+        store.close()
+
+
+def test_no_network_and_a_turned_off_source_are_not_a_line_and_one_line_stands_in_for_the_question(tmp_path):
+    from engine.today_queue import queue
+    from engine.watch import refresh
+
+    ws, cfg, store = make(
+        tmp_path,
+        [
+            {"id": "away", "connector": "fake", "label": "Away", "every_minutes": 30, "settings": {"error": "offline"}},
+            {
+                "id": "off",
+                "connector": "fake",
+                "label": "Off",
+                "enabled": False,
+                "every_minutes": 30,
+                "settings": {"error": "auth"},
+            },
+            {"id": "s", "connector": "fake", "label": "Board", "every_minutes": 30, "settings": {"error": "auth"}},
+        ],
+        failures_before_asking=2,
+    )
+    try:
+        for source in ("away", "s"):
+            for hours in (0, 1, 2):
+                refresh(ws, store, cfg, source, NOW + timedelta(hours=hours))
+        asked = [q for q in store.read().list("question") if (q.data.get("resolves") or {}).get("kind") == "watch"]
+        assert len(asked) == 1  # the question is filed, and Today shows the one line for that source instead of it
+        now = NOW + timedelta(hours=3)
+        lines = queue(ws, store, cfg, now)
+        assert [line.source for line in lines if line.kind == "source_unread"] == ["s"]
+        assert not [line for line in lines if line.question == asked[0].id]
+    finally:
+        store.close()
+
+
+def test_the_line_for_an_unread_source_is_served_on_the_queue(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine.watch import refresh
+
+    ws, cfg, store = make(
+        tmp_path,
+        [{"id": "s", "connector": "fake", "label": "Board", "every_minutes": 30, "settings": {"error": "auth"}}],
+    )
+    try:
+        refresh(ws, store, cfg, "s", datetime.now(UTC) - timedelta(hours=3))
+    finally:
+        store.close()
+    client = TestClient(create_app(ws, cfg, "t", start_worker=False), headers={"Authorization": "Bearer t"})
+    (line,) = [
+        line
+        for line in client.get(cfg.server.base_path.rstrip("/") + "/api/today/queue").json()
+        if line["kind"] == "source_unread"
+    ]
+    assert (line["group"], line["source"], line["subject"], line["problem_kind"]) == ("risk", "s", "Board", "auth")
+    assert line["waiting_since"] and "Sign in" in line["text"]

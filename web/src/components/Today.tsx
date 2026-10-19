@@ -9,6 +9,7 @@ import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { BackupLine } from "../shell/BackupLine";
 import { SetupLine } from "../shell/SetupLine";
+import { CoverageLine, useNoneText } from "./Coverage";
 import { opensItems } from "./TodayDetail";
 import { TodayQueue, type QueueHandlers, type Selection } from "./TodayQueue";
 import { TodayRail } from "./TodayRail";
@@ -32,6 +33,7 @@ export function Today(props: {
   const beside = useMediaQuery(INSPECTOR_FROM);
   const queue = useQueue();
   const count = useTodayCount();
+  const none = useNoneText();
   const [selected, setSelected] = useState<Selection | null>(null);
 
   // Another part of the screen asks for an answer or a question to be looked at: its line opens, with the cursor on it.
@@ -58,6 +60,7 @@ export function Today(props: {
     onOpenRules: () => props.onView("records/rules-review"),
     onOpenKnowledge: () => props.onView("records/knowledge"),
     onAddAccount: props.onAddAccount,
+    onOpenSources: () => props.onView("sources"),
     onOpenRecord: props.onOpenRecord,
     onOpenGuide: props.onOpenGuide,
     onOpenView: props.onView,
@@ -66,7 +69,8 @@ export function Today(props: {
     <div className={styles.today}>
       <div className={styles.head}>
         <h1>{t("nav.home")}</h1>
-        <p>{[longDay(new Date()), count === null ? "" : count === 0 ? t("today.needs.none") : tn("today.needs.count", count)].filter(Boolean).join(" · ")}</p>
+        <p>{[longDay(new Date()), count === null ? "" : count === 0 ? none : tn("today.needs.count", count)].filter(Boolean).join(" · ")}</p>
+        <CoverageLine />
       </div>
       <div className={styles.full}>
         <SetupLine workspace={props.workspace} onOpenGuide={props.onOpenGuide} />

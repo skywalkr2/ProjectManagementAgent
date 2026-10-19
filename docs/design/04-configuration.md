@@ -230,6 +230,9 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   sorting rule is offered or saved for a whole public mail domain, only for a sender (6.5).
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per
   read.
+- `unread_gap_factor` (2): how many of a source's own read intervals (`every_minutes`) it may go unread, failing, before
+  it becomes a line on Today for the person (6.32, "Coverage on Today"). One line stands in for the question above;
+  a source with no network is not counted.
 
 Sources are also added by a sign-in (6.27): an add-on declares the inbox and the main calendar, and signing in starts them
 (`first_run: recent`, the add-on's own interval). The person narrows, adds or removes sources afterwards from the Sources
@@ -386,7 +389,7 @@ so nothing expensive happens unless the person chose it.
 ## 4.9 `config/dispatch.yaml`, `config/governor.yaml`
 
 **Dispatch** (built): `max_input_chars` (60000; a longer input is refused with a request to split it or raise the key),
-`fix_rounds` (1, up to 3: how many times a failing answer goes back to the AI), `retries` (2, up to 5: how many times a run that gave no usable answer or failed is tried again by itself before it goes to the person, 6.16, 8.6), `retry_wait_seconds` (30: the wait before the first retry, doubled for each later one), `offline_check_seconds` (60, 5 to 3600: how long work that found no network waits before it is looked at again; it uses no tries, 6.16, 8.6), `offline_line_after_minutes` (60: how long work may wait for the network before Today asks the person to check the connection; most waits clear within minutes of opening the lid, 7.7) and `cleaning` (6.6): `remove_quoted` (true),
+`fix_rounds` (1, up to 3: how many times a failing answer goes back to the AI), `retries` (2, up to 5: how many times a run that gave no usable answer or failed is tried again by itself before it goes to the person, 6.16, 8.6), `retry_wait_seconds` (30: the wait before the first retry, doubled for each later one), `offline_check_seconds` (60, 5 to 3600: how long work that found no network waits before it is looked at again; it uses no tries, 6.16, 8.6), `offline_line_after_minutes` (60: how long work may wait for the network before Today asks the person to check the connection; most waits clear within minutes of opening the lid, 7.7), `no_work_tries` (5, up to 20: how many runs in a row may do no work, a program that only printed a banner or a call the computer's sleep cut off, before the request comes to the person; such a run is no try, 6.16), `sleep_gap_seconds` (30: how much longer a failed call's clock time may be than the time awake before it is taken as cut off by sleep, 6.16) and `cleaning` (6.6): `remove_quoted` (true),
 `signature_markers` (default "-- " and "Sent from my "; a line starting with one ends the message) and `remove_patterns`
 (regular expressions for disclaimers and footers).
 

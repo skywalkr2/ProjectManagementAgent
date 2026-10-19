@@ -22,6 +22,7 @@ import { Panel } from "../ui/Panel";
 import { Pill, type PillTone } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
+import { NothingNeedsYou } from "./Coverage";
 import { LearnedLine, isLearned } from "./LearnedToday";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
@@ -36,6 +37,7 @@ export interface QueueHandlers {
   onOpenRules: () => void;
   onOpenKnowledge?: () => void;
   onAddAccount?: () => void;
+  onOpenSources?: () => void;
   onOpenRecord?: (kind: string, id: string) => void;
   onOpenGuide?: (step: string) => void;
   /** Go to a screen: the Projects list where unfiled work is filed. */
@@ -316,9 +318,7 @@ export function TodayQueue(props: {
               )}
               {plugins.review}
               {count === 0 && (
-                <p className={styles.empty} data-queue-empty="">
-                  {t("queue.empty")}
-                </p>
+                <NothingNeedsYou className={styles.empty} />
               )}
             </>
           )}
@@ -405,7 +405,7 @@ function LineItem(props: {
   if (isHeld(line)) {
     return (
       <li className={styles.item}>
-        <HeldLine line={line} onOpenAiAccounts={handlers.onOpenAiAccounts} onOpenHandover={handlers.onOpenHandover} onOpenRules={handlers.onOpenRules} onOpenKnowledge={handlers.onOpenKnowledge} onAddAccount={handlers.onAddAccount} />
+        <HeldLine line={line} onOpenAiAccounts={handlers.onOpenAiAccounts} onOpenHandover={handlers.onOpenHandover} onOpenRules={handlers.onOpenRules} onOpenKnowledge={handlers.onOpenKnowledge} onAddAccount={handlers.onAddAccount} onOpenSources={handlers.onOpenSources} />
       </li>
     );
   }

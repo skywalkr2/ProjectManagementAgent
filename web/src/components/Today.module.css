@@ -19,6 +19,11 @@
 
 .head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
 .head p { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+/* What was read and what couldn't be: the second line of the heading. A source that couldn't be read is marked in its own
+   style (strong and in the problem color), apart from what was read; the words differ too, so color is never the only sign. */
+.head .coverage { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; font-size: var(--text-xs); line-height: var(--lh-xs); }
+.coverageSource[data-coverage="unread"] { color: var(--danger); font-weight: var(--weight-semibold); }
+.coverageSource[data-coverage="pending"] { font-style: italic; }
 .full { grid-column: 1 / -1; min-width: 0; }
 .full:empty { display: none; }
 

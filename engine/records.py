@@ -894,8 +894,9 @@ class StopCause(BaseModel):
         "allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. paused: "
         "every account that could take it is waiting for a usage limit to reset (`account`, `until`); the request "
         "stays queued and runs again by itself then. retry: a run that gave no usable answer is tried again by "
-        "itself at `until`. offline: no AI account could be reached for want of a network connection; the request "
-        "stays queued since `since` and is looked at again at `until`, and no try is counted."
+        "itself at `until` (`idle` counts the runs in a row that did no work). offline: no AI account could be "
+        "reached for want of a network connection; the request stays queued since `since` and is looked at again "
+        "at `until`, and no try is counted."
     )
     level: Literal["open", "internal", "restricted"] | None = Field(
         None, description="For data_level: the data level of the material."
@@ -911,12 +912,15 @@ class StopCause(BaseModel):
         None, description="For paused, retry and offline: when the request runs again by itself."
     )
     since: datetime | None = Field(None, description="For offline: when the request first found no network.")
+    idle: int | None = Field(
+        None, description="For retry after runs that did no work: how many such runs in a row there have been."
+    )
 
     @model_serializer(mode="wrap")
     def _leave_out_unset_times(self, handler: Any) -> dict[str, Any]:
         """The account, the tier and the times are written only for the causes that have them."""
         data = handler(self)
-        for key in ("account", "tier", "until", "since"):
+        for key in ("account", "tier", "until", "since", "idle"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data
@@ -1550,6 +1554,12 @@ class Run(Record):
         "that did, as a fresh run the person accepted. None for other work.",
     )
     error_kind: str | None = Field(None, description="How the call failed, from the runner's own error; none if ok.")
+    no_work: bool = Field(
+        False,
+        description="The run did no work: the program only printed a banner, or the call was cut off by the computer "
+        "sleeping. It is no try, never sent back as a mistake, and counts for nothing in spending or in how well an "
+        "account is doing.",
+    )
     error_detail: str | None = Field(None, description="The error's own text, for diagnosing a failure.")
     started_at: datetime = Field(description="When the call started.")
     knowledge: RunKnowledge | None = Field(None, description="What it was given from what was learned, and searched.")

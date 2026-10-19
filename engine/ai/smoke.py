@@ -16,7 +16,7 @@ from typing import Any
 
 from engine.ai import learning_check
 from engine.ai.adapters import make_adapter
-from engine.ai.task import AiError, AiTask, provider_reason
+from engine.ai.task import NO_WORK_KINDS, AiError, AiTask, provider_reason
 from engine.config import Config
 from engine.secrets import SecretError, describe_secret, resolve_secret
 from engine.state_file import write_whole
@@ -132,6 +132,7 @@ PROBLEMS = {
     "offline": "There is no network connection to reach it",
     "invalid_output": "Its answer couldn't be read",
     "no_output": "It finished without giving an answer",
+    "no_work": "It started but did nothing; it may be signed out",
     "refused": "It refused the request",
 }
 
@@ -340,9 +341,9 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
         pick = next((r for r in failed if r.get("main")), failed[0] if failed else None)
         if failed or not test.get("results"):
             return "failing", (str(pick.get("detail", ""))[:DETAIL_LIMIT] or None) if pick else None
-    # A call that found no network says nothing about the account, so it never hides or makes a failure.
+    # A call that found no network or did no work says nothing about the account: it never hides or makes a failure.
     runs = sorted(
-        (run for run in store.read().list("run") if run.data.get("error_kind") != "offline"),
+        (run for run in store.read().list("run") if run.data.get("error_kind") not in NO_WORK_KINDS),
         key=lambda run: run.data.get("started_at", ""),
     )
     if runs and runs[-1].data.get("outcome") == "error" and runs[-1].data.get("error_kind") == "auth":

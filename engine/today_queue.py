@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from engine import held_ask, move_groups
+from engine import held_ask, move_groups, watch
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -77,11 +77,13 @@ class Line:
     over: `count` of them, `origins` counted by where they came from and `expired` how many from inputs expired since
     the person last looked), catch_up (what the assistant learned from corrections made before it could: `count`
     waiting and `left_out`, how many kinds of correction were too many for one list), extractor (a kind of file that
-    isn't being read: `file_kind` is the kind, and `text` why), send or nudge. `count` is how
-    many things the line covers; `text` the decision, question or held item in one line; `subject` the one thing's own
-    words when a review or overdue line covers exactly one (the screen titles it by them); `title` the input the line
-    is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as the engine said
-    it."""
+    isn't being read: `file_kind` is the kind, and `text` why), source_unread (a source that has failed for longer than
+    its usual gap: `source` is its id, `subject` its label, `problem_kind` the kind of failure, `text` what went wrong
+    and what to do, and `waiting_since` when it was last read, or first tried when it never was), send or nudge.
+    `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
+    one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
+    the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
+    the engine said it."""
 
     key: str
     group: str
@@ -124,6 +126,8 @@ class Line:
     model: str | None = None
     check_failed: bool | None = None
     file_kind: str | None = None
+    source: str | None = None
+    problem_kind: str | None = None
     credential_kind: str | None = None
     credential_name: str | None = None
     places: list[str] = field(default_factory=list)
@@ -157,6 +161,13 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         )
 
     lines: list[Line] = []
+    # A source failing for longer than its usual gap is one line of its own, which stands in for the question the
+    # watcher files about the same source.
+    unread: dict[str, Any] = {}
+    for watched_source in cfg.watch.sources:
+        found = watch.unread(store, cfg, watched_source, now)
+        if found is not None:
+            unread[watched_source.id] = found
     requests = {r.id: r for r in reader.list("request")}
     by_changeset: dict[str, Any] = {}
     for req in requests.values():
@@ -192,7 +203,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 line.project = action.data.get("project")
                 found = suggest_owner(reader, cfg, action.id)
                 line.suggestion = found.shown(people) if found is not None else None
-        elif about in ROUTING:
+        elif about in ROUTING or (about == "watch" and resolves.get("source") in unread):
             continue
         else:
             line.kind = "decision" if d.get("kind") == "decision" else "question"
@@ -268,6 +279,26 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 text=problem.reason,
                 file_kind=problem.kind,
                 since=problem.since,
+            )
+        )
+
+    for watched_source in cfg.watch.sources:
+        found = unread.get(watched_source.id)
+        if found is None:
+            continue
+        # A source that can't be read is never a silent stop or a clean "nothing needs you":
+        # the line says which, and since when.
+        lines.append(
+            Line(
+                key=f"source_unread:{watched_source.id}",
+                group="risk",
+                kind="source_unread",
+                source=watched_source.id,
+                subject=watched_source.label or watched_source.id,
+                problem_kind=found.kind,
+                text=found.problem,
+                waiting_since=found.since,
+                since=found.since,
             )
         )
 

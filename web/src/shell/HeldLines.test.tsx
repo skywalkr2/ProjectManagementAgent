@@ -15,6 +15,7 @@ function HeldLines(props: {
   onOpenRules?: () => void;
   onOpenKnowledge?: () => void;
   onAddAccount?: () => void;
+  onOpenSources?: () => void;
 }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
   const lines = (queue.data ?? []).filter(isHeld);
@@ -47,12 +48,13 @@ function show(lines: S["QueueLineView"][], routes: Record<string, (body: unknown
   const onOpenRules = vi.fn();
   const onOpenKnowledge = vi.fn();
   const onAddAccount = vi.fn();
+  const onOpenSources = vi.fn();
   renderApp(
     <RestartProvider hellos={1}>
-      <HeldLines onOpenAiAccounts={onOpenAiAccounts} onOpenHandover={onOpenHandover} onOpenRules={onOpenRules} onOpenKnowledge={onOpenKnowledge} onAddAccount={onAddAccount} />
+      <HeldLines onOpenAiAccounts={onOpenAiAccounts} onOpenHandover={onOpenHandover} onOpenRules={onOpenRules} onOpenKnowledge={onOpenKnowledge} onAddAccount={onAddAccount} onOpenSources={onOpenSources} />
     </RestartProvider>,
   );
-  return { calls, onOpenAiAccounts, onOpenHandover, onOpenRules, onOpenKnowledge, onAddAccount };
+  return { calls, onOpenAiAccounts, onOpenHandover, onOpenRules, onOpenKnowledge, onAddAccount, onOpenSources };
 }
 
 test("nothing is drawn while the queue has neither a restart nor a paused line", async () => {
@@ -523,4 +525,30 @@ test("a paused account and a check are named as the person named the account, an
   expect(check).toHaveTextContent("Check Second account before it stands in for everyday work");
   await user.click(within(check).getByRole("button", { name: /Check Second account/ }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/acct-2/test?tier=routine&model=default")).toBe(true));
+});
+
+const unreadSource = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("source_unread", {
+    key: "source_unread:work-mail",
+    source: "work-mail",
+    subject: "Work mail",
+    problem_kind: "auth",
+    text: "The sign-in was withdrawn. Sign in to it again, then it is read on its next turn.",
+    waiting_since: `${addDays(localDate(new Date()), -1)}T18:00:00-05:00`,
+    ...over,
+  });
+
+test("a source that couldn't be read for too long is a line that starts with what to do, says since when and opens Sources", async () => {
+  const user = userEvent.setup();
+  const { onOpenSources } = show([unreadSource()]);
+  const row = await screen.findByRole("region", { name: "Source not read" });
+  expect(row).toHaveTextContent(/^Source not readSign in to Work mail again: not read since yesterday/);
+  expect(row).toHaveTextContent("The sign-in was withdrawn. Sign in to it again, then it is read on its next turn.");
+  await user.click(within(row).getByRole("button", { name: "Open Sources" }));
+  expect(onOpenSources).toHaveBeenCalledTimes(1);
+});
+
+test("a source line for a kind of failure with no verb of its own still starts with one", async () => {
+  show([unreadSource({ problem_kind: "outage" })]);
+  expect(await screen.findByRole("region", { name: "Source not read" })).toHaveTextContent(/Check Work mail: not read since/);
 });

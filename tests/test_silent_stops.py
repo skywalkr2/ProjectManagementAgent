@@ -448,6 +448,133 @@ def test_another_account_in_the_chain_takes_the_work_when_one_has_no_connection(
     assert data(env, request)["state"] == "review" and data(env, request)["cause"] is None
 
 
+BAD = json.dumps({"ops": [{"op": "fact", "text": "Proof ships soon", "evidence": {"quote": "words nobody wrote"}}]})
+BANNER = "Welcome to the agent v1.4. Please sign in with your account to continue."
+
+
+def runs_of(env) -> list[dict]:
+    return [r.data for r in env[2].read().list("run")]
+
+
+def test_a_network_lost_in_a_fix_round_waits_for_it_and_the_outage_uses_nothing_up(env):
+    _, cfg, store, clock = env
+    assert cfg.dispatch.fix_rounds == 1
+    # The first answer needs a fix round; the network goes while that round is asked; then it is back.
+    provider = Scripted(BAD, offline(), BAD, ANSWER)
+    set_responder(provider)
+    request = hand(env)
+    worker = worker_of(env)
+    worker.run_pending()
+    waiting = data(env, request)
+    assert waiting["state"] == "queued" and waiting["cause"]["kind"] == "offline" and waiting["retries"] == 0
+    assert waiting["attempts"] == 0, "a look that found no network is no attempt"
+    assert not store.read().list("changeset"), "the unfinished answer is not filed, held or shown as a failure"
+    clock.move(seconds=cfg.dispatch.offline_check_seconds)
+    worker.run_pending()
+    done = data(env, request)
+    # The fix round the outage interrupted is still there: the first answer of the new look is fixed by it.
+    assert done["state"] == "review" and done["cause"] is None and done["retries"] == 0
+    assert done["attempts"] == 1
+    assert provider.calls == 4
+
+
+def test_a_network_lost_on_the_stronger_tier_waits_instead_of_ending_on_the_first_answer(env):
+    _, cfg, store, clock = env
+    # Both routine answers fail their checks, so the stronger tier is asked; there the network is gone.
+    provider = Scripted(BAD, BAD, offline(), ANSWER)
+    set_responder(provider)
+    request = hand(env)
+    worker = worker_of(env)
+    worker.run_pending()
+    waiting = data(env, request)
+    assert waiting["state"] == "queued" and waiting["cause"]["kind"] == "offline" and waiting["attempts"] == 0
+    assert not store.read().list("changeset"), "the first answer is not the end of a request that was still working"
+    assert {r["tier"] for r in runs_of(env)} == {"routine", "deep"}
+    clock.move(seconds=cfg.dispatch.offline_check_seconds)
+    worker.run_pending()
+    assert data(env, request)["state"] == "review"
+
+
+def no_work() -> AiError:
+    return AiError("no_work", BANNER)
+
+
+def test_a_run_that_did_no_work_is_no_attempt_no_retry_no_fix_round_and_never_quotes_its_banner(env):
+    from engine.assistant_status import assistant_state
+    from engine.usage import spend
+
+    _, cfg, store, clock = env
+    provider = Scripted(no_work(), no_work(), ANSWER)
+    set_responder(provider)
+    request = hand(env)
+    worker = worker_of(env)
+    worker.run_pending()
+    waiting = data(env, request)
+    assert provider.calls == 1, "nothing was sent back for another round"
+    assert waiting["state"] == "queued" and waiting["retries"] == 0 and waiting["attempts"] == 0
+    assert waiting["cause"]["kind"] == "retry" and waiting["cause"]["idle"] == 1
+    assert "did no work" in waiting["waiting"] and "Trying again at" in waiting["waiting"]
+    assert "Welcome" not in waiting["waiting"] and "sign in" not in waiting["waiting"]
+    [record] = runs_of(env)
+    assert record["no_work"] is True and record["outcome"] == "error" and not record["cost_usd"]
+    # It waits for its time, which doubles for each run in a row, and never runs in a loop.
+    assert worker.run_pending() == 0 and provider.calls == 1
+    clock.move(seconds=cfg.dispatch.retry_wait_seconds)
+    worker.run_pending()
+    second = data(env, request)
+    assert second["cause"]["idle"] == 2 and second["retries"] == 0 and second["attempts"] == 0
+    assert datetime.fromisoformat(second["cause"]["until"]) - clock() == timedelta(
+        seconds=cfg.dispatch.retry_wait_seconds * 2
+    )
+    clock.move(seconds=cfg.dispatch.retry_wait_seconds * 2)
+    worker.run_pending()
+    done = data(env, request)
+    assert done["state"] == "review" and done["retries"] == 0 and done["attempts"] == 1
+    # The two runs that did nothing count for nothing: no spend, and no failure against the account.
+    assert spend(store, cfg, clock()).today_usd == 0 and all(r["cost_usd"] in (None, 0) for r in runs_of(env))
+    state = assistant_state(store, cfg, clock())
+    assert [(r.count, r.failed) for r in state.runs_today] == [(1, 0)] and not state.last_run_failed
+
+
+def test_runs_that_keep_doing_no_work_come_to_the_person_in_plain_words_after_the_configured_number(env):
+    _, cfg, store, clock = env
+    set_responder(Scripted(no_work()))
+    request = hand(env)
+    worker = worker_of(env)
+    for _ in range(cfg.dispatch.no_work_tries + 1):
+        worker.run_pending()
+        clock.move(minutes=30)
+    stopped = data(env, request)
+    assert stopped["state"] == "needs_you" and stopped["cause"] is None
+    assert stopped["waiting"].startswith(f"The AI program started {cfg.dispatch.no_work_tries} times and did no work")
+    assert "Welcome" not in stopped["waiting"] and "Couldn't finish" not in stopped["waiting"]
+    assert stopped["retries"] == 0 and stopped["attempts"] == 0
+    assert len(runs_of(env)) == cfg.dispatch.no_work_tries + 1 and all(r["no_work"] for r in runs_of(env))
+    # The person's Try again starts the count afresh.
+    retry(store, request)
+    assert data(env, request)["state"] == "queued" and data(env, request)["cause"] is None
+
+
+def test_a_call_the_computer_sleeping_cut_off_did_no_work_and_a_slow_one_did_not(env):
+    _, cfg, store, clock = env
+    account = account_of(cfg)
+
+    def cut_off_by_sleep(task):
+        clock.move(hours=8)  # the lid closed in the middle of the call
+        raise AiError("timeout", "the call didn't finish in time")
+
+    def slow(task):
+        clock.move(seconds=cfg.dispatch.sleep_gap_seconds - 1)  # slow, but awake all the way
+        raise AiError("timeout", "the call didn't finish in time")
+
+    for provider, kind in ((cut_off_by_sleep, "no_work"), (slow, "timeout")):
+        router = Router(cfg, store, env={}, now=clock, adapter_factory=adapters_by_account(cfg, {account: provider}))
+        with pytest.raises(AiError) as err:
+            router.call(TASK, request_id="REQ-1")
+        assert err.value.kind == kind
+    assert [(r["error_kind"], r["no_work"]) for r in runs_of(env)] == [("no_work", True), ("timeout", False)]
+
+
 # ---- a lost network is never held against an account ----------------------------------------
 
 

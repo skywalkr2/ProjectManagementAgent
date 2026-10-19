@@ -406,7 +406,13 @@ class AgentErrorPatterns(ConfigModel):
         description="Patterns in the error stream for a limit's reset time: the first group is a number of seconds "
         "from now or a date and time (ISO 8601). Used for a usage limit or a request to wait.",
     )
-    exit_codes: dict[int, Literal["auth", "rate_limited", "quota", "provider_down"]] = Field(
+    no_work: list[str] = Field(
+        default_factory=list,
+        description="Patterns in the error stream meaning: the program ran but did no work (it only printed a banner "
+        "or a sign-in prompt, or was cut off). Such a run is no try and is never sent back as a mistake. A run that "
+        "fails with nothing at all on its error stream counts the same.",
+    )
+    exit_codes: dict[int, Literal["auth", "rate_limited", "quota", "provider_down", "no_work"]] = Field(
         default_factory=dict, description="Exit codes the agent documents, mapped to what they mean."
     )
     report_on_output: bool = Field(
@@ -1004,6 +1010,21 @@ class DispatchFile(FileModel):
         le=1440,
         description="How long work may wait for the network before Today asks you to check the connection. Most "
         "waits clear within minutes of opening the lid, so the default is an hour.",
+    )
+    no_work_tries: int = Field(
+        5,
+        ge=0,
+        le=20,
+        description="How many runs in a row may do no work (the program only printed a banner, or the call was cut "
+        "off by the computer sleeping) before the request comes to you. Such a run is no try and uses up no automatic "
+        "retry; each waits, with the wait doubling, then runs again.",
+    )
+    sleep_gap_seconds: int = Field(
+        30,
+        ge=1,
+        le=3600,
+        description="How much longer a failed call's clock time may be than the time the computer was awake before the "
+        "call is taken as cut off by the computer sleeping. A call cut off that way did no work.",
     )
     cleaning: CleaningSettings = Field(default_factory=CleaningSettings, description="Input cleaning before AI calls.")
     knowledge: KnowledgeSettings = Field(
@@ -1856,6 +1877,13 @@ class WatchFile(FileModel):
         3,
         ge=1,
         description="Failed reads in a row before the person is asked about a source; one question, not one per read.",
+    )
+    unread_gap_factor: float = Field(
+        2,
+        ge=1,
+        description="How many times a source's own read interval it may go unread, failing, before it becomes a "
+        "line on Today for you to act on (1 is as soon as one interval has passed). A source with no network is "
+        "not counted.",
     )
     default_data_level: Literal["open", "internal", "restricted"] = Field(
         "internal",

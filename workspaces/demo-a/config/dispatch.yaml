@@ -5,6 +5,8 @@ retries: 2
 retry_wait_seconds: 30
 offline_check_seconds: 60
 offline_line_after_minutes: 60
+no_work_tries: 5
+sleep_gap_seconds: 30
 cleaning:
   remove_quoted: true
   signature_markers: ["-- ", "Sent from my ", "Best regards,"]

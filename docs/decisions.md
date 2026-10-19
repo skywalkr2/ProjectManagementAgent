@@ -296,6 +296,21 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   **Impact:** design 7.9 and 6.16 (CHANGES.md section 87); P27 leaves the open promises. Left: only the note-reading kind
   has measurements today (the core's cases all run it), so other kinds say "no tests cover this kind of work yet";
   moving a kind to another tier isn't pre-checked against what its backup account passed (the account checks flag it).
+- **Also (2026-10-19): an outage is not a failure (S1, brought forward from phase E).** A network lost mid-request
+  (in a fix round, on the stronger tier's re-run, or while continuing a draft) waits for the network and uses nothing up.
+  A run that did no work (an agent that exited with nothing on its error stream or only a banner, one ended by a signal,
+  or a call cut off by the computer sleeping) is a new error kind `no_work`, decided from the exit code, error stream and
+  clocks only: it isn't an attempt, uses no fix round, falls back to the next account, isn't counted as a failure, and
+  after `dispatch.no_work_tries` in a row the person gets a plain message that never quotes the banner.
+  **Impact:** design 6 and 4 (CHANGES.md section 88). Left: a resumed request starts again from its first call, so a
+  first call that had succeeded is paid for twice; an agent that exits 0 printing only a banner still reads as a
+  malformed answer (telling them apart would mean reading model output).
+- **Also (2026-10-19): the coverage line on Today (S1, designer F4 and F9).** Under Today's heading, what was read and
+  when, and any source that couldn't be read, in different words and styles. A source whose latest real try failed and
+  whose last good read is older than its interval times `watch.unread_gap_factor` (default 2) becomes a Today line that
+  starts with the verb ("Sign in to Work mail again: not read since …"), in place of the "can't be read" question line.
+  An empty Today says what was read, and never "nothing needs you" alone while a source is unread.
+  **Impact:** design 7.7 (CHANGES.md section 89). Left: the heading's times are computed when Today renders and don't tick.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

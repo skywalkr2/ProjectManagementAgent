@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from engine.ai.task import NO_WORK_KINDS
 from engine.config import Config
 from engine.today import zone
 
@@ -46,13 +47,13 @@ def account_states(ws: Any, store: Any, cfg: Config, now: datetime | None = None
     answered: dict[str, datetime] = {}
     for stored in view.latest("run", "started_at", LATEST_WINDOW):
         run = stored.data
-        if run.get("error_kind") == "offline" or run.get("outcome") != "ok":
+        if run.get("error_kind") in NO_WORK_KINDS or run.get("outcome") != "ok":
             continue
         answered.setdefault(run["provider"], _at(run["started_at"]))
     spent: dict[str, float] = {}
     for stored in view.since("run", "started_at", (day_start.astimezone(UTC) - timedelta(days=1)).date().isoformat()):
         run = stored.data
-        if run.get("error_kind") == "offline" or _at(run["started_at"]) < day_start:
+        if run.get("error_kind") in NO_WORK_KINDS or _at(run["started_at"]) < day_start:
             continue
         spent[run["provider"]] = spent.get(run["provider"], 0.0) + (run.get("cost_usd") or 0.0)
 

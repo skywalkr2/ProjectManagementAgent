@@ -9,7 +9,7 @@ import yaml
 from engine.ai.adapters import stub
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
-from engine.ai.task import AiResult
+from engine.ai.task import AiError, AiResult
 from engine.config import load_config
 from engine.dispatcher import process
 from engine.storage import WriteContext
@@ -142,7 +142,10 @@ def answers(monkeypatch, *results):
 
     def fake(self, task, model):
         asked.append(task)
-        return queue.pop(0) if len(queue) > 1 else queue[0]
+        item = queue.pop(0) if len(queue) > 1 else queue[0]
+        if isinstance(item, Exception):
+            raise item
+        return item
 
     monkeypatch.setattr(stub.StubAdapter, "run", fake)
     return asked
@@ -200,6 +203,37 @@ def test_a_draft_cut_off_twice_waits_for_the_person(env, monkeypatch):
     assert run(env, request_id) is None
     waiting = store.read().get("request", request_id).data
     assert waiting["state"] == "needs_you" and "cut off at the output limit twice" in waiting["waiting"]
+
+
+def test_a_continuation_that_finds_no_network_waits_for_it_and_files_nothing_yet(env, monkeypatch):
+    _, _, store = env
+    record = chapter(env)
+    whole = prose("The ferry left before dawn.\n")
+    answers(
+        monkeypatch, prose("The ferry left be", truncated=True), AiError("offline", "name resolution failed"), whole
+    )
+    request_id = start(env, record)
+    assert run(env, request_id) is None
+    waiting = store.read().get("request", request_id).data
+    assert waiting["state"] == "queued" and waiting["cause"]["kind"] == "offline" and waiting["retries"] == 0
+    assert waiting["attempts"] == 0 and "cut off" not in waiting["waiting"]
+    assert not [v for v in store.read().list("text_version") if v.data["source"] == "draft"]
+    run(env, request_id)  # the network is back
+    assert store.read().get("request", request_id).data["state"] == "review"
+    assert pending(store, record).data["status"] == "pending"
+
+
+def test_a_continuation_that_did_no_work_is_no_attempt_and_not_a_failed_draft(env, monkeypatch):
+    _, _, store = env
+    record = chapter(env)
+    banner = AiError("no_work", "Welcome to the agent. Please sign in.")
+    answers(monkeypatch, prose("The ferry left be", truncated=True), banner, prose("The ferry left before dawn.\n"))
+    request_id = start(env, record)
+    assert run(env, request_id) is None
+    waiting = store.read().get("request", request_id).data
+    assert waiting["state"] == "queued" and waiting["retries"] == 0 and waiting["attempts"] == 0
+    assert waiting["cause"]["kind"] == "retry" and waiting["cause"]["idle"] == 1
+    assert "Welcome" not in waiting["waiting"] and "couldn't be continued" not in waiting["waiting"]
 
 
 def test_an_empty_draft_is_tried_again_by_itself_and_files_nothing(env, monkeypatch):

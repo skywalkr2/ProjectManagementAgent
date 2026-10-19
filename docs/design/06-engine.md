@@ -1533,6 +1533,29 @@ since an answer shows the limit has lifted
 waits for the network the header's status says "Waiting for the network" (after a lost live connection, before a
 restart or a backup), and its popover gives the count and since when (`network_wait` of the status;
 `web/src/shell/StatusMenu.test.tsx`, `web/src/shell/status.test.ts`, `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`).
+**A run that did no work is not an attempt.** Besides `offline`, the error kind `no_work` is a run that ran and did
+nothing: a command-line agent that failed with nothing on its error stream (only a banner or a sign-in prompt on its
+output), whose error stream matches the account's `errors.no_work` patterns or whose exit code the account maps to
+`no_work`, or that a signal ended; or a call that failed with a timeout or a break in the exchange while the computer was
+asleep (the wall clock ran ahead of the time awake by more than `dispatch.sleep_gap_seconds`, 30). It is classified from
+the exit code, the error stream and the clocks, never from the answer (an error stream with other words is still
+`other`; a known sign-in or usage-limit pattern still wins). The router tries the next account on it. The request is no
+attempt (`attempts` and `retries` stay as they were), nothing is sent back as a mistake and no fix round is used, the run
+record has `no_work` true and no cost, and runs like it are left out of the day's counts and of whether an account is
+failing. The request waits as a `retry` with `idle` counting the runs in a row, the wait doubling from
+`dispatch.retry_wait_seconds`; after `dispatch.no_work_tries` (5) in a row it comes to the person saying how many times the
+program started and did no work, and never quoting the banner (`tests/test_silent_stops.py::test_a_run_that_did_no_work_is_no_attempt_no_retry_no_fix_round_and_never_quotes_its_banner`,
+`::test_runs_that_keep_doing_no_work_come_to_the_person_in_plain_words_after_the_configured_number`,
+`::test_a_call_the_computer_sleeping_cut_off_did_no_work_and_a_slow_one_did_not`,
+`tests/test_cli_agent.py::test_a_run_that_only_printed_a_banner_did_no_work_whatever_the_banner_says`). A network lost or a
+run that did no work in the middle of a request's work (a fix round, a search call, the stronger tier's re-run, a draft's
+continuation) is the same wait: the request goes back in line with no attempt used, the interrupted round's answer is not
+filed or shown as a failure, and the next look starts afresh with every fix round still to use
+(`tests/test_silent_stops.py::test_a_network_lost_in_a_fix_round_waits_for_it_and_the_outage_uses_nothing_up`,
+`::test_a_network_lost_on_the_stronger_tier_waits_instead_of_ending_on_the_first_answer`,
+`tests/test_drafts.py::test_a_continuation_that_finds_no_network_waits_for_it_and_files_nothing_yet`). No apply step reaches
+the network (ops only write records, settings, rules and text), so there is no apply to wait for the network.
+
 Notes and messages cost little; drafting work
 (proposals, statements of work, long copy, research, independent reviews) can cost the person real money, so spending is something they decide,
 never something that happens to them:

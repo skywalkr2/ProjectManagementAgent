@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
+from engine.ai.task import NO_WORK_KINDS
 from engine.config import Config
 from engine.storage import Store
 from engine.today import zone
@@ -54,7 +55,7 @@ def _at(text: str) -> datetime:
 
 
 def _reached(run: dict) -> bool:
-    return run.get("error_kind") != "offline"
+    return run.get("error_kind") not in NO_WORK_KINDS
 
 
 def chains(cfg: Config) -> list[Chain]:

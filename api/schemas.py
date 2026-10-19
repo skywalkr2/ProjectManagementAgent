@@ -1495,7 +1495,10 @@ class QueueLineView(BaseModel):
     of what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST
     /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account
     at all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that
-    isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well; `unfiled` is
+    isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;
+    `source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its
+    label, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last
+    read, or first tried when it never was), which clears once it is read again; `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1523,6 +1526,7 @@ class QueueLineView(BaseModel):
         "credential",
         "no_account",
         "extractor",
+        "source_unread",
         "review",
         "rule_review",
         "learned",
@@ -1621,6 +1625,14 @@ class QueueLineView(BaseModel):
         None,
         description="For an extractor line: the kind of file that isn't being read (document, spreadsheet, "
         "presentation, pdf or text), or the label an add-on gave its own kind. `text` says why.",
+    )
+    source: str | None = Field(
+        None, description="For a source_unread line: the watched source's id; its label is in GET /api/watch."
+    )
+    problem_kind: str | None = Field(
+        None,
+        description="For a source_unread line: the kind of failure (auth, no_access, not_found, outage, or another "
+        "kind a connector reports), which the screen words as what to do.",
     )
     credential_kind: Literal["account", "sign_in"] | None = Field(
         None, description="For a credential line: an AI account's key or an add-on's sign-in."

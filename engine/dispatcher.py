@@ -143,6 +143,7 @@ def process(
         return needs_you(store, request_id, SAY_WHO_FIRST, cause={"kind": "no_person"})
     before = req.data.get("cause") or {}
     offline_since = before.get("since") if before.get("kind") == "offline" else None
+    attempts_before = req.data["attempts"]  # a run that did no work gives this back: it was no attempt
     _set(
         store,
         request_id,
@@ -335,12 +336,18 @@ def process(
             return None
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
+        if second.cause and second.cause.get("kind") in ("offline", "no_work"):
+            outcome = second  # a re-run that found no network or did no work is a wait, never the first answer's end
     if _closed(store, request_id):
         return None  # the request was closed or replaced while the assistant worked: nothing of this run is written
     if outcome.cause and outcome.cause.get("kind") == "offline":
         # The network is down: the request stays in line, no try is counted, and it is looked at again after a short
         # wait. Since when is kept from the first time it found no network.
-        return wait_for_network(store, cfg, request_id, now, since=offline_since)
+        return wait_for_network(store, cfg, request_id, now, since=offline_since, attempts=attempts_before)
+    if outcome.cause and outcome.cause.get("kind") == "no_work":
+        # The run did nothing (a program that only printed a banner, or a call the computer's sleep cut off): no
+        # attempt and no automatic retry is used, and it is tried again after a wait, a few times before the person.
+        return wait_after_no_work(store, cfg, request_id, now, before, attempts=attempts_before)
     if outcome.cause and outcome.cause.get("kind") == "paused":
         # Every account that could take it is waiting for a limit to reset: it stays in line and runs by itself then.
         _set(store, request_id, state="queued", waiting=outcome.stop, cause=outcome.cause)
@@ -604,8 +611,12 @@ def _call(
     except (BudgetReached, NoProvider) as err:
         out.stop, out.cause = str(err), _data_level_cause(err)
     except AiError as err:
-        out.stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
-        out.retry = failure_in_words(err) if err.kind in RETRIED else None
+        if err.kind == "no_work":
+            # The run did no work: it is no answer to send back, no failure of the model and no try.
+            out.stop, out.cause = NO_WORK, {"kind": "no_work"}
+        else:
+            out.stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
+            out.retry = failure_in_words(err) if err.kind in RETRIED else None
     else:
         tier_account = router.cfg.ai.tiers[choice.tier].use if choice.tier in router.cfg.ai.tiers else ""
         out.fallback = (
@@ -759,7 +770,16 @@ def _rounds(
         if result.refused:
             return _Outcome(run_id=out.run_id, stop=_refused(store, out.run_id, result.refusal or ""))
         if draft is not None:
-            text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content, independent)
+            try:
+                text, stop = _drafted(
+                    router, task, result, request_id, tier, data_level, use, content, independent, offline_known
+                )
+            except NetworkOffline:
+                return _Outcome(run_id=out.run_id, stop=OFFLINE_WAITING, cause={"kind": "offline"})
+            except AiError as err:
+                if err.kind != "no_work":
+                    raise
+                return _Outcome(run_id=out.run_id, stop=NO_WORK, cause={"kind": "no_work"})
             if stop:
                 return _Outcome(run_id=out.run_id, stop=stop, retry=stop.rstrip(".") if not text.strip() else None)
             from engine.texts import AnchorProblem, parse_anchored, splice_after, splice_span, split_questions
@@ -863,6 +883,12 @@ UNREADABLE = (
 )
 #: What a request waits on while no AI account can be reached for want of a network connection.
 OFFLINE_WAITING = "Waiting for an internet connection"
+#: What a request waits on after a run that did no work, and what it says when run after run did none.
+NO_WORK = "The AI program started but did no work"
+NO_WORK_STOPPED = (
+    "The AI program started {times} times and did no work each time. It may be signed out, or the computer kept "
+    "being cut off. Check the account on the AI accounts screen, then try again."
+)
 #: What a run waits on while the workspace has no person set; the setup step that names them clears it.
 SAY_WHO_FIRST = "Say who you are first"
 UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for you to start it."
@@ -893,9 +919,11 @@ def _drafted(
     use: str | None,
     content: frozenset[str],
     independent: Independence | None = None,
+    offline_known: bool = False,
 ) -> tuple[str, str | None]:
     """A draft's text from a prose answer: one surrounding code fence removed, and an answer cut off at the output
-    limit continued once. Returns the text and, when it can't be finished, why the person is needed."""
+    limit continued once. Returns the text and, when it can't be finished, why the person is needed. A continuation
+    that finds no network, or does no work, raises that error: the request waits, as for any call."""
     text = _unfenced(result.text)
     if not text.strip():
         return "", "The assistant's draft came back empty."
@@ -910,8 +938,11 @@ def _drafted(
                 use=use,
                 content=content,
                 independent=independent,
+                offline_known=offline_known,
             )
         except (AiError, BudgetReached, NoProvider) as err:
+            if isinstance(err, NetworkOffline) or (isinstance(err, AiError) and err.kind == "no_work"):
+                raise
             return text, f"The draft was cut off at the output limit and couldn't be continued ({err})."
         if more.refused or more.truncated:
             return text, (
@@ -985,19 +1016,20 @@ _PLAIN_FAILURE = {
     "offline": "There is no network connection to the AI account",
     "invalid_output": "The AI account's answer couldn't be read",
     "no_output": "The AI account finished without giving an answer",
+    "no_work": NO_WORK,
 }
 
 
 def failure_in_words(err: AiError) -> str:
     """A failed call in a few plain words: what happened and the provider's own reason, if it gave one."""
-    reason = provider_reason(err.detail)
+    reason = "" if err.kind == "no_work" else provider_reason(err.detail)  # a banner is never the reason given
     return _PLAIN_FAILURE.get(err.kind, "The AI call failed") + (f" ({reason})" if reason else "")
 
 
 def _ai_failure(err: AiError) -> str:
     plain = _PLAIN_FAILURE.get(err.kind, "The AI call failed")
     when = f"; it can try again in {int(err.retry_after)} seconds" if err.retry_after else ""
-    reason = provider_reason(err.detail)
+    reason = "" if err.kind == "no_work" else provider_reason(err.detail)
     why = f" ({reason})" if reason else ""
     if err.hint:
         signed_out = "The AI account isn't signed in" if err.kind == "auth" else plain
@@ -1101,9 +1133,12 @@ def _close_held(tx: Tx, cs: Stored) -> None:
     tx.update("changeset", cs.id, {"ops": ops, "status": status}, _ENGINE, read_version=cs.version)
 
 
-def wait_for_network(store: Store, cfg: Config, request_id: str, now: datetime, since: object = None) -> None:
+def wait_for_network(
+    store: Store, cfg: Config, request_id: str, now: datetime, since: object = None, attempts: int | None = None
+) -> None:
     """Queue a request that found no network. It says why, since when and until when it is looked at again; `retries`
-    is left as it was, so being offline never uses up the tries a failing service gets."""
+    is left as it was, so being offline never uses up the tries a failing service gets, and `attempts` goes back to
+    what it was before the look (a run that found no network is no attempt)."""
     started = since if isinstance(since, str) else now.isoformat()
     at = now + timedelta(seconds=cfg.dispatch.offline_check_seconds)
     began = datetime.fromisoformat(started)
@@ -1113,6 +1148,32 @@ def wait_for_network(store: Store, cfg: Config, request_id: str, now: datetime, 
         state="queued",
         waiting=(f"{OFFLINE_WAITING} since {when_text(cfg, began, now)}. Checking again at {when_text(cfg, at, now)}."),
         cause={"kind": "offline", "since": started, "until": at.isoformat()},
+        **({} if attempts is None else {"attempts": attempts}),
+    )
+    return None
+
+
+def wait_after_no_work(
+    store: Store, cfg: Config, request_id: str, now: datetime, before: dict, attempts: int | None = None
+) -> None:
+    """A run did no work (a program that only printed a banner, or a call cut off by the computer sleeping). It is no
+    attempt and no automatic retry: `attempts` and `retries` stay as they were. The request waits, with a wait that
+    doubles for each such run in a row, and runs again by itself; after `dispatch.no_work_tries` in a row the person
+    is told, in plain words that never quote the program's banner."""
+    idle = (before.get("idle") or 0) + 1 if before.get("kind") == "retry" else 1
+    changes: dict[str, object] = {} if attempts is None else {"attempts": attempts}
+    if idle > cfg.dispatch.no_work_tries:
+        _set(store, request_id, **changes)
+        needs_you(store, request_id, NO_WORK_STOPPED.format(times=idle - 1))
+        return None
+    at = now + timedelta(seconds=cfg.dispatch.retry_wait_seconds * 2 ** (idle - 1))
+    _set(
+        store,
+        request_id,
+        state="queued",
+        waiting=f"{NO_WORK}. Trying again at {when_text(cfg, at, now)}.",
+        cause={"kind": "retry", "until": at.isoformat(), "idle": idle},
+        **changes,
     )
     return None
 

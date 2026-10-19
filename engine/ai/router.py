@@ -17,7 +17,7 @@ from engine.config import Config
 from engine.secrets import SecretError, resolve_secret
 from engine.storage import Store, WriteContext
 
-FALLBACK_ON = {"rate_limited", "quota", "auth", "no_key", "provider_down", "timeout", "offline"}
+FALLBACK_ON = {"rate_limited", "quota", "auth", "no_key", "provider_down", "timeout", "offline", "no_work"}
 LEVELS = ("open", "internal", "restricted")
 _SYSTEM = WriteContext(actor="engine", trust="trusted", op="run.record")
 
@@ -184,6 +184,10 @@ def accounts(cfg: Config, data_level: str, content: frozenset[str] = frozenset()
     return found
 
 
+#: The failures of a call that, when the computer slept during it, are a call cut off with no answer.
+CUT_OFF_BY = ("timeout", "provider_down")
+
+
 def _outcome(result: AiResult | None, error: AiError | None) -> str:
     if (error is not None and error.kind == "refused") or (result is not None and result.refused):
         return "refused"
@@ -288,6 +292,9 @@ class Router:
                 self._record(task, request_id, choice, started, time.monotonic() - clock, None, last, independent)
                 continue
             except AiError as err:
+                if err.kind in CUT_OFF_BY and self._slept(started, clock):
+                    # The computer slept during the call: it was cut off with no answer, so it did no work.
+                    err = AiError("no_work", err.detail)
                 last = err
                 if err.kind == "offline":
                     offline += 1
@@ -340,6 +347,13 @@ class Router:
         if offline and offline + len(paused) + len(over) == len(options):
             raise NetworkOffline(last.detail)
         raise last
+
+    def _slept(self, started: datetime, clock: float) -> bool:
+        """Whether the computer was asleep during a call that began at `started` (wall clock) and `clock` (the awake
+        clock): the time on the wall clock ran ahead of the time the computer was awake by more than the configured
+        gap."""
+        wall = (self.now() - started).total_seconds()
+        return wall - (time.monotonic() - clock) > self.cfg.dispatch.sleep_gap_seconds
 
     def _lent(self, tier: str, independent: Independence | None = None) -> str | None:
         """The account of another tier the person said yes to for this tier's work, while that answer counts and the
@@ -616,6 +630,7 @@ class Router:
             ),
             "error_kind": error.kind if error else ("refused" if result and result.refused else None),
             "error_detail": error.detail if error else (result.refusal if result and result.refused else None),
+            "no_work": error is not None and error.kind == "no_work",
             "started_at": started.isoformat(),
             "knowledge": task.knowledge,
         }

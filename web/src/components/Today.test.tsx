@@ -171,6 +171,40 @@ test("an empty queue says so in one line", async () => {
   expect(screen.getByText(/Nothing needs you$/)).toBeInTheDocument();
 });
 
+const watched = (id: string, over: Partial<S["WatchSourceView"]> = {}): S["WatchSourceView"] => ({
+  id,
+  label: id,
+  connector: "kind-a",
+  connector_label: "A kind",
+  enabled: true,
+  every_minutes: 15,
+  items: 0,
+  last: null,
+  read_at: null,
+  failures: 0,
+  problem: null,
+  ...over,
+});
+
+test("the heading says what was read, and an empty Today says nothing needs you together with it", async () => {
+  const read = new Date().toISOString();
+  show([], { "GET watch": () => [watched("a", { read_at: read, last: { outcome: "ok", started_at: read, new: 0, changed: 0, removed: 0 } })] });
+  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /Nothing needs you · Read 1 source, last at /.test(el.textContent ?? ""));
+  expect(empty).toBeInTheDocument();
+  expect(screen.getAllByText(/Read 1 source, last at /).length).toBeGreaterThanOrEqual(2); // the heading's line and the empty state's
+  expect(screen.getByText(/Nothing needs you$/)).toBeInTheDocument();
+});
+
+test("when a source couldn't be read, neither the heading nor the empty Today says nothing needs you alone", async () => {
+  const read = new Date().toISOString();
+  show([], { "GET watch": () => [watched("m", { label: "Work mail", read_at: read, last: { outcome: "failed", started_at: read, new: 0, changed: 0, removed: 0 } })] });
+  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /couldn't be read/.test(el.textContent ?? ""));
+  expect(empty.textContent).toMatch(/^Nothing found that needs you/);
+  expect(screen.getByText(/Nothing found that needs you$/)).toBeInTheDocument();
+  expect(screen.queryByText(/Nothing needs you/)).toBeNull();
+  expect(screen.getAllByText(/Work mail couldn't be read since/).length).toBeGreaterThanOrEqual(2);
+});
+
 test("a row names its project only when the screen holds more than one", async () => {
   const other = line("owner", { key: "question:Q-9", text: "Plan the launch", project: "PRJ-2", project_name: "Autumn book", question: "Q-9" });
   show([decision, other]);

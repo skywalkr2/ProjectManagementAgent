@@ -37,6 +37,15 @@ elif mode == "reports-on-output":
     sys.exit(1)
 elif mode == "limit":
     sys.exit(7)
+elif mode == "banner":
+    print("Welcome to the agent. Sign in to continue.")
+    sys.exit(1)
+elif mode == "banner-stderr":
+    print("Welcome to the agent 1.4. Starting up", file=sys.stderr)
+    sys.exit(2)
+elif mode == "crash":
+    print("Traceback (most recent call last): the agent's own bug", file=sys.stderr)
+    sys.exit(1)
 elif mode == "sleep":
     time.sleep(5)
 elif mode == "env":
@@ -138,7 +147,10 @@ def test_errors_are_read_from_the_exit_code_and_error_stream_only(agent_script):
     assert limited.value.kind == "quota"
     with pytest.raises(AiError) as unknown:
         CliAgentAdapter(settings(agent_script, "limit")).run(task(), "m")
-    assert unknown.value.kind == "other"
+    assert unknown.value.kind == "no_work", "an exit that said nothing on the error stream did no work"
+    with pytest.raises(AiError) as crashed:
+        CliAgentAdapter(settings(agent_script, "crash")).run(task(), "m")
+    assert crashed.value.kind == "other" and "Traceback" in crashed.value.detail
     # The model writing words that look like an error is an answer, not a failure.
     said = CliAgentAdapter(settings(agent_script, "says-signed-out", errors={"auth": ["logged in"]})).run(task(), "m")
     assert said.text == "not logged in"
@@ -244,7 +256,35 @@ def test_an_agent_that_reports_its_failure_on_its_output_is_understood(agent_scr
     untold = settings(agent_script, "reports-on-output", output_json=True, output_fields=fields)
     with pytest.raises(AiError) as unread:
         CliAgentAdapter(untold).run(task(), "m")
-    assert unread.value.kind == "other" and "Not logged in" not in unread.value.detail
+    assert unread.value.kind == "no_work" and "Not logged in" not in unread.value.detail
+
+
+def test_a_run_that_only_printed_a_banner_did_no_work_whatever_the_banner_says(agent_script):
+    """From the exit code and the error stream only: a failure with nothing on the error stream, a banner the account's
+    patterns name, or a program ended by a signal is `no_work`: not a mistake of the model, not a usage limit."""
+    on_output = settings(agent_script, "banner", errors={"auth": ["sign in"]})
+    with pytest.raises(AiError) as printed:
+        CliAgentAdapter(on_output).run(task(), "m")
+    assert printed.value.kind == "no_work", "the output is never read for an error; its banner is not a sign-in error"
+    plain = settings(agent_script, "banner-stderr")
+    with pytest.raises(AiError) as unnamed:
+        CliAgentAdapter(plain).run(task(), "m")
+    assert unnamed.value.kind == "other", "an unknown message on the error stream stays an unknown failure"
+    named = settings(agent_script, "banner-stderr", errors={"no_work": [r"welcome to the agent"]})
+    with pytest.raises(AiError) as banner:
+        CliAgentAdapter(named).run(task(), "m")
+    assert banner.value.kind == "no_work"
+    by_code = settings(agent_script, "limit", errors={"exit_codes": {7: "no_work"}})
+    with pytest.raises(AiError) as coded:
+        CliAgentAdapter(by_code).run(task(), "m")
+    assert coded.value.kind == "no_work"
+    adapter = CliAgentAdapter(settings(agent_script, "stdout"))
+    assert adapter.classify_error(-9, "", None).kind == "no_work"
+    assert adapter.classify_error(1, "Please sign in", None).kind == "other"
+    # A sign-in the account's patterns know is still a sign-in, and a usage limit still a usage limit.
+    known = CliAgentAdapter(settings(agent_script, "stdout", errors={"auth": ["sign in"]}))
+    assert known.classify_error(1, "Please sign in", None).kind == "auth"
+    assert known.classify_error(1, "Usage limit reached", None).kind == "quota"
 
 
 def test_an_agent_preset_shows_why_a_signed_out_test_failed_in_plain_words(agent_script):

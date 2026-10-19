@@ -112,6 +112,35 @@ def last_read(store: Any, source: str) -> Any | None:
     return runs[-1] if runs else None
 
 
+@dataclass(frozen=True)
+class Unread:
+    """A source that has been failing for longer than its usual gap: when it was last read (or first tried, when it
+    never was), the kind of failure and what went wrong with what to do, in plain words."""
+
+    since: str
+    kind: str
+    problem: str
+
+
+def unread(store: Any, cfg: Any, source: Any, now: datetime) -> Unread | None:
+    """Whether a source that is on has been failing for longer than `watch.unread_gap_factor` times its own read
+    interval, counted from its last good read (its first try when it never had one). A read that found no network or was
+    throttled neither starts nor ends a failure, so a source that is only offline is never reported."""
+    if not source.enabled:
+        return None
+    runs = store.read().find("watch_run", {"source": source.id})
+    failing = next((r for r in reversed(runs) if r.data["outcome"] not in ("offline", "throttled")), None)
+    if failing is None or failing.data["outcome"] != "failed":
+        return None
+    read = last_read(store, source.id)
+    since = str((read or runs[0]).data["started_at"])
+    if now - datetime.fromisoformat(since) <= timedelta(minutes=source.every_minutes * cfg.watch.unread_gap_factor):
+        return None
+    kind = failing.data.get("error_kind") or ""
+    problem = _problem(failing.data.get("error") or kind, advice_for(kind, failing.data.get("error_advice")))
+    return Unread(since=since, kind=kind, problem=problem)
+
+
 def due(store: Any, cfg: Any, now: datetime) -> list[str]:
     """Sources that are on and whose time has come."""
     found = []

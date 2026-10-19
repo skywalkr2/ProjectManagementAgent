@@ -123,6 +123,9 @@ time. These rules hold for the main session and every subagent.
   reviews).
 - **A subagent runs only the tests for what it touched**: never the full Python suite, the full web suite or the browser
   tests. The main session runs the full suites once, just before a push, one full run at a time.
+- **Batch before the full run** (owner, 2026-10-19: the full run takes too long to do per change): commit each reviewed
+  item locally, and run the full suites once per batch of three or four items, then push the batch. Locally the Python
+  suite runs on one version (CI runs every supported one); the browser tests run when the batch touches `web/` or `api/`.
 - **The browser tests run only in that one full run**, never two runs at once. If anything else might be using the
   default ports, set `PW_PORT_OFFSET`.
 - **Never stop processes by a broad pattern** (`pkill -f pytest`, `pkill -f playwright`): it kills other workers' runs.
