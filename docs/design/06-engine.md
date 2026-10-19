@@ -2867,20 +2867,25 @@ already in the configured sent folder.
 **What a draft to someone else carries (S1-2).** A message drafted for another person carries only what they need.
 These are lints on every draft addressed to someone other than the person (severity in `config/checks.yaml`; one
 return, then held for the person when the draft will reach someone, per 6.22):
-- *no bookkeeping*: no record ids, internal terms, stances, scores or "the assistant noticed"; the wording sheet's
-  list of internal terms is the deterministic part;
+- *no bookkeeping*: no record ids, internal terms, stances, scores or "the assistant noticed"; the record ids and
+  `language.internal_terms` are the deterministic part (the lint `bookkeeping`);
 - *only openable links*: a link the reader can't open is left out (the rule questions already follow, 6.8);
-- *no long quotes back*: a quote of the reader's own words is at most `drafts.max_quote_words` (a setting, 25 by
-  default); the rest is a link or a summary;
+- *no long quotes back*: a quote is at most `checks.tuning.long_quote.max_words` (a setting, 25 by default); the rest
+  is a link or a summary;
 - *never single a person out*: a draft to several people never names one of them as the cause of a miss; a
   discrepancy in one person's work is asked of that person privately, in a draft to them alone. Naming is the model's
   label, so this one is a lint with a return, not a refusal.
+
+*Built so far (S1-2):* the `bookkeeping` and `long-quote` lints on a question to someone else and on a drafted reply
+(`tests/test_reader_checks.py`); openable links were already refused (6.8). Left: never singling a person out, which
+needs drafts to several people (S1b), and its learning pair.
 
 **One message per person per batch.** Everything one gap needs is one ask, never three messages about one gap. All the
 asks to one person go out together: one message per person per batch, the asks numbered inside it, sent now or held
 for a later batch. Each ask keeps its own id, so each is answered and tracked on its own. An ask made for someone who
 already has a message waiting joins it instead of becoming a second draft the same day. The grouping is by rules, from
-the asks' recipients.
+the asks' recipients. *Today:* follow-ups already compose one message per person with every waiting question numbered,
+each question keeping its id (`engine/followups.py`); holding a message for a later batch is not built.
 
 **How a reply owed ends (S1-2).** Besides a sent reply, a reply owed ends when:
 - the person marks it *Answered another way* (a call, a meeting, a chat), optionally with a few words that become the

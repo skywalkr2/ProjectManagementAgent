@@ -1059,6 +1059,8 @@ def _default_lints() -> dict[str, Severity]:
         "other-team-item": "return",
         "stance": "return",
         "rejected-ask": "return",
+        "bookkeeping": "return",
+        "long-quote": "return",
     }
 
 
@@ -1137,6 +1139,16 @@ class UnverifiedQuoteTuning(ConfigModel):
     )
 
 
+class LongQuoteTuning(ConfigModel):
+    max_words: int = Field(
+        25,
+        ge=3,
+        le=200,
+        description="The most words a passage in quotation marks may have in text written for someone else; anything "
+        "longer is a link or a summary instead.",
+    )
+
+
 class LintTuning(ConfigModel):
     """Settings of the core lints that have more than a severity: one entry per lint, named as the lint is in `lints`
     with underscores for hyphens, so each setting has a plain dotted key and environment variable."""
@@ -1162,6 +1174,10 @@ class LintTuning(ConfigModel):
     unverified_quote: UnverifiedQuoteTuning = Field(
         default_factory=UnverifiedQuoteTuning,
         description="Settings of the check that words in quotation marks are in the material cited.",
+    )
+    long_quote: LongQuoteTuning = Field(
+        default_factory=LongQuoteTuning,
+        description="Settings of the check that text for someone else doesn't quote long passages back.",
     )
 
 
@@ -1360,6 +1376,17 @@ class LanguageFile(FileModel):
         default_factory=lambda: list(DEFAULT_SELF_WORDS),
         description='The words the language uses for the person themselves ("assign it to me"). A name written as one '
         "of these means the person, whatever case it is in.",
+    )
+    internal_terms: list[str] = Field(
+        default_factory=lambda: [
+            "changeset",
+            "ledger",
+            "applier",
+            "the assistant noticed",
+            "the assistant found",
+        ],
+        description="Words of the app's own workings that never belong in text written for someone else (a question "
+        "to them, a reply). Matched as whole words, ignoring case.",
     )
     rejecting_words: list[str] = Field(
         default_factory=lambda: [

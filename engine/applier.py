@@ -83,7 +83,7 @@ from engine.ops import (
     reach_problem,
 )
 from engine.plugin_api import NeedsPerson
-from engine.records import entry_problem, model_for
+from engine.records import REGISTRY, entry_problem, model_for
 from engine.rule_use import RULE_CHECK, failing_rules
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
@@ -503,6 +503,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     if not _openable(link.url):
                         refuse(i, "question-links", f"{link.url} isn't a link the recipient can open")
             _wording(i, op.title + " " + op.text, ctx, lint, _quotes_in(op, ctx))
+            if not to_pm:
+                _for_reader(i, op.title + " " + op.text, ctx, lint)
             minimum = ctx.cfg.checks.tuning.several_questions.minimum
             if numbered_questions(op.text) >= minimum:
                 lint(
@@ -529,6 +531,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             _wording(i, op.text, ctx, lint, quotes)
             if op.reply:
                 _wording(i, op.reply, ctx, lint, quotes)
+                _for_reader(i, op.reply, ctx, lint)
             if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
             if op.promised_to and len(op.owners) > 1:
@@ -766,6 +769,22 @@ def _wording(i: int, text: str, ctx: Context, lint: Any, quotes: list[str] | Non
         if re.search(r"(?<![a-z])" + re.escape(phrase.lower()) + r"(?![a-z])", lowered):
             lint(i, "blocked-wording", f"avoid {phrase!r}: say what to do, or ask the real question")
             return
+
+
+def _for_reader(i: int, text: str, ctx: Context, lint: Any) -> None:
+    """Checks on text written for someone else (design 6.35): none of the app's own ids or terms, and no long passage
+    quoted back."""
+    ids = "|".join(sorted({model.prefix for model in REGISTRY.values()}, key=len, reverse=True))
+    found = re.search(rf"(?<![A-Za-z0-9-])(?:{ids})-\d+(?![A-Za-z0-9])", text)
+    term = next((t for t in ctx.cfg.language.internal_terms if t.strip() and scope.has_word(text, t)), None)
+    if found is not None:
+        lint(i, "bookkeeping", f"{found.group(0)} is the app's own id: name the thing in words the reader knows")
+    elif term is not None:
+        lint(i, "bookkeeping", f"{term!r} is the app's own word: say it the way the reader would")
+    limit = ctx.cfg.checks.tuning.long_quote.max_words
+    longest = max((len(p.split()) for p in quoted_passages(text)), default=0)
+    if longest > limit:
+        lint(i, "long-quote", f"a quote of {longest} words is too long for the reader: link to it or say it in a line")
 
 
 def _openable(url: str) -> bool:

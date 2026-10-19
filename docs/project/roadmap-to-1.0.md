@@ -557,6 +557,9 @@ S1. **Promises, and how they end:**
   asks to one person go out together numbered, each keeping its own id, sent now or held for a later batch (the
   designer's review, 2026-10-19). Exit: a test per lint, a test that two asks to one person on one day make one
   message with two numbered asks answered separately, and a learning pair for singling out.
+  *Built so far (S1-2):* the `bookkeeping` and `long-quote` lints (`tests/test_reader_checks.py`); one message per
+  person with numbered asks already existed (`engine/followups.py`). Left: holding a message for a later batch, and
+  singling out (with drafts to several people, S1b) and its learning pair.
 - [ ] [S1-2] **A sender's distribution limit travels with the content** (the designer's notes, 2026-10-19; design 6.35):
   a limit read from a message is recorded on the source as its audience (narrowing applies at once; widening is the
   person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
