@@ -1809,6 +1809,12 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **From three weeks of running** (the designer's S1-1 notes, 2026-10-19; design 6.33): on hold until a
+  trigger, taken off hold with a new date in one step; a promise due at a meeting follows the meeting; the chase clock
+  for waiting-ons (14 days undated, 7 days before a date); dates read against the message's own day and zone; one
+  promise per owner; one promise from several sources with every quote and a shown date disagreement, and a restatement
+  with a date outside the window is a move held for Keep with both quotes (the designer's review, 2026-10-19); chasing is news,
+  a reported done is credited to its owner; a confirmed second spelling becomes an alias. *Built (S1-1):* `tests/test_promises.py` (hold with a new date, meetings, the message's own day, one owner, merging, a restatement as a move, crediting, aliases), `tests/test_promise_lines.py` (the chase clock), `TodayPromises.test.tsx`.
 - [x] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
   their voice to edit and copy; "No reply needed" is a choice the assistant learns from. (Drafting follow-ups is now
   expected of any assistant; Thimbleby's difference is promises kept across every source, with the people around them.)
