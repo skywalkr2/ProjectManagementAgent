@@ -411,6 +411,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   (there is no people settings file). A question says what it asks about (`asks_about`), the model's label, so the
   gate is a lint held after one return. Decided by the main session.
   **Impact:** design 6.34 (CHANGES.md section 101); roadmap S1-2.
+- **Also (2026-10-19): reminders in the app first; reaching a sleeping computer moves to S1b-2.** Putting a reminder
+  into the person's calendar or mailing it is an outward act and needs the publisher (S1b-1), so it is its own S1b-2
+  item. In the app: working days are a first and a last weekday (a split week waits for a multi-select), "late" is a
+  reminder not shown within `steward.reminders.late_after_minutes` of its time (the app can't yet tell a sleep from a
+  closed browser), and a reminder due in quiet hours goes to the morning list, never late. New words beyond the
+  reminder wording sheet ("Missed while this computer was asleep", "Remind me…", the toasts) are listed for the
+  designer's review. Decided by the main session.
+  **Impact:** design 6.32 (CHANGES.md section 100); roadmap S1-2, S1b-2.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

@@ -56,3 +56,14 @@ The calendar shows it outside the app, so "Reminder:" says where it came from.
 
 The plainer of the two drafts ("A small nudge" was dropped as filler). The email carries `Auto-Submitted:
 auto-generated` (`engine/reminder_mail.py`), so the mailbox reader never acts on it.
+
+## Words added while building, for the designer's review
+
+Built in S1-2 (CHANGES.md section 100) beyond the wording above; in the wording sheet (`web/src/wording/en.json`) until
+reviewed:
+
+- The digest for missed reminders in "summary" mode: `Missed while this computer was asleep`
+- The to-do menu: `Remind me…`, `Change reminder…`, `Remove reminder`, and the form's label `Remind me at`
+- The line's pill `Reminder` and the menu's title `Snooze`
+- Toasts: `Snoozed until {when}.`, `Reminder set for {when}.`, `Reminder removed.`
+- Settings: `Allow notifications`, and times in the lists shown on a 24-hour clock (`09:00`)

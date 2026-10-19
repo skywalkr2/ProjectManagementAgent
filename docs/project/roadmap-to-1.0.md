@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 153, each in exactly one batch; 200 done items are in `roadmap-done.md`.
+- **Open items:** 153, each in exactly one batch; 201 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -59,7 +59,7 @@ keep each item's full text.
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (8 open items; size: about two and a half days)
+2. **S1-2 What the person owes and misses** (7 open items; size: about two and a half days)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
     - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
@@ -100,7 +100,7 @@ keep each item's full text.
     - *Covers:* *The publisher, brought forward from phase C4*; *Nothing on its own* (both in phase S, S1b); and the named S1b tests of the approval guards (designer's F7, `docs/project/designer-answers-2026-10-19.md`): a closed lid or lost network mid-send is checked with the service before any retry, an approval does not survive a restart that changed the draft's inputs, and the rest of that answer's list.
     - *Exit:* those tests pass; every outward act shows its exact content and target, nothing runs without the person's yes on that exact act, and the status and ledger line are written.
 
-11. **S1b-2 Mail and calendar acts** (3 open items; size: about a day, with the mail add-on's builder)
+11. **S1b-2 Mail and calendar acts** (4 open items; size: about a day, with the mail add-on's builder)
     - *Covers:* *Mail*; *Calendar*; *Plugin API for acting* (all in S1b).
     - *Exit:* journey tests with fake mail and calendar services pass: an approved reply, a move or label, an invitation answer; the owner sees each act's exact content, its status and Undo where the service allows.
 
@@ -568,19 +568,6 @@ S1. **Promises, and how they end:**
   person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
   anyone outside an audience is refused (an invariant), and its packet leaves that source out. Exit: a restricted and
   an open message in one area; a draft outside the group draws only on the open one.
-- [ ] [S1-2] **Reminders at a time** on any dated thing, with snooze; a Today line and a browser notification while the app is
-  open (desktop notifications from the menu bar or tray with phase I). **Missed while asleep:** on waking, reminders
-  that came due while the computer slept are shown at once, marked late, never dropped.
-  When a reminder fires is computed by rules (`engine/reminders.py`, `tests/test_reminders.py`): quiet hours across
-  midnight, working hours, missed occurrences each or as one summary, and the snooze choices.
-  Their wording (Today lines, the snooze menu with resolved times, the digest, the calendar alarm and the email) is
-  in `docs/project/steward-reminder-wording.md`.
-  **Reaching the person while the computer sleeps** (owner: "whatever we can do to make it full featured ... but not
-  phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
-  event with an alarm (an approved calendar write, once per reminder or by a standing yes for reminders), so their phone
-  rings without Thimbleby running; or as a reminder mail to their own address. No third-party push service. A
-  companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
-  the apps can reach).
 - [ ] [S1-2] **What changed since yesterday** (the functional designer's F2, 2026-10-19; added when this plan was cut
   into batches): the gate's first slice names one plain "what changed since yesterday" line, kept in the first slice even
   as one line because it is how the person notices a miss, and no item stood for it. Each line says what the assistant
@@ -623,6 +610,13 @@ management (not just read only) lets do it"):
 - [ ] [S1b-2] **Mail:** reply, reply all, forward and send a drafted message; archive, move, label and mark read, one at a time
   or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
+- [ ] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
+  the publisher for it): (owner: "whatever we can do to make it full featured ... but not
+  phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
+  event with an alarm (an approved calendar write, once per reminder or by a standing yes for reminders), so their phone
+  rings without Thimbleby running; or as a reminder mail to their own address. No third-party push service. A
+  companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
+  the apps can reach).
 - [ ] [S1b-2] **Calendar:** create an event or a hold, move or cancel one the person owns, and accept, decline or propose a
   new time for an invitation. Through the account's service; a subscribed calendar link stays read-only by nature.
   Reading an invitation and preparing the answer has its engine (`engine/itip.py`, `tests/test_itip.py`); sending it

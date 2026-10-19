@@ -1809,6 +1809,13 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **Reminders at a time** on any dated thing, with snooze; a Today line and a browser notification while the app is
+  open (desktop notifications from the menu bar or tray with phase I). **Missed while asleep:** on waking, reminders
+  that came due while the computer slept are shown at once, marked late, never dropped.
+  When a reminder fires is computed by rules (`engine/reminders.py`, `tests/test_reminders.py`): quiet hours across
+  midnight, working hours, missed occurrences each or as one summary, and the snooze choices.
+  Their wording (Today lines, the snooze menu with resolved times, the digest, the calendar alarm and the email) is
+  in `docs/project/steward-reminder-wording.md`. *Built (S1-2):* `tests/test_reminder_lines.py`, `TodayReminders.test.tsx`, `Settings.test.tsx`. Left: reminders on records other than actions; "late" is judged by age, not by a recorded sleep; a working week that isn't one run of days; reaching the person while the computer sleeps moved to S1b-2.
 - [x] **A rejected ask is dropped, not reworded** (the designer's lessons, 2026-10-19; design 6.22): a correction
   that rejects the asking ends as `question.drop` with the person's reason; "check X first" checks X in that run and
   closes the question when X answers it. One learning pair for each. *Built (S1-2):* `tests/test_rejected_ask.py`, the pairs `rejected-ask` and `look-it-up` (`tests/test_pairs.py`). Left: a stance proposed from the correction, with the stance screens.
