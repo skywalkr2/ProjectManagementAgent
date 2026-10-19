@@ -1256,6 +1256,8 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `use` | str \| None | `None` | The account the person picked for this request ("provider/model"), in place of its tier. |
 | `approval` | Literal['required', 'granted'] \| None | `None` | Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm. |
 | `estimate_usd` | float \| None | `None` | What the run was estimated to cost when it asked for a go. |
+| `range_usd` | list[float] \| None | `None` | What the whole request was estimated to cost, low and high, with its fix rounds, searches and the stronger model, when it was last dispatched; none when it can't be priced. |
+| `spend_cap_usd` | float \| None | `None` | The most the request may spend in all under the person's go: what it had spent before the go plus the high figure; none until the first dispatch after a go. |
 | `note` | str \| None | `None` | The person's own words that came with the request. |
 | `source` | str \| None | `None` | The id of the source the request is about, if any. |
 | `origin` | Literal['pm', 'input', 'schedule'] | required | Who started it: pm, the person (handing something in or sending work back); input, an outside input; schedule, a schedule or a stage entry. |
