@@ -505,7 +505,11 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 _wording(i, op.reply, ctx, lint, quotes)
             if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
-            for existing in known_actions:
+            if op.promised_to and len(op.owners) > 1:
+                refuse(i, "one-owner", "one promise per owner: add one action for each person who owes it")
+            if op.due_at_event and not (op.event or op.series):
+                refuse(i, "targets", "a date at a calendar entry needs the entry: give its event or series")
+            for existing in [] if _same_promise(view, ctx, op) is not None else known_actions:
                 if _similar(op.text, existing.data["text"]) >= similarity:
                     state = {"done": "done action", "dropped": "dropped action"}.get(
                         existing.data["status"], "open action"
@@ -834,7 +838,7 @@ def _shares_words(a: str, b: str) -> bool:
 
 
 #: The ops that end an action or change its date: read from what came in, each waits for the person to keep it.
-ENDING_OPS = (ActionCloseOp, ActionDropOp, ActionMoveOp, ActionPartOp)
+ENDING_OPS = (ActionCloseOp, ActionDropOp, ActionMoveOp, ActionPartOp, ActionUnholdOp)
 ENDING_WAITS = "Something that came in says this ended or moved: keep it, or change it."
 
 
@@ -860,6 +864,25 @@ def action_hold_problem(view: Any, op: Any) -> str | None:
         return f"action {op.id} is waiting for an owner; pick one or add it to another action first"
     if status != "open":
         return f"action {op.id} is already {status}"
+    return None
+
+
+def _same_promise(view: Any, ctx: Context, op: Any) -> Any | None:
+    """The open promise a new one repeats (design 6.33): the same one owner, owed to the same people, in nearly the same
+    words. A promise said in a meeting, repeated in mail and noted by the person is one record."""
+    if not isinstance(op, ActionAddOp) or not op.promised_to or len(op.owners) != 1:
+        return None
+    owner = ctx.people.resolve(op.owners[0]).person
+    owed = {ctx.people.resolve(name).person for name in op.promised_to}
+    if owner is None or None in owed:
+        return None
+    similarity = ctx.cfg.checks.tuning.near_duplicate_action.similarity
+    for existing in view.list("action"):
+        data = existing.data
+        if data["status"] != "open" or [o.get("person") for o in data.get("owners") or []] != [owner]:
+            continue
+        if set(data.get("promised_to") or []) == owed and _similar(op.text, data["text"]) >= similarity:
+            return existing
     return None
 
 
@@ -1089,6 +1112,70 @@ def edit_record(store: Store, tx: Tx, op: Any, w: WriteContext) -> None:
     if why:
         raise StoreError(why)
     tx.update(op.record.kind, op.record.id, dict(op.fields), w, read_version=op.read_version)
+    if op.record.kind == "event" and "start" in op.fields:
+        follow_event(tx, op.record.id, w)
+
+
+def follow_event(tx: Tx, event_id: str, w: WriteContext) -> list[str]:
+    """Move every open promise due at a calendar entry to the entry's day: a date-only move, with no news. Returns the
+    actions moved."""
+    day = _event_day(tx, event_id)
+    moved = []
+    for action in tx.find("action", {"due_event": event_id}):
+        if action.data["status"] in ("open", "held") and action.data.get("due") != (day.isoformat() if day else None):
+            tx.update("action", action.id, {"due": day.isoformat() if day else None}, w, read_version=action.version)
+            moved.append(action.id)
+    return moved
+
+
+def _event_day(tx: Tx, event_id: str) -> date | None:
+    entry = tx.get("event", event_id)
+    start = entry.data.get("start") if entry is not None else None
+    if not start:
+        return None
+    return date.fromisoformat(str(start)[:10])
+
+
+def _within_window(existing: Any, due: date | None, ctx: Context) -> bool:
+    """Whether a new promise's date is close enough to an open one's to be the same promise; a missing date on either
+    side matches."""
+    if not existing or due is None:
+        return True
+    window = ctx.cfg.checks.tuning.near_duplicate_action.date_window_days
+    return abs((date.fromisoformat(str(existing)) - due).days) <= window
+
+
+def _merge_promise(
+    tx: Tx,
+    cur: Any,
+    op: Any,
+    ctx: Context,
+    w: WriteContext,
+    due: date | None,
+    check: bool,
+    ev: dict,
+    today: date,
+    source: str | None,
+) -> None:
+    """Add a repeat of an open promise to it: one record, every quote kept (design 6.33). When the dates disagree, the
+    person's own words win, otherwise the newest; the date that loses is shown on the promise, never dropped
+    silently."""
+    data = cur.data
+    changes: dict[str, Any] = {"also_said": [*data.get("also_said", []), ev]}
+    own = _persons_own(tx, ctx)
+    words = " ".join(op.due_words.split()) if op.due_words else None
+    if due is not None and due.isoformat() != data.get("due"):
+        said = words or due.isoformat()
+        if data.get("due") and data.get("due_by_person") and not own:
+            note = f"Another source gives {said}; your date stays"
+        else:
+            earlier = data.get("due_words") or data.get("due")
+            changes |= {"due": due.isoformat(), "due_words": words, "due_check": check, "due_by_person": own}
+            note = f"Said before: {earlier}" if earlier else None
+        if note:
+            entry = {"on": today.isoformat(), "text": note, "quote": ev["quote"], "source": source, "delivered": False}
+            changes["news"] = [*data.get("news", []), entry]
+    tx.update("action", cur.id, changes, w, read_version=cur.version)
 
 
 def apply_changeset(
@@ -1676,6 +1763,8 @@ def _apply_op(
         moved = {k: v for k, v in (("start", op.start), ("end", op.end)) if v is not None}
         tx.update("event", op.id, moved, w, read_version=cur.version)
         made("event", op.id)
+        for action_id in follow_event(tx, op.id, w):
+            made("action", action_id)
     elif isinstance(op, SeriesAddOp):
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         data = {
@@ -1727,6 +1816,14 @@ def _apply_op(
         owners = [{"person": ctx.people.resolve(n).person} for n in op.owners]
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         due, check = _due(tx, ctx, source, op.due_words, op.due)
+        placed = series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg))
+        if op.due_at_event and placed:
+            due, check = _event_day(tx, placed), False
+        same = _same_promise(tx, ctx, op)
+        if same is not None and _within_window(same.data.get("due"), due, ctx):
+            _merge_promise(tx, same, op, ctx, w, due, check, ev, today, source)
+            made("action", same.id)
+            return touched, None
         said = ctx.people.resolve(op.said_by) if op.said_by else None
         data = {
             "text": op.text,
@@ -1737,8 +1834,10 @@ def _apply_op(
             "promised_to": [ctx.people.resolve(n).person for n in op.promised_to],
             "basis": op.basis,
             "said_by": said.person if said is not None and said.status == "ok" else None,
+            "due_event": placed if op.due_at_event and placed else None,
+            "due_by_person": due is not None and _persons_own(tx, ctx),
             "project": op.project,
-            "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
+            "event": placed,
             "series": op.series,
             "source": source,
             "evidence": ev,
@@ -1776,7 +1875,14 @@ def _apply_op(
         made("action", op.id)
     elif isinstance(op, ActionUnholdOp):
         cur = tx.get("action", op.id)
-        tx.update("action", op.id, {"on_hold": None}, w, read_version=cur.version)
+        changes = {"on_hold": None}
+        if op.due_words or op.due:
+            # Taking it off hold with its new date is one step.
+            due, check = _due(tx, ctx, source, op.due_words, op.due)
+            words = " ".join(op.due_words.split()) if op.due_words else None
+            changes |= {"due": due.isoformat() if due else None, "due_words": words, "due_check": check}
+            changes |= {"due_event": None, "due_by_person": due is not None and _persons_own(tx, ctx)}
+        tx.update("action", op.id, changes, w, read_version=cur.version)
         made("action", op.id)
     elif isinstance(op, ActionDropOp):
         cur = tx.get("action", op.id)
@@ -1790,6 +1896,7 @@ def _apply_op(
         due, check = _due(tx, ctx, source, op.due_words, op.due)
         words = " ".join(op.due_words.split()) if op.due_words else None
         changes = {"due": due.isoformat() if due else None, "due_words": words, "due_check": check}
+        changes |= {"due_event": None, "due_by_person": due is not None and _persons_own(tx, ctx)}
         tx.update("action", op.id, changes, w, read_version=cur.version)
         made("action", op.id)
     elif isinstance(op, (ActionPartOp, ActionNewsOp)):
@@ -1882,7 +1989,14 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
     if not (words or "").strip() or not language.lower().startswith("en"):
         return given, False
     locale = "en_US" if language.lower().startswith("en-us") else "en_GB"
-    found = resolve(words, _received_at(tx, ctx, source), zone(ctx.cfg), locale=locale)
+    received, where = _received_at(tx, ctx, source), zone(ctx.cfg)
+    saved = tx.get("source", source) if source else None
+    sent = saved.data.get("sent_at") if saved is not None else None
+    if sent:
+        # A message's "tomorrow" is the day after it was sent, where its sender was.
+        received = datetime.fromisoformat(str(sent))
+        where = received.tzinfo or where
+    found = resolve(words, received, where, locale=locale)
     day = found.end or found.start
     if day is None:
         return None, False
@@ -2422,6 +2536,22 @@ def _record_routed(
         "at": now.isoformat(),
     }
     learn.record(tx, cfg, data, w, now)
+    _keep_alias(tx, person, name, w)
+
+
+def _keep_alias(tx: Tx, person_id: str, name: str | None, w: WriteContext) -> None:
+    """A second spelling the person said is someone becomes an alias on that person, so one person's promises never
+    split into two lists. Only a name of two or more words: a bare first name could later match the wrong person
+    without anyone being asked."""
+    spelled = " ".join((name or "").split())
+    person = tx.get("person", person_id)
+    if person is None or len(spelled.split()) < 2:
+        return
+    known = [person.data["full_name"], *person.data.get("aliases", [])]
+    if spelled.casefold() in {n.casefold() for n in known}:
+        return
+    aliases = [*person.data.get("aliases", []), spelled]
+    tx.update("person", person_id, {"aliases": aliases}, w, read_version=person.version)
 
 
 def _question_name(store: Store, qid: str) -> str | None:

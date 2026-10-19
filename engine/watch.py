@@ -670,6 +670,7 @@ def _hand_in(
         "source",
         {
             "received_at": received or now.isoformat(),
+            "sent_at": received,
             "kind": f"watched:{source.connector}",
             "title": f"{item.title}"[:120],
             "content_hash": digest,

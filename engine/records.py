@@ -457,6 +457,16 @@ class Action(Record):
     due_check: bool = Field(
         False, description="The rules' reading of `due_words` is uncertain, so the person checks the date."
     )
+    due_event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The calendar entry it is due at: its date follows the entry's when the entry moves."
+    )
+    due_by_person: bool = Field(
+        False, description="Its date came from the person's own words, so another source's date doesn't replace it."
+    )
+    also_said: list[Evidence] = Field(
+        default_factory=list,
+        description="Other sources that said the same promise, each with its words; one promise, every quote kept.",
+    )
     news: list[ActionNews] = Field(
         default_factory=list, description="What was heard about it that didn't end it, oldest first."
     )
@@ -554,6 +564,11 @@ class Source(Record):
 
     received_at: datetime = Field(
         description="When the input arrived: a mail's own received time, else when it was handed in or first read."
+    )
+    sent_at: datetime | None = Field(
+        None,
+        description="For a mail message: when it was sent, with the sender's own offset, so 'tomorrow' in it is read "
+        "against its own day and zone; none for anything else.",
     )
     kind: str = Field(description="How it arrived, such as pasted.")
     title: str = Field(description="A short name for it, shown in lists.")
@@ -1781,6 +1796,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("reported_by", "person"),
         ("promised_to[]", "person"),
         ("said_by", "person"),
+        ("due_event", "event"),
         ("source", "source"),
     ],
     "question": [

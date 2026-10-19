@@ -1068,6 +1068,13 @@ class NearDuplicateActionTuning(ConfigModel):
         description="How alike a new action's words must be to an open or done action to count as a near-duplicate: "
         "0 flags any action that shares a word, 1 only one with the same words.",
     )
+    date_window_days: int = Field(
+        3,
+        ge=0,
+        le=60,
+        description="How many days apart two sources' dates for the same promise may be and still be one promise; a "
+        "repeat further apart is a new promise.",
+    )
 
 
 class AlreadyKnownTuning(ConfigModel):

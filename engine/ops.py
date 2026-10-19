@@ -283,6 +283,11 @@ class ActionAddOp(OpModel):
         description="For a promise: said, when someone said it outright; inferred, when you read it between the lines.",
     )
     said_by: str | None = Field(None, description="Who said it, by name or id, when the input names them.")
+    due_at_event: bool = Field(
+        False,
+        description="The date is the calendar entry's in `event` ('by Thursday's meeting', 'after the review'): it is "
+        "due on the entry's day and moves when the entry moves.",
+    )
     project: str | None = Field(None, description="Project id, if the action belongs to one.")
     reply: str | None = Field(
         None,
@@ -347,6 +352,10 @@ class ActionUnholdOp(OpModel):
 
     op: Literal["action.unhold"] = "action.unhold"
     id: str = Field(description="The id of the action that is on hold and no longer waits.")
+    due_words: str | None = Field(
+        None, max_length=120, description="The exact words of its new date, when the input gives one ('by Monday')."
+    )
+    due: date | None = Field(None, description="Its new date, when there are no words to read it from.")
     evidence: EvidenceIn | None = Field(
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )

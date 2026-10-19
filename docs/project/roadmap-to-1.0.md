@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 152, each in exactly one batch; 196 done items are in `roadmap-done.md`.
+- **Open items:** 153, each in exactly one batch; 196 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -55,7 +55,7 @@ full test run and one push (CLAUDE.md, "Usage and machine load"). Every open ite
 rough (half a day to two days; the batches from phase C on are sized when they are reached). The phase sections below
 keep each item's full text.
 
-1. **S1-1 Promises core (in progress)** (3 open items; size: about a day)
+1. **S1-1 Promises core (in progress)** (4 open items; size: about a day)
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
@@ -557,6 +557,11 @@ S1. **Promises, and how they end:**
   Automatic mail is recognized by its headers (`engine/automatic_mail.py`, `tests/test_automatic_mail.py`; markers in
   `engine/defaults/automatic_mail.yaml`): an automatic reply, a delivery report or generated or list mail never
   counts as the other person answering, and never resolves a promise.
+- [ ] [S1-1] **From three weeks of running** (the designer's S1-1 notes, 2026-10-19; design 6.33): on hold until a
+  trigger, taken off hold with a new date in one step; a promise due at a meeting follows the meeting; the chase clock
+  for waiting-ons (14 days undated, 7 days before a date); dates read against the message's own day and zone; one
+  promise per owner; one promise from several sources with every quote and a shown date disagreement; chasing is news,
+  a reported done is credited to its owner; a confirmed second spelling becomes an alias.
 - [ ] [S1-1] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
   owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
   doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the

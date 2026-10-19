@@ -24,6 +24,13 @@ invariants:
     seed: >-
       Some changes are the person's alone: editing text, accepting or discarding a proposed version, editing a
       record's fields. Never include them. Propose the new text for the person to review, or ask a question.
+  one-owner:
+    ops:
+      - action.add
+    line: A promise has one owner; two people who owe something are two actions.
+    seed: >-
+      A promise owed to someone has exactly one owner. When two people each owe it, add one action for each, each
+      with its own owner and the same people it is owed to.
   targets:
     ops:
       - note

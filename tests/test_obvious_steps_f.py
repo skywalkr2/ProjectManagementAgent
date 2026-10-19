@@ -11,7 +11,7 @@ import pytest
 
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
-from engine.applier import Context, Inputs, check
+from engine.applier import Context, Inputs, check, release
 from engine.dispatcher import process, undo_changeset
 from engine.evaluate import _hand_in_watched, evaluate
 from engine.followups import put_on_hold
@@ -94,9 +94,11 @@ def test_action_unhold_takes_the_action_off_hold_as_data_and_undo_puts_the_hold_
     cs_id, result = apply(
         store, cfg, [unhold_op(target)], origin="input", trust="untrusted", source_id=source(store), raw=RAW
     )
-    assert result == ["applied"]
+    # Read from an input, taking it off hold waits for the person's Keep, like any change to its date (design 6.33).
+    assert result == ["held"] and hold_of(store, target) == before
+    release(store, cfg, cs_id, 0)
     assert hold_of(store, target) is None and store.read().get("action", target).data["status"] == "open"
-    assert len(store.read().list("signal")) == signals, "what the assistant applies is not a correction"
+    assert len(store.read().list("signal")) == signals, "keeping what the assistant proposed is not a correction"
     assert undo_changeset(store, cs_id).restored == [0]
     assert hold_of(store, target) == before
 

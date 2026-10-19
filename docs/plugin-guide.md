@@ -1189,6 +1189,11 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `said_by` | str \| None | `None` | The id of the person who said it, when the input names them. |
 | `due_words` | str \| None | `None` | The exact words its due date was read from. |
 | `due_check` | bool | `False` | The rules' reading of `due_words` is uncertain, so the person checks the date. |
+| `due_event` | str \| None | `None` | The calendar entry it is due at: its date follows the entry's when the entry moves. |
+| `due_by_person` | bool | `False` | Its date came from the person's own words, so another source's date doesn't replace it. |
+| `also_said` | list[Evidence] | `[]` | Other sources that said the same promise, each with its words; one promise, every quote kept. |
+| `also_said[].source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
+| `also_said[].quote` | str | required | The exact words, as they appear in that source. |
 | `news` | list[ActionNews] | `[]` | What was heard about it that didn't end it, oldest first. |
 | `news[].on` | date | required | The day it was heard. |
 | `news[].text` | str | required | What was heard, in plain words. |
@@ -1230,6 +1235,7 @@ One input the workspace received, such as pasted text; the text is kept by its h
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `received_at` | datetime | required | When the input arrived: a mail's own received time, else when it was handed in or first read. |
+| `sent_at` | datetime \| None | `None` | For a mail message: when it was sent, with the sender's own offset, so 'tomorrow' in it is read against its own day and zone; none for anything else. |
 | `kind` | str | required | How it arrived, such as pasted. |
 | `title` | str | required | A short name for it, shown in lists. |
 | `content_hash` | str | required | Hash of its text; the saved text is named by it in the sources folder. |
@@ -1874,6 +1880,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `promised_to` | list[str] | `[]` | For a promise: the people it was promised to, each by name or id (the person this app is for, when someone else promised them something). Empty for a plain to-do. |
 | `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said, when someone said it outright; inferred, when you read it between the lines. |
 | `said_by` | str \| None | `None` | Who said it, by name or id, when the input names them. |
+| `due_at_event` | bool | `False` | The date is the calendar entry's in `event` ('by Thursday's meeting', 'after the review'): it is due on the entry's day and moves when the entry moves. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
@@ -1972,6 +1979,8 @@ Take an action off hold when the input says the thing it was waiting for has hap
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the action that is on hold and no longer waits. |
+| `due_words` | str \| None | `None` | The exact words of its new date, when the input gives one ('by Monday'). |
+| `due` | date \| None | `None` | Its new date, when there are no words to read it from. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 

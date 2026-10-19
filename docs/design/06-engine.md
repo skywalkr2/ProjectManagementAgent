@@ -2731,6 +2731,31 @@ the input said reported it) (`tests/test_promises.py`). *Not built yet:* the pro
 promises both ways, the sent folder offered as a source, the line for a promise past its date with its choices, the
 "why" on every promise with one-click corrections, and the golden cases and harness pairs.
 
+**From three weeks of running** (the designer's S1-1 notes, 2026-10-19, `docs/project/designer-s1-1-notes-2026-10-19.md`):
+- **On hold until a trigger** is its own state: `action.hold` stores what it waits for, and a held promise is out of due
+  and overdue everywhere. Taking it off hold can carry its new date (`action.unhold` with `due_words`), as one step;
+  read from an input, it waits for the person's Keep like any date change.
+- **Due at a meeting:** `action.add` with `due_at_event` and its `event` is due on the entry's day (`due_event`) and moves
+  when the entry moves (`event.set`, or the person's own edit), as a date-only move with no news.
+- **The chase clock:** a promise owed to the person gets a line only after `steward.chase_undated_days` (14) days with no
+  news when it has no date, only within `steward.chase_dated_days` (7) days of its date or once past it when it has one,
+  and never while on hold.
+- **Dates read against the message:** a mail message's source keeps `sent_at`, with the sender's own offset, and the
+  rules read its words against that day and zone, so the same thread read on its day or ten days later gives the same
+  dates.
+- **One promise per owner:** a promise with two owners is refused ("add one action for each person who owes it"); an
+  owner that isn't a known person waits for "Pick an owner".
+- **One promise from several sources:** a new promise with the same one owner, owed to the same people, in nearly the
+  same words (`checks.tuning.near_duplicate_action.similarity`) and a date within
+  `checks.tuning.near_duplicate_action.date_window_days` (3) of an open one is added to it (`also_said`, every quote
+  kept). When the dates disagree, the person's own words win, otherwise the newest, and the other date is a news line on
+  the promise.
+- **Crediting and chasing:** the person's "I pinged her" is news and the promise stays open; "Sam sent it" closes it,
+  credited to Sam and reported by the person.
+- **Two names, one person:** a second spelling of two or more words that the person confirms in "who is this?" becomes an
+  alias on that person; a bare first name never does, since it could later match the wrong person unasked.
+*Built (S1-1):* `tests/test_promises.py`; the chase clock with the promise screens.
+
 ## 6.34 Stance: who each person is to the person (phase S1-2, designed 2026-10-19)
 
 The designer's lessons from running (2026-10-19): polite, accurate questions to another team's architect were each the

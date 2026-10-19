@@ -375,6 +375,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   pairs. (4) An unknown status stays unknown and an add from a link says when nothing could read it (B-6a); reading
   the system of record is C4's fact lookups. Decided by the main session.
   **Impact:** design 6.34 (new), 6.16, 6.19, 6.22 (CHANGES.md section 97); roadmap S1-2, S1-3, B-6a, C4; risks R15.
+- **Also (2026-10-19): the designer's S1-1 notes from three weeks of tracking promises**
+  (`docs/project/designer-s1-1-notes-2026-10-19.md`), all taken into S1-1: on hold until a trigger with a one-step
+  unhold and new date (held for Keep when read from an input); a date at a meeting that follows the meeting; the chase
+  clock (14 and 7 days, as settings); dates read against the message's own day and zone (`sent_at`); one promise per
+  owner, refused otherwise; one promise from several sources, merged with every quote, the person's date winning and a
+  disagreement shown; crediting and chasing kept apart; a confirmed second spelling of two or more words becomes an
+  alias, never a bare first name. Decided by the main session.
+  **Impact:** design 6.33; roadmap S1-1.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
