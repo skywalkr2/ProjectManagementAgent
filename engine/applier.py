@@ -55,6 +55,7 @@ from engine.ops import (
     OpModel,
     PersonAddOp,
     PersonContactOp,
+    PersonStanceOp,
     ProjectAddOp,
     ProjectRoleOp,
     QuestionAddOp,
@@ -453,6 +454,11 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             elif ctx.actor != "pm" and not ctx.confirmed_by_pm:
                 # Whoever proposes it, a way to reach someone waits for the person.
                 problems.append(Problem("contact-confirm", "hold", i, CONTACT_WAITS))
+        if isinstance(op, PersonStanceOp):
+            if view.get("person", op.id) is None:
+                refuse(i, "targets", f"there is no person {op.id}")
+            elif op.id == ctx.people.pm:
+                refuse(i, "targets", "a stance is toward someone else, never yourself")
         if isinstance(op, ProjectAddOp):
             taken = {p.data["name"].strip().lower() for p in view.list("project")}
             if op.name.strip().lower() in taken:
@@ -638,6 +644,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     return problems
 
 
+#: A stance in plain words, for the line that asks the person to keep one.
+STANCE_PLAIN = {
+    "manage": "you manage them",
+    "alongside": "you work alongside them",
+    "report_to": "you report to them",
+    "watch": "you only watch them",
+}
 #: Why a contact detail or a project the assistant found waits, as the held line says it.
 CONTACT_WAITS = "A way to reach someone waits for your confirmation."
 REACHED_WAITS = "Someone has already been sent this: look at it before dropping it."
@@ -1251,6 +1264,10 @@ def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | N
     """An op's own one-line label. A plugin op's `describe` may take a read view, to name the records it changes."""
     import inspect
 
+    if isinstance(op, PersonStanceOp) and view is not None:
+        found = view.get("person", op.id)
+        if found is not None:
+            return f"Change who {found.data['full_name']} is to you: {STANCE_PLAIN[op.stance]}"
     if isinstance(op, PersonContactOp) and view is not None:
         found = view.get("person", op.person)
         if found is not None:
@@ -2196,6 +2213,12 @@ def _apply_op(
         if op.first_name:
             data["first_name"] = " ".join(op.first_name.split())
         made("person", tx.create("person", data, w).id)
+    elif isinstance(op, PersonStanceOp):
+        found = tx.get("person", op.id)
+        if found is None:
+            raise StoreError(f"there is no person {op.id}")
+        tx.update("person", op.id, {"stance": op.stance}, w, read_version=found.version)
+        made("person", op.id)
     elif isinstance(op, PersonContactOp):
         found = tx.get("person", op.person)
         kind = contact_kind(ctx.cfg, op.kind)

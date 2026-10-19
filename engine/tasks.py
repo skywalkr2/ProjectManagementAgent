@@ -43,12 +43,13 @@ NOTES_ONLY = frozenset({"project.add", "project.role", "person.contact"})
 #: What an ask may do besides what reading notes does: answer, suggest a setting, draft a report to the maintainers.
 ASK_OPS = ("answer", "setting.propose", "report.draft")
 #: What learning from a correction may propose (design 6.22): one entry to keep, or a change to a lesson that should
-#: have caught the mistake. None of these depends on the account that runs it.
+#: have caught the mistake, or who a person is to the person (a stance, which waits for the person's Keep). None of
+#: these depends on the account that runs it.
 #: What a follow-on run may do (engine/follow_on.py): ask whoever decides whether a tied action's date should change or
 #: whether a moved plan still holds, draft a correction for someone an item already reached, and leave a note. It never
 #: changes an action's day or words.
 FOLLOW_ON_OPS = ("question.add", "note")
-LEARN_OPS = ("lesson.add", "lesson.update", "glossary.add", "routing.add", "style.add", "rule.add")
+LEARN_OPS = ("lesson.add", "lesson.update", "glossary.add", "routing.add", "style.add", "rule.add", "person.stance")
 
 
 @dataclass(frozen=True)

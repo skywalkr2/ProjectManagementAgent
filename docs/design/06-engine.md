@@ -2741,7 +2741,7 @@ promise and applies at once, shown on it. A held ending kept by the person count
 and Drop; for the person's own, the same choices without Chase. A waiting-on's line follows the stance of whoever owes
 it (6.34): *I manage them* and *I work alongside them* get the Chase line and its draft; *I report to them* gets no
 Chase and no draft, only "Waiting on Ana: the budget answer, due Tuesday" with New date, Done and Drop; *I only watch*
-gets no line at all. Until stances are built (S1-2), everyone is the default stance. A nudge never ends it. A waiting-on is not left to go stale: with a date it
+gets no line at all, though the action still counts as covered, so no other line (the follow-up line included) picks it up. A person with no stance has the default stance. A reply owed (6.35) is the person's own and is never gated by stance. A nudge never ends it. A waiting-on is not left to go stale: with a date it
 gets its line from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
 `steward.chase_undated_days` (14) with no news since it was made or since its last news ("Chase Ana: the floor plan, no
 date, nothing heard for 14 days"). Never while it is on hold.
@@ -2838,13 +2838,21 @@ assistant may draft or ask them. It is the person's own rule, kept per person, b
   person's own note asks whoever it says.
 - **Corrections propose a stance.** A reply like "not my job" or "we are not their boss" about a question to someone
   becomes a proposed stance for that person, or for their role, which the person keeps or changes (6.22). It is
-  probably the most common correction a steward gets.
+  probably the most common correction a steward gets. The proposal is the op `person.stance` (the person, one of the
+  four stances, evidence), a system op the learning task may propose: it is held for the person's Keep like every
+  system op from the assistant, and never applies on its own. For someone's role there is no op yet.
+- **Choosing a stance.** The person's page has a list of the four meanings (and "Use my default"), saved at once as
+  the person's own edit with Undo. Settings shows `steward.default_stance` as a list and `steward.tracks` as ticks.
 - **Not yet:** the full scope resolver (6.18, phase E) takes the stance as one of its inputs; until then the gate above
   is the whole of it.
 
 *Built so far (S1-2):* the field, the two settings, `asks_about`, the gate and the packet's people list
-(`tests/test_stance.py`). Left: choosing a stance on the person's page, a correction proposing a stance, the learning
-pairs for each stance, the chase line by stance (6.33), and drafted messages other than questions.
+(`tests/test_stance.py`); choosing a stance on the person's page and the two settings' plain labels
+(`web/src/components/StancePicker.test.tsx`); the chase line by stance, "Waiting on" for someone the person reports to
+and no line for someone only watched (`tests/test_stance_lines.py`, `web/src/components/TodayPromises.test.tsx`); the
+op `person.stance` held for the person's Keep, offered to the learning task; and the learning pairs for each stance
+(`workspaces/demo-b/pairs/stance-*.yaml`). Left: a stance for a role rather than a person, drafted messages other than
+questions, and the send line ("Send <name> their actions"), which still counts actions owed by someone only watched.
 
 ## 6.35 Drafts to other people, replies owed, and the week (phases S1-2, S1-3 and S2, designed 2026-10-19)
 

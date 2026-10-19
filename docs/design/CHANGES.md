@@ -1033,6 +1033,14 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Drafts to others (6.35) | Only openable links were checked | The `bookkeeping` lint (record ids, `language.internal_terms`) and the `long-quote` lint (`checks.tuning.long_quote.max_words`) on questions to someone else and drafted replies. Built: `tests/test_reader_checks.py` |
 
+## 106. A stance for each person: the person's choice, the chase line, a proposal from a correction (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Choosing a stance (6.34) | `stance` was a field with no screen; `steward.tracks` showed read-only | The person's page has a list "Who they are to you" (*I manage them*, *I work alongside them*, *I report to them*, *I only watch them*, and *Use my default (<its words>)*, which says what a person marked track-only counts as). A choice saves at once as the person's own `record.edit` with an undo toast. Settings gives `steward.default_stance` and `steward.tracks` plain labels, and a list drawn from a fixed set of values (`tracks`) is ticked, never typed. Built: `web/src/components/StancePicker.test.tsx`, `web/src/components/Settings.test.tsx`, `tests/test_stance_lines.py` |
+| The chase line by stance (6.33) | Every waiting-on read "Chase <name>: ..." with Followed up first | `promises.late(...)` gives each entry the owner's stance (none for the person's own and for a reply owed). *Manage* and *alongside* are unchanged. *Report to* reads "Waiting on <name>: <words>, due <day>" with New date first and Done and Drop in the menu, no Followed up; the follow-up (nudge) line leaves such an action out too. *Only watch* has no line, and no follow-up line either, but the action still counts as covered, so no other line picks it up. Built: `tests/test_stance_lines.py`, `web/src/components/TodayPromises.test.tsx` |
+| A correction proposes a stance (6.22, 6.34) | A "not my job" correction could only become a lesson | New op `person.stance` (the person, one of the four stances, evidence), system tier, offered to `learn-correction` (`LEARN_OPS`): it is held for the person's Keep like any system op from the assistant, never applied on its own, and a held line says "Change who <name> is to you: you report to them". The prompt says to propose it instead of a lesson when the person rejects asking someone at all. A refusal for no such person or for the person themselves is a `targets` check, and `invariants.yaml` names the op under `targets` and `evidence`. Learning pairs now score and keep a proposed stance (`stance-report-to`, `stance-watch`, `stance-alongside`, and the negative `stance-manage`). Built: `tests/test_stance_lines.py`, `tests/test_pairs.py` |
+
 ## 105. What changed since yesterday (2026-10-19)
 
 | Where | Before | Now |

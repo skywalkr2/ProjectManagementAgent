@@ -218,11 +218,19 @@ def test_silent_corrections_wait_for_the_next_batch_and_run_together(env):
     assert {r.data["state"] for r in learning(store)} == {"done"}
 
 
-def test_learning_offers_the_knowledge_ops_a_lesson_change_and_a_rule_but_never_a_report_and_takes_settings_at_once():
+def test_learning_offers_the_knowledge_ops_a_rule_and_a_stance_but_never_a_report_and_takes_settings_at_once():
     from engine.worker import is_live
 
     ops = set(task_kind(learn.TASK).ops)
-    assert ops == {"lesson.add", "lesson.update", "glossary.add", "routing.add", "style.add", "rule.add"}
+    assert ops == {
+        "lesson.add",
+        "lesson.update",
+        "glossary.add",
+        "routing.add",
+        "style.add",
+        "rule.add",
+        "person.stance",
+    }
     assert task_kind(learn.TASK).max_ops == 1
     assert is_live("dispatch.knowledge.learn") and is_live("dispatch.knowledge.learn_every_minutes")
 

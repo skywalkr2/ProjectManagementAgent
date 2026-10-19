@@ -2266,6 +2266,18 @@ A way to reach a person that the input gives, such as a phone number or an addre
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that give it; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
+### `person.stance`
+
+Who a person is to the person, proposed from a correction such as "not my job to ask them" or "we are not their boss". A system op: it changes what the assistant may draft or ask them, so from anyone but the person's own words it waits for the person's Keep. The four stances mean: manage (questions about what the person tracks, design detail included, and chasing their dates), alongside (follow-ups on promises made to the person and a clear mistake with links to both sides, nothing about how they do their own work), report_to (no chasing and no question unless the person asks), watch (nothing is drafted to them). Propose it instead of a lesson when the person rejects asking someone at all; evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the person whose stance this is. |
+| `stance` | Literal['manage', 'alongside', 'report_to', 'watch'] | required | Who they are to the person: manage, alongside, report_to or watch. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the request that give it; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
 ### `project.add`
 
 Start a new project, optionally inside another (a book in its series). A system op: from the assistant it waits for the person. The name must not be another live project's.

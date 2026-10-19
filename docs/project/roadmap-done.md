@@ -1809,6 +1809,14 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **A stance per person** (the designer's lessons, 2026-10-19; design 6.34): the stance field from a value list
+  with meanings (I manage them, I work alongside them, I report to them, I only watch; `track_only` becomes the last),
+  `people.default_stance` (alongside) and `steward.tracks` (dates and decisions) as settings with schema, defaults and
+  demo values, and the gate on every question or drafted message to someone else, as a lint (one return, then a hold);
+  a correction like "not my job" proposes a stance for that person or role. Learning pairs for each stance. The chase
+  line follows the stance (the designer's review, 2026-10-19; design 6.33): Chase with a draft for manage and
+  alongside, "Waiting on <name>" with New date, Done and Drop and no draft for report to, no line for only watch; one
+  test per stance on the same overdue promise. *Built (S1-2):* `tests/test_stance.py`, `tests/test_stance_lines.py`, the pairs `stance-report-to`, `stance-watch`, `stance-alongside` and `stance-manage` (`tests/test_pairs.py`), `StancePicker.test.tsx`, `TodayPromises.test.tsx`. Left: a stance per role; a per-project `steward.tracks`; the pairs proven on a real account (`cockpit evaluate --pairs`).
 - [x] **What changed since yesterday** (the functional designer's F2, 2026-10-19; added when this plan was cut
   into batches): the gate's first slice names one plain "what changed since yesterday" line, kept in the first slice even
   as one line because it is how the person notices a miss, and no item stood for it. Each line says what the assistant

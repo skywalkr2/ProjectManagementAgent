@@ -127,6 +127,32 @@ test("the choices after Followed up are New date, Done and Drop; Done closes it 
   await waitFor(() => expect(calls.filter((c) => c.route === "POST actions/ACT-1/status").map((c) => c.body)).toEqual([{ status: "done" }, { status: "open" }]));
 });
 
+test("a waiting-on owed by someone the person reports to reads Waiting on, with New date first and Done and Drop in the menu", async () => {
+  const user = userEvent.setup();
+  show([chase({ stance: "report_to" })]);
+  const row = await rowOf(`Waiting on Robin Sample: Send the floor plan, due ${day("2026-10-13")}`);
+  expect(row).not.toHaveTextContent("Chase");
+  expect(within(row).queryByRole("button", { name: "Followed up" })).toBeNull();
+  expect(within(row).getByRole("button", { name: "New date" })).toBeInTheDocument();
+  await menuOf(user, row);
+  expect(screen.getByRole("menuitem", { name: "Done" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Drop" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Followed up" })).toBeNull();
+  expect(screen.queryByRole("menuitem", { name: "New date" })).toBeNull();
+  await user.keyboard("{Escape}");
+  await user.click(within(row).getByRole("button", { name: "New date" }));
+  expect(await screen.findByLabelText("New date", { selector: "input" })).toHaveAttribute("type", "date");
+});
+
+test("a waiting-on with no date reads Waiting on too, and managed or alongside stay Chase", async () => {
+  show([
+    chase({ key: "promise:ACT-1", stance: "report_to", due: undefined, waiting_days: 12 }),
+    chase({ key: "promise:ACT-2", actions: ["ACT-2"], text: "Book the room", subject: "Book the room", stance: "manage", due: undefined, waiting_days: 12 }),
+  ]);
+  expect(await rowOf("Waiting on Robin Sample: Send the floor plan, no date, nothing heard for 12 days")).toBeInTheDocument();
+  expect(await rowOf("Chase Robin Sample: Book the room, no date, nothing heard for 12 days")).toBeInTheDocument();
+});
+
 test("the person's own promise is the same line without Chase, with Done first", async () => {
   const user = userEvent.setup();
   const { calls } = show([own()], { "POST actions/ACT-1/status": () => ({ ok: "ACT-1", request: null }) });

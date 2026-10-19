@@ -1,0 +1,75 @@
+id: stance-watch
+title: Someone the person only watches is asked nothing, and what they report is recorded as a fact
+skills: [use-lesson, no-repeat-question]
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  given:
+  - kind: person
+    id: PER-202
+    fields:
+      full_name: Corin Quill
+      role: Paper supplier contact
+      org: ORG-2
+      how_to_reach:
+        email: corin@example.com
+  pasted: |-
+    From: Corin Quill
+
+    The cover stock for the first printing has been delivered to the press.
+  wrong:
+    summary: Asked Corin which finish the cover stock uses.
+    ops:
+    - op: question.add
+      to: PER-202
+      title: Which finish does the cover stock use?
+      text: The cover stock was delivered to the press.
+      asks_about: decision
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The cover sign-off
+      project: PRJ-1
+      evidence:
+        quote: The cover stock for the first printing has been delivered
+  correction:
+    kind: dropped
+    note: I only keep an eye on Corin's side. Nothing is asked of them, just write down what they tell me.
+    id: '@question'
+  expect_proposal:
+  - op: person.stance
+    person: PER-202
+    stance: watch
+  keep: true
+later:
+  received: '2026-10-16'
+  project: PRJ-1
+  pasted: |-
+    From: Corin Quill
+
+    The cover stock has been cut to size and is waiting for the printer.
+  expect:
+  - op: fact
+    text_has: [cut]
+  forbid:
+  - op: question.add
+    to: PER-202
+  packet_has: [only watches them]
+ideal:
+  learn:
+    summary: The person only watches Corin, so nothing is asked of them.
+    topic: asking Corin
+    ops:
+    - op: person.stance
+      id: PER-202
+      stance: watch
+      evidence:
+        quote: I only keep an eye on Corin's side
+  later:
+    summary: The cover stock has been cut to size and waits for the printer.
+    ops:
+    - op: fact
+      text: The cover stock has been cut to size and is waiting for the printer.
+      project: PRJ-1
+      evidence:
+        quote: The cover stock has been cut to size and is waiting for the printer

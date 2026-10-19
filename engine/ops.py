@@ -589,6 +589,28 @@ class PersonContactOp(OpModel):
         return f"Add a {self.kind} for {self.person}"
 
 
+class PersonStanceOp(OpModel):
+    """Who a person is to the person, proposed from a correction such as "not my job to ask them" or "we are not their
+    boss". A system op: it changes what the assistant may draft or ask them, so from anyone but the person's own words
+    it waits for the person's Keep. The four stances mean: manage (questions about what the person tracks, design detail
+    included, and chasing their dates), alongside (follow-ups on promises made to the person and a clear mistake with
+    links to both sides, nothing about how they do their own work), report_to (no chasing and no question unless the
+    person asks), watch (nothing is drafted to them). Propose it instead of a lesson when the person rejects asking
+    someone at all; evidence is required."""
+
+    op: Literal["person.stance"] = "person.stance"
+    id: str = Field(description="The id of the person whose stance this is.")
+    stance: Literal["manage", "alongside", "report_to", "watch"] = Field(
+        description="Who they are to the person: manage, alongside, report_to or watch."
+    )
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the request that give it; required unless the person makes it."
+    )
+
+    def describe(self) -> str | None:
+        return f"Change who {self.id} is to you"
+
+
 class RecordRef(BaseModel):
     """A reference to one record by kind and id."""
 
@@ -1111,6 +1133,7 @@ Op = Annotated[
     | QuestionMarkSentOp
     | PersonAddOp
     | PersonContactOp
+    | PersonStanceOp
     | StageMoveOp
     | RecordDeleteOp
     | FileAddOp
@@ -1170,6 +1193,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "question.mark_sent": QuestionMarkSentOp,
     "person.add": PersonAddOp,
     "person.contact": PersonContactOp,
+    "person.stance": PersonStanceOp,
     "stage.move": StageMoveOp,
     "record.delete": RecordDeleteOp,
     "file.add": FileAddOp,
@@ -1242,6 +1266,7 @@ TIERS: dict[str, Tier] = (
         "mail.restore": "system",
         "rule.add": "system",
         "rule.retire": "system",
+        "person.stance": "system",
     }
     | {name: "system" for name in KNOWLEDGE_OPS}
 )
@@ -1264,6 +1289,7 @@ NEEDS_EVIDENCE = {
     "question.drop",
     "question.done",
     "person.contact",
+    "person.stance",
     "project.role",
     "source.limit",
 }

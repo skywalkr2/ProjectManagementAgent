@@ -543,8 +543,14 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.nudge", { name });
       case "promise": {
         const vars = { name, text: line.text ?? "", date: line.due ? day(line.due) : "" };
-        if (!line.due) return tn("queue.promise.chase_undated", line.waiting_days ?? 0, { ...vars, n: line.waiting_days ?? 0 });
-        return t(line.person ? "queue.promise.chase" : "queue.promise.own", vars);
+        // Someone the person reports to is waited on, never chased (design 6.34).
+        const waiting = line.stance === "report_to";
+        if (!line.due) {
+          const n = line.waiting_days ?? 0;
+          return waiting ? tn("queue.promise.wait_undated", n, { ...vars, n }) : tn("queue.promise.chase_undated", n, { ...vars, n });
+        }
+        if (!line.person) return t("queue.promise.own", vars);
+        return waiting ? t("queue.promise.wait", vars) : t("queue.promise.chase", vars);
       }
       case "reminder":
         return reminderTitle(line, t);

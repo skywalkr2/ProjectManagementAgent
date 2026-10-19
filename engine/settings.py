@@ -390,6 +390,9 @@ def _kind(annotation: Any) -> tuple[Kind, list[str]]:
         return "text", []
     if origin is list and args == [str]:
         return "list", []
+    if origin is list and len(args) == 1 and typing.get_origin(args[0]) is Literal:
+        # A list drawn from a fixed set of values: the screens offer the values to tick, never a box to type in.
+        return "list", [str(a) for a in typing.get_args(args[0])]
     return "other", []
 
 

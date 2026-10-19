@@ -1,6 +1,7 @@
 // The choices of a promise that is past its date with nothing heard since (design 6.33, 7.7). The one that fits comes
-// first: Followed up for a promise someone else owes (a nudge: it stays open), Done for the person's own; the others are
-// in the row's menu: New date, Done, Drop. Each is the action's own route, so each records what it always did.
+// first: Followed up for a promise someone else owes (a nudge: it stays open), New date when that someone is a person
+// the user reports to (waited on, never chased), Done for the person's own; the others are in the row's menu: New date,
+// Done, Drop. Each is the action's own route, so each records what it always did.
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -74,6 +75,8 @@ export function usePromiseChoices(line: Line, onClosed?: () => void): PromiseCho
       {drop.form}
     </>
     ) : null;
+  // Someone the person reports to is waited on, not chased: no Followed up, a new date first.
+  if (person && line.stance === "report_to") return { primary: { label: t("queue.promise.new_date"), run: () => setDating(true) }, menu: [finish, drop.entry], form };
   return person
     ? { primary: { label: t("followups.followed_up"), run: () => void followedUp() }, menu: [newDate, finish, drop.entry], form }
     : { primary: { label: t("queue.promise.done"), run: () => void done() }, menu: [newDate, drop.entry], form };

@@ -2137,6 +2137,8 @@ def _op_view(
         meta["name"] = op["name"]
     if op["op"] == "project.role":
         meta["role"] = op["role"]
+    if op["op"] == "person.stance":
+        meta["stance"] = op["stance"]
     evidence = op.get("evidence")
     return OpView(
         index=o["index"],

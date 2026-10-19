@@ -419,6 +419,13 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   reminder wording sheet ("Missed while this computer was asleep", "Remind me…", the toasts) are listed for the
   designer's review. Decided by the main session.
   **Impact:** design 6.32 (CHANGES.md section 100); roadmap S1-2, S1b-2.
+- **Also (2026-10-19): a correction can propose a stance, and stances reach drafted messages.** A new op
+  `person.stance` (system tier) is one the learning task may propose when the person rejects asking someone at all; like
+  every system op from the assistant it waits for the person's Keep. The chase line follows the stance (Chase for
+  manage and alongside, "Waiting on" for report to, nothing for only watch), and follow-up messages never list actions
+  owed by someone the person only watches or reports to. `steward.tracks` is picked from tick boxes. Decided by the main
+  session.
+  **Impact:** design 6.33, 6.34 (CHANGES.md section 106); roadmap S1-2.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

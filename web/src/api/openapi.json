@@ -7663,6 +7663,24 @@
             "description": "The part in a project that the op sets: run, design or watch.",
             "title": "Role"
           },
+          "stance": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manage",
+                  "alongside",
+                  "report_to",
+                  "watch"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who a person is to the user that the op sets (design 6.34).",
+            "title": "Stance"
+          },
           "to": {
             "anyOf": [
               {
@@ -11451,6 +11469,24 @@
             ],
             "description": "For a rule_review line: the size of what every run is sent, in characters, on the latest run.",
             "title": "Stable Size"
+          },
+          "stance": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manage",
+                  "alongside",
+                  "report_to",
+                  "watch"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a promise line someone else owes: who they are to the person (design 6.34). The screen says Chase for manage and alongside, and Waiting on, with no follow-up, for report_to; null for the person's own.",
+            "title": "Stance"
           },
           "state": {
             "anyOf": [

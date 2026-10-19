@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from engine.origin import origins
+from engine.scope import stance_of
 
 #: The ops that end a promise or move its date; one held for the person's Keep stands for its action.
 ENDING_NAMES = ("action.close", "action.drop", "action.move", "action.part")
@@ -24,8 +25,9 @@ def is_promise(data: dict[str, Any]) -> bool:
 @dataclass(frozen=True)
 class Late:
     """An open action that needs a line: its `action`, the `due` day (none when undated), its `text`, `owner`, the
-    person to chase (none when it is the person's own), and `quiet` days: past its date (negative while the date is
-    still ahead), or, for an undated one, since it was made or last heard of."""
+    person to chase (none when it is the person's own), `stance` (who that person is to the person, design 6.34: none
+    for the person's own and for a reply owed, which a stance never gates), and `quiet` days: past its date (negative
+    while the date is still ahead), or, for an undated one, since it was made or last heard of."""
 
     action: str
     due: date | None
@@ -34,6 +36,7 @@ class Late:
     project: str | None
     quiet: int
     since: date
+    stance: str | None = None
 
 
 def held_endings(changesets: dict[str, dict[str, Any]], live: set[str]) -> set[str]:
@@ -59,12 +62,17 @@ def late(
     - Owed by someone else, which the person waits on: with a date, from `steward.chase_dated_days` before it and once
       it has passed (a past one with no news since its day); with none, after `steward.chase_undated_days` with no news
       since it was made or since its latest news. One chased lately waits as long again.
+    Each waiting-on carries the owner's stance (the screens word it by that, and Today leaves out a watched one).
     `made` gives the day an action was made. Oldest first."""
     found: list[Late] = []
     if pm is None:
         return found
     rule = cfg.steward
     wait = cfg.ui.followups.question_after_days
+
+    def stance(owner: str, data: dict[str, Any]) -> str | None:
+        return None if data.get("reply_owed") else stance_of(reader, rule, owner)
+
     for record in reader.list("action"):
         d = record.data
         if d.get("status") != "open" or d.get("on_hold") or record.id in pending:
@@ -89,14 +97,23 @@ def late(
                 continue
             if chased and (today - max(chased)).days < wait:
                 continue
-            found.append(Late(record.id, due, text, owners[0], project, (today - due).days, due))
+            found.append(Late(record.id, due, text, owners[0], project, (today - due).days, due, stance(owners[0], d)))
             continue
         began = made(record.id)
         since = max([*news, *chased, *([began] if began else [])], default=None)
         if since is not None and (today - since).days < rule.chase_undated_days:
             continue
         found.append(
-            Late(record.id, None, text, owners[0], project, (today - since).days if since else 0, since or today)
+            Late(
+                record.id,
+                None,
+                text,
+                owners[0],
+                project,
+                (today - since).days if since else 0,
+                since or today,
+                stance(owners[0], d),
+            )
         )
     return sorted(found, key=lambda x: (x.since, x.action))
 

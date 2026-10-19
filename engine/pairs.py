@@ -33,6 +33,8 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
                               # a `text_has` / `topic_has` word with `|` is met by any one of its alternatives
                               # (`complet|finish|done`), each a case-insensitive part of the text
       keep: true | false | discard   # what the person does with each proposal: Keep, nothing, Discard
+                              # (a proposed stance is `person.stance`, with `person` and `stance`; keeping it applies
+                              # the held change as the person's)
       allow_active: true      # only when the person's own act makes something active at once (comment why)
       expect_learning: false  # no learning request may be queued
     later:                    # (b) a later, similar input, scored exactly like a golden case
@@ -68,13 +70,14 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from engine import follow_on, knowledge, learn
 from engine.ai.adapters import make_adapter
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
-from engine.applier import apply_as_person, decline_held, pick_owner
+from engine.applier import apply_as_person, decline_held, pick_owner, release
 from engine.config import Config
 from engine.corrections import answered_assistant
 from engine.dispatcher import process, send_back, signal, undo_changeset
@@ -111,8 +114,9 @@ from engine.yaml_load import load_yaml
 
 #: The kinds an entry the assistant learned can be: the four kinds of knowledge and standing rules.
 ENTRY_KINDS: tuple[str, ...] = (*knowledge.KINDS, "rule")
-#: The kind of entry each op that proposes one makes.
-OP_ENTRY = {**knowledge.OP_KIND, "rule.add": "rule"}
+#: The kind of entry each op that proposes one makes. A proposed stance is no record: it is a held change, shown here
+#: as an entry of the kind `stance` so a pair scores and keeps it like the rest.
+OP_ENTRY = {**knowledge.OP_KIND, "rule.add": "rule", "person.stance": "stance"}
 CORRECTIONS = (
     "sent_back",
     "undone",
@@ -558,12 +562,48 @@ class _Play:
         view = self.store.read()
         return {s.id: s for kind in ENTRY_KINDS for s in view.list(kind)}
 
+    def held_stances(self, requests: list[str]) -> list[Any]:
+        """The stances the learning runs of these requests proposed and that still wait for the person's Keep, each as
+        an entry of the kind `stance` whose id names its changeset and op (`CS-1#0`)."""
+        view = self.store.read()
+        found = []
+        for request_id in requests:
+            changeset = (view.get("request", request_id).data.get("changeset")) or ""
+            cs = view.get("changeset", changeset)
+            for outcome in cs.data["ops"] if cs is not None else []:
+                op = outcome["op"]
+                if outcome["status"] == "held" and op.get("op") == "person.stance":
+                    data = {
+                        "status": "proposed",
+                        "text": f"{op['id']} is {op['stance']}",
+                        "person": op["id"],
+                        "stance": op["stance"],
+                        "origin": "assistant",
+                        "trust": "untrusted",
+                    }
+                    found.append(SimpleNamespace(id=f"{changeset}#{outcome['index']}", kind="stance", data=data))
+        return found
+
+    def _decide_stance(self, entry_id: str, how: Any) -> None:
+        """Keep a proposed stance (the held change is applied as the person's) or keep things as they are."""
+        changeset, _, index = entry_id.partition("#")
+        outcomes = self.store.read().get("changeset", changeset).data["ops"]
+        if outcomes[int(index)]["status"] != "held":
+            return
+        if how is True:
+            release(self.store, self.fixed, changeset, int(index), now=self.tick())
+        else:
+            decline_held(self.store, changeset, int(index), now=self.tick())
+
     def decide(self, ids: list[str], how: Any) -> None:
         """Keep or discard proposals as the person does: the same edit and signal as the screens make."""
         person = self.fixed.workspace.user.person
         if person is None or how is False:
             return
         for entry_id in ids:
+            if "#" in entry_id:
+                self._decide_stance(entry_id, how)
+                continue
             kind = knowledge.kind_of(entry_id) or "rule"
             found = self.store.read().get(kind, entry_id)
             if found is None or found.data["status"] != "proposed":
@@ -648,7 +688,7 @@ def _entry_matches(spec: Mapping[str, Any], stored: Any) -> bool:
     wording = " ".join(str(data.get(k, "")) for k in ("text", "term", "meaning", "topic", "observation"))
     if not _has(wording, spec.get("text_has", [])) or not _has(str(data.get("topic", "")), spec.get("topic_has", [])):
         return False
-    for key in ("person", "team", "term", "audience", "origin", "trust"):
+    for key in ("person", "team", "term", "audience", "origin", "trust", "stance"):
         if key in spec and data.get(key) != spec[key]:
             return False
     if "negative" in spec and bool(data.get("negative")) != bool(spec["negative"]):
@@ -853,6 +893,7 @@ def _play_pair(
             if first.get("expect_learning", True) and not queued and not answered and expects:
                 problems.append("first: the correction queued no learning")
         learned = [s for i, s in play.entries().items() if i not in before and s.data["status"] != "discarded"]
+        learned += play.held_stances(queued) if first.get("correction") is not None else []
         problems += _proposal_findings("first", first.get("expect_proposal"), learned, entry_extra)
         active = [s for s in learned if s.data["status"] == "active"]
         if active and not first.get("allow_active"):

@@ -423,6 +423,9 @@ class OpMeta(BaseModel):
     value: Any = None
     name: str | None = Field(None, description="The name of what the op proposes to add, such as a project.")
     role: str | None = Field(None, description="The part in a project that the op sets: run, design or watch.")
+    stance: Literal["manage", "alongside", "report_to", "watch"] | None = Field(
+        None, description="Who a person is to the user that the op sets (design 6.34)."
+    )
 
 
 class OpView(BaseModel):
@@ -1870,6 +1873,11 @@ class QueueLineView(BaseModel):
     )
     sender: str | None = Field(
         None, description="For a reply line to nobody known: who the message is from, as the message writes it."
+    )
+    stance: Literal["manage", "alongside", "report_to", "watch"] | None = Field(
+        None,
+        description="For a promise line someone else owes: who they are to the person (design 6.34). The screen says "
+        "Chase for manage and alongside, and Waiting on, with no follow-up, for report_to; null for the person's own.",
     )
     after_move: AfterMove | None = Field(
         None,

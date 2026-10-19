@@ -33,6 +33,10 @@ What to propose:
   person's id from the people list. Use "glossary.add" for a term or acronym the correction explains. Use "style.add"
   for what a recipient wants or avoids in what is written to them. Use "rule.add" only when the PM's own words in the
   correction state a standing instruction ("from now on ...", "never ..."); it waits for the PM either way.
+- When the PM rejects asking someone at all ("not my job", "we are not their boss"), propose that person's stance with
+  "person.stance" instead of a lesson: "report_to" when the PM answers to them, "watch" when the PM only follows what
+  they do, or "alongside" for "not my place to ask about their design". Use the person's id from the people list; it
+  waits for the PM either way.
 - When a lesson in the list should have caught this and didn't, a repeat means its guard was wrong: use
   "lesson.update" on that lesson (its id, with the new wording, guard or reach) instead of adding a second one.
 - Write the text so it reads on its own, in one or two plain sentences, as the PM would say it. The PM reads it and

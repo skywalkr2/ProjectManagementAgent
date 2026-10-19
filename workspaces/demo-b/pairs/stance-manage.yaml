@@ -1,0 +1,68 @@
+id: stance-manage
+title: A design question to someone the person manages stays asked when design is tracked, however a stance was chosen
+skills: [use-lesson, no-repeat-question]
+negative: true
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  given:
+  - kind: person
+    id: PER-204
+    fields:
+      full_name: Tamsin Voss
+      role: Illustrator
+      team: TEAM-1
+  pasted: |-
+    From: Tamsin Voss
+
+    The endpaper pattern now repeats every four inches instead of six.
+  fixed:
+    summary: Asked Tamsin why the endpaper pattern repeats sooner.
+    ops:
+    - op: question.add
+      to: PER-204
+      title: Why does the endpaper pattern now repeat every four inches?
+      text: The endpaper pattern changed from six inches to four.
+      asks_about: design
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The endpaper sign-off
+      project: PRJ-1
+      evidence:
+        quote: The endpaper pattern now repeats every four inches instead of six
+  # The person picks the stance on the person's page: that is a choice, not a correction of the assistant's work.
+  correction:
+    kind: changed
+    id: PER-204
+    fields:
+      stance: manage
+  expect_proposal: none
+  expect_learning: false
+later:
+  received: '2026-10-16'
+  project: PRJ-1
+  pasted: |-
+    From: Tamsin Voss
+
+    The endpaper colors now run from cream to a pale green.
+  expect:
+  - op: question.add
+    to: PER-204
+  packet_has: [manages them]
+ideal:
+  later:
+    summary: Asked Tamsin why the endpaper colors changed.
+    ops:
+    - op: question.add
+      to: PER-204
+      title: Why do the endpaper colors now run from cream to pale green?
+      text: The endpaper colors changed.
+      asks_about: design
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The endpaper sign-off
+      project: PRJ-1
+      evidence:
+        quote: The endpaper colors now run from cream to a pale green

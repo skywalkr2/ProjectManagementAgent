@@ -56,7 +56,7 @@ export function SettingRow(props: {
   const describedBy = [
     hint && `${id}-hint`,
     waiting && `${id}-waiting`,
-    item.type === "list" && `${id}-list`,
+    item.type === "list" && (item.options ?? []).length === 0 && `${id}-list`,
     invalid && `${id}-bad`,
     problem && `${id}-problem`,
     note && `${id}-note`,
@@ -130,6 +130,24 @@ export function SettingRow(props: {
         ))}
       </select>
     );
+  } else if (item.type === "list" && (item.options ?? []).length > 0) {
+    // A list drawn from a fixed set of values is ticked, never typed.
+    const held = String(draft).split("\n").filter(Boolean);
+    const toggle = (value: string, on: boolean) => {
+      const next = (item.options ?? []).filter((o) => (o === value ? on : held.includes(o))).join("\n");
+      props.onChange(next);
+      props.commit?.(next);
+    };
+    control = (
+      <div id={id} role="group" aria-labelledby={`${id}-label`} aria-describedby={describedBy} className="check-group">
+        {choices.map((c) => (
+          <label key={c.tag} className="check-line">
+            <input type="checkbox" checked={held.includes(c.tag)} disabled={off} onChange={(e) => toggle(c.tag, e.target.checked)} />
+            <span>{c.label}</span>
+          </label>
+        ))}
+      </div>
+    );
   } else if (item.type === "list") {
     control = (
       <textarea
@@ -196,6 +214,7 @@ export function SettingRow(props: {
   }
 
   const checkbox = item.type === "yes_no" && !readOnly;
+  const ticked = item.type === "list" && (item.options ?? []).length > 0 && !readOnly;
   const labelNode = checkbox ? (
     <label className="check-line" htmlFor={id}>
       {control}
@@ -203,7 +222,7 @@ export function SettingRow(props: {
     </label>
   ) : readOnly ? (
     <span className="setting-label">{label}</span>
-  ) : typedSecret ? (
+  ) : typedSecret || ticked ? (
     <span className="setting-label" id={`${id}-label`}>
       {label}
     </span>
@@ -243,7 +262,7 @@ export function SettingRow(props: {
             {waiting}
           </p>
         )}
-        {item.type === "list" && !readOnly && (
+        {item.type === "list" && !readOnly && !ticked && (
           <p className="hint" id={`${id}-list`}>
             {t("settings.list_hint")}
           </p>

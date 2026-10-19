@@ -111,3 +111,19 @@ def test_the_gate_is_a_setting_like_any_lint(env):
     set_stance(store, them["id"], "watch")
     cfg.checks.lints["stance"] = "off"
     assert problems(env, ask(cfg, them, "date"), "", "stance") == []
+
+
+@pytest.mark.parametrize(("stance", "told"), [("watch", False), ("report_to", False), ("alongside", True)])
+def test_someone_watched_or_reported_to_is_never_sent_their_actions(env, stance, told):
+    from datetime import date
+
+    from engine.followups import sections
+
+    _, cfg, store = env
+    them = outsider(cfg)
+    with store.transaction() as tx:
+        made = tx.create("action", {"text": "Send the revised plan", "owners": [{"person": them["id"]}]}, _TEST).id
+    set_stance(store, them["id"], stance)
+    theirs = next((s for s in sections(store, cfg, date(2026, 10, 14)) if s.person == them["id"]), None)
+    listed = theirs is not None and any(a["id"] == made for a in theirs.actions)
+    assert listed is told

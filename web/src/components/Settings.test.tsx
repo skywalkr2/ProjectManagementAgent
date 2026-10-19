@@ -816,3 +816,24 @@ test("the Today section holds the reminder settings as lists, and the button tha
   expect(request).toHaveBeenCalledTimes(1);
   vi.unstubAllGlobals();
 });
+
+test("who people are to you is a list in words, and what you keep track of is ticked from a fixed set, never typed", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [
+      item("steward.default_stance", { group: "steward", type: "choice", options: ["manage", "alongside", "report_to", "watch"], value: "alongside", default: "alongside" }),
+      item("steward.tracks", { group: "steward", type: "list", options: ["dates", "decisions", "design"], value: ["dates", "decisions"], default: ["dates", "decisions"] }),
+    ],
+    { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
+  );
+  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  const stance = await screen.findByRole("combobox", { name: "Who people are to you until you say otherwise" });
+  expect(within(stance).getAllByRole("option").map((o) => o.textContent)).toEqual(["I manage them", "I work alongside them", "I report to them", "I only watch them"]);
+  const group = screen.getByRole("group", { name: "What you keep track of" });
+  expect(within(group).getByRole("checkbox", { name: "Delivery dates" })).toBeChecked();
+  expect(within(group).getByRole("checkbox", { name: "Design quality" })).not.toBeChecked();
+  expect(screen.queryByRole("textbox", { name: "What you keep track of" })).toBeNull();
+  await user.click(within(group).getByRole("checkbox", { name: "Design quality" }));
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "steward.tracks": ["dates", "decisions", "design"] } });
+});

@@ -1,0 +1,75 @@
+id: stance-report-to
+title: Someone the person reports to is not asked for dates, and the stance, once kept, is what the next input is read with
+skills: [use-lesson, no-repeat-question]
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  given:
+  - kind: person
+    id: PER-201
+    fields:
+      full_name: Rowan Pell
+      role: Director
+      team: TEAM-1
+      how_to_reach:
+        email: rowan@example.com
+  pasted: |-
+    From: Rowan Pell
+
+    The budget review is next week and the cover costs are not final yet.
+  wrong:
+    summary: Asked Rowan when the cover costs will be final.
+    ops:
+    - op: question.add
+      to: PER-201
+      title: When will the cover costs be final?
+      text: The budget review is next week and the cover costs are not final.
+      asks_about: date
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The budget review
+      project: PRJ-1
+      evidence:
+        quote: the cover costs are not final yet
+  correction:
+    kind: dropped
+    note: Not my place to chase Rowan for a date. I report to Rowan, so nothing is asked of them unless I say so.
+    id: '@question'
+  expect_proposal:
+  - op: person.stance
+    person: PER-201
+    stance: report_to
+  keep: true
+later:
+  received: '2026-10-16'
+  project: PRJ-1
+  pasted: |-
+    From: Rowan Pell
+
+    The budget review moved to Thursday and the cover costs are still not final.
+  expect:
+  - op: fact
+    text_has: [review]
+  forbid:
+  - op: question.add
+    to: PER-201
+  packet_has: [reports to them]
+ideal:
+  learn:
+    summary: The person reports to Rowan, so Rowan is not asked anything unless the person says so.
+    topic: asking Rowan
+    ops:
+    - op: person.stance
+      id: PER-201
+      stance: report_to
+      evidence:
+        quote: I report to Rowan
+  later:
+    summary: The budget review moved to Thursday; the cover costs are still not final.
+    ops:
+    - op: fact
+      text: The budget review moved to Thursday and the cover costs are still not final.
+      project: PRJ-1
+      evidence:
+        quote: The budget review moved to Thursday and the cover costs are still not final

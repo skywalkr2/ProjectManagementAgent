@@ -16,6 +16,7 @@ from engine.cleaning import normalize
 from engine.config import Config
 from engine.dispatcher import signal
 from engine.names import People
+from engine.scope import stance_of
 from engine.storage import Store, WriteContext
 
 _PM = WriteContext(actor="pm", trust="trusted", op="followup")
@@ -61,6 +62,10 @@ class Nudge:
     round: int
     question_ids: list[str]
     action_ids: list[str]
+
+
+#: Stances (design 6.34) whose people are never told their actions in a drafted message.
+UNTOLD_STANCES = frozenset({"watch", "report_to"})
 
 
 @dataclass
@@ -117,9 +122,12 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
         )
     open_actions = [a for a in store.read().list("action") if a.data["status"] == "open"]
     history = store.read().field_changes("action", TOLD_FIELDS) if any(a.data.get("told") for a in open_actions) else {}
+    view = store.read()
     for a in open_actions:
         d = a.data
         for owner in d.get("owners", []):
+            if owner["person"] != people.pm and stance_of(view, cfg.steward, owner["person"]) in UNTOLD_STANCES:
+                continue  # nothing is drafted to someone the person only watches or reports to (design 6.34)
             told = d.get("told", {}).get(owner["person"])
             if told and changed_since_told(history.get(a.id, []), owner["person"], d):
                 told = None  # what they were told is out of date, so they need telling again

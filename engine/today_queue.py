@@ -18,6 +18,7 @@ from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
 from engine.plugin_api import TODAY_GROUPS
+from engine.scope import stance_of
 from engine.titles import Title, head_of, title_for
 from engine.today import zone
 
@@ -86,7 +87,8 @@ class Line:
     and what to do, and `waiting_since` when it was last read, or first tried when it never was), promise (one open
     action that needs a look: its id in `actions`, its words in `text`, its day in `due` (none when undated),
     `waiting_days` (days past its date, below zero while the date is ahead, or days with nothing heard when undated),
-    and in `person` the one to chase, none when it is the person's own), reminder (an open action whose reminder has
+    and in `person` the one to chase, none when it is the person's own, with `stance`: who they are to the person, so
+    the line says Chase or Waiting on; none for the person's own), reminder (an open action whose reminder has
     reached the person: its id in `actions`, its words in `text`, the moment it was set for in `at` on the person's
     clock, `late` when it came due while the app or the computer was not running, and in `snoozes` the choices that
     still have a time, each `choice` with the `at` it resolves to), reminder_digest (reminders that fell in quiet hours,
@@ -155,6 +157,7 @@ class Line:
     reply: str | None = None
     reply_reviewed: bool | None = None
     sender: str | None = None
+    stance: str | None = None
     since: str = ""
 
 
@@ -558,9 +561,13 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         stamp = _created(reader, "action", action_id)
         return _aware(stamp).astimezone(zone(cfg)).date() if stamp else None
 
-    late = promises.late(reader, cfg, people.pm, today, promises.held_endings(changesets, live), made)
-    on_a_line = {x.action for x in late}
-    for x in late:
+    # What each is to the person decides the line (design 6.33, 6.34): one only watched has none, but is still
+    # covered, so no other line picks it up.
+    covered = promises.late(reader, cfg, people.pm, today, promises.held_endings(changesets, live), made)
+    on_a_line = {x.action for x in covered}
+    for x in covered:
+        if x.stance == "watch":
+            continue
         lines.append(
             Line(
                 key=f"promise:{x.action}",
@@ -573,6 +580,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 waiting_days=x.quiet,
                 actions=[x.action],
                 subject=x.text,
+                stance=x.stance,
                 since=x.since.isoformat(),
             )
         )
@@ -839,7 +847,9 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
         waiting = [q for q in s.questions if q["chase_due"]]
-        told = [a for a in s.actions if a["chase_due"] and a["id"] not in on_a_line]
+        # Nothing is chased for someone the person reports to or only watches (design 6.34), so no follow-up is drafted.
+        chased = stance_of(reader, cfg.steward, s.person) not in ("report_to", "watch")
+        told = [a for a in s.actions if chased and a["chase_due"] and a["id"] not in on_a_line]
         if waiting or told:
             longest = max([q["waiting_days"] or 0 for q in waiting] + [a["told_days"] or 0 for a in told])
             lines.append(

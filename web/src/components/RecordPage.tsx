@@ -21,6 +21,7 @@ import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
 import { RecordActivity } from "./RecordActivity";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { StancePicker } from "./StancePicker";
 import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
@@ -69,7 +70,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const rows = data
     ? Object.entries(data.fields)
         // The id of the input an item came from is shown as its "Where it came from" link instead.
-        .filter(([name]) => name !== "id" && !(name === "source" && data.origin))
+        .filter(([name]) => name !== "id" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
         .map(([name, value]) => ({ name, lines: shown(name, value) }))
         .filter((row) => row.lines.length > 0)
     : [];
@@ -164,6 +165,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               </dl>
             )}
           </section>
+          {kind === "person" && (
+            <StancePicker person={id} version={data.version} stance={data.fields.stance} trackOnly={data.fields.track_only === true} />
+          )}
           </aside>
         </div>
       )}

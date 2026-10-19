@@ -1,0 +1,74 @@
+id: stance-alongside
+title: Someone the person works alongside is not asked about how they do their own design work
+skills: [use-lesson, no-repeat-question]
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  given:
+  - kind: person
+    id: PER-203
+    fields:
+      full_name: Wren Ashby
+      role: Interior layout lead
+      team: TEAM-2
+      stance: manage
+  pasted: |-
+    From: Wren Ashby
+
+    The interior now sets every chapter in two columns instead of one.
+  wrong:
+    summary: Asked Wren why the interior uses two columns.
+    ops:
+    - op: question.add
+      to: PER-203
+      title: Why does the interior now use two columns?
+      text: The interior changed from one column to two.
+      asks_about: design
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The interior sign-off
+      project: PRJ-1
+      evidence:
+        quote: The interior now sets every chapter in two columns instead of one
+  correction:
+    kind: dropped
+    note: Not my place to ask Wren why. We work alongside each other and the layout is theirs.
+    id: '@question'
+  expect_proposal:
+  - op: person.stance
+    person: PER-203
+    stance: alongside
+  keep: true
+later:
+  received: '2026-10-16'
+  project: PRJ-1
+  pasted: |-
+    From: Wren Ashby
+
+    The chapter openers now use a drop cap and a wider top margin.
+  expect:
+  - op: fact
+    text_has: [drop cap]
+  forbid:
+  - op: question.add
+    to: PER-203
+  packet_has: [works alongside them]
+ideal:
+  learn:
+    summary: The person works alongside Wren, so how Wren does their own design work isn't asked about.
+    topic: asking Wren about layout
+    ops:
+    - op: person.stance
+      id: PER-203
+      stance: alongside
+      evidence:
+        quote: We work alongside each other
+  later:
+    summary: The chapter openers now use a drop cap and a wider top margin.
+    ops:
+    - op: fact
+      text: The chapter openers now use a drop cap and a wider top margin.
+      project: PRJ-1
+      evidence:
+        quote: The chapter openers now use a drop cap and a wider top margin
