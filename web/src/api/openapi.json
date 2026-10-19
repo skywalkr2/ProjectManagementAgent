@@ -703,6 +703,18 @@
             ],
             "title": "End"
           },
+          "entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an event read from a connected calendar: the id of the calendar entry kept for this date (its page shows who is asked), when there is one.",
+            "title": "Entry"
+          },
           "link": {
             "anyOf": [
               {
@@ -736,7 +748,7 @@
                 "type": "null"
               }
             ],
-            "description": "For an own entry: the series it is one meeting of.",
+            "description": "The series this date or entry is one meeting of, when it is.",
             "title": "Series"
           },
           "snapshot": {
@@ -5257,6 +5269,14 @@
       },
       "FolderListView": {
         "properties": {
+          "files": {
+            "description": "With a file ending asked for: the files that match.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          },
           "folders": {
             "items": {
               "type": "string"
@@ -14150,6 +14170,14 @@
           "file": {
             "title": "File",
             "type": "string"
+          },
+          "file_types": {
+            "description": "With a file chooser: the endings of the files it offers (such as .ics), so it lists only those.",
+            "items": {
+              "type": "string"
+            },
+            "title": "File Types",
+            "type": "array"
           },
           "group": {
             "description": "The section it belongs to: the file, or the file and its first part.",
@@ -25051,6 +25079,22 @@
                 }
               ],
               "title": "Path"
+            }
+          },
+          {
+            "in": "query",
+            "name": "files",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Files"
             }
           }
         ],

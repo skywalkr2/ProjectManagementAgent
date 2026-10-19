@@ -282,7 +282,13 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
         <div className="tb-title">
           {event.cancelled && <span className="pill k-risk">{t("today.agenda.called_off")}</span>}
           <span className={event.cancelled ? "struck" : undefined}>
-            {event.link ? <SafeLink label={event.title} url={event.link} /> : event.title}
+            {event.link ? (
+              <SafeLink label={event.title} url={event.link} />
+            ) : event.entry ? (
+              <a href={viewHref(recordView("event", event.entry))}>{event.title}</a>
+            ) : (
+              event.title
+            )}
           </span>
           {open > 0 && event.series && (
             <>

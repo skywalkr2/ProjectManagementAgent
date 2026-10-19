@@ -1,5 +1,6 @@
-// Picking a folder on this computer from a list (design 7.8): open a folder to look inside, go up, use the one shown.
-// Only offered when the app runs on the person's own computer; the server refuses to list folders otherwise.
+// Picking a folder, or a file, on this computer from a list (design 7.8): open a folder to look inside, go up, use the one
+// shown; to pick a file, choose it from the list. Only offered when the app runs on the person's own computer; the server
+// refuses to list folders otherwise.
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
@@ -14,19 +15,31 @@ export function joinPath(base: string, name: string): string {
   return base.endsWith(sep) ? `${base}${name}` : `${base}${sep}${name}`;
 }
 
+/** Where a file picker starts: the folder a chosen file is in, else (for a folder) the one given. */
+function startFolder(start: string | undefined, picksFile: boolean): string | undefined {
+  const given = start?.trim();
+  if (!given) return undefined;
+  if (!picksFile) return given;
+  const cut = Math.max(given.lastIndexOf("/"), given.lastIndexOf("\\"));
+  return cut > 0 ? given.slice(0, cut) : undefined;
+}
+
 /** Whether this app can list folders here. It can't when hosted; callers then offer a typed path and say nothing about it. */
 export function useFolderListing(enabled = true): boolean {
   const probe = useQuery({ queryKey: ["folders", ""], queryFn: () => api.folders(), retry: false, enabled });
   return enabled && !probe.isError;
 }
 
-export function FolderPicker(props: { start?: string; onPick: (path: string) => void; onClose: () => void }) {
+/** With `files` (the endings of the files wanted, such as ".ics") it picks a file rather than a folder. */
+export function FolderPicker(props: { start?: string; files?: string[]; onPick: (path: string) => void; onClose: () => void }) {
   const { t } = useWords();
   const titleId = useId();
-  const [path, setPath] = useState<string | undefined>(props.start?.trim() || undefined);
+  const picksFile = props.files !== undefined;
+  // A file already chosen starts the list in the folder it is in.
+  const [path, setPath] = useState<string | undefined>(startFolder(props.start, picksFile));
   const folders = useQuery({
-    queryKey: ["folders", path ?? ""],
-    queryFn: () => api.folders(path),
+    queryKey: ["folders", path ?? "", picksFile ? (props.files ?? []).join(",") : ""],
+    queryFn: () => api.folders(path, props.files),
     retry: false,
   });
   const here = folders.data?.path;
@@ -44,7 +57,7 @@ export function FolderPicker(props: { start?: string; onPick: (path: string) => 
   return (
     <ModalPanel titleId={titleId} onClose={props.onClose}>
       <Heading slot="title" id={titleId} level={2}>
-        {t("folders.title")}
+        {t(picksFile ? "folders.file_title" : "folders.title")}
       </Heading>
       {problem && (
         <p className="problem-note" role="alert">
@@ -74,17 +87,25 @@ export function FolderPicker(props: { start?: string; onPick: (path: string) => 
               {t("folders.up")}
             </button>
           </div>
-          {folders.data.folders.length === 0 ? (
-            <p className="empty">{t("folders.none")}</p>
+          {folders.data.folders.length === 0 && (!picksFile || (folders.data.files ?? []).length === 0) ? (
+            <p className="empty">{t(picksFile ? "folders.no_files" : "folders.none")}</p>
           ) : (
             <ul className="folder-list">
               {folders.data.folders.map((name) => (
-                <li key={name}>
+                <li key={`folder:${name}`}>
                   <button type="button" className="link-button" onClick={() => setPath(joinPath(folders.data!.path, name))}>
                     {name}
                   </button>
                 </li>
               ))}
+              {picksFile &&
+                (folders.data.files ?? []).map((name) => (
+                  <li key={`file:${name}`}>
+                    <button type="button" className="btn small" onClick={() => props.onPick(joinPath(folders.data!.path, name))}>
+                      {t("folders.use_file", { name })}
+                    </button>
+                  </li>
+                ))}
             </ul>
           )}
         </>
@@ -93,9 +114,11 @@ export function FolderPicker(props: { start?: string; onPick: (path: string) => 
         <button type="button" className="btn quiet" onClick={props.onClose}>
           {t("action.cancel")}
         </button>
-        <button type="button" className="btn primary" disabled={!folders.data} onClick={() => folders.data && props.onPick(folders.data.path)}>
-          {t("folders.use")}
-        </button>
+        {!picksFile && (
+          <button type="button" className="btn primary" disabled={!folders.data} onClick={() => folders.data && props.onPick(folders.data.path)}>
+            {t("folders.use")}
+          </button>
+        )}
       </div>
     </ModalPanel>
   );

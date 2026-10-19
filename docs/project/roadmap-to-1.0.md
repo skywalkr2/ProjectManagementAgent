@@ -277,6 +277,9 @@ group on 2026-10-20, which the plan's order (B, S, then I) and the integrity ite
    invitations as calendar entries, repeating events expanded, Outlook time zones, attendees) and P18 (several accounts
    of one service at once, each source picking its account; a plugin API change told to the mail add-on's builder).
    P16's leftovers too: an add-on's own secrets and the backup key typed on the screen.
+   *P17 built (B-5):* a link or a file on this computer, repeats expanded, invitations, Outlook zones, attendees, a
+   changed or cancelled date on its own entry, a promise due at it following and listed in Since yesterday
+   (`tests/test_ics_full.py`). Left of P17: an invitation attached to a mail, and a hosted app's upload instead of a file.
 4. [B-6a, B-6b] **Wave 6, the rest:** (also the designer's F12 and F13, 2026-10-19: a refused form refreshes the untouched fields and
    lists what changed underneath; kept secrets nothing refers to are removed after 30 days or with their source, never
    while an Undo points at one; and open promise P26: a to-do tied to the question it waits on, the nudge's

@@ -2054,6 +2054,8 @@ class Registrar:
 from engine.connectors import (  # noqa: E402 - part of the plugin API
     ConnectorError,
     EventDetails,
+    EventOccurrence,
+    EventPerson,
     ItemFile,
     MessageDetails,
     Poll,
@@ -2070,6 +2072,8 @@ __all__ = [
     "ItemFile",
     "ExtractError",
     "EventDetails",
+    "EventOccurrence",
+    "EventPerson",
     "MessageDetails",
     "PLUGIN_API_VERSION",
     "Settings",

@@ -28,6 +28,9 @@ from engine.storage import WriteContext
 from engine.titles import head_of, title_for
 from engine.today import zone
 
+#: The op a calendar's own changes are written under (`engine/source_entries.py`).
+CALENDAR_RULE = "calendar.keep"
+
 Act = Literal["added", "closed", "moved", "merged", "dropped", "set_aside", "news"]
 Because = Literal["said", "rule", "sorting", "replied", "meeting"]
 UndoKind = Literal["changeset", "closer_look", "set_aside"]
@@ -201,6 +204,29 @@ def build(ws: Any, view: Any, cfg: Any, people: Any, now: datetime) -> Plan:
         entry = _rule_entry(view, close)
         if entry is not None:
             keep((close.record or ("", close.ref))[:2], moment, entry)
+    # A calendar the person reads moved or called off a meeting a promise was due at: a rule did it, outside any change.
+    for row in view.ledger(kind="action"):
+        if row["op"] != CALENDAR_RULE or row["field"] not in ("due", "news"):
+            continue
+        moment = _moment(row["at"])
+        action = view.get("action", row["record_id"])
+        if moment is None or not (since < moment <= now) or action is None:
+            continue
+        moved = row["field"] == "due"
+        heard = (row.get("after") or [{}])[-1] if not moved and isinstance(row.get("after"), list) else {}
+        entry = Entry(
+            ref=f"calendar:{row['seq']}",
+            act="moved" if moved else "news",
+            title=str(action.data["text"]),
+            when=str(row["at"]),
+            because="meeting",
+            seen=False,
+            undo=None,
+            day=action.data.get("due") if moved else None,
+            detail=None if moved else heard.get("text"),
+            record=("action", action.id),
+        )
+        keep(("action", action.id), moment, entry)
     entries = [e for _, e in sorted(found.values(), key=lambda pair: (pair[0], pair[1].ref), reverse=True)]
     return Plan(since=since, until=now, entries=entries)
 

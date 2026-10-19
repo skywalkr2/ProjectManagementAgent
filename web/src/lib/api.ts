@@ -381,7 +381,11 @@ export const api = {
   templates: () => call<S["TemplateView"][]>("GET", "templates"),
   applyTemplate: (template: string) => call<S["TemplateApplied"]>("POST", "templates/apply", { id: template }),
   folderCheck: (path: string) => call<S["FolderCheckView"]>("GET", `setup/folder-check?path=${id(path)}`),
-  folders: (path?: string) => call<S["FolderListView"]>("GET", `setup/folders${path ? `?path=${id(path)}` : ""}`),
+  /** The folders inside one, and with `files` (endings such as ".ics") the files that end that way. */
+  folders: (path?: string, files?: string[]) => {
+    const asked = [path ? `path=${id(path)}` : "", files && files.length > 0 ? `files=${id(files.join(","))}` : ""].filter(Boolean);
+    return call<S["FolderListView"]>("GET", `setup/folders${asked.length > 0 ? `?${asked.join("&")}` : ""}`);
+  },
   saveBackupFolder: (body: S["BackupFolderAdd"]) => call<S["SettingsSaved"]>("POST", "setup/backup-folder", body),
   endpoints: () => call<S["EndpointView"][]>("GET", "ai/endpoints"),
   aiModels: (body: S["AiModelsAsk"]) => call<S["AiModelsView"]>("POST", "ai/models", body),

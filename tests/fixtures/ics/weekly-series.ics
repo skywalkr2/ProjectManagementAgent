@@ -1,0 +1,30 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Fictional//Calendar//EN
+BEGIN:VEVENT
+UID:series-1@calendar.example.com
+DTSTAMP:20300301T080000Z
+DTSTART:20300304T090000Z
+DTEND:20300304T100000Z
+RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=6
+EXDATE:20300318T090000Z
+SUMMARY:Harbor stand-up
+LOCATION:Room 2
+ORGANIZER;CN=Ines Marlow:mailto:ines.marlow@example.com
+ATTENDEE;CN=Ines Marlow;PARTSTAT=ACCEPTED:mailto:ines.marlow@example.com
+ATTENDEE;CN=Dara Keene;PARTSTAT=NEEDS-ACTION:mailto:dara.keene@example.com
+DESCRIPTION:Quick round of what is blocked.
+END:VEVENT
+BEGIN:VEVENT
+UID:series-1@calendar.example.com
+DTSTAMP:20300302T080000Z
+RECURRENCE-ID:20300311T090000Z
+DTSTART:20300312T140000Z
+DTEND:20300312T150000Z
+SUMMARY:Harbor stand-up (moved)
+LOCATION:Room 5
+ORGANIZER;CN=Ines Marlow:mailto:ines.marlow@example.com
+ATTENDEE;CN=Ines Marlow;PARTSTAT=ACCEPTED:mailto:ines.marlow@example.com
+ATTENDEE;CN=Dara Keene;PARTSTAT=NEEDS-ACTION:mailto:dara.keene@example.com
+END:VEVENT
+END:VCALENDAR

@@ -88,6 +88,7 @@ from engine.workspace import Workspace
 log = logging.getLogger(__name__)
 
 #: What a hosted app says to a pasted key: keys stay in the app's own environment, given by their reference.
+HOSTED_FILE = "A hosted app can't read a file on your computer. Give the calendar's link instead."
 HOSTED_KEY = "On a hosted app, a key can't be pasted: keep it in the app's environment and give where it is instead."
 
 #: Why a measuring failed, in words.
@@ -392,11 +393,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return FolderCheckView(**vars(setup.check_backup_folder(ws, path)))
 
     @r.get("/setup/folders")
-    def folders(path: str | None = None) -> FolderListView:
+    def folders(path: str | None = None, files: str | None = None) -> FolderListView:
         if not local:
             raise HTTPException(status_code=403, detail="Folders on the server can't be browsed; type the path.")
         try:
-            return FolderListView(**vars(setup.list_folders(path)))
+            return FolderListView(**vars(setup.list_folders(path, files)))
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
 
@@ -470,7 +471,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         try:
             # Settings that refer to records hold their ids; a name typed for one is resolved or refused.
             settings = references.join_settings(connector.settings, settings, store.read())
-            return connector.settings.model_validate(settings).model_dump(mode="json", exclude_defaults=True)
+            checked = connector.settings.model_validate(settings).model_dump(mode="json", exclude_defaults=True)
+            if not local and any(_nested(checked, f) for f in config_screens.picked_fields(connector.settings, "file")):
+                raise HTTPException(status_code=400, detail=HOSTED_FILE)
+            return checked
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
         except ValueError as err:

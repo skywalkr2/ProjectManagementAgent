@@ -163,3 +163,61 @@ test("a fact recorded before the source was kept says only when", async () => {
   renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
   expect(await screen.findByText(`recorded ${day("2026-09-01")}`)).toBeInTheDocument();
 });
+
+// A calendar entry kept from a calendar: who invited, who is asked and the person's own answer (design 7.14).
+
+const entryFields = {
+  title: "Floor plan walkthrough",
+  start: "2030-03-08T15:00:00+00:00",
+  invitation: true,
+  response: "tentative",
+  key: "invite-1#2030-03-08T15:00:00+00:00",
+  organizer: { address: "robin@example.com", name: "Robin S.", person: "PER-1", response: "accepted" },
+  attendees: [
+    { address: "robin@example.com", name: "Robin S.", person: "PER-1", response: "accepted" },
+    { address: "dara.keene@example.com", name: "Dara Keene", person: null, response: "needs-action" },
+    { address: "me@example.com", name: null, person: null, response: null },
+  ],
+  cancelled: false,
+  notes: [],
+};
+
+test("an invitation's page lists who invited, who is asked with their answers and the person's own answer", async () => {
+  api("event", "EVT-1", entryFields, page({ kind: "event", id: "EVT-1", name: "Floor plan walkthrough" }), {
+    "GET plugin-actions?kind=event&id=EVT-1": () => [],
+  });
+  renderApp(<RecordPage kind="event" id="EVT-1" onBack={() => {}} />);
+  const section = await screen.findByRole("region", { name: "Who is asked" });
+  expect(within(section).getByText(/Invited by/)).toBeInTheDocument();
+  expect(within(section).getByText("Your answer: Maybe")).toBeInTheDocument();
+  const rows = within(section).getAllByRole("listitem");
+  // A person the workspace knows is shown by their name there and links to their page; others by the name the calendar gave.
+  expect(rows[0]).toHaveTextContent("Robin Sample · robin@example.com · Accepted");
+  expect(within(rows[0]).getByRole("link", { name: "Robin Sample" })).toHaveAttribute("href", expect.stringContaining("person"));
+  expect(rows[1]).toHaveTextContent("Dara Keene · dara.keene@example.com · No answer yet");
+  expect(within(rows[1]).queryByRole("link")).toBeNull();
+  expect(rows[2]).toHaveTextContent("me@example.com");
+  // The entry's internal key and flags are not shown as details.
+  const details = screen.getByRole("heading", { name: "Details" }).closest("section") as HTMLElement;
+  expect(within(details).queryByText(/invite-1/)).toBeNull();
+  expect(within(details).queryByText("Key")).toBeNull();
+});
+
+test("an entry with nobody on it has no list of people, and one the person organizes says organized by", async () => {
+  api("event", "EVT-2", { title: "Walkthrough", start: "2030-03-08", attendees: [], organizer: null, invitation: false }, page({ kind: "event", id: "EVT-2", name: "Walkthrough" }), {
+    "GET plugin-actions?kind=event&id=EVT-2": () => [],
+    "GET task-kinds?kind=event&id=EVT-2": () => [],
+  });
+  const first = renderApp(<RecordPage kind="event" id="EVT-2" onBack={() => {}} />);
+  expect(await screen.findByRole("heading", { name: "Walkthrough" })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Who is asked" })).toBeNull();
+  first.unmount();
+  api("event", "EVT-3", { ...entryFields, invitation: false, response: "accepted" }, page({ kind: "event", id: "EVT-3", name: "Planning hour" }), {
+    "GET plugin-actions?kind=event&id=EVT-3": () => [],
+    "GET task-kinds?kind=event&id=EVT-3": () => [],
+  });
+  renderApp(<RecordPage kind="event" id="EVT-3" onBack={() => {}} />);
+  const section = await screen.findByRole("region", { name: "Who is asked" });
+  expect(within(section).getByText(/Organized by/)).toBeInTheDocument();
+  expect(within(section).queryByText(/Your answer/)).toBeNull();
+});

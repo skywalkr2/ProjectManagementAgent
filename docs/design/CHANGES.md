@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 114. Calendars from .ics, full featured (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Calendar source (6.2) | A private link only; a repeating event was one item whose later dates the agenda couldn't place; times with an unknown zone were read as UTC | A link or a file picked on this computer (a hosted app refuses a file plainly), read again on each read; `expand_days` (default 60) lists every date of a repeating event, and a rule the engine can't follow shows the first date with a note. Windows time zone names go through the shipped list; an unknown zone or none is read in the calendar's zone, else the person's, with a note. Built: `tests/test_ics_full.py` |
+| Calendar entries (5.1, 6.32) | Only the person's and the assistant's own entries | A calendar source's dates are kept as entries by rules, with place, organizer, attendees (resolved to people by address, each with their answer), the invitation mark and the person's own answer; a repeating event's entries are one series. A moved date moves its entry and the promise due at it, a called-off or skipped date marks only its entry and tells that promise once. Built: `tests/test_ics_full.py` |
+| Plugin API surface (3.3) | `EventDetails` carried a start, end, place, cancelled and repeats | Adds `occurrences`, `organizer`, `attendees`, `method`, `notes` and `entries` (and `EventOccurrence`, `EventPerson`); no version change, `docs/plugin-guide.md` regenerated |
+| Source form (7.8) | A path setting could pick a folder | It can pick a file too (`picker: file`, with the endings it lists): `GET /api/setup/folders?files=.ics`. Built: `web/src/components/Sources.test.tsx` |
+| Entry page and agenda (7.14, 7.1) | An entry's page showed its fields; an agenda row of a read event had no page | The entry's page lists who is asked with their answers and who invited; an agenda row of a kept date links to it. Built: `web/src/components/RecordPageRecords.test.tsx`, `web/src/components/TodayRail.test.tsx` |
+
 ## 113. The gate week's instruments and the Quality screen (2026-10-19)
 
 | Where | Before | Now |

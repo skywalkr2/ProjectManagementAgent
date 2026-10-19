@@ -184,13 +184,13 @@ export function SettingRow(props: {
         }
       />
     );
-    // A folder can be picked from a list where the app can list folders; otherwise it is typed, with no fuss.
+    // A folder or a file can be picked from a list where the app can list folders; otherwise it is typed, with no fuss.
     control =
-      item.picker === "folder" && props.canList ? (
+      item.picker && props.canList ? (
         <div className="inline-field">
           {input}
           <button type="button" className="btn primary" ref={chooser} disabled={off} onClick={() => setPicking(true)}>
-            {t("settings.choose_folder")}
+            {t(item.picker === "file" ? "settings.choose_file" : "settings.choose_folder")}
             <span className="sr"> {label}</span>
           </button>
           {String(draft) !== "" && (
@@ -298,6 +298,7 @@ export function SettingRow(props: {
       {picking && (
         <FolderPicker
           start={String(draft) || undefined}
+          files={item.picker === "file" ? (item.file_types ?? []) : undefined}
           onClose={() => {
             setPicking(false);
             restoreFocus(() => chooser.current);
@@ -325,7 +326,7 @@ export function ItemFields(props: {
   /** Lets secret settings be typed (a source's form); left out, they are plain text boxes for where they are kept. */
   secret?: SecretInput;
 }) {
-  const canList = useFolderListing(props.items.some((i) => i.picker === "folder"));
+  const canList = useFolderListing(props.items.some((i) => i.picker));
   return (
     <>
       {props.items.map((item) => {

@@ -443,6 +443,60 @@ describe("adding a source", () => {
     await waitFor(() => expect(post(calls, "POST settings")).toEqual({ changes: {}, reset: ["watch.sources"], fingerprint: "fp-2" }));
   });
 
+  test("a calendar file on this computer is picked from a list, not typed, and sent as the file's path", async () => {
+    const user = userEvent.setup();
+    const enc = encodeURIComponent;
+    const calendar = kind("calendar", "A calendar file", null, [
+      field("file", "text", { picker: "file", file_types: [".ics"] }),
+      field("expand_days", "integer", { value: 60, default: 60 }),
+    ]);
+    const { calls } = open([], [], {
+      "GET watch/kinds": () => [...KINDS, calendar],
+      "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["Calendars"], files: [] }),
+      [`GET setup/folders?files=${enc(".ics")}`]: () => ({ path: "/home/me", parent: "/home", folders: ["Calendars"], files: ["notes.ics"] }),
+      [`GET setup/folders?path=${enc("/home/me/Calendars")}&files=${enc(".ics")}`]: () => ({
+        path: "/home/me/Calendars",
+        parent: "/home/me",
+        folders: [],
+        files: ["work.ics", "home.ics"],
+      }),
+      "POST watch/sources": () => SAVED([], [{ id: "work-file" }]),
+    });
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    await user.click(await screen.findByRole("radio", { name: "A calendar file" }));
+    await user.type(screen.getByLabelText("Name"), "Work file");
+    await user.click(await screen.findByRole("button", { name: /Choose a file…/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Choose a file" });
+    // Folders to open and files to choose are in one list; a file is chosen, not typed, and no folder is "used".
+    expect(await within(dialog).findByRole("button", { name: "Calendars" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Use notes.ics" })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Use this folder" })).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Calendars" }));
+    await user.click(await within(dialog).findByRole("button", { name: "Use work.ics" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Choose a file" })).toBeNull());
+    expect(screen.getByLabelText("About file")).toHaveValue("/home/me/Calendars/work.ics");
+    await user.click(screen.getByRole("button", { name: "Add source" }));
+    await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
+    expect(post(calls, "POST watch/sources")).toMatchObject({
+      connector: "calendar",
+      label: "Work file",
+      settings: { file: "/home/me/Calendars/work.ics" },
+    });
+  });
+
+  test("where the app can't list folders (hosted), a file is not offered from a list", async () => {
+    const user = userEvent.setup();
+    const calendar = kind("calendar", "A calendar file", null, [field("file", "text", { picker: "file", file_types: [".ics"] })]);
+    open([], [], {
+      "GET watch/kinds": () => [...KINDS, calendar],
+      "GET setup/folders": () => new Refuse(403, "Folders on the server can't be browsed; type the path."),
+    });
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    await user.click(await screen.findByRole("radio", { name: "A calendar file" }));
+    expect(await screen.findByLabelText("About file")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Choose a file/ })).toBeNull());
+  });
+
   test("a refusal that names a field is shown on the form, which stays open with what was typed", async () => {
     const user = userEvent.setup();
     open([], [], { "POST watch/sources": () => new Refuse(400, "address: Field required") });

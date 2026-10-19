@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import difflib
 import hashlib
+import json
 import os
 import threading
 import time
@@ -212,7 +213,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
             first = err.errors()[0]
             where = ".".join(str(p) for p in first["loc"]) or "settings"
             raise ConnectorError("no_access", f"its settings don't fit: {where}: {first['msg']}") from None
-        poll = _poll(store, connector, settings, state, ws)
+        poll = _poll(store, connector, settings, state, ws, cfg, now)
     except ConnectorError as err:
         outcome = {"offline": "offline", "throttled": "throttled"}.get(err.kind, "failed")
         wait = err.retry_after if err.retry_after is not None else source.every_minutes * 60
@@ -238,7 +239,9 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     baseline = not read_before and source.first_run in ("baseline", "recent", "intake")
     recent = timedelta(hours=source.first_run_hours) if baseline and source.first_run == "recent" else None
     result = _compare(ws, store, cfg, source, poll, now, baseline, recent, router)
-    from engine import source_intake
+    from engine import source_entries, source_intake
+
+    source_entries.keep(store, cfg, source, poll.items, now)
 
     back_to = source_intake.looked_back_to(source, poll.items, now) if taking_in else None
     _record(
@@ -273,8 +276,15 @@ def _after_mail(ws: Any, store: Any, cfg: Any, now: datetime) -> None:
         sent_version.match_sent(ws, store, cfg, now)
 
 
-def _poll(store: Any, connector: Connector, settings: Any, state: dict[str, Any], ws: Any) -> Any:
-    context = ConnectorContext(workspace_root=ws.root)
+def _poll(
+    store: Any, connector: Connector, settings: Any, state: dict[str, Any], ws: Any, cfg: Any, now: datetime
+) -> Any:
+    context = ConnectorContext(
+        workspace_root=ws.root,
+        now=now,
+        timezone=cfg.workspace.user.timezone,
+        hosted=cfg.server.mode == "hosted",
+    )
     if "/" not in connector.name:
         return connector.poll(settings, state, context)
     return store.plugins.poll_connector(connector, settings, state, context)
@@ -471,7 +481,7 @@ def _awaiting_sorting(
             author=sd.get("author"),
             changed_at=sd.get("changed_at"),
             link=sd.get("link"),
-            event=EventDetails(**sd["event"]) if sd.get("event") else None,
+            event=EventDetails.from_dict(sd["event"]) if sd.get("event") else None,
             message=_message_of(sd.get("message")),
         )
         facts = _change(cfg, source, item, "new", None)
@@ -612,14 +622,19 @@ def data_level_of(cfg: Any, source: Any) -> str:
 
 def _details(item: SourceItem) -> dict[str, Any]:
     """What a calendar or mail item is, as the snapshot keeps it."""
-    from dataclasses import asdict
-
     return {
         "link": item.link,
         "changed_at": item.changed_at,
-        "event": asdict(item.event) if item.event is not None else None,
+        "event": _event_dict(item.event),
         "message": _message_dict(item.message),
     }
+
+
+def _event_dict(event: Any) -> dict[str, Any] | None:
+    """An event's details as plain data, the way the snapshot keeps them (its lists as lists)."""
+    from dataclasses import asdict
+
+    return json.loads(json.dumps(asdict(event))) if event is not None else None
 
 
 def _change(cfg: Any, source: Any, item: SourceItem, change: str, old: str | None) -> dict[str, Any]:
@@ -914,7 +929,7 @@ def hand_in_snapshot_in(
         author=data.get("author"),
         changed_at=data.get("changed_at"),
         link=data.get("link"),
-        event=EventDetails(**data["event"]) if data.get("event") else None,
+        event=EventDetails.from_dict(data["event"]) if data.get("event") else None,
         message=_message_of(data.get("message")),
     )
     return _hand_in(
@@ -943,7 +958,7 @@ def item_of_snapshot(ws: Any, data: dict[str, Any]) -> SourceItem:
         author=data.get("author"),
         changed_at=data.get("changed_at"),
         link=data.get("link"),
-        event=EventDetails(**data["event"]) if data.get("event") else None,
+        event=EventDetails.from_dict(data["event"]) if data.get("event") else None,
         message=_message_of(data.get("message")),
     )
 
@@ -1009,7 +1024,7 @@ def _hand_in_window(
             author=data.get("author"),
             changed_at=data.get("changed_at"),
             link=data.get("link"),
-            event=EventDetails(**data["event"]) if data.get("event") else None,
+            event=EventDetails.from_dict(data["event"]) if data.get("event") else None,
             message=_message_of(data.get("message")),
         )
         facts = _change(cfg, source, item, "new", None)

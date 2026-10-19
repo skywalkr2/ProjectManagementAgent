@@ -745,6 +745,29 @@ class Report(Record):
     )
 
 
+class SnapshotPerson(BaseModel):
+    """Someone on a calendar item as its source gave them (see EventPerson in the connectors)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    address: str | None = None
+    name: str | None = None
+    response: str | None = None
+
+
+class SnapshotOccurrence(BaseModel):
+    """One date of a repeating calendar item (see EventOccurrence in the connectors)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start: str
+    end: str | None = None
+    was: str | None = None
+    cancelled: bool = False
+    title: str | None = None
+    where: str | None = None
+
+
 class SnapshotEvent(BaseModel):
     """A calendar item's details as its source gave them (see EventDetails in the connectors)."""
 
@@ -756,6 +779,12 @@ class SnapshotEvent(BaseModel):
     where: str | None = None
     cancelled: bool = False
     repeats: str | None = None
+    occurrences: list[SnapshotOccurrence] = Field(default_factory=list)
+    organizer: SnapshotPerson | None = None
+    attendees: list[SnapshotPerson] = Field(default_factory=list)
+    method: str | None = None
+    notes: list[str] = Field(default_factory=list)
+    entries: bool = False
 
 
 class SnapshotMessage(BaseModel):
@@ -1390,6 +1419,22 @@ class Rule(Record):
     )
 
 
+class EntryPerson(BaseModel):
+    """Someone on a calendar entry: who invited, or who is asked. Resolved to a person the workspace knows by the
+    address they can be reached at."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    address: str | None = Field(None, description="Their address, as the calendar gives it.")
+    name: str | None = Field(None, description="Their name, as the calendar gives it.")
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The id of the person it is, when the workspace knows them."
+    )
+    response: str | None = Field(
+        None, description="Their answer to the invitation, as the calendar says it (accepted, tentative, declined...)."
+    )
+
+
 class CalendarEntry(Record):
     """Something dated in the app's own calendar: a day or a moment, or a range of days or moments. Added by
     `event.add` from what came in, and by plugins and the person later; never written to a calendar service."""
@@ -1413,6 +1458,22 @@ class CalendarEntry(Record):
         None, description="The id of the series it is one instance of, if any."
     )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
+    key: str | None = Field(
+        None,
+        description="For an entry kept from a calendar source: which date of which event it is, as the source names "
+        "it, so a read of the source updates this entry and no other.",
+    )
+    where: str | None = Field(None, description="Where it happens, as the calendar says.")
+    cancelled: bool = Field(False, description="The calendar says it was called off, or the series skips this date.")
+    invitation: bool = Field(False, description="It came as an invitation: someone else asked the person to it.")
+    organizer: EntryPerson | None = Field(None, description="Who invited, or who organizes it.")
+    attendees: list[EntryPerson] = Field(default_factory=list, description="Who is asked, with each one's answer.")
+    response: str | None = Field(
+        None, description="The person's own answer to the invitation, when the attendee list holds them."
+    )
+    notes: list[str] = Field(
+        default_factory=list, description="What had to be guessed in reading it (a time zone, a repeat rule)."
+    )
     evidence: Evidence | None = Field(None, description="The words that justify it.")
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
@@ -1987,7 +2048,13 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("applies_to.except[]", "project"),
     ],
     "signal": [("run", "run"), ("changeset", "changeset"), ("person", "person")],
-    "event": [("project", "project"), ("series", "series"), ("source", "source")],
+    "event": [
+        ("project", "project"),
+        ("series", "series"),
+        ("source", "source"),
+        ("organizer.person", "person"),
+        ("attendees[].person", "person"),
+    ],
     "series": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("question", "question"), ("source", "source")],
     "lesson": [*KNOWLEDGE_REFERENCES, ("signal", "signal")],

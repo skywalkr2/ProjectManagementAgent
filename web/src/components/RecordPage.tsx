@@ -16,6 +16,7 @@ import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
 import { PersonDrawer } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
+import { Attendees } from "./Attendees";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
@@ -71,6 +72,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     ? Object.entries(data.fields)
         // The id of the input an item came from is shown as its "Where it came from" link instead.
         .filter(([name]) => name !== "id" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
+        // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
+        .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
         .map(([name, value]) => ({ name, lines: shown(name, value) }))
         .filter((row) => row.lines.length > 0)
     : [];
@@ -113,6 +116,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         <div className="record-grid">
           <div className="record-main">
           {kind === "action" && <PromiseWhy action={id} quiet omitOrigin />}
+          {kind === "event" && <Attendees fields={data.fields} names={names} />}
           {page.data && <RecordActivity page={page.data} />}
           {data.long_text.map((field) => (
             <TextSection
@@ -175,6 +179,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     </section>
   );
 }
+
+/** The fields of a calendar entry the page shows in its own way (its people and its answer), or not at all (its key). */
+const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response"]);
 
 /** The kinds of record a change can be asked for. */
 const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);

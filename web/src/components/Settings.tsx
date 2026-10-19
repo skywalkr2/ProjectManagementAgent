@@ -81,7 +81,7 @@ export function Settings(props: {
   const content = useRef<HTMLDivElement>(null);
 
   const everything = settings.data?.items ?? [];
-  const canList = useFolderListing(everything.some((i) => i.picker === "folder"));
+  const canList = useFolderListing(everything.some((i) => i.picker));
   const listed = navSections(everything, { lists: (lists.data?.length ?? 0) > 0, files: (forms.data?.length ?? 0) > 0 });
   const wanted = props.section ?? chosen;
   const loaded = settings.isSuccess && !lists.isPending && !forms.isPending;

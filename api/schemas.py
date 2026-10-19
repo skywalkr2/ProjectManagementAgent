@@ -1524,7 +1524,12 @@ class AgendaItemView(BaseModel):
         description="An entry in the app's own calendar (recorded from what came in), not an event read from a "
         "connected calendar. Its end is the last day or moment, included.",
     )
-    series: str | None = Field(None, description="For an own entry: the series it is one meeting of.")
+    entry: str | None = Field(
+        None,
+        description="For an event read from a connected calendar: the id of the calendar entry kept for this date "
+        "(its page shows who is asked), when there is one.",
+    )
+    series: str | None = Field(None, description="The series this date or entry is one meeting of, when it is.")
     open_items: int = Field(
         0, description="For a meeting of a series: how many open actions and questions sit on it (never shown as zero)."
     )
@@ -2339,6 +2344,10 @@ class SettingItem(BaseModel):
     picker: Literal["folder", "file"] | None = Field(
         None, description="Offer a chooser for this path instead of typing it."
     )
+    file_types: list[str] = Field(
+        default_factory=list,
+        description="With a file chooser: the endings of the files it offers (such as .ics), so it lists only those.",
+    )
     plugin: str | None = Field(
         None,
         description="The add-on whose setting this is (its file is plugins/<name>); its name and label are in "
@@ -2481,6 +2490,7 @@ class FolderListView(BaseModel):
     path: str
     parent: str | None = None
     folders: list[str]
+    files: list[str] = Field(default_factory=list, description="With a file ending asked for: the files that match.")
 
 
 class BackupFolderAdd(BaseModel):

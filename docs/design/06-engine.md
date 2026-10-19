@@ -56,6 +56,23 @@ place and whether it was cancelled; a message's sender, received time and whethe
 item's snapshot, so the agenda and the list of what came in on Today need no AI call (6.15); the text still carries everything
 the assistant reads.
 
+**Calendars from .ics.** The `calendar` connector reads a published link or, in an app on the person's own computer, a file picked
+from a list (a path setting, never typed; a hosted app refuses a file plainly and asks for the link). A file is read again each time
+the source is read, so a change in it is a change in the source. A repeating event is one item for its series with every date in
+`expand_days` (default 60) listed on it, expanded by `engine/recurrence.py`; a repeat rule the engine doesn't support shows the
+first date with a note, never nothing. A time zone written as a Windows name is read through the shipped list
+(`engine/defaults/windows_zones.yaml`); a zone nobody knows, or a time with none, is read in the calendar's own zone, else the
+person's, with a note. Each date is kept as a calendar entry by rules (`engine/source_entries.py`; no AI, and nothing is written
+to the calendar): its place, who organizes it and who is asked (each resolved to a person by address, with their answer), whether it
+came as an invitation (the calendar sent it as a request, or its organizer isn't the person) and the person's own answer. A
+repeating event's entries are one series. A moved date moves only its own entry, and a promise due at it follows (6.33); a date
+called off, or skipped by its series, marks only its entry and gives a promise due at it one news line, its date unchanged. The
+agenda lists each date once and links its entry, whose page lists the people asked. *Built so far (P17, B-5):*
+`tests/test_ics_full.py` (the connector, a source's read, the entries, the agenda and the add-source routes),
+`tests/test_calendar_mail.py`, `web/src/components/Sources.test.tsx` (the file picker),
+`web/src/components/RecordPageRecords.test.tsx` (the people asked) and `web/src/components/TodayRail.test.tsx` (the link). Left: an
+invitation attached to a mail, with Undo (P17 part 3).
+
 **Reaching the network.** A plugin's connector reaches the network only through the core's client (decisions, 2026-10-11,
 "Plugins reach the network only through the core's client…"): only hosts the manifest declares in `requires.network`, over
 HTTPS (plain HTTP only on this computer), with redirects checked against the same list and answers capped in size. It gets the

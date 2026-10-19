@@ -70,6 +70,7 @@ class FolderList:
     path: str
     parent: str | None
     folders: list[str] = field(default_factory=list)
+    files: list[str] = field(default_factory=list)
 
 
 # ---- steps -----------------------------------------------------------------------------------------------------------
@@ -315,17 +316,23 @@ def check_backup_folder(ws: Any, raw: str) -> FolderCheck:
     return FolderCheck(str(folder), True, None, round(free, 1))
 
 
-def list_folders(raw: str | None) -> FolderList:
-    """The folders inside one folder on this computer, to pick a backup or synced folder. Hidden folders are left
-    out. Only offered when the app runs on the person's own computer."""
+def list_folders(raw: str | None, files: str | None = None) -> FolderList:
+    """The folders inside one folder on this computer, to pick a backup or synced folder, and with `files` (endings
+    such as `.ics`, separated by commas) the files that end that way, to pick a file. Hidden ones are left out. Only
+    offered when the app runs on the person's own computer."""
     folder = Path(raw).expanduser() if raw else Path.home()
+    endings = tuple(e.strip().lower() for e in (files or "").split(",") if e.strip())
     try:
         folder = folder.resolve(strict=True)
-        names = sorted((p.name for p in folder.iterdir() if p.is_dir() and not p.name.startswith(".")), key=str.lower)
+        inside = [p for p in folder.iterdir() if not p.name.startswith(".")]
+        names = sorted((p.name for p in inside if p.is_dir()), key=str.lower)
+        found = sorted(
+            (p.name for p in inside if endings and p.is_file() and p.name.lower().endswith(endings)), key=str.lower
+        )
     except OSError as err:
         raise StoreError(f"that folder can't be opened: {err.strerror or err}") from None
     parent = str(folder.parent) if folder.parent != folder else None
-    return FolderList(str(folder), parent, names[:500])
+    return FolderList(str(folder), parent, names[:500], found[:500])
 
 
 # ---- AI accounts -----------------------------------------------------------------------------------------------------

@@ -29,6 +29,7 @@ class AgendaItem:
     cancelled: bool
     days: list[date] = field(default_factory=list)
     own: bool = False  # an entry in the app's own calendar, not an event read from a connected calendar
+    entry: str | None = None  # the calendar entry kept for this date of an event read from a connected calendar
     series: str | None = None  # the series an own entry is one meeting of
     open_items: int = 0  # for such a meeting: how many open actions and questions sit on it
 
@@ -65,30 +66,71 @@ def agenda(store: Any, cfg: Any, now: datetime) -> list[AgendaItem]:
     first = now.astimezone(here).date()
     days = [first + timedelta(days=n) for n in range(cfg.ui.today.agenda_days_ahead + 1)]
     found = []
-    for snap in store.read().list("snapshot"):
+    view = store.read()
+    kept = {
+        (e.data["source"], e.data["key"]): e for e in view.list("event") if e.data.get("key") and e.data.get("source")
+    }
+    for snap in view.list("snapshot"):
         data = snap.data
         event = data.get("event")
         if data.get("gone") or not event:
             continue
-        on = [d for d in days if _falls_on(event, d, here)]
-        if not on:
-            continue
-        found.append(
-            AgendaItem(
-                snapshot=snap.id,
-                source=data["source"],
-                title=data["title"],
-                start=event["start"],
-                end=event.get("end"),
-                all_day=bool(event.get("all_day")),
-                where=event.get("where"),
-                link=data.get("link"),
-                cancelled=bool(event.get("cancelled")),
-                days=on,
+        for date_ in _dates(event, data["title"], data["key"]):
+            on = [d for d in days if _falls_on(date_, d, here)]
+            if not on:
+                continue
+            entry = kept.get((data["source"], date_["key"]))
+            found.append(
+                AgendaItem(
+                    snapshot=snap.id,
+                    source=data["source"],
+                    title=date_["title"],
+                    start=date_["start"],
+                    end=date_["end"],
+                    all_day=bool(event.get("all_day")),
+                    where=date_["where"],
+                    link=data.get("link"),
+                    cancelled=date_["cancelled"],
+                    days=on,
+                    entry=entry.id if entry is not None else None,
+                    series=entry.data.get("series") if entry is not None else None,
+                    open_items=_open_on(view, entry, days[0], here)
+                    if entry is not None and entry.data.get("series")
+                    else 0,
+                )
             )
-        )
     found.sort(key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
     return [*found, *_own_entries(store, days, here)]
+
+
+def _dates(event: dict[str, Any], title: str, key: str) -> list[dict[str, Any]]:
+    """The dates an event item stands for: each date of a series the connector expanded, or the one date it has. Each is
+    a start, an end, a title, a place, whether it is called off, and the key of the entry kept for it."""
+    listed = event.get("occurrences") or []
+    if not listed:
+        return [
+            {
+                "start": event["start"],
+                "end": event.get("end"),
+                "all_day": bool(event.get("all_day")),
+                "title": title,
+                "where": event.get("where"),
+                "cancelled": bool(event.get("cancelled")),
+                "key": key,
+            }
+        ]
+    return [
+        {
+            "start": o["start"],
+            "end": o.get("end"),
+            "all_day": bool(event.get("all_day")),
+            "title": o.get("title") or title,
+            "where": o.get("where") or event.get("where"),
+            "cancelled": bool(o.get("cancelled")),
+            "key": f"{key}#{o.get('was') or o['start']}",
+        }
+        for o in listed
+    ]
 
 
 def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaItem]:
@@ -98,6 +140,8 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaIte
     view = store.read()
     for entry in view.list("event"):
         data = entry.data
+        if data.get("key"):
+            continue  # kept from a connected calendar: shown as that calendar's event, not a second time
         try:
             start = entry_time(data["start"])
             end = entry_time(data["end"]) if data.get("end") else start

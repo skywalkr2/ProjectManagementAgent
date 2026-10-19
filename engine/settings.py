@@ -94,6 +94,7 @@ class Setting:
     plugin: str | None = None  # the add-on whose settings these are; None for the app's own
     choices: str | None = None  # the named list a text setting picks from (a key of CHOICE_LISTS), when it has one
     secret: bool = False  # the value is a reference to a secret (a password, a key, a private address)
+    file_types: list[str] = field(default_factory=list)  # with picker "file": the endings it offers (".ics")
 
 
 @dataclass
@@ -271,6 +272,7 @@ def _walk(
                 picker=extra.get("picker") if isinstance(extra.get("picker"), str) else None,
                 choices=list_name,
                 secret=isinstance(info.description, SecretHint),
+                file_types=[str(x) for x in extra.get("file_types") or [] if isinstance(x, str)],
             )
         )
 
@@ -280,6 +282,14 @@ def secret_fields(model: type[BaseModel]) -> list[str]:
     found: list[Setting] = []
     _walk(model, ["settings"], {}, {}, {}, found)
     return [s.key.removeprefix("settings.") for s in found if s.secret]
+
+
+def picked_fields(model: type[BaseModel], picker: str) -> list[str]:
+    """The dotted names of a settings model's fields the screen fills with a chooser of this kind ("folder" or
+    "file"): paths on the computer the app runs on."""
+    found: list[Setting] = []
+    _walk(model, ["settings"], {}, {}, {}, found)
+    return [s.key.removeprefix("settings.") for s in found if s.picker == picker]
 
 
 def _with_current(options: list[str], value: Any) -> list[str]:

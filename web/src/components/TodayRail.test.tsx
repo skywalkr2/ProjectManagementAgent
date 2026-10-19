@@ -170,6 +170,22 @@ test("a meeting of a series says how many open items wait for it, linking to the
   expect(quiet).not.toHaveTextContent("0");
 });
 
+test("a date of an event read from a calendar links to its entry's page, where the people asked are listed", async () => {
+  open({
+    "GET today/agenda": () => [
+      event({ title: "Harbor stand-up", start: at(TODAY, 9), entry: "EVT-7", series: "SER-2", open_items: 2 }),
+      event({ title: "Standup", start: at(TODAY, 10) }),
+    ],
+  });
+  const col = await column("Agenda");
+  const rows = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
+  const linked = rows.find((row) => row.textContent?.includes("Harbor stand-up"))!;
+  expect(within(linked).getByRole("link", { name: "Harbor stand-up" }).getAttribute("href")).toMatch(/#records\/event\/EVT-7$/);
+  expect(within(linked).getByRole("link", { name: "2 open" }).getAttribute("href")).toMatch(/#records\/series\/SER-2$/);
+  const plain = rows.find((row) => row.textContent?.includes("Standup") && !row.textContent?.includes("Harbor"))!;
+  expect(within(plain).queryByRole("link")).toBeNull();
+});
+
 test("the now line goes at the end of today's list when everything has ended, and is absent with no timed events", async () => {
   open({ "GET today/agenda": () => [event({ title: "Early", start: at(TODAY, 8), end: at(TODAY, 9) })] });
   const col = await column("Agenda");

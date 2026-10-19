@@ -18,7 +18,7 @@ For a plugin's own tests, install the host from its repository without the web s
 
 One distribution may ship several plugins. They may share a helper package of their own (a module neither plugin registers from); what a plugin may not do is import another plugin's registered package or read its records.
 
-Import everything from `engine.plugin_api`: `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `ItemFile`, `ExtractError`, `EventDetails`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `TODAY_GROUPS`, `PacketContext`, `LongText`, `Unit`, `Part`, `KnowledgeParts`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
+Import everything from `engine.plugin_api`: `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `ItemFile`, `ExtractError`, `EventDetails`, `EventOccurrence`, `EventPerson`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `TODAY_GROUPS`, `PacketContext`, `LongText`, `Unit`, `Part`, `KnowledgeParts`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
 
 ## The manifest: plugin.yaml
 
@@ -872,7 +872,7 @@ A file an item carries (a mail's attachment, a document in a folder). `name`: it
 
 ### EventDetails
 
-What a calendar item is, for the day's agenda. `start` and `end`: ISO 8601 date-times with their offset (`2026-03-02T09:30:00+01:00` or `...Z`), or plain dates (`2026-03-02`) with `all_day`; an all-day `end` is the day after the last day, as calendars write it. `where`: the place or the meeting address, as the service says. `cancelled`: the organizer called it off. `repeats`: the repeat rule as the service wrote it, for an item that stands for a series the connector didn't expand into its occurrences (the agenda can't place those).
+What a calendar item is, for the day's agenda. `start` and `end`: ISO 8601 date-times with their offset (`2026-03-02T09:30:00+01:00` or `...Z`), or plain dates (`2026-03-02`) with `all_day`; an all-day `end` is the day after the last day, as calendars write it. `where`: the place or the meeting address, as the service says. `cancelled`: the organizer called it off. `repeats`: the repeat rule as the service wrote it, for an item that stands for a series; with `occurrences` empty the agenda can't place its dates. `occurrences`: the dates of a series the connector expanded over its window (the first in `start` and `end`), each with its own start and end, so the agenda shows every date and a changed or called-off date touches only that date. `organizer` and `attendees`: who invited and who is asked. `method`: how the calendar says the event was sent (`REQUEST` for an invitation). `notes`: plain sentences about how the event was read that the person should see (a repeat rule that wasn't understood, a time zone that was guessed). `entries`: ask the core to keep each date as a calendar entry of its own (with its attendees), so a promise can be due at it and move with it.
 
 | Field | Type | Default |
 |---|---|---|
@@ -882,6 +882,35 @@ What a calendar item is, for the day's agenda. `start` and `end`: ISO 8601 date-
 | `where` | str \| None | `None` |
 | `cancelled` | bool | `False` |
 | `repeats` | str \| None | `None` |
+| `occurrences` | tuple[EventOccurrence, ...] | `()` |
+| `organizer` | EventPerson \| None | `None` |
+| `attendees` | tuple[EventPerson, ...] | `()` |
+| `method` | str \| None | `None` |
+| `notes` | tuple[str, ...] | `()` |
+| `entries` | bool | `False` |
+
+### EventPerson
+
+Someone on a calendar event. `address`: their address, without `mailto:`. `name`: as the calendar names them. `response`: their answer to the invitation as the service says it, in lower case (accepted, declined, tentative, needs-action, delegated); None when it says none.
+
+| Field | Type | Default |
+|---|---|---|
+| `address` | str \| None | `None` |
+| `name` | str \| None | `None` |
+| `response` | str \| None | `None` |
+
+### EventOccurrence
+
+One date of a repeating event the connector expanded. `start` and `end`: as on `EventDetails`. `was`: the start it had in the series before it was moved, set only for a moved date (the series' own date is the date's identity, so a moved date is still the same one). `cancelled`: this date was called off. `title`, `where`: what differs from the series for a changed date; None for the series' own.
+
+| Field | Type | Default |
+|---|---|---|
+| `start` | str | required |
+| `end` | str \| None | `None` |
+| `was` | str \| None | `None` |
+| `cancelled` | bool | `False` |
+| `title` | str \| None | `None` |
+| `where` | str \| None | `None` |
 
 ### MessageDetails
 
@@ -1413,6 +1442,22 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `project` | str \| None | `None` | The id of the project it is about, if any. |
 | `series` | str \| None | `None` | The id of the series it is one instance of, if any. |
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
+| `key` | str \| None | `None` | For an entry kept from a calendar source: which date of which event it is, as the source names it, so a read of the source updates this entry and no other. |
+| `where` | str \| None | `None` | Where it happens, as the calendar says. |
+| `cancelled` | bool | `False` | The calendar says it was called off, or the series skips this date. |
+| `invitation` | bool | `False` | It came as an invitation: someone else asked the person to it. |
+| `organizer` | EntryPerson \| None | see below | Who invited, or who organizes it. |
+| `organizer.address` | str \| None | `None` | Their address, as the calendar gives it. |
+| `organizer.name` | str \| None | `None` | Their name, as the calendar gives it. |
+| `organizer.person` | str \| None | `None` | The id of the person it is, when the workspace knows them. |
+| `organizer.response` | str \| None | `None` | Their answer to the invitation, as the calendar says it (accepted, tentative, declined...). |
+| `attendees` | list[EntryPerson] | `[]` | Who is asked, with each one's answer. |
+| `attendees[].address` | str \| None | `None` | Their address, as the calendar gives it. |
+| `attendees[].name` | str \| None | `None` | Their name, as the calendar gives it. |
+| `attendees[].person` | str \| None | `None` | The id of the person it is, when the workspace knows them. |
+| `attendees[].response` | str \| None | `None` | Their answer to the invitation, as the calendar says it (accepted, tentative, declined...). |
+| `response` | str \| None | `None` | The person's own answer to the invitation, when the attendee list holds them. |
+| `notes` | list[str] | `[]` | What had to be guessed in reading it (a time zone, a repeat rule). |
 | `evidence` | Evidence \| None | see below | The words that justify it. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
@@ -1811,6 +1856,24 @@ What a watched item looked like when last read: its text is kept in the sources 
 | `event.where` | str \| None | `None` |  |
 | `event.cancelled` | bool | `False` |  |
 | `event.repeats` | str \| None | `None` |  |
+| `event.occurrences` | list[SnapshotOccurrence] | `[]` |  |
+| `event.occurrences[].start` | str | required |  |
+| `event.occurrences[].end` | str \| None | `None` |  |
+| `event.occurrences[].was` | str \| None | `None` |  |
+| `event.occurrences[].cancelled` | bool | `False` |  |
+| `event.occurrences[].title` | str \| None | `None` |  |
+| `event.occurrences[].where` | str \| None | `None` |  |
+| `event.organizer` | SnapshotPerson \| None | see below |  |
+| `event.organizer.address` | str \| None | `None` |  |
+| `event.organizer.name` | str \| None | `None` |  |
+| `event.organizer.response` | str \| None | `None` |  |
+| `event.attendees` | list[SnapshotPerson] | `[]` |  |
+| `event.attendees[].address` | str \| None | `None` |  |
+| `event.attendees[].name` | str \| None | `None` |  |
+| `event.attendees[].response` | str \| None | `None` |  |
+| `event.method` | str \| None | `None` |  |
+| `event.notes` | list[str] | `[]` |  |
+| `event.entries` | bool | `False` |  |
 | `message` | SnapshotMessage \| None | see below | For a mail item: from whom and when. |
 | `message.sender` | str \| None | `None` |  |
 | `message.received` | str \| None | `None` |  |

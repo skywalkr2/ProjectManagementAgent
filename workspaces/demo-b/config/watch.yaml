@@ -27,8 +27,9 @@ sources:
     first_run: recent     # the first read hands in what happens within a day of now; the rest is only noted
     first_run_hours: 24
     settings:
-      address: env:WORK_CALENDAR_ADDRESS   # the private address, kept outside the files
-      days_ahead: 30
+      address: env:WORK_CALENDAR_ADDRESS   # the private address, kept outside the files; or give file: and a path
+      days_ahead: 30        # how far ahead single events are read
+      expand_days: 60       # how far ahead each date of a repeating event is listed
   - id: mail
     connector: mailbox
     label: Project mail

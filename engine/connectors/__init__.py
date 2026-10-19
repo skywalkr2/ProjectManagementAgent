@@ -28,12 +28,44 @@ log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
+class EventPerson:
+    """Someone on a calendar event. `address`: their address, without `mailto:`. `name`: as the calendar names them.
+    `response`: their answer to the invitation as the service says it, in lower case (accepted, declined, tentative,
+    needs-action, delegated); None when it says none."""
+
+    address: str | None = None
+    name: str | None = None
+    response: str | None = None
+
+
+@dataclass(frozen=True)
+class EventOccurrence:
+    """One date of a repeating event the connector expanded. `start` and `end`: as on `EventDetails`. `was`: the
+    start it had in the series before it was moved, set only for a moved date (the series' own date is the date's
+    identity, so a moved date is still the same one). `cancelled`: this date was called off. `title`, `where`: what
+    differs from the series for a changed date; None for the series' own."""
+
+    start: str
+    end: str | None = None
+    was: str | None = None
+    cancelled: bool = False
+    title: str | None = None
+    where: str | None = None
+
+
+@dataclass(frozen=True)
 class EventDetails:
     """What a calendar item is, for the day's agenda. `start` and `end`: ISO 8601 date-times with their offset
     (`2026-03-02T09:30:00+01:00` or `...Z`), or plain dates (`2026-03-02`) with `all_day`; an all-day `end` is the day
     after the last day, as calendars write it. `where`: the place or the meeting address, as the service says.
     `cancelled`: the organizer called it off. `repeats`: the repeat rule as the service wrote it, for an item that
-    stands for a series the connector didn't expand into its occurrences (the agenda can't place those)."""
+    stands for a series; with `occurrences` empty the agenda can't place its dates. `occurrences`: the dates of a
+    series the connector expanded over its window (the first in `start` and `end`), each with its own start and end,
+    so the agenda shows every date and a changed or called-off date touches only that date. `organizer` and
+    `attendees`: who invited and who is asked. `method`: how the calendar says the event was sent (`REQUEST` for an
+    invitation). `notes`: plain sentences about how the event was read that the person should see (a repeat rule
+    that wasn't understood, a time zone that was guessed). `entries`: ask the core to keep each date as a calendar
+    entry of its own (with its attendees), so a promise can be due at it and move with it."""
 
     start: str
     end: str | None = None
@@ -41,6 +73,26 @@ class EventDetails:
     where: str | None = None
     cancelled: bool = False
     repeats: str | None = None
+    occurrences: tuple[EventOccurrence, ...] = ()
+    organizer: EventPerson | None = None
+    attendees: tuple[EventPerson, ...] = ()
+    method: str | None = None
+    notes: tuple[str, ...] = ()
+    entries: bool = False
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> EventDetails:
+        """The details as the snapshot keeps them (nested values as plain data) back as they were handed in."""
+        organizer = data.get("organizer")
+        return EventDetails(
+            **{
+                **data,
+                "occurrences": tuple(EventOccurrence(**o) for o in data.get("occurrences") or ()),
+                "organizer": EventPerson(**organizer) if organizer else None,
+                "attendees": tuple(EventPerson(**a) for a in data.get("attendees") or ()),
+                "notes": tuple(data.get("notes") or ()),
+            }
+        )
 
 
 @dataclass(frozen=True)
@@ -196,6 +248,25 @@ def _aware(value: str) -> datetime:
     return when
 
 
+def _check_event_people(key: str, event: EventDetails) -> None:
+    people = [*event.attendees, *([event.organizer] if event.organizer is not None else [])]
+    if not isinstance(event.attendees, (tuple, list)) or not all(isinstance(p, EventPerson) for p in people):
+        raise ValueError(f"event {key!r}: attendees is a list of EventPerson, and organizer an EventPerson")
+    if not isinstance(event.occurrences, (tuple, list)) or not all(
+        isinstance(o, EventOccurrence) for o in event.occurrences
+    ):
+        raise ValueError(f"event {key!r}: occurrences is a list of EventOccurrence")
+    for occurrence in event.occurrences:
+        try:
+            moment(occurrence.start, all_day=event.all_day)
+            if occurrence.end:
+                moment(occurrence.end, all_day=event.all_day)
+        except (TypeError, ValueError) as err:
+            raise ValueError(f"event {key!r}: an occurrence: {err}") from None
+    if not isinstance(event.notes, (tuple, list)) or not all(isinstance(n, str) for n in event.notes):
+        raise ValueError(f"event {key!r}: notes is a list of text")
+
+
 def _check_details(item: SourceItem) -> None:
     if item.event is not None and item.message is not None:
         raise ValueError(f"item {item.key!r} is an event or a message, not both")
@@ -210,6 +281,7 @@ def _check_details(item: SourceItem) -> None:
             raise ValueError(f"event {item.key!r}: {err}") from None
         if end is not None and end < start:
             raise ValueError(f"event {item.key!r} ends before it starts")
+        _check_event_people(item.key, event)
     if item.message is not None:
         if not isinstance(item.message, MessageDetails):
             raise ValueError("a SourceItem's message is a MessageDetails")
@@ -239,6 +311,12 @@ class ConnectorContext:
     keep_secret: Callable[[str, str], None] | None = None  # keep a declared secret (a refreshed token) on this computer
     access_token: Callable[[str], str] | None = None  # a current token for one of the plugin's own sign-ins
     granted: Callable[[str], set[str]] | None = None  # the scopes the person allowed for one of its sign-ins
+    #: The moment of this read, and the person's time zone (an IANA name), for the core's own connectors: a window
+    #: and times with no zone are read against them. Not given to a plugin's connector.
+    now: datetime | None = None
+    timezone: str | None = None
+    #: The app is hosted, so a core connector doesn't read files from the computer it runs on.
+    hosted: bool = False
 
 
 @dataclass(frozen=True)
@@ -376,7 +454,7 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
             SourceItem(
                 **item,
                 files=files,
-                event=EventDetails(**event) if event else None,
+                event=EventDetails.from_dict(event) if event else None,
                 message=MessageDetails(
                     **{
                         **message,
