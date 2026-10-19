@@ -784,6 +784,8 @@ def _calendar_section(store: Store, cfg: Config, today: date) -> str:
 
 
 def _people(store: Store, cfg: Config) -> str:
+    from engine.scope import stance_of
+
     teams = {t.id: t.data["name"] for t in store.read().list("team")}
     orgs = {o.id: o.data["name"] for o in store.read().list("organization")}
     lines = []
@@ -801,8 +803,21 @@ def _people(store: Store, cfg: Config) -> str:
             bits.append("org: " + orgs.get(d["org"], d["org"]))
         if p.id == pm:
             bits.append("this is the PM")
+        else:
+            bits.append(_STANCE_WORDS[stance_of(store.read(), cfg.steward, p.id)])
         lines.append("- " + " | ".join(bits))
-    return "\n".join(lines) or "(none)"
+    if not lines:
+        return "(none)"
+    return "\n".join([f"The PM tracks: {', '.join(cfg.steward.tracks)}.", *lines])
+
+
+#: How each stance (design 6.34) reads in the people list of a packet.
+_STANCE_WORDS = {
+    "manage": "the PM manages them",
+    "alongside": "the PM works alongside them",
+    "report_to": "the PM reports to them: ask them nothing unless the PM says to",
+    "watch": "the PM only watches them: ask them nothing",
+}
 
 
 def _value_lists(store: Store) -> str:

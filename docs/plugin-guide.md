@@ -1103,6 +1103,7 @@ Someone the workspace works with or tracks. Added by `person.add`; role, org and
 | `why_they_matter` | str \| None | `None` | Why this person matters to the work, in plain words. |
 | `name_verified` | bool | `False` | True when the name's spelling came from the person, a signed header address or a record the person made; false when it was read from outside content and not yet confirmed. |
 | `track_only` | bool | `False` | True for someone inside the tracked area who is only observed, not given work. |
+| `stance` | Literal['manage', 'alongside', 'report_to', 'watch'] \| None | `None` | Who they are to the person (design 6.34): manage (the person manages them), alongside (they work alongside each other), report_to (the person reports to them) or watch (the person only watches). Empty means the workspace's default stance; someone marked track_only counts as watch. |
 | `status` | Literal['active', 'left'] | `'active'` | active: still around. left: no longer part of the work. |
 
 ### `organization` (ORG-n)
@@ -2288,6 +2289,7 @@ A question for a person, written for its reader. A decision is a question to who
 | `project` | str \| None | `None` | Project id, if the question is about one. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
+| `asks_about` | Literal['date', 'decision', 'design', 'mistake', 'other'] | `'other'` | What the question asks about: date (chasing when something will be done, or a promise), decision, design (how they do their own work, or its detail), mistake (an apparent contradiction with a recorded decision or fact: link both sides), or other. |
 | `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. |
 | `matters_for` | str \| None | `None` | For a question to anyone but the PM: which of the PM's decisions, designs or dated items depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say so in the change's note. |
 

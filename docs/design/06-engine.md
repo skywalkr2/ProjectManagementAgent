@@ -2788,14 +2788,15 @@ wrong thing for this person to send that person ("not my job to tell the archite
 might manage those architects and want exactly those questions. So who each person is to the person decides what the
 assistant may draft or ask them. It is the person's own rule, kept per person, beside the role per project (6.18).
 
-- **The stance** is a field on the person record, from a value list (6.31) whose values carry their meaning: *I manage
-  them*, *I work alongside them*, *I report to them*, *I only watch* (the existing `track_only` becomes this value).
-  Personal life uses the same meanings with its own words in the list (a client, family). A new person starts at
-  `people.default_stance`, *I work alongside them* by default: quizzing someone you don't manage costs more than a
-  missed question.
+- **The stance** is a field on the person record (`stance`) with four fixed meanings, because the gate reads the
+  meaning: `manage` (*I manage them*), `alongside` (*I work alongside them*), `report_to` (*I report to them*) and
+  `watch` (*I only watch*; someone marked `track_only` counts as this). The words on screen come from the wording
+  sheet, so personal life can use its own words for the same meanings (a client, family). A value list (6.31) can't
+  hold a meaning per value, so it isn't one. A person with no stance has `steward.default_stance`, *I work alongside
+  them* by default: quizzing someone you don't manage costs more than a missed question.
 - **What the person tracks** is a setting, `steward.tracks` (delivery dates and decisions by default; design quality is
-  an option), overridable per project: a person who tracks dates gets no design questions drafted, whatever the
-  stance.
+  an option): a person who tracks dates gets no design questions drafted, whatever the stance. A per-project override
+  is not built yet.
 - **The gate on drafts and questions**, checked in the applier on every question or drafted message to someone other
   than the person:
   - *manage*: anything within what the person tracks, design detail included, and chasing their dates;
@@ -2804,14 +2805,20 @@ assistant may draft or ask them. It is the person's own rule, kept per person, b
     they do their own work;
   - *report to*: no chasing at all; a question to them is drafted only when the person asks for it;
   - *only watch*: nothing is drafted to them.
-  The question's kind (date, decision, design, mistake) is the model's label, so the gate is a lint (one return, then a
-  hold for the person, as 6.22's rule checks), except the deterministic part: a "mistake" with fewer than two links to
-  what it contradicts is returned.
+  The question's kind (`asks_about` on `question.add`: date, decision, design, mistake or other) is the model's label,
+  so the gate is a lint, `stance` (one return, then a hold for the person, like the scope checks of 6.18), and a
+  "mistake" with fewer than two links to what it contradicts is returned the same way. The packet's people list says
+  who each person is to the person and what the person tracks, so the model can ask only what is allowed. The
+  person's own note asks whoever it says.
 - **Corrections propose a stance.** A reply like "not my job" or "we are not their boss" about a question to someone
   becomes a proposed stance for that person, or for their role, which the person keeps or changes (6.22). It is
   probably the most common correction a steward gets.
 - **Not yet:** the full scope resolver (6.18, phase E) takes the stance as one of its inputs; until then the gate above
   is the whole of it.
+
+*Built so far (S1-2):* the field, the two settings, `asks_about`, the gate and the packet's people list
+(`tests/test_stance.py`). Left: choosing a stance on the person's page, a correction proposing a stance, the learning
+pairs for each stance, the chase line by stance (6.33), and drafted messages other than questions.
 
 ## 6.35 Drafts to other people, replies owed, and the week (phases S1-2, S1-3 and S2, designed 2026-10-19)
 

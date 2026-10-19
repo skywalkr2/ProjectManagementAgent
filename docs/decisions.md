@@ -405,6 +405,12 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   manage and alongside, "Waiting on" without a draft for report to, no line for only watch. Decided by the designer;
   (3) is built in S1-1, (1) and (4) with S1-2's drafts and stances.
   **Impact:** design 6.33, 6.35 (CHANGES.md section 99); roadmap S1-1, S1-2.
+- **Also (2026-10-19): the stance is four fixed meanings, not a value list.** The gate reads what a stance means, and
+  a value list (6.31) holds words without a meaning per value, so the stance is `manage`, `alongside`, `report_to` or
+  `watch`, worded on screen from the wording sheet. Its settings are `steward.default_stance` and `steward.tracks`
+  (there is no people settings file). A question says what it asks about (`asks_about`), the model's label, so the
+  gate is a lint held after one return. Decided by the main session.
+  **Impact:** design 6.34 (CHANGES.md section 101); roadmap S1-2.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

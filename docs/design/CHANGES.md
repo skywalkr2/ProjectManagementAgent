@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 101. The stance gate (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Stance (6.34) | Designed as a value list with `people.default_stance` | Four fixed meanings on the person (`stance`), worded on screen; `steward.default_stance` and `steward.tracks`; `asks_about` on `question.add`; the `stance` lint held after one return; the people list in packets says who each person is to the person. Built: `tests/test_stance.py` |
+
 ## 99. The designer's review of 6.33 and 6.35 (2026-10-19)
 
 | Where | Before | Now |

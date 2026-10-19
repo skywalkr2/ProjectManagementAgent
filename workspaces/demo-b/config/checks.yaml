@@ -1,5 +1,5 @@
 version: 1
-lints: {blocked-wording: return, run-on-list: warn, near-duplicate-action: warn, evidence-fit: return, already-known: return, near-duplicate-question: warn, several-questions: return, question-without-stake: return, unnamed-recipient: return, unverified-quote: return, unverified-name: warn, unknown-link: return, version-number: return, summary-is-status: return, unlinked-made: return, watched-project: return, other-team-item: return}
+lints: {blocked-wording: return, run-on-list: warn, near-duplicate-action: warn, evidence-fit: return, already-known: return, near-duplicate-question: warn, several-questions: return, question-without-stake: return, unnamed-recipient: return, unverified-quote: return, unverified-name: warn, unknown-link: return, version-number: return, summary-is-status: return, unlinked-made: return, watched-project: return, other-team-item: return, stance: return}
 projects: {}   # per project, e.g. {PRJ-2: {plugin/lint-name: off}}: a check switched off for one piece of work
 tuning:
   near_duplicate_action: {similarity: 0.8, date_window_days: 3}   # how alike a new action must be to be flagged (0 to 1); how many days apart two dates for one promise may be

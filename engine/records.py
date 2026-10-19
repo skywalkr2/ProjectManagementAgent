@@ -293,6 +293,12 @@ class Person(Record):
     track_only: bool = Field(
         False, description="True for someone inside the tracked area who is only observed, not given work."
     )
+    stance: Literal["manage", "alongside", "report_to", "watch"] | None = Field(
+        None,
+        description="Who they are to the person (design 6.34): manage (the person manages them), alongside (they "
+        "work alongside each other), report_to (the person reports to them) or watch (the person only watches). "
+        "Empty means the workspace's default stance; someone marked track_only counts as watch.",
+    )
     status: Literal["active", "left"] = Field(
         "active", description="active: still around. left: no longer part of the work."
     )

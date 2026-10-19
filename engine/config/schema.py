@@ -1057,6 +1057,7 @@ def _default_lints() -> dict[str, Severity]:
         "unlinked-made": "return",
         "watched-project": "return",
         "other-team-item": "return",
+        "stance": "return",
     }
 
 
@@ -1939,6 +1940,17 @@ class WatchFile(FileModel):
 
 
 class StewardFile(FileModel):
+    default_stance: Literal["manage", "alongside", "report_to", "watch"] = Field(
+        "alongside",
+        description="Who a person is to you until you say otherwise: manage (you manage them), alongside (you work "
+        "alongside them), report_to (you report to them) or watch (you only watch). It decides what the assistant "
+        "may draft or ask them.",
+    )
+    tracks: list[Literal["dates", "decisions", "design"]] = Field(
+        default_factory=lambda: ["dates", "decisions"],
+        description="What you track for the work: delivery dates, decisions, and design quality. The assistant drafts "
+        "no question about something you don't track, whoever it is for.",
+    )
     chase_undated_days: int = Field(
         14,
         ge=1,

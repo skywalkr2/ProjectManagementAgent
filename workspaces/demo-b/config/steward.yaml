@@ -1,3 +1,5 @@
 version: 1
 chase_undated_days: 10   # a waiting-on with no date gets a line after this many days with no news
 chase_dated_days: 5   # a dated waiting-on gets a line from this many days before its date
+default_stance: alongside   # who a new person is to you until you say otherwise
+tracks: [dates, decisions, design]   # what you track: no question is drafted about anything else

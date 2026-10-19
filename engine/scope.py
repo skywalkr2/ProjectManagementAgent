@@ -15,7 +15,7 @@ from engine.ops import ActionAddOp, OpModel, QuestionAddOp
 from engine.records import PROJECT_ROLES
 
 #: The checks that return an item once and hold it if it comes back, whoever the item reaches.
-HELD_LINTS = frozenset({"watched-project", "other-team-item"})
+HELD_LINTS = frozenset({"watched-project", "other-team-item", "stance"})
 #: The part a person has on a project that gives them none.
 DEFAULT_ROLE = "run"
 
@@ -116,3 +116,40 @@ def _addressed(quote: str, name: str, request_words: list[str]) -> bool:
 
 def _has_word(text: str, word: str) -> bool:
     return re.search(r"(?<!\w)" + re.escape(word.strip()) + r"(?!\w)", text, re.IGNORECASE) is not None
+
+
+def stance_of(view: Any, steward: Any, person_id: str | None) -> str:
+    """Who a person is to the person (design 6.34): their own stance, watch for someone marked track_only, else the
+    workspace's default."""
+    record = view.get("person", person_id) if person_id else None
+    if record is None:
+        return steward.default_stance
+    if record.data.get("stance"):
+        return record.data["stance"]
+    return "watch" if record.data.get("track_only") else steward.default_stance
+
+
+def stance_findings(op: OpModel, view: Any, people: Any, steward: Any) -> list[tuple[str, str]]:
+    """What a question to someone else may ask, by who they are to the person and what the person tracks (design
+    6.34): nothing to someone they only watch or report to (unless the person asks for it), nothing about something
+    the person doesn't track, no design questions to someone they work alongside, and a mistake only with links to
+    both sides of what it contradicts."""
+    if not isinstance(op, QuestionAddOp):
+        return []
+    resolved = people.resolve(op.to)
+    if resolved.status != "ok" or resolved.person is None or resolved.person == people.pm:
+        return []
+    name = people.name(resolved.person)
+    stance = stance_of(view, steward, resolved.person)
+    tracked = {"date": "dates", "decision": "decisions", "design": "design"}.get(op.asks_about)
+    if stance == "watch":
+        return [("stance", f"you only watch {name}, so nothing is drafted to them: record what you learned as a fact")]
+    if stance == "report_to":
+        return [("stance", f"you report to {name}, so a question to them is drafted only when you ask for one")]
+    if tracked is not None and tracked not in steward.tracks:
+        return [("stance", f"you don't track {tracked}, so this isn't asked: record it as a fact if it matters")]
+    if stance == "alongside" and op.asks_about == "design":
+        return [("stance", f"you work alongside {name}, so how they do their own work isn't yours to ask about")]
+    if op.asks_about == "mistake" and len(op.links) < 2:
+        return [("stance", "a possible mistake links both sides: what it contradicts and where it was said")]
+    return []

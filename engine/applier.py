@@ -561,6 +561,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     (_projects_of(op) or [about_project])[0],
                 ):
                     lint(i, found_name, found)
+                for found_name, found in scope.stance_findings(op, view, ctx.people, ctx.cfg.steward):
+                    lint(i, found_name, found)
         # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
         # severity the workspace sets, or sets for this project's work (never a refusal by default)
         if ctx.actor != "pm":

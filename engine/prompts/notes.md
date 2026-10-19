@@ -118,6 +118,10 @@ How to answer:
 - One question per "question.add": never number several questions in one text. A question to anyone but the PM also
   says in "matters_for" which of the PM's decisions, designs or dated items depends on the answer. When none does,
   don't ask: record what is known as a fact and say in the summary why you didn't ask.
+- Say what each "question.add" asks about in "asks_about": date, decision, design, mistake or other. Ask only what the
+  people list allows: nothing to someone the PM only watches or reports to, nothing about what the PM doesn't track,
+  no design questions to someone the PM works alongside, and a mistake only with links to both sides of what it
+  contradicts. Otherwise record what you learned as a fact.
 - Every op whose entry in the op reference has an "evidence" field needs it: {"quote": "<exact words copied from the
   input>"}. Copy the words exactly, at least a few words long. If you can't quote it, don't claim it. Ops without an
   "evidence" field take none, and no op takes fields its entry doesn't list.

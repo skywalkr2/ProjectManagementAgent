@@ -456,6 +456,12 @@ class QuestionAddOp(OpModel):
     series: Annotated[str | None, RefTo("series")] = Field(
         None, description="The series of a repeating meeting it is for; it sits on the next instance."
     )
+    asks_about: Literal["date", "decision", "design", "mistake", "other"] = Field(
+        "other",
+        description="What the question asks about: date (chasing when something will be done, or a promise), "
+        "decision, design (how they do their own work, or its detail), mistake (an apparent contradiction with a "
+        "recorded decision or fact: link both sides), or other.",
+    )
     kind: Literal["question", "decision"] = Field(
         "question",
         description="question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is "
