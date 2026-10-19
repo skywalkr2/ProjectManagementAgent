@@ -1606,6 +1606,16 @@ class FollowupsSettings(ConfigModel):
     )
 
 
+class WalkthroughSettings(ConfigModel):
+    first_promises: int = Field(
+        5,
+        ge=1,
+        le=20,
+        description="How many of the promises found in the person's own mail the new-start walkthrough shows on its "
+        "first-result screen, soonest day first. The rest are still kept and followed.",
+    )
+
+
 class BrandSettings(ConfigModel):
     color: str | None = Field(
         None,
@@ -1659,6 +1669,9 @@ class UiFile(FileModel):
     followups: FollowupsSettings = Field(
         default_factory=FollowupsSettings,
         description="When something sent to a person is due a follow-up, which Today and Follow-ups both use.",
+    )
+    walkthrough: WalkthroughSettings = Field(
+        default_factory=WalkthroughSettings, description="What the new-start walkthrough shows."
     )
     brand: BrandSettings = Field(default_factory=BrandSettings, description="The accent color and logo.")
     theme: Literal["system", "light", "dark"] = Field(

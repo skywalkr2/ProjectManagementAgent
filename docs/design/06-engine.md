@@ -145,8 +145,8 @@ mailbox neither floods the queue nor runs up cost on day one:
   handed in, as if the source had been set to `recent`; triage rules apply as for any change.
 
 **Sources a sign-in starts** (6.27). Signing in to a service starts the sources its add-on declares (the inbox, the main
-calendar), with `first_run: recent`, so the first thing the person sees is their recent mail and today's meetings handled by
-the assistant.
+calendar), with `first_run: intake` (6.32), so the first read is one total, one go and one "Look over what was found"
+line, not a review line for each item. *Built so far (S1-3):* `tests/test_sign_in_sources.py`.
 
 ## 6.5 Triage
 
@@ -2447,7 +2447,7 @@ private repository; the core signs in"). The mechanism is generic: an add-on dec
 - **Signing in is the whole setup** (decisions, 2026-10-12). The add-on lists the sources its sign-in starts (the inbox, the
   main calendar), each with its connector, label, settings and interval. As soon as the person signs in, the core adds them to
   `watch.sources` (4.5) **once per sign-in, and only where the workspace reads nothing with that connector yet**, with
-  `first_run: recent` (6.4). A mail source with nothing chosen reads the inbox, so nothing has to be chosen first. The person
+  `first_run: intake` (6.32). A mail source with nothing chosen reads the inbox, so nothing has to be chosen first. The person
   narrows, adds or removes sources afterwards, and their changes and removals stand. Which sign-ins have had their sources
   started is kept on this computer; a sign-in made before its add-on declared any gets them at the next start.
 - **"Not reading".** If the person later removed the sources, the Sign-ins row says what it is not reading and offers **Start
@@ -2644,10 +2644,21 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     in what the connector returned: when the source holds no mail that far back the result says "Only mail from <date> is
     available to read" and the date moves only as far as that mail goes. Built: `tests/test_source_intake.py`,
     `tests/test_source_intake_routes.py`, `web/src/components/LookBack.test.tsx`, `web/src/shell/HeldLines.test.tsx`,
-    `web/src/components/Today.test.tsx`, `web/src/components/WhatChanged.test.tsx`. *Not built:* a source's sign-in still
-    starts it with `first_run: recent` (6.27); a connector's own first read is bounded by its own settings (the mailbox
+    `web/src/components/Today.test.tsx`, `web/src/components/WhatChanged.test.tsx`. A source a sign-in starts is taken in this way too (6.27;
+    `tests/test_sign_in_sources.py`). *Not built:* a connector's own first read is bounded by its own settings (the mailbox
     connector takes its latest `first_read` messages, with no date), so the date a first read says it looked back to is the
     window the core applied, not a promise about what the connector returned.
+- **The walkthrough's first result** (S1-3). Right after the mail step, once a mailbox is read and an AI account is chosen,
+  the walkthrough offers the same intake as one look back: "Look back over the last 14 days of your own mail" (the source's
+  `first_run_days`), the items and the one estimate shown first, and one Start for every source's intake the sign-in
+  brought (the mail waiting for sorting is sorted first; the Start also covers the workspace's first go for those
+  requests). The sent folder is part of it when it is read, as another source. After the Start it lists up to
+  `ui.walkthrough.first_promises` (5) open promises (design 6.33's view: who owes each to whom, its day and its exact words)
+  and one follow-up ready to copy, the one the Follow-ups screen composes, copied and kept by the same route (6.35); with no
+  promise found it says so and offers "Missed one". Nothing is spent before the Start; with the built-in stand-in the
+  figure shown is "less than a cent". Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`,
+  journeys J2 (nothing found) and J6 (a promise found). *Not built:* a sent folder offered by a sign-in itself (6.33), so the
+  look back reads it only when the person added it.
 - **Coverage on Today.** "Couldn't read" and "read, nothing new" are different words and never share a color. A source that
   has failed for longer than its usual gap becomes a line for the person ("work mail hasn't been read since yesterday
   6 PM: sign in again?"). A day whose right top line is "nothing needs you, and here is what was read" is a test case.

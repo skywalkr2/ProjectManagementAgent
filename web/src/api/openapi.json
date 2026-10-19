@@ -4893,6 +4893,35 @@
         "title": "FingerprintIn",
         "type": "object"
       },
+      "FirstFollowUp": {
+        "description": "The one follow-up ready to copy on the first-result screen: whom it is to (`person`, a person id), and the\nmessage the Follow-ups screen composes for them. Copying it is POST /api/followups/{person}/mark-sent.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "to_send": {
+            "title": "To Send",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "person",
+          "name",
+          "message",
+          "to_send"
+        ],
+        "title": "FirstFollowUp",
+        "type": "object"
+      },
       "FirstGoSorting": {
         "description": "The sorting run the first go also makes, for mail handed in unsorted while the go was pending.",
         "properties": {
@@ -4938,6 +4967,163 @@
           "started"
         ],
         "title": "FirstGoStarted",
+        "type": "object"
+      },
+      "FirstPromise": {
+        "description": "One open promise on the walkthrough's first-result screen: its words, who owes it (in the owner format, `mine`\nwhen the person does), to whom, its day and the exact words it was read from.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "promised_to": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Promised To",
+            "type": "array"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "text",
+          "owner",
+          "mine",
+          "promised_to"
+        ],
+        "title": "FirstPromise",
+        "type": "object"
+      },
+      "FirstPromisesView": {
+        "description": "Where the walkthrough's first result stands. `stage`: no_mail (no mail or calendar is read), no_ai (no AI\naccount is chosen), reading (the first read hasn't happened), offer (the look back over the last `days` of mail is\nheld for the person's go: `count` items, about `estimate_usd`, `unpriced` of them with no price), working\n(`finished` of `count` done) or ready (up to the setting's number of `promises` and the `more` that aren't shown,\nwith one `follow_up` ready when there is someone to send it to). The go is POST /api/setup/first-promises/go.",
+        "properties": {
+          "count": {
+            "description": "The items the look back takes in.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many days of mail the look back covers; none without mail.",
+            "title": "Days"
+          },
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About what the look back costs; none when nothing has a price.",
+            "title": "Estimate Usd"
+          },
+          "finished": {
+            "description": "How many of them are done.",
+            "title": "Finished",
+            "type": "integer"
+          },
+          "follow_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FirstFollowUp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "more": {
+            "description": "Open promises beyond the ones shown.",
+            "title": "More",
+            "type": "integer"
+          },
+          "promises": {
+            "items": {
+              "$ref": "#/components/schemas/FirstPromise"
+            },
+            "title": "Promises",
+            "type": "array"
+          },
+          "sources": {
+            "description": "What is read, by its label.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "stage": {
+            "enum": [
+              "no_mail",
+              "no_ai",
+              "reading",
+              "offer",
+              "working",
+              "ready"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "unpriced": {
+            "description": "How many of the items have no price.",
+            "title": "Unpriced",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stage",
+          "sources",
+          "count",
+          "finished",
+          "unpriced",
+          "promises",
+          "more"
+        ],
+        "title": "FirstPromisesView",
         "type": "object"
       },
       "FoldIn": {
@@ -13787,6 +13973,7 @@
               "you",
               "ai",
               "mail",
+              "promises",
               "backup",
               "people",
               "done"
@@ -16414,6 +16601,7 @@
                   "you",
                   "ai",
                   "mail",
+                  "promises",
                   "backup",
                   "people",
                   "done"
@@ -16454,6 +16642,7 @@
               "you",
               "ai",
               "mail",
+              "promises",
               "backup",
               "people",
               "done"
@@ -24187,6 +24376,44 @@
           }
         },
         "summary": "Backup Folder"
+      }
+    },
+    "/api/setup/first-promises": {
+      "get": {
+        "description": "Where the first result stands: the look back offered with its estimate, under way, or done with the\npromises found and one follow-up ready. Writes nothing.",
+        "operationId": "first_result_api_setup_first_promises_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirstPromisesView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "First Result"
+      }
+    },
+    "/api/setup/first-promises/go": {
+      "post": {
+        "description": "The person's go for the look back: everything it counted starts, as the go on Today's line does.",
+        "operationId": "first_result_go_api_setup_first_promises_go_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "First Result Go"
       }
     },
     "/api/setup/folder-check": {

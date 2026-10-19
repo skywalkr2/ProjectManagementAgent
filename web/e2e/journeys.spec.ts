@@ -85,6 +85,13 @@ test.describe.serial("journeys", () => {
     await visit(page);
     await main.getByRole("button", { name: "Skip for now" }).click();
 
+    // Your promises comes right after mail: with no mail connected it says so and offers nothing to read.
+    await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
+    await expect(main.getByText(/Connect your mail first/)).toBeVisible();
+    await expect(main.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
+    await visit(page);
+    await main.getByRole("button", { name: "Next" }).click();
+
     // Backups: a folder outside the workspace, which is checked before it is saved.
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);

@@ -362,6 +362,10 @@ export const api = {
   saveSettings: (body: S["SettingsSave"]) => call<S["SettingsSaved"]>("POST", "settings", body),
   setup: () => call<S["SetupView"]>("GET", "setup"),
   /** Keeps where the walkthrough stands on the server: its screen, that it was closed, or that it was finished. */
+  /** Where the walkthrough's first result stands: the look back offered with its estimate, under way, or done. */
+  firstPromises: () => call<S["FirstPromisesView"]>("GET", "setup/first-promises"),
+  /** The go for the look back the walkthrough offered: everything it counted starts. */
+  firstPromisesGo: () => call<S["IntakeStarted"]>("POST", "setup/first-promises/go"),
   keepWalkthrough: (body: S["WalkthroughIn"]) => call<S["WalkthroughView"]>("POST", "setup/walkthrough", body),
   me: () => call<S["MeView"]>("GET", "me"),
   saveMe: (fullName: string) => call<S["MeView"]>("POST", "me", { full_name: fullName }),

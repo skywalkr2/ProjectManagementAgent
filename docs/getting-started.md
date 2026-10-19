@@ -105,14 +105,14 @@ The screen lists the services you can connect.
 - **Then:** press **Sign in**. The service's own sign-in page opens in this tab; you sign in there and allow reading. You
   come back to this screen.
 
-After you sign in, the screen lists what is now being read (your inbox and your main calendar). **The last day of your
-mail waits for your first Go**, so you see a result without a surprise on the bill. You can choose other folders or
+After you sign in, the screen lists what is now being read (your inbox and your main calendar). **What it holds waits for
+your Start on the next screen**, so you see a result without a surprise on the bill. You can choose other folders or
 calendars later from Sources.
 
 If your mail service is not in the list, press **Another mail or calendar**. That opens Sources, where you can add a mail
 folder from any mail server or a calendar's private address.
 
-*Cost: nothing here.* Reading costs nothing; the AI only works on what was read after your first Go.
+*Cost: nothing here.* Reading costs nothing; the AI only works on what was read after your Start.
 *If it fails:*
 - If the install is refused, the row shows the app's own words (a release that does not match its checksum, or one that
   cannot be reached). Try again, or press **How to get it** for the add-on's instructions.
@@ -121,6 +121,19 @@ folder from any mail server or a calendar's private address.
 - If the app does not come back within a minute, do the same.
 - If signing in is refused, a message says so when you come back. Press **Sign in** again. If your service shows a warning
   page for this app, the screen says what that means for you.
+
+### Your promises
+
+This screen comes right after mail, before anything that asks about backups, people or projects. It offers **Look back over
+the last 14 days of your own mail**, with the number of items and about what it would cost together, such as *12 items to
+look over. About $0.30 in all.* Nothing is read by the assistant until you press **Start**.
+
+After it has read them, the screen lists up to five open promises it found (who owes each to whom, the day, and the words
+from your mail), and one follow-up message ready to copy: press **Copy message**, send it from your own mail, then press
+**Mark sent**. If it found none, the screen says so, and **Missed one** lets you say in a sentence what it missed.
+
+*Cost: the estimate on the screen, shown before you press Start.* On the built-in stand-in it is less than a cent.
+*If it fails:* the screen says what to do first (choose an AI account, or connect mail) and takes you back to it.
 
 ### Backups
 
@@ -145,9 +158,9 @@ Press **Go to Today**.
 
 ## Your first result
 
-Today shows one line: **Start the assistant**, with how many items are waiting (for example, the last day of your mail)
-and about what they would cost together, such as *Start the assistant: 14 items, about $0.30*. Keyboard focus is
-on it when you arrive. Nothing has been sent to your AI service yet.
+If you pressed **Start** on Your promises, your first result is already there. Otherwise Today shows one line: **Start the
+assistant**, with how many items are waiting and about what they would cost together, such as *Start the assistant: 14
+items, about $0.30*. Keyboard focus is on it when you arrive. Nothing has been sent to your AI service yet.
 
 Press **Go** on that line. The assistant reads each item, one at a time, and files what it finds: actions with owners and
 dates, questions, facts and notes, each with the words from your mail that justify it. Open **What changed** to look over

@@ -135,6 +135,17 @@ def test_the_mailbox_has_recent_and_old_items_in_the_shapes_the_assistant_reads(
     assert not set(split["noted"]) & {*split["mail"], *split["events"]}
 
 
+def test_a_quiet_first_read_takes_in_two_weeks_of_work_mail_and_every_event():
+    from datetime import UTC, datetime
+
+    taken = fake_services.intake_items(datetime.now(UTC))
+    recent = fake_services.recent_items(datetime.now(UTC))
+    # The week-old message is taken in, not only noted; the meeting next week is too.
+    assert set(recent["mail"]) < set(taken["mail"]) and taken["noted"] == []
+    assert set(taken["events"]) == {e["title"] for e in fake_services.events(datetime.now(UTC))}
+    assert taken["set_aside"] == recent["set_aside"]
+
+
 def test_the_catalog_lists_a_wheel_the_app_installs(tmp_path):
     wheel = fake_services.build_wheel(fake_services.PLUGINS / "journey_panel", tmp_path)
     feed = packs.parse("https://127.0.0.1/catalog", fake_services.catalog_feed(wheel, "https://127.0.0.1:1"))

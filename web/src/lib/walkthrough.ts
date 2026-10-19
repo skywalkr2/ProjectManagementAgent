@@ -6,13 +6,14 @@ export type Screen = S["WalkthroughView"]["step"];
 type Step = S["SetupStepView"];
 
 /** The screens, in the order a person needs them. The last one lists what was set up and what is optional. */
-export const SCREENS: readonly Screen[] = ["you", "ai", "mail", "backup", "people", "done"];
+export const SCREENS: readonly Screen[] = ["you", "ai", "mail", "promises", "backup", "people", "done"];
 
-/** The core setup step each screen is about; the last has none. */
+/** The core setup step each screen is about; the first result and the last have none. */
 export const STEP_OF: Record<Screen, string | null> = {
   you: "workspace",
   ai: "ai",
   mail: "mail",
+  promises: null,
   backup: "backup",
   people: "people",
   done: null,
@@ -25,7 +26,7 @@ export function screenOf(steps: Step[], id: string): Screen {
 
 export type Standing = "done" | "skipped" | "todo";
 
-/** Where a screen stands, from the core step it is about. The last screen has no standing of its own. */
+/** Where a screen stands, from the core step it is about. The first result and the last screen have no standing of their own. */
 export function standing(steps: Step[], screen: Screen): Standing | null {
   const id = STEP_OF[screen];
   const step = id ? steps.find((s) => s.id === id) : undefined;

@@ -14,6 +14,7 @@ const BY_GROUP: Array<[front: string, section: Fixed]> = [
   ["storage", "backups"],
   ["ui.today", "today"],
   ["ui.followups", "today"],
+  ["ui.walkthrough", "you"],
   ["steward", "today"],
   ["ui", "appearance"],
 ];

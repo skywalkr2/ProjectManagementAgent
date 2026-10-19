@@ -6,6 +6,7 @@ toast_seconds: 0
 feedback_to: feedback@example.com   # where the feedback button writes
 today: {mail_hours: 48, mail_max: 40, agenda_days_ahead: 2}   # what Today's agenda and what came in cover
 followups: {action_due_within_days: 7, undated_after_days: 14, question_after_days: 4, second_nudge_items: 2}   # when a sent item is due a follow-up
+walkthrough: {first_promises: 5}   # how many promises the walkthrough's first-result screen shows
 brand: {color: "#2f6f5e", logo: null}   # the accent color; a logo is an image file in this config folder
 theme: system   # system, light or dark; each person can change it on their own device
 density: compact   # comfortable or compact

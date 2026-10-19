@@ -79,7 +79,11 @@ export function LookBack(props: { source: Source; onClose: () => void }) {
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
 /** What the items would cost, in words: the estimate, the plan's allowance, or both. */
-function costWords(found: S["LookBackView"], estimate: (usd: number | null | undefined) => string | null, t: T): string {
+export function costWords(
+  found: Pick<S["LookBackView"], "estimate_usd" | "unpriced">,
+  estimate: (usd: number | null | undefined) => string | null,
+  t: T,
+): string {
   const amount = estimate(found.estimate_usd);
   if (amount === null) return t("coverage.look_back.cost.unpriced");
   return t(found.unpriced > 0 ? "coverage.look_back.cost.mixed" : "coverage.look_back.cost.priced", { cost: amount });

@@ -1945,6 +1945,50 @@ class CatchUpStarted(BaseModel):
     started: int = Field(description="How many learning runs for the catch-up list the go started.")
 
 
+class FirstPromise(BaseModel):
+    """One open promise on the walkthrough's first-result screen: its words, who owes it (in the owner format, `mine`
+    when the person does), to whom, its day and the exact words it was read from."""
+
+    action: str
+    text: str
+    owner: str
+    mine: bool
+    promised_to: list[str]
+    due: date | None = None
+    quote: str | None = None
+
+
+class FirstFollowUp(BaseModel):
+    """The one follow-up ready to copy on the first-result screen: whom it is to (`person`, a person id), and the
+    message the Follow-ups screen composes for them. Copying it is POST /api/followups/{person}/mark-sent."""
+
+    person: str
+    name: str
+    message: str
+    to_send: int
+
+
+class FirstPromisesView(BaseModel):
+    """Where the walkthrough's first result stands. `stage`: no_mail (no mail or calendar is read), no_ai (no AI
+    account is chosen), reading (the first read hasn't happened), offer (the look back over the last `days` of mail is
+    held for the person's go: `count` items, about `estimate_usd`, `unpriced` of them with no price), working
+    (`finished` of `count` done) or ready (up to the setting's number of `promises` and the `more` that aren't shown,
+    with one `follow_up` ready when there is someone to send it to). The go is POST /api/setup/first-promises/go."""
+
+    stage: Literal["no_mail", "no_ai", "reading", "offer", "working", "ready"]
+    sources: list[str] = Field(description="What is read, by its label.")
+    days: int | None = Field(None, description="How many days of mail the look back covers; none without mail.")
+    count: int = Field(description="The items the look back takes in.")
+    finished: int = Field(description="How many of them are done.")
+    estimate_usd: float | None = Field(
+        None, description="About what the look back costs; none when nothing has a price."
+    )
+    unpriced: int = Field(description="How many of the items have no price.")
+    promises: list[FirstPromise]
+    more: int = Field(description="Open promises beyond the ones shown.")
+    follow_up: FirstFollowUp | None = None
+
+
 class IntakeStarted(BaseModel):
     started: int = Field(description="How many requests of the source's intake the go started.")
 
@@ -2352,14 +2396,14 @@ class SetupStepView(BaseModel):
         default_factory=dict, description="Core settings a plugin step suggests, applied with the step's Apply."
     )
     sign_in: str | None = Field(None, description="For a step the core adds per sign-in: the sign-in's name.")
-    group: Literal["you", "ai", "mail", "backup", "people", "done"] = Field(
+    group: Literal["you", "ai", "mail", "promises", "backup", "people", "done"] = Field(
         "done",
         description="The walkthrough screen the step is on. A step on the last screen is an optional extra.",
     )
     counted: bool = Field(False, description="The step counts toward finishing the setup.")
 
 
-WalkthroughScreen = Literal["you", "ai", "mail", "backup", "people", "done"]
+WalkthroughScreen = Literal["you", "ai", "mail", "promises", "backup", "people", "done"]
 
 
 class WalkthroughView(BaseModel):

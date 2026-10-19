@@ -469,6 +469,8 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   whose own due date is this near or past (an action on hold is never chased); `undated_after_days` (14): a told action with
   no due date and no word after this many days. They replace the old `today.nudge_after_days`, which an existing file may still
   carry and is read as `question_after_days`.
+- `walkthrough`: `first_promises` (5): how many promises found in the person's own mail the new-start walkthrough's first-result
+  screen shows, soonest day first (7.8).
 - `brand`: `color` (`#rrggbb`; the app works out shades from it and Settings warns when its contrast would fail; empty uses the
   app's indigo) and `logo` (a PNG, JPEG, WebP or SVG file name in the config folder; empty shows the workspace's initials).
 - `theme` (`system`, `light` or `dark`) and `density` (`comfortable` or `compact`): the workspace's defaults. Each person can

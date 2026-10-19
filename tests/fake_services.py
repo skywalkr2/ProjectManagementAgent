@@ -439,6 +439,24 @@ def recent_items(now: datetime, hours: int = 24) -> dict[str, list[str]]:
     }
 
 
+def intake_items(now: datetime, days: int = 14) -> dict[str, list[str]]:
+    """What a quiet first read takes in (a sign-in's sources): the work messages of the last `days` and every event,
+    whatever its day; the mail the app sets aside by what the service says about it within those days; and the mail
+    older than that, which it only notes."""
+    mail = messages(now)
+    aside = [m for m in mail if m["bulk"] or {"promotions", "social", "forums"} & set(m["categories"])]
+
+    def within(stamped: str) -> bool:
+        return datetime.fromisoformat(stamped) >= now - timedelta(days=days)
+
+    return {
+        "mail": [m["subject"] for m in mail if within(m["received"]) and m not in aside],
+        "set_aside": [m["subject"] for m in aside if within(m["received"])],
+        "events": [e["title"] for e in events(now)],
+        "noted": [m["subject"] for m in mail if not within(m["received"])],
+    }
+
+
 def mail_routes(state: State) -> list[Route]:
     async def listed(request: Request) -> JSONResponse:
         if not signed_in(state, request):
@@ -576,7 +594,12 @@ def helper_routes(state: State, base: str) -> list[Route]:
 
     async def sign_in(_request: Request) -> JSONResponse:
         return JSONResponse(
-            {**state.seen, "tokens": len(state.access), "recent_items": recent_items(datetime.now(UTC))}
+            {
+                **state.seen,
+                "tokens": len(state.access),
+                "recent_items": recent_items(datetime.now(UTC)),
+                "intake_items": intake_items(datetime.now(UTC)),
+            }
         )
 
     async def mail_later(_request: Request) -> JSONResponse:

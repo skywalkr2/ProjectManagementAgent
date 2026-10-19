@@ -93,3 +93,15 @@ def test_a_sign_in_made_earlier_gets_its_sources_when_the_app_starts(signing):  
     _with_sources(ws)
     _app(ws, cfg)
     assert [s["label"] for s in sources(ws) if s["connector"] == "p18/inbox"] == ["Your inbox"]
+
+
+def test_a_sign_ins_sources_are_taken_in_quietly(signing):  # noqa: F811
+    """A source a sign-in adds reads its first mail the quiet way (one total, one go, one list to look over), not the
+    last day's items one by one (design 6.32)."""
+    ws, cfg, store, _ = signing
+    store.close()
+    _with_sources(ws)
+    c, api = _app(ws, cfg)
+    sign_in(c, api)
+    added = [s for s in sources(ws) if s["connector"] == "p18/inbox"]
+    assert [s["first_run"] for s in added] == ["intake"]

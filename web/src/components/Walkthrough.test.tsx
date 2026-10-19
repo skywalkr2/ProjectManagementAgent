@@ -841,7 +841,7 @@ describe("Mail and calendar", () => {
     expect(mine).not.toHaveAttribute("data-signed-in");
   });
 
-  test("after signing in it says what is read now and that the last day of mail waits for the first Go", async () => {
+  test("after signing in it says what is read now and that what it reads waits for the first Go", async () => {
     service("on", { signed: true });
     open();
     const mine = await row();
@@ -850,7 +850,7 @@ describe("Mail and calendar", () => {
     const list = reading.closest("[data-reading]") as HTMLElement;
     expect(within(list).getByText("Your inbox")).toBeInTheDocument();
     expect(within(list).getByText("Your calendar")).toBeInTheDocument();
-    expect(within(list).getByText(/The last day of your mail waits for you to start the assistant/)).toBeInTheDocument();
+    expect(within(list).getByText(/What it reads waits for you to start the assistant on the next screen/)).toBeInTheDocument();
   });
 
   test("two services turned on before the restart still need only the one restart button", async () => {

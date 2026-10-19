@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 110. Sign-in sources taken in quietly, and a first success in five minutes (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Sources a sign-in starts (6.27, 6.32) | They read the last day's mail and today's meetings with `first_run: recent`, one review line for each item | They use `first_run: intake`: the first read is one total, one go and one "Look over what was found" line for each source. Built: `tests/test_sign_in_sources.py`; journeys J2 and J6 expect it |
+| The walkthrough's screens (7.8) | You, Your AI account, Mail and calendar, Backups, People, Done | "Your promises" is a screen of its own right after Mail and calendar, before Backups and People, with no setup step of its own (`WALKTHROUGH_STEPS`); the screen the person is on is kept as for any other. Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx` |
+| A first result (7.8, 6.32) | The walkthrough ended with nothing read; the first result was on Today after the first go | Once a mailbox is read and an AI account is chosen, "Your promises" offers "Look back over the last 14 days of your own mail" (the source's `first_run_days`) with its estimate and one Start, which is the go of every intake the sign-in brought, the workspace's first go included (`GET /api/setup/first-promises`, `POST /api/setup/first-promises/go`). After it, up to `ui.walkthrough.first_promises` (5) open promises are listed with who owes each to whom, its day and the words it came from, and one follow-up is ready to copy through the Follow-ups screen's own copy (`POST /api/followups/{person}/mark-sent` keeps the copy). With none found the screen says so and offers "Missed one". Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx` |
+| Settings (4.0) | | `ui.walkthrough.first_promises` (5), in `ui.yaml`, shown in Settings under You |
+
 ## 109. What a draft to someone else carries, first part (2026-10-19)
 
 | Where | Before | Now |

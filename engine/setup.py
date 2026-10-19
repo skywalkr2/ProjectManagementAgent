@@ -33,8 +33,10 @@ from engine.yaml_load import load_yaml
 
 STATE_FILE = "setup.json"
 CORE_STEPS = ("workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons")
-#: The walkthrough's screens, in order. The last one lists what was set up and what is optional.
-WALKTHROUGH_STEPS = ("you", "ai", "mail", "backup", "people", "done")
+#: The walkthrough's screens, in order. "promises" is the first result (the look back over the mail and the promises
+#: found, `engine/first_promises.py`), right after mail, so nothing that asks about more comes before it; it has no
+#: setup step of its own. The last screen lists what was set up and what is optional.
+WALKTHROUGH_STEPS = ("you", "ai", "mail", "promises", "backup", "people", "done")
 #: The walkthrough screen a core step belongs to; a core step not listed is an optional extra, on the last screen.
 CORE_GROUPS = {"workspace": "you", "ai": "ai", "mail": "mail", "backup": "backup", "people": "people"}
 CATALOG = shipped("catalog") / "ai-endpoints.yaml"
