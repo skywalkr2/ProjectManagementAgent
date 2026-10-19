@@ -4,7 +4,7 @@
 //   #records/projects  #records/people  #records/files  #records/knowledge  #records/rules-review
 //   #records/panel/<name>  #records/<kind>/<id>
 //   #sources  #addons  #settings  #settings/<section> (you, ai, backups, today, appearance, lists, files, advanced, addon/<name>)
-//   #settings/ai-compare (what each AI account can do)  #setup (the guide)  #handover (which copy to keep)  #styleguide
+//   #settings/ai-compare (what each AI account can do)  #setup (the guide)  #handover (which copy to keep)  #quality  #styleguide
 // A `View` is that fragment, written without the "#" and with each name or id encoded, so two views compare with ===.
 export type CoreView =
   | "today"
@@ -24,6 +24,7 @@ export type CoreView =
   | "settings/ai-compare"
   | "setup"
   | "handover"
+  | "quality"
   | "styleguide";
 export type PanelGroup = "work" | "records";
 /** The sections of Settings that are always there; an add-on's own is `addon/<name>`. */
@@ -49,6 +50,7 @@ export const CORE_VIEWS: readonly CoreView[] = [
   "settings/ai-compare",
   "setup",
   "handover",
+  "quality",
   "styleguide",
 ];
 

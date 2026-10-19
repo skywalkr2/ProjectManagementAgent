@@ -2617,7 +2617,7 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     what, when, which rule or run, and why.
   - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on the Sources screen under "Closed
     without you seeing", below the Set aside folder and the rule closes. The measure, silent closes out of all closes in
-    the quality window with the counts for each kind, is `closes.measure`, for the Quality screen to use later.
+    the quality window with the counts for each kind, is `closes.measure`, shown on the Quality screen (see Measures).
   - Tests: `tests/test_silent_closes.py::test_an_assistant_drop_applied_as_data_is_a_silent_close_and_is_listed_with_what_when_by_and_why`,
     `::test_the_persons_own_close_is_not_silent_but_is_counted_in_all_closes`,
     `::test_a_close_the_person_looked_over_and_approved_is_not_silent`,
@@ -2630,7 +2630,7 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     learning runs closed when there is nothing to do, a change folded into a newer one (read once, in order), the
     questions a source's recovery or a sign-in closes, requests an attempt superseded, proposals that expired (counted on
     their own review line), and stage moves (a move forward, never a close).
-  - Not built: a Today line for silent closes, and the measure on the Quality screen.
+  - Not built: a Today line for silent closes.
 - **An outage is not a failure.** With the computer asleep or no network, work waits and runs when the network is back. A
   run that did no work (cut off, or a runner that only printed a sign-in banner) is not an attempt, is never sent back as
   a mistake, and doesn't count against the request's spending figure.
@@ -2688,8 +2688,8 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   send-back (the note is the person's words); no run is named, since the person's sentence is all that is known, so it
   is not part of the repeat-correction rate, and a lesson from it should name no kind of work unless the person's words
   do. The quality view (`GET /api/quality`) lists "Missed one" for each person and week with the week's dates, a week
-  with none as zero. Built: `tests/test_missed_one.py`, `web/src/components/MissedOne.test.tsx`. *Not built:* the Quality
-  screen itself (the API has the measure; no screen shows any measure yet) and the evening wrap-up's entry (phase S2).
+  with none as zero. Built: `tests/test_missed_one.py`, `web/src/components/MissedOne.test.tsx`. The Quality screen shows it
+  by week. *Not built:* the evening wrap-up's entry (phase S2).
 - **Measures** (the gate week, the tester group, the Quality screen): missed out of present; wrong out of proposed; wrong
   endings, a nudge treated as done included (chasing someone else's promise doesn't fulfill it); silent closes out of all
   closes (the figure is built, `closes.measure`; the screen is not); changed dates, cancellations, partial deliveries and
@@ -2702,6 +2702,37 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   frozen:** Today, the promise lines, the prompts and the model choices don't change, and fixes found go on a list and land
   after it; the one exception is anything that loses a promise or closes one wrongly, fixed at once with the day noted in
   the week's log so the measures before and after can be told apart.
+  *Built so far* (the gate week's instruments, `engine/gate_measures.py`): `GET /api/quality` gives each measure as a count
+  with its denominator, for each day (on the person's clock) and for the window, which is the quality window's days
+  ending today, with its first and last dates. **Silent closes out of all closes** is `closes.measure`, by the day each
+  close was made. **Wrong endings out of endings made**: an ending is a close, drop, move, part or unhold (`ENDING_OPS`)
+  in a change a run made (not one the person made on a screen), counted once it applied or the person decided about it
+  (one still waiting for their Keep is not counted yet); it is wrong when the person kept things as they were
+  (`decline_held`), undid it, or reopened an action a nudge had recorded as done. A nudge recorded as done is found from
+  the records: an applied `action.close` whose request came from a note typed on "Followed up" (the source's kind), and
+  the reopening is the action's status going back to open in the ledger afterward; an ending undone and reopened counts
+  once. **Missed out of present** is the person's own entry, never computed: the record `promise_count` (one for each
+  person and day, `present` and `missed`), saved or corrected by `PUT /api/quality/counts/{day}` and put back by
+  `POST /api/quality/counts/{day}/undo` with what the save returned; a day that hasn't come, or more missed than
+  present, is refused. "Missed one" for each person and week is as before. **The replay set** is the number of files in the
+  workspace's `replays/` folder; when they last ran isn't shown, because the capability matrix records a day for every
+  set of cases together and so can't say it for replays alone. The Quality screen (`#quality`, a link in Settings'
+  list of sections) has one section for each measure, each a sentence with its number out of its denominator ("2 of 41
+  closes weren't seen by you.") and a short list by day, never a bare percentage and never by colour; the entry form
+  (a date defaulting to today, two number fields, Save with an Undo toast, the cursor in the date); an empty state in
+  plain words for each section; and the older measures (knowledge used, repeated corrections, what runs couldn't do).
+  It is not on Today. During the counted week the screen only shows the window's dates; nothing else about it changes.
+  Tests: `tests/test_gate_measures.py::test_silent_closes_are_counted_out_of_all_closes_for_each_day_and_for_the_window`,
+  `::test_an_ending_the_person_declined_or_undid_is_wrong_and_every_applied_declined_or_undone_ending_was_made`,
+  `::test_a_nudge_recorded_as_done_that_the_person_reopened_is_a_wrong_ending`,
+  `::test_the_daily_count_is_saved_corrected_and_undone`,
+  `::test_counts_are_summed_for_the_window_as_missed_out_of_present_for_the_person_who_entered_them`,
+  `::test_the_window_is_the_configured_days_ending_today_on_the_persons_own_clock`,
+  `::test_the_replay_set_is_the_files_in_the_workspaces_replays_folder`,
+  `::test_the_quality_route_serves_every_measure_with_its_denominator_and_the_window`,
+  `::test_the_daily_count_is_entered_corrected_and_undone_through_the_api` and the export round trip
+  `::test_a_window_with_no_counts_is_zero_over_zero_and_the_counts_survive_export_and_import`; the screen:
+  `web/src/components/Quality.test.tsx`. *Not built:* a record of when the replays last ran.
 - **Sending (S1b) is accepted only on named tests:** exact content and recipients; an approval goes stale when the draft,
   its recipients or its inputs change, a restart that re-resolved addresses or updated a template included; never twice
   after a timeout, retry or restart; after a closed lid or lost network mid-send, the result is checked with the service

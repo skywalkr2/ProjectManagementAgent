@@ -11047,6 +11047,312 @@
         "title": "ProposedOp",
         "type": "object"
       },
+      "QualityCloseDay": {
+        "properties": {
+          "day": {
+            "description": "The day, on the person's own clock.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "silent": {
+            "description": "Of those, the ones the person hasn't seen.",
+            "title": "Silent",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Closes made that day.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "total",
+          "silent"
+        ],
+        "title": "QualityCloseDay",
+        "type": "object"
+      },
+      "QualityCloses": {
+        "description": "Silent closes out of all closes in the window (design 6.32).",
+        "properties": {
+          "days": {
+            "description": "Each day with a close, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualityCloseDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "silent": {
+            "description": "Of those, the ones the person hasn't made, seen or approved.",
+            "title": "Silent",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Every close made in the window: by a rule, set aside, or by the assistant.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "silent",
+          "days"
+        ],
+        "title": "QualityCloses",
+        "type": "object"
+      },
+      "QualityCountBefore": {
+        "description": "What a day's count held before a save, which Undo puts back.",
+        "properties": {
+          "missed": {
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "title": "Present",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "present",
+          "missed"
+        ],
+        "title": "QualityCountBefore",
+        "type": "object"
+      },
+      "QualityCountDay": {
+        "properties": {
+          "day": {
+            "description": "The day counted.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "missed": {
+            "description": "Of those, how many the app didn't have.",
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "description": "Promises the person counted on their own list that day.",
+            "title": "Present",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "present",
+          "missed"
+        ],
+        "title": "QualityCountDay",
+        "type": "object"
+      },
+      "QualityCountIn": {
+        "properties": {
+          "missed": {
+            "description": "Of those, how many the app didn't have.",
+            "minimum": 0.0,
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "description": "How many promises the person counted on their own list that day.",
+            "minimum": 0.0,
+            "title": "Present",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "present",
+          "missed"
+        ],
+        "title": "QualityCountIn",
+        "type": "object"
+      },
+      "QualityCountSaved": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "id": {
+            "description": "The id of the day's count.",
+            "title": "Id",
+            "type": "string"
+          },
+          "missed": {
+            "title": "Missed",
+            "type": "integer"
+          },
+          "present": {
+            "title": "Present",
+            "type": "integer"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityCountBefore"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the day held before this save; none when it had nothing. Undo takes it back."
+          }
+        },
+        "required": [
+          "id",
+          "day",
+          "present",
+          "missed"
+        ],
+        "title": "QualityCountSaved",
+        "type": "object"
+      },
+      "QualityCountUndo": {
+        "properties": {
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityCountBefore"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What `previous` was in the save to undo."
+          }
+        },
+        "title": "QualityCountUndo",
+        "type": "object"
+      },
+      "QualityCounts": {
+        "description": "Missed out of present in the window (design 6.32): the person's own daily entries, summed. The app never works\nthese out.",
+        "properties": {
+          "days": {
+            "description": "Each day with an entry, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualityCountDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "entered": {
+            "description": "How many days have an entry.",
+            "title": "Entered",
+            "type": "integer"
+          },
+          "missed": {
+            "description": "Of those, how many the app didn't have.",
+            "title": "Missed",
+            "type": "integer"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the person whose entries these are.",
+            "title": "Person"
+          },
+          "present": {
+            "description": "Promises counted over the days entered.",
+            "title": "Present",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "present",
+          "missed",
+          "entered",
+          "days"
+        ],
+        "title": "QualityCounts",
+        "type": "object"
+      },
+      "QualityEndingDay": {
+        "properties": {
+          "day": {
+            "description": "The day the endings were made, on the person's own clock.",
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "made": {
+            "description": "Endings the assistant made that day.",
+            "title": "Made",
+            "type": "integer"
+          },
+          "wrong": {
+            "description": "Of those, the wrong ones.",
+            "title": "Wrong",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "made",
+          "wrong"
+        ],
+        "title": "QualityEndingDay",
+        "type": "object"
+      },
+      "QualityEndings": {
+        "description": "Wrong endings out of endings made in the window (design 6.32): an ending is a close, drop, move, part or unhold\nthe assistant made; it is wrong when the person declined it, undid it, or reopened an action a nudge had recorded\nas done. One still waiting for the person's Keep is not counted yet.",
+        "properties": {
+          "days": {
+            "description": "Each day with an ending made, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualityEndingDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "declined": {
+            "description": "Wrong because the person kept things as they were.",
+            "title": "Declined",
+            "type": "integer"
+          },
+          "made": {
+            "description": "Endings made in the window that applied or that the person decided about.",
+            "title": "Made",
+            "type": "integer"
+          },
+          "reopened": {
+            "description": "Wrong because a nudge was recorded as done and the person reopened it.",
+            "title": "Reopened",
+            "type": "integer"
+          },
+          "undone": {
+            "description": "Wrong because the person undid it.",
+            "title": "Undone",
+            "type": "integer"
+          },
+          "wrong": {
+            "description": "Of those, the wrong ones: declined, undone or reopened.",
+            "title": "Wrong",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "made",
+          "wrong",
+          "declined",
+          "undone",
+          "reopened",
+          "days"
+        ],
+        "title": "QualityEndings",
+        "type": "object"
+      },
       "QualityKnowledgeUsed": {
         "description": "How often one kind of work used what it was given (design 6.20): the runs whose answer listed an entry it had\nbeen given, over the runs given at least one.",
         "properties": {
@@ -11261,13 +11567,50 @@
         "title": "QualityRepeatWeek",
         "type": "object"
       },
+      "QualityReplays": {
+        "description": "The replay set (design 6.32): the misses kept as cases.",
+        "properties": {
+          "count": {
+            "description": "How many replay files the workspace has.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When they last ran; none, because nothing records it apart from other runs.",
+            "title": "Last Run"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "QualityReplays",
+        "type": "object"
+      },
       "QualityView": {
         "description": "The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly\nmissing-op list and \"Missed one\" for each person and week, over the configured window.",
         "properties": {
+          "closes": {
+            "$ref": "#/components/schemas/QualityCloses"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/QualityCounts"
+          },
           "days": {
             "description": "The window the figures cover, in days.",
             "title": "Days",
             "type": "integer"
+          },
+          "endings": {
+            "$ref": "#/components/schemas/QualityEndings"
           },
           "knowledge_used": {
             "items": {
@@ -11302,6 +11645,21 @@
             },
             "title": "Repeat Corrections",
             "type": "array"
+          },
+          "replays": {
+            "$ref": "#/components/schemas/QualityReplays"
+          },
+          "since": {
+            "description": "The first day of the window the gate-week measures cover.",
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "until": {
+            "description": "The last day of the window: today, on the person's own clock.",
+            "format": "date",
+            "title": "Until",
+            "type": "string"
           }
         },
         "required": [
@@ -11309,7 +11667,13 @@
           "min_corrections_per_week",
           "knowledge_used",
           "repeat_corrections",
-          "missing"
+          "missing",
+          "since",
+          "until",
+          "closes",
+          "endings",
+          "counts",
+          "replays"
         ],
         "title": "QualityView",
         "type": "object"
@@ -22664,7 +23028,7 @@
     },
     "/api/quality": {
       "get": {
-        "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, and \"Missed one\" for each person and week (design 6.32), over the configured\nwindow.",
+        "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, and \"Missed one\" for each person and week (design 6.32), over the configured\nwindow; and the gate week's instruments, each a count with its denominator for each day and for the window:\nsilent closes out of all closes, wrong endings out of endings made, the person's own missed out of present,\nand the replay set.",
         "operationId": "quality_view_api_quality_get",
         "responses": {
           "200": {
@@ -22679,6 +23043,108 @@
           }
         },
         "summary": "Quality View"
+      }
+    },
+    "/api/quality/counts/{day}": {
+      "put": {
+        "description": "Save the person's own count for a day, or correct it: how many promises they counted on their own list\n(`present`) and how many of those the app didn't have (`missed`). Returns what the day held before, which\nUndo takes.",
+        "operationId": "save_count_api_quality_counts__day__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityCountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityCountSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Count"
+      }
+    },
+    "/api/quality/counts/{day}/undo": {
+      "post": {
+        "description": "Undo a save: the day holds what it held before, or nothing.",
+        "operationId": "undo_count_api_quality_counts__day__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityCountUndo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Count"
       }
     },
     "/api/questions/dropped": {

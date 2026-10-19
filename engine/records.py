@@ -876,6 +876,30 @@ class Look(Record):
     at: datetime = Field(description="The moment the list was drawn that the person then opened.")
 
 
+class PromiseCount(Record):
+    """The person's own count for one day: how many promises they count on their own list that day (`present`) and how
+    many of those the app didn't have (`missed`). Entered on the Quality screen and kept as the person typed it; the
+    app never works it out. One record for each person and day, and saving the day again corrects it."""
+
+    record_kind: ClassVar[str] = "promise_count"
+    prefix: ClassVar[str] = "PCNT"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("person", "day"),)
+
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The person who counted; none when the workspace names no person yet."
+    )
+    day: date = Field(description="The day counted, on the person's own clock.")
+    present: int = Field(ge=0, description="How many promises the person counted on their own list that day.")
+    missed: int = Field(ge=0, description="Of those, how many the app didn't have.")
+    at: datetime = Field(description="When the count was last saved.")
+
+    @model_validator(mode="after")
+    def _within(self) -> PromiseCount:
+        if self.missed > self.present:
+            raise ValueError("the app can't have missed more promises than the person counted")
+        return self
+
+
 class AuditEntry(Record):
     """One sign-in, sign-out or turning an add-on on or off, made from the screens. The engine writes it as it happens;
     nothing changes it. It never holds a token, a secret or the signed-in account's name."""
@@ -1872,6 +1896,7 @@ REGISTRY: dict[str, type[Record]] = {
         JobRun,
         SettingChange,
         Look,
+        PromiseCount,
         AuditEntry,
         Answer,
         SettingProposal,
@@ -1909,6 +1934,7 @@ KNOWLEDGE_REFERENCES: list[tuple[str, str]] = [
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "look": [("person", "person")],
+    "promise_count": [("person", "person")],
     "copy": [("person", "person"), ("questions[]", "question"), ("actions[]", "action"), ("sent_source", "source")],
     "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],

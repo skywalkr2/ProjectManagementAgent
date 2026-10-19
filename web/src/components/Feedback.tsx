@@ -29,6 +29,7 @@ const VIEW_LABEL: Record<CoreView, string> = {
   "settings/ai-compare": "ai_compare.title",
   setup: "welcome.title",
   handover: "handover.title",
+  quality: "quality.title",
   styleguide: "nav.styleguide",
 };
 

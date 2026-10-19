@@ -15,7 +15,7 @@ export class ApiError extends Error {
   }
 }
 
-async function send<T>(method: "GET" | "POST" | "DELETE", path: string, init: RequestInit): Promise<T> {
+async function send<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, init: RequestInit): Promise<T> {
   const response = await fetch(`api/${path}`, { method, credentials: "same-origin", ...init });
   if (!response.ok) {
     let detail = "";
@@ -30,7 +30,7 @@ async function send<T>(method: "GET" | "POST" | "DELETE", path: string, init: Re
   return (await response.json()) as T;
 }
 
-async function call<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
   if (body === undefined) return send<T>(method, path, { headers: {} });
   return send<T>(method, path, { headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 }
@@ -102,6 +102,11 @@ export const api = {
 
   ask: (question: string) => call<S["Created"]>("POST", "ask", { question }),
   asks: () => call<S["AskView"][]>("GET", "asks"),
+  quality: () => call<S["QualityView"]>("GET", "quality"),
+  /** Save, or correct, the person's own count for a day: what Undo takes comes back as `previous`. */
+  saveCount: (day: string, body: S["QualityCountIn"]) => call<S["QualityCountSaved"]>("PUT", `quality/counts/${id(day)}`, body),
+  undoCount: (day: string, previous: S["QualityCountBefore"] | null) =>
+    call<S["Ok"]>("POST", `quality/counts/${id(day)}/undo`, { previous } satisfies S["QualityCountUndo"]),
   missed: (text: string) => call<S["MissedSent"]>("POST", "missed", { text } satisfies S["MissedIn"]),
   applyProposal: (proposal: string, body: S["ProposalApply"]) =>
     call<S["SettingsSaved"]>("POST", `setting-proposals/${id(proposal)}/apply`, body),

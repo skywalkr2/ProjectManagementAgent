@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 113. The gate week's instruments and the Quality screen (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Measures (6.32) | Only the quality view's API had figures, and no screen showed any | `GET /api/quality` adds the window's first and last dates and, each as a count with its denominator for each day and for the window, silent closes out of all closes, wrong endings out of endings made (declined, undone, or a nudge recorded as done that the person reopened, found from the records), the person's own missed out of present, and the number of replay files. Built: `tests/test_gate_measures.py` |
+| Missed out of present (6.32, 5.1) | Named, with nowhere to enter it | A core record `promise_count`, one for each person and day, entered on the Quality screen and never computed: `PUT /api/quality/counts/{day}` saves or corrects it and returns what the day held, `POST /api/quality/counts/{day}/undo` takes that back. It goes through export and import. `docs/plugin-guide.md` is regenerated. Built: `tests/test_gate_measures.py` |
+| Quality screen (7.1, 7.9) | Not built | `#quality`, a link in Settings' list of sections: a section for each measure with its number out of its denominator and a list by day, the entry form (a date defaulting to today, two numbers, Save with an Undo toast), a plain empty state for each section, and the older measures in the same style. Not on Today. Built: `web/src/components/Quality.test.tsx` |
+| The replay set (6.32) | Its last run was to be shown if recorded | Only the count is shown: the capability matrix keeps one day for every set of cases together, so it can't say when the replays alone last ran |
+
 ## 112. Which sign-in an agent runs as (2026-10-19)
 
 | Where | Before | Now |

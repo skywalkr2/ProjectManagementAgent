@@ -22,6 +22,7 @@ import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
+import { Quality } from "./components/Quality";
 import { Knowledge } from "./components/Knowledge";
 import { MissedOneProvider } from "./components/MissedOne";
 import { Panel } from "./components/Panel";
@@ -108,8 +109,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     setView(recordView(kind, id));
   };
   const shown = parseView(view);
-  // The grid of what each account can do belongs to Settings, so Settings stays marked in the navigation.
-  const navView: View = view === "settings/ai-compare" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
+  // The grid of what each account can do and the quality figures belong to Settings, so Settings stays marked in the navigation.
+  const navView: View = view === "settings/ai-compare" || view === "quality" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened
@@ -238,6 +239,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             onOpenKnowledge={() => setView("records/knowledge")}
             onOpenCompare={() => setView("settings/ai-compare")}
             onOpenSources={() => setView("sources")}
+            onOpenQuality={() => setView("quality")}
             section={shown.section}
             onSection={(section) => setView(settingsView(section))}
             addAccount={addAccount}
@@ -250,6 +252,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <Addons onBack={() => setView("settings")} />;
       case "handover":
         return <Handover />;
+      case "quality":
+        return <Quality onBack={() => setView("settings")} />;
       case "styleguide":
         return styleGuideShown(rc) ? <StyleGuide /> : null;
       default:

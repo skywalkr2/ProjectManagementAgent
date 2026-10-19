@@ -1,0 +1,14 @@
+/* The Quality screen: one section for each measure, each a sentence with its numbers and a short list by day. */
+.sections { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-4); }
+.section { min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.section h2 { margin: 0; }
+.section p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.sum { font-size: var(--text-base); font-weight: var(--weight-semibold); }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.list li { min-width: 0; overflow-wrap: anywhere; padding: var(--space-1) 0; border-bottom: 1px solid var(--border); }
+.window { margin: var(--space-2) 0 0; }
+.form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
+.form .field { margin: 0; min-width: 0; flex: 1 1 12rem; }
+.form input { width: 100%; min-width: 0; }
+.form .act { flex: 0 0 auto; }
+.alert { margin: 0; }

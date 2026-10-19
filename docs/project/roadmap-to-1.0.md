@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 142, each in exactly one batch; 212 done items are in `roadmap-done.md`.
+- **Open items:** 141, each in exactly one batch; 213 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -65,7 +65,7 @@ keep each item's full text.
     - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
     - *Exit:* a journey test for each; the stance gate holds a design question drafted to someone the person works alongside; a draft to someone outside a restricted message's group draws only on the open one; the style pair passes; the new learning pairs pass.
 
-3. **S1-3 Ready for the gate week** (1 open item; size: about a day and a quarter)
+3. **S1-3 Ready for the gate week (built; the gate week is next)** (0 open items; size: about a day and a quarter)
     - *Covers:* *Sign-in sources taken in quietly* (S1, designer's F6: sources a sign-in adds use the quiet intake, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line; a new item in S1); *A first success in five minutes* (S1); *The gate week's instruments* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *Which sign-in an agent runs as* (design 6.16), so the gate week runs on a known account; and (the designer's notes for later batches) *Work the assistant releases on its own keeps the person's hours* (design 6.35).
     - *Exit:* the owner can start the two measured days; journeys J2 and J6 pass with one total, one go and one "Look over what was found" line.
@@ -558,10 +558,6 @@ S1. **Promises, and how they end:**
   with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Left: records made from a limited source
   carrying the limit (a fact quoted later), and a packet leaving a limited source out once a task drafts to a named
   recipient.
-- [ ] [S1-3] **The gate week's instruments** (design 6.32 measures): silent closes, missed out of present (against the owner's
-  own list), wrong endings, Missed-one per week, the replay set.
-  The "Missed one" count per person per week is in `GET /api/quality` (`missed`); the Quality screen shows it with the
-  other measures here.
 
 S1b. **Acting for you, after your yes** (owner, 2026-10-17: "if we can have the app actually able to do mail/calendar
 management (not just read only) lets do it"):

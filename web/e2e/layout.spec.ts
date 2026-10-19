@@ -52,6 +52,7 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   },
   { name: "Add-ons", hash: "addons", ready: (page) => heading(page, "Add-ons") },
   { name: "Settings", hash: "settings", ready: (page) => heading(page, "Settings") },
+  { name: "Quality", hash: "quality", ready: (page) => heading(page, "Quality") },
   // Each section of Settings, with its help beside the settings or under them.
   {
     name: "Settings: AI accounts",

@@ -42,6 +42,7 @@ export function Settings(props: {
   onOpenKnowledge?: () => void;
   /** Opens the grid of what each AI account can do. */
   onOpenCompare?: () => void;
+  onOpenQuality?: () => void;
   /** The section the address names; the first when it names none. */
   section?: SettingsSection | null;
   /** Called with the section the person chose, to put it in the address; without it the screen keeps the choice itself. */
@@ -93,6 +94,7 @@ export function Settings(props: {
     if (props.onSection) props.onSection(next);
     else setChosen(next);
   };
+  const lastOwn = [...listed].reverse().find((id) => !id.startsWith("addon/"));
   const follow = (e: MouseEvent, run: () => void) => {
     // A plain click moves within the app; a modified one (a new tab) keeps its link.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -387,7 +389,19 @@ export function Settings(props: {
                       </li>,
                     ]
                   : []),
+                // Quality is a screen of its own; the list only leads to it, after the app's own sections and before
+                // each add-on's.
+                ...(id === lastOwn
+                  ? [
+                      <li key="quality">
+                        <a href={viewHref("quality")} onClick={(e) => props.onOpenQuality && follow(e, props.onOpenQuality)}>
+                          {t("quality.open")}
+                        </a>
+                      </li>,
+                    ]
+                  : []),
               ])}
+
             </ul>
           </nav>
         </div>

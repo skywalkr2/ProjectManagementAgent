@@ -112,8 +112,10 @@ test("the section list sits down the side, one link for each section that has so
     "Backups and sync",
     "Appearance",
     "Lists",
+    "Quality",
   ]);
   expect(within(nav).getByRole("link", { name: "You and the workspace" })).toHaveAttribute("aria-current", "page");
+  expect(within(nav).getByRole("link", { name: "Quality" })).toHaveAttribute("href", expect.stringMatching(/#quality$/));
   expect(within(nav).getByRole("link", { name: "Backups and sync" })).toHaveAttribute("href", expect.stringMatching(/#settings\/backups$/));
   expect(within(nav).getByRole("link", { name: "Sources" })).toHaveAttribute("href", expect.stringMatching(/#sources$/));
 });

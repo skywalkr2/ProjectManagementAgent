@@ -1730,6 +1730,18 @@ When a person last opened the list of what changed since yesterday: everything m
 | `person` | str \| None | `None` | The person who looked; none when the workspace names no person yet. |
 | `at` | datetime | required | The moment the list was drawn that the person then opened. |
 
+### `promise_count` (PCNT-n)
+
+The person's own count for one day: how many promises they count on their own list that day (`present`) and how many of those the app didn't have (`missed`). Entered on the Quality screen and kept as the person typed it; the app never works it out. One record for each person and day, and saving the day again corrects it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `person` | str \| None | `None` | The person who counted; none when the workspace names no person yet. |
+| `day` | date | required | The day counted, on the person's own clock. |
+| `present` | int | required | How many promises the person counted on their own list that day. |
+| `missed` | int | required | Of those, how many the app didn't have. |
+| `at` | datetime | required | When the count was last saved. |
+
 ### `audit_entry` (AUD-n)
 
 One sign-in, sign-out or turning an add-on on or off, made from the screens. The engine writes it as it happens; nothing changes it. It never holds a token, a secret or the signed-in account's name.

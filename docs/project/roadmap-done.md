@@ -1809,6 +1809,10 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **The gate week's instruments** (design 6.32 measures): silent closes, missed out of present (against the owner's
+  own list), wrong endings, Missed-one per week, the replay set.
+  The "Missed one" count per person per week is in `GET /api/quality` (`missed`); the Quality screen shows it with the
+  other measures here. *Built (S1-3):* `tests/test_gate_measures.py`, `Quality.test.tsx`. Left: a journey of a nudge closed then reopened; when the replay set last ran.
 - [x] **Which sign-in an agent runs as** (the designer's lessons, 2026-10-19; design 6.16): the account check reads
   the identity each command-line agent runs as from the tool itself (an adapter capability), Settings shows it beside
   the account, and a change of identity, or one that doesn't fit the work's data level, is a Today line; runs that would

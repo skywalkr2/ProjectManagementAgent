@@ -3829,6 +3829,91 @@ class QualityMissedWeek(BaseModel):
     count: int = Field(description="How many times they said the assistant missed something that week.")
 
 
+class QualityCloseDay(BaseModel):
+    day: date = Field(description="The day, on the person's own clock.")
+    total: int = Field(description="Closes made that day.")
+    silent: int = Field(description="Of those, the ones the person hasn't seen.")
+
+
+class QualityCloses(BaseModel):
+    """Silent closes out of all closes in the window (design 6.32)."""
+
+    total: int = Field(description="Every close made in the window: by a rule, set aside, or by the assistant.")
+    silent: int = Field(description="Of those, the ones the person hasn't made, seen or approved.")
+    days: list[QualityCloseDay] = Field(description="Each day with a close, oldest first.")
+
+
+class QualityEndingDay(BaseModel):
+    day: date = Field(description="The day the endings were made, on the person's own clock.")
+    made: int = Field(description="Endings the assistant made that day.")
+    wrong: int = Field(description="Of those, the wrong ones.")
+
+
+class QualityEndings(BaseModel):
+    """Wrong endings out of endings made in the window (design 6.32): an ending is a close, drop, move, part or unhold
+    the assistant made; it is wrong when the person declined it, undid it, or reopened an action a nudge had recorded
+    as done. One still waiting for the person's Keep is not counted yet."""
+
+    made: int = Field(description="Endings made in the window that applied or that the person decided about.")
+    wrong: int = Field(description="Of those, the wrong ones: declined, undone or reopened.")
+    declined: int = Field(description="Wrong because the person kept things as they were.")
+    undone: int = Field(description="Wrong because the person undid it.")
+    reopened: int = Field(description="Wrong because a nudge was recorded as done and the person reopened it.")
+    days: list[QualityEndingDay] = Field(description="Each day with an ending made, oldest first.")
+
+
+class QualityCountDay(BaseModel):
+    day: date = Field(description="The day counted.")
+    present: int = Field(description="Promises the person counted on their own list that day.")
+    missed: int = Field(description="Of those, how many the app didn't have.")
+
+
+class QualityCounts(BaseModel):
+    """Missed out of present in the window (design 6.32): the person's own daily entries, summed. The app never works
+    these out."""
+
+    person: str | None = Field(None, description="The id of the person whose entries these are.")
+    present: int = Field(description="Promises counted over the days entered.")
+    missed: int = Field(description="Of those, how many the app didn't have.")
+    entered: int = Field(description="How many days have an entry.")
+    days: list[QualityCountDay] = Field(description="Each day with an entry, oldest first.")
+
+
+class QualityReplays(BaseModel):
+    """The replay set (design 6.32): the misses kept as cases."""
+
+    count: int = Field(description="How many replay files the workspace has.")
+    last_run: datetime | None = Field(
+        None, description="When they last ran; none, because nothing records it apart from other runs."
+    )
+
+
+class QualityCountIn(BaseModel):
+    present: int = Field(ge=0, description="How many promises the person counted on their own list that day.")
+    missed: int = Field(ge=0, description="Of those, how many the app didn't have.")
+
+
+class QualityCountBefore(BaseModel):
+    """What a day's count held before a save, which Undo puts back."""
+
+    present: int
+    missed: int
+
+
+class QualityCountSaved(BaseModel):
+    id: str = Field(description="The id of the day's count.")
+    day: date
+    present: int
+    missed: int
+    previous: QualityCountBefore | None = Field(
+        None, description="What the day held before this save; none when it had nothing. Undo takes it back."
+    )
+
+
+class QualityCountUndo(BaseModel):
+    previous: QualityCountBefore | None = Field(None, description="What `previous` was in the save to undo.")
+
+
 class QualityView(BaseModel):
     """The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly
     missing-op list and "Missed one" for each person and week, over the configured window."""
@@ -3843,3 +3928,9 @@ class QualityView(BaseModel):
         description='"Missed one" for each person and week, oldest week first; a person with any in the window has a '
         "row for every week, so a week with none is zero. It should fall from week to week.",
     )
+    since: date = Field(description="The first day of the window the gate-week measures cover.")
+    until: date = Field(description="The last day of the window: today, on the person's own clock.")
+    closes: QualityCloses
+    endings: QualityEndings
+    counts: QualityCounts
+    replays: QualityReplays
