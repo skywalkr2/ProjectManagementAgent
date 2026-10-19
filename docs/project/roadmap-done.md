@@ -1809,6 +1809,12 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **Sign-in sources taken in quietly** (designer F6, from the intake built 2026-10-19): sources a sign-in adds use
+  `first_run: intake`, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line
+  instead of a review line per item. *Today:* sign-in sources still read the last day (`first_run: recent`). *Built (S1-3):* `tests/test_first_promises.py`, `journeys-mail.spec.ts` (J2), `journeys-new-start.spec.ts` (J6).
+- [x] **A first success in five minutes:** the walkthrough connects one mailbox and an AI account, looks back over the
+  last two weeks of the person's own mail (estimate first), and shows a handful of real open promises with one follow-up
+  ready, before any project, area, pack or extra account is asked about. *Built (S1-3):* `tests/test_first_promises.py`, `FirstPromises.test.tsx`, `journeys.spec.ts` (J1), J2, J6. Left: the stand-in model never finds a promise, so J2 shows the empty case; the cost on a real account isn't measured yet.
 - [x] **The style pair** (moved from L4): *moved to S1-2 as "Learning from the sent version" (the designer's notes,
   2026-10-19); this line stays as a pointer.* *Built (S1-2):* the pair `sent-version-roles` (`tests/test_pairs.py`).
 - [x] **Learning from the sent version** (the designer's notes, 2026-10-19; design 6.35; the style pair, moved here
