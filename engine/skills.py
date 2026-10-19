@@ -11,7 +11,7 @@ allowed to see (`within_level`).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -26,13 +26,21 @@ class Skill:
     id: str
     label: str
     description: str
+    #: Measurable facts about a request that make this skill matter (the parts of a routing rule's `when`), when the
+    #: skill is only at risk on some requests; a skill with none is needed by every request of its kind of work.
+    route_when: dict[str, int] = field(default_factory=dict, hash=False, compare=False)
 
 
 def core_skills() -> list[Skill]:
     """The skills the core ships, in the order of the file."""
     data = load_yaml(DEFAULTS.read_text(encoding="utf-8")) or {}
     return [
-        Skill(str(entry["id"]), str(entry["label"]), str(entry.get("description", "")))
+        Skill(
+            str(entry["id"]),
+            str(entry["label"]),
+            str(entry.get("description", "")),
+            {str(k): int(v) for k, v in (entry.get("route_when") or {}).items()},
+        )
         for entry in data.get("skills") or []
     ]
 

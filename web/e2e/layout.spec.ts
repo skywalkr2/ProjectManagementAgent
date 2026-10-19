@@ -53,7 +53,16 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   { name: "Add-ons", hash: "addons", ready: (page) => heading(page, "Add-ons") },
   { name: "Settings", hash: "settings", ready: (page) => heading(page, "Settings") },
   // Each section of Settings, with its help beside the settings or under them.
-  { name: "Settings: AI accounts", hash: "settings/ai", ready: (page) => section(page, "AI accounts") },
+  {
+    name: "Settings: AI accounts",
+    hash: "settings/ai",
+    ready: async (page) => {
+      await section(page, "AI accounts");
+      // Under the accounts: which model does what, with its lists and the routing rules.
+      await expect(page.getByRole("heading", { level: 3, name: "Which model does what" })).toBeVisible();
+      await expect(page.getByRole("group", { name: "Rule 1" })).toBeVisible();
+    },
+  },
   { name: "Settings: Backups and sync", hash: "settings/backups", ready: (page) => section(page, "Backups and sync") },
   { name: "Settings: Today", hash: "settings/today", ready: (page) => section(page, "Today") },
   { name: "Settings: Appearance", hash: "settings/appearance", ready: (page) => section(page, "Appearance") },

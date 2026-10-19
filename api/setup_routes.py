@@ -22,6 +22,7 @@ from api.schemas import (
     AiBorrowAnswer,
     AiBorrowed,
     AiCheckSize,
+    AiKindFit,
     AiMeasureEstimate,
     AiMeasureIn,
     AiMeasureStarted,
@@ -29,11 +30,16 @@ from api.schemas import (
     AiModelSkills,
     AiModelsView,
     AiModelView,
+    AiRouteRuleView,
+    AiRoutingView,
+    AiRuleSuggestion,
     AiSkillsView,
     AiSkillView,
     AiSwitched,
     AiSwitchEstimate,
     AiTestResult,
+    AiTierView,
+    AiWorkKindView,
     BackupFolderAdd,
     CatalogAddress,
     ConfirmDone,
@@ -800,6 +806,115 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 )
             )
         return found
+
+    @r.get("/ai/routing")
+    def ai_routing() -> AiRoutingView:
+        """Which model does what (design 7.9): each kind of work (the core's and every running add-on's) with the tier
+        it uses now, what was measured for the model each tier uses, the cheapest tier that passed, each tier with its
+        account and second try, the routing rules in the order they are checked, and the rules the measurements back."""
+        from datetime import UTC, datetime
+
+        from engine.ai import matrix, suggest
+        from engine.ai.adapters import make_adapter
+        from engine.shipped import DEMOS, demo
+        from engine.skills import skills as skill_list
+        from engine.tasks import default_tier
+        from engine.tasks import settings as task_settings
+
+        cfg_now = current()
+        ai = cfg_now.ai
+        today = datetime.now(UTC).date()
+        sets: dict[str, dict[str, str]] = {}
+        needed: dict[str, list[str]] = {}
+        for demo_name in DEMOS:
+            sets |= matrix.case_sets(demo(demo_name), ws.root)
+            for kind_name, ids in matrix.skills_by_kind(demo(demo_name), ws.root).items():
+                needed[kind_name] = [
+                    *needed.get(kind_name, []),
+                    *(i for i in ids if i not in needed.get(kind_name, [])),
+                ]
+        # The measurements of the model each tier uses, by tier; a tier with no account has none.
+        standings: dict[str, list[Any]] = {}
+        for tier_name, tier in ai.tiers.items():
+            account, _, short = tier.use.partition("/")
+            provider = ai.providers.get(account) if tier.use else None
+            if provider is None:
+                continue
+            version = matrix.current_program_version(cfg_now, account, make_adapter)
+            standings[tier_name] = matrix.standing(
+                ws,
+                cfg_now,
+                f"{account}/{provider.models.get(short, short)}",
+                program_version=version,
+                current_sets=sets,
+                today=today,
+            )
+        labels = {s.id: s.label for s in skill_list()}
+        route_when = {s.id: s.route_when for s in skill_list() if s.route_when}
+        kinds = []
+        suggestions = []
+        for name, kind in sorted(store.plugins.tasks.items(), key=lambda pair: (("/" in pair[0]), pair[0])):
+            if "/" in name and not store.plugins.active(name.split("/", 1)[0]):
+                continue
+            configured = ai.tasks.get(name)
+            tier_now = task_settings(cfg_now, kind).tier
+            ids = needed.get(name, [])
+            fits = [suggest.fit(tier_name, ids, held) for tier_name, held in standings.items()]
+            chosen = suggest.suggest_tier(fits, tier_now)
+            kinds.append(
+                AiWorkKindView(
+                    name=name,
+                    label=kind.label or name.rsplit("/", 1)[-1].replace("-", " ").capitalize(),
+                    tier=tier_now,
+                    default_tier=default_tier(cfg_now, kind),
+                    custom=configured is not None and "tier" in configured.model_fields_set,
+                    source=config_screens.source_of(cfg_now, f"ai.tasks.{name}.tier"),
+                    fits=[AiKindFit(**vars(f)) for f in fits],
+                    suggested_tier=chosen.tier,
+                    suggestion_why_not=chosen.why_not,
+                )
+            )
+            tier_cfg = ai.tiers.get(tier_now)
+            rule = suggest.suggest_rule(
+                name,
+                tier_now,
+                ids,
+                {t: held for t, held in standings.items()},
+                escalate_to=tier_cfg.escalate_to if tier_cfg else None,
+                route_when=route_when,
+                existing=ai.routing,
+            )
+            if rule is not None:
+                suggestions.append(
+                    AiRuleSuggestion(
+                        rule=AiRouteRuleView(
+                            task=rule.task,
+                            tier=rule.tier,
+                            input_chars_over=rule.when.get("input_chars_over"),
+                            quoted_messages_over=rule.when.get("quoted_messages_over"),
+                        ),
+                        skills=[labels.get(i, i) for i in rule.skills],
+                    )
+                )
+        tiers = [
+            AiTierView(
+                name=name,
+                account=(tier.use.split("/", 1)[0] or None) if tier.use else None,
+                escalate_to=tier.escalate_to,
+                escalate_source=config_screens.source_of(cfg_now, f"ai.tiers.{name}.escalate_to"),
+            )
+            for name, tier in ai.tiers.items()
+        ]
+        return AiRoutingView(
+            kinds=kinds,
+            tiers=tiers,
+            rules=[AiRouteRuleView(tier=rule.tier, **rule.when.model_dump()) for rule in ai.routing],
+            rules_source=config_screens.source_of(cfg_now, "ai.routing"),
+            rule_suggestions=suggestions,
+            min_score=ai.skills.min_score,
+            confirm_above_usd=ai.budgets.confirm_above_usd,
+            per_run_usd=ai.budgets.per_run_usd,
+        )
 
     @r.get("/ai/check-size")
     def ai_check_size() -> AiCheckSize:

@@ -623,6 +623,31 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
   });
 
   for (const scheme of ["light", "dark"] as const) {
+    test(`Settings: which model does what has named lists, saves a choice with Undo, and has no violations in ${scheme}`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 1024, height: 900 });
+      await signIn(page, "settings/ai");
+      const part = page.getByRole("region", { name: "Which model does what" });
+      await expect(part).toBeVisible();
+      await expect(part.getByRole("group", { name: "Each kind of work" }).getByRole("combobox").first()).toBeVisible();
+      await expect(part.getByRole("group", { name: "Send hard work to a stronger model first" })).toContainText("the first one that fits decides");
+      await expect(part).toContainText("follows your spending limits");
+      await part.scrollIntoViewIfNeeded();
+      await expectNoViolations(page);
+      // A choice is saved as it is made and can be undone.
+      const first = part.getByRole("group", { name: "Each kind of work" }).getByRole("combobox").first();
+      const before = await first.inputValue();
+      const options = await first.locator("option").evaluateAll((all) => all.map((o) => (o as HTMLOptionElement).value));
+      const other = options.find((o) => o !== before)!;
+      await first.selectOption(other);
+      await expect(page.getByRole("button", { name: "Undo" }).first()).toBeVisible();
+      await expect(first).toHaveValue(other);
+      await page.getByRole("button", { name: "Undo" }).first().click();
+      await expect(first).toHaveValue(before);
+    });
+  }
+
+  for (const scheme of ["light", "dark"] as const) {
     test(`the grid of what each account can do, in ${scheme}: pass rate first, the cheapest passing marked, and no violations`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await mockAccounts(page);

@@ -1,6 +1,7 @@
 # The skills a run can get right or wrong (design 6.16, "What a model can do, measured"). Every evaluation case, learning
 # pair and scenario names the ones it proves with `skills:`. Each skill has a plain-words label, shown in Settings, and a
-# description of what it covers. Packs may add their own through `engine.skills.merge`.
+# description of what it covers; `route_when` (optional) says on which requests the skill is at risk, as the parts of a
+# routing rule's `when`. Packs may add their own through `engine.skills.merge`.
 skills:
   - id: use-term
     label: Using a term
@@ -41,6 +42,7 @@ skills:
   - id: new-message-only
     label: Acting on the new message
     description: Acts on the newest message of a thread and treats the quoted history as background.
+    route_when: {quoted_messages_over: 3}   # at risk only where the input quotes many earlier messages
   - id: recording-only-what-matters
     label: Recording only what matters
     description: Leaves small talk and mail the person set aside unrecorded.

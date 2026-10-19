@@ -2188,6 +2188,94 @@ class AiAccountView(BaseModel):
     )
 
 
+SettingLayer = Literal["default", "file", "env", "flag"]
+
+
+class AiKindFit(BaseModel):
+    """What the measurements hold for the model one tier uses, over the skills a kind of work needs (design 6.16)."""
+
+    tier: str
+    skills: int = Field(description="How many skills the kind of work needs, as the cases that run it name them.")
+    measured: int = Field(description="Of those, how many have at least one run.")
+    stale: int = Field(description="Of the measured, how many are out of date: unknown, never a pass.")
+    below: int = Field(description="Of the measured, how many are under the minimum score (`ai.skills.min_score`).")
+    runs: int = Field(description="All runs of those skills, out-of-date ones included.")
+    passes: int
+    cost_per_pass_usd: float | None = Field(None, description="What a passing run cost on average; none without one.")
+    status: Literal["ok", "below_min", "stale", "not_measured"] = Field(
+        description="ok: every skill measured, fresh and above the minimum. Anything else is not a pass."
+    )
+
+
+class AiWorkKindView(BaseModel):
+    """One kind of AI work and the tier it uses now (design 7.9, which model does what)."""
+
+    name: str = Field(description="The kind of work's name, as `ai.tasks.<name>` and the routing rules name it.")
+    label: str = Field(description="The kind of work in plain words; the screen's own wording sheet may say it better.")
+    tier: str = Field(description="The tier it uses now: the workspace's choice, else its role's, else its own.")
+    default_tier: str = Field(description="The tier it uses when the workspace has made no choice for it.")
+    custom: bool = Field(description="The workspace chose this kind of work's tier (`ai.tasks.<name>.tier` is set).")
+    source: SettingLayer = Field(
+        description="The layer that set `ai.tasks.<name>.tier`; env and flag can't be changed here."
+    )
+    fits: list[AiKindFit] = Field(description="What was measured for it, for the model each tier uses.")
+    suggested_tier: str | None = Field(
+        None,
+        description="The cheapest tier whose model passed every skill this kind of work needs; none when none did.",
+    )
+    suggestion_why_not: Literal["no_accounts", "no_cases", "not_measured", "stale", "none_passes"] | None = Field(
+        None, description="Why there is no suggestion: nothing to run it on, no case that measures it, or the results."
+    )
+
+
+class AiTierView(BaseModel):
+    """One tier: the account it uses and the stronger tier it tries once more on."""
+
+    name: str = Field(description="The tier's name in the settings; the screen words it.")
+    account: str | None = Field(None, description="The short name of the account that does its work; none when unset.")
+    escalate_to: str | None = Field(
+        None, description="The stronger tier tried once more when the answer keeps failing the app's checks."
+    )
+    escalate_source: SettingLayer = Field(description="The layer that set `ai.tiers.<name>.escalate_to`.")
+
+
+class AiRouteRuleView(BaseModel):
+    """One routing rule: all the parts given must match, and then the request goes to the tier."""
+
+    task: str | None = None
+    input_chars_over: int | None = None
+    quoted_messages_over: int | None = None
+    data_level: Literal["open", "internal", "restricted"] | None = None
+    tier: str
+
+
+class AiRuleSuggestion(BaseModel):
+    """A routing rule the measurements back, offered only; nothing is added until the person says so."""
+
+    rule: AiRouteRuleView
+    skills: list[str] = Field(description="The labels of the skills the tier in use is measured under the minimum on.")
+
+
+class AiRoutingView(BaseModel):
+    """Which model does what: every kind of work with its tier, the tiers with their second tries, the routing rules in
+    the order they are checked, and the spending limits that apply to a stronger model."""
+
+    kinds: list[AiWorkKindView]
+    tiers: list[AiTierView]
+    rules: list[AiRouteRuleView]
+    rules_source: SettingLayer = Field(
+        description="The layer that set `ai.routing`; env and flag can't be changed here."
+    )
+    rule_suggestions: list[AiRuleSuggestion] = Field(
+        description="Rules the measurements back, at most one for each kind of work."
+    )
+    min_score: float = Field(description="`ai.skills.min_score`: the pass rate a skill needs to count.")
+    confirm_above_usd: float = Field(
+        description="`ai.budgets.confirm_above_usd`: work estimated above it waits for a go."
+    )
+    per_run_usd: float = Field(description="`ai.budgets.per_run_usd`: no single run is started above it.")
+
+
 class AiSkillView(BaseModel):
     """What the measurements hold for one model and one skill (design 6.16): a skill is one kind of thing a run can get
     right or wrong. A skill nobody measured has no runs."""

@@ -285,6 +285,17 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   **Impact:** design 4, 6 and 7 (7.6, 7.7, 7.13, 7.14, 7.17) and CHANGES.md section 86; P13 and P14 leave the open
   promises. Left: "usually with" on the series page (meetings carry no attendees yet), the source label outside the
   record page, per-row answers to a follow-on question, and "Drop it and draft the note" (waits for the publisher).
+- **Also (2026-10-19): which model does what, on the Settings screen (P27), built.** Under AI accounts: each kind of
+  work picks its model; each model says whether a failed check tries once more on a stronger one; rules send hard work to
+  a stronger model first (kind, length, earlier messages quoted, data level; first match wins); a plain line says how
+  spending limits apply. All apply at once with no restart. Beside each kind, what was measured (passes N of M, cost per
+  pass, out of date, not measured) and a suggestion from a plain rule (`engine/ai/suggest.py`: the cheapest tier passing
+  every measured skill, never a stale or unmeasured one), applied only when the person clicks "Use this"; likewise a
+  suggested rule where only the stronger model passes. Settings accepts list and per-kind keys through a generic opt-in
+  in the schema (`screen_edit`, `new_entries`).
+  **Impact:** design 7.9 and 6.16 (CHANGES.md section 87); P27 leaves the open promises. Left: only the note-reading kind
+  has measurements today (the core's cases all run it), so other kinds say "no tests cover this kind of work yet";
+  moving a kind to another tier isn't pre-checked against what its backup account passed (the account checks flag it).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

@@ -87,6 +87,17 @@ def is_live(key: str) -> bool:
     return any(key.startswith(p) if p.endswith(".") else key == p or key.startswith(p + ".") for p in LIVE_KEYS)
 
 
+def changes_who_takes_work(key: str) -> bool:
+    """Whether a changed settings key changes which account takes some work (an account itself, the main and backup
+    accounts of a tier, the tier a kind of work uses, the routing rules), so work held for an account's usage limit may
+    try again at once. A tier's second try only comes after a first try, so it changes nothing held."""
+    return (
+        key.startswith(("ai.providers.", "ai.routing"))
+        or (key.startswith("ai.tiers.") and key.endswith((".use", ".fallback")))
+        or (key.startswith("ai.tasks.") and key.endswith(".tier"))
+    )
+
+
 def code_fingerprint() -> str:
     """The newest modification time of the running program's own source files."""
     newest = max((p.stat().st_mtime for root in CODE_ROOTS if root.is_dir() for p in root.rglob("*.py")), default=0.0)
@@ -277,7 +288,7 @@ class Worker:
                 del self.cfg.sources[key]
             self.cfg.sources.update({k: v for k, v in fresh.sources.items() if k.startswith(name + ".")})
         self._config_seen = seen
-        if any(k.startswith(("ai.providers.", "ai.tiers.")) for k in changed):
+        if any(changes_who_takes_work(k) for k in changed):
             release_paused(self.store)
         if changed:
             log.info("Took in changed settings: %s", ", ".join(sorted(changed)))

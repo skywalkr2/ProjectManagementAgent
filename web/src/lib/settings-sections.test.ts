@@ -1,5 +1,5 @@
 import type { S } from "./api";
-import { navSections, sectionItems, sectionOfItem, topics } from "./settings-sections";
+import { isListed, navSections, sectionItems, sectionOfItem, topics } from "./settings-sections";
 
 function item(key: string, group: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
   return {
@@ -73,4 +73,11 @@ test("Advanced is grouped by topic, one topic for each group, in the order the g
     ["workspace.plugins.catalog", 1],
     ["dispatch.knowledge", 1],
   ]);
+});
+
+test("the tier of each kind of work, what a tier tries once more on and the routing rules are not rows of their own: a part of the AI section edits them", () => {
+  const own = [item("ai.tasks", "ai", { type: "other" }), item("ai.tiers", "ai", { type: "other" }), item("ai.routing", "ai", { type: "other" })];
+  expect(own.map(isListed)).toEqual([false, false, false]);
+  expect(sectionItems([...ITEMS, ...own], "ai").map((i) => i.key)).not.toEqual(expect.arrayContaining(["ai.routing"]));
+  expect(sectionItems([...ITEMS, ...own], "ai").map((i) => i.key)).toContain("ai.budgets.per_run_usd");
 });

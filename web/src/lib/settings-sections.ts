@@ -26,9 +26,16 @@ export function sectionOfItem(item: Pick<Item, "group" | "plugin">): SettingsSec
   return found ? found[1] : "advanced";
 }
 
+/** Settings that a part of their section edits in its own way, so they aren't also listed as rows: the tier each kind of
+ * work uses, what a tier tries once more on, and the routing rules (Which model does what). */
+const OWN_PART = ["ai.tasks", "ai.tiers", "ai.routing"];
+
+/** Whether a setting is listed as a row of its own. */
+export const isListed = (item: Pick<Item, "key">): boolean => !OWN_PART.includes(item.key);
+
 /** A section's settings, the basic ones first. */
 export function sectionItems(items: Item[], section: SettingsSection): Item[] {
-  const mine = items.filter((i) => sectionOfItem(i) === section);
+  const mine = items.filter((i) => isListed(i) && sectionOfItem(i) === section);
   return [...mine.filter((i) => i.basic), ...mine.filter((i) => !i.basic)];
 }
 

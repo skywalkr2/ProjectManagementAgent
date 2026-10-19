@@ -527,11 +527,17 @@ class TierSettings(ConfigModel):
         "", description="provider/model short name that does this tier's work; empty means no account is set up yet."
     )
     fallback: list[str] = Field(default_factory=list, description="Tried in order when the main one can't serve.")
-    escalate_to: str | None = Field(None, description="A stronger tier to retry on when checks keep failing.")
+    escalate_to: str | None = Field(
+        None,
+        description="A stronger tier to retry on when checks keep failing.",
+        json_schema_extra={"screen_edit": True},
+    )
 
 
 class TaskSettings(ConfigModel):
-    tier: str = Field("routine", description="Which tier this kind of work uses.")
+    tier: str = Field(
+        "routine", description="Which tier this kind of work uses.", json_schema_extra={"screen_edit": True}
+    )
     temperature: float = Field(
         0.0, ge=0, le=2, description="Randomness: near zero for extraction, a little for drafting."
     )
@@ -685,7 +691,11 @@ class AiFile(FileModel):
         default_factory=dict, description="Every AI account this workspace may use (none until one is added)."
     )
     tiers: dict[str, TierSettings] = Field(default_factory=_default_tiers, description="What the work needs.")
-    tasks: dict[str, TaskSettings] = Field(default_factory=_default_tasks, description="Tier and settings per task.")
+    tasks: dict[str, TaskSettings] = Field(
+        default_factory=_default_tasks,
+        description="Tier and settings per task.",
+        json_schema_extra={"new_entries": True},
+    )
     roles: Roles = Field(
         default_factory=Roles, description="Tiers by the role a kind of work plays: write, check or research."
     )
@@ -706,6 +716,7 @@ class AiFile(FileModel):
     routing: list[RouteRule] = Field(
         default_factory=list,
         description="Rules checked in order before a call that send some requests to another tier; first match wins.",
+        json_schema_extra={"screen_edit": True},
     )
     borrow_other_tier: Literal["ask", "never"] = Field(
         "ask",

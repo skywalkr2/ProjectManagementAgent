@@ -1285,6 +1285,13 @@ evaluation reports.
 - **Telling the person.** When the matrix shows a cheaper model is as good for some work, or the configured one is
   below the score for a skill a task kind needs, Today gets one line to decide ("Use <account> for everyday work: it
   scores the same at a third of the cost"). Nothing switches on its own.
+- **Choosing from Settings** (built; the router's own pick by skill and the Today line above are still designed). Which
+  model does what (7.9) puts the measurements beside each kind of work and offers, only on the person's click, the
+  cheapest tier whose model passed every skill the kind needs (`engine/ai/suggest.py`): all measured, none out of date,
+  none under `ai.skills.min_score`; a stale or missing result is unknown and never a pass. Which skills a kind needs
+  comes from the cases that run it: the core's cases, pairs, scenarios and replays run the note-reading kind, a pack's
+  case the kind it names. It also offers a routing rule where the model in use is under the minimum on a skill and
+  another tier passes it.
 
 **Adding an account** (Settings, AI): pick the kind, by name, from a list the app ships as data (`catalog/ai-endpoints.yaml`:
 services, local servers and the common command-line agents, each agent with its command, the program's own options that keep

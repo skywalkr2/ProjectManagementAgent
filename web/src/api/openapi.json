@@ -1369,6 +1369,79 @@
         "title": "AiCheckSize",
         "type": "object"
       },
+      "AiKindFit": {
+        "description": "What the measurements hold for the model one tier uses, over the skills a kind of work needs (design 6.16).",
+        "properties": {
+          "below": {
+            "description": "Of the measured, how many are under the minimum score (`ai.skills.min_score`).",
+            "title": "Below",
+            "type": "integer"
+          },
+          "cost_per_pass_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a passing run cost on average; none without one.",
+            "title": "Cost Per Pass Usd"
+          },
+          "measured": {
+            "description": "Of those, how many have at least one run.",
+            "title": "Measured",
+            "type": "integer"
+          },
+          "passes": {
+            "title": "Passes",
+            "type": "integer"
+          },
+          "runs": {
+            "description": "All runs of those skills, out-of-date ones included.",
+            "title": "Runs",
+            "type": "integer"
+          },
+          "skills": {
+            "description": "How many skills the kind of work needs, as the cases that run it name them.",
+            "title": "Skills",
+            "type": "integer"
+          },
+          "stale": {
+            "description": "Of the measured, how many are out of date: unknown, never a pass.",
+            "title": "Stale",
+            "type": "integer"
+          },
+          "status": {
+            "description": "ok: every skill measured, fresh and above the minimum. Anything else is not a pass.",
+            "enum": [
+              "ok",
+              "below_min",
+              "stale",
+              "not_measured"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier",
+          "skills",
+          "measured",
+          "stale",
+          "below",
+          "runs",
+          "passes",
+          "status"
+        ],
+        "title": "AiKindFit",
+        "type": "object"
+      },
       "AiMeasureEstimate": {
         "description": "What measuring an account would run and cost, shown before anything is spent.",
         "properties": {
@@ -1678,6 +1751,163 @@
         "title": "AiModelsView",
         "type": "object"
       },
+      "AiRouteRuleView": {
+        "description": "One routing rule: all the parts given must match, and then the request goes to the tier.",
+        "properties": {
+          "data_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "internal",
+                  "restricted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Level"
+          },
+          "input_chars_over": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Chars Over"
+          },
+          "quoted_messages_over": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoted Messages Over"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier"
+        ],
+        "title": "AiRouteRuleView",
+        "type": "object"
+      },
+      "AiRoutingView": {
+        "description": "Which model does what: every kind of work with its tier, the tiers with their second tries, the routing rules in\nthe order they are checked, and the spending limits that apply to a stronger model.",
+        "properties": {
+          "confirm_above_usd": {
+            "description": "`ai.budgets.confirm_above_usd`: work estimated above it waits for a go.",
+            "title": "Confirm Above Usd",
+            "type": "number"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/AiWorkKindView"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "min_score": {
+            "description": "`ai.skills.min_score`: the pass rate a skill needs to count.",
+            "title": "Min Score",
+            "type": "number"
+          },
+          "per_run_usd": {
+            "description": "`ai.budgets.per_run_usd`: no single run is started above it.",
+            "title": "Per Run Usd",
+            "type": "number"
+          },
+          "rule_suggestions": {
+            "description": "Rules the measurements back, at most one for each kind of work.",
+            "items": {
+              "$ref": "#/components/schemas/AiRuleSuggestion"
+            },
+            "title": "Rule Suggestions",
+            "type": "array"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/AiRouteRuleView"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "rules_source": {
+            "description": "The layer that set `ai.routing`; env and flag can't be changed here.",
+            "enum": [
+              "default",
+              "file",
+              "env",
+              "flag"
+            ],
+            "title": "Rules Source",
+            "type": "string"
+          },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/AiTierView"
+            },
+            "title": "Tiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kinds",
+          "tiers",
+          "rules",
+          "rules_source",
+          "rule_suggestions",
+          "min_score",
+          "confirm_above_usd",
+          "per_run_usd"
+        ],
+        "title": "AiRoutingView",
+        "type": "object"
+      },
+      "AiRuleSuggestion": {
+        "description": "A routing rule the measurements back, offered only; nothing is added until the person says so.",
+        "properties": {
+          "rule": {
+            "$ref": "#/components/schemas/AiRouteRuleView"
+          },
+          "skills": {
+            "description": "The labels of the skills the tier in use is measured under the minimum on.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rule",
+          "skills"
+        ],
+        "title": "AiRuleSuggestion",
+        "type": "object"
+      },
       "AiSkillView": {
         "description": "What the measurements hold for one model and one skill (design 6.16): a skill is one kind of thing a run can get\nright or wrong. A skill nobody measured has no runs.",
         "properties": {
@@ -1935,6 +2165,148 @@
           "detail"
         ],
         "title": "AiTestResult",
+        "type": "object"
+      },
+      "AiTierView": {
+        "description": "One tier: the account it uses and the stronger tier it tries once more on.",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The short name of the account that does its work; none when unset.",
+            "title": "Account"
+          },
+          "escalate_source": {
+            "description": "The layer that set `ai.tiers.<name>.escalate_to`.",
+            "enum": [
+              "default",
+              "file",
+              "env",
+              "flag"
+            ],
+            "title": "Escalate Source",
+            "type": "string"
+          },
+          "escalate_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The stronger tier tried once more when the answer keeps failing the app's checks.",
+            "title": "Escalate To"
+          },
+          "name": {
+            "description": "The tier's name in the settings; the screen words it.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "escalate_source"
+        ],
+        "title": "AiTierView",
+        "type": "object"
+      },
+      "AiWorkKindView": {
+        "description": "One kind of AI work and the tier it uses now (design 7.9, which model does what).",
+        "properties": {
+          "custom": {
+            "description": "The workspace chose this kind of work's tier (`ai.tasks.<name>.tier` is set).",
+            "title": "Custom",
+            "type": "boolean"
+          },
+          "default_tier": {
+            "description": "The tier it uses when the workspace has made no choice for it.",
+            "title": "Default Tier",
+            "type": "string"
+          },
+          "fits": {
+            "description": "What was measured for it, for the model each tier uses.",
+            "items": {
+              "$ref": "#/components/schemas/AiKindFit"
+            },
+            "title": "Fits",
+            "type": "array"
+          },
+          "label": {
+            "description": "The kind of work in plain words; the screen's own wording sheet may say it better.",
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "description": "The kind of work's name, as `ai.tasks.<name>` and the routing rules name it.",
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "description": "The layer that set `ai.tasks.<name>.tier`; env and flag can't be changed here.",
+            "enum": [
+              "default",
+              "file",
+              "env",
+              "flag"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "suggested_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The cheapest tier whose model passed every skill this kind of work needs; none when none did.",
+            "title": "Suggested Tier"
+          },
+          "suggestion_why_not": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_accounts",
+                  "no_cases",
+                  "not_measured",
+                  "stale",
+                  "none_passes"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why there is no suggestion: nothing to run it on, no case that measures it, or the results.",
+            "title": "Suggestion Why Not"
+          },
+          "tier": {
+            "description": "The tier it uses now: the workspace's choice, else its role's, else its own.",
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "tier",
+          "default_tier",
+          "custom",
+          "source",
+          "fits"
+        ],
+        "title": "AiWorkKindView",
         "type": "object"
       },
       "Answer": {
@@ -15724,6 +16096,25 @@
           }
         },
         "summary": "Ai Models"
+      }
+    },
+    "/api/ai/routing": {
+      "get": {
+        "description": "Which model does what (design 7.9): each kind of work (the core's and every running add-on's) with the tier\nit uses now, what was measured for the model each tier uses, the cheapest tier that passed, each tier with its\naccount and second try, the routing rules in the order they are checked, and the rules the measurements back.",
+        "operationId": "ai_routing_api_ai_routing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiRoutingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Routing"
       }
     },
     "/api/ai/skills": {

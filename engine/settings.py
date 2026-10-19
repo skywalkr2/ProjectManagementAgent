@@ -263,7 +263,9 @@ def _walk(
                 source=source,
                 locked=locked,
                 basic=dotted in BASIC,
-                editable=kind != "other" and not locked and not dotted.startswith(FILE_ONLY),
+                editable=(kind != "other" or extra.get("screen_edit") is True)
+                and not locked
+                and not dotted.startswith(FILE_ONLY),
                 enabled_by=switch if isinstance(switch, str) else None,
                 picker=extra.get("picker") if isinstance(extra.get("picker"), str) else None,
                 choices=list_name,
@@ -323,6 +325,46 @@ def _model_of(annotation: Any) -> type[BaseModel] | None:
     if isinstance(annotation, type) and issubclass(annotation, BaseModel):
         return annotation
     return None
+
+
+def _entry_model_of(annotation: Any) -> type[BaseModel] | None:
+    """The settings model each entry of a map holds (a map of names to models), when the annotation is one."""
+    args = typing.get_args(annotation)
+    if typing.get_origin(annotation) is dict and len(args) == 2:
+        return _model_of(args[1])
+    return None
+
+
+def source_of(cfg: Any, key: str) -> str:
+    """The layer that set a key in a loaded config: default, file, env or flag."""
+    return _source(key, cfg.sources)
+
+
+def opened_to_screens(key: str, cfg: Any) -> bool:
+    """Whether a key sits below a field the schema opens to the screens, though no form lists it on its own: a setting
+    of one entry of a map (`json_schema_extra={"screen_edit": True}` on the setting itself). The entry must already
+    exist unless its map says new ones may be added (`"new_entries": True`)."""
+    name, *path = key.split(".")
+    model = FILES.get(name)
+    data: Any = getattr(cfg, name).model_dump(mode="json") if model is not None else None
+    while model is not None and path:
+        info = model.model_fields.get(path[0])
+        if info is None:
+            return False
+        extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+        here, path = path[0], path[1:]
+        data = (data or {}).get(here) if isinstance(data, dict) else None
+        if (inner := _model_of(info.annotation)) is not None:
+            model = inner
+            continue
+        if (entry := _entry_model_of(info.annotation)) is not None:
+            if len(path) < 2 or (path[0] not in (data or {}) and extra.get("new_entries") is not True):
+                return False
+            data = (data or {}).get(path[0])
+            model, path = entry, path[1:]
+            continue
+        return not path and extra.get("screen_edit") is True
+    return False
 
 
 def _kind(annotation: Any) -> tuple[Kind, list[str]]:
@@ -486,7 +528,7 @@ def _check_key(
     if key.startswith(FILE_ONLY):
         log.warning("A save named a setting only the files or flags set: %s", key)
         raise SettingsError(f"{screen_name(setting)} is set when the app starts, not here")
-    if setting is None and not key.startswith(allow):
+    if setting is None and not key.startswith(allow) and not opened_to_screens(key, cfg):
         log.warning("A save named a setting the screens don't change: %s", key)
         raise SettingsError("that isn't a setting the screens change")
     if setting is not None and setting.locked:

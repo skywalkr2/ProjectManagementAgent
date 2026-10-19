@@ -283,3 +283,27 @@ def case_sets(template: Path, packs_of: Path | None = None) -> dict[str, dict[st
     if replayed:
         found[case_set_key("replays", template.name)] = set_hashes(replayed)
     return found
+
+
+#: The kind of work the core's own cases, learning pairs, scenarios and replays run: reading what is handed in.
+CORE_KIND = "notes"
+
+
+def skills_by_kind(template: Path, packs_of: Path | None = None) -> dict[str, list[str]]:
+    """The skills that cases prove for each kind of work, in the order of the skills list. The core's golden cases,
+    learning pairs, scenarios and replays all run the note-reading kind (`CORE_KIND`); a plugin's case runs the kind it
+    names (`task`), or that same one when it names none. A kind no case runs has no entry: nothing measures it."""
+    from engine.evaluate import load_pack_cases
+
+    named: dict[str, set[str]] = {}
+    for kind in ("cases", "pairs", "replays"):
+        for ids in (_skills_of(template, kind) or {}).values():
+            named.setdefault(CORE_KIND, set()).update(ids)
+    try:
+        packs = load_pack_cases(packs_of or template)
+    except (ValueError, OSError):
+        packs = []
+    for case in packs:
+        named.setdefault(str(case.get("task") or CORE_KIND), set()).update(case.get("skills") or [])
+    order = [s.id for s in skills()]
+    return {kind: [i for i in order if i in ids] for kind, ids in named.items() if ids}

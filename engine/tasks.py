@@ -175,3 +175,12 @@ def settings(cfg: Any, kind: TaskKind | None, name: str | None = None) -> Any:
     if configured is not None:
         values.update({f: getattr(configured, f) for f in configured.model_fields_set})
     return TaskSettings.model_validate(values)
+
+
+def default_tier(cfg: Any, kind: TaskKind) -> str:
+    """The tier a kind of work uses while the workspace's `ai.tasks.<kind>.tier` says nothing: its role's tier
+    (ai.roles) when that is set, else the tier the kind itself asks for, else the usual one."""
+    from engine.config.schema import TaskSettings
+
+    role_tier = getattr(cfg.ai.roles, kind.role).tier
+    return role_tier or kind.defaults.get("tier") or TaskSettings.model_fields["tier"].get_default()

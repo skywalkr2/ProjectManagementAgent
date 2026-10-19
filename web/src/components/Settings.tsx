@@ -9,11 +9,12 @@ import { api, ApiError, type S } from "../lib/api";
 import { useValueLists } from "../lib/lists";
 import { problemText } from "../lib/problem";
 import { addonLabel, fromDraft, groupLabel, isOff, depthOf, matches, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
-import { navSections, sectionItems, sectionOfItem, topics } from "../lib/settings-sections";
+import { isListed, navSections, sectionItems, sectionOfItem, topics } from "../lib/settings-sections";
 import { knownFingerprint, rememberFingerprint, useAfterSave } from "../lib/settings-save";
 import { settingsView, viewHref, type SettingsSection } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
+import { AiRouting } from "./AiRouting";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
@@ -285,7 +286,7 @@ export function Settings(props: {
     </h2>
   );
 
-  const found = query.trim() ? everything.filter((item) => matches(item, query, t, has)) : [];
+  const found = query.trim() ? everything.filter((item) => isListed(item) && matches(item, query, t, has)) : [];
   const results = () => {
     if (!found.length) return <p className="empty">{t("settings.none_match")}</p>;
     return listed
@@ -312,6 +313,7 @@ export function Settings(props: {
             }}
             onCompare={props.onOpenCompare}
           />
+          <AiRouting />
           {form("ai")}
         </>
       );

@@ -350,6 +350,7 @@ export const api = {
   addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
   aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),
   aiSkills: () => call<S["AiSkillsView"]>("GET", "ai/skills"),
+  aiRouting: () => call<S["AiRoutingView"]>("GET", "ai/routing"),
   /** What one account's connection check involves, to price it with a model's price. */
   aiCheckSize: () => call<S["AiCheckSize"]>("GET", "ai/check-size"),
   changeAccount: (name: string, body: S["AiAccountChange"]) =>
