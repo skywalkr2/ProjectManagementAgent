@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 99. The designer's review of 6.33 and 6.35 (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Drafts to others (6.35) | A lint: one gap per message | One message per person per batch, asks numbered inside it, each with its own id; everything one gap needs is one ask |
+| Dates (6.33) | Anything tied to an event stayed "no date" | Tied to a known calendar entry is due at it; tied to an event with no entry stays "no date" with its words kept |
+| One promise from several sources (6.33) | A restatement with a date outside the window became a second promise | It is an `action.move` on the open promise, held for Keep with both quotes |
+| No news by its date (6.33, 6.34) | "Chase" for every waiting-on | By stance: Chase and a draft for manage and alongside, "Waiting on" for report to, no line for only watch |
+
 ## 98. Drafts to other people, replies owed, and the week (2026-10-19, designed)
 
 | Where | Before | Now |

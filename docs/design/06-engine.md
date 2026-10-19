@@ -2693,8 +2693,9 @@ the person, the person is waiting on it.
 
 **Dates by rules first.** `action.add` and `action.move` take `due_words`; the applier reads them with
 `engine/due_phrases.py` against the date the input was received, and the rules' date wins over a date the model gave.
-Anything vague or tied to an event stays "no date". A due date with no words behind it is kept as given only when
-the person wrote it.
+Anything vague stays "no date". A date tied to a known calendar entry is due at it (`due_at_event`, below); one tied
+to an event with no entry ("once the keys arrive") stays "no date", with the event's words kept. A due date with no
+words behind it is kept as given only when the person wrote it.
 
 **How a promise ends, each an op with its evidence:**
 - done: `action.close` (credited to its owners, with who reported it, as today);
@@ -2710,8 +2711,11 @@ yet. One from the person's own note or a button applies at once with Undo. `acti
 promise and applies at once, shown on it. A held ending kept by the person counts as seen (6.32's silent closes).
 
 **No news by its date.** A promise past its date with no ending and no news is a line with its choices: for a waiting-on,
-"Chase Ana: the floor plan, due Tuesday" with Followed up (a nudge: it stays open), New date, Done and Drop; for the
-person's own, the same choices without Chase. A nudge never ends it. A waiting-on is not left to go stale: with a date it
+"Chase Ana: the floor plan, due Tuesday" with a drafted follow-up, Followed up (a nudge: it stays open), New date, Done
+and Drop; for the person's own, the same choices without Chase. A waiting-on's line follows the stance of whoever owes
+it (6.34): *I manage them* and *I work alongside them* get the Chase line and its draft; *I report to them* gets no
+Chase and no draft, only "Waiting on Ana: the budget answer, due Tuesday" with New date, Done and Drop; *I only watch*
+gets no line at all. Until stances are built (S1-2), everyone is the default stance. A nudge never ends it. A waiting-on is not left to go stale: with a date it
 gets its line from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
 `steward.chase_undated_days` (14) with no news since it was made or since its last news ("Chase Ana: the floor plan, no
 date, nothing heard for 14 days"). Never while it is on hold.
@@ -2765,9 +2769,12 @@ ways, and the golden cases and harness pairs are in demo-b (`tests/test_followup
   owner that isn't a known person waits for "Pick an owner".
 - **One promise from several sources:** a new promise with the same one owner, owed to the same people, in nearly the
   same words (`checks.tuning.near_duplicate_action.similarity`) and a date within
-  `checks.tuning.near_duplicate_action.date_window_days` (3) of an open one is added to it (`also_said`, every quote
-  kept). When the dates disagree, the person's own words win, otherwise the newest, and the other date is a news line on
-  the promise.
+  `checks.tuning.near_duplicate_action.date_window_days` (3) of an open one is added to it quietly (`also_said`, every
+  quote kept). When the dates disagree, the person's own words win, otherwise the newest, and the other date is a news
+  line on the promise. **A restatement with a new date** (the same owner, people and nearly the same words, but a date
+  outside the window: "I'll send it Friday", then a week later "I'll send it the Friday after") is an `action.move` on
+  the open promise, never a second promise: read from an input it waits for the person's Keep, and the line shows both
+  quotes.
 - **Crediting and chasing:** the person's "I pinged her" is news and the promise stays open; "Sam sent it" closes it,
   credited to Sam and reported by the person.
 - **Two names, one person:** a second spelling of two or more words that the person confirms in "who is this?" becomes an
@@ -2830,12 +2837,17 @@ return, then held for the person when the draft will reach someone, per 6.22):
 - *no bookkeeping*: no record ids, internal terms, stances, scores or "the assistant noticed"; the wording sheet's
   list of internal terms is the deterministic part;
 - *only openable links*: a link the reader can't open is left out (the rule questions already follow, 6.8);
-- *one gap per message*: two unrelated asks to one person are two drafts;
 - *no long quotes back*: a quote of the reader's own words is at most `drafts.max_quote_words` (a setting, 25 by
   default); the rest is a link or a summary;
 - *never single a person out*: a draft to several people never names one of them as the cause of a miss; a
   discrepancy in one person's work is asked of that person privately, in a draft to them alone. Naming is the model's
   label, so this one is a lint with a return, not a refusal.
+
+**One message per person per batch.** Everything one gap needs is one ask, never three messages about one gap. All the
+asks to one person go out together: one message per person per batch, the asks numbered inside it, sent now or held
+for a later batch. Each ask keeps its own id, so each is answered and tracked on its own. An ask made for someone who
+already has a message waiting joins it instead of becoming a second draft the same day. The grouping is by rules, from
+the asks' recipients.
 
 **How a reply owed ends (S1-2).** Besides a sent reply, a reply owed ends when:
 - the person marks it *Answered another way* (a call, a meeting, a chat), optionally with a few words that become the

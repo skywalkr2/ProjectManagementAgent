@@ -543,7 +543,7 @@ S1. **Promises, and how they end:**
   back to me Tuesday" is a waiting-on with its date. A message's own new text is separated from its quoted history and signature first
   (`engine/reply_split.py`, `tests/test_reply_split.py`, 2026-10-17), so a promise quoted again is never counted twice. Due phrases are read by rules before any AI
   (`engine/due_phrases.py`, `tests/test_due_phrases.py`, 2026-10-17): weekdays, times, written dates with or without a
-  year, week and month ranges, working days; anything vague or tied to an event stays "no date", and an uncertain
+  year, week and month ranges, working days; anything vague stays "no date" (a date tied to a known calendar entry is due at it; one tied to an event with no entry stays "no date" with its words kept), and an uncertain
   reading (next Friday, a past "this Friday", a year-less date far ahead) is marked for the person to check.
   Evaluation material: 120 single items (`docs/project/steward-promise-examples.yaml`) and 25 whole threads with how
   each promise ends (`docs/project/steward-promise-threads.yaml`, checked by `tests/test_steward_threads.py`).
@@ -563,7 +563,8 @@ S1. **Promises, and how they end:**
 - [ ] [S1-1] **From three weeks of running** (the designer's S1-1 notes, 2026-10-19; design 6.33): on hold until a
   trigger, taken off hold with a new date in one step; a promise due at a meeting follows the meeting; the chase clock
   for waiting-ons (14 days undated, 7 days before a date); dates read against the message's own day and zone; one
-  promise per owner; one promise from several sources with every quote and a shown date disagreement; chasing is news,
+  promise per owner; one promise from several sources with every quote and a shown date disagreement, and a restatement
+  with a date outside the window is a move held for Keep with both quotes (the designer's review, 2026-10-19); chasing is news,
   a reported done is credited to its owner; a confirmed second spelling becomes an alias.
 - [ ] [S1-1] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
   owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
@@ -586,9 +587,12 @@ S1. **Promises, and how they end:**
   a learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft,
   and a journey test of the copied-but-not-sent question.
 - [ ] [S1-2] **What a draft to someone else carries** (the designer's notes, 2026-10-19; design 6.35): lints on every draft
-  to someone other than the person: no bookkeeping (the wording sheet's internal terms), only openable links, one gap
-  per message, quotes of the reader's own words at most `drafts.max_quote_words`, and never singling a person out in a
-  group draft (a discrepancy goes to that person alone). Exit: a test per lint, and a learning pair for singling out.
+  to someone other than the person: no bookkeeping (the wording sheet's internal terms), only openable links, quotes of
+  the reader's own words at most `drafts.max_quote_words`, and never singling a person out in a group draft (a
+  discrepancy goes to that person alone). One message per person per batch: everything one gap needs is one ask, all
+  asks to one person go out together numbered, each keeping its own id, sent now or held for a later batch (the
+  designer's review, 2026-10-19). Exit: a test per lint, a test that two asks to one person on one day make one
+  message with two numbered asks answered separately, and a learning pair for singling out.
 - [ ] [S1-2] **A sender's distribution limit travels with the content** (the designer's notes, 2026-10-19; design 6.35):
   a limit read from a message is recorded on the source as its audience (narrowing applies at once; widening is the
   person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
@@ -618,7 +622,10 @@ S1. **Promises, and how they end:**
   with meanings (I manage them, I work alongside them, I report to them, I only watch; `track_only` becomes the last),
   `people.default_stance` (alongside) and `steward.tracks` (dates and decisions) as settings with schema, defaults and
   demo values, and the gate on every question or drafted message to someone else, as a lint (one return, then a hold);
-  a correction like "not my job" proposes a stance for that person or role. Learning pairs for each stance.
+  a correction like "not my job" proposes a stance for that person or role. Learning pairs for each stance. The chase
+  line follows the stance (the designer's review, 2026-10-19; design 6.33): Chase with a draft for manage and
+  alongside, "Waiting on <name>" with New date, Done and Drop and no draft for report to, no line for only watch; one
+  test per stance on the same overdue promise.
 - [ ] [S1-2] **A rejected ask is dropped, not reworded** (the designer's lessons, 2026-10-19; design 6.22): a correction
   that rejects the asking ends as `question.drop` with the person's reason; "check X first" checks X in that run and
   closes the question when X answers it. One learning pair for each.

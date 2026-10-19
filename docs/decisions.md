@@ -396,6 +396,15 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   week and three to five confirmed goals, repeating nothing on Today. Decided by the main session.
   **Impact:** design 6.35 (new) and 6.32 (CHANGES.md section 98); roadmap S1-2 (+3 items), S1-3 (+1), S2, L-more;
   open items 153 to 157.
+- **Also (2026-10-19): the designer's review of design 6.33 and 6.35.** (1) "One gap per message" was the wrong way
+  round: everything one gap needs is one ask, and all asks to one person go out as one message per batch, numbered,
+  each ask keeping its own id. (2) A date tied to a known calendar entry is due at it; tied to an event with no entry,
+  it stays "no date" with its words kept (6.33 no longer contradicts itself). (3) A restated promise with a date outside
+  the merge window is an `action.move` on the open promise, held for Keep with both quotes, never a second promise; the
+  window only decides when a quote is added quietly. (4) The chase line follows the stance: Chase and a draft for
+  manage and alongside, "Waiting on" without a draft for report to, no line for only watch. Decided by the designer;
+  (3) is built in S1-1, (1) and (4) with S1-2's drafts and stances.
+  **Impact:** design 6.33, 6.35 (CHANGES.md section 99); roadmap S1-1, S1-2.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
