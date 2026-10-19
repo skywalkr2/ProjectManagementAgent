@@ -4,7 +4,14 @@ Open questions from the build, written so each can be answered on its own. Each 
 default the build follows if the answer is "yes, that's fine". Answered questions move to `docs/decisions.md` and
 leave this list.
 
-No questions are open. The UI designer's round 33 to 38 (2026-10-16) is answered in
+**Open: F1 to F13 (2026-10-19)**, in `designer-update-2026-10-19.md` with what changed since the last round. Each
+there says what the app does today and the default the build follows if the answer is "yes, that's fine":
+F1 gate phase S on a week of real mail; F2 hold the broader steward features behind it; F3 how "dependable" is measured;
+F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first run; F7 tests for approved sending;
+F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
+calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords.
+
+Earlier rounds: The UI designer's round 33 to 38 (2026-10-16) is answered in
 `reviews/ui-ux-2026-10/answers-33-38.md`, with mockups in `reviews/ui-ux-2026-10/mockup-round-33-38/`, and goes into phase
 B as a Today follow-up wave after wave 2, with the four other findings in it (phone header overlap, the Backup bar
 repeating the status chip, the rail's to-dos as checkboxes, meta lines starting with raw pasted text). Answer 37 adds a
