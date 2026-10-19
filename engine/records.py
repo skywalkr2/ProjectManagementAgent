@@ -1779,6 +1779,8 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("owners[].team", "team"),
         ("done_by[]", "person"),
         ("reported_by", "person"),
+        ("promised_to[]", "person"),
+        ("said_by", "person"),
         ("source", "source"),
     ],
     "question": [

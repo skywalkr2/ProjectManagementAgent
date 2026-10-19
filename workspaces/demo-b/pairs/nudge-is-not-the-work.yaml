@@ -18,7 +18,7 @@ first:
       evidence:
         quote: He says he is on it
   correction:
-    kind: undone
+    kind: declined  # the close read from a relayed note waits for the person, who keeps the action open
   expect_proposal:
   - op: lesson.add
     text_has: [complet|finish|done]  # completion or complete, however the lesson words it

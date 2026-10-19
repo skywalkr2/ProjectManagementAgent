@@ -22,7 +22,7 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
       before: [{received, <input keys>, answer: {...}, label}]  # inputs before it, with fixed answers
       then: [{received, <input keys>, answer: {...}, label}]    # more inputs after it, with fixed answers
       correction:             # what the person does, through the same code the screens use
-        kind: sent_back | undone | answered | moved | dropped | picked_owner | not_a_project | part_of |
+        kind: sent_back | undone | declined | answered | moved | dropped | picked_owner | not_a_project | part_of |
               new_person | set_aside | asked | changed
         note: ...             # the person's words; of: <label> (default: the first input's change)
         # moved/picked_owner/answered/dropped/asked/changed name a record: id or @action, @question, @event, @fact,
@@ -74,7 +74,7 @@ from engine import follow_on, knowledge, learn
 from engine.ai.adapters import make_adapter
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
-from engine.applier import apply_as_person, pick_owner
+from engine.applier import apply_as_person, decline_held, pick_owner
 from engine.config import Config
 from engine.corrections import answered_assistant
 from engine.dispatcher import process, send_back, signal, undo_changeset
@@ -116,6 +116,7 @@ OP_ENTRY = {**knowledge.OP_KIND, "rule.add": "rule"}
 CORRECTIONS = (
     "sent_back",
     "undone",
+    "declined",
     "answered",
     "moved",
     "dropped",
@@ -128,7 +129,7 @@ CORRECTIONS = (
     "changed",
 )
 #: The corrections that act on an earlier change, so they need one to exist.
-CHANGE_CORRECTIONS = frozenset({"sent_back", "undone", "not_a_project", "part_of", "set_aside"})
+CHANGE_CORRECTIONS = frozenset({"sent_back", "undone", "declined", "not_a_project", "part_of", "set_aside"})
 KEEPS = (True, False, "discard")
 INPUT_KEYS = ("received", "pasted", "note", "project", "typed_on", "watched", "attached", "label")
 _PERSON = WriteContext(actor="pm", trust="trusted", op="pair.person")
@@ -471,6 +472,13 @@ class _Play:
                 send_back(self.store, cs, note, now=when, undo_first=spec.get("undo", True))
             elif kind == "undone":
                 undo_changeset(self.store, cs)
+            elif kind == "declined":
+                # The person keeps things as they are for the first op held for them (an ending read from an input).
+                ops = self.store.read().get("changeset", cs).data["ops"]
+                held = next((o["index"] for o in ops if o["status"] == "held"), None)
+                if held is None:
+                    raise _Stop("nothing was held for the person to decline")
+                decline_held(self.store, cs, held, now=when)
             elif kind == "answered":
                 if answered_assistant(self.store, cfg, ref("id"), note) is None:
                     raise _Stop("the answer was a bare confirmation, so nothing is recorded")

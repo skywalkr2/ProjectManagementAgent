@@ -96,6 +96,10 @@ def test_undo_restores_the_records(api):
     client, base, worker = api
     item = hand_in_case(client, base, worker, "close-action")
     action_id = case("close-action")["expect"][0]["id"]
+    # The close read from the message waits for the person's Keep (design 6.33); keep it, then undo the change.
+    kept = client.post(f"{base}/changesets/{item['changeset']['id']}/ops/0/release", json={})
+    assert kept.status_code == 200, kept.text
+    assert client.app.state.store.read().get("action", action_id).data["status"] == "done"
     report = client.post(f"{base}/changesets/{item['changeset']['id']}/undo", json={}).json()
     assert report["restored"] and not report["skipped"]
     store = client.app.state.store
