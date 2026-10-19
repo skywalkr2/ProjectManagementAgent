@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 157, each in exactly one batch; 196 done items are in `roadmap-done.md`.
+- **Open items:** 154, each in exactly one batch; 199 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -55,7 +55,7 @@ full test run and one push (CLAUDE.md, "Usage and machine load"). Every open ite
 rough (half a day to two days; the batches from phase C on are sized when they are reached). The phase sections below
 keep each item's full text.
 
-1. **S1-1 Promises core (in progress)** (4 open items; size: about a day)
+1. **S1-1 Promises core (in progress)** (1 open item; size: about a day)
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
@@ -538,42 +538,12 @@ proves it on a week of real use, and only then goes on:
   memory, areas of life, capture from anywhere and the conversation.
 
 S1. **Promises, and how they end:**
-- [ ] [S1-1] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
-  folder is offered as a source when a mailbox is connected): "I'll send it Friday" is the person's to-do; "they'll get
-  back to me Tuesday" is a waiting-on with its date. A message's own new text is separated from its quoted history and signature first
-  (`engine/reply_split.py`, `tests/test_reply_split.py`, 2026-10-17), so a promise quoted again is never counted twice. Due phrases are read by rules before any AI
-  (`engine/due_phrases.py`, `tests/test_due_phrases.py`, 2026-10-17): weekdays, times, written dates with or without a
-  year, week and month ranges, working days; anything vague stays "no date" (a date tied to a known calendar entry is due at it; one tied to an event with no entry stays "no date" with its words kept), and an uncertain
-  reading (next Friday, a past "this Friday", a year-less date far ahead) is marked for the person to check.
-  Evaluation material: 120 single items (`docs/project/steward-promise-examples.yaml`) and 25 whole threads with how
-  each promise ends (`docs/project/steward-promise-threads.yaml`, checked by `tests/test_steward_threads.py`).
-  Twenty learning pairs for promises (`docs/project/steward-learning-pairs.yaml`, shape checked by
-  `tests/test_steward_learning_pairs.py`) become harness pairs in a workspace's `pairs/` folder once promise
-  records and ops exist; this item isn't done until they run there.
-  *Built so far (2026-10-19, design 6.33):* promises are actions with `promised_to`, `basis`, `due_words`, `due_check`
-  and `news`; dates read by the rules first; `action.move`, `action.part`, `action.news`; endings from an input wait
-  for the person (`tests/test_promises.py`). Left: the prompts and playbook for promises both ways, the sent folder as
-  a source, the golden cases and harness pairs.
-  Messages join their conversation by rules (`engine/mail_threads.py`, `tests/test_mail_threads.py`): the reply
-  headers first, then the same subject with a shared correspondent within a set number of days (a setting, 14 by
-  default), never on an ambiguous match.
-  Automatic mail is recognized by its headers (`engine/automatic_mail.py`, `tests/test_automatic_mail.py`; markers in
-  `engine/defaults/automatic_mail.yaml`): an automatic reply, a delivery report or generated or list mail never
-  counts as the other person answering, and never resolves a promise.
 - [ ] [S1-1] **From three weeks of running** (the designer's S1-1 notes, 2026-10-19; design 6.33): on hold until a
   trigger, taken off hold with a new date in one step; a promise due at a meeting follows the meeting; the chase clock
   for waiting-ons (14 days undated, 7 days before a date); dates read against the message's own day and zone; one
   promise per owner; one promise from several sources with every quote and a shown date disagreement, and a restatement
   with a date outside the window is a move held for Keep with both quotes (the designer's review, 2026-10-19); chasing is news,
   a reported done is credited to its owner; a confirmed second spelling becomes an alias.
-- [ ] [S1-1] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
-  owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
-  doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the
-  person keeps or changes, never a silent close, so "Waiting on" never goes stale. A promise with no news by its date
-  is a line with its choices.
-- [ ] [S1-1] **Every promise shows why:** the source sentence (the exact words, as evidence already requires), who owes it, the
-  date and where it came from, and whether it was said outright or inferred (the `basis` facts already carry), never a
-  model's own confidence score. One click to correct any of them, recorded as a signal.
 - [ ] [S1-2] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
   their voice to edit and copy; "No reply needed" is a choice the assistant learns from. (Drafting follow-ups is now
   expected of any assistant; Thimbleby's difference is promises kept across every source, with the people around them.)

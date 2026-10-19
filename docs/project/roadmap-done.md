@@ -1809,6 +1809,36 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
+  folder is offered as a source when a mailbox is connected): "I'll send it Friday" is the person's to-do; "they'll get
+  back to me Tuesday" is a waiting-on with its date. A message's own new text is separated from its quoted history and signature first
+  (`engine/reply_split.py`, `tests/test_reply_split.py`, 2026-10-17), so a promise quoted again is never counted twice. Due phrases are read by rules before any AI
+  (`engine/due_phrases.py`, `tests/test_due_phrases.py`, 2026-10-17): weekdays, times, written dates with or without a
+  year, week and month ranges, working days; anything vague stays "no date" (a date tied to a known calendar entry is due at it; one tied to an event with no entry stays "no date" with its words kept), and an uncertain
+  reading (next Friday, a past "this Friday", a year-less date far ahead) is marked for the person to check.
+  Evaluation material: 120 single items (`docs/project/steward-promise-examples.yaml`) and 25 whole threads with how
+  each promise ends (`docs/project/steward-promise-threads.yaml`, checked by `tests/test_steward_threads.py`).
+  Twenty learning pairs for promises (`docs/project/steward-learning-pairs.yaml`, shape checked by
+  `tests/test_steward_learning_pairs.py`) become harness pairs in a workspace's `pairs/` folder once promise
+  records and ops exist; this item isn't done until they run there.
+  *Built so far (2026-10-19, design 6.33):* promises are actions with `promised_to`, `basis`, `due_words`, `due_check`
+  and `news`; dates read by the rules first; `action.move`, `action.part`, `action.news`; endings from an input wait
+  for the person (`tests/test_promises.py`). Left: the prompts and playbook for promises both ways, the sent folder as
+  a source, the golden cases and harness pairs.
+  Messages join their conversation by rules (`engine/mail_threads.py`, `tests/test_mail_threads.py`): the reply
+  headers first, then the same subject with a shared correspondent within a set number of days (a setting, 14 by
+  default), never on an ambiguous match.
+  Automatic mail is recognized by its headers (`engine/automatic_mail.py`, `tests/test_automatic_mail.py`; markers in
+  `engine/defaults/automatic_mail.yaml`): an automatic reply, a delivery report or generated or list mail never
+  counts as the other person answering, and never resolves a promise. *Built (S1):* `tests/test_promises.py`, `tests/test_evaluate_harness.py`, `tests/test_followups_backup_eval.py`, `tests/test_pairs.py`, `tests/test_sent_folder.py`, `Sources.test.tsx`. Left: the sent folder offered by a plugin's sign-in sources, and the owner's learning run (O3) on this batch.
+- [x] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
+  owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
+  doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the
+  person keeps or changes, never a silent close, so "Waiting on" never goes stale. A promise with no news by its date
+  is a line with its choices. *Built (S1):* `tests/test_promises.py`, `tests/test_promise_lines.py`, `TodayPromises.test.tsx`.
+- [x] **Every promise shows why:** the source sentence (the exact words, as evidence already requires), who owes it, the
+  date and where it came from, and whether it was said outright or inferred (the `basis` facts already carry), never a
+  model's own confidence score. One click to correct any of them, recorded as a signal. *Built (S1):* `tests/test_promise_routes.py`, `PromiseWhy.test.tsx`.
 - [x] **An outage is not a failure** (moved from phase E's governor, 2026-10-19; design 6.32): work waits for the network,
   a run that did no work isn't an attempt and costs nothing against the request, a cut-off run is never "couldn't
   finish". *Built (S1):* `tests/test_silent_stops.py`, `tests/test_cli_agent.py`, `tests/test_drafts.py`. Left: a resumed
