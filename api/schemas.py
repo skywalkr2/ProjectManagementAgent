@@ -1464,8 +1464,9 @@ class HeldAsk(BaseModel):
     the new and the present date, `to_name` the person it would go to, `told` the people a drop would leave out of the
     loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action also carries what
     the input says happened: the action's id in `record`, its `owners` in the owner format, `reporter` (who said it),
-    and by ask the words of a new date (`due_words`), what was `delivered` and what is `left`, or the `reason` it is
-    called off. The screen words the title and the answers from these."""
+    and by ask the words of a new date (`due_words`) with the promise's own earlier words (`earlier`), what was
+    `delivered` and what is `left`, or the `reason` it is called off. The screen words the title and the answers from
+    these."""
 
     ask: Literal["close", "date", "owner", "routing", "drop", "move", "part"]
     item: str
@@ -1479,6 +1480,7 @@ class HeldAsk(BaseModel):
     owners: list[str] = Field(default_factory=list)
     reporter: str | None = None
     due_words: str | None = None
+    earlier: str | None = None
     delivered: str | None = None
     left: str | None = None
     reason: str | None = None

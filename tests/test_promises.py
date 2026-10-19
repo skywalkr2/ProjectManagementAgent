@@ -12,7 +12,9 @@ from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.applier import ENDING_WAITS, release
 from engine.dispatcher import process
+from engine.held_ask import describe
 from engine.intake import hand_in
+from engine.names import People
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
@@ -311,6 +313,36 @@ def test_the_same_promise_from_two_sources_is_one_record_with_both_quotes_and_a_
     assert promise["due"] == "2026-10-14"  # the newest wins when the person said neither
     assert [e["quote"] for e in promise["also_said"]] == [later]
     assert any("by Tuesday" in n["text"] for n in promise["news"])
+
+
+def test_a_promise_said_again_with_a_date_outside_the_window_is_a_move_the_person_keeps_with_both_quotes(env):
+    _, cfg, store = env
+    owner, person = someone()["id"], cfg.workspace.user.person
+    first = "I will send the floor plan by Tuesday."
+    later = "Sorry for the delay: I will send the floor plan by October 30."
+    outcomes = []
+    for quote, words in ((first, "by Tuesday"), (later, "by October 30")):
+        answer(
+            {
+                "op": "action.add",
+                "text": "Send the floor plan",
+                "owners": [owner],
+                "promised_to": [person],
+                "due_words": words,
+                "evidence": {"quote": quote},
+            }
+        )
+        (outcome,), cs_id = run(env, pasted=quote)
+        outcomes.append((outcome, cs_id))
+    (promise,) = [a for a in store.read().list("action") if a.data["text"] == "Send the floor plan"]
+    (moved, cs_id) = outcomes[1]
+    assert moved["op"]["op"] == "action.move" and moved["op"]["id"] == promise.id
+    assert moved["status"] == "held" and ENDING_WAITS in moved["reason"]
+    shown = describe(store.read(), People(store, cfg), moved["op"])
+    assert (shown["quote"], shown["earlier"]) == (later, first)
+    assert promise.data["due"] == "2026-10-13"
+    release(store, cfg, cs_id, 0)
+    assert action(store, promise.id)["due"] == "2026-10-30"
 
 
 def test_the_persons_own_date_wins_over_a_later_source(env):

@@ -2753,11 +2753,12 @@
 
   "queue.held.e.close": "Keep: {who} finished '{item}'",
   "queue.held.e.drop": "Keep: '{item}' is called off",
-  "queue.held.e.move": "Keep: '{item}' moves to {when}",
+  "queue.held.e.move": "Keep: '{item}' is now due {when}",
   "queue.held.e.part": "Keep: {who} delivered {delivered}, and what is left is '{left}'",
   "queue.held.e.someone": "Someone",
   "queue.held.e.new_date": "a new date",
   "queue.held.e.said_by": "Said by {name}",
+  "queue.held.e.earlier": "Said before: “{quote}”",
   "queue.held.e.keep": "Keep",
   "queue.held.e.not_yet": "Not yet",
   "queue.held.e.change": "Change",

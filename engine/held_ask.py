@@ -44,6 +44,7 @@ def _ending(people: Any, found: Any, op: dict[str, Any], reporter: str | None) -
     }
     if op["op"] == "action.move":
         shown |= {"value": str(op["due"]) if op.get("due") else None, "due_words": op.get("due_words")}
+        shown["earlier"] = (found.data.get("evidence") or {}).get("quote")
     elif op["op"] == "action.part":
         shown |= {"delivered": op.get("delivered"), "left": op.get("left")}
     elif op["op"] == "action.drop":
