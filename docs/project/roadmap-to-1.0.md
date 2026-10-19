@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 141, each in exactly one batch; 213 done items are in `roadmap-done.md`.
+- **Open items:** 139, each in exactly one batch; 215 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -70,7 +70,7 @@ keep each item's full text.
     - *Also covers* (the designer's lessons, 2026-10-19): *Which sign-in an agent runs as* (design 6.16), so the gate week runs on a known account; and (the designer's notes for later batches) *Work the assistant releases on its own keeps the person's hours* (design 6.35).
     - *Exit:* the owner can start the two measured days; journeys J2 and J6 pass with one total, one go and one "Look over what was found" line.
 
-4. **B-5 Sources and accounts** (3 open items, plus the numbered wave 5 entry; size: about one to two days)
+4. **B-5 Sources and accounts** (1 open item, plus the numbered wave 5 entry; size: about one to two days)
     - *Covers:* *Wave 5* with P17 (.ics calendars, full featured) and P18 (several accounts of one service); the items that belong with it: *Passwords, keys and private addresses typed on the screen* (P16), *Add-ons install from the screen* (P15), *Mailbox and calendar passwords and addresses entered on screen* (all in phase B, built to S's shape).
     - *Exit:* the tests each item names pass; the owner adds an .ics link and file and a second account of one service, and types a password and a key on screen, with no file edit.
 
@@ -383,15 +383,6 @@ From the original designer's lessons of 2026-10-14:
   `tests/test_setup.py::test_a_choice_list_includes_the_current_value_when_it_is_not_one_of_the_list`,
   `web/src/lib/languages.test.ts`, `web/src/components/Settings.test.tsx` (a setting that picks a language),
   `web/src/components/Setup.test.tsx` (the project form's Language list: empty is "Same as …", picking saves the tag)).
-- [ ] [B-5] **Passwords, keys and private addresses typed on the screen** (P16; owner, 2026-10-16: "in imap setup we need to be
-  able to take a password and not require the user to have set it somewhere else"). *Built:* a setting that holds a
-  secret reference is marked `secret`; a source's add and change routes take pasted values apart from the settings and a
-  local app keeps each in the private keys folder (0700, the file 0600), writing only its `file:` reference; a hosted app
-  refuses; the value never reaches `watch.yaml`, the ledger or an answer; a source's form shows a password box, "Where it
-  is kept instead", "Kept on this computer" with Replace and "Read from …"
-  (`tests/test_typed_secrets.py`, `web/src/components/Sources.test.tsx` (a secret setting typed on the screen)).
-  *Left:* typing an add-on's own secrets (`workspace.plugins.secrets`) and the backup key (`storage.backups.encrypt`),
-  which are still reference boxes in Settings.
 - [ ] [B-5] **Add-ons install from the screen** (P15; owner, 2026-10-16: "they still require manual command line installs
   instead of through the screen. the screen lists zero available plugins"). *Built:* with no catalog listed Add-ons
   offers an address field (the cursor in it) that saves into `workspace.plugins.catalog.feeds` and reads it at once; the
@@ -486,9 +477,6 @@ From the original designer's lessons of 2026-10-14:
 - [ ] [B-6a] **Found by the phase A journeys** (decisions, 2026-10-12, "What the first journeys found"): a new AI account's
   suggested name is the service's name, not its catalog id; a custom address needs no key when the service takes
   none; Follow-ups' Copy shows the message it will copy before copying, as 7.5 says (today it copies at once).
-- [ ] [B-5] **Mailbox and calendar passwords and addresses entered on screen** and kept like an AI key, for the core's own
-  mail and calendar sources (moved from phase A; today they work only through `env:` or `file:`). The exit test and the
-  owner's real use sign in to a named service instead.
 - [ ] [B-6a] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
   send.
 - [ ] [B-6a] **Value-list values carry meaning** (design 5.4): a tone for each value, and a meaning for status values, so a value the

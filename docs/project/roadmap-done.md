@@ -1806,6 +1806,23 @@ From the original designer's lessons of 2026-10-14:
   certain tasks we can add sonnet for harder tasks"): adding a harder model to an account that is a backup offers to move
   its harder-work backup to that model, checked first, in one click. *Today:* "Use as backup" puts the harder model in
   only when the account has one at that moment; afterwards the harder work stays on the everyday model. *Built (replaced by item 25):* `web/src/components/AiAccounts.test.tsx` ("a backup that gains a harder model offers to move its harder work there, checked first, in one click"), `tests/test_setup.py::test_a_backup_moves_to_its_harder_model_keeps_its_place_and_can_stop`.
+- [x] **Passwords, keys and private addresses typed on the screen** (P16; owner, 2026-10-16: "in imap setup we need to be
+  able to take a password and not require the user to have set it somewhere else"). *Built:* a setting that holds a
+  secret reference is marked `secret`; a source's add and change routes take pasted values apart from the settings and a
+  local app keeps each in the private keys folder (0700, the file 0600), writing only its `file:` reference; a hosted app
+  refuses; the value never reaches `watch.yaml`, the ledger or an answer; a source's form shows a password box, "Where it
+  is kept instead", "Kept on this computer" with Replace and "Read from …"
+  (`tests/test_typed_secrets.py`, `web/src/components/Sources.test.tsx` (a secret setting typed on the screen)).
+  *Also built (B-5):* an add-on's declared secrets typed in Settings and on its Add-ons row, and the backup key typed or
+  made ("Make one for me", shown once to copy), each kept the same way with Undo, a hosted app taking only a reference
+  (`tests/test_typed_secrets.py`, `web/src/components/KeptSecrets.test.tsx`). Old kept secrets nothing refers to are
+  removed in B-6a (the designer's F13).
+- [x] **Mailbox and calendar passwords and addresses entered on screen** and kept like an AI key, for the core's own
+  mail and calendar sources (moved from phase A; today they work only through `env:` or `file:`). The exit test and the
+  owner's real use sign in to a named service instead.
+  *Built (B-5):* the core mailbox's password and the calendar's private address are typed on the Sources form and kept
+  like a key (`tests/test_typed_secrets.py`, `web/src/components/Sources.test.tsx` (the calendar's private link box)).
+
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
