@@ -2,15 +2,16 @@
 
 Rewritten on 2026-10-12 after the review (`review-2026-10-12.md`), at the owner's direction.
 
-**The goal:** a baseline that works for a real person with no demo data, then an assistant that learns (phase L-core,
-after which real use starts), then the UI finished and out of the way, then
-three packs running in the owner's own workspace:
-- **the writing pack;**
-- **a project management pack:** an AI project manager that knows what is being done, builds schedules and tracks
-  action items;
-- **the publishing pack.**
-
-The owner hasn't yet seen any pack working.
+**The goal:** Thimbleby (still called PM Cockpit in the code until phase I): a daily assistant for anyone juggling work,
+which keeps track of what the person promised and what was promised to them, and gets the next step ready, with the
+person approving everything outward. The path:
+- **The first milestone:** the core complete, with full UI and code reviews approved, plus the installers (phases B, S and
+  I).
+- **The gate week** on the owner's personal mail is the first measured use of the core.
+- **Real use by the owner** starts once the writing pack is complete (phase C).
+- **Packs come after the core** (the writing pack, then the project management and publishing packs), and every pack is
+  designed before plugin API 1.0, so the API holds the base any pack could need.
+- **1.0 is published** once the owner finalizes scope.
 
 **How the order was chosen:** each phase makes the next one testable by the owner. The plan holds one stream of work at
 a time, and a phase ends when its exit test passes, not when its code is written.
@@ -42,7 +43,8 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
 - **When the owner uses it:** the owner tests it after phase B and starts real use once the writing pack is complete
   (owner, 2026-10-15; confirmed 2026-10-19). Phase S's gate week is the measured trial of the core on the owner's personal
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
-- **Owner action pending:** re-run the learning tests (O3) after setting the model choices.
+- **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
+  pushes.
 - **Open items:** 148, each in exactly one batch; 196 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
@@ -55,7 +57,7 @@ keep each item's full text.
 
 1. **S1-1 Promises core (in progress)** (3 open items; size: about a day)
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
-    - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep.
+    - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
 2. **S1-2 What the person owes and misses** (4 open items; size: about a day)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
@@ -86,7 +88,8 @@ keep each item's full text.
     - *Exit:* each accepted item has its test, and the owner sees the changed screens.
 
 9. **Gate week (owner)** (no items; the gate is written out in phase S; size: two measured days, then the counted week)
-    - *Covers:* the owner's personal mail, at least one closed-lid night and one network drop; the owner writes down each promise they notice before looking at the assistant's list; two days are measured first and the thresholds set from what was seen, then the counted week.
+    - *Covers:* the owner's personal mail, at least one closed-lid night and one network drop; the owner writes down each promise they notice before looking at the assistant's list; two days are measured first and the thresholds set from what was seen, then the counted week. The testers are held to the thresholds this week sets for missed out of present, silent closes and wrong endings: those numbers come from real use, and per-tester thresholds would move the bar to fit. Counts that depend on how much mail a person gets are reported, not gated. The "Missed one" trend from week one to week two is the one measure only the testers have.
+    - *Frozen:* What is measured is frozen during the counted week: Today, the promise lines, the prompts and the model choices don't change. Fixes found during the week go into `docs/project/gate-week-fixes.md` (created when the week starts) and land after it. The one exception is anything that loses a promise or closes one wrongly: it is fixed at once, and the day is noted in the week's log so the measures before and after it can be told apart.
     - *Exit:* pass or not on the owner's thresholds for the measures in design 6.32. Nothing behind the gate starts before it.
 
 10. **S1b-1 The publisher and the guards** (2 open items; size: about a day)
@@ -119,45 +122,49 @@ keep each item's full text.
 
 17. **I-2 The tester milestone and the website** (4 open items; size: about half a day, then the owner's decisions)
     - *Covers:* open promise P24: *the content brief for the website's session* and *keeping the website in step with releases* (phase I, "The website"); the tester invitation items: *the release build fills in its catalog and feedback addresses*, *Mail and calendar sign-in approval for testers and launch*; and the tester milestone paragraph at the top of phase I.
-    - *Exit:* the first content brief is sent; the owner's thresholds for missed and false promises are set; a small invited group can install and connect mail, and their "Missed one" counts fall from week one to week two.
+    - *Exit:* the first content brief is sent; a small invited group can install and connect mail, and the website says what to expect.
 
-18. **C0 The capability matrix, step 2 (refined when reached)** (4 open items; size: about 1.5 sessions, as C0 states)
+18. **Tester weeks (testers)** (no items; size: two calendar weeks)
+    - *Covers:* the invited group uses the app on personal mail (or work mail with the employer's OK, risk R14) for two weeks, each tester bringing back what was missed through "Missed one". The testers are held to the thresholds the gate week set for missed out of present, silent closes and wrong endings; counts that depend on how much mail a person gets are reported, not gated.
+    - *Exit:* the testers' "Missed one" counts fall from week one to week two, and the inherited thresholds hold.
+
+19. **C0 The capability matrix, step 2 (refined when reached)** (4 open items; size: about 1.5 sessions, as C0 states)
     - *Covers:* the four items of C0 (phase C)
     - *Exit:* phase C's exit test, for the part C0 serves: work goes to the cheapest model whose measured scores hold.
 
-19. **C1 The writing pack, installed and reviewed (refined when reached)** (6 open items; size: set when reached)
+20. **C1 The writing pack, installed and reviewed (refined when reached)** (6 open items; size: set when reached)
     - *Covers:* the items of C1 (phase C)
     - *Exit:* the pack installs from Add-ons with its libraries, and the owner's walkthrough on a fictional book is done.
 
-20. **C4 What the packs need from the core (refined when reached)** (11 open items; size: set when reached)
+21. **C4 What the packs need from the core (refined when reached)** (11 open items; size: set when reached)
     - *Covers:* the items of C4 (phase C): the file channel, shared-file writing, fact lookups, and the builders' question rounds
     - *Exit:* phase C's exit test: the writing pack takes a fictional manuscript from import to a built PDF and EPUB the owner approves, and a correction in the pack's own work teaches.
 
-21. **C2 The project management pack (refined when reached)** (3 open items; size: set when reached)
+22. **C2 The project management pack (refined when reached)** (3 open items; size: set when reached)
     - *Covers:* the items of C2 (phase P)
     - *Exit:* phase P's exit test, for the plan, the schedule and what is late or at risk.
 
-22. **C3 The publishing pack (refined when reached)** (4 open items; size: set when reached)
+23. **C3 The publishing pack (refined when reached)** (4 open items; size: set when reached)
     - *Covers:* the items of C3 (phase P); C3b, the sales support pack, has no items and waits on its user's requirements
     - *Exit:* phase P's exit test, for the launch plan, listing sheet and prices and the hand-offs between packs.
 
-23. **C3c Business analysis and systems architect packs (refined when reached)** (4 open items; size: set when reached)
+24. **C3c Business analysis and systems architect packs (refined when reached)** (4 open items; size: set when reached)
     - *Covers:* the items of C3c (phase P)
     - *Exit:* each pack drafts what its role writes, works alone, and hands off through versioned interfaces.
 
-24. **L-more The rest of learning (refined when reached)** (12 open items; size: about 4 sessions, as the phase states)
+25. **L-more The rest of learning (refined when reached)** (12 open items; size: about 4 sessions, as the phase states)
     - *Covers:* the items of phase L-more
     - *Exit:* each item's own test; it runs beside real use after the packs.
 
-25. **D Owner validation and real use (refined when reached)** (4 open items; size: set when reached)
+26. **D Owner validation and real use (refined when reached)** (4 open items; size: set when reached)
     - *Covers:* the items of phase D
     - *Exit:* phase D's exit test, which is the owner's own judgment on dates the owner sets.
 
-26. **E The rest of version 1 (refined when reached)** (9 open items; size: set when reached)
+27. **E The rest of version 1 (refined when reached)** (9 open items; size: set when reached)
     - *Covers:* the items of phase E
     - *Exit:* each item's named test, in the order phase E gives (what protects real data first).
 
-27. **Publish 1.0** (3 open items; size: set when reached)
+28. **Publish 1.0** (3 open items; size: set when reached)
     - *Covers:* the three release mechanics of the section "Publish 1.0"
     - *Exit:* the private workspace's self-check passes, the fresh repository exists, and the README and docs match what 1.0 does.
 
@@ -170,18 +177,15 @@ blocks; everything else goes ahead without it.
 |---|---|---|---|---|
 | O1 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-agent.json`: 42 of 42 passed on the owner's one account, a command-line agent). **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
 | O2 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-harder-agent.json`: 30 of 48 as scored at `feb6b3f`, 48 of 48 once six cases were corrected; every failure was an extra op the case hadn't allowed). **The harder set's "before" run** (the original designer's L1 check-in, 2026-10-14): the harder set (below, "L1b") on the owner's account, 3 runs per case, pinned to the commit that adds it, which is the last commit before any L2 code. The report records the agent's program version, and says plainly when every tier ran on the same account, so the run says nothing about a low-cost tier against a stronger one. Steps below, once the set lands. | The owner's computer, with their AI accounts | L4's comparison, which rests on this set. | L2's build: the run is pinned, so it can be made any time; L2 code only lands after the pinned commit. |
-| O3 | **The "after" run** (L4's last step): the golden set, the harder set and the learning pairs on the owner's account, 3 runs per case, pinned to commit `b136c7d` (the last L-core code, with the fixes the first three attempts found). Compared case by case with O1 and O2. Steps below. | The owner's computer, with the account used for O1 and O2 | Real use: the comparison has to exist before it starts. | Phase B, which goes ahead meanwhile. |
+| O3 | **One run of the learning tests, at the end of batch S1-1:** the golden set, the harder set, the existing learning pairs and the twenty promise pairs, on the owner's account, 3 runs per case, on the commit that S1-1 pushes. Compared case by case with O1 and O2. It costs the owner's AI allowance once, and it gives the gate week a clean "before". Steps below. | The owner's computer, with the account used for O1 and O2 | The gate week's start, and real use: the comparison has to exist before either starts. | Phase B, which goes ahead meanwhile. |
 
 
-**O3 steps** (pinned to commit `b136c7d`, phase L-core's last code). The first attempt at `786563c` stopped at the account check,
-whose learning round-trip refused an answer that filled in the correction a lesson comes from (fixed in `69285f2`); the
-second, at `69285f2`, scored 32 of 81 on the golden set, mostly because the cases lagged the calendar-entry rule, and
-stopped during the pairs while the computer slept (fixed in `c6d467c`); the third, at `c6d467c`, passed 74 of 81 and 44 of 57, and its pairs showed the op reference gave no nested shapes (fixed in `e986e72`) and more cases and pairs lagging the prompt (fixed in `b136c7d`; decisions, 2026-10-15). In the
-owner's copy of the repository, on their
-own computer, on the workspace and account used for O2:
+**O3 steps** (on the commit that batch S1-1 pushes; the message that asks for the run names it). Earlier attempts at the
+"after" run, and the fixes they led to, are in `roadmap-done.md` and `decisions.md` (2026-10-15). In the owner's copy of
+the repository, on their own computer, on the workspace and account used for O2:
 ```
 git fetch origin claude/tender-tesla-16a8ob
-git worktree add ../cockpit-after b136c7d
+git worktree add ../cockpit-after FETCH_HEAD
 cd ../cockpit-after
 uv sync
 uv run cockpit ai test -w ~/cockpit-exit
@@ -190,30 +194,25 @@ uv run cockpit evaluate --from workspaces/demo-a -w ~/cockpit-exit --account "<t
 uv run cockpit evaluate --pairs --from workspaces/demo-b -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after-pairs.json
 uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after-pairs-harder.json
 ```
+- **Check the commit:** `git log -1 --format=%h` in `../cockpit-after` must show the commit the message names.
 - **First:** `ai test` should end with every tier able to run, on its main account or a backup that stands in; stop
   there if a tier can't run. Paste the lines exactly as written: a
   `<…>` placeholder or a trailing `# note` breaks the whole paste in zsh.
-- **Cost:** about 430 small runs in all on the one account: 81 and 60 for the two sets (27 and 20 cases × 3), and
-  about 280 for the pairs (30 pairs and the day-30 scenario, each about three calls, × 3). On a subscription agent it is
+- **Cost:** about 430 small runs in all on the one account before the promise pairs: 81 and 60 for the two sets (27 and
+  20 cases × 3), and about 280 for the pairs (30 pairs and the day-30 scenario, each about three calls, × 3); the twenty
+  promise pairs add about 180. On a subscription agent it is
   usage, and a long run may pause at the plan's limit and carry on. Run the commands one at a time if you'd rather see
   each report first.
 - **What it shows:** each report ends with a pass rate per case and an overall line. The first two cover O1's and O2's
   cases plus the ones added since (those have no "before" number). A pair passes only when the later input comes out
   right with the correction not repeated, and a negative pair passes only when its later input is unchanged. A pair
   that fails names what the later run was given, so a gap in learning shows which knowledge didn't reach it.
-- **Status, 2026-10-15:** the golden and harder sets ran at `b136c7d` (73 of 81, 55 of 57; `evals/README.md`). The
-  account's monthly quota ran out during the pairs, so both pair sets run again at `4b672f6` (a spent plan is now read
-  as one, and the pairs check learning rather than wording), on the backup account the owner set for the rest of the
-  month (owner, 2026-10-15: the main account first, a low-cost API model as its checked backup); the report names it.
-  The owner's `cockpit-after` copy now follows the branch, and the two pair commands above run there with `--account` set
-  to the backup's name as `ai test` shows it, after the fix that shows the `"op"` field in the op reference (the backup's
-  account check failed without it; decisions, 2026-10-15).
-  The first run on the backup finished every case but left both report files empty (the printed report never reached
-  them); `--out <file>` now saves the report after every case, and the pair commands are run again with it.
+- **Saving the report:** `--out <file>` saves the report after every case, so a run that stops part way leaves what it
+  finished. If the main account's allowance runs out, the pair commands run on the backup account, and the report names it.
 - **Keep the computer awake:** start each command with `caffeinate -i` on a Mac. A run frozen by sleep can take many
   minutes to recover, since each call waits up to 90 seconds before giving up.
 - **Then:** send the four files (in your home folder) to the session. It checks them for account names or addresses, writes the comparison
-  with O1 and O2 in `docs/project/evals/`, and turns any failing pair into a fix with its test before real use starts.
+  with O1 and O2 in `docs/project/evals/`, and turns any failing pair into a fix with its test before the gate week starts.
   After that, `git worktree remove ../cockpit-after`.
 
 ## The plugin API's road to 1.0
@@ -524,7 +523,8 @@ proves it on a week of real use, and only then goes on:
 - **The gate week:** the owner's personal mail (R9 rules out work mail); at least one closed-lid night and one network drop;
   the owner writes down each promise they notice before looking at the assistant's list, as the independent list; two
   days are measured first and the thresholds set from what was seen, then the counted week. Pass on the owner's
-  thresholds for the measures in design 6.32.
+  thresholds for the measures in design 6.32. The testers are held to the thresholds this week sets for missed out of present, silent closes and wrong endings: those numbers come from real use, and per-tester thresholds would move the bar to fit. Counts that depend on how much mail a person gets are reported, not gated. The "Missed one" trend from week one to week two is the one measure only the testers have.
+- **The freeze:** What is measured is frozen during the counted week: Today, the promise lines, the prompts and the model choices don't change. Fixes found during the week go into `docs/project/gate-week-fixes.md` (created when the week starts) and land after it. The one exception is anything that loses a promise or closes one wrongly: it is fixed at once, and the day is noted in the week's log so the measures before and after it can be told apart.
 - **Behind the gate:** S1b (sending and calendar acts: the riskiest part, so it waits), the brief, meeting prep, people
   memory, areas of life, capture from anywhere and the conversation.
 
@@ -683,7 +683,11 @@ items each tester brings back through "Missed one" per week, which should fall f
 says personal mail, or work mail only with the employer's OK (risk R14). A small invited group tests the installers with the mail and calendar
 add-on. Gated on: every integrity defect in phase B's first items fixed with its test; the installers built and tried
 on a clean Mac and a clean Windows computer with the same journey (install, connect mail, a first result, Undo,
-reopen); and the owner's thresholds for missed and false promises set before the run.
+reopen); and the gate week passed, so its thresholds exist. The testers are held to the thresholds the gate week set for
+missed out of present, silent closes and wrong endings: those numbers come from real use, and per-tester thresholds would
+move the bar to fit. Counts that depend on how much mail a person gets are reported, not gated. The "Missed one" trend
+from week one to week two is the one measure only the testers have. The two tester weeks are their own row in the batches
+("Tester weeks").
 
 **The owner decided (2026-10-18):** (1) every defect above is fixed before anyone outside tests the app: the tester
 milestone below is gated on them; (2) testers use the mail and calendar add-on, since a test without real mail isn't

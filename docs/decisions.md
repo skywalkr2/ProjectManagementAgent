@@ -353,6 +353,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   feedback the owner accepts is built in batch B-7, before the gate week. The roadmap is regrouped into
   batches, one piece of scope per full run and push, with finished work moved to `docs/project/roadmap-done.md`.
   **Impact:** roadmap order only; no design change.
+- **Also (2026-10-19): the owner's review of the batched plan.** (1) The roadmap's opening and the charter now say the
+  current product: a daily assistant, with the first milestone, the gate week, the writing pack's real use and 1.0 in that
+  order. (2) The learning tests are one owner run (O3) at the end of batch S1-1, on the commit it pushes, covering the
+  golden set, the harder set, the existing pairs and the twenty promise pairs: it costs the owner's AI allowance once and
+  gives the gate week a clean "before". (3) The tester period is its own row, "Tester weeks", two calendar weeks, ending
+  when the testers' "Missed one" counts fall from week one to week two and the inherited thresholds hold. (4) The testers
+  inherit the gate week's thresholds for missed out of present, silent closes and wrong endings, since per-tester
+  thresholds would move the bar to fit; counts that depend on how much mail a person gets are reported, not gated.
+  (5) What is measured is frozen during the counted week (Today, the promise lines, the prompts, the model choices); fixes
+  go to `docs/project/gate-week-fixes.md` and land after it, except anything that loses or wrongly closes a promise, which
+  is fixed at once and noted in the week's log. Decided by the main session on the owner's review.
+  **Impact:** roadmap and charter only; design 6.32's gate gains the freeze and the inherited thresholds.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

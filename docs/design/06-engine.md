@@ -2626,7 +2626,13 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   closes (the figure is built, `closes.measure`; the screen is not); changed dates, cancellations, partial deliveries and
   owner changes handled; review time; sources not read; and "Missed one" per person per week, which should fall from week
   one to week two. Counts with their denominators; a held-out set; and a replay set where each real miss becomes a case
-  (starting state, the person's action, expected end).
+  (starting state, the person's action, expected end). **The gate week's thresholds** are set from its two measured
+  days; the testers are held to those numbers for missed out of present, silent closes and wrong endings (per-tester
+  thresholds would move the bar to fit), counts that depend on how much mail a person gets are reported, not gated, and
+  the "Missed one" trend is the one measure only the testers have. **During the counted week, what is measured is
+  frozen:** Today, the promise lines, the prompts and the model choices don't change, and fixes found go on a list and land
+  after it; the one exception is anything that loses a promise or closes one wrongly, fixed at once with the day noted in
+  the week's log so the measures before and after can be told apart.
 - **Sending (S1b) is accepted only on named tests:** exact content and recipients; an approval goes stale when the draft,
   its recipients or its inputs change, a restart that re-resolved addresses or updated a template included; never twice
   after a timeout, retry or restart; after a closed lid or lost network mid-send, the result is checked with the service

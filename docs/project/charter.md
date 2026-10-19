@@ -1,9 +1,13 @@
 # Project charter
 
+Updated 2026-10-19: the daily assistant direction (decisions 2026-10-16, 2026-10-17, 2026-10-19).
+
 ## Purpose
 
-Build PM Cockpit: a generic, AI-assisted cockpit that watches a person's sources, drafts updates, questions and action items,
-and gives them one screen to review and send. The design is in `docs/design/`.
+Build Thimbleby (called PM Cockpit in the code until phase I): a daily assistant for anyone juggling work. It keeps
+track of what the person promised and what was promised to them, across mail, notes and calendar, and gets the next step
+ready, with the person approving everything outward. Project support is one use of it, not the whole product. The design
+is in `docs/design/` (6.32, the daily steward, is the core of it).
 
 ## End state, beyond 1.0 (owner, 2026-10-14)
 
@@ -64,23 +68,43 @@ clean-room and all committed data is fictional.
 
 ## Sponsor, owner and first user
 
-The owner: sponsor, product owner and first user. The **first real deployment is the owner's literary imprint**, in a private
-workspace outside this repository, starting with the run-up to its first book launch on **2026-12-01**.
+The owner: sponsor, product owner and first user. The first users, in order:
+1. **The owner, on personal mail,** in the gate week (`roadmap-to-1.0.md`, phase S): the first measured use of the core.
+2. **The testers,** a small invited group using the installers with the mail and calendar add-on, for two weeks.
+3. **The owner's real use, with the writing pack,** once the pack is complete (phase C), in a private workspace outside this
+   repository. The owner's literary imprint is that workspace; its launch follows the writing pack's first real use and
+   is not the product's purpose.
 
 ## Objectives and success measures
 
-**Set aside (owner, 2026-10-09 and 2026-10-12; confirmed 2026-10-15):** there is no go/no-go date. The 2026-12-01 launch
-goes ahead without the tool. The owner tests it after the UI phase (B) and starts real use once the writing pack is
-complete (phase C); the order of work is `roadmap-to-1.0.md`. The original criteria are kept below for the record.
+**Set aside (owner, 2026-10-09 and 2026-10-12; confirmed 2026-10-15 and 2026-10-19):** there is no go/no-go date. The
+2026-12-01 imprint launch goes ahead without the tool. The first milestone is the core complete, with full UI and code
+reviews approved, plus the installers (phases B, S and I); the order of work is `roadmap-to-1.0.md`. The original
+criteria are kept below for the record.
 
-**By the go/no-go (2026-10-30), the launch slice (`schedule.md`) is useful or it waits** (set aside, above):
+**The product's measures (design 6.32, "Measures"),** read first from the gate week and then from the testers:
+
+| Measure | Target |
+|---|---|
+| Promises missed, out of the promises present, against the person's own list | threshold set from the gate week's two measured days |
+| Silent closes, out of all closes | threshold set from the gate week's two measured days |
+| Wrong endings (a nudge treated as done included) | threshold set from the gate week's two measured days |
+| "Missed one" per person per week | falls from week one to week two (the testers' measure) |
+| Review time | reported; threshold set from the gate week's two measured days |
+
+The testers are held to the thresholds the gate week sets, not to ones of their own: those numbers come from real use, and
+per-tester thresholds would move the bar to fit. Counts that depend on how much mail a person gets are reported, not
+gated. What is measured is frozen during the counted week (roadmap, phase S).
+
+**Kept for the record, set aside above: by the go/no-go (2026-10-30), the launch slice (`schedule.md`) is useful or it
+waits:**
 
 - The milestone 2 acceptance scenario (`schedule.md`) passes on the fictional imprint.
 - A week of the owner's real launch notes and emails runs through it, and the owner judges it saved time.
 - Nothing went out without approval (guaranteed by design; checked anyway).
 - An off-device backup exists and has succeeded.
 
-**For version 1 (after the launch), measured from quality signals (design 6.20):**
+**Earlier measures for version 1 (design 6.20), kept:**
 
 | Measure | Target |
 |---|---|
@@ -103,7 +127,7 @@ complete (phase C); the order of work is `roadmap-to-1.0.md`. The original crite
 
 | Who | Role | Involvement |
 |---|---|---|
-| Owner | Sponsor, product owner, first user (publisher) | Decides scope, reviews milestones, runs the private workspace |
+| Owner | Sponsor, product owner, first user (gate week, then real use with the writing pack) | Decides scope, reviews milestones, runs the private workspace |
 | Author of the first design | Subject-matter reviewer | Reviews design changes via `docs/design/CHANGES.md` |
 | The imprint's contributors (editor, designer, printer, reviewers, media) | Recipients of messages | Never use the tool; receive only what the owner approves |
 
