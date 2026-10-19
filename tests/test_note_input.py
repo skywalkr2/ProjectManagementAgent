@@ -240,6 +240,7 @@ def test_every_route_a_note_can_be_typed_on_has_its_words_for_the_assistant():
         "answered",
         "answered_for",
         "change_requested",
+        "missed_one",
     }
 
 
@@ -337,6 +338,8 @@ def type_on(client, base, worker, route: str) -> tuple[str, str | None]:
     editor = person_with_role("Editor")
     actions = fixture_records(DEMO_B, "action")
     action = actions[0]["id"]
+    if route == "missed_one":
+        return client.post(f"{base}/missed", json={"text": LONG}).json()["request"], None
     if route in ("mark_done", "reopened"):
         done = route == "mark_done"
         target = action if done else next(a for a in actions if a.get("status") == "done")["id"]
