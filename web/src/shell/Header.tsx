@@ -121,9 +121,7 @@ export function Header(props: {
       </div>
       {!props.narrow && (
         <div className={styles.end}>
-          <Button variant="ghost" icon="alert" {...{ [MISSED_BUTTON]: "" }} onClick={missed}>
-            {t("missed.open")}
-          </Button>
+          <IconButton icon="alert" label={t("missed.open")} {...{ [MISSED_BUTTON]: "" }} onPress={missed} />
           <Button variant="primary" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}
           </Button>
