@@ -434,11 +434,12 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   clock. Decided by the main session.
   **Impact:** design 6.35, 6.32 (CHANGES.md section 111); roadmap S1-3.
 - **Also (2026-10-19): a blocked action is an action on hold that names its blocker.** "Blocked, waiting on …" is not a
-  second state beside On hold: `on_hold` gains an optional `on`, a person or an action, and an action on hold that names
-  one reads "Blocked, waiting on <the person or the action>" on its row, while one that gives only words reads "On hold:
-  …" as before. Neither is due. Top priorities counts the blocked ones. Taking it off hold is the existing
+  second state beside On hold: `on_hold` gains an optional `on`, a person, an action or a question (which also gives
+  open promise P26 its tie: "Waits on: <the question>", then "Unblocked: <who> answered <date>"), and an action on hold
+  that names a person or an action reads "Blocked, waiting on <the person or the action>" on its row, while one that
+  gives only words reads "On hold: …" as before. Neither is due. Top priorities counts the blocked ones. Taking it off hold is the existing
   `action.unhold`. Dependencies between work items stay the project management pack's. Decided by the main session.
-  **Impact:** design 6.9 "On hold" (CHANGES.md, B-6a); roadmap B-6a "An action can be blocked".
+  **Impact:** design 6.9 "On hold" (CHANGES.md, B-6a); roadmap B-6a "An action can be blocked"; P26's tie.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
