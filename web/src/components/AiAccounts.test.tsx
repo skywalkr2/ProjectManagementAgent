@@ -690,3 +690,19 @@ test("a check that would cost more than the amount the person set asks first, wi
   await user.click(await screen.findByRole("button", { name: "Go ahead" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/second")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "everyday" } }));
 });
+
+test("an agent account says which sign-in it runs as, or that it can't tell and why, and an account that isn't an agent says nothing", async () => {
+  api({
+    "GET ai/accounts": () => [
+      account("main", { label: "Main account", used_for: ["routine", "deep"] }),
+      account("second", { label: "Second account", kind: "app-a", runs_as: "alex@example.com", runs_as_how: "asked the program" }),
+      account("third", { label: "Third account", kind: "app-a", identity_unknown: "the account's settings don't say how to ask this program which sign-in it uses" }),
+      account("fourth", { label: "Fourth account", kind: "app-a", runs_as: "alex@example.com", identity_changed_to: "sam@example.com" }),
+    ],
+  });
+  open();
+  expect(await within(await row("Second account")).findByText("Runs as alex@example.com")).toBeInTheDocument();
+  expect(within(await row("Third account")).getByText(/^Can't tell which sign-in it uses: the account's settings don't say how/)).toBeInTheDocument();
+  expect(within(await row("Fourth account")).getByText("Now runs as sam@example.com; answer on Today")).toBeInTheDocument();
+  expect(within(await row("Main account")).queryByText(/Runs as|Can't tell/)).toBeNull();
+});

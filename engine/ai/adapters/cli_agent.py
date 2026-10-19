@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
+from engine.ai.task import AgentIdentity, AiError, AiResult, AiTask, IdentityUnknown, ModelInfo
 from engine.prompts import render
 
 #: Variables every agent sees: where programs are, its home and user name (where its own sign-in is kept, in a file
@@ -46,6 +46,7 @@ BASE_ENV = (
 )
 ERROR_TAIL = 4000
 VERSION_CHARS = 200
+IDENTITY_CHARS = 200
 
 Runner = Callable[..., subprocess.CompletedProcess]
 
@@ -278,6 +279,67 @@ class CliAgentAdapter:
                 if line.strip():
                     return line.strip()[:VERSION_CHARS]
         return None
+
+    def identity(self) -> AgentIdentity | IdentityUnknown:
+        """The account the agent is signed in as, read from the program itself by the command the account names, and
+        from the part of its output the account's settings point to (a JSON field, or a line, optionally a pattern
+        within it). Unknown, with the reason in plain words, when no command is set, it fails, is too slow, says
+        nothing or doesn't have what the settings point to: never a guess from anything else. It runs with the same
+        allowlisted environment as a run."""
+        agent = self.agent
+        if not agent.identity_command:
+            return IdentityUnknown("the account's settings don't say how to ask this program which sign-in it uses")
+        shown = " ".join(agent.identity_command)
+        with _scratch() as scratch:
+            try:
+                done = self._runner(  # noqa: S603 - the account's own program, arguments as a list, no shell
+                    agent.identity_command,
+                    input="",
+                    cwd=scratch,
+                    env=self._env(),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=agent.identity_timeout_seconds,
+                )
+            except subprocess.TimeoutExpired:
+                return IdentityUnknown(
+                    f"asking the program didn't finish in {agent.identity_timeout_seconds:g} seconds"
+                )
+            except OSError as err:
+                return IdentityUnknown(f"the program couldn't be started to ask: {err}")
+        if done.returncode != 0:
+            said = (done.stderr or "").strip().splitlines()
+            tail = f": {said[-1][:IDENTITY_CHARS]}" if said else ""
+            return IdentityUnknown(f"asking the program stopped with exit code {done.returncode}{tail}")
+        out = (done.stdout or "").strip()
+        if not out:
+            return IdentityUnknown("the program answered with nothing")
+        if agent.identity_field:
+            try:
+                data = json.loads(out)
+            except ValueError:
+                return IdentityUnknown("the program's answer isn't the JSON the settings describe")
+            found = _at(data, agent.identity_field)
+            if not isinstance(found, str) or not found.strip():
+                return IdentityUnknown(f"the program's answer has no account at {agent.identity_field}")
+            account, where = found, f"field {agent.identity_field}"
+        else:
+            lines = [line for line in out.splitlines() if line.strip()]
+            if agent.identity_line > len(lines):
+                return IdentityUnknown(f"the program's answer has no line {agent.identity_line}")
+            account, where = lines[agent.identity_line - 1], f"line {agent.identity_line}"
+        if agent.identity_pattern:
+            try:
+                match = re.search(agent.identity_pattern, account)
+            except re.error:
+                return IdentityUnknown("the pattern in the account's settings isn't a valid pattern")
+            if match is None or not match.groups() or not (match.group(1) or "").strip():
+                return IdentityUnknown("the program's answer doesn't match the pattern in the account's settings")
+            account, where = match.group(1), f"{where}, by pattern"
+        account = account.strip()[:IDENTITY_CHARS]
+        return AgentIdentity(account, f"asked the program with {shown} ({where})")
 
     def catalog(self) -> dict[str, ModelInfo]:
         """An agent publishes no catalog; its models and prices come from the account's settings."""

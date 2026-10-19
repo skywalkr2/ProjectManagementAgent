@@ -473,6 +473,33 @@ class AgentSettings(ConfigModel):
     version_timeout_seconds: float = Field(
         10, gt=0, description="How long the agent's version check may take before the version is left unknown."
     )
+    identity_command: list[str] = Field(
+        default_factory=list,
+        description="The program and arguments that print which account the agent is signed in as, so Settings can "
+        "say whose sign-in it runs as and Today can ask when that changes. Empty: the program has no way to say, and "
+        "the account shows that it can't tell.",
+    )
+    identity_field: str = Field(
+        "",
+        description="When the identity command prints JSON: the dotted path to the account in it. Empty: the output is "
+        "read by line.",
+    )
+    identity_line: int = Field(
+        1, ge=1, description="Without identity_field: the line of the output that holds the account, counting from 1."
+    )
+    identity_pattern: str = Field(
+        "",
+        description="A regular expression whose first group is the account within that line. Empty: the whole line.",
+    )
+    identity_timeout_seconds: float = Field(
+        10, gt=0, description="How long the identity command may take before the sign-in is left unknown."
+    )
+    identity_recheck_seconds: float = Field(
+        600,
+        ge=0,
+        description="How long a sign-in read stays current when runs look for a change: a run reads it again only "
+        "after this many seconds. Zero reads it before every run.",
+    )
 
 
 class ProviderSettings(ConfigModel):
@@ -508,6 +535,12 @@ class ProviderSettings(ConfigModel):
     content_levels: list[str] | None = Field(
         None,
         description="The content levels this account takes (those defined for AI); unset means it takes every level.",
+    )
+    identity_level: list[DataLevel] | None = Field(
+        None,
+        description="For a command-line agent: the data levels the sign-in it runs as may see, such as a personal "
+        "sign-in set for open and internal material only. Work above them waits for you, even where the account is "
+        "allowed more. Unset: the sign-in adds no limit of its own.",
     )
     timeout_seconds: int = Field(90, ge=5, description="How long to wait for an answer.")
     json_mode: bool = Field(True, description="Ask the provider for JSON output when it supports that.")

@@ -532,6 +532,46 @@ test("a check that couldn't finish says so and names no cases", async () => {
   expect(within(row).queryAllByRole("listitem")).toHaveLength(0);
 });
 
+const identityLine = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("identity", { key: "identity:second", group: "decide", account: "second", text: "sam@example.com", subject: "alex@example.com", state: "changed", ...over });
+
+test("a changed sign-in says which account now runs as whom and offers Sign in again and Keep it", async () => {
+  const { onOpenAiAccounts } = show([identityLine()]);
+  const row = await screen.findByRole("region", { name: "Check a sign-in" });
+  expect(row).toHaveTextContent("The second agent now runs as sam@example.com: keep it or sign in again?");
+  expect(row).toHaveTextContent("Anything above open material waits until you answer.");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Sign in again", "Keep it"]);
+  await userEvent.setup().click(within(row).getByRole("button", { name: "Sign in again for second" }));
+  expect(onOpenAiAccounts).toHaveBeenCalled();
+});
+
+test("Keep it records the new sign-in for the account, says so, and the line goes", async () => {
+  const user = userEvent.setup();
+  let lines = [identityLine()];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST ai/accounts/second/identity/keep": () => {
+      lines = [];
+      return { ok: "second" };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Check a sign-in" });
+  await user.click(within(row).getByRole("button", { name: "Keep sam@example.com for second" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/second/identity/keep")).toBe(true));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Check a sign-in" })).toBeNull());
+  expect(await screen.findByText("second now runs as sam@example.com.")).toBeInTheDocument();
+});
+
+test("work above the levels a sign-in is set for says so, with how much waits, and opens the account", async () => {
+  const { onOpenAiAccounts } = show([identityLine({ key: "identity:second:level", state: "level", subject: null, count: 2, names: ["restricted"] })]);
+  const row = await screen.findByRole("region", { name: "Check a sign-in" });
+  expect(row).toHaveTextContent("The second agent runs as sam@example.com, which isn't set for restricted material");
+  expect(row).toHaveTextContent("2 pieces of work wait.");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Open the account"]);
+  await userEvent.setup().click(within(row).getByRole("button", { name: "Open second" }));
+  expect(onOpenAiAccounts).toHaveBeenCalled();
+});
+
 test("a paused account and a check are named as the person named the account, and the answer still goes to its id", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({

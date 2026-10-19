@@ -1007,24 +1007,31 @@ class StopCause(BaseModel):
     """Why a request stopped, in a form the screen can act on."""
 
     model_config = ConfigDict(extra="forbid")
-    kind: Literal["data_level", "no_person", "paused", "retry", "offline"] = Field(
+    kind: Literal["data_level", "no_person", "paused", "retry", "offline", "identity"] = Field(
         description="data_level: no AI account may see the request's material, and `accounts` would take it if "
         "allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. paused: "
         "every account that could take it is waiting for a usage limit to reset (`account`, `until`); the request "
         "stays queued and runs again by itself then. retry: a run that gave no usable answer is tried again by "
         "itself at `until` (`idle` counts the runs in a row that did no work). offline: no AI account could be "
         "reached for want of a network connection; the request stays queued since `since` and is looked at again "
-        "at `until`, and no try is counted."
+        "at `until`, and no try is counted. identity: a command-line agent's sign-in changed (`why` changed) or "
+        "isn't set for the material's level (`why` level); the request stays queued, untouched, until the person "
+        "answers for `account`."
     )
     level: Literal["open", "internal", "restricted"] | None = Field(
-        None, description="For data_level: the data level of the material."
+        None, description="For data_level and identity: the data level of the material."
     )
     accounts: list[str] = Field(
         default_factory=list,
         description='For data_level: the accounts ("provider/model") that would take the material if allowed its '
         "level, in the order the tier tries them.",
     )
-    account: str | None = Field(None, description="For paused: the account whose limit resets first.")
+    account: str | None = Field(
+        None, description="For paused: the account whose limit resets first. For identity: the agent account."
+    )
+    why: Literal["changed", "level"] | None = Field(
+        None, description="For identity: whether the sign-in changed, or isn't set for the material's level."
+    )
     tier: str | None = Field(None, description="For paused: the tier whose work waits.")
     until: datetime | None = Field(
         None, description="For paused, retry and offline: when the request runs again by itself."
@@ -1038,7 +1045,7 @@ class StopCause(BaseModel):
     def _leave_out_unset_times(self, handler: Any) -> dict[str, Any]:
         """The account, the tier and the times are written only for the causes that have them."""
         data = handler(self)
-        for key in ("account", "tier", "until", "since", "idle"):
+        for key in ("account", "tier", "until", "since", "idle", "why"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data

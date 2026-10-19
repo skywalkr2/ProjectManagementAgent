@@ -86,6 +86,22 @@ class AiError(Exception):
         super().__init__(f"{kind}: {self.detail}" if self.detail else kind)
 
 
+@dataclass(frozen=True)
+class AgentIdentity:
+    """The account a command-line agent runs as, as the program itself says: `account` is what it printed and
+    `how_read` says in plain words which command and which part of its output it came from."""
+
+    account: str
+    how_read: str
+
+
+@dataclass(frozen=True)
+class IdentityUnknown:
+    """The program's sign-in couldn't be read: `reason` says why in plain words. It is never a guess."""
+
+    reason: str
+
+
 REASON_LIMIT = 200
 
 

@@ -27,6 +27,7 @@ providers:
   #   adapter: cli-agent
   #   models: {default: agent-default-model}
   #   allowed_data: [open]
+  #   identity_level: [open]                 # the levels the sign-in it runs as may see; work above them waits for you
   #   agent:
   #     command: [example-agent, run, --sandbox, "{scratch}", --write-only, "{outbox}", --packet, "{packet}"]
   #     packet_via: file
@@ -34,6 +35,10 @@ providers:
   #     key_env: EXAMPLE_AGENT_KEY
   #     errors: {auth: ["invalid key"], exit_codes: {4: rate_limited}}
   #     sign_in_hint: Check the key in the account's settings
+  #     identity_command: [example-agent, whoami]   # prints which account it is signed in as; empty: can't tell
+  #     identity_line: 1                        # the line of that answer with the account, counting from 1
+  #     identity_pattern: 'as (\S+)'               # the account within the line (first group); empty: the whole line
+  #     identity_recheck_seconds: 600           # a run looks again at the sign-in after this long, so a change is found
   #     version_command: [example-agent, --version]   # prints the agent's version for evaluation reports; empty: the program with --version
   #     home: shared                         # signed in with a key, so the home folder holds nothing it needs
   #   auth: env:EXAMPLE_AGENT_KEY

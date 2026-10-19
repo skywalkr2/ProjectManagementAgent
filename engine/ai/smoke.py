@@ -16,7 +16,7 @@ from typing import Any
 
 from engine.ai import learning_check
 from engine.ai.adapters import make_adapter
-from engine.ai.task import NO_WORK_KINDS, AiError, AiTask, provider_reason
+from engine.ai.task import NO_WORK_KINDS, AiError, AiTask, IdentityUnknown, provider_reason
 from engine.config import Config
 from engine.secrets import SecretError, describe_secret, resolve_secret
 from engine.state_file import write_whole
@@ -40,8 +40,9 @@ class SmokeResult:
     answered: bool = False  # the account's call went through, whatever it said
     offline: bool = False  # no connection could be made at all: the test says nothing about the account
     ref: str = ""  # the "account/model" the result is about
-    part: str = "call"  # call (one kind of work's parameters), lockdown or learning
+    part: str = "call"  # call (one kind of work's parameters), lockdown, learning or identity
     params: list[Any] = field(default_factory=list)  # for a call: the kind of work, temperature and most output
+    identity: dict[str, str] | None = None  # for identity: {account, how_read}, or {unknown: the reason}
 
 
 def _params_for_tier(cfg: Config, tier: str) -> list[tuple[str, float, int]]:
@@ -115,6 +116,7 @@ def smoke_test(
             if ref not in locked:
                 locked.add(ref)
                 results.extend(_lockdown(tier_name, ref, position == 0, settings, model_id, env, adapter_factory))
+                results.extend(_identity(tier_name, ref, position == 0, settings, env, adapter_factory))
                 results.append(
                     _learning(tier_name, ref, position == 0, cfg, settings, model_id, env, adapter_factory, store)
                 )
@@ -199,6 +201,45 @@ def _lockdown(
             part="lockdown",
         )
         for c in checks
+    ]
+
+
+def _identity(
+    tier: str,
+    ref: str,
+    main: bool,
+    settings: Any,
+    env: Mapping[str, str],
+    adapter_factory: Callable[[str, Any, str | None], Any],
+) -> list[SmokeResult]:
+    """For an agent account, which sign-in it runs as, read from the program (design 6.16). Not being able to tell is
+    said as it is and is no failure of the account's check; an account that isn't an agent has no result."""
+    try:
+        adapter = adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, env))
+    except (SecretError, AiError, ValueError):
+        return []  # the connection test above already says why
+    reader = getattr(adapter, "identity", None)
+    start = time.monotonic()
+    found = reader() if callable(reader) else None
+    if found is None:
+        return []
+    if isinstance(found, IdentityUnknown):
+        detail, said = f"can't tell which sign-in it uses: {found.reason}", {"unknown": found.reason}
+    else:
+        detail, said = f"runs as {found.account}", {"account": found.account, "how_read": found.how_read}
+    return [
+        SmokeResult(
+            tier,
+            f"{ref} (identity)",
+            main,
+            True,
+            detail,
+            time.monotonic() - start,
+            provider=ref.partition("/")[0],
+            ref=ref,
+            part="identity",
+            identity=said,
+        )
     ]
 
 

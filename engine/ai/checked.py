@@ -15,13 +15,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from engine.ai import identity
 from engine.ai.smoke import SmokeResult, _params_for_tier
+from engine.ai.task import AgentIdentity, IdentityUnknown
 from engine.config import Config
 from engine.state_file import write_whole
 from engine.workspace import Workspace
 
 CHECKED_FILE = "ai-checked.json"
-NOT_ACCOUNT = ("accepted_unchecked", "label")
+NOT_ACCOUNT = ("accepted_unchecked", "label", "identity_level")
 
 
 def account_fingerprint(cfg: Config, ref: str) -> str | None:
@@ -64,6 +66,7 @@ def remember(ws: Workspace, cfg: Config, results: list[SmokeResult]) -> None:
         if r.ref:
             by_ref.setdefault(r.ref, []).append(r)
     kept = _read(ws)
+    _take_in_identities(ws, results)
     for ref, found in by_ref.items():
         fingerprint = account_fingerprint(cfg, ref)
         if fingerprint is None or any(r.offline for r in found):
@@ -84,6 +87,23 @@ def remember(ws: Workspace, cfg: Config, results: list[SmokeResult]) -> None:
             "at": datetime.now(UTC).isoformat(),
         }
     write_whole(ws.private_dir / CHECKED_FILE, json.dumps(kept, indent=2) + "\n")
+
+
+def _take_in_identities(ws: Workspace, results: list[SmokeResult]) -> None:
+    """Record which sign-in each agent account runs as, as the check read it (design 6.16). A different one than the
+    recorded identity waits for the person; one that couldn't be read is recorded as unknown. Once per account."""
+    seen: set[str] = set()
+    for r in results:
+        if r.part != "identity" or not r.identity or not r.provider or r.provider in seen:
+            continue
+        seen.add(r.provider)
+        said = r.identity
+        found = (
+            IdentityUnknown(said["unknown"])
+            if "unknown" in said
+            else AgentIdentity(said.get("account", ""), said.get("how_read", ""))
+        )
+        identity.observe(ws, r.provider, found)
 
 
 def checked_at(ws: Workspace | Folder, cfg: Config, ref: str) -> datetime | None:

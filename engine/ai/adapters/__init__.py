@@ -11,6 +11,10 @@ from engine.ai.task import AiResult, AiTask
 
 
 class Adapter(Protocol):
+    """What every adapter does. Capabilities beyond `run` are optional methods the caller looks for: `catalog`,
+    `program_version` and `lockdown_test` (a command-line agent), and `identity`, which returns the account a
+    command-line agent runs as (or why that can't be told), and None for an adapter it doesn't apply to."""
+
     name: str
 
     def run(self, task: AiTask, model: str) -> AiResult: ...

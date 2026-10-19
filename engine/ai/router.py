@@ -11,6 +11,7 @@ from typing import Any
 from engine.ai.adapters import Adapter, make_adapter
 from engine.ai.borrow import Borrowed, borrowed_path, chain
 from engine.ai.catalog import Catalogs
+from engine.ai.checked import folder_of
 from engine.ai.pauses import Pauses, pauses_path, waiting_text
 from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
 from engine.config import Config
@@ -50,6 +51,18 @@ class NoProvider(Exception):
         self.blocked = blocked
 
 
+class IdentityHeld(NoProvider):
+    """The only thing in the way is which sign-in a command-line agent runs as: `account` is the agent account, `why`
+    is `changed` (it now runs as a different sign-in than the one recorded, and waits for the person's answer on Today)
+    or `level` (its sign-in isn't set for the level of the material, `level`). The work waits for the person, as for a
+    level no account may see; the message says why in plain words."""
+
+    def __init__(self, message: str, *, account: str, why: str, level: str):
+        super().__init__(message, level=level)
+        self.account = account
+        self.why = why
+
+
 class AccountPaused(NoProvider):
     """Every account that could take the work is paused until a usage limit resets. `account` is the one that resets
     first and `until` when; `tier` is the tier whose work waits; the message is what the work waits on, in plain
@@ -84,12 +97,16 @@ def choices(
     content: frozenset[str] = frozenset(),
     independent: Independence | None = None,
     unchecked: Collection[tuple[str, str]] = (),
+    identity_held: Mapping[str, str] | None = None,
 ) -> list[Choice]:
     """The main choice for the task's tier, then its fallbacks, keeping only accounts allowed to see this data. `use`
     (a "provider/model" the person picked for this request) replaces the tier's list. For a check, accounts that wrote
     the work are left out, or put last when the person accepts the same account; the person's own pick stands.
     `unchecked` holds the (tier, "provider/model") pairs of backup accounts that can't stand in yet: a backup named
-    there is never chosen."""
+    there is never chosen. `identity_held` maps the agent accounts whose sign-in changed, and waits for the person's
+    answer, to the sign-in found now: such an account takes open material only meanwhile. An account whose
+    `identity_level` leaves out the material's level is never chosen for it either; when that is all that is in the
+    way, the stop is `IdentityHeld`."""
     task = cfg.ai.tasks.get(task_kind)
     tier_name = tier or (task.tier if task else "routine")
     tier_cfg = cfg.ai.tiers.get(tier_name)
@@ -100,6 +117,7 @@ def choices(
     picked: list[Choice] = []
     refused: list[str] = []
     blocked: list[str] = []
+    waiting_on_identity: list[IdentityHeld] = []
     for ref in [use] if use is not None else [tier_cfg.use, *tier_cfg.fallback]:
         provider_name, _, model_key = ref.partition("/")
         provider = cfg.ai.providers.get(provider_name)
@@ -114,12 +132,20 @@ def choices(
             if takes(provider, content):
                 blocked.append(ref)
             continue
+        if takes(provider, content):
+            stop = _identity_stop(provider, provider_name, data_level, identity_held or {})
+            if stop is not None:
+                refused.append(str(stop))
+                waiting_on_identity.append(stop)
+                continue
         if not takes(provider, content):
             refused.append(f"{provider_name} doesn't take {', '.join(sorted(content))} material")
             continue
         model_id = provider.models.get(model_key, model_key) if provider.adapter != "stub" else "stub"
         picked.append(Choice(tier_name, provider_name, model_key, model_id))
     if not picked:
+        if waiting_on_identity:
+            raise waiting_on_identity[0]
         raise NoProvider(
             "no AI account can take this: " + "; ".join(refused),
             level=data_level if blocked else None,
@@ -136,6 +162,32 @@ def choices(
             )
         picked = others + (same if independent.same_account else [])
     return picked
+
+
+def _identity_stop(provider: Any, name: str, data_level: str, identity_held: Mapping[str, str]) -> IdentityHeld | None:
+    """Why an agent account's sign-in keeps it from material at this level, or None when it doesn't: a changed sign-in
+    waiting for the person takes open material only, and an `identity_level` takes only the levels it names."""
+    top = LEVELS.index(data_level)
+    label = provider.label or name
+    if name in identity_held and top > 0:
+        found = identity_held[name]
+        return IdentityHeld(
+            f"the {label} agent now runs as {found}. {data_level.capitalize()} material waits until you answer on "
+            "Today: keep it or sign in again",
+            account=name,
+            why="changed",
+            level=data_level,
+        )
+    shown = provider.identity_level
+    if shown is not None and top > max((LEVELS.index(lvl) for lvl in shown), default=-1):
+        return IdentityHeld(
+            f"the {label} agent's sign-in isn't set for {data_level} material. It waits until you answer: sign in as "
+            "another account, or change the levels it is set for",
+            account=name,
+            why="level",
+            level=data_level,
+        )
+    return None
 
 
 def estimate_tokens(chars: int) -> int:
@@ -232,6 +284,20 @@ class Router:
 
         return frozenset((s.tier, s.ref) for s in cannot_stand_in(folder_of(self.store), self.cfg))
 
+    def _identity_held(self, task_kind: str, tier: str | None, use: str | None) -> dict[str, str]:
+        """The agent accounts whose sign-in changed and wait for the person's answer, each with the sign-in found now.
+        Before a run, every agent account this work could use is read again when its configured time has passed, so a
+        change found by a run is held at once. Read from what the checks kept, at the moment of use."""
+        from engine.ai import identity
+
+        where = folder_of(self.store)
+        task = self.cfg.ai.tasks.get(task_kind)
+        tier_cfg = self.cfg.ai.tiers.get(tier or (task.tier if task else "routine"))
+        refs = [use] if use is not None else ([tier_cfg.use, *tier_cfg.fallback] if tier_cfg and tier_cfg.use else [])
+        for name in dict.fromkeys(ref.partition("/")[0] for ref in refs):
+            identity.watch(where, self.cfg, name, self.adapter_factory, self.env, self.now())
+        return {n: who for n, who in identity.held(where).items() if n in self.cfg.ai.providers}
+
     def call(
         self,
         task: AiTask,
@@ -262,6 +328,7 @@ class Router:
             content=content,
             independent=independent,
             unchecked=self._unchecked(),
+            identity_held=self._identity_held(task.kind, tier, use),
         )
         options = self._that_fit(task, list(picked))
         paused: dict[str, datetime] = {}

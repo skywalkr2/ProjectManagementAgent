@@ -79,6 +79,10 @@ class Line:
     oldest began), overdue, account_check (an AI account in a fallback chain that can't stand in yet: its `account`, the
     `tier` whose chain it is in, its `model`, and `check_failed` when its last check failed rather than it never having
     been checked),
+    identity (an agent account whose sign-in changed or doesn't fit the work waiting on it: its `account`; with `state`
+    changed, the sign-in found now in `text` and the recorded one in `subject`, to keep or sign in again; with `state`
+    level, the sign-in in `text` (none when unknown), the levels of the waiting work in `names` and how many requests
+    wait in `count`),
     switch_failed (a switch of the `tier`'s account or model whose check found problems, or couldn't finish: the new
     `account`, the earlier one in `text`, `count` cases that didn't come out right with the first of them in `names`,
     and `check_failed` when the check couldn't finish),
@@ -526,6 +530,50 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 names=names[: switch_check.NAMED],
                 check_failed=bool(entry.get("unfinished")),
                 since=str(entry.get("at") or ""),
+            )
+        )
+
+    # Decide: an agent account whose sign-in changed, until the person keeps it or signs in again; and an agent whose
+    # sign-in isn't set for the level of work waiting on it.
+    from engine.ai import identity
+
+    for name, (before, found, since) in identity.pending(ws).items():
+        if name in cfg.ai.providers:
+            lines.append(
+                Line(
+                    key=f"identity:{name}",
+                    group="decide",
+                    kind="identity",
+                    account=name,
+                    text=found.account,
+                    subject=before.account,
+                    state="changed",
+                    since=since,
+                )
+            )
+    by_account: dict[str, set[str]] = {}
+    counts: dict[str, int] = {}
+    for r in requests.values():
+        cause = r.data.get("cause") or {}
+        waits = r.data.get("state") == "queued" and not r.data.get("dismissed")
+        if (
+            waits
+            and (cause.get("kind"), cause.get("why")) == ("identity", "level")
+            and cause["account"] in cfg.ai.providers
+        ):
+            by_account.setdefault(cause["account"], set()).add(str(cause.get("level")))
+            counts[cause["account"]] = counts.get(cause["account"], 0) + 1
+    for name, levels in sorted(by_account.items()):
+        lines.append(
+            Line(
+                key=f"identity:{name}:level",
+                group="decide",
+                kind="identity",
+                count=counts[name],
+                account=name,
+                text=(identity.recorded(ws, name) or identity.AgentIdentity("", "")).account or None,
+                state="level",
+                names=[lv for lv in ("open", "internal", "restricted") if lv in levels],
             )
         )
 
@@ -1016,6 +1064,7 @@ _KIND_ORDER = {
     "away": -1.5,
     "account_check": 1,
     "switch_failed": 1,
+    "identity": 0,
     "credential": 1,
     "no_account": 0,
     "extractor": 1,

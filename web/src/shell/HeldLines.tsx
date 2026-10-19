@@ -27,7 +27,7 @@ import styles from "./HeldLines.module.css";
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "identity", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -59,6 +59,8 @@ export function HeldLine(props: {
       return <AccountCheckLine line={line} />;
     case "switch_failed":
       return <SwitchFailedLine line={line} />;
+    case "identity":
+      return <IdentityLine line={line} onOpenAiAccounts={props.onOpenAiAccounts} />;
     case "extractor":
       return <ExtractorLine line={line} />;
     case "source_unread":
@@ -359,6 +361,60 @@ function SwitchFailedLine(props: { line: Line }) {
         </Button>
         <Button size="sm" variant="secondary" loading={busy === "keep"} disabled={busy !== null} aria-label={t("queue.switch_failed.keep_named", { account, work })} onClick={() => void keep()}>
           {t("queue.switch_failed.keep")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** An agent account whose sign-in changed (keep the new one, or sign in again), or whose sign-in isn't set for the level of
+ * the work waiting on it (open the account). Work above open material waits until the person answers. */
+function IdentityLine(props: { line: Line; onOpenAiAccounts: () => void }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const [busy, setBusy] = useState(false);
+  const nameOf = useAccountNames();
+  const { line } = props;
+  const account = nameOf(line.account ?? "");
+  const identity = line.text ?? "";
+  if (line.state === "level") {
+    const levels = (line.names ?? []).map((level) => t(`changes.level.${level}`)).join(", ");
+    return (
+      <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.identity.label")} data-queue-line="identity">
+        <Pill tone="warn">{t("queue.identity.label")}</Pill>
+        <div className={styles.body}>
+          <p className={styles.text}>{t(identity ? "queue.identity.level" : "queue.identity.level_unknown", { account, identity, levels })}</p>
+          <p className={styles.sub}>{tn("queue.identity.level.sub", line.count)}</p>
+        </div>
+        <div className={styles.actions}>
+          <Button size="sm" variant="primary" data-key="primary" aria-label={t("queue.identity.open_named", { account })} onClick={props.onOpenAiAccounts}>
+            {t("queue.identity.open")}
+          </Button>
+        </div>
+      </section>
+    );
+  }
+  const keep = async () => {
+    setBusy(true);
+    await act(
+      () => api.keepIdentity(line.account ?? ""),
+      () => ({ message: t("queue.identity.keep_toast", { account, identity }) }),
+    );
+    setBusy(false);
+  };
+  return (
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.identity.label")} data-queue-line="identity">
+      <Pill tone="warn">{t("queue.identity.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.identity", { account, identity })}</p>
+        <p className={styles.sub}>{t("queue.identity.sub")}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" data-key="primary" disabled={busy} aria-label={t("queue.identity.sign_in_named", { account })} onClick={props.onOpenAiAccounts}>
+          {t("queue.identity.sign_in")}
+        </Button>
+        <Button size="sm" variant="secondary" loading={busy} disabled={busy} aria-label={t("queue.identity.keep_named", { account, identity })} onClick={() => void keep()}>
+          {t("queue.identity.keep")}
         </Button>
       </div>
     </section>

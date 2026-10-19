@@ -27,6 +27,7 @@ providers:
   #   adapter: cli-agent
   #   models: {default: agent-default-model}
   #   allowed_data: [open, internal]
+  #   identity_level: [open, internal]       # the levels the sign-in it runs as may see; work above them waits for you
   #   timeout_seconds: 300
   #   agent:
   #     command: [example-agent, --print, --no-tools, --model, "{model}"]
@@ -42,6 +43,9 @@ providers:
   #       reset: ["resets in ([0-9]+) seconds"]   # the first group: seconds, or an ISO date and time
   #       exit_codes: {3: auth}
   #     sign_in_hint: Run example-agent login in a terminal
+  #     identity_command: [example-agent, whoami, --json]   # prints which account it is signed in as; empty: can't tell
+  #     identity_field: account.email           # where the account is in that JSON; empty: read by identity_line (1) and identity_pattern
+  #     identity_recheck_seconds: 600           # a run looks again at the sign-in after this long, so a change is found
   #     version_command: [example-agent, --version]   # prints the agent's version for evaluation reports; empty: the program with --version
   #     home: fresh                          # each run starts with an empty home folder, so no memory carries over
   #     home_files: [.config/example-agent/credentials.json]   # all it needs to stay signed in

@@ -1685,7 +1685,11 @@ class QueueLineView(BaseModel):
     `places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model
     whose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`
     of what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST
-    /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account
+    /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `identity` is a command-line agent
+    account (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in
+    `subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set
+    for the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels
+    of the waiting work, `count` the requests); `no_account` is work with no AI account
     at all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that
     isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;
     `source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its
@@ -1744,6 +1748,7 @@ class QueueLineView(BaseModel):
         "sent_check",
         "account_check",
         "switch_failed",
+        "identity",
         "credential",
         "no_account",
         "extractor",
@@ -1806,11 +1811,13 @@ class QueueLineView(BaseModel):
         description="When the oldest request waiting for the network began waiting (offline), on the person's own "
         "clock (their time zone).",
     )
-    state: Literal["diverged", "chosen", "elsewhere"] | None = Field(
+    state: Literal["diverged", "chosen", "elsewhere", "changed", "level"] | None = Field(
         None,
         description="For a handover line: diverged (this computer and the synced folder each changed; the person "
         "chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened "
-        "the workspace, so this copy stopped writing to the folder). `text` is the other computer's name.",
+        "the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an "
+        "identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in "
+        "isn't set for the level of the work waiting).",
     )
     rules: list[str] = Field(
         default_factory=list, description="For a rule_review line: the ids of the rules flagged, most present first."
@@ -2551,6 +2558,28 @@ class AiAccountView(BaseModel):
     )
     paused_until: datetime | None = Field(
         None, description="When the usage limit holding it resets, on the person's own clock; none when not paused."
+    )
+    runs_as: str | None = Field(
+        None,
+        description="For a command-line agent: the account it runs as, as its own program said when it was last read "
+        "(by the connection check or a run); none when never read or not an agent.",
+    )
+    runs_as_how: str | None = Field(
+        None, description="For `runs_as`: which command and which part of its answer it was read from, in plain words."
+    )
+    identity_unknown: str | None = Field(
+        None,
+        description="For a command-line agent whose last reading couldn't tell which sign-in it uses: why, in plain "
+        "words. None when it could tell or was never read.",
+    )
+    identity_changed_to: str | None = Field(
+        None,
+        description="A different account than `runs_as` that the agent runs as now, waiting for Keep it or Sign in "
+        "again on Today (POST /api/ai/accounts/{name}/identity/keep).",
+    )
+    identity_level: list[Literal["open", "internal", "restricted"]] | None = Field(
+        None,
+        description="The data levels the sign-in it runs as may see; none: no limit beyond what the account may see.",
     )
     check_usd: float | None = Field(
         None,

@@ -8,7 +8,7 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -107,8 +107,10 @@ def code_fingerprint() -> str:
 
 def waits_for_its_time(request: dict[str, Any], now: datetime) -> bool:
     """Whether a queued request is waiting for a time to come (an account's limit to reset, the next automatic try or
-    the next look for the network) and that time is still ahead."""
+    the next look for the network) and that time is still ahead, or for the person's answer about an agent's sign-in."""
     cause = request.get("cause") or {}
+    if cause.get("kind") == "identity":
+        return True  # it waits for the person's answer about an agent's sign-in, not for a time
     if cause.get("kind") not in ("paused", "retry", "offline") or not cause.get("until"):
         return False
     until = datetime.fromisoformat(str(cause["until"]))
@@ -125,7 +127,33 @@ def release_paused(store: Store) -> int:
     released = 0
     with store.transaction() as tx:
         for r in tx.list("request"):
-            if r.data["state"] == "queued" and (r.data.get("cause") or {}).get("kind") == "paused":
+            if r.data["state"] == "queued" and (r.data.get("cause") or {}).get("kind") in ("paused", "identity"):
+                tx.update(
+                    "request",
+                    r.id,
+                    {"cause": None, "waiting": "With the assistant, next in line"},
+                    ctx,
+                    read_version=r.version,
+                )
+                released += 1
+    return released
+
+
+def release_identity(store: Store, account: str | None = None, *, unless: Collection[str] = ()) -> int:
+    """Let the requests that wait for the person's answer about an agent's sign-in try again at once: those of one
+    account, or of every account but the ones in `unless` (whose sign-in still waits for an answer). Work that still
+    doesn't fit waits again, with its reason. Returns how many were let go."""
+    ctx = WriteContext(actor="engine", trust="trusted", op="worker.release")
+    released = 0
+    with store.transaction() as tx:
+        for r in tx.list("request"):
+            cause = r.data.get("cause") or {}
+            if (
+                r.data["state"] == "queued"
+                and cause.get("kind") == "identity"
+                and account in (None, cause.get("account"))
+                and cause.get("account") not in unless
+            ):
                 tx.update(
                     "request",
                     r.id,

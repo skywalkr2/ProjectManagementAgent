@@ -53,6 +53,10 @@ class StubAdapter:
     def catalog(self) -> dict:
         return {}
 
+    def identity(self) -> None:
+        """Not applicable: the stand-in signs in as nobody."""
+        return None
+
 
 def _first_line(request: str) -> str:
     match = re.search(r"<untrusted[^>]*>\s*(.+?)\s*</untrusted>", request, re.S) or re.search(

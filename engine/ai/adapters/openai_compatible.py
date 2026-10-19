@@ -78,6 +78,10 @@ class OpenAICompatibleAdapter:
             cached_input_tokens=details.get("cached_tokens") if isinstance(details, dict) else None,
         )
 
+    def identity(self) -> None:
+        """Not applicable: the account is a key, not a sign-in of a person."""
+        return None
+
     def catalog(self) -> dict[str, ModelInfo]:
         """The account's model list, with context size and prices where the endpoint publishes them; empty when it
         can't be read.

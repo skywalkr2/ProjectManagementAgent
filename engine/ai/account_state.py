@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from engine.ai.identity import Shown, shown
 from engine.ai.task import NO_WORK_KINDS
 from engine.config import Config
 from engine.today import zone
@@ -27,6 +28,7 @@ class AccountState:
     check_failed_for: list[str] = field(default_factory=list)
     checked_at: datetime | None = None
     paused_until: datetime | None = None
+    identity: Shown = field(default_factory=Shown)
 
 
 def _at(text: str) -> datetime:
@@ -73,5 +75,6 @@ def account_states(ws: Any, store: Any, cfg: Config, now: datetime | None = None
             check_failed_for=failed,
             checked_at=max(stamps).astimezone(here) if stamps else None,
             paused_until=until.astimezone(here) if until else None,
+            identity=shown(ws, name),
         )
     return found

@@ -9,7 +9,9 @@
 #   allowed_data       the data levels a new account of this kind is offered by default (the person can change them)
 #   settings           provider settings a new account of this kind starts with (see ai.yaml's providers); for a
 #                      command-line agent, its whole `agent` block: the command with the program's own options that
-#                      turn its tools off, how it takes the packet and where its answer is
+#                      turn its tools off, how it takes the packet and where its answer is, and, where the program
+#                      can say which account it is signed in as, identity_command with identity_field (or
+#                      identity_line and identity_pattern) naming where the account is in its answer
 #   program            for a command-line agent: the program's name, so the screen can say whether it is installed
 #   model_examples     names the program accepts for its models, offered when it can't list them
 #   model_optional     the program picks its own model when none is named
@@ -121,6 +123,8 @@ endpoints:
           quota: ["usage limit reached", "hit your limit"]
           rate_limited: ["rate limit", "overloaded"]
         sign_in_hint: Open a terminal, run claude and sign in, then press Test again.
+        identity_command: [claude, auth, status]
+        identity_field: email
     note: Uses your Claude subscription or account through Claude Code, with its tools turned off.
   - id: copilot
     name: GitHub Copilot CLI

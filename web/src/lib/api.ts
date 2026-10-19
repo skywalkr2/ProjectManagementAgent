@@ -400,6 +400,8 @@ export const api = {
     call<S["SettingsSaved"]>("POST", `ai/switch/${id(tier)}/back`, { fingerprint } satisfies S["FingerprintIn"]),
   /** Keeps a switch whose check didn't pass. */
   keepSwitch: (tier: string) => call<S["Ok"]>("POST", `ai/switch/${id(tier)}/keep`),
+  /** Keeps the sign-in an agent account now runs as, in place of the one recorded. */
+  keepIdentity: (name: string) => call<S["Ok"]>("POST", `ai/accounts/${id(name)}/identity/keep`),
   /** Removes an account; `takeOver` names the backup that does its work in its place. */
   removeAccount: (name: string, fingerprint: string, takeOver?: string) =>
     call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/remove`, {

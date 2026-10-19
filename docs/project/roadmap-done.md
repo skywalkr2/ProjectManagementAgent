@@ -1809,6 +1809,10 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **Which sign-in an agent runs as** (the designer's lessons, 2026-10-19; design 6.16): the account check reads
+  the identity each command-line agent runs as from the tool itself (an adapter capability), Settings shows it beside
+  the account, and a change of identity, or one that doesn't fit the work's data level, is a Today line; runs that would
+  reach a level the new identity isn't allowed wait for the person. Risk R15. *Built (S1-3):* `tests/test_agent_identity.py`, `HeldLines.test.tsx`, `AiAccounts.test.tsx`. Left: the one preset's identity command is unverified on a live account (R15 stays open until it is); borrowing may offer a held account, though its runs still wait in the router.
 - [x] **Work the assistant releases on its own keeps the person's hours** (the designer's notes, 2026-10-19;
   design 6.35): new Today lines it adds, reminders it set itself, notifications and work held until an event that
   comes in at night wait for working hours and never land in quiet hours; a time the person chose is kept; what waited

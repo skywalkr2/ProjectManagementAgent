@@ -19,6 +19,7 @@ from engine.ai.router import (
     LEVELS,
     AccountPaused,
     BudgetReached,
+    IdentityHeld,
     Independence,
     NetworkOffline,
     NoProvider,
@@ -362,6 +363,11 @@ def process(
         # The run did nothing (a program that only printed a banner, or a call the computer's sleep cut off): no
         # attempt and no automatic retry is used, and it is tried again after a wait, a few times before the person.
         return wait_after_no_work(store, cfg, request_id, now, before, attempts=attempts_before)
+    if outcome.cause and outcome.cause.get("kind") == "identity":
+        # An agent's sign-in changed (or isn't set for the material's level): the work waits in line, untouched, until
+        # the person answers; Keep, a check that finds the sign-in back, or a change of the settings lets it go.
+        _set(store, request_id, state="queued", waiting=outcome.stop, cause=outcome.cause)
+        return None
     if outcome.cause and outcome.cause.get("kind") == "paused":
         # Every account that could take it is waiting for a limit to reset: it stays in line and runs by itself then.
         _set(store, request_id, state="queued", waiting=outcome.stop, cause=outcome.cause)
@@ -691,7 +697,7 @@ def _call(
         if isinstance(err, BudgetReached) and budget is not None and budget.reached(store):
             out.stop, out.cause = budget.stop(store), {"kind": "spend_cap"}
         else:
-            out.stop, out.cause = str(err), _data_level_cause(err)
+            out.stop, out.cause = str(err), _identity_cause(err) or _data_level_cause(err)
     except AiError as err:
         if err.kind == "no_work":
             # The run did no work: it is no answer to send back, no failure of the model and no try.
@@ -1119,6 +1125,14 @@ def _ai_failure(err: AiError) -> str:
         signed_out = "The AI account isn't signed in" if err.kind == "auth" else plain
         return f"{signed_out}{when}{why}. {err.hint.rstrip('.')}, then try again."
     return f"{plain}{when}{why}. Check the account on the AI accounts screen, then try again."
+
+
+def _identity_cause(err: Exception) -> dict | None:
+    """When a stop is that an agent account's sign-in changed or isn't set for the material's level: the account, why
+    and the level, for the line on Today and for letting the work go once the person has answered."""
+    if isinstance(err, IdentityHeld):
+        return {"kind": "identity", "account": err.account, "why": err.why, "level": err.level}
+    return None
 
 
 def _data_level_cause(err: Exception) -> dict | None:

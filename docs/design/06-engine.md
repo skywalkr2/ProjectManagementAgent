@@ -1643,6 +1643,20 @@ it reads (a personal account on a work area). Until the person answers, runs tha
 isn't allowed wait, as any run does with no allowed account. A tool that can't report who it runs as says so on the
 account, never a guess. The same leak in the other direction is risk R14.
 
+How it is built: an agent account's settings name the command (`agent.identity_command`) and where the account is in its
+answer (`identity_field` for JSON, or `identity_line` with an optional `identity_pattern`); the adapter's `identity()`
+runs it with the same allowlisted environment as a run and returns the account and how it was read, or "can't tell" with
+the reason (no command set, a failing command, an answer without the account). Other adapters have no identity. The check
+records the first reading in the workspace's private folder; a later check, or a run whose last reading is older than
+`agent.identity_recheck_seconds`, that reads a different account keeps the recorded one and makes the Today line (Keep
+records the new one, Sign in again opens the accounts screen, and a reading that is the recorded account again clears
+it). While the line waits, the account takes open material only; work above that waits in line with its reason and "until
+you answer", and goes after Keep. `identity_level` on the account names the levels the sign-in may see; work above them
+waits the same way, with a line naming the levels and how much waits. An unreadable identity changes nothing recorded.
+*Built so far (S1-3):* `tests/test_agent_identity.py`, `web/src/shell/HeldLines.test.tsx` (the Today line),
+`web/src/components/AiAccounts.test.tsx` (Runs as, Can't tell). *Not built:* an account that borrows work for another tier
+(6.16, borrowing) still reads only the account's allowed levels, not its identity's.
+
 ## 6.17 Periodic jobs (later)
 
 - **Weekly check-up:** suggested goals (the AI replaces automatic goals with 3 to 5 real ones), meetings to hold, actions due by

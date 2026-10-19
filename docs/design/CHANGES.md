@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 112. Which sign-in an agent runs as (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Agent accounts (6.16) | The check recorded nothing about whose sign-in an agent used | An adapter capability `identity()` reads it from the program by the account's `agent.identity_command` (with `identity_field`, or `identity_line` and `identity_pattern`), or says it can't tell and why; other adapters return none. The check records it beside the account's other results and Settings shows "Runs as <account>" or "Can't tell which sign-in it uses". Built: `tests/test_agent_identity.py`, `web/src/components/AiAccounts.test.tsx` |
+| A change of sign-in (6.16, 7.7) | | A later check, or a run whose last reading is older than `agent.identity_recheck_seconds`, that reads a different account makes the Today line `identity` (`state` changed) with Keep (`POST /api/ai/accounts/{name}/identity/keep`) and Sign in again. Until answered the account takes open material only; other work waits queued with the cause `identity` and "until you answer", and goes after Keep. Built: `tests/test_agent_identity.py`, `web/src/shell/HeldLines.test.tsx` |
+| A level that doesn't fit (6.16) | | The account setting `identity_level` (a list of data levels) holds work above those levels the same way, with an `identity` line (`state` level) naming the levels and how many requests wait. Built: `tests/test_agent_identity.py` |
+| Settings (4.0), requests (5.1) | | `agent.identity_command`, `identity_field`, `identity_line`, `identity_pattern`, `identity_timeout_seconds`, `identity_recheck_seconds` and the account's `identity_level`, with demo values in both fictional workspaces; the first preset (a signed-in command-line app) carries its own status command. `StopCause` gains the kind `identity` (so `docs/plugin-guide.md` is regenerated) |
+
 ## 111. Work the assistant releases on its own keeps the person's hours (2026-10-19)
 
 | Where | Before | Now |

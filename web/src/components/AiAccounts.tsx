@@ -536,6 +536,13 @@ function AccountRow(props: {
         return t("ai_accounts.state.untested");
     }
   })();
+  const identityText = account.identity_changed_to
+    ? t("ai_accounts.identity.changed", { account: account.identity_changed_to })
+    : account.runs_as
+      ? t("ai_accounts.identity.runs_as", { account: account.runs_as })
+      : account.identity_unknown
+        ? t("ai_accounts.identity.unknown", { reason: account.identity_unknown })
+        : "";
   const worry = ["missing", "no_key", "failed", "paused", "ending"].includes(state.kind);
   const dot = worry ? <Icon name="alert" size={16} /> : <span className={styles.dot} data-tone={state.kind === "untested" ? "quiet" : "ok"} aria-hidden="true" />;
 
@@ -621,6 +628,11 @@ function AccountRow(props: {
             {dot}
             <span>{stateText}</span>
           </span>
+          {identityText && (
+            <span className={styles.meta} data-tone={account.identity_changed_to || (!account.runs_as && account.identity_unknown) ? "warn" : "ok"} data-identity="" title={account.runs_as_how ?? undefined}>
+              {identityText}
+            </span>
+          )}
           {skillLine && (
             <span className={styles.skills}>
               {skillLine}

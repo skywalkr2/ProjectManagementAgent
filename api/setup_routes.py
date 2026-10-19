@@ -877,6 +877,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     check_failed_for=now_state.check_failed_for,
                     checked_at=now_state.checked_at,
                     paused_until=now_state.paused_until,
+                    runs_as=now_state.identity.recorded.account if now_state.identity.recorded else None,
+                    runs_as_how=now_state.identity.recorded.how_read if now_state.identity.recorded else None,
+                    identity_unknown=now_state.identity.unknown,
+                    identity_changed_to=now_state.identity.changed_to,
+                    identity_level=p.identity_level,
                     check_usd=check_cost.cost(current(), name, catalogs),
                 )
             )
@@ -1140,11 +1145,37 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         results = account_test(now, os.environ, name, tier=tier, model=model, store=store)
         remember(ws, now, results)
         lift_pauses(ws, results)
+        release_identity_waits()
         line = AiTestResult(tier="account", account=name, main=True, ok=True, detail="answered")
         for x in results:
             if not x.ok and line.ok:
                 line.ok, line.detail = False, x.detail
         return [line]
+
+    def release_identity_waits() -> None:
+        """After a check or an answer: work that waited on an agent's sign-in tries again unless that sign-in still
+        waits for the person."""
+        from engine.ai import identity
+        from engine.worker import release_identity
+
+        if release_identity(store, unless=set(identity.held(ws))):
+            worker.poke()
+
+    @r.post("/ai/accounts/{name}/identity/keep")
+    def ai_identity_keep(name: str) -> Ok:
+        """Keep the sign-in an agent account now runs as: it is recorded in place of the earlier one, the line on Today
+        goes, and the work that waited on it tries again."""
+        from engine.ai import identity
+
+        if name not in current().ai.providers:
+            raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
+        if not identity.keep(ws, name):
+            raise HTTPException(
+                status_code=409, detail="This account's sign-in hasn't changed, so there is nothing to keep."
+            )
+        release_identity_waits()
+        events.changed()
+        return Ok(ok=name)
 
     switch_estimates: dict[tuple[Any, ...], tuple[float | None, int]] = {}
 
@@ -1528,6 +1559,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         record(ws, results)
         remember(ws, current, results)
         lift_pauses(ws, results)
+        release_identity_waits()
         events.changed()
         # One line per kind of work and account, in plain words: the run's own details are for `cockpit ai test`.
         lines: dict[tuple[str, str], AiTestResult] = {}
