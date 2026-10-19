@@ -1,6 +1,6 @@
 // The obvious next step as one click: "Add a new person" on a "Who is this?" question (prefilled, the cursor in its first
 // field, Undo), and the three choices on a project the assistant found.
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
@@ -37,11 +37,16 @@ const personRoutes = {
   "POST changesets/CS-3/undo": () => ({ restored: [0], skipped: [] }),
 };
 
-test("Add a new person opens a form with the cursor in the full name, filled in from the input", async () => {
+/** The person picker's last choice opens the form in place: a drawer over the screen, which is never left. */
+async function addAPerson(user: ReturnType<typeof userEvent.setup>) {
+  await user.selectOptions(await screen.findByRole("combobox"), "Add a person…");
+}
+
+test("Add a person… in the list opens a form with the cursor in the full name, filled in from the input", async () => {
   const user = userEvent.setup();
   fakeApi(personRoutes);
   renderApp(<AskChooser ask={whoIs} />);
-  await user.click(await screen.findByRole("button", { name: "Add a new person" }));
+  await addAPerson(user);
   const name = await screen.findByRole("textbox", { name: "Full name" });
   expect(name).toHaveFocus();
   expect(name).toHaveValue("Jordan Pike");
@@ -58,7 +63,7 @@ test("adding the person sends the form, says what went ahead and Undo takes the 
   const user = userEvent.setup();
   const calls = fakeApi(personRoutes);
   renderApp(<AskChooser ask={whoIs} />);
-  await user.click(await screen.findByRole("button", { name: "Add a new person" }));
+  await addAPerson(user);
   const role = await screen.findByRole("textbox", { name: "Role" });
   await user.clear(role);
   await user.type(role, "Printer");
@@ -89,7 +94,7 @@ test("a blank contact value sends no kind, and the add button waits for a name",
     "GET questions/Q-1/new-person": () => ({ ...prefill, org: "", role: "", contact_kind: "", contact_value: "" }),
   });
   renderApp(<AskChooser ask={{ ...whoIs, name: "" }} />);
-  await user.click(await screen.findByRole("button", { name: "Add a new person" }));
+  await addAPerson(user);
   const name = await screen.findByRole("textbox", { name: "Full name" });
   await user.clear(name);
   expect(screen.getByRole("button", { name: "Add and use" })).toBeDisabled();
@@ -104,11 +109,31 @@ test("a blank contact value sends no kind, and the add button waits for a name",
   }));
 });
 
-test("Add a new person is offered for a name, not for an owner", async () => {
-  fakeApi(personRoutes);
+test("Add a person… is in the owner list too: the form opens in place and the person it adds is the one picked", async () => {
+  const user = userEvent.setup();
+  let people: S["PersonView"][] = [];
+  const calls = fakeApi({
+    ...personRoutes,
+    "GET people": () => people,
+    "POST people": () => {
+      people = [{ id: "PER-9", name: "Casey Moor", role: null, org: null, org_name: null, aliases: [], status: "active", is_pm: false, track_only: false, open_items: 0, how_to_reach: {} } as S["PersonView"]];
+      return { id: "PER-9" };
+    },
+    "POST questions/Q-2/answer": () => ({ request: null }),
+  });
   renderApp(<AskChooser ask={{ id: "Q-2", about: "owner", name: null, options: [] }} />);
-  expect(await screen.findByRole("combobox", { name: "Who owns this?" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Add a new person" })).toBeNull();
+  const picker = await screen.findByRole("combobox", { name: "Who owns this?" });
+  expect(within(picker).getByRole("option", { name: "Add a person…" })).toBeInTheDocument();
+  await user.selectOptions(picker, "Add a person…");
+  const dialog = await screen.findByRole("dialog", { name: "Add a person" });
+  await waitFor(() => expect(within(dialog).getByRole("textbox", { name: "Full name" })).toHaveFocus());
+  await user.type(within(dialog).getByRole("textbox", { name: "Full name" }), "Casey Moor");
+  await user.click(within(dialog).getByRole("button", { name: "Add a person" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST people")?.body).toMatchObject({ full_name: "Casey Moor" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add a person" })).toBeNull());
+  await waitFor(() => expect(screen.getByRole("combobox", { name: "Who owns this?" })).toHaveValue("PER-9"));
+  // The person is picked, not applied: answering is still their next click.
+  expect(calls.some((c) => c.route === "POST questions/Q-2/answer")).toBe(false);
 });
 
 function projectChange(): S["ChangeItem"] {

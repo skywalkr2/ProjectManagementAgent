@@ -25,7 +25,7 @@ function at(date: string, hour: number, minute = 0): string {
 }
 
 function event(extra: Partial<S["AgendaItemView"]> & Pick<S["AgendaItemView"], "title">): S["AgendaItemView"] {
-  return { snapshot: `snap-${extra.title}`, source: "cal-1", start: at(TODAY, 15), all_day: false, cancelled: false, own: false, days: [TODAY], ...extra };
+  return { snapshot: `snap-${extra.title}`, source: "cal-1", start: at(TODAY, 15), all_day: false, cancelled: false, own: false, open_items: 0, days: [TODAY], ...extra };
 }
 
 function message(extra: Partial<S["ArrivedView"]> & Pick<S["ArrivedView"], "title">): S["ArrivedView"] {
@@ -154,6 +154,20 @@ test("the app's own entries follow the calendar events on each day they cover, m
   const tomorrow = within(within(col).getByRole("list", { name: "Tomorrow" })).getAllByRole("listitem");
   expect(tomorrow[0]).toHaveTextContent("Delivery window");
   expect(tomorrow[0]).toHaveTextContent("From your notes");
+});
+
+test("a meeting of a series says how many open items wait for it, linking to the series' page; with none it says nothing", async () => {
+  const own = (extra: Partial<S["AgendaItemView"]>) =>
+    event({ title: "Print sync", snapshot: "EVT-1", source: "", own: true, all_day: true, start: TODAY, days: [TODAY], series: "SER-1", ...extra });
+  open({ "GET today/agenda": () => [own({ open_items: 3 }), own({ title: "Quiet sync", snapshot: "EVT-2", open_items: 0 }), event({ title: "Standup", start: at(TODAY, 9) })] });
+  const col = await column("Agenda");
+  const rows = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
+  const sync = rows.find((row) => row.textContent?.includes("Print sync"))!;
+  expect(sync).toHaveTextContent("Print sync · 3 open");
+  expect(within(sync).getByRole("link", { name: "3 open" }).getAttribute("href")).toMatch(/#records\/series\/SER-1$/);
+  const quiet = rows.find((row) => row.textContent?.includes("Quiet sync"))!;
+  expect(quiet).not.toHaveTextContent(/open/);
+  expect(quiet).not.toHaveTextContent("0");
 });
 
 test("the now line goes at the end of today's list when everything has ended, and is absent with no timed events", async () => {

@@ -18,3 +18,17 @@ test("a status chip says its state in words, with a dot that is only decoration"
   expect(chip).toHaveAttribute("data-tone", "warn");
   expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
 });
+
+test("the inferred tag is a dashed outline with an approximate sign, and a screen reader hears what it means", () => {
+  const { container } = render(
+    <Pill inferred describedAs="Inferred by the assistant, not stated">
+      Inferred
+    </Pill>,
+  );
+  const tag = container.querySelector("[data-inferred]")!;
+  expect(tag).toHaveTextContent("≈");
+  expect(screen.getByText("Inferred by the assistant, not stated")).toHaveClass("sr");
+  // The visible word is hidden from the reader so it isn't read twice.
+  expect(screen.getByText("Inferred", { selector: "[aria-hidden=true]" })).toBeInTheDocument();
+  expect(tag.className).toMatch(/inferred/);
+});

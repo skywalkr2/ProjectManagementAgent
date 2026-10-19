@@ -29,6 +29,7 @@ from api.data_form_routes import build_data_form_router
 from api.knowledge_routes import build_knowledge_router
 from api.pack_routes import build_pack_router
 from api.quality_routes import build_quality_router
+from api.records_routes import build_records_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
 from api.screen_text import refusal
@@ -287,6 +288,7 @@ def create_app(
     inner.include_router(build_data_form_router(store))
     inner.include_router(build_knowledge_router(cfg, store, events, worker))
     inner.include_router(build_quality_router(cfg, store))
+    inner.include_router(build_records_router(cfg, store, events))
     inner.state.worker = worker
     inner.state.store = store
     inner.state.events = events

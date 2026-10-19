@@ -29,6 +29,8 @@ class AgendaItem:
     cancelled: bool
     days: list[date] = field(default_factory=list)
     own: bool = False  # an entry in the app's own calendar, not an event read from a connected calendar
+    series: str | None = None  # the series an own entry is one meeting of
+    open_items: int = 0  # for such a meeting: how many open actions and questions sit on it
 
 
 @dataclass
@@ -93,7 +95,8 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaIte
     """The app's own calendar entries that overlap the listed days, earliest first. A range counts every day from its
     start to its end, both included; an entry with no time of day is all-day."""
     found = []
-    for entry in store.read().list("event"):
+    view = store.read()
+    for entry in view.list("event"):
         data = entry.data
         try:
             start = entry_time(data["start"])
@@ -118,9 +121,31 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaIte
                 cancelled=False,
                 days=on,
                 own=True,
+                series=data.get("series"),
+                open_items=_open_on(view, entry, days[0], here) if data.get("series") else 0,
             )
         )
     return sorted(found, key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
+
+
+def _open_on(view: Any, entry: Any, today: date, here: ZoneInfo) -> int:
+    """How many open actions and questions sit on a meeting of a series: those that name it, and, when it is the series'
+    next meeting, those on the series that name no meeting, or one that has passed (they roll to the next)."""
+    from engine.series import SETTLED, next_instance, span
+
+    series = entry.data["series"]
+    upcoming = next_instance(view, series, today, here)
+    counted = 0
+    for kind, settled in SETTLED.items():
+        for item in view.list(kind):
+            if item.data.get("series") != series or item.data.get("status") in settled:
+                continue
+            named = view.get("event", item.data["event"]) if item.data.get("event") else None
+            days = span(named.data, here) if named is not None else None
+            sits = named.id if named is not None and days is not None and days[1] >= today else None
+            if (sits or (upcoming.id if upcoming is not None else None)) == entry.id:
+                counted += 1
+    return counted
 
 
 def _local_day(value: date | datetime, here: ZoneInfo) -> date:

@@ -281,7 +281,7 @@ test("Edit details offers the right control for each editable field and skips th
   expect(within(mood).getAllByRole("option").map((o) => o.textContent)).toEqual(["calm", "tense"]);
   expect(within(form).getByRole("combobox", { name: "Owner" })).toHaveValue("P-2");
   const book = within(form).getByRole("combobox", { name: "Book" });
-  expect(within(book).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "First book", "Second book"]);
+  expect(within(book).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "First book", "Second book", "Add a project…"]);
   expect(within(form).getByRole("textbox", { name: /Tags/ })).toHaveValue("one\ntwo");
   for (const skipped of ["Id", "Link", "Locked", "Body text", "Raw"]) expect(within(form).queryByLabelText(skipped)).toBeNull();
 });

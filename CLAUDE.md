@@ -108,10 +108,35 @@ the change that records it also edits the design section it affects, and `docs/d
   - Coding, tests, audits and docs go to Sonnet subagents wherever a brief can say what done looks like. The main
     session keeps only judgment and review.
   - While iterating, a subagent runs only the tests for what it touched. The full suites run once, before a push.
+
+## Usage and machine load (owner, 2026-10-18 and 19)
+Usage is the owner's money, and the machine is small (a few cores): overloaded runs made tests fail at random and wasted
+time. These rules hold for the main session and every subagent.
+- **Spend usage on judgment, not on doing.** The main session plans, briefs, reviews and decides; code, tests, docs and
+  audits go to Sonnet subagents with a brief that says what done looks like. Reviews are lean: read the diff of the risky
+  parts (the applier, Undo, spending, credentials, trust and plugin boundaries), spot-check the rest, run the checks.
+- **Read only what's needed.** Search before reading; read the part of a file a change needs, not whole files; keep
+  command output short (tail, grep); don't re-read what's already in context; don't re-derive settled facts.
+- **One brief, one subagent, one worktree from the working branch** (`git worktree add <path> -b <name> <working
+  branch>`, never the default branch, whose history is a stub). A brief states the starting state to check first.
+- **At most two workers at a time** (the main session plus one subagent, or two subagents while the main session only
+  reviews).
+- **A subagent runs only the tests for what it touched**: never the full Python suite, the full web suite or the browser
+  tests. The main session runs the full suites once, just before a push, one full run at a time.
+- **The browser tests run only in that one full run**, never two runs at once. If anything else might be using the
+  default ports, set `PW_PORT_OFFSET`.
+- **Never stop processes by a broad pattern** (`pkill -f pytest`, `pkill -f playwright`): it kills other workers' runs.
+  Stop only your own process by its id.
+- **Don't poll with sleep loops**; a foreground `sleep` may return at once. Run a long job in the background and wait for
+  its notification.
+- **Judge a run by its exit code**, not by grepping a summary line (pytest here prints none with `-q -n auto`).
+- **A failure under load is re-run once on its own** before it is called real or a flake; a test that fails only under
+  load is made robust, not retried until it passes.
+- **After every push, check CI's result** for that commit, not only the local run; a red CI is work before anything new.
+- **Every push reports the suite times**; the main session checks `uv run pytest --durations=15` and fixes or flags any
+  test that got slow.
   - Tests stay fast: no sleeps, no real network, shared fixtures over new workspaces, and the cheapest level that
     proves the behavior (a unit test before an API test, an API test before a browser test).
-  - Every push reports the suite times. The main session checks `uv run pytest --durations=15` and fixes or flags any
-    test that got slow.
 
 ## How work reaches the owner (review, 2026-10-12)
 - The plan is `docs/project/roadmap-to-1.0.md`: one phase at a time, each ending on its exit test. One stream of work at

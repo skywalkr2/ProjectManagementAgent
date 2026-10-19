@@ -318,6 +318,16 @@ class Tx:
         ).fetchall()
         return {r["record_id"]: (r["changeset"], r["request"]) for r in rows}
 
+    def creators(self, kind: str) -> dict[str, tuple[str, str]]:
+        """For every record of a kind, the actor and the time on the first ledger entry it ever got (who created it,
+        and when), keyed by record id."""
+        rows = self._c.execute(
+            "SELECT record_id, actor, at FROM ledger WHERE kind=? AND seq IN "
+            "(SELECT MIN(seq) FROM ledger WHERE kind=? GROUP BY record_id)",
+            (kind, kind),
+        ).fetchall()
+        return {r["record_id"]: (r["actor"], str(r["at"])) for r in rows}
+
     def field_changes(self, kind: str, fields: Iterable[str]) -> dict[str, list[dict[str, Any]]]:
         """The ledger's changes to these fields of every record of a kind, oldest first, keyed by record id. Each is
         the record's version, the field, and its value before and after."""

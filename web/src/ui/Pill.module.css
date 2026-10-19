@@ -8,3 +8,4 @@
 .warn { background: var(--warn-soft); color: var(--warn); }
 .danger { background: var(--danger-soft); color: var(--danger); }
 .ok { background: var(--ok-soft); color: var(--ok); }
+.inferred { background: transparent; color: var(--text-muted); border: 1px dashed var(--border-strong); gap: var(--space-1); }

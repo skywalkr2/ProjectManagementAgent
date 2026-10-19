@@ -8,6 +8,7 @@ import { NoteBox, useNoted } from "./NoteBox";
 import { NewPersonForm } from "./NextSteps";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu } from "./RowMenu";
+import { Drawer } from "../ui/Drawer";
 
 /** Where an unowned action came from, so it can be added to another action instead of being given an owner. */
 export interface FoldAt {
@@ -53,17 +54,15 @@ export function AskChooser(props: {
         onChange={setPerson}
         suggested={ask.options}
         people={people.data ?? []}
+        // A name nobody could place is answered by adding who it is, from the input's own details; any other question just
+        // picks the person who was added.
+        onAdd={ask.about === "held-op" ? () => setAdding(true) : undefined}
       />
       {foldInto && <span className="hint">{t("ask.fold_hint")}</span>}
       <div className="row-end">
         <button type="button" className="btn primary" data-key="primary" disabled={!person} onClick={() => void choose()}>
           {word}
         </button>
-        {ask.about === "held-op" && (
-          <button type="button" className="btn" aria-expanded={adding} onClick={() => setAdding((v) => !v)}>
-            {t("ask.add_person")}
-          </button>
-        )}
         {foldInto && (
           <button type="button" className="btn" onClick={fold}>
             {t("ask.fold", { action: foldInto.text })}
@@ -76,7 +75,11 @@ export function AskChooser(props: {
           ]}
         />
       </div>
-      {adding && <NewPersonForm question={ask.id} onClose={() => setAdding(false)} />}
+      {adding && (
+        <Drawer open title={t("newperson.title")} onClose={() => setAdding(false)}>
+          <NewPersonForm question={ask.id} onClose={() => setAdding(false)} />
+        </Drawer>
+      )}
       {noting && person && <NoteBox sends={[{ label: word, run: choose }]} onClose={() => setNoting(false)} />}
     </div>
   );

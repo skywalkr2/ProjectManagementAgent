@@ -11,24 +11,24 @@ import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { SafeLink } from "./SafeText";
 
-export function OriginLink(props: { origin?: S["Origin"] | null }) {
+export function OriginLink(props: { origin?: S["Origin"] | null; /** The link's words, when they are more than "Where it came from". */ label?: string }) {
   const { t } = useWords();
   const origin = props.origin;
   if (!origin) return null;
   if (origin.kind === "link" && origin.url) {
     return (
       <div className="origin">
-        <SafeLink label={t("origin.link")} url={origin.url} />
+        <SafeLink label={props.label ?? t("origin.link")} url={origin.url} />
       </div>
     );
   }
-  if (origin.kind === "source" && origin.source) return <SourceLink source={origin.source} />;
-  if (origin.kind === "change" && origin.changeset) return <ChangeLink changeset={origin.changeset} />;
+  if (origin.kind === "source" && origin.source) return <SourceLink source={origin.source} label={props.label} />;
+  if (origin.kind === "change" && origin.changeset) return <ChangeLink changeset={origin.changeset} label={props.label} />;
   return null;
 }
 
 /** Opens the saved text of the input in a dialog. */
-function SourceLink(props: { source: string }) {
+function SourceLink(props: { source: string; label?: string }) {
   const { t } = useWords();
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -39,7 +39,7 @@ function SourceLink(props: { source: string }) {
   return (
     <div className="origin">
       <button ref={button} type="button" className="link-button" aria-haspopup="dialog" onClick={() => setOpen(true)}>
-        {t("origin.link")}
+        {props.label ?? t("origin.link")}
       </button>
       {open && <SourceDialog source={props.source} onClose={close} />}
     </div>
@@ -77,7 +77,7 @@ function SourceDialog(props: { source: string; onClose: () => void }) {
 }
 
 /** Opens the change in What changed: on this screen when the list is here, else on that screen. */
-function ChangeLink(props: { changeset: string }) {
+function ChangeLink(props: { changeset: string; label?: string }) {
   const { t } = useWords();
   return (
     <div className="origin">
@@ -88,7 +88,7 @@ function ChangeLink(props: { changeset: string }) {
           if (!revealOrKeep("changeset", props.changeset)) window.location.hash = toHash("work/changed");
         }}
       >
-        {t("origin.link")}
+        {props.label ?? t("origin.link")}
       </button>
     </div>
   );

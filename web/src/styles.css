@@ -449,3 +449,14 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .restart-line { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); align-items: start; }
 .restart-line .acts { grid-column: 2; }
 .restart-mark { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-full); background: var(--warn-soft); color: var(--warn); }
+
+/* A record's page (design 7.14): what is going on beside the record's details; stacked below 1024px. */
+.record-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gutter); align-items: start; min-width: 0; }
+@media (min-width: 1024px) { .record-grid { grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); } }
+.record-main, .record-activity, .record-section { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
+.record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); }
+.record-side h3 { margin: 0; }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); overflow-wrap: anywhere; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.timeline .when { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.unfiled { display: grid; gap: var(--space-3); min-width: 0; }
+.unfiled .bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }

@@ -163,14 +163,17 @@ def fingerprint(config_dir: Path) -> str:
     return digest.hexdigest()
 
 
-def describe(cfg: Any, plugins: Any = None, config_dir: Path | None = None) -> list[Setting]:
+def describe(
+    cfg: Any, plugins: Any = None, config_dir: Path | None = None, live: dict[str, list[str]] | None = None
+) -> list[Setting]:
     """Every key of every config file, for the Settings forms; with the plugin host and the config folder, also each
-    running add-on's settings (file `plugins/<name>`, as read from its file now)."""
+    running add-on's settings (file `plugins/<name>`, as read from its file now). `live` holds the choices of the
+    named lists that come from the workspace's own records (a value list), by the name a setting gives."""
     found: list[Setting] = []
     for name, model in FILES.items():
         defaults = model().model_dump(mode="json")
         values = getattr(cfg, name).model_dump(mode="json")
-        _walk(model, [name], values, defaults, cfg.sources, found)
+        _walk(model, [name], values, defaults, cfg.sources, found, live)
     for plugin, model in (plugin_models(plugins) if config_dir is not None else {}).items():
         file = PLUGIN_PREFIX + plugin
         raw = _plugin_raw(config_dir, plugin)
@@ -215,7 +218,13 @@ def _leaf_paths(data: Any, prefix: tuple[str, ...] = ()) -> list[tuple[str, ...]
 
 
 def _walk(
-    model: type[BaseModel], path: list[str], values: Any, defaults: Any, sources: dict[str, str], out: list[Setting]
+    model: type[BaseModel],
+    path: list[str],
+    values: Any,
+    defaults: Any,
+    sources: dict[str, str],
+    out: list[Setting],
+    live: dict[str, list[str]] | None = None,
 ) -> None:
     for key, info in model.model_fields.items():
         if key == "version" and len(path) == 1:
@@ -224,12 +233,14 @@ def _walk(
         dotted = ".".join(here)
         inner = _model_of(info.annotation)
         if inner is not None:
-            _walk(inner, here, (values or {}).get(key), (defaults or {}).get(key), sources, out)
+            _walk(inner, here, (values or {}).get(key), (defaults or {}).get(key), sources, out, live)
             continue
         kind, options = _kind(info.annotation)
         extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
         list_name = str(extra["choices"]) if extra.get("choices") else None
         named = CHOICE_LISTS.get(list_name) if list_name else None
+        if list_name and (live or {}).get(list_name):
+            named = (live or {})[list_name].copy
         if named is not None and (listed := named()):
             kind, options = "choice", _with_current(listed, (values or {}).get(key))
         else:

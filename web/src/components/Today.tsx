@@ -60,6 +60,7 @@ export function Today(props: {
     onAddAccount: props.onAddAccount,
     onOpenRecord: props.onOpenRecord,
     onOpenGuide: props.onOpenGuide,
+    onOpenView: props.onView,
   };
   return (
     <div className={styles.today}>

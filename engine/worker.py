@@ -45,6 +45,7 @@ LIVE_KEYS = (
     "workspace.user.",
     "workspace.name",
     "workspace.assistant_name",
+    "workspace.project.completed_status",
     "workspace.our_accounts",
     "storage.backups.",
     "storage.export.every_minutes",

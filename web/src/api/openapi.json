@@ -589,6 +589,88 @@
         "title": "ActivityEntry",
         "type": "object"
       },
+      "AfterMove": {
+        "description": "The move a question (or a group of them) came after (design 7.7): the record that moved, by its own name, the day\nit moved to and whether that is earlier than where it was. `others` names the people the same follow-on run asked\nquestions of; those wait in Follow-ups.",
+        "properties": {
+          "by": {
+            "description": "Whether the person or the assistant (from an input) moved it.",
+            "enum": [
+              "pm",
+              "assistant"
+            ],
+            "title": "By",
+            "type": "string"
+          },
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The follow-on run's own change, which Undo takes back.",
+            "title": "Changeset"
+          },
+          "earlier": {
+            "default": false,
+            "title": "Earlier",
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "What moved: event, action or fact.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "others": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Others",
+            "type": "array"
+          },
+          "record": {
+            "title": "Record",
+            "type": "string"
+          },
+          "replaced": {
+            "default": false,
+            "description": "A fact that was replaced rather than a date that moved.",
+            "title": "Replaced",
+            "type": "boolean"
+          },
+          "request": {
+            "title": "Request",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it moved to, YYYY-MM-DD.",
+            "title": "To"
+          }
+        },
+        "required": [
+          "kind",
+          "record",
+          "title",
+          "by",
+          "request"
+        ],
+        "title": "AfterMove",
+        "type": "object"
+      },
       "AgendaItemView": {
         "description": "An event from a watched calendar, or an entry in the app's own calendar, on today or the next configured days.",
         "properties": {
@@ -633,11 +715,29 @@
             "description": "Where to open it; untrusted, so show its real domain.",
             "title": "Link"
           },
+          "open_items": {
+            "default": 0,
+            "description": "For a meeting of a series: how many open actions and questions sit on it (never shown as zero).",
+            "title": "Open Items",
+            "type": "integer"
+          },
           "own": {
             "default": false,
             "description": "An entry in the app's own calendar (recorded from what came in), not an event read from a connected calendar. Its end is the last day or moment, included.",
             "title": "Own",
             "type": "boolean"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an own entry: the series it is one meeting of.",
+            "title": "Series"
           },
           "snapshot": {
             "description": "The item's id: the snapshot of a watched event, or the id of an own entry.",
@@ -2966,6 +3066,79 @@
         "title": "CiteView",
         "type": "object"
       },
+      "CompletedAction": {
+        "description": "Finished work: credited to who did it, with who said it was done (a nudge is never completion).",
+        "properties": {
+          "done_by": {
+            "description": "Names of the people who did the work.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Done By",
+            "type": "array"
+          },
+          "done_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it was closed, YYYY-MM-DD.",
+            "title": "Done On"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "reported_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the person who said it was done.",
+            "title": "Reported By"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "CompletedAction",
+        "type": "object"
+      },
       "ConfirmDone": {
         "properties": {
           "confirmed": {
@@ -3773,6 +3946,88 @@
           "quote"
         ],
         "title": "Evidence",
+        "type": "object"
+      },
+      "FactSource": {
+        "description": "Who a fact rests on and where it came from, for the label in its meta line (never part of copied or published\ntext). `basis` is person (the person said it), said (someone else did: `by`, reported by `reported_by` when another\nperson's input carried it) or inferred (the assistant worked it out, so it feeds the record only until the person\nconfirms it); null for a fact recorded before this was kept.",
+        "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "person",
+                  "inferred",
+                  "said"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the person who said it, when someone else did.",
+            "title": "By"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The input it came from, by its short name.",
+            "title": "Input"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it was confirmed, true as of, or filed, YYYY-MM-DD.",
+            "title": "On"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it came from, for the link that is the label."
+          },
+          "reported_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the person whose input carried what was said.",
+            "title": "Reported By"
+          }
+        },
+        "title": "FactSource",
         "type": "object"
       },
       "FieldView": {
@@ -4772,6 +5027,94 @@
           "state"
         ],
         "title": "HandoverView",
+        "type": "object"
+      },
+      "HeldAsk": {
+        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, or drop it), `item` the words of what\nit is about, `value` and `from_value` the new and the present date, `to_name` the person it would go to, `told`\nthe people a drop would leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it\non. The screen words the title and the two answers from these.",
+        "properties": {
+          "ask": {
+            "enum": [
+              "close",
+              "date",
+              "owner",
+              "routing",
+              "drop"
+            ],
+            "title": "Ask",
+            "type": "string"
+          },
+          "from_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Value"
+          },
+          "item": {
+            "title": "Item",
+            "type": "string"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Name"
+          },
+          "told": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Told",
+            "type": "array"
+          },
+          "told_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Told On"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "ask",
+          "item"
+        ],
+        "title": "HeldAsk",
         "type": "object"
       },
       "HoldChanged": {
@@ -6635,6 +6978,18 @@
             "title": "Id",
             "type": "string"
           },
+          "meeting_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day of the meeting it sits on (YYYY-MM-DD), for \"for Thursday's print sync\".",
+            "title": "Meeting On"
+          },
           "origin": {
             "anyOf": [
               {
@@ -6676,6 +7031,29 @@
             ],
             "title": "Project Name"
           },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The series of meetings it is for, when it is on one.",
+            "title": "Series"
+          },
+          "series_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Title"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -6705,6 +7083,17 @@
             ],
             "title": "Kind"
           },
+          "meeting_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meeting On"
+          },
           "origin": {
             "anyOf": [
               {
@@ -6715,6 +7104,28 @@
               }
             ],
             "description": "Where the question came from, for its link."
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series"
+          },
+          "series_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Title"
           },
           "status": {
             "anyOf": [
@@ -8008,6 +8419,14 @@
             "description": "The name a greeting to them uses; empty means the first word.",
             "title": "First Name"
           },
+          "how_to_reach": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "How to reach them: a channel name mapped to its address or handle.",
+            "title": "How To Reach",
+            "type": "object"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -8470,6 +8889,12 @@
               }
             ],
             "title": "Budget Usd"
+          },
+          "completed": {
+            "default": false,
+            "description": "Its status is the one the settings say means finished: it is listed under Completed, not removed.",
+            "title": "Completed",
+            "type": "boolean"
           },
           "content_levels": {
             "items": {
@@ -9448,7 +9873,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well; `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled).",
         "properties": {
           "account": {
             "anyOf": [
@@ -9468,6 +9893,17 @@
             },
             "title": "Actions",
             "type": "array"
+          },
+          "after_move": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AfterMove"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a question the person was asked after something moved, and for the moved line that groups several: the move it came after. A moved line's `questions` are its rows and `changeset` is the follow-on run's change."
           },
           "changeset": {
             "anyOf": [
@@ -9594,6 +10030,17 @@
             "title": "Group",
             "type": "string"
           },
+          "held": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeldAsk"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a held line that rests on an inference or would drop something that reached someone: the question it asks. Keeping things as they are is POST /api/changesets/{id}/ops/{index}/decline."
+          },
           "key": {
             "description": "Stable while the thing it stands for waits.",
             "title": "Key",
@@ -9627,7 +10074,9 @@
               "learned",
               "catch_up",
               "send",
-              "nudge"
+              "nudge",
+              "unfiled",
+              "moved"
             ],
             "title": "Kind",
             "type": "string"
@@ -10059,12 +10508,31 @@
             "title": "Activity",
             "type": "array"
           },
+          "completed_actions": {
+            "description": "Finished actions credited to this person (who did the work) or in this project, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/CompletedAction"
+            },
+            "title": "Completed Actions",
+            "type": "array"
+          },
           "details": {
             "items": {
               "$ref": "#/components/schemas/RecordDetail"
             },
             "title": "Details",
             "type": "array"
+          },
+          "fact_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactSource"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a fact: who it rests on and where it came from."
           },
           "id": {
             "title": "Id",
@@ -10927,6 +11395,376 @@
           }
         },
         "title": "SentText",
+        "type": "object"
+      },
+      "SeriesItem": {
+        "properties": {
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "action",
+              "question"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "rolled_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesMeeting"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The meeting the item sat on before it moved to this one, when it moved."
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "description": "An action's words or a question's title.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text"
+        ],
+        "title": "SeriesItem",
+        "type": "object"
+      },
+      "SeriesMeeting": {
+        "description": "One meeting of a series: its calendar entry, when it starts (as written) and its day in the person's zone.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it falls on, YYYY-MM-DD.",
+            "title": "On"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "start"
+        ],
+        "title": "SeriesMeeting",
+        "type": "object"
+      },
+      "SeriesMovedItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "action",
+              "question"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesMeeting"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The meeting it moved to."
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text"
+        ],
+        "title": "SeriesMovedItem",
+        "type": "object"
+      },
+      "SeriesNext": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPersonGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it falls on, YYYY-MM-DD.",
+            "title": "On"
+          },
+          "open": {
+            "description": "How many open items sit on it.",
+            "title": "Open",
+            "type": "integer"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "start",
+          "open",
+          "groups"
+        ],
+        "title": "SeriesNext",
+        "type": "object"
+      },
+      "SeriesPageView": {
+        "description": "A series' page (design 7.14): the next meeting's open items by person, then the meetings that passed.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesNext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The next meeting; null when none is scheduled."
+          },
+          "open_without_next": {
+            "default": 0,
+            "description": "Open items waiting when no later meeting exists.",
+            "title": "Open Without Next",
+            "type": "integer"
+          },
+          "past": {
+            "description": "Meetings that passed, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/SeriesPast"
+            },
+            "title": "Past",
+            "type": "array"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "repeats": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How often it repeats, in the person's own words.",
+            "title": "Repeats"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "past"
+        ],
+        "title": "SeriesPageView",
+        "type": "object"
+      },
+      "SeriesPast": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "moved": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesMovedItem"
+            },
+            "title": "Moved",
+            "type": "array"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it falls on, YYYY-MM-DD.",
+            "title": "On"
+          },
+          "settled": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesMovedItem"
+            },
+            "title": "Settled",
+            "type": "array"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "start",
+          "settled",
+          "moved"
+        ],
+        "title": "SeriesPast",
+        "type": "object"
+      },
+      "SeriesPersonGroup": {
+        "properties": {
+          "is_pm": {
+            "description": "The person themselves, listed last and shown as \"You\".",
+            "title": "Is Pm",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person the items are with; null when it is not known.",
+            "title": "Person"
+          }
+        },
+        "required": [
+          "is_pm",
+          "items"
+        ],
+        "title": "SeriesPersonGroup",
         "type": "object"
       },
       "SetAsideDone": {
@@ -13167,6 +14005,143 @@
         "title": "UndoReport",
         "type": "object"
       },
+      "UnfiledFile": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnfiledRef"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "project": {
+            "description": "The project to file them under, from GET /api/projects.",
+            "title": "Project",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "items"
+        ],
+        "title": "UnfiledFile",
+        "type": "object"
+      },
+      "UnfiledItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the assistant filed it.",
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "note",
+              "action",
+              "question",
+              "fact"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "description": "The item in one line: a note's or fact's words, an action's text, a question's title.",
+            "title": "Text",
+            "type": "string"
+          },
+          "trust": {
+            "default": "trusted",
+            "enum": [
+              "trusted",
+              "untrusted"
+            ],
+            "title": "Trust",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "version",
+          "text"
+        ],
+        "title": "UnfiledItem",
+        "type": "object"
+      },
+      "UnfiledRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "note",
+              "action",
+              "question",
+              "fact"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "read_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version of the item the person was looking at; the filing is refused if it changed since. Left out, the current version is used.",
+            "title": "Read Version"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "UnfiledRef",
+        "type": "object"
+      },
+      "UnfiledView": {
+        "description": "What the assistant filed under no project (design 7.14), newest first. `count` is the length of `items`, so the\nscreen never shows a zero: it shows nothing when there is none.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnfiledItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "UnfiledView",
+        "type": "object"
+      },
       "Unfollow": {
         "properties": {
           "on": {
@@ -15157,6 +16132,55 @@
         "summary": "Approve"
       }
     },
+    "/api/changesets/{cs_id}/ops/{index}/decline": {
+      "post": {
+        "description": "Keep things as they are for a held item: it isn't applied and leaves the list, and the choice is a\ncorrection the assistant learns from.",
+        "operationId": "decline_op_api_changesets__cs_id__ops__index__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decline Op"
+      }
+    },
     "/api/changesets/{cs_id}/ops/{index}/fold": {
       "post": {
         "description": "Add an action waiting for an owner to the open action it nearly repeats, as one change with Undo. The\nwaiting action closes as dropped, its words are kept in the other action's notes, and a declined correction is\nrecorded naming the action it went into.",
@@ -15380,6 +16404,55 @@
           }
         },
         "summary": "Release Op"
+      }
+    },
+    "/api/changesets/{cs_id}/ops/{index}/undecline": {
+      "post": {
+        "description": "Take back keeping a held item as it was: it waits for the person again.",
+        "operationId": "undecline_op_api_changesets__cs_id__ops__index__undecline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undecline Op"
       }
     },
     "/api/changesets/{cs_id}/reopen": {
@@ -20141,6 +21214,46 @@
         "summary": "Runtime Config"
       }
     },
+    "/api/series/{series_id}/page": {
+      "get": {
+        "description": "A series' page: the next meeting with what is open for it by person (the person last), and the meetings\nthat passed, each with what was settled and what moved on.",
+        "operationId": "series_api_series__series_id__page_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesPageView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Series"
+      }
+    },
     "/api/set-aside": {
       "get": {
         "description": "The Set aside folder: mail kept away from the assistant, in two sections, newest first.",
@@ -21849,6 +22962,64 @@
           }
         },
         "summary": "Today Todo"
+      }
+    },
+    "/api/unfiled": {
+      "get": {
+        "description": "The notes, actions, questions and facts the assistant filed under no project (or under one since removed),\nnewest first.",
+        "operationId": "unfiled_api_unfiled_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnfiledView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Unfiled"
+      }
+    },
+    "/api/unfiled/file": {
+      "post": {
+        "description": "File several items under one project as the person's own edit, in one change with Undo. Each item's\nproject is an edit of the assistant's work, so each is recorded as a correction.",
+        "operationId": "file_unfiled_api_unfiled_file_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnfiledFile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "File Unfiled"
       }
     },
     "/api/watch": {

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from engine import held_ask, move_groups
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -68,7 +69,9 @@ class Line:
     credential (a key or sign-in that stops working on `due`, or already has: `credential_kind` is account or
     sign_in, `credential_name` its name, `waiting_days` the days left, below zero once it has passed, and `places`
     every place the same credential is used),
-    review, rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
+    moved (the questions a follow-on run asked the person about one move, as one line: `count` of them in
+    `questions`, the move in `after_move`), review, unfiled (what the assistant filed under no project: `count` of
+    them), rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
     the always-sent section's `stable_size` against its `stable_budget`, and `moved` rules sent only with the runs they
     cover), learned (proposals of what the assistant learned from inputs and from the person's corrections, to look
     over: `count` of them, `origins` counted by where they came from and `expired` how many from inputs expired since
@@ -115,6 +118,8 @@ class Line:
     expired: int | None = None
     left_out: int | None = None
     suggestion: dict[str, Any] | None = None
+    held: dict[str, Any] | None = None
+    after_move: dict[str, Any] | None = None
     tier: str | None = None
     model: str | None = None
     check_failed: bool | None = None
@@ -192,6 +197,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         else:
             line.kind = "decision" if d.get("kind") == "decision" else "question"
         lines.append(line)
+    lines = move_groups.group(reader, people, zone(cfg), lines, Line)
 
     # Decide: held items with no question (they wait for the person's yes), and runs waiting for a go.
     for cs_id, cs in changesets.items():
@@ -212,6 +218,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     changeset=cs_id,
                     op=outcome["index"],
                     waiting=outcome.get("reason"),
+                    held=held_ask.describe(reader, people, outcome.get("op") or {}),
                     untrusted=cs.get("trust") == "untrusted",
                     since=str(req.data.get("created_at") or ""),
                 )
@@ -579,6 +586,21 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # Review: what the assistant filed under no project, as one line while there is any.
+    from engine.unfiled import unfiled
+
+    loose = unfiled(reader)
+    if loose:
+        lines.append(
+            Line(
+                key="unfiled",
+                group="review",
+                kind="unfiled",
+                count=len(loose),
+                since=min(i.created_at for i in loose),
+            )
+        )
+
     # Send and follow up: who has something to send, then who hasn't answered for a while.
     for s in sections(store, cfg, today):
         if s.is_pm:
@@ -727,6 +749,8 @@ _KIND_ORDER = {
     "rule_review": 1,
     "learned": 2,
     "catch_up": 3,
+    "unfiled": 4,
+    "moved": 6,
     "send": 0,
     "nudge": 1,
 }

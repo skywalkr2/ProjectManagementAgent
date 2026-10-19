@@ -1812,7 +1812,7 @@ group on 2026-10-20, which the plan's order (B, S, then I) and the integrity ite
    help beside the form; the owner: "i dont really see much different and the save button never seems to be active").
    The screen wording review (`docs/project/wording-review-2026-10.md`) is applied in this wave by its triage, with the
    browser tests updated in the same change, and every count it marks is checked so that zero never renders.
-2. **Wave 4, records:** Projects and People as their own tables with detail panes, record pages, forms in drawers (the
+2. **Wave 4, records (built 2026-10-19; tests in `Projects.test.tsx`, `People.test.tsx`, `SeriesPage.test.tsx`, `Unfiled.test.tsx`, `tests/test_series_page.py`, `tests/test_held_ask.py`, `tests/test_move_groups.py`, `tests/test_unfiled.py`, `tests/test_record_page.py`; what is left is in decisions, 2026-10-19):** Projects and People as their own tables with detail panes, record pages, forms in drawers (the
    two nav buttons that open one screen), the series page (30), the fact's source label (29), held lines (28),
    questions after a move grouped (27), Completed as a place, P13 ("Add a person" inside the owner list) and P14 (a home
    for unfiled items).

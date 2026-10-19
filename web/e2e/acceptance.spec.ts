@@ -481,7 +481,7 @@ test.describe.serial("acceptance scenario", () => {
     expect(change.changeset!.ops.map((o) => o.op)).toEqual(["note"]);
   });
 
-  test("a note handed in as the person's own is filed under its project and found there", async ({ page }) => {
+  test("a note handed in as the person's own is filed under its project and found there, and one with no project is in the Unfiled group", async ({ page }) => {
     await signIn(page);
     const projects: Array<{ id: string; name: string }> = await (await page.request.get("api/projects")).json();
     const loose = await handIn(page, { id: "loose-note", note: "Keep this one for later" });
@@ -489,12 +489,40 @@ test.describe.serial("acceptance scenario", () => {
     const row = await handIn(page, { id: "own-note", note: "Keep this under the project, for later" });
     const first = projects[0];
     await expect(row.locator("li.child", { hasText: `Filed a note under ${first.name}` })).toHaveCount(1);
-    await go(page, "People");
-    const project = page.locator("li.line", { hasText: first.name });
-    await project.getByRole("button", { name: /More actions for/ }).click();
-    await page.getByRole("menuitem", { name: /^Notes \(\d+\)$/ }).click();
-    await expect(project.locator("ul.notes")).toContainText("Noted.");
-    await expect(page.getByRole("heading", { name: "Notes not filed under a project" })).toBeVisible();
+    await go(page, "Projects");
+    // The note filed under no project is in the Unfiled group above the table, not lost.
+    const unfiled = page.getByRole("heading", { level: 2, name: "Unfiled" });
+    await expect(unfiled).toBeVisible();
+    await expect(unfiled.locator("xpath=ancestor::section[1]").getByRole("button", { name: "File under…" }).first()).toBeVisible();
+    // The one filed under its project is in that project's details.
+    const project = page.getByRole("row", { name: new RegExp(first.name) });
+    await project.getByRole("button", { name: `Details: ${first.name}` }).click();
+    await expect(page.getByText("Noted.").first()).toBeVisible();
+    await checkAccessibility(page);
+  });
+
+  test("an item the assistant filed under no project is filed from the Unfiled group, with Undo, and Today says how many there are", async ({ page }) => {
+    await signIn(page);
+    await handIn(page, { id: "loose-note-2", note: "Keep this one for later too" });
+    await expect.poll(async () => ((await (await page.request.get("api/unfiled")).json()) as { count: number }).count).toBeGreaterThan(0);
+    const before = ((await (await page.request.get("api/unfiled")).json()) as { count: number }).count;
+    // Today carries one line for it, starting with the verb, and no line when there is none.
+    await go(page, "Today");
+    await expect(page.locator('[data-queue-line="unfiled"]')).toContainText(`File ${before} item`);
+    await page.locator('[data-queue-line="unfiled"]').getByRole("button", { name: "File them" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Projects", exact: true })).toBeVisible();
+    const group = page.getByRole("heading", { level: 2, name: "Unfiled" }).locator("xpath=ancestor::section[1]");
+    const first = group.getByRole("listitem").first();
+    await first.getByRole("button", { name: "File under…" }).click();
+    const picker = first.getByRole("combobox");
+    await expect(picker).toBeFocused();
+    await expect(picker.locator("option").last()).toHaveText("Add a project…");
+    const projects: Array<{ id: string; name: string }> = await (await page.request.get("api/projects")).json();
+    await picker.selectOption({ label: projects[0].name });
+    await expect(page.getByRole("region", { name: "Notifications" })).toContainText(`under ${projects[0].name}.`);
+    await expect.poll(async () => ((await (await page.request.get("api/unfiled")).json()) as { count: number }).count).toBe(before - 1);
+    await page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Undo" }).first().click();
+    await expect.poll(async () => ((await (await page.request.get("api/unfiled")).json()) as { count: number }).count).toBe(before);
     await checkAccessibility(page);
   });
 
@@ -832,27 +860,34 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("people and projects are set up from the screen, with undo", async ({ page }) => {
+  test("people and projects are set up from the screen, in drawers, with undo", async ({ page }) => {
     await signIn(page);
     await go(page, "People");
-    await expect(page.getByRole("heading", { name: "People" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "People", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Add a person" }).click();
-    await page.getByLabel(/Full name/).fill("Test Person");
-    await page.getByLabel(/^Role/).fill("Proofreader");
-    await page.locator("form").getByRole("button", { name: "Add a person" }).click();
-    const row = page.locator("li.line", { hasText: "Test Person" });
+    const adding = page.getByRole("dialog", { name: "Add a person" });
+    await expect(adding.getByLabel(/Full name/)).toBeFocused();
+    await adding.getByLabel(/Full name/).fill("Test Person");
+    await adding.getByLabel(/^Role/).fill("Proofreader");
+    await checkAccessibility(page);
+    await adding.getByRole("button", { name: "Add a person" }).click();
+    const row = page.getByRole("row", { name: /Test Person/ });
     await expect(row).toContainText("Proofreader");
-    await row.getByRole("button", { name: "Edit" }).click();
-    await row.getByLabel(/Full name/).fill("Renamed Person");
-    await row.getByRole("button", { name: "Save" }).click();
-    await expect(page.locator("li.line", { hasText: "Renamed Person" })).toBeVisible();
+    await row.getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    const editing = page.getByRole("dialog", { name: "Edit person" });
+    await editing.getByLabel(/Full name/).fill("Renamed Person");
+    await editing.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByRole("row", { name: /Renamed Person/ })).toBeVisible();
     // The rename's own toast, not whichever Undo happens to be last on screen.
     const renamed = page.getByRole("region", { name: "Notifications" }).locator("div", { hasText: /^Saved Renamed Person/ });
     await renamed.getByRole("button", { name: "Undo" }).click();
-    await expect(page.locator("li.line", { hasText: "Test Person" })).toBeVisible();
+    await expect(page.getByRole("row", { name: /Test Person/ })).toBeVisible();
     await checkAccessibility(page);
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "People", exact: true })).toBeVisible();
+    await go(page, "Projects");
+    await expect(page.getByRole("heading", { level: 1, name: "Projects", exact: true })).toBeVisible();
     await go(page, "Today");
     await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
   });
@@ -861,7 +896,7 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     await go(page, "People");
     await page.getByRole("button", { name: "Add a person" }).click();
-    const form = page.locator("form.setup-form");
+    const form = page.getByRole("dialog", { name: "Add a person" }).locator("form.setup-form");
     await form.getByLabel(/Full name/).fill("Org Person");
     const org = form.getByRole("combobox", { name: /Organization/ });
     await expect(org.locator("option")).toContainText(["Not set", "Add an organization…"]);
@@ -874,8 +909,8 @@ test.describe.serial("acceptance scenario", () => {
     // Enter adds the organization; it does not send the person.
     await field.press("Enter");
     await expect(org.locator("option:checked")).toHaveText(name);
-    await form.getByRole("button", { name: "Add a person" }).click();
-    const row = page.locator("li.line", { hasText: "Org Person" });
+    await page.getByRole("dialog", { name: "Add a person" }).getByRole("button", { name: "Add a person" }).click();
+    const row = page.getByRole("row", { name: /Org Person/ });
     await expect(row).toContainText(name);
     await expect(row).not.toContainText(/ORG-/);
     const orgs = page.getByRole("region", { name: "Organizations" });
@@ -885,9 +920,11 @@ test.describe.serial("acceptance scenario", () => {
 
   test("a value added to the project status list from a project form is selected, and still there after a reload", async ({ page }) => {
     await signIn(page);
-    await go(page, "People");
+    await go(page, "Projects");
     await page.getByRole("button", { name: "Add a project" }).click();
-    const form = page.locator("form.setup-form");
+    const drawer = page.getByRole("dialog", { name: "Add a project" });
+    const form = drawer.locator("form.setup-form");
+    await expect(form.getByRole("textbox", { name: "Name" })).toBeFocused();
     await form.getByRole("textbox", { name: "Name" }).fill("Listed project");
     const status = form.getByRole("combobox", { name: "Status" });
     await expect(status.locator("option")).toContainText(["Not set", "Add to the list…"]);
@@ -900,17 +937,17 @@ test.describe.serial("acceptance scenario", () => {
     await field.press("Enter");
     await expect(status).toHaveValue("Parked for now");
     await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Added Parked for now to Project status.");
-    await form.getByRole("button", { name: "Add a project" }).click();
-    const row = page.locator("li.line", { hasText: "Listed project" });
+    await drawer.getByRole("button", { name: "Add a project" }).click();
+    const row = page.getByRole("row", { name: /Listed project/ });
     await expect(row).toContainText("Parked for now");
     await page.reload();
-    // The reloaded page has no views to open until the app has loaded, so wait for the People view itself.
-    await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
-    await go(page, "People");
-    const again = page.locator("li.line", { hasText: "Listed project" });
+    // The reloaded page has no views to open until the app has loaded, so wait for the Projects view itself.
+    await expect(page.getByRole("heading", { level: 1, name: "Projects", exact: true })).toBeVisible();
+    const again = page.getByRole("row", { name: /Listed project/ });
     await expect(again).toContainText("Parked for now");
-    await again.getByRole("button", { name: "Edit" }).click();
-    await expect(again.getByRole("combobox", { name: "Status" })).toHaveValue("Parked for now");
+    await again.getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    await expect(page.getByRole("dialog", { name: "Edit project" }).getByRole("combobox", { name: "Status" })).toHaveValue("Parked for now");
     await checkAccessibility(page);
   });
 

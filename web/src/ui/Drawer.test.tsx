@@ -80,3 +80,26 @@ test("the close button follows the same guard", async () => {
   await user.click(screen.getByRole("button", { name: "Close" }));
   expect(await screen.findByRole("alert")).toBeInTheDocument();
 });
+
+test("a drawer opened over another is named by its own title", async () => {
+  const user = userEvent.setup();
+  function Two() {
+    const [inner, setInner] = useState(false);
+    return (
+      <Drawer open title="Add a project" onClose={() => undefined}>
+        <button type="button" onClick={() => setInner(true)}>
+          Add an owner
+        </button>
+        {inner && (
+          <Drawer open title="Add a person" onClose={() => setInner(false)}>
+            <input aria-label="Full name" />
+          </Drawer>
+        )}
+      </Drawer>
+    );
+  }
+  render(<Two />);
+  await user.click(screen.getByRole("button", { name: "Add an owner" }));
+  expect(await screen.findByRole("dialog", { name: "Add a person" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Add a project", hidden: true })).toBeInTheDocument();
+});

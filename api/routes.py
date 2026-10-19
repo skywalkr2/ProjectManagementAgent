@@ -1118,8 +1118,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def record_page(record_id: str, kind: str) -> RecordPageView:
         """Any record's page: core or a plugin's, by its kind."""
         from engine.record_page import page
+        from engine.today import zone
 
-        found = page(store, kind, record_id, pm=cfg.workspace.user.person, owner_format=cfg.workspace.owner_format)
+        here = zone(cfg)
+        found = page(
+            store,
+            kind,
+            record_id,
+            pm=cfg.workspace.user.person,
+            owner_format=cfg.workspace.owner_format,
+            today=datetime.now(UTC).astimezone(here).date(),
+            here=here,
+        )
         if found is None:
             raise HTTPException(status_code=404, detail=f"There is no {kind} {record_id}.")
         return RecordPageView(**found)
@@ -1411,6 +1421,27 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         return Ok(ok=cs_id)
 
+    @r.post("/changesets/{cs_id}/ops/{index}/decline")
+    def decline_op(cs_id: str, index: int) -> Ok:
+        """Keep things as they are for a held item: it isn't applied and leaves the list, and the choice is a
+        correction the assistant learns from."""
+        from engine.applier import decline_held
+
+        need("changeset", cs_id)
+        guard(lambda: decline_held(store, cs_id, index))
+        changed()
+        return Ok(ok=cs_id)
+
+    @r.post("/changesets/{cs_id}/ops/{index}/undecline")
+    def undecline_op(cs_id: str, index: int) -> Ok:
+        """Take back keeping a held item as it was: it waits for the person again."""
+        from engine.applier import undecline_held
+
+        need("changeset", cs_id)
+        guard(lambda: undecline_held(store, cs_id, index))
+        changed()
+        return Ok(ok=cs_id)
+
     @r.post("/questions/{qid}/pick-owner")
     def owner(qid: str, body: OwnerPick) -> Noted:
         need("question", qid)
@@ -1679,6 +1710,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 status=p.data.get("status", "active"),
                 is_pm=p.id == pm,
                 track_only=bool(p.data.get("track_only")),
+                how_to_reach=p.data.get("how_to_reach") or {},
                 **seen.get(p.id, {}),
             )
             for p in store.read().list("person")
@@ -1797,6 +1829,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         names = People(store, cfg)
         view = store.read()
         seen = counts(view)["projects"]
+        done = cfg.workspace.project.completed_status.strip().casefold()
         return [
             ProjectView(
                 parent=p.data.get("parent"),
@@ -1816,6 +1849,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 owner=p.data.get("owner"),
                 owner_name=names.name(p.data["owner"]) if p.data.get("owner") else None,
                 summary=p.data.get("summary"),
+                completed=bool(done) and (p.data.get("status") or "").strip().casefold() == done,
                 **seen.get(p.id, {}),
             )
             for p in store.read().list("project")

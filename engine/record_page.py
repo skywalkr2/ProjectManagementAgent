@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Any, Literal, get_args, get_origin
+from zoneinfo import ZoneInfo
 
 from engine.names import render_owner
 from engine.origin import origins
@@ -13,6 +14,7 @@ from engine.records import ref_fields, values_at
 from engine.texts import long_text_fields
 
 ACTIVITY_MAX = 60
+COMPLETED_MAX = 50
 _NAME_FIELDS = ("full_name", "name", "title", "text")
 _HIDDEN = {"id", "stage", "ext", "aliases"}
 
@@ -48,7 +50,14 @@ def _type_of(annotation: Any) -> str:
 
 
 def page(
-    store: Any, kind: str, record_id: str, *, pm: str | None, owner_format: str = "{full_name}"
+    store: Any,
+    kind: str,
+    record_id: str,
+    *,
+    pm: str | None,
+    owner_format: str = "{full_name}",
+    today: date | None = None,
+    here: ZoneInfo | None = None,
 ) -> dict[str, Any] | None:
     view = store.read()
     record = view.get(kind, record_id)
@@ -92,6 +101,10 @@ def page(
     actions, questions = _open_with(view, kind, record_id)
     action_origin = origins(view, "action", [a.id for a in actions])
     question_origin = origins(view, "question", [q.id for q in questions])
+
+    def meeting(entry: dict[str, Any]) -> dict[str, Any]:
+        return _meeting(view, entry, today, here)
+
     return {
         "kind": kind,
         "id": record.id,
@@ -107,6 +120,7 @@ def page(
                 "project": a.data.get("project"),
                 "project_name": name_of("project", a.data["project"]) if a.data.get("project") else None,
                 "origin": action_origin[a.id],
+                **meeting(a.data),
             }
             for a in actions
         ],
@@ -119,10 +133,96 @@ def page(
                 "status": q.data.get("status"),
                 "kind": q.data.get("kind"),
                 "origin": question_origin[q.id],
+                **meeting(q.data),
             }
             for q in questions
         ],
+        "completed_actions": _completed(view, kind, record_id, name_of),
+        "fact_source": _fact_source(view, record) if kind == "fact" else None,
         "activity": _activity(view, kind, record_id, actions, questions, name_of, pm),
+    }
+
+
+def _meeting(view: Any, data: dict[str, Any], today: date | None, here: ZoneInfo | None) -> dict[str, Any]:
+    """The meeting an item is for: its series and the day of the instance it sits on (the series' next one when it
+    names none), for the "for Thursday's print sync" label. Empty for an item on no series."""
+    from engine.series import next_instance, span
+
+    series = view.get("series", data["series"]) if data.get("series") else None
+    entry = view.get("event", data["event"]) if data.get("event") else None
+    if entry is None and series is not None and today is not None and here is not None:
+        entry = next_instance(view, series.id, today, here)
+    days = span(entry.data, here or ZoneInfo("UTC")) if entry is not None else None
+    if series is None and entry is not None and entry.data.get("series"):
+        series = view.get("series", entry.data["series"])
+    return {
+        "series": series.id if series is not None else None,
+        "series_title": series.data["title"] if series is not None else None,
+        "meeting_on": days[0].isoformat() if days else None,
+    }
+
+
+def _completed(view: Any, kind: str, record_id: str, name_of: Any) -> list[dict[str, Any]]:
+    """The finished actions credited to this person (or in this project, or to this organization's people), newest
+    first, each with who did the work and who said it was done. The one who only reported it is not credited."""
+    if kind not in ("person", "project", "organization"):
+        return []
+    people = {record_id} if kind == "person" else set()
+    if kind == "organization":
+        people = {p.id for p in view.list("person") if p.data.get("org") == record_id}
+    found = []
+    for a in view.list("action"):
+        d = a.data
+        if d.get("status") != "done":
+            continue
+        if not ((people & set(d.get("done_by") or [])) or (kind == "project" and d.get("project") == record_id)):
+            continue
+        closed = [
+            row
+            for row in view.ledger(kind="action", record_id=a.id)
+            if row["field"] == "status" and row["after"] == "done"
+        ]
+        found.append(
+            {
+                "id": a.id,
+                "text": d["text"],
+                "project": d.get("project"),
+                "project_name": name_of("project", d["project"]) if d.get("project") else None,
+                "done_by": [name_of("person", p) for p in d.get("done_by") or []],
+                "reported_by": name_of("person", d["reported_by"]) if d.get("reported_by") else None,
+                "done_on": str(closed[-1]["at"])[:10] if closed else None,
+            }
+        )
+    found.sort(key=lambda c: (c["done_on"] or "", c["id"]), reverse=True)
+    return found[:COMPLETED_MAX]
+
+
+def _fact_source(view: Any, record: Any) -> dict[str, Any]:
+    """Who a fact rests on and where it came from, for the label in its meta line: the basis (the person, someone
+    else, or the assistant's inference), who said it and who reported it, the input and the day. The day is the one the
+    person confirmed it when they did, else the day it was true as of, else the day it was filed."""
+    from engine.origin import origins
+
+    data = record.data
+    source = view.get("source", data["source"]) if data.get("source") else None
+    said = view.get("person", data["said_by"], include_deleted=True) if data.get("said_by") else None
+    author = (
+        view.get("person", source.data["author"], include_deleted=True)
+        if source and source.data.get("author")
+        else None
+    )
+    rows = view.ledger(kind="fact", record_id=record.id)
+    confirmed = [r for r in rows if r["field"] == "basis" and r["version"] > 1]
+    filed = str(rows[0]["at"])[:10] if rows else None
+    on = str(confirmed[-1]["at"])[:10] if confirmed else (str(data["as_of"]) if data.get("as_of") else filed)
+    reported_by = author.data["full_name"] if author is not None and (said is None or author.id != said.id) else None
+    return {
+        "basis": data.get("basis"),
+        "by": said.data["full_name"] if said is not None else None,
+        "reported_by": reported_by if data.get("basis") == "said" else None,
+        "input": source.data["title"] if source is not None else None,
+        "on": on,
+        "origin": origins(view, "fact", [record.id])[record.id],
     }
 
 

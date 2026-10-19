@@ -11,7 +11,7 @@ import { TodoRow } from "./TodayRail";
 import { ChangeRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
-const OPENS = new Set<QueueLine["kind"]>(["decision", "question", "who_is", "owner", "held", "go", "refused", "failed", "review", "send", "nudge", "overdue"]);
+const OPENS = new Set<QueueLine["kind"]>(["decision", "question", "who_is", "owner", "held", "moved", "go", "refused", "failed", "review", "send", "nudge", "overdue"]);
 
 export function opensItems(line: QueueLine): boolean {
   return OPENS.has(line.kind);
@@ -25,6 +25,8 @@ export function LineDetail(props: { line: QueueLine; sendBack?: boolean; onOpenG
     case "owner":
     case "who_is":
       return <QuestionDetail line={line} onOpenGuide={props.onOpenGuide} />;
+    case "moved":
+      return <MovedDetail line={line} />;
     case "send":
       return <SendDetail line={line} />;
     case "nudge":
@@ -64,6 +66,22 @@ function QuestionDetail(props: { line: QueueLine; onOpenGuide?: (step: string) =
   return (
     <ul className="children">
       <DecisionRow question={question} reveal={0} />
+    </ul>
+  );
+}
+
+/** The things to check after a move: one row for each, each with its own answer. */
+function MovedDetail(props: { line: QueueLine }) {
+  const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
+  if (followups.isPending) return <Skeleton />;
+  const mine = followups.data?.find((s) => s.is_pm)?.questions ?? [];
+  const rows = (props.line.questions ?? []).map((id) => mine.find((q) => q.id === id)).filter((q) => q !== undefined);
+  if (rows.length === 0) return <Gone />;
+  return (
+    <ul className="children">
+      {rows.map((question) => (
+        <DecisionRow key={question.id} question={question} reveal={0} />
+      ))}
     </ul>
   );
 }

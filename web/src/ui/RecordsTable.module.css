@@ -1,0 +1,37 @@
+/* A records table (design 7.13, 7.14): columns that fit the window, never a sideways scroll. Less important columns drop out
+   as the window narrows (rank 2 under 1280px, rank 3 under 1024px), and on a phone each row stacks as a list row with its
+   cells under the name. */
+.wrap { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.table th, .table td { text-align: left; vertical-align: middle; padding: var(--space-2) var(--space-3); overflow-wrap: anywhere; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.table thead th { background: var(--surface-sunk); color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--border); }
+.row { border-bottom: 1px solid var(--border); background: var(--surface); }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--surface-hover); }
+.row:focus { outline: none; }
+.row:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
+.row[data-selected] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.group th { background: var(--surface-sunk); color: var(--text); font-weight: var(--weight-semibold); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.groupCount { color: var(--text-muted); font-weight: var(--weight-regular); }
+th:first-child, .name { width: 30%; }
+.name { font-weight: var(--weight-semibold); font-size: var(--text-md); line-height: var(--lh-md); }
+.name a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
+.name a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.acts { width: 1%; white-space: nowrap; }
+.actsInner { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.num { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1279px) { .rank2 { display: none; } }
+@media (max-width: 1023px) { .rank3 { display: none; } }
+
+/* Phone: the table becomes a list; every cell sits under the name with its heading before it. */
+:global([data-narrow]) .table, :global([data-narrow]) .table tbody, :global([data-narrow]) .table tr, :global([data-narrow]) .table td, :global([data-narrow]) .table th { display: block; }
+:global([data-narrow]) .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+:global([data-narrow]) .rank2, :global([data-narrow]) .rank3 { display: block; }
+:global([data-narrow]) .row { padding: var(--space-2) var(--space-3); }
+:global([data-narrow]) .row td { padding: var(--space-1) 0; }
+:global([data-narrow]) .row td[data-label]::before { content: attr(data-label) ": "; color: var(--text-muted); }
+:global([data-narrow]) .row td.name::before, :global([data-narrow]) .row td.acts::before { content: none; }
+:global([data-narrow]) .acts, :global([data-narrow]) .name { width: auto; }
+:global([data-narrow]) .actsInner { justify-content: flex-start; }
+:global([data-narrow]) .row td:empty { display: none; }

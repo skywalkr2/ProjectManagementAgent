@@ -258,8 +258,9 @@ test.describe.serial("journeys", () => {
       const sentence = `${name} will confirm the catering menu by 2026-11-20.`;
       row = await handIn(sentence, sentence);
       await expect(row.getByRole("combobox", { name: `Who is “${name}”?` })).toBeVisible();
-      await row.getByRole("button", { name: "Add a new person" }).click();
-      const form = row.getByRole("form", { name: "New person" });
+      // The last choice in the list opens the form in a drawer over the screen; nobody leaves it to add someone.
+      await row.getByRole("combobox", { name: `Who is “${name}”?` }).selectOption({ label: "Add a person…" });
+      const form = page.getByRole("dialog", { name: "New person" }).getByRole("form", { name: "New person" });
       await expect(form.getByLabel("Full name", { exact: true })).toBeFocused();
       await expect(form.getByLabel("Full name", { exact: true })).toHaveValue(name);
       await visit(page);

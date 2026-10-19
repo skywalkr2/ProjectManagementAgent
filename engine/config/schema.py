@@ -56,6 +56,12 @@ class ProjectSettings(ConfigModel):
         description="The most lines a project's summary may have. A summary says where the project stands; what was "
         "found goes to facts, and a longer one is returned to the assistant to shorten.",
     )
+    completed_status: str = Field(
+        "Done",
+        description="The project status that means a project is finished. Projects with it are listed under "
+        "Completed at the bottom of the projects list, with everything about them kept; nothing is removed.",
+        json_schema_extra={"choices": "project_status"},
+    )
 
 
 class ToolSettings(ConfigModel):

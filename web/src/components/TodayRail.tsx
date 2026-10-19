@@ -17,7 +17,7 @@ import { OriginLink } from "./Origin";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import styles from "./Today.module.css";
-import type { View } from "../lib/views";
+import { recordView, viewHref, type View } from "../lib/views";
 import { Panel } from "../ui/Panel";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -267,11 +267,13 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
 }
 
 function AgendaRow(props: { event: Event; when: string; past: boolean; source: string }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const { event } = props;
   const row = useRef<HTMLLIElement>(null);
   const change = useChangeThis({ kind: "event", id: event.snapshot }, () => row.current?.focus());
   const meta = [event.where, event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
+  // A meeting of a series shows how many open items wait for it, linking to the series' page; with none, nothing is said.
+  const open = event.series && (event.open_items ?? 0) > 0 ? event.open_items! : 0;
   return (
     <li className={props.past ? "tb-row past" : "tb-row"} ref={row} tabIndex={event.own ? -1 : undefined}>
       <span className="tb-when">{props.when}</span>
@@ -281,6 +283,12 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
           <span className={event.cancelled ? "struck" : undefined}>
             {event.link ? <SafeLink label={event.title} url={event.link} /> : event.title}
           </span>
+          {open > 0 && event.series && (
+            <>
+              {" · "}
+              <a href={viewHref(recordView("series", event.series))}>{tn("today.agenda.open", open)}</a>
+            </>
+          )}
         </div>
         {meta && <div className="tb-meta">{meta}</div>}
       </div>

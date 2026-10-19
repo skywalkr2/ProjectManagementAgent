@@ -376,6 +376,18 @@ test("the first field of the section has the cursor when it opens", async () => 
   await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveFocus());
 });
 
+test("Backups and sync holds the synced folder and the scheduled work, so neither is on the Projects or People screens", async () => {
+  api([item("storage.sync.folder", { group: "storage.sync", description: "Where the synced folder is.", value: "/shared/Cockpit", picker: "folder" })], {
+    "GET sync": () => ({ folder: "/shared/Cockpit", problem: null, stopped: false, changed_outside: [], removed_outside: [], rebuilt: [], outside_edits: [], conflict_copies: [], shared: false, handover: null }),
+    "GET jobs": () => [{ name: "demo/refresh-feeds", plugin: "demo", enabled: true, every_minutes: 60, last_run_at: null, last_outcome: null, last_error: null }],
+  });
+  open("backups");
+  const sync = await screen.findByRole("region", { name: "Synced folder" });
+  expect(await within(sync).findByText("Kept in /shared/Cockpit")).toBeInTheDocument();
+  const jobs = await screen.findByRole("region", { name: "Scheduled work" });
+  expect(jobs).toHaveTextContent("Refresh feeds");
+});
+
 const ASK = "Restart to finish this change? It takes a few seconds and keeps anything you're typing elsewhere.";
 
 function RestartHarness() {

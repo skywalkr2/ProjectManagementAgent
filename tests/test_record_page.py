@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.evaluate import load_cases
+from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B
 
@@ -102,3 +103,155 @@ def test_the_owner_format_applies_to_the_owners_on_the_review_screen_and_the_rec
         )
         assert listed[0] == expected
     set_responder(None)
+
+
+# ---- finished work, a series label and a fact's source (design 7.14) ----------------------------------------------
+
+_PM = WriteContext(actor="pm", trust="trusted", op="test.finish")
+ASSISTANT = WriteContext(actor="assistant", trust="trusted", op="test.file")
+
+
+def _finish(store, action, *, by, reported):
+    current = store.read().get("action", action.id)
+    with store.transaction() as tx:
+        tx.update(
+            "action",
+            action.id,
+            {"status": "done", "done_by": [by], "reported_by": reported},
+            _PM,
+            read_version=current.version,
+        )
+
+
+def test_finished_work_is_credited_to_who_did_it_and_names_who_reported_it(api):
+    client, store = api
+    action = next(a for a in store.read().list("action") if a.data.get("project") and a.data.get("owners"))
+    people = [p.id for p in store.read().list("person")]
+    doer = action.data["owners"][0]["person"]
+    reporter = next(p for p in people if p != doer)
+    _finish(store, action, by=doer, reported=reporter)
+    project = client.get(f"/api/record-pages/{action.data['project']}", params={"kind": "project"}).json()
+    done = next(c for c in project["completed_actions"] if c["id"] == action.id)
+    names = {p.id: p.data["full_name"] for p in store.read().list("person")}
+    assert done["done_by"] == [names[doer]] and done["reported_by"] == names[reporter] and done["done_on"]
+    assert action.id not in [a["id"] for a in project["open_actions"]]
+    theirs = client.get(f"/api/record-pages/{doer}", params={"kind": "person"}).json()
+    assert action.id in [c["id"] for c in theirs["completed_actions"]]
+    # The one who only reported it is not credited with the work.
+    reporters = client.get(f"/api/record-pages/{reporter}", params={"kind": "person"}).json()
+    assert action.id not in [c["id"] for c in reporters["completed_actions"]]
+
+
+def test_a_project_with_the_configured_done_status_is_marked_completed(api):
+    client, store = api
+    rows = client.get("/api/projects").json()
+    assert not any(r["completed"] for r in rows)
+    project = store.read().list("project")[0]
+    done = client.get("/api/settings").json()
+    wanted = next(i["value"] for i in done["items"] if i["key"] == "workspace.project.completed_status")
+    with store.transaction() as tx:
+        tx.update("project", project.id, {"status": wanted}, _PM, read_version=project.version)
+    rows = {r["id"]: r for r in client.get("/api/projects").json()}
+    assert rows[project.id]["completed"] is True
+    assert sum(r["completed"] for r in rows.values()) == 1
+
+
+def test_the_setting_that_names_the_done_status_picks_from_the_projects_status_list(api):
+    client, store = api
+    item = next(
+        i for i in client.get("/api/settings").json()["items"] if i["key"] == "workspace.project.completed_status"
+    )
+    statuses = next(v for v in store.read().list("value_list") if v.data["name"] == "project-status").data["values"]
+    assert item["type"] == "choice" and set(statuses) <= set(item["options"])
+
+
+def test_an_item_on_a_series_names_the_meeting_it_is_for(api):
+    client, store = api
+    action = next(a for a in store.read().list("action") if a.data.get("project") and a.data.get("owners"))
+    with store.transaction() as tx:
+        series = tx.create("series", {"title": "Print sync", "trust": "trusted"}, _PM).id
+        event = tx.create(
+            "event", {"title": "Print sync", "start": "2030-10-24", "series": series, "trust": "trusted"}, _PM
+        ).id
+        tx.update("action", action.id, {"series": series, "event": event}, _PM, read_version=action.version)
+    page = client.get(f"/api/record-pages/{action.data['project']}", params={"kind": "project"}).json()
+    listed = next(a for a in page["open_actions"] if a["id"] == action.id)
+    assert (
+        listed["series"] == series and listed["series_title"] == "Print sync" and listed["meeting_on"] == "2030-10-24"
+    )
+
+
+def test_a_facts_page_says_who_it_rests_on_and_where_it_came_from(api):
+    client, store = api
+    people = store.read().list("person")
+    said, author = people[0], people[1]
+    with store.transaction() as tx:
+        source = tx.create(
+            "source",
+            {
+                "received_at": "2026-10-09T10:00:00+00:00",
+                "kind": "pasted",
+                "title": "Production check-in notes",
+                "content_hash": "abc",
+                "trust": "untrusted",
+                "author": author.id,
+            },
+            _PM,
+        ).id
+        inferred = tx.create(
+            "fact", {"text": "Both spines are in the folder.", "basis": "inferred", "source": source}, _PM
+        ).id
+        reported = tx.create(
+            "fact", {"text": "The proof is approved.", "basis": "said", "said_by": said.id, "source": source}, _PM
+        ).id
+        own = tx.create("fact", {"text": "The trim size is fixed.", "basis": "person"}, _PM).id
+
+    def label(fact):
+        return client.get(f"/api/record-pages/{fact}", params={"kind": "fact"}).json()["fact_source"]
+
+    assert label(inferred)["basis"] == "inferred" and label(inferred)["input"] == "Production check-in notes"
+    said_label = label(reported)
+    assert said_label["basis"] == "said" and said_label["by"] == said.data["full_name"]
+    assert said_label["reported_by"] == author.data["full_name"]
+    assert label(own)["basis"] == "person" and label(own)["by"] is None
+    assert (
+        client.get(f"/api/record-pages/{project_id(store)}", params={"kind": "project"}).json()["fact_source"] is None
+    )
+
+
+def project_id(store):
+    return store.read().list("project")[0].id
+
+
+def test_confirming_an_inferred_fact_makes_it_the_persons_own_and_undo_brings_it_back(api):
+    client, store = api
+    with store.transaction() as tx:
+        fact = tx.create("fact", {"text": "Both spines are in the folder.", "basis": "inferred"}, ASSISTANT)
+    done = client.post(
+        "/api/records/edit", json={"kind": "fact", "id": fact.id, "fields": {"basis": "person"}, "read_version": 1}
+    )
+    assert done.status_code == 200, done.text
+    assert store.read().get("fact", fact.id).data["basis"] == "person"
+    page = client.get(f"/api/record-pages/{fact.id}", params={"kind": "fact"}).json()
+    assert page["fact_source"]["basis"] == "person"
+    assert client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={}).status_code == 200
+    assert store.read().get("fact", fact.id).data["basis"] == "inferred"
+
+
+def test_only_confirming_can_change_a_facts_basis(api):
+    client, store = api
+    with store.transaction() as tx:
+        said = tx.create("fact", {"text": "Said by someone.", "basis": "said"}, ASSISTANT)
+        fact = tx.create("fact", {"text": "Inferred.", "basis": "inferred"}, ASSISTANT)
+    assert (
+        client.post(
+            "/api/records/edit", json={"kind": "fact", "id": said.id, "fields": {"basis": "person"}, "read_version": 1}
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            "/api/records/edit", json={"kind": "fact", "id": fact.id, "fields": {"basis": "said"}, "read_version": 1}
+        ).status_code
+        == 409
+    )

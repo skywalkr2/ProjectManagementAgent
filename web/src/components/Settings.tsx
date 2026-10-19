@@ -16,7 +16,9 @@ import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
+import { JobsPanel } from "./JobsPanel";
 import { SettingRow } from "./SettingRow";
+import { SyncPanel } from "./SyncPanel";
 import { ValueLists } from "./ValueLists";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
@@ -329,6 +331,12 @@ export function Settings(props: {
       <>
         {heading(section)}
         {form(section)}
+        {section === "backups" && (
+          <>
+            <SyncPanel />
+            <JobsPanel />
+          </>
+        )}
       </>
     );
   };

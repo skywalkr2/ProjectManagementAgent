@@ -12,6 +12,8 @@ import { day, wallTime } from "../lib/dates";
 import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { onShowNewLines } from "../lib/queue-hold";
+import { afterMove, heldAnswers, heldTitle, moveTitle } from "../lib/queue-words";
+import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { HeldLine, isHeld } from "../shell/HeldLines";
@@ -36,6 +38,8 @@ export interface QueueHandlers {
   onAddAccount?: () => void;
   onOpenRecord?: (kind: string, id: string) => void;
   onOpenGuide?: (step: string) => void;
+  /** Go to a screen: the Projects list where unfiled work is filed. */
+  onOpenView?: (view: View) => void;
 }
 
 /** What a line is selected as: the line, and whether its card opens on the note to send it back with. */
@@ -425,8 +429,10 @@ type Tone = PillTone;
 interface Described {
   pill: string;
   tone: Tone;
-  meta: string;
+  meta: ReactNode;
   primary: { label: string; run?: () => void } | null;
+  /** The other answer to a question the line asks, as a visible button (7.6: a held line may show two). */
+  other?: { label: string; run: () => void };
   menu: MenuAction[];
 }
 
@@ -481,7 +487,11 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "owner":
         return t("queue.owner", { text: line.text ?? "" });
       case "held":
-        return t("queue.held");
+        return line.held ? heldTitle(line.held, t) : t("queue.held");
+      case "unfiled":
+        return tn("queue.unfiled", line.count);
+      case "moved":
+        return moveTitle(line, t, tn);
       case "go":
         return t("queue.go", { what });
       case "first_go":
@@ -551,15 +561,83 @@ function QueueRow(props: {
   const d: Described = (() => {
     switch (line.kind) {
       case "decision":
-        return { pill: t("queue.pill.decision"), tone: "need", meta: meta(what, line.due && t("op.meta.due", { date: day(line.due) })), primary: { label: t("queue.act.answer") }, menu: [] };
+        return { pill: t("queue.pill.decision"), tone: "need", meta: meta(what, afterMove(line, t), line.due && t("op.meta.due", { date: day(line.due) })), primary: { label: t("queue.act.answer") }, menu: [] };
       case "question":
-        return { pill: t("queue.pill.question"), tone: "need", meta: meta(what), primary: { label: t("queue.act.answer") }, menu: [] };
+        return { pill: t("queue.pill.question"), tone: "need", meta: meta(what, afterMove(line, t)), primary: { label: t("queue.act.answer") }, menu: [] };
       case "who_is":
         return { pill: t("queue.pill.waiting"), tone: "warn", meta: meta(what), primary: { label: t("queue.act.pick") }, menu: [] };
       case "owner":
         return { pill: t("queue.pill.waiting"), tone: "warn", meta: meta(line.due && t("op.meta.due", { date: day(line.due) })), primary: { label: t("queue.act.pick_owner") }, menu: [] };
-      case "held":
-        return { pill: t("queue.pill.waiting"), tone: "warn", meta: meta(line.text, line.waiting, what), primary: { label: t("queue.act.decide") }, menu: [] };
+      case "held": {
+        const ask = line.held;
+        if (!ask || line.changeset == null || line.op == null) {
+          return { pill: t("queue.pill.waiting"), tone: "warn", meta: meta(line.text, line.waiting, what), primary: { label: t("queue.act.decide") }, menu: [] };
+        }
+        const cs = line.changeset;
+        const index = line.op;
+        const words = heldAnswers(ask, t);
+        const told = ask.told ?? [];
+        return {
+          pill: t("queue.pill.waiting"),
+          tone: "warn",
+          meta: (
+            <>
+              {meta(line.waiting, ask.quote ? t("queue.held.quote", { quote: ask.quote }) : "", what)}
+              {ask.ask === "drop" && told.length > 0 && (
+                <>
+                  {" · "}
+                  <strong>{ask.told_on ? t("queue.held.told_on", { names: told.join(", "), date: day(ask.told_on) }) : t("queue.held.told", { names: told.join(", ") })}</strong>
+                </>
+              )}
+            </>
+          ),
+          primary: {
+            label: words.primary,
+            run: () =>
+              void act(
+                () => api.release(cs, index),
+                () => ({ message: t("queue.held.done", { what: ask.item }), undo: () => api.undo(cs, [index]) }),
+              ),
+          },
+          other: {
+            label: words.other,
+            run: () =>
+              void act(
+                () => api.declineOp(cs, index),
+                () => ({ message: t("queue.held.kept", { what: ask.item }), undo: () => api.undeclineOp(cs, index) }),
+              ),
+          },
+          menu: [],
+        };
+      }
+      case "unfiled":
+        return {
+          pill: t("queue.pill.unfiled"),
+          tone: "neutral",
+          meta: t("queue.unfiled.meta"),
+          primary: { label: t("queue.act.file_them"), run: () => props.handlers.onOpenView?.("records/projects") },
+          menu: [],
+        };
+      case "moved": {
+        const after = line.after_move;
+        const others = after?.others ?? [];
+        const open: MenuAction[] = [];
+        if (after && props.handlers.onOpenRecord) open.push({ id: "meeting", label: t("queue.moved.open", { what: after.title }), run: () => props.handlers.onOpenRecord!(after.kind, after.record) });
+        if (line.changeset) {
+          const cs = line.changeset;
+          open.push({ id: "undo-run", label: t("queue.moved.undo"), run: () => void act(() => api.undo(cs), () => ({ message: t("queue.moved.undone") })) });
+        }
+        return {
+          pill: t("queue.pill.moved"),
+          tone: "warn",
+          meta: meta(
+            after && t(after.by === "pm" ? "queue.moved.from_you" : "queue.moved.from_input"),
+            others.length > 0 && tn("queue.moved.others", others.length, { names: others.join(", ") }),
+          ),
+          primary: { label: t("queue.act.look_closer") },
+          menu: open,
+        };
+      }
       case "go": {
         const item = changes.data?.find((c) => c.id === line.request);
         return {
@@ -646,17 +724,24 @@ function QueueRow(props: {
     else if (opens) select(!open);
   };
   const primary: ReactNode = d.primary ? (
-    <Button
-      size="sm"
-      variant="primary"
-      data-key="primary"
-      aria-expanded={!d.primary.run && opens && !props.beside ? open : undefined}
-      aria-controls={!d.primary.run && opens && !props.beside ? detailId : undefined}
-      aria-describedby={`${detailId}-title`}
-      onClick={d.primary.run ?? choose}
-    >
-      {d.primary.label}
-    </Button>
+    <>
+      {d.other && (
+        <Button size="sm" aria-describedby={`${detailId}-title`} onClick={d.other.run}>
+          {d.other.label}
+        </Button>
+      )}
+      <Button
+        size="sm"
+        variant="primary"
+        data-key="primary"
+        aria-expanded={!d.primary.run && opens && !props.beside ? open : undefined}
+        aria-controls={!d.primary.run && opens && !props.beside ? detailId : undefined}
+        aria-describedby={`${detailId}-title`}
+        onClick={d.primary.run ?? choose}
+      >
+        {d.primary.label}
+      </Button>
+    </>
   ) : undefined;
   // A line settled somewhere else stays where it was, said so and with nothing to press, until the person moves on.
   if (props.ghost)

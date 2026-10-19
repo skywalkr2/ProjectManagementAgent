@@ -11,9 +11,14 @@ import { readable, readableTail, useValueLines } from "../lib/records";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { useChangeThis, useQuestionMenu, type ChangeKind } from "./ChangeThis";
+import { FactSource } from "./FactSource";
 import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
+import { PersonDrawer } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
+import { ProjectDrawer } from "./ProjectForm";
+import { ProjectPicker } from "./ProjectPicker";
+import { RecordActivity } from "./RecordActivity";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
@@ -27,6 +32,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const fields = useQuery({ queryKey: ["kind", kind], queryFn: () => api.kindView(kind) });
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  // What is open with the record, what was finished and what happened to it; a record the page can't be read for shows none.
+  const page = useQuery({ queryKey: ["record-page", kind, id], queryFn: () => api.recordPage(kind, id) });
   const lines = useValueLines();
   const { open, dialog } = useTextReview();
   // "Change this" sits in a menu beside the record's own actions, for the kinds of record it can be asked for.
@@ -39,6 +46,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   );
   const menu = [...(kind === "question" ? questionMenu.entries : []), change.entry];
   const [editing, setEditing] = useState(false);
+  // A person and a project are edited in the same drawer as on their own screens.
+  const drawer = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : kind === "project" ? (projects.data ?? []).find((p) => p.id === id) : undefined;
   const editButton = useRef<HTMLButtonElement>(null);
   const stopEditing = () => {
     setEditing(false);
@@ -63,7 +72,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         .map(([name, value]) => ({ name, lines: shown(name, value) }))
         .filter((row) => row.lines.length > 0)
     : [];
-  const heading = data ? (shown("title", data.fields.title)[0] ?? shown("name", data.fields.name)[0] ?? data.id) : id;
+  // The record's name, never its id: the page says it (a person is named by their full name).
+  const heading = data ? (page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || data.id) : id;
 
   return (
     <section className="panel-section record-page" aria-labelledby="record-title">
@@ -86,6 +96,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       </div>
       {data && kind === "question" && questionMenu.form}
       {data && CHANGEABLE.has(kind) && change.form}
+      {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
       {record.isError && (
@@ -97,18 +108,34 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         </p>
       )}
       {data && (
-        <>
+        <div className="record-grid">
+          <div className="record-main">
+          {page.data && <RecordActivity page={page.data} />}
+          {data.long_text.map((field) => (
+            <TextSection
+              key={field}
+              kind={kind}
+              id={id}
+              field={field}
+              help={info.get(field)?.description || undefined}
+              onReview={open}
+            />
+          ))}
+          </div>
+          <aside className="record-side">
           <OriginLink origin={data.origin} />
           <section aria-labelledby="record-details">
             <div className="heading">
               <h3 id="record-details">{t("record.details")}</h3>
-              {offered.length > 0 && !editing && (
+              {(drawer || offered.length > 0) && !editing && (
                 <button type="button" className="btn" ref={editButton} onClick={() => setEditing(true)}>
                   {t("record.edit")}
                 </button>
               )}
             </div>
-            {editing ? (
+            {editing && drawer && kind === "person" && <PersonDrawer person={drawer as S["PersonView"]} onClose={stopEditing} />}
+            {editing && drawer && kind === "project" && <ProjectDrawer project={drawer as S["ProjectView"]} onClose={stopEditing} />}
+            {editing && !drawer ? (
               <DetailsForm
                 kind={kind}
                 record={data}
@@ -135,17 +162,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               </dl>
             )}
           </section>
-          {data.long_text.map((field) => (
-            <TextSection
-              key={field}
-              kind={kind}
-              id={id}
-              field={field}
-              help={info.get(field)?.description || undefined}
-              onReview={open}
-            />
-          ))}
-        </>
+          </aside>
+        </div>
       )}
       {dialog}
     </section>
@@ -329,11 +347,17 @@ function DetailInput(props: {
     );
   }
   let control;
-  if (f.type === "choice" || (f.type === "reference" && f.refers_to === "project")) {
-    const options =
-      f.type === "choice"
-        ? (f.options ?? []).map((o) => ({ value: o, label: o }))
-        : props.projects.map((p) => ({ value: p.id, label: p.name }));
+  if (f.type === "reference" && f.refers_to === "project") {
+    // A project can be added from here: the form opens in place and the new project is the one picked.
+    return (
+      <>
+        <ProjectPicker id={id} label={label} value={text} onChange={props.onChange} empty={required ? "" : t("record.none")} required={required} describedBy={help} autoFocus={props.autoFocus} />
+        {note}
+      </>
+    );
+  }
+  if (f.type === "choice") {
+    const options = (f.options ?? []).map((o) => ({ value: o, label: o }));
     control = (
       <select id={id} value={text} required={required} aria-describedby={help} autoFocus={props.autoFocus} onChange={(e) => props.onChange(e.target.value)}>
         {!required && <option value="">{t("record.none")}</option>}

@@ -24,12 +24,14 @@ import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
 import { Knowledge } from "./components/Knowledge";
 import { Panel } from "./components/Panel";
+import { People } from "./components/People";
+import { Projects } from "./components/Projects";
 import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
 import { RuleReview } from "./components/RuleReview";
+import { SeriesPage } from "./components/SeriesPage";
 import { Settings } from "./components/Settings";
 import { Sources, type AddRequest } from "./components/Sources";
-import { Setup } from "./components/Setup";
 import { StyleGuide } from "./components/StyleGuide";
 import { Stages } from "./components/Stages";
 import { Today } from "./components/Today";
@@ -163,6 +165,9 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
 
   const body = (() => {
     if (shown.type === "panel") return <Panel key={shown.name} name={shown.name} onOpenRecord={openRecord} />;
+    if (shown.type === "record" && shown.kind === "series") {
+      return <SeriesPage key={shown.id} id={shown.id} onBack={() => setView(origin.current)} />;
+    }
     if (shown.type === "record") {
       return <RecordPage key={`${shown.kind}:${shown.id}`} kind={shown.kind} id={shown.id} onBack={() => setView(origin.current)} />;
     }
@@ -198,9 +203,9 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "work/stages":
         return <Stages />;
       case "records/projects":
-        return <Setup lead="projects" />;
+        return <Projects />;
       case "records/people":
-        return <Setup lead="people" />;
+        return <People />;
       case "records/files":
         return <Files />;
       case "records/knowledge":

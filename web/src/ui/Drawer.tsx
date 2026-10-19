@@ -1,7 +1,7 @@
 // A drawer from the right (design 7.12, 7.13): for forms and hand-in, so the list stays visible. It has a sticky footer for
 // its actions, closes with Esc, and when it holds unsaved text (`dirty`) Esc or a click outside asks first instead of
 // losing it. Focus returns to what opened it when it closes.
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { useWords } from "../lib/wording";
 import { Button } from "./Button";
@@ -22,6 +22,8 @@ export function Drawer(props: {
 }) {
   const { t } = useWords();
   const [guarding, setGuarding] = useState(false);
+  // Each drawer has its own heading id, so one opened over another is named by its own title.
+  const titleId = useId();
   const close = () => {
     setGuarding(false);
     props.onClose();
@@ -40,9 +42,9 @@ export function Drawer(props: {
       className={styles.overlay}
     >
       <Modal className={[styles.modal, props.wide ? styles.wide : ""].filter(Boolean).join(" ")} data-modal-open="">
-        <Dialog className={styles.dialog} aria-labelledby="drawer-title">
+        <Dialog className={styles.dialog} aria-labelledby={titleId}>
           <div className={styles.head}>
-            <Heading slot="title" id="drawer-title" className={styles.title}>
+            <Heading slot="title" id={titleId} className={styles.title}>
               {props.title}
             </Heading>
             <IconButton icon="close" label={t("action.close")} onPress={attempt} />

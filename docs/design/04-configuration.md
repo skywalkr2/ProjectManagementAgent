@@ -87,6 +87,7 @@ Built keys, with defaults:
 - `language`: the language and variety work is written in, as a tag (default `en-US`). A project may set its own (5.1).
 - `contact_kinds`: the kinds of contact detail a person record keeps and the assistant may propose from a signature
   (`person.contact`), picked from a list on screen. Default `email`, `phone`, `address`.
+- `project.completed_status`: the project status that means a project is finished (default `Done`), picked from the project status list on screen. Projects with it are listed under Completed at the end of the Projects table and count as completed in the project record; nothing is removed (7.13). Live.
 - `our_accounts`: the names this app uses on watched sources (its own publishes). A watched change by one of them is
   marked `by_us` (6.4, 6.5). Live.
 - `user.accounts`: the person's own names on watched sources. A change by one of them is the person's own work

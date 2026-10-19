@@ -275,6 +275,16 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   phase S1; after phase B wave 4 (in progress), S1 goes before B's waves 5 and 6 so Today is designed once, and those
   waves are then built to S's shape. The owner tries the app in the evenings as it goes rather than holding all feedback.
   **Impact:** the roadmap's order and "When the owner uses it" updated; open promise P28 closed.
+- **Also (2026-10-19): phase B wave 4, the records screens, built.** Projects and People are their own tables with a
+  details pane and drawers for forms; record pages show activity beside details; the meeting series page (answer 30),
+  the fact's source label with "Confirm it" (the person's own edit of an inferred fact's basis, the only basis change
+  allowed; `record.edit` stays person-only), held lines as questions with two named answers and a recorded decline
+  (answer 28), questions after a move grouped (answer 27), Completed as a place with credit and who reported it, "Add a
+  person…" in every person picker (P13), and an Unfiled group with "File under…" that teaches the assistant (P14; filing
+  a question or note now records the correction, which it didn't before).
+  **Impact:** design 4, 6 and 7 (7.6, 7.7, 7.13, 7.14, 7.17) and CHANGES.md section 86; P13 and P14 leave the open
+  promises. Left: "usually with" on the series page (meetings carry no attendees yet), the source label outside the
+  record page, per-row answers to a follow-on question, and "Drop it and draft the note" (waits for the publisher).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

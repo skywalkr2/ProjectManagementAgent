@@ -672,6 +672,9 @@ class PersonView(BaseModel):
     track_only: bool = False
     open_items: int = Field(0, description="Open actions and questions with them.")
     last_contact: str | None = Field(None, description="When something was last sent or told to them (a date).")
+    how_to_reach: dict[str, str] = Field(
+        default_factory=dict, description="How to reach them: a channel name mapped to its address or handle."
+    )
 
 
 class PersonIn(BaseModel):
@@ -738,6 +741,10 @@ class ProjectView(BaseModel):
     open_actions: int = 0
     open_questions: int = 0
     last_change: str | None = Field(None, description="When the project record last changed.")
+    completed: bool = Field(
+        False,
+        description="Its status is the one the settings say means finished: it is listed under Completed, not removed.",
+    )
 
 
 class NoteView(BaseModel):
@@ -747,6 +754,40 @@ class NoteView(BaseModel):
     project_name: str | None
     created_at: str | None = Field(None, description="When the note was filed, from the first record of it.")
     trust: Literal["trusted", "untrusted"]
+
+
+class UnfiledItem(BaseModel):
+    kind: Literal["note", "action", "question", "fact"]
+    id: str
+    version: int
+    text: str = Field(
+        description="The item in one line: a note's or fact's words, an action's text, a question's title."
+    )
+    created_at: str | None = Field(None, description="When the assistant filed it.")
+    trust: Literal["trusted", "untrusted"] = "trusted"
+
+
+class UnfiledView(BaseModel):
+    """What the assistant filed under no project (design 7.14), newest first. `count` is the length of `items`, so the
+    screen never shows a zero: it shows nothing when there is none."""
+
+    count: int
+    items: list[UnfiledItem]
+
+
+class UnfiledRef(BaseModel):
+    kind: Literal["note", "action", "question", "fact"]
+    id: str
+    read_version: int | None = Field(
+        None,
+        description="The version of the item the person was looking at; the filing is refused if it changed since. "
+        "Left out, the current version is used.",
+    )
+
+
+class UnfiledFile(BaseModel):
+    project: str = Field(description="The project to file them under, from GET /api/projects.")
+    items: list[UnfiledRef] = Field(min_length=1)
 
 
 class ProjectIn(BaseModel):
@@ -896,6 +937,11 @@ class OpenAction(BaseModel):
     project: str | None = None
     project_name: str | None = None
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
+    series: str | None = Field(None, description="The series of meetings it is for, when it is on one.")
+    series_title: str | None = None
+    meeting_on: str | None = Field(
+        None, description='The day of the meeting it sits on (YYYY-MM-DD), for "for Thursday\'s print sync".'
+    )
 
 
 class OpenQuestion(BaseModel):
@@ -906,6 +952,35 @@ class OpenQuestion(BaseModel):
     status: str | None = None
     kind: str | None = None
     origin: Origin | None = Field(None, description="Where the question came from, for its link.")
+    series: str | None = None
+    series_title: str | None = None
+    meeting_on: str | None = None
+
+
+class CompletedAction(BaseModel):
+    """Finished work: credited to who did it, with who said it was done (a nudge is never completion)."""
+
+    id: str
+    text: str
+    project: str | None = None
+    project_name: str | None = None
+    done_by: list[str] = Field(default_factory=list, description="Names of the people who did the work.")
+    reported_by: str | None = Field(None, description="Name of the person who said it was done.")
+    done_on: str | None = Field(None, description="The day it was closed, YYYY-MM-DD.")
+
+
+class FactSource(BaseModel):
+    """Who a fact rests on and where it came from, for the label in its meta line (never part of copied or published
+    text). `basis` is person (the person said it), said (someone else did: `by`, reported by `reported_by` when another
+    person's input carried it) or inferred (the assistant worked it out, so it feeds the record only until the person
+    confirms it); null for a fact recorded before this was kept."""
+
+    basis: Literal["person", "inferred", "said"] | None = None
+    by: str | None = Field(None, description="Name of the person who said it, when someone else did.")
+    reported_by: str | None = Field(None, description="Name of the person whose input carried what was said.")
+    input: str | None = Field(None, description="The input it came from, by its short name.")
+    on: str | None = Field(None, description="The day it was confirmed, true as of, or filed, YYYY-MM-DD.")
+    origin: Origin | None = Field(None, description="Where it came from, for the link that is the label.")
 
 
 class ActivityEntry(BaseModel):
@@ -921,6 +996,64 @@ class ActivityEntry(BaseModel):
     by_assistant: bool
 
 
+class SeriesMeeting(BaseModel):
+    """One meeting of a series: its calendar entry, when it starts (as written) and its day in the person's zone."""
+
+    id: str
+    title: str
+    start: str
+    on: str | None = Field(None, description="The day it falls on, YYYY-MM-DD.")
+
+
+class SeriesItem(BaseModel):
+    kind: Literal["action", "question"]
+    id: str
+    text: str = Field(description="An action's words or a question's title.")
+    status: str | None = None
+    due: str | None = None
+    rolled_from: SeriesMeeting | None = Field(
+        None, description="The meeting the item sat on before it moved to this one, when it moved."
+    )
+
+
+class SeriesMovedItem(BaseModel):
+    kind: Literal["action", "question"]
+    id: str
+    text: str
+    status: str | None = None
+    to: SeriesMeeting | None = Field(None, description="The meeting it moved to.")
+
+
+class SeriesPersonGroup(BaseModel):
+    person: str | None = Field(None, description="The person the items are with; null when it is not known.")
+    name: str | None = None
+    is_pm: bool = Field(description='The person themselves, listed last and shown as "You".')
+    items: list[SeriesItem]
+
+
+class SeriesNext(SeriesMeeting):
+    open: int = Field(description="How many open items sit on it.")
+    groups: list[SeriesPersonGroup]
+
+
+class SeriesPast(SeriesMeeting):
+    settled: list[SeriesMovedItem]
+    moved: list[SeriesMovedItem]
+
+
+class SeriesPageView(BaseModel):
+    """A series' page (design 7.14): the next meeting's open items by person, then the meetings that passed."""
+
+    id: str
+    title: str
+    repeats: str | None = Field(None, description="How often it repeats, in the person's own words.")
+    project: str | None = None
+    project_name: str | None = None
+    next: SeriesNext | None = Field(None, description="The next meeting; null when none is scheduled.")
+    past: list[SeriesPast] = Field(description="Meetings that passed, newest first.")
+    open_without_next: int = Field(0, description="Open items waiting when no later meeting exists.")
+
+
 class RecordPageView(BaseModel):
     """A record's page (design 7.14): its name, details in declared order with names resolved, what is open with
     it, and its activity, newest first."""
@@ -932,6 +1065,11 @@ class RecordPageView(BaseModel):
     details: list[RecordDetail]
     open_actions: list[OpenAction]
     open_questions: list[OpenQuestion]
+    completed_actions: list[CompletedAction] = Field(
+        default_factory=list,
+        description="Finished actions credited to this person (who did the work) or in this project, newest first.",
+    )
+    fact_source: FactSource | None = Field(None, description="For a fact: who it rests on and where it came from.")
     activity: list[ActivityEntry]
 
 
@@ -1276,6 +1414,10 @@ class AgendaItemView(BaseModel):
         description="An entry in the app's own calendar (recorded from what came in), not an event read from a "
         "connected calendar. Its end is the last day or moment, included.",
     )
+    series: str | None = Field(None, description="For an own entry: the series it is one meeting of.")
+    open_items: int = Field(
+        0, description="For a meeting of a series: how many open actions and questions sit on it (never shown as zero)."
+    )
 
 
 class ArrivedView(BaseModel):
@@ -1302,6 +1444,40 @@ class TodoView(BaseModel):
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
 
 
+class HeldAsk(BaseModel):
+    """A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change
+    its date, give it to another owner, send a question to someone else instead, or drop it), `item` the words of what
+    it is about, `value` and `from_value` the new and the present date, `to_name` the person it would go to, `told`
+    the people a drop would leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it
+    on. The screen words the title and the two answers from these."""
+
+    ask: Literal["close", "date", "owner", "routing", "drop"]
+    item: str
+    value: str | None = None
+    from_value: str | None = None
+    to_name: str | None = None
+    told: list[str] = Field(default_factory=list)
+    told_on: str | None = None
+    quote: str | None = None
+
+
+class AfterMove(BaseModel):
+    """The move a question (or a group of them) came after (design 7.7): the record that moved, by its own name, the day
+    it moved to and whether that is earlier than where it was. `others` names the people the same follow-on run asked
+    questions of; those wait in Follow-ups."""
+
+    kind: str = Field(description="What moved: event, action or fact.")
+    record: str
+    title: str
+    to: str | None = Field(None, description="The day it moved to, YYYY-MM-DD.")
+    earlier: bool = False
+    by: Literal["pm", "assistant"] = Field(description="Whether the person or the assistant (from an input) moved it.")
+    replaced: bool = Field(False, description="A fact that was replaced rather than a date that moved.")
+    request: str
+    changeset: str | None = Field(None, description="The follow-on run's own change, which Undo takes back.")
+    others: list[str] = Field(default_factory=list)
+
+
 class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
@@ -1319,7 +1495,9 @@ class QueueLineView(BaseModel):
     of what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST
     /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account
     at all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that
-    isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well."""
+    isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well; `unfiled` is
+    what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
+    by GET /api/unfiled)."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -1351,6 +1529,8 @@ class QueueLineView(BaseModel):
         "catch_up",
         "send",
         "nudge",
+        "unfiled",
+        "moved",
     ]
     count: int
     text: str | None = Field(None, description="The decision, question, name or held item in one line.")
@@ -1473,6 +1653,17 @@ class QueueLineView(BaseModel):
         None,
         description="For an owner line: who the routing entries suggest owns the action and why, and the nearest open "
         "action to fold it into; none when nothing applies.",
+    )
+    after_move: AfterMove | None = Field(
+        None,
+        description="For a question the person was asked after something moved, and for the moved line that groups "
+        "several: the move it came after. A moved line's `questions` are its rows and `changeset` is the follow-on "
+        "run's change.",
+    )
+    held: HeldAsk | None = Field(
+        None,
+        description="For a held line that rests on an inference or would drop something that reached someone: the "
+        "question it asks. Keeping things as they are is POST /api/changesets/{id}/ops/{index}/decline.",
     )
 
 

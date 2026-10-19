@@ -205,11 +205,19 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     # ---- settings ------------------------------------------------------------------------------------------------
 
+    def _live_lists() -> dict[str, list[str]]:
+        """The choices of the settings that pick from a list the person keeps (a value list), as it stands now."""
+        lists = {v.data["name"]: v.data["values"] for v in store.read().list("value_list")}
+        return {"project_status": list(lists.get("project-status", []))}
+
     @r.get("/settings")
     def settings_view() -> SettingsView:
         return SettingsView(
             fingerprint=config_screens.fingerprint(ws.config_dir),
-            items=[SettingItem(**vars(s)) for s in config_screens.describe(current(), store.plugins, ws.config_dir)],
+            items=[
+                SettingItem(**vars(s))
+                for s in config_screens.describe(current(), store.plugins, ws.config_dir, _live_lists())
+            ],
         )
 
     @r.post("/restart")

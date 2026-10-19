@@ -1002,6 +1002,12 @@ def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | N
     return " ".join(text.split())[:200] if isinstance(text, str) and text.strip() else None
 
 
+def is_confirm(kind: str, current: dict[str, Any], fields: dict[str, Any]) -> bool:
+    """Whether a change is the person confirming an inferred fact: its basis becomes theirs and nothing else changes.
+    It is the only change to a fact's basis, and it comes only from the person's own edit."""
+    return kind == "fact" and current.get("basis") == "inferred" and fields == {"basis": "person"}
+
+
 def edit_problem(store: Store, view: Any, op: Any) -> str | None:
     """Why a record.edit can't apply, or None: the fields must exist, be ordinary fields, and leave the record valid,
     its unique groups unique and its references pointing at records that exist."""
@@ -1017,6 +1023,8 @@ def edit_problem(store: Store, view: Any, op: Any) -> str | None:
     closed = {"id", "stage", "ext"} | set(long_text_fields(model)) | set(getattr(model, "fixed_fields", ()))
     if knowledge.is_keep(op.record.kind, current.data, dict(op.fields)):
         closed -= {"trust"}  # keeping a proposal makes the person its author, so its content is theirs
+    if is_confirm(op.record.kind, current.data, dict(op.fields)):
+        closed -= {"basis"}  # confirming what the assistant inferred makes it the person's own word
     for name in op.fields:
         if name not in model.model_fields:
             return f"{op.record.kind} has no field {name}"
@@ -2086,6 +2094,73 @@ def _release_one(
         )
 
     store.plugins.publish("changeset.applied", {"id": changeset_id}, follows=changeset_id)
+
+
+DECLINED_REASON = "You kept it as it was."
+
+
+def decline_held(store: Store, changeset_id: str, index: int, *, now: datetime | None = None) -> None:
+    """Keep things as they are for a held op: it is not applied, it leaves the person's list, and one `held_declined`
+    signal records the choice for the assistant to learn from. Undo is `undecline_held`."""
+    now = now or datetime.now(UTC)
+    cs = store.read().get("changeset", changeset_id)
+    if cs is None:
+        raise StoreError(f"there is no changeset {changeset_id}")
+    outcomes = cs.data["ops"]
+    if not 0 <= index < len(outcomes) or outcomes[index]["status"] != "held":
+        raise StoreError("that item isn't waiting for you")
+    outcome = outcomes[index]
+    target = outcome["op"].get("id") or outcome["op"].get("question") or ""
+    outcome.update(status="undone", held_reason=outcome.get("reason"), reason=DECLINED_REASON)
+    still = "held" if any(o["status"] == "held" for o in outcomes) else "applied"
+    with store.transaction() as tx:
+        tx.update(
+            "changeset",
+            changeset_id,
+            {"ops": outcomes, "status": still},
+            WriteContext(actor="pm", trust="trusted", op="changeset.decline"),
+            read_version=cs.version,
+        )
+        learn.record(
+            tx,
+            store.plugins.cfg,
+            {
+                "kind": "held_declined",
+                "refs": [changeset_id, *([target] if target else [])],
+                "changeset": changeset_id,
+                "run": cs.data.get("run"),
+                "note": f"{outcome['op'].get('op')}: {outcome.get('label') or ''}".strip(),
+                "at": now.isoformat(),
+            },
+            WriteContext(actor="pm", trust="trusted", op="held_declined"),
+            now,
+        )
+
+
+def undecline_held(store: Store, changeset_id: str, index: int) -> None:
+    """Take back keeping things as they are: the op waits for the person again, and what the assistant would have
+    learned from the choice is netted out."""
+    cs = store.read().get("changeset", changeset_id)
+    if cs is None:
+        raise StoreError(f"there is no changeset {changeset_id}")
+    outcomes = cs.data["ops"]
+    if (
+        not 0 <= index < len(outcomes)
+        or outcomes[index]["reason"] != DECLINED_REASON
+        or outcomes[index]["status"] != "undone"
+    ):
+        raise StoreError("that item wasn't kept as it was")
+    outcome = outcomes[index]
+    outcome.update(status="held", reason=outcome.pop("held_reason", None))
+    with store.transaction() as tx:
+        tx.update(
+            "changeset",
+            changeset_id,
+            {"ops": outcomes, "status": "held"},
+            WriteContext(actor="pm", trust="trusted", op="changeset.undecline"),
+            read_version=cs.version,
+        )
+    learn.net_out(store, "held_declined", [changeset_id])
 
 
 def pick_owner(store: Store, question_id: str, person: str) -> None:
