@@ -2535,8 +2535,9 @@ people and details, and never acts in their name without their yes on the exact 
   at-risk line says when it bites, a needs-your-yes line starts with what the person does and opens the exact
   content, an empty section is left out, a quiet day is one line, and no line reports status or progress (samples in
   `docs/project/steward-brief-samples.md`). The evening wrap-up has done today (credited to whoever did it), moved to
-  tomorrow and still waiting on others; the Monday briefing has the week's promises both ways, deadlines, clashes
-  and what needs a decision, under the same line rules (`docs/project/steward-wrapup-samples.md`).
+  tomorrow and still waiting on others; the Monday briefing opens with a copy-ready message to whoever the person
+  reports to, then the week's promises, questions, chases and decisions, and three to five goals the person confirms,
+  under the same line rules (6.35; `docs/project/steward-wrapup-samples.md`).
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
@@ -2787,3 +2788,74 @@ assistant may draft or ask them. It is the person's own rule, kept per person, b
   probably the most common correction a steward gets.
 - **Not yet:** the full scope resolver (6.18, phase E) takes the stance as one of its inputs; until then the gate above
   is the whole of it.
+
+## 6.35 Drafts to other people, replies owed, and the week (phases S1-2, S1-3 and S2, designed 2026-10-19)
+
+The designer's notes for S1-2, S1-3 and S2 from their running version
+(`docs/project/designer-future-notes-2026-10-19.md`). Each point lands in the batch the designer named.
+
+**Learning from the sent version (S1-2).** The person's sent message is the best teacher a draft gets, and it is
+already in the configured sent folder.
+- When the sent folder is read, a sent message is matched to the draft it came from: same thread and recipients, and
+  text at least `drafts.sent_match.similarity` alike (a setting). A match is one-to-one; nothing is matched by the
+  model.
+- The difference between the draft and what was sent is recorded as a style signal (6.22, the correction kind
+  "edited before sending"): names replaced with roles, a promise cut, a softer opening. It becomes a proposed style
+  note through the usual learning loop, never a rule on its own. This is the style pair, brought forward from L-more.
+- A matched sent message ends the reply owed it answered, credited to the person, with the sent message as evidence.
+- A draft the person copied that has no matching sent message after `drafts.sent_match.ask_after_days` (a setting,
+  2 by default) becomes one question: "Did this go out another way?", with *Yes, another way*, *Not sent* and *Still
+  to send*. A draft the person never copied asks nothing.
+
+**What a draft to someone else carries (S1-2).** A message drafted for another person carries only what they need.
+These are lints on every draft addressed to someone other than the person (severity in `config/checks.yaml`; one
+return, then held for the person when the draft will reach someone, per 6.22):
+- *no bookkeeping*: no record ids, internal terms, stances, scores or "the assistant noticed"; the wording sheet's
+  list of internal terms is the deterministic part;
+- *only openable links*: a link the reader can't open is left out (the rule questions already follow, 6.8);
+- *one gap per message*: two unrelated asks to one person are two drafts;
+- *no long quotes back*: a quote of the reader's own words is at most `drafts.max_quote_words` (a setting, 25 by
+  default); the rest is a link or a summary;
+- *never single a person out*: a draft to several people never names one of them as the cause of a miss; a
+  discrepancy in one person's work is asked of that person privately, in a draft to them alone. Naming is the model's
+  label, so this one is a lint with a return, not a refusal.
+
+**How a reply owed ends (S1-2).** Besides a sent reply, a reply owed ends when:
+- the person marks it *Answered another way* (a call, a meeting, a chat), optionally with a few words that become the
+  evidence;
+- *someone else on the thread answered it*: a later message on the same thread, from another recipient, that answers
+  the ask. Read from an input, this ending waits for Keep like every other ending (6.33), and the line names who
+  answered.
+"No reply needed" stays a choice the assistant learns from (6.22).
+
+**A sender's distribution limit travels with the content (S1-2).** Some messages say who may see them: a marking
+("internal only", "not for the client"), a named group, or the sender's own words.
+- When a message carries a limit, the source records it as its audience: the named group, or the message's own
+  recipients when no group is named. Recording a limit only narrows, so it applies at once from the input; widening it
+  is the person's alone (a person-only change) and is recorded with who widened it.
+- Every record that takes evidence from a limited source carries the limit (the most restrictive one wins when it has
+  several). A draft is refused (an invariant: deterministic, from the evidence's sources and the draft's recipients)
+  when any recipient is outside the audience of a source it draws on, and the packet for a draft to someone outside
+  an audience leaves that source's content out entirely.
+- Proven with a restricted and an open message in one area: a draft to someone outside the group draws only on the open
+  one, and a draft to the group may draw on both.
+
+**What changed since yesterday says what the assistant did (S1-2).** Each line names the act and its reason in the
+assistant's own voice ("Closed the floor plan promise: the owner said it was sent"), and anything the assistant closed,
+moved or merged without the person seeing it is one step from the line: the record, its evidence and its Undo.
+
+**Work the assistant releases on its own keeps the person's hours (S1-3).** Anything the assistant releases without
+the person's act at that moment (new lines it adds to Today, a reminder it set itself, a notification, work held until
+an event that comes in at night) waits for the person's working hours, and never lands in quiet hours (both are the
+existing settings). A time the person chose (a reminder for 7:00) is kept as chosen. What waited arrives together, as
+one group, when the hours start.
+
+**The Monday briefing (S2).** On the first open of the week (the day is a setting):
+1. **A copy-ready message to whoever the person reports to**: the people whose stance is *I report to them* (6.34).
+   It is a draft under the rules above (unreviewed until the person copies it), covering what was done, what moved and
+   what needs them. With nobody marked, the briefing asks once who it is for.
+2. **This week**, through the last working day: promises due by owner, overdue first; questions to send; answers to
+   chase; decisions waiting. Built from the records by rules.
+3. **Goals:** three to five for the week, proposed from what is due and open, which the person confirms, changes or
+   drops. Confirmed goals are kept for the week and read by the morning brief.
+Nothing already on Today is repeated in the briefing; it links to Today instead.

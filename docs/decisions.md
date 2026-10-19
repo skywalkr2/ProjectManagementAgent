@@ -383,6 +383,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   disagreement shown; crediting and chasing kept apart; a confirmed second spelling of two or more words becomes an
   alias, never a bare first name. Decided by the main session.
   **Impact:** design 6.33; roadmap S1-1.
+- **Also (2026-10-19): the designer's notes for S1-2, S1-3 and S2 from their running**
+  (`docs/project/designer-future-notes-2026-10-19.md`), each placed in the batch they named. S1-2: learning from the
+  sent version (a one-to-one match to the draft, the difference a style signal, a copied draft not found sent asked
+  once; the style pair moves here from L-more); lints on drafts to other people (no bookkeeping, openable links, one
+  gap per message, short quotes, never singling a person out); two more endings of a reply owed (answered another way;
+  answered by someone else on the thread, held for Keep); a sender's distribution limit recorded on the source, where
+  narrowing applies at once, widening is the person's, and a draft outside the audience is refused as an invariant
+  because it is decided from the evidence and recipients alone; and "what changed" lines saying what the assistant
+  did, with unseen closes one step away. S1-3: work the assistant releases on its own keeps working and quiet hours.
+  S2: the Monday briefing opens with a copy-ready message to whoever the person reports to (stance 6.34), then the
+  week and three to five confirmed goals, repeating nothing on Today. Decided by the main session.
+  **Impact:** design 6.35 (new) and 6.32 (CHANGES.md section 98); roadmap S1-2 (+3 items), S1-3 (+1), S2, L-more;
+  open items 153 to 157.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

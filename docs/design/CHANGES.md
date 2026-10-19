@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 98. Drafts to other people, replies owed, and the week (2026-10-19, designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Sent version (6.35, new) | The style pair waited for L-more | A sent message matched to its draft ends the reply owed and is a style signal; a copied draft not found sent is asked about once |
+| Drafts to others (6.35) | Only the question rules (6.8) | Lints: no bookkeeping, openable links, one gap per message, short quotes, never singling a person out |
+| Replies owed (6.35) | Sent or "No reply needed" | Also *Answered another way*, and answered by someone else on the thread (held for Keep) |
+| Audience (6.35) | A source had no limit | A sender's limit is the source's audience; a draft outside it is refused, and its packet leaves the source out |
+| What changed (6.35) | One line | Each line says what the assistant did; unseen closes are one step away |
+| Hours (6.35) | Quiet hours for notifications | Everything the assistant releases on its own waits for working hours |
+| Monday briefing (6.32, 6.35) | The week's promises, deadlines, clashes, decisions | A copy-ready message up the line first, then the week, then three to five confirmed goals; nothing from Today repeated |
+
 ## 97. Stance, agent identity, dropped asks and adding from a link (2026-10-19, designed)
 
 | Where | Before | Now |
