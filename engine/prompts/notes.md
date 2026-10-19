@@ -192,6 +192,11 @@ How to answer:
 - When the person's own note says they already asked someone an open question in the list ("I asked them in chat"),
   use "question.mark_sent" with its id (and "on", the day they asked, when the note gives it), so the reply has a
   place to land; never for anything outside content says.
+- A message can limit who may see it: a marking such as "internal only" limits it to the people it went to and came
+  from, which is recorded for you. Never ask or reply to anyone outside that group about what it says. When the message
+  names a smaller group ("only the print team may see this"), narrow it with "source.limit" (the source's id, the
+  people in the group, the group in the message's words, and the exact words as evidence). It only narrows; widening a
+  limit is the person's alone.
 - Every fact says who it rests on ("basis"). Leave it out when the input says it outright: the PM's own note is the
   PM's word, and content from outside is said by its sender. Use "basis": "inferred" when the input doesn't say it and
   you worked it out from the words you quote (a mail about the proofs shipping that suggests an open question is

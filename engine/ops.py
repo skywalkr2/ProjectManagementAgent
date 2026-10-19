@@ -850,6 +850,40 @@ class MailRestoreOp(OpModel):
         return f"Bring back {self.snapshot} from the Set aside folder"
 
 
+class SourceLimitOp(OpModel):
+    """Narrow who may see a message to a group the message names ("only the print team"). The limit only narrows: the
+    group must be among the people the message went to and came from, or within the limit it already has. Applies at
+    once, with Undo; only the person widens it."""
+
+    op: Literal["source.limit"] = "source.limit"
+    id: str = Field(description="The id of the message's source: the input this run was given.")
+    people: list[str] = Field(min_length=1, description="The people in the group, each by name or id.")
+    group: str = Field(min_length=1, max_length=120, description="The group, in the message's own words.")
+    evidence: EvidenceIn = Field(description="The exact words from the message that name the group.")
+
+    def describe(self) -> str | None:
+        return f"Limit message {self.id} to {self.group}"
+
+
+class SourceWidenOp(OpModel):
+    """Widen who may see a message: add people to its audience, or remove the limit. Only the person uses it; Undo puts
+    the narrower audience back."""
+
+    op: Literal["source.widen"] = "source.widen"
+    id: str = Field(description="The id of the message's source.")
+    people: list[str] = Field(default_factory=list, description="The people to add, each by name or id.")
+    open: bool = Field(False, description="True to remove the limit, so anyone may see it.")
+
+    @model_validator(mode="after")
+    def _one_way(self) -> SourceWidenOp:
+        if self.open == bool(self.people):
+            raise ValueError("name the people to add, or set open to remove the limit, not both and not neither")
+        return self
+
+    def describe(self) -> str | None:
+        return f"Remove the limit on message {self.id}" if self.open else f"Widen the limit on message {self.id}"
+
+
 class ListRetireOp(OpModel):
     """Stop offering a value; records that hold it keep it."""
 
@@ -1095,6 +1129,8 @@ Op = Annotated[
     | ListMergeOp
     | ListRetireOp
     | MailRestoreOp
+    | SourceLimitOp
+    | SourceWidenOp
     | ReportDraftOp
     | LessonAddOp
     | LessonUpdateOp
@@ -1152,6 +1188,8 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "list.merge": ListMergeOp,
     "list.retire": ListRetireOp,
     "mail.restore": MailRestoreOp,
+    "source.limit": SourceLimitOp,
+    "source.widen": SourceWidenOp,
     "rule.add": RuleAddOp,
     "rule.retire": RuleRetireOp,
     "report.draft": ReportDraftOp,
@@ -1188,6 +1226,7 @@ PERSON_ONLY_OPS = {
     "question.update",
     "question.move",
     "question.mark_sent",
+    "source.widen",
 }
 
 TIERS: dict[str, Tier] = (
@@ -1226,6 +1265,7 @@ NEEDS_EVIDENCE = {
     "question.done",
     "person.contact",
     "project.role",
+    "source.limit",
 }
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.

@@ -14086,6 +14086,97 @@
         "title": "SortingRuleIn",
         "type": "object"
       },
+      "SourceLimit": {
+        "description": "Who a source's sender limited it to (design 6.35), with the sentence that says so.",
+        "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The group the message names, when the limit was narrowed to it.",
+            "title": "Group"
+          },
+          "marking": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The phrase in the message that limits it.",
+            "title": "Marking"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLimitPerson"
+            },
+            "title": "People",
+            "type": "array"
+          },
+          "why": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sentence of the message that holds the marking.",
+            "title": "Why"
+          },
+          "widened_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the person who widened the limit, when they did.",
+            "title": "Widened By"
+          }
+        },
+        "required": [
+          "people"
+        ],
+        "title": "SourceLimit",
+        "type": "object"
+      },
+      "SourceLimitPerson": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person's id; none for an address no known person holds.",
+            "title": "Id"
+          },
+          "name": {
+            "description": "The person's name, or the address as kept.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SourceLimitPerson",
+        "type": "object"
+      },
       "SourceSecretView": {
         "description": "Where one of a source's secret settings (a password, a private address) is read from, never its value.",
         "properties": {
@@ -14135,6 +14226,17 @@
             "title": "Kind",
             "type": "string"
           },
+          "limit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceLimit"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who its sender limited it to; none when it has no limit."
+          },
           "received_at": {
             "title": "Received At",
             "type": "string"
@@ -14177,6 +14279,28 @@
           "text"
         ],
         "title": "SourceView",
+        "type": "object"
+      },
+      "SourceWiden": {
+        "additionalProperties": false,
+        "description": "The person widening a source's limit: the people to add, or the whole limit removed.",
+        "properties": {
+          "open": {
+            "default": false,
+            "description": "True removes the limit.",
+            "title": "Open",
+            "type": "boolean"
+          },
+          "people": {
+            "description": "The ids of the people to add.",
+            "items": {
+              "type": "string"
+            },
+            "title": "People",
+            "type": "array"
+          }
+        },
+        "title": "SourceWiden",
         "type": "object"
       },
       "SpendStatus": {
@@ -24016,6 +24140,56 @@
           }
         },
         "summary": "Source"
+      }
+    },
+    "/api/sources/{src_id}/widen": {
+      "post": {
+        "description": "The person widens who may see a limited message, or removes the limit, with Undo.",
+        "operationId": "source_widen_api_sources__src_id__widen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "src_id",
+            "required": true,
+            "schema": {
+              "title": "Src Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceWiden"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Source Widen"
       }
     },
     "/api/stages/move": {

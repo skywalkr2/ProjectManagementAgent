@@ -11,11 +11,12 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
+from email.utils import parseaddr
 from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import draft_checks, knowledge, learn, proposals, reply_lines, scope
+from engine import audience, draft_checks, knowledge, learn, proposals, reply_lines, scope
 from engine import search as workspace_search
 from engine import series as series_module
 from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
@@ -73,6 +74,8 @@ from engine.ops import (
     SeriesAddOp,
     SeriesLinkOp,
     SettingProposeOp,
+    SourceLimitOp,
+    SourceWidenOp,
     StageMoveOp,
     TextAcceptOp,
     TextDiscardOp,
@@ -492,6 +495,15 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     f"this looks answered by {known.id}: {known.text} If it doesn't answer this, search for what is "
                     "missing before asking.",
                 )
+        # a draft to someone goes only to people a limited message it draws on may go to (design 6.35)
+        if (isinstance(op, (QuestionAddOp, QuestionMoveOp)) or (isinstance(op, ActionAddOp) and op.reply)) and (
+            why := _audience_problem(view, ctx, op)
+        ) is not None:
+            refuse(i, "audience", why)
+        if isinstance(op, SourceLimitOp) and (found := source_limit_problem(view, ctx, op)) is not None:
+            refuse(i, found[0], found[1])
+        if isinstance(op, SourceWidenOp) and (why := source_widen_problem(view, ctx, op)) is not None:
+            refuse(i, "targets", why)
         # questions to other people
         if isinstance(op, QuestionAddOp):
             resolved = ctx.people.resolve(op.to)
@@ -974,6 +986,114 @@ def _reply_owed_problem(view: Any, ctx: Context, op: ActionAddOp) -> str | None:
         bulk = bool(((snap.data.get("message") if snap is not None else None) or {}).get("bulk"))
     when = datetime.fromisoformat(str(received)) if received else None
     return reply_lines.refusal(view, ctx.cfg, ctx.inputs.raw_input, when, bulk)
+
+
+def _audience_problem(view: Any, ctx: Context, op: QuestionAddOp | QuestionMoveOp | ActionAddOp) -> str | None:
+    """Why a draft to someone can't go to them, or None (design 6.35): a source it draws on (the input's own, the one a
+    quote of its evidence is from, and for a rerouted question the one it was asked from) is limited to people the
+    recipient isn't among. The reader of a reply is the input's sender; a reply owed answers its own message, whose
+    limit never counts against the one who sent it."""
+    evidence = _evidence(op)
+    drawn = [ctx.inputs.source, ctx.inputs.evidence_source(evidence.quote) if evidence is not None else None]
+    if isinstance(op, QuestionAddOp):
+        return audience.recipient_problem(view, ctx.people, drawn, op.to)
+    if isinstance(op, QuestionMoveOp):
+        asked = view.get("question", op.id)
+        return audience.recipient_problem(view, ctx.people, [asked.data.get("source")] if asked else [], op.to)
+    read = reply_lines.read_message(ctx.inputs.raw_input)
+    if read is None:
+        return None  # no sender to read it, so no reader to check
+    if op.reply_owed:
+        drawn = [s for s in drawn if s != ctx.inputs.source]
+    reader = reply_lines.asker_of(ctx.people, ctx.inputs.raw_input) or read.sender
+    return audience.recipient_problem(view, ctx.people, drawn, reader)
+
+
+def _audience_names(ctx: Context, names: list[str]) -> tuple[list[str], str | None]:
+    """People named for an audience, as it keeps them: known people by id, an address as the lowercased address. The
+    second value says which name is neither."""
+    kept: list[str] = []
+    for name in names:
+        resolved = ctx.people.resolve(name)
+        if resolved.status == "ok":
+            who = resolved.person
+        elif "@" in name:
+            who = parseaddr(name)[1].strip().lower() or None
+        else:
+            return kept, f"{name!r} isn't one known person or an address"
+        if who is not None and who not in kept:
+            kept.append(who)
+    return kept, None
+
+
+def _message_people(ctx: Context, source: Any) -> list[str]:
+    """The people a source's message went to and came from, as its saved text says."""
+    text = source_text(Workspace(ctx.store.path.parent), ctx.store, source.id)
+    return audience.people_of(text, ctx.people)
+
+
+def source_limit_problem(view: Any, ctx: Context, op: SourceLimitOp) -> tuple[str, str] | None:
+    """Why the assistant can't narrow a source to a group, as (check, message), or None. It narrows only the message
+    this run was given, and only to people already among those it may go to: the limit it has, else the people the
+    message went to and came from."""
+    found = view.get("source", op.id)
+    if found is None:
+        return "targets", f"there is no source {op.id}"
+    if ctx.actor != "pm" and op.id != ctx.inputs.source:
+        return "targets", "the limit can only be set on this input's own message, not on another"
+    group, bad = _audience_names(ctx, op.people)
+    if bad:
+        return "targets", bad
+    current = found.data.get("audience")
+    allowed = {"people": current["people"] if current else _message_people(ctx, found)}
+    outside = [
+        who
+        for who in group
+        if not audience.within(allowed, ctx.people, who if who in ctx.people.records else None, who)
+    ]
+    if outside:
+        names = ", ".join(ctx.people.name(who) for who in outside)
+        return "audience", f"a limit can only narrow: {names} isn't among the people this message may go to"
+    return None
+
+
+def source_widen_problem(view: Any, ctx: Context, op: SourceWidenOp) -> str | None:
+    """Why a source's limit can't be widened, or None: it has to be limited, and the people to add known."""
+    found = view.get("source", op.id)
+    if found is None:
+        return f"there is no source {op.id}"
+    if not found.data.get("audience"):
+        return f"source {op.id} isn't limited"
+    return _audience_names(ctx, op.people)[1]
+
+
+def _change_audience(tx: Tx, op: SourceLimitOp | SourceWidenOp, ctx: Context, w: WriteContext) -> list[dict[str, Any]]:
+    """Narrow or widen a source's audience, or take the limit off. One field changes, so Undo puts the earlier
+    audience (or none) back."""
+    cur = tx.get("source", op.id)
+    old = cur.data.get("audience")
+    if isinstance(op, SourceLimitOp):
+        group, _ = _audience_names(ctx, op.people)
+        why = (old or {}).get("why") or op.evidence.quote[: audience.WHY_MAX]
+        new: dict[str, Any] | None = {
+            "marking": None,
+            "widened_by": None,
+            **(old or {}),
+            "why": why,
+            "people": group,
+            "group": op.group,
+        }
+    elif op.open:
+        new = None
+    else:
+        added, _ = _audience_names(ctx, op.people)
+        new = {
+            **old,
+            "people": [*old["people"], *(who for who in added if who not in old["people"])],
+            "widened_by": ctx.people.pm,
+        }
+    tx.update("source", op.id, {"audience": new}, w, read_version=cur.version)
+    return [{"kind": "source", "id": op.id}]
 
 
 def _input_project(tx: Any, request_id: str | None, source_id: str | None) -> str | None:
@@ -1676,6 +1796,8 @@ def _apply_op(
         return _correct_question(tx, op, ctx, w), None
     if isinstance(op, ActionReplyOp):
         return _review_reply(tx, op, ctx, w), None
+    if isinstance(op, (SourceLimitOp, SourceWidenOp)):
+        return _change_audience(tx, op, ctx, w), None
     if isinstance(op, RuleAddOp):
         from engine.rules import add_rule
 

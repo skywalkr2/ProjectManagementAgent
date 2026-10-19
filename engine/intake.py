@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from engine import audience
 from engine.config import Config
 from engine.config.schema import ReportedSpeech
 from engine.names import People
@@ -45,6 +46,7 @@ def hand_in(
     now: datetime | None = None,
     data_level: str | None = None,
     project: str | None = None,
+    cfg: Config | None = None,
 ) -> HandedIn:
     note, pasted = note.strip(), pasted.strip()
     if not note and not pasted:
@@ -53,6 +55,10 @@ def hand_in(
         raise IntakeError(f"There is no project {project}.")
     now = now or datetime.now(UTC)
     source_id = None
+    limit = None
+    if pasted:
+        settings = cfg or ws.config()
+        limit = audience.limit_of(pasted, settings.language.limit_markings, People(store, settings))
     with store.transaction() as tx:
         if pasted:
             digest = hashlib.sha256(pasted.encode("utf-8")).hexdigest()
@@ -70,6 +76,7 @@ def hand_in(
                     "content_hash": digest,
                     "trust": "untrusted",
                     "sensitivity": data_level or "internal",
+                    **({"audience": limit} if limit else {}),
                 },
                 _PM,
             ).id

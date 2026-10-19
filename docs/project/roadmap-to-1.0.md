@@ -565,6 +565,11 @@ S1. **Promises, and how they end:**
   person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
   anyone outside an audience is refused (an invariant), and its packet leaves that source out. Exit: a restricted and
   an open message in one area; a draft outside the group draws only on the open one.
+  *Built so far (S1-2):* markings read by rules into the source's audience, `source.limit` (narrow only) and
+  `source.widen` (the person's), the `audience` invariant on questions, reroutes and drafted replies, and "Limited to"
+  with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Left: records made from a limited source
+  carrying the limit (a fact quoted later), and a packet leaving a limited source out once a task drafts to a named
+  recipient.
 - [ ] [S1-2] **What changed since yesterday** (the functional designer's F2, 2026-10-19; added when this plan was cut
   into batches): the gate's first slice names one plain "what changed since yesterday" line, kept in the first slice even
   as one line because it is how the person notices a miss, and no item stood for it. Each line says what the assistant

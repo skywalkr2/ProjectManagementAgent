@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api.screen_text import ScreenText
 from engine.records import KnowledgeEvidence, Scope
@@ -593,6 +593,36 @@ class Origin(BaseModel):
     request: str | None = Field(None, description="The request behind that change, for a change.")
 
 
+class SourceLimitPerson(BaseModel):
+    id: str | None = Field(None, description="The person's id; none for an address no known person holds.")
+    name: str = Field(description="The person's name, or the address as kept.")
+
+
+class SourceLimit(BaseModel):
+    """Who a source's sender limited it to (design 6.35), with the sentence that says so."""
+
+    people: list[SourceLimitPerson]
+    marking: str | None = Field(None, description="The phrase in the message that limits it.")
+    why: str | None = Field(None, description="The sentence of the message that holds the marking.")
+    group: str | None = Field(None, description="The group the message names, when the limit was narrowed to it.")
+    widened_by: str | None = Field(None, description="The name of the person who widened the limit, when they did.")
+
+
+class SourceWiden(BaseModel):
+    """The person widening a source's limit: the people to add, or the whole limit removed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    people: list[str] = Field(default_factory=list, description="The ids of the people to add.")
+    open: bool = Field(False, description="True removes the limit.")
+
+    @model_validator(mode="after")
+    def _one_way(self) -> SourceWiden:
+        if self.open == bool(self.people):
+            raise ValueError("name the people to add, or remove the limit")
+        return self
+
+
 class SourceView(BaseModel):
     id: str
     title: str
@@ -601,6 +631,7 @@ class SourceView(BaseModel):
     received_at: str
     url: str | None
     text: str
+    limit: SourceLimit | None = Field(None, description="Who its sender limited it to; none when it has no limit.")
 
 
 class FollowupQuestion(BaseModel):

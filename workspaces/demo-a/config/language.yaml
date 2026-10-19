@@ -25,6 +25,8 @@ title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to
 bare_confirmation_words: 4
 # Phrases that say the person already sent something (see the unnamed-recipient check).
 already_sent_phrases: [I sent, I've sent, I have sent, I just sent, I emailed, I've emailed, I forwarded, I've forwarded, we sent, we've sent]
+# Phrases with which a sender limits who may see a message (see the audience check).
+limit_markings: [internal only, do not forward, don't forward, not for the client, not for distribution, confidential, for your eyes only]
 # Patterns for a tool's version number, which a question or draft for someone else never holds (see the version-number check).
 version_patterns: ['\b[vV]\d+(?:\.\d+){0,3}\b', '\b\d{1,3}\.\d{1,3}\.\d{1,3}(?:\.\d{1,5})?\b', '(?i)\b(?:version|ver\.?|release|build)\s+\d+(?:\.\d+)*\b']
 # Words that show a project's summary holds findings instead of its status (see the summary-is-status check).

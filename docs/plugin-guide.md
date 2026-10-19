@@ -650,7 +650,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `action.close`, `action.drop`, `action.hold`, `action.move`, `action.part`, `action.reply`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `action.close`, `action.drop`, `action.hold`, `action.move`, `action.part`, `action.reply`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `source.widen`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1258,6 +1258,12 @@ One input the workspace received, such as pasted text; the text is kept by its h
 | `watched.by_you` | bool | `False` | The change is the person's own work, from their source or their names. |
 | `watched.credited_to` | str \| None | `None` | The person or team the source names as the author of all it holds, as an id. |
 | `excerpts` | Literal['allowed', 'never'] | `'allowed'` | never: the person allows using this source but never quoting it beyond a word or two; checks that compare drafts with sources apply a stricter limit to it. Set by the person only. |
+| `audience` | Audience \| None | see below | Who may see what it says, when its sender limited it (design 6.35): a question or reply drawn from it goes only to these people. None means no limit. The assistant may only narrow it (`source.limit`); the person widens it (`source.widen`). |
+| `audience.people` | list[str] | required | The person ids it is limited to; an address no known person holds is kept lowercased. |
+| `audience.marking` | str \| None | `None` | The phrase in the message that limits it, as the rules found it. |
+| `audience.why` | str \| None | `None` | The sentence of the message that holds the marking, or the words that name the group. |
+| `audience.group` | str \| None | `None` | The group the message names, in its own words, when the assistant narrowed the limit to it. |
+| `audience.widened_by` | str \| None | `None` | The id of the person who widened the limit, when they did. |
 | `sensitivity` | Literal['open', 'internal', 'restricted'] | `'internal'` | Its data level, how sensitive its text is: it goes only to AI accounts allowed this level. From the person's choice when they handed it in, or the watched source's setting. Only the person changes it. |
 
 ### `request` (REQ-n)
@@ -2503,6 +2509,29 @@ Propose a change to one setting, when the answer is a setting the PM can change.
 | `setting` | str | required | The setting's code, exactly as the settings list gives it. |
 | `value` | Any | required | Its new value, of the type the settings list shows for it. |
 | `why` | str | required | Why this change answers the question, in one line. |
+
+### `source.limit`
+
+Narrow who may see a message to a group the message names ("only the print team"). The limit only narrows: the group must be among the people the message went to and came from, or within the limit it already has. Applies at once, with Undo; only the person widens it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str | required | The group, in the message's own words. |
+| `id` | str | required | The id of the message's source: the input this run was given. |
+| `people` | list[str] | required | The people in the group, each by name or id. |
+| `evidence` | EvidenceIn | required | The exact words from the message that name the group. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `source.widen`
+
+Widen who may see a message: add people to its audience, or remove the limit. Only the person uses it; Undo puts the narrower audience back.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the message's source. |
+| `people` | list[str] | `[]` | The people to add, each by name or id. |
+| `open` | bool | `False` | True to remove the limit, so anyone may see it. |
 
 ### `stage.move`
 

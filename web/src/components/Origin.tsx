@@ -10,6 +10,7 @@ import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { SafeLink } from "./SafeText";
+import { SourceLimit } from "./SourceLimit";
 
 export function OriginLink(props: { origin?: S["Origin"] | null; /** The link's words, when they are more than "Where it came from". */ label?: string }) {
   const { t } = useWords();
@@ -64,6 +65,7 @@ function SourceDialog(props: { source: string; onClose: () => void }) {
             {s.title} · {dayAndTime(s.received_at)}
             {s.trust === "untrusted" && <span className="tag">{t("source.outside")}</span>}
           </div>
+          {s.limit && <SourceLimit source={props.source} limit={s.limit} />}
           {s.text ? <div className="source-text">{s.text}</div> : <p className="hint">{t("source.not_kept")}</p>}
         </div>
       )}

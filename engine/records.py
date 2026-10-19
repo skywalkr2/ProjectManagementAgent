@@ -570,6 +570,25 @@ class Watched(BaseModel):
     )
 
 
+class Audience(BaseModel):
+    """Who may see a source's content, when its sender limited it: the people it went to and came from, or the group
+    the message names. Anyone else is outside it; the person running the app is never outside."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    people: list[str] = Field(
+        description="The person ids it is limited to; an address no known person holds is kept lowercased."
+    )
+    marking: str | None = Field(None, description="The phrase in the message that limits it, as the rules found it.")
+    why: str | None = Field(
+        None, description="The sentence of the message that holds the marking, or the words that name the group."
+    )
+    group: str | None = Field(
+        None, description="The group the message names, in its own words, when the assistant narrowed the limit to it."
+    )
+    widened_by: str | None = Field(None, description="The id of the person who widened the limit, when they did.")
+
+
 class Source(Record):
     """One input the workspace received, such as pasted text; the text is kept by its hash. The engine adds it when
     something is handed in, and its content never changes; the person may mark how it may be quoted."""
@@ -584,6 +603,7 @@ class Source(Record):
         "url",
         "watched",
         "author",
+        "audience",
     )
     person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"sensitivity": ()}
 
@@ -619,6 +639,12 @@ class Source(Record):
         "allowed",
         description="never: the person allows using this source but never quoting it beyond a word or two; checks "
         "that compare drafts with sources apply a stricter limit to it. Set by the person only.",
+    )
+    audience: Audience | None = Field(
+        None,
+        description="Who may see what it says, when its sender limited it (design 6.35): a question or reply drawn "
+        "from it goes only to these people. None means no limit. The assistant may only narrow it (`source.limit`); "
+        "the person widens it (`source.widen`).",
     )
     sensitivity: Literal["open", "internal", "restricted"] = Field(
         "internal",

@@ -119,7 +119,10 @@ from api.schemas import (
     SendBack,
     SentCounts,
     SentText,
+    SourceLimit,
+    SourceLimitPerson,
     SourceView,
+    SourceWiden,
     SpendStatus,
     StageHistoryEntry,
     StageMove,
@@ -1284,7 +1287,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def handin(body: HandIn) -> Handed:
         handed = guard(
             lambda: hand_in(
-                ws, store, note=body.note, pasted=body.pasted, data_level=body.data_level, project=body.project
+                ws,
+                store,
+                note=body.note,
+                pasted=body.pasted,
+                data_level=body.data_level,
+                project=body.project,
+                cfg=cfg,
             )
         )
         changed()
@@ -1509,7 +1518,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             raise HTTPException(status_code=409, detail="That question is already answered.")
         values = {"name": People(store, cfg).name(q.data["to"]), "title": q.data["title"], "question": qid}
         note = render("reply", values, ws.root)
-        handed = guard(lambda: hand_in(ws, store, note=note, pasted=body.text))
+        handed = guard(lambda: hand_in(ws, store, note=note, pasted=body.text, cfg=cfg))
         changed()
         worker.poke()
         return Handed(request=handed.request, source=handed.source)
@@ -1643,7 +1652,31 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             received_at=str(d["received_at"]),
             url=d.get("url"),
             text=source_text(ws, store, src.id),
+            limit=_limit_view(d.get("audience")),
         )
+
+    def _limit_view(found: dict[str, Any] | None) -> SourceLimit | None:
+        if not found:
+            return None
+        who = People(store, cfg)
+        return SourceLimit(
+            people=[SourceLimitPerson(id=p if p in who.records else None, name=who.name(p)) for p in found["people"]],
+            marking=found.get("marking"),
+            why=found.get("why"),
+            group=found.get("group"),
+            widened_by=who.name(found["widened_by"]) if found.get("widened_by") else None,
+        )
+
+    @r.post("/sources/{src_id}/widen")
+    def source_widen(src_id: str, body: SourceWiden) -> Applied:
+        """The person widens who may see a limited message, or removes the limit, with Undo."""
+        from engine.applier import apply_as_person
+
+        need("source", src_id)
+        op = {"op": "source.widen", "id": src_id, "people": body.people, "open": body.open}
+        cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Widened who may see a message"))
+        changed()
+        return Applied(changeset=cs_id)
 
     @r.get("/followups")
     def followups() -> list[FollowupSection]:

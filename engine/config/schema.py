@@ -1473,6 +1473,15 @@ class LanguageFile(FileModel):
         "went to, a question or action that names a recipient for it is returned: the assistant asks the person "
         "who it went to instead of guessing.",
     )
+    limit_markings: list[str] = Field(
+        default_factory=lambda: [
+            *("internal only", "do not forward", "don't forward", "not for the client"),
+            *("not for distribution", "confidential", "for your eyes only"),
+        ],
+        description="Phrases (whole words, ignoring case) with which a sender limits who may see a message. When the "
+        "new text of a message holds one, the message is limited to the people it went to and came from: a question "
+        "or reply drafted from it to anyone else is refused, until the person widens the limit.",
+    )
     version_patterns: list[str] = Field(
         default_factory=lambda: list(DEFAULT_VERSION_PATTERNS),
         description="Patterns (regular expressions) for a tool's version number, such as v2.3 or build 1042. A "

@@ -1043,6 +1043,15 @@ yet follow, that it is *designed*, with its phase.
 | Settings (4.0) | None | `steward.reply_thread_days` (14): how far apart two messages with the same subject and a person in common may be to count as one conversation, until the mail details carry thread headers; demo values in both fictional workspaces |
 | Not yet | | Learning a style from the sent version, drafting rules for messages to others, sending (S1b) |
 
+## 103. A sender's limit travels with the content (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Audience (6.35) | A source had no limit, so a draft could carry a message marked "internal only" to anyone | A marking in a message's new text (`language.limit_markings`, demo values in both fictional workspaces) gives its source an `audience`: the people it went to and came from, with the marking and its sentence. The invariant `audience` refuses a question, a reroute or a drafted reply to anyone outside the audience of a source it draws on, naming who the message is limited to. Built: `tests/test_audience.py` |
+| Ops (6.7) | None | `source.limit` (data tier, evidence): the assistant narrows an audience to a group the message names, never widens; `source.widen` (person-only): add people or remove the limit, recorded with `widened_by`, with Undo |
+| Screens (7.14) | The saved text of an input showed only its title and date | A limited source says "Limited to: <names>" with the sentence that limits it, and Widen (pick a person from the list, or Remove the limit) with an Undo toast. Built: `web/src/components/SourceLimit.test.tsx` |
+| Not yet | | Records made from a limited source carrying the limit themselves; leaving a limited source out of a packet (no task drafts to a recipient named in its request today) |
+
 ## 102. A rejected ask is dropped (2026-10-19)
 
 | Where | Before | Now |

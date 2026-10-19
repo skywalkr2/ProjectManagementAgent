@@ -2924,6 +2924,20 @@ for Keep, whose line names who answered, and the open list a run reads marks eac
 - Proven with a restricted and an open message in one area: a draft to someone outside the group draws only on the open
   one, and a draft to the group may draw on both.
 
+*Built so far (S1-2, the limit on a source):* a message whose new text (not its quoted history) holds one of the
+`language.limit_markings` phrases (whole words, ignoring case) gives its source an `audience`: the people on its From,
+To and Cc lines, known people by id and anyone else by lowercased address, with the `marking` and the sentence it was in
+(`why`); no marking, or a text with no From and To lines, means no limit. `source.limit` (data tier, evidence, only on
+the input's own message) narrows the audience to a group the message names and refuses a widening; `source.widen`
+(person-only) adds people or removes the limit, records `widened_by`, and Undo restores the narrower audience. The
+invariant `audience` refuses a `question.add`, a rerouted `question.move`, or an `action.add` with a drafted `reply`
+when a source it draws on (the input's own, the one a quote of its evidence is from, a rerouted question's own; a reply
+owed does not count the message it answers) has an audience the recipient is not in; the person is never outside one.
+The saved text of a limited source shows "Limited to: <names>" with the sentence and a Widen choice with Undo
+(`tests/test_audience.py`, `web/src/components/SourceLimit.test.tsx`). Not yet: records made from a limited source do
+not carry the limit themselves, and no packet leaves a limited source out, because no task drafts to a recipient named
+in its request today.
+
 **What changed since yesterday says what the assistant did (S1-2).** Each line names the act and its reason in the
 assistant's own voice ("Closed the floor plan promise: the owner said it was sent"), and anything the assistant closed,
 moved or merged without the person seeing it is one step from the line: the record, its evidence and its Undo.

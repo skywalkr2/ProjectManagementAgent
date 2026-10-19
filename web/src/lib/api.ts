@@ -54,6 +54,7 @@ export const api = {
   changes: () => call<S["ChangeItem"][]>("GET", "changes"),
   todayQueue: () => call<S["QueueLineView"][]>("GET", "today/queue"),
   source: (src: string) => call<S["SourceView"]>("GET", `sources/${id(src)}`),
+  widenSource: (src: string, body: S["SourceWiden"]) => call<S["Applied"]>("POST", `sources/${id(src)}/widen`, body),
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
 
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),

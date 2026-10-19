@@ -28,8 +28,10 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
+from engine import audience
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.extract.attached import with_files_read
+from engine.names import People
 from engine.storage import StoreError, WriteContext
 from engine.triage import classify
 
@@ -670,8 +672,13 @@ def _hand_in(
     order. The records are written as `ctx`. `extra`: more fields for the request (a first read taking a source in
     holds it for one go); a request closed at once keeps only its `intake` mark."""
     folded = [] if closed else _waiting_for(tx, source.id, item.key)
+    earlier = [_read_text(ws, tx.get("source", r.data["source"]).data["content_hash"]) for r in folded]
+    # A sender's limit on any of the messages read together limits them all, to the people every limit holds.
+    known = People.from_records(
+        {p.id: p.data for p in tx.list("person")}, cfg.workspace.user.person, self_words=cfg.language.self_words
+    )
+    limit = audience.narrowest(audience.limit_of(t, cfg.language.limit_markings, known) for t in (text, *earlier))
     if folded:
-        earlier = [_read_text(ws, tx.get("source", r.data["source"]).data["content_hash"]) for r in folded]
         text = "\n\nThen:\n\n".join([*earlier, text])
     digest = _keep_text(ws, text)
     received = item.message.received if item.message is not None and item.message.received else None
@@ -689,6 +696,7 @@ def _hand_in(
             "projects": [source.project] if source.project else [],
             "sensitivity": data_level_of(cfg, source),
             "url": item.link,
+            **({"audience": limit} if limit else {}),
             "watched": {
                 "source": source.id,
                 "key": item.key,
