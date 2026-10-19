@@ -459,7 +459,7 @@ function reviewParts(line: QueueLine) {
   return { kinds, done, refusedOnly };
 }
 
-/** What an intake's results were, in the order a person thinks of them: "3 actions, 2 questions, 4 held for you". */
+/** What an intake's results were, in the order a person thinks of them: "3 actions, 2 questions, 4 waiting for you". */
 const INTAKE_KINDS = [...REVIEW_KINDS, "other", "held", "refused"] as const;
 
 function useIntakeWords(): (line: QueueLine) => string {

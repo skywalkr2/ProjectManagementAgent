@@ -258,7 +258,7 @@ const intakeReview: Line = line("intake_review", {
 test("what a new source's intake found is one review line that counts it in plain words", async () => {
   show([intakeReview]);
   expect(await screen.findByText("Look over what was found in Inbox: 4 items")).toBeInTheDocument();
-  expect(within(row("intake_review")).getByText("3 actions, 2 questions, 4 held for you")).toBeInTheDocument();
+  expect(within(row("intake_review")).getByText("3 actions, 2 questions, 4 waiting for you")).toBeInTheDocument();
 });
 
 test("Look over opens the changes and marks the intake seen, and Undo puts the line back", async () => {

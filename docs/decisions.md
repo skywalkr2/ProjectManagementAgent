@@ -347,8 +347,9 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   the designer's miss was old open items in a tracker. Decided by the main session.
   **Impact:** design 6.32, 6.4, 4 and 5 (CHANGES.md section 93).
 - **Also (2026-10-19): a UI/UX review gate after phase B (owner).** After batch B-6b the UI/UX designer re-reviews the
-  whole UI from screenshots of every main screen at the tested widths, light and dark, and the list of UI changes since
-  their last review; their accepted feedback is built in batch B-7, before the gate week. The roadmap is regrouped into
+  whole UI: the "UI/UX design review" session (session_013bf5ZXfFsJPS4pTXMTMxYc) runs on this repository and builds the
+  screens itself, so the main session sends it the commit and the list of UI changes since its last review; the
+  feedback the owner accepts is built in batch B-7, before the gate week. The roadmap is regrouped into
   batches, one piece of scope per full run and push, with finished work moved to `docs/project/roadmap-done.md`.
   **Impact:** roadmap order only; no design change.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
