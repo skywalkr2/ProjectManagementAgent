@@ -1849,6 +1849,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("reported_by", "person"),
         ("promised_to[]", "person"),
         ("said_by", "person"),
+        ("asker", "person"),
         ("due_event", "event"),
         ("source", "source"),
     ],
