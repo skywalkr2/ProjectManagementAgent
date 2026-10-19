@@ -525,7 +525,7 @@ test("an empty mail card says the mailbox wasn't read when there was no network,
   });
   const col = await column("Came in");
   expect(await within(col).findByText("Your mail couldn't be read, so this list may be missing messages.")).toBeInTheDocument();
-  expect(within(col).getByRole("alert")).toHaveTextContent("Work mail wasn't read: there is no network connection. It is tried again by itself.");
+  expect(within(col).getByRole("alert")).toHaveTextContent("Work mail couldn't be checked without an internet connection. It will retry automatically.");
   expect(within(col).queryByText("No mail has come in lately.")).toBeNull();
   expect(await within(await column("Agenda")).findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
 });
@@ -546,4 +546,18 @@ test("Check now says which source couldn't be read and why, in place of only a c
   expect(
     await screen.findByText("Nothing new. Source b can't be read: the service refused the sign-in. Sign in to it again, then it is read on its next turn."),
   ).toBeInTheDocument();
+});
+
+test("empty panels show no count of zero, in words or as a badge", async () => {
+  open({
+    "GET today/agenda": () => [],
+    "GET today/todo": () => [],
+    "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
+  });
+  expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+  expect(document.body).not.toHaveTextContent(/\b0 (events|things|messages)/);
+  for (const column of ["agenda", "todo", "arrived"]) {
+    const col = document.querySelector(`[data-col="${column}"]`) as HTMLElement;
+    expect(within(col).queryByText("0")).toBeNull();
+  }
 });

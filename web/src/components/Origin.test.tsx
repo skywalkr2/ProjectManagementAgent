@@ -77,7 +77,7 @@ test("a decision whose input has no address opens the saved text in a dialog", a
   await user.click(within(row).getByRole("button", { name: "Where it came from" }));
   const dialog = await screen.findByRole("dialog", { name: "Where it came from" });
   expect(await within(dialog).findByText("Thanks. The proof ships on Friday.")).toBeInTheDocument();
-  expect(within(dialog).getByText("outside content")).toBeInTheDocument();
+  expect(within(dialog).getByText("someone else's material")).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Close" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });

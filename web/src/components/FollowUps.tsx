@@ -669,13 +669,13 @@ function sentLine(date: string | null, days: number | null, project: string, tn:
   return [project, when].filter(Boolean).join(" · ");
 }
 
-/** "waiting 5d", in the warning color and with "follow up" added once the follow-up rule says it is time. */
+/** "waiting 5 days", in the warning color and with "follow up" added once the follow-up rule says it is time. */
 function WaitingPill(props: { days: number | null; chase: boolean }) {
-  const { t } = useWords();
+  const { tn } = useWords();
   if (props.days === null) return null;
   return (
     <span className={props.chase ? "pill k-risk" : "pill k-wait"}>
-      {t(props.chase ? "followups.waiting_pill.chase" : "followups.waiting_pill", { n: props.days })}
+      {props.chase ? tn("followups.waiting_pill.chase", props.days) : tn("followups.waiting_pill", props.days)}
     </span>
   );
 }

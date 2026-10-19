@@ -89,7 +89,7 @@ export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
                   <p className={styles.text}>{t("alive.runs_none")}</p>
                 ) : (
                   <ul className={styles.rows}>
-                    {a.runs_today.map((r) => (
+                    {a.runs_today.filter((r) => r.count > 0).map((r) => (
                       <li key={r.account} className={styles.text}>
                         {tn("alive.runs_row", r.count, { account: nameOf(r.account), failed: r.failed ? t("alive.runs_failed", { failed: r.failed }) : "" })}
                       </li>

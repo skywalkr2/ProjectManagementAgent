@@ -51,7 +51,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Today",
     "What changed",
     "Follow-ups",
-    "Waiting to go out",
+    "Drafts to approve",
     "Stages",
     "Goals",
     "Projects",
@@ -100,11 +100,11 @@ test("with the sidebar collapsed to a rail, each icon still has its name, and th
   const stages = await screen.findByRole("link", { name: "Stages" });
   while (document.activeElement !== stages) await user.tab();
   expect(await screen.findByRole("tooltip")).toHaveTextContent("Stages");
-  await user.click(screen.getByRole("button", { name: "Pin the sidebar open" }));
+  await user.click(screen.getByRole("button", { name: "Keep the side menu open" }));
   expect(onToggle).toHaveBeenCalledTimes(1);
 });
 
 test("the toggle collapses a sidebar that shows labels", async () => {
   show({ expanded: true });
-  expect(await screen.findByRole("button", { name: "Collapse the sidebar" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Hide the side menu" })).toBeInTheDocument();
 });

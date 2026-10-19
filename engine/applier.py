@@ -2151,7 +2151,7 @@ def fold_unowned(
         if target.version != read_version:
             raise StoreError(f"action {into} changed since it was read")
         cs_id = tx.new_id("changeset")
-        summary = "Added an action to another one"
+        summary = "Combined two to-dos"
         request = tx.create(
             "request",
             {

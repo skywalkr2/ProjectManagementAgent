@@ -16,7 +16,7 @@ test("with no backup folder it says so, starting with what to do, and opens the 
   const user = userEvent.setup();
   const { onOpenGuide } = show({ configured: false, needs_attention: true });
   const line = await screen.findByRole("region", { name: "Backup" });
-  expect(line).toHaveTextContent("Choose a backup folder. No off-device backup is set up.");
+  expect(line).toHaveTextContent("Choose a folder for backups on another device.");
   await user.click(screen.getByRole("button", { name: "Set up backups" }));
   expect(onOpenGuide).toHaveBeenCalledWith("backup");
 });
@@ -25,7 +25,7 @@ test("with a folder but no backup yet it says so and offers Back up now", async 
   const user = userEvent.setup();
   const { calls } = show({ configured: true, needs_attention: true }, { "POST backup": () => statusFixture() });
   const line = await screen.findByRole("region", { name: "Backup" });
-  expect(line).toHaveTextContent("Back up now. No backup has succeeded yet.");
+  expect(line).toHaveTextContent("Back up now. No backup has worked yet.");
   await user.click(screen.getByRole("button", { name: "Back up now" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST backup")).toBe(true));
 });
@@ -48,7 +48,7 @@ test("it is gone while a backup is current", async () => {
 
 test("an encrypted backup says so on the line", async () => {
   show({ configured: true, needs_attention: true, age_hours: 100, encrypted: true });
-  expect(await screen.findByRole("region", { name: "Backup" })).toHaveTextContent("The backups are encrypted.");
+  expect(await screen.findByRole("region", { name: "Backup" })).toHaveTextContent("Backups are protected with encryption.");
 });
 
 test("the button is at the end of the row, as on the setup line, whichever button it is", async () => {

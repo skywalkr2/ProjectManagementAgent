@@ -251,7 +251,7 @@ export function TodayQueue(props: {
           title={t("today.needs.title")}
           flush
           count={
-            count === null ? null : (
+            count === null || count === 0 ? null : (
               <>
                 <span aria-hidden="true">{count}</span>
                 <span className="sr">{tn("today.needs.count", count)}</span>

@@ -133,7 +133,7 @@ test("a kind whose details this screen can't ask for says so, and Add stays off"
   renderApp(<AddFile onClose={() => undefined} />);
   await user.selectOptions(await screen.findByRole("combobox", { name: "What it's for" }), "demo/odd");
   await user.upload(fileInput(), text());
-  expect(screen.getByText("This kind of file needs details this screen can't ask for yet.")).toBeInTheDocument();
+  expect(screen.getByText("This file needs details you can't enter here yet.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
 });
 
@@ -146,7 +146,7 @@ test("a file that is too big or the wrong type is turned away before sending, in
   expect(await screen.findByRole("alert")).toHaveTextContent("big.txt is larger than 1 MB.");
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   await user.upload(fileInput(), new File(["x"], "page.html", { type: "text/html" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Files of type text/html can't be added as this kind of file.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("You can't use a text/html file for this purpose.");
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   expect(calls.some((c) => c.route.startsWith("POST files"))).toBe(false);
 });

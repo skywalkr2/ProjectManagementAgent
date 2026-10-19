@@ -162,7 +162,7 @@ test("the default view hides what was already sent; Waiting on them shows it, on
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => waitingSections(), "GET people": () => [] });
   renderApp(<FollowUps />);
-  expect(await screen.findByText("Nothing left to send. Anything you have sent is under Waiting on them.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing left to send. Sent messages are under Waiting on them.")).toBeInTheDocument();
   expect(screen.queryByText("Is the index final?")).toBeNull();
   expect(screen.queryByRole("button", { name: /Copy/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Waiting on them" }));
@@ -174,7 +174,7 @@ test("the default view hides what was already sent; Waiting on them shows it, on
   expect(rows[0]).toHaveTextContent(/sent .* \(2 days\)/);
   expect(rows[1]).toHaveTextContent(/sent .* \(1 day\)/);
   expect(within(rows[0]).getByRole("button", { name: "Record reply" })).toBeInTheDocument();
-  expect(within(rows[1]).getByRole("button", { name: "They finished it" })).toBeInTheDocument();
+  expect(within(rows[1]).getByRole("button", { name: "Mark their work done" })).toBeInTheDocument();
   expect(screen.queryByRole("textbox")).toBeNull();
 });
 
@@ -184,7 +184,7 @@ test("Waiting on them has its own empty state, and the PM's decisions stay under
   renderApp(<FollowUps />);
   expect(await screen.findByRole("heading", { name: "You" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Waiting on them" }));
-  expect(screen.getByText(/Nobody is waiting on you to hear back/)).toBeInTheDocument();
+  expect(screen.getByText(/You're not waiting for any replies/)).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "You" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "To send" }));
   expect(screen.getByRole("heading", { name: "You" })).toBeInTheDocument();
@@ -201,7 +201,7 @@ test("a waiting question takes its reply right on its line", async () => {
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   await user.click(screen.getByRole("button", { name: "Record reply" }));
   await user.type(screen.getByRole("textbox", { name: /Robin's reply/ }), "Yes, the index is final.");
-  await user.click(screen.getByRole("button", { name: "Hand in reply" }));
+  await user.click(screen.getByRole("button", { name: "Add reply" }));
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST questions/Q-1/reply")?.body).toEqual({ text: "Yes, the index is final." }),
   );
@@ -221,28 +221,28 @@ function chaseSections(): S["FollowupSection"][] {
   return waiting;
 }
 
-test("They finished it closes the action as the person's work and offers Undo", async () => {
+test("Mark their work done closes the action as the person's work and offers Undo", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({ "GET followups": () => waitingSections(), "GET people": () => [], ...finishRoutes });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   expect(screen.queryByRole("button", { name: "Followed up" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "They finished it" }));
+  await user.click(screen.getByRole("button", { name: "Mark their work done" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/finished")).toBe(true));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/status")?.body).toEqual({ status: "open" }));
 });
 
-test("once the follow-up rule says it is time, Followed up is the primary and They finished it moves to the row's menu", async () => {
+test("once the follow-up rule says it is time, Followed up is the primary and Mark their work done moves to the row's menu", async () => {
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => chaseSections(), "GET people": () => [], ...finishRoutes });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const row = screen.getByText("Send the index").closest("li") as HTMLElement;
   expect(within(row).getByRole("button", { name: "Followed up" })).toBeInTheDocument();
-  expect(within(row).queryByRole("button", { name: "They finished it" })).toBeNull();
+  expect(within(row).queryByRole("button", { name: "Mark their work done" })).toBeNull();
   await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
-  expect(await screen.findByRole("menuitem", { name: "They finished it" })).toBeInTheDocument();
+  expect(await screen.findByRole("menuitem", { name: "Mark their work done" })).toBeInTheDocument();
 });
 
 test("Followed up records the chase, says so on the row and can be undone", async () => {
@@ -253,7 +253,7 @@ test("Followed up records the chase, says so on the row and can be undone", asyn
   await user.click(screen.getByRole("button", { name: "Followed up" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")).toBe(true));
   expect(calls.some((c) => c.route === "POST actions/ACT-1/status")).toBe(false);
-  expect(await screen.findByText("Recorded that you followed up with Robin. It stays open.")).toBeInTheDocument();
+  expect(await screen.findByText("Recorded your follow-up with Robin. It stays open.")).toBeInTheDocument();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST followups/PER-2/actions/ACT-1/unfollow")?.body).toEqual({
@@ -314,10 +314,24 @@ test("a waiting pill says how long, and says follow up in words as well as color
   fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
-  const calm = screen.getByText("waiting 3d");
+  const calm = screen.getByText("waiting 3 days");
   expect(calm).toHaveClass("k-wait");
-  const late = screen.getByText("waiting 6d · follow up");
+  const late = screen.getByText("waiting 6 days · follow up");
   expect(late).toHaveClass("k-risk");
+});
+
+test("one day of waiting is singular, in the pill and with follow up", async () => {
+  const user = userEvent.setup();
+  const waiting = waitingSections();
+  waiting[0].actions[0].told_days = 1;
+  waiting[0].questions[0].waiting_days = 1;
+  waiting[0].questions[0].chase_due = true;
+  fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  expect(screen.getByText("waiting 1 day")).toHaveClass("k-wait");
+  expect(screen.getByText("waiting 1 day · follow up")).toHaveClass("k-risk");
+  expect(document.body).not.toHaveTextContent("1 days");
 });
 
 test("an action on hold shows what it waits for with its old due date in the tooltip, and is not chased", async () => {
@@ -464,7 +478,7 @@ test("the table is on screen before anything is copied: actions by due date with
   renderApp(<FollowUps />);
   await showTable(user);
   const [actions, questions] = screen.getAllByRole("table");
-  expect(within(actions).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Project", "Action", "Due", "Link", "Your update"]);
+  expect(within(actions).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Project", "To-do", "Due", "Link", "Your update"]);
   expect(within(questions).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Project", "Question", "First asked", "Link", "Your answer"]);
   const bodyRows = (table: HTMLElement) => within(table).getAllByRole("row").slice(1);
   const a = bodyRows(actions).map((r) => within(r).getAllByRole("cell").map((c) => c.textContent));
@@ -517,7 +531,7 @@ test("Copy as table puts an HTML table on the clipboard and Copy for a spreadshe
   await showTable(user);
   await user.click(screen.getByRole("button", { name: "Copy for a spreadsheet" }));
   const sheet = await navigator.clipboard.readText();
-  expect(sheet.split("\n")[0]).toBe("Project\tAction\tDue\tLink\tYour update");
+  expect(sheet.split("\n")[0]).toBe("Project\tTo-do\tDue\tLink\tYour update");
   expect(sheet).toContain("Send the index");
   expect(sheet).toContain(`${WEB}example.com/book`);
   expect(sheet).not.toContain("Book page");
@@ -564,7 +578,7 @@ test("the two copy buttons are named for where the table goes, with one hint, an
   const buttons = screen.getAllByRole("button").map((b) => b.textContent);
   const at = buttons.indexOf("Copy as table");
   expect(buttons.slice(at, at + 3)).toEqual(["Copy as table", "Copy for a spreadsheet", "Mark sent"]);
-  expect(screen.getByText(/For a spreadsheet.*copies tab-separated cells with full web addresses/)).toBeInTheDocument();
+  expect(screen.getByText(/Copy for a spreadsheet to paste into cells/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Copy as table" }));
   await user.click(screen.getAllByRole("button", { name: "Mark sent" })[0]);
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/mark-sent")).toBe(true));
@@ -653,7 +667,7 @@ test("a person who hasn't answered gets a drafted nudge: the items, the box with
   expect(calls.filter((c) => c.route.startsWith("POST"))).toHaveLength(0);
   await user.click(within(card).getByRole("button", { name: "Mark sent" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST followups/PER-4/followed-up")?.body).toEqual({ text: nudgeText + " PS", question_ids: ["Q-7"], action_ids: [] }));
-  expect(await screen.findByText(/Recorded that you followed up with Quinn/)).toBeInTheDocument();
+  expect(await screen.findByText(/Recorded your follow-up with Quinn/)).toBeInTheDocument();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST followups/PER-4/unfollow")?.body).toEqual({

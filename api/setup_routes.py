@@ -912,7 +912,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             cost = "its cost can't be estimated" if plan.usd is None else f"it would cost about ${plan.usd:.2f}"
             raise HTTPException(
                 status_code=409,
-                detail=f"Measuring needs your go first: {cost}, and you asked to be asked about that.",
+                detail=f"Testing needs your confirmation first: {cost}, and you asked to be asked about that.",
             )
         refs = [f"{account}/{short}" for short in plan.models]
         already = measure.begin(ws, refs)

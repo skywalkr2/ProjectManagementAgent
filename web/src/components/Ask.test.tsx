@@ -149,7 +149,7 @@ test("a suggested setting shows its label, value and why, and Apply sends the cu
   const row = await item("Question a");
   await waitFor(() => expect(row).toHaveTextContent("How many things: 8"));
   expect(row).toHaveTextContent("You asked for more.");
-  await user.click(await within(row).findByRole("button", { name: "Apply: How many things" }));
+  await user.click(await within(row).findByRole("button", { name: "Make this change: How many things" }));
   await waitFor(() =>
     expect(sent(calls, "POST setting-proposals/sp1/apply")).toEqual({ fingerprint: "fp-1", read_version: 3 }),
   );
@@ -183,7 +183,7 @@ test("a suggestion that changed since it was read is refused in words", async ()
     "POST setting-proposals/sp1/apply": () => new Refuse(409, "That suggestion changed since you saw it."),
   });
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: /^Apply/ }));
+  await user.click(await screen.findByRole("button", { name: /^Make this change/ }));
   expect(await screen.findByRole("alert")).toHaveTextContent("That suggestion changed since you saw it.");
 });
 
@@ -202,8 +202,8 @@ test("a suggestion already dealt with says so and offers nothing", async () => {
   const proposal: S["SettingProposalView"] = { id: "sp1", version: 4, key: "demo.thing", value: 8, why: "", status: "applied" };
   open([ask("a", { state: "done", answer: { text: "Done.", cites: [] }, proposals: [proposal] })]);
   const row = await item("Question a");
-  expect(row).toHaveTextContent("Applied");
-  expect(within(row).queryByRole("button", { name: /^Apply/ })).toBeNull();
+  expect(row).toHaveTextContent("Changed");
+  expect(within(row).queryByRole("button", { name: /^Make this change/ })).toBeNull();
 });
 
 test("Copy puts the draft report on the clipboard; Mark sent then records it", async () => {
@@ -238,7 +238,7 @@ const withReport = (report: S["ReportView"], feedbackTo: string | null | undefin
 test("with an address a report has a mail link with its title and text encoded, beside Copy", async () => {
   withReport(draft(), "feedback@example.com");
   const row = await item("Question a");
-  const link = within(row).getByRole("link", { name: "Open in your mail: A missing button" });
+  const link = within(row).getByRole("link", { name: "Open in your email app: A missing button" });
   expect(link).toHaveAttribute(
     "href",
     `mailto:feedback@example.com?subject=${encodeURIComponent("A missing button")}&body=${encodeURIComponent("It would help\r\nto have one.")}`,
@@ -267,12 +267,12 @@ test("opening the report in the mail program makes Mark sent the main action, an
   const { calls } = withReport(draft(), "feedback@example.com", { "POST reports/rp1/sent": () => ({ id: "rp1" }) });
   const user = userEvent.setup();
   const row = await item("Question a");
-  const link = within(row).getByRole("link", { name: "Open in your mail: A missing button" });
+  const link = within(row).getByRole("link", { name: "Open in your email app: A missing button" });
   // The browser would follow the link; the test only checks what the page does about the click.
   link.addEventListener("click", (e) => e.preventDefault());
   await user.click(link);
   expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveClass("primary");
-  expect(within(row).getByRole("link", { name: "Open in your mail: A missing button" })).not.toHaveClass("primary");
+  expect(within(row).getByRole("link", { name: "Open in your email app: A missing button" })).not.toHaveClass("primary");
   expect(calls.some((c) => c.route === "POST reports/rp1/sent")).toBe(false);
   await user.click(within(row).getByRole("button", { name: "Mark sent: A missing button" }));
   await waitFor(() => expect(sent(calls, "POST reports/rp1/sent")).toEqual({ read_version: 2 }));
@@ -285,7 +285,7 @@ test("copying a report with a mail link also makes Mark sent the main action", a
   await user.click(within(row).getByRole("button", { name: "Copy: A missing button" }));
   expect(await navigator.clipboard.readText()).toBe("A missing button\n\nIt would help\nto have one.");
   expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveClass("primary");
-  expect(within(row).getByRole("link", { name: "Open in your mail: A missing button" })).toBeInTheDocument();
+  expect(within(row).getByRole("link", { name: "Open in your email app: A missing button" })).toBeInTheDocument();
 });
 
 test("when copying is blocked the report is not marked sent", async () => {

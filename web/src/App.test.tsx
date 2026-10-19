@@ -25,15 +25,15 @@ const rc = (extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] => ({
   ...extra,
 });
 
-test("the Help menu says the version and opens Send feedback, and focus comes back to the Help button", async () => {
+test("the Help menu says the version and opens Write feedback, and focus comes back to the Help button", async () => {
   fakeApi({ "GET panels": () => [], "GET asks": () => [] });
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
   const help = screen.getByRole("button", { name: "Help" });
   await user.click(help);
   expect(screen.getByRole("menuitem", { name: "Version 9.8.7" })).toHaveAttribute("aria-disabled", "true");
-  await user.click(screen.getByRole("menuitem", { name: "Send feedback" }));
-  const dialog = screen.getByRole("dialog", { name: "Send feedback" });
+  await user.click(screen.getByRole("menuitem", { name: "Write feedback" }));
+  const dialog = screen.getByRole("dialog", { name: "Write feedback" });
   await user.type(screen.getByLabelText("What happened, or what would help?"), "Hello");
   expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe("Hello\n\nApp version: 9.8.7\nScreen: Today");
   await user.keyboard("{Escape}");
@@ -77,7 +77,7 @@ test("Connect on Today's empty card opens Sources with the add form open, and on
   expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
   expect(await screen.findByRole("form", { name: "Add a source" })).toBeInTheDocument();
   // Going away and coming back by the views doesn't open it again.
-  await user.click(screen.getByRole("link", { name: "Workspace, go to Today" }));
+  await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
   await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Sources" }));
   expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
@@ -90,7 +90,7 @@ test("the workspace name goes to Today from any screen", async () => {
   const user = userEvent.setup();
   await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Sources" }));
   expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
-  await user.click(screen.getByRole("link", { name: "Workspace, go to Today" }));
+  await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
 });
 
@@ -108,9 +108,9 @@ test("an address names the view it opens, and the sidebar marks it", async () =>
   window.location.hash = "#work/outgoing";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  expect(await screen.findByRole("heading", { level: 1, name: "Waiting to go out" })).toBeInTheDocument();
-  expect(screen.getByText("Nothing waiting to go out. Drafts appear here for your approval.")).toBeInTheDocument();
-  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out", current: "page" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Drafts to approve" })).toBeInTheDocument();
+  expect(screen.getByText("No drafts waiting for approval.")).toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Drafts to approve", current: "page" })).toBeInTheDocument();
 });
 
 test("the projects and people views open the people and projects screen at their own part", async () => {
@@ -138,8 +138,8 @@ test("going to another view moves focus to its heading, but the first load does 
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
   expect(await screen.findByRole("heading", { level: 1, name: "Today" })).not.toHaveFocus();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out" }));
-  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Waiting to go out" })).toHaveFocus());
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Drafts to approve" }));
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Drafts to approve" })).toHaveFocus());
 });
 
 test("Today's heading carries the date, and every view has one h1", async () => {
@@ -156,7 +156,7 @@ test("the style guide opens in a demo workspace, and is not there otherwise", as
   window.location.hash = "#styleguide";
   fakeApi(quiet);
   const hidden = renderApp(<App rc={rc()} />);
-  await screen.findByRole("link", { name: "Workspace, go to Today" });
+  await screen.findByRole("link", { name: "Go to Today · Workspace" });
   expect(screen.queryByRole("heading", { level: 1, name: "Style guide" })).toBeNull();
   hidden.unmount();
   fakeApi(quiet);
@@ -181,7 +181,7 @@ test("the browser going offline shows in the status chip at once", async () => {
   act(() => {
     window.dispatchEvent(new Event("offline"));
   });
-  expect(await screen.findByRole("button", { name: "Status: Offline · reconnecting" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "App status: Disconnected · reconnecting" })).toBeInTheDocument();
   // The query library pauses its requests while the browser says it is offline; leave it as found.
   act(() => {
     window.dispatchEvent(new Event("online"));

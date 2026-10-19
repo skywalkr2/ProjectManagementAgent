@@ -40,7 +40,7 @@ function show(routes: Routes, onReview = vi.fn()) {
 test("each format has a Hand out button; after it, there is a link to download the file", async () => {
   const user = userEvent.setup();
   const { calls } = show({ "POST working-copies": () => copy({ file: "FILE 9" }) });
-  await user.click(await screen.findByRole("button", { name: "Hand out as Word file" }));
+  await user.click(await screen.findByRole("button", { name: "Open a working copy as Word file" }));
   const link = await screen.findByRole("link", { name: "Download" });
   expect(link).toHaveAttribute("href", "api/files/FILE%209/content");
   expect(calls.find((c) => c.route === "POST working-copies")?.body).toEqual({ format: "demo/word", kind: KIND, id: ID, field: FIELD });
@@ -59,7 +59,7 @@ test("copies are listed in words, an out-of-date one says so, and only copies th
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("Out with you");
   expect(rows[0]).toHaveTextContent("Out of date");
-  expect(within(rows[0]).getByRole("button", { name: "Bring back Word file" })).toBeInTheDocument();
+  expect(within(rows[0]).getByRole("button", { name: "Bring back your edits to Word file" })).toBeInTheDocument();
   expect(rows[1]).toHaveTextContent("Brought back");
   expect(within(rows[1]).queryByRole("button")).toBeNull();
 });
@@ -70,9 +70,9 @@ test("bringing a file back sends its bytes with its name and opens the review of
     [`GET ${list}`]: () => [copy()],
     "POST working-copies/WC-1/return?name=chapter%201.docx": () => ({ unchanged: false, version: "V-5", unmapped: [] }),
   });
-  await screen.findByRole("button", { name: "Bring back Word file" });
+  await screen.findByRole("button", { name: "Bring back your edits to Word file" });
   const file = new File(["edited bytes"], "chapter 1.docx", { type: "application/octet-stream" });
-  await user.upload(screen.getByLabelText("Choose the file to bring back for Word file"), file);
+  await user.upload(screen.getByLabelText("Choose the file with your edits to Word file"), file);
   await waitFor(() => expect(onReview).toHaveBeenCalledWith("V-5", expect.any(Function)));
   expect(calls.find((c) => c.route.startsWith("POST working-copies/WC-1/return"))?.body).toBe(file);
 });
@@ -83,8 +83,8 @@ test("a file that came back unchanged says so and opens nothing", async () => {
     [`GET ${list}`]: () => [copy()],
     "POST working-copies/WC-1/return?name=same.docx": () => ({ unchanged: true, version: null, unmapped: [] }),
   });
-  await screen.findByRole("button", { name: "Bring back Word file" });
-  await user.upload(screen.getByLabelText("Choose the file to bring back for Word file"), new File(["x"], "same.docx"));
+  await screen.findByRole("button", { name: "Bring back your edits to Word file" });
+  await user.upload(screen.getByLabelText("Choose the file with your edits to Word file"), new File(["x"], "same.docx"));
   expect(await screen.findByText("Word file came back as it left, so nothing changed.")).toBeInTheDocument();
   expect(onReview).not.toHaveBeenCalled();
 });

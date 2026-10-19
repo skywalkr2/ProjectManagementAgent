@@ -77,10 +77,10 @@ test("the list has a row per thing, tagged by where it came from, with how many 
   const drawer = await screen.findByRole("dialog", { name: "What Helper learned" });
   const rows = await within(drawer).findAllByRole("listitem");
   expect(rows).toHaveLength(2);
-  expect(within(rows[0]).getByText("From what came in")).toBeInTheDocument();
+  expect(within(rows[0]).getByText("From incoming material")).toBeInTheDocument();
   expect(within(rows[1]).getByText("From your correction")).toBeInTheDocument();
   expect(within(drawer).getByText(/2 from what came in expired before you looked/)).toBeInTheDocument();
-  expect(within(rows[0]).getByText("From outside")).toBeInTheDocument();
+  expect(within(rows[0]).getByText("From someone else's material")).toBeInTheDocument();
 });
 
 test("Keep all is offered only for terms that carry the words they came from, and keeps just those", async () => {
@@ -159,11 +159,11 @@ test("the catch-up line opens its own list with the count of kinds left out", as
   });
   const row = await screen.findByRole("region", { name: "Review" });
   expect(row).toHaveTextContent("Look over 2 things Helper learned from your earlier corrections");
-  expect(row).toHaveTextContent("3 more kinds of correction didn't fit and have expired");
+  expect(row).toHaveTextContent("3 additional correction types exceeded the review limit and expired");
   await user.click(within(row).getByRole("button", { name: "Review" }));
   const drawer = await screen.findByRole("dialog", { name: "Learned from your earlier corrections" });
   expect(await within(drawer).findByText("Send proofs to the author.")).toBeInTheDocument();
-  expect(within(drawer).getByText(/1 kind of correction is still being looked at/)).toBeInTheDocument();
-  expect(within(drawer).getByText(/3 more kinds of correction didn't fit the list of 10/)).toBeInTheDocument();
+  expect(within(drawer).getByText(/Reviewing 1 kind of correction/)).toBeInTheDocument();
+  expect(within(drawer).getByText(/3 additional correction types are outside the 10-item review limit/)).toBeInTheDocument();
   expect(within(drawer).getByRole("button", { name: "Keep" })).toBeInTheDocument();
 });

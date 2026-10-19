@@ -6,7 +6,7 @@ const WEB = "https" + "://";
 
 const words: TableWords = {
   project: "Project",
-  action: "Action",
+  action: "To-do",
   question: "Question",
   due: "Due",
   asked: "First asked",
@@ -71,7 +71,7 @@ test("actions go by due date with the overdue first and undated last; questions 
     TODAY,
   );
   expect(found.map((t) => t.kind)).toEqual(["actions", "questions"]);
-  expect(found[0].columns).toEqual(["Project", "Action", "Due", "Link", "Your update"]);
+  expect(found[0].columns).toEqual(["Project", "To-do", "Due", "Link", "Your update"]);
   expect(found[1].columns).toEqual(["Project", "Question", "First asked", "Link", "Your answer"]);
   expect(found[0].rows.map((r) => r[1].text)).toEqual(["Late", "Later", "No date"]);
   expect(found[0].rows.map((r) => r[2].text)).toEqual(["D(2026-10-14) · overdue", "D(2026-10-23)", ""]);
@@ -108,7 +108,7 @@ test("overdue is in words and in a danger colour in the HTML; a page is its name
   expect(html).toContain(`<a href="${WEB}example.com/book">Book page</a>`);
   expect(html).toContain("<td");
   const sheet = toTsv(found, words);
-  expect(sheet.split("\n")[0]).toBe("Project\tAction\tDue\tLink\tYour update");
+  expect(sheet.split("\n")[0]).toBe("Project\tTo-do\tDue\tLink\tYour update");
   expect(sheet).toContain(`Book\tLate\tD(2026-10-14) · overdue\t${WEB}example.com/book\t`);
   expect(sheet).toContain("Book\tPlain\tD(2026-10-30)\t—\t");
   expect(sheet).not.toContain("Book page");

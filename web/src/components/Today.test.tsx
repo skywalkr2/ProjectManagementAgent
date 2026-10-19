@@ -167,7 +167,7 @@ test("the heading says how many lines need the person, and the same number is th
 
 test("an empty queue says so in one line", async () => {
   show([]);
-  expect(await screen.findByText("Nothing needs you right now. New things appear here as they come in.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing needs you right now.")).toBeInTheDocument();
   expect(screen.getByText(/Nothing needs you$/)).toBeInTheDocument();
 });
 
@@ -190,7 +190,7 @@ test("a review card is titled by what it holds", async () => {
     review,
     line("review", { key: "review:REQ-2", count: 4, request: "REQ-2", changeset: "CS-2", outcome: { actions_added: 2, questions: 1, notes: 1 } }),
   ]);
-  expect(await screen.findByText("Look over 3 actions Helper added")).toBeInTheDocument();
+  expect(await screen.findByText("Look over 3 to-dos Helper added")).toBeInTheDocument();
   expect(screen.getByText("Look over 4 things Helper did")).toBeInTheDocument();
   expect(within(row("review")).getByText(/1 waits for you/)).toBeInTheDocument();
 });
@@ -212,12 +212,12 @@ test("All looks good acts at once on the whole review card, with Undo", async ()
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/reopen")).toBe(true));
 });
 
-test("the first go is one line with its price, and Go starts the runs", async () => {
+test("the first go is one line with its price, and Go starts the tasks", async () => {
   const user = userEvent.setup();
   const { calls } = show([line("first_go", { key: "first_go", count: 3, estimate_usd: 0.3 })], { "POST runs/first-go": () => ({ started: 3 }) });
   expect(await screen.findByText(/Start the assistant: 3 items, about/)).toBeInTheDocument();
-  expect(screen.getByText("Nothing is spent until you press Go.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Go" }));
+  expect(screen.getByText("Nothing is spent until you press Start.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST runs/first-go")).toBe(true));
 });
 
@@ -259,7 +259,7 @@ test("Review & copy opens the message to copy, with the cursor able to edit it",
 test("a card's menu has Look closer and Send back, which opens the note to send it back with", async () => {
   const user = userEvent.setup();
   show([review]);
-  await user.click(await screen.findByRole("button", { name: /More actions for Look over 3 actions/ }));
+  await user.click(await screen.findByRole("button", { name: /More actions for Look over 3 to-dos/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Send back with a note" }));
   expect(await screen.findByRole("textbox")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Send back" })).toBeDisabled();
@@ -288,11 +288,11 @@ test("the restart and paused lines are rows of the queue, drawn with their own w
     "GET status": () => statusFixture({ can_restart: true }),
   });
   const restart = await screen.findByRole("region", { name: "Restart needed" });
-  expect(restart).toHaveTextContent("Restart to run 2 waiting requests");
+  expect(restart).toHaveTextContent("Restart to resume 2 waiting tasks");
   expect(within(restart).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
   const paused = screen.getByRole("region", { name: "Paused account" });
   expect(paused).toHaveTextContent("main");
-  expect(within(paused).getByRole("button", { name: "AI accounts" })).toBeInTheDocument();
+  expect(within(paused).getByRole("button", { name: "Open AI accounts" })).toBeInTheDocument();
   // Restart comes first, then the group of what is at risk.
   expect(document.querySelectorAll("[data-queue-line]")[0]).toBe(restart);
 });
@@ -333,18 +333,18 @@ test("lines that arrive while the person is working in the queue wait behind 'N 
     },
   });
   await user.click(await screen.findByRole("button", { name: "All looks good" }));
-  const pill = await screen.findByRole("button", { name: "1 new · Show" });
+  const pill = await screen.findByRole("button", { name: "Show 1 new item" });
   expect(document.querySelector('[data-queue-line="send"]')).toBeNull();
   // Nothing moved under the cursor; Show brings the new line in.
   await user.click(pill);
   expect(await screen.findByText("Send 2 items to Robin Sample")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "1 new · Show" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Show 1 new item" })).toBeNull();
 });
 
 test("a request to look at a changeset opens its line", async () => {
   const { reveal } = await import("../lib/reveal");
   show([review]);
-  await screen.findByText("Look over 3 actions Helper added");
+  await screen.findByText("Look over 3 to-dos Helper added");
   let handled = false;
   await act(async () => {
     handled = reveal("changeset", "CS-1");
@@ -360,11 +360,11 @@ test("a line that holds one item is titled by the item itself; a line that group
   const overdueOne = line("overdue", { key: "overdue", count: 1, actions: ["ACT-1"], due: "2026-10-08", waiting_days: 5, subject: "Approve the proof" });
   show([decision, one, review, overdueOne]);
   expect(await screen.findByText("Matte or soft-touch?", { selector: "li *" })).toBeInTheDocument();
-  expect(screen.queryByText("Answer 1 decision")).toBeNull();
+  expect(screen.queryByText("Make 1 decision")).toBeNull();
   expect(within(row("decision")).getByRole("button", { name: "Answer" })).toBeInTheDocument();
   expect(screen.getByText("Send two spine options")).toBeInTheDocument();
-  expect(screen.getByText(/Look over 1 action Helper added/)).toBeInTheDocument();
-  expect(screen.getByText("Look over 3 actions Helper added")).toBeInTheDocument();
+  expect(screen.getByText(/Look over 1 to-do Helper added/)).toBeInTheDocument();
+  expect(screen.getByText("Look over 3 to-dos Helper added")).toBeInTheDocument();
   expect(screen.getByText("Approve the proof", { selector: "li *" })).toBeInTheDocument();
   expect(screen.queryByText("Finish 1 overdue to-do")).toBeNull();
   expect(screen.getByText(/Was due .*5 days ago/)).toBeInTheDocument();
@@ -380,7 +380,7 @@ test("from 1680px the pane opens on the first line at once, headed by the line's
   expect(await within(pane).findByRole("heading", { name: "Matte or soft-touch?" })).toBeInTheDocument();
   expect(within(pane).getByText("1 of 3 · j / k")).toBeInTheDocument();
   expect(await within(pane).findByRole("textbox", { name: "Your answer" })).toBeInTheDocument();
-  expect(within(pane).queryByText("Pick a line to see its items here.")).toBeNull();
+  expect(within(pane).queryByText("Choose an item to see its details.")).toBeNull();
 });
 
 test("the pane shows the line that has the cursor, and showing a line marks nothing", async () => {
@@ -391,7 +391,7 @@ test("the pane shows the line that has the cursor, and showing a line marks noth
   await waitFor(() => expect(row("decision")).toHaveFocus());
   await user.keyboard("j");
   expect(row("review")).toHaveFocus();
-  expect(await within(pane).findByRole("heading", { name: "Look over 3 actions Helper added" })).toBeInTheDocument();
+  expect(await within(pane).findByRole("heading", { name: "Look over 3 to-dos Helper added" })).toBeInTheDocument();
   expect(within(pane).getByText("2 of 3 · j / k")).toBeInTheDocument();
   expect(await within(pane).findByText("Send two spine options")).toBeInTheDocument();
   await user.keyboard("j");
@@ -404,11 +404,11 @@ test("a click on a line shows it in the pane, and clicking it again keeps it the
   const user = userEvent.setup();
   show([decision, review], {}, { wide: true });
   const pane = await inspector();
-  await screen.findByText(/Look over 3 actions Helper added/, { selector: "li *" });
-  await user.click(within(row("review")).getByText(/Look over 3 actions/));
-  expect(await within(pane).findByRole("heading", { name: "Look over 3 actions Helper added" })).toBeInTheDocument();
-  await user.click(within(row("review")).getByText(/Look over 3 actions/));
-  expect(within(pane).getByRole("heading", { name: "Look over 3 actions Helper added" })).toBeInTheDocument();
+  await screen.findByText(/Look over 3 to-dos Helper added/, { selector: "li *" });
+  await user.click(within(row("review")).getByText(/Look over 3 to-dos/));
+  expect(await within(pane).findByRole("heading", { name: "Look over 3 to-dos Helper added" })).toBeInTheDocument();
+  await user.click(within(row("review")).getByText(/Look over 3 to-dos/));
+  expect(within(pane).getByRole("heading", { name: "Look over 3 to-dos Helper added" })).toBeInTheDocument();
 });
 
 test("after a line is settled the cursor and the pane move to the next line, not back to the top", async () => {
@@ -442,7 +442,7 @@ test("the pane remembers its line when Today is opened again in the same session
   // If its line is gone, the pane takes the line now in its position.
   cleanup();
   show([decision, review], {}, { wide: true });
-  expect(await within(await inspector()).findByRole("heading", { name: "Look over 3 actions Helper added" })).toBeInTheDocument();
+  expect(await within(await inspector()).findByRole("heading", { name: "Look over 3 to-dos Helper added" })).toBeInTheDocument();
 });
 
 test("with nothing that needs the person the pane says so and what comes next, and is never blank", async () => {
@@ -472,16 +472,16 @@ test("the list holds still while the pointer is over it, and the new lines come 
   const user = userEvent.setup();
   let lines = [decision, review];
   const { refresh } = show([], { "GET today/queue": () => lines });
-  await screen.findByText(/Look over 3 actions/);
+  await screen.findByText(/Look over 3 to-dos/);
   (document.activeElement as HTMLElement | null)?.blur();
   await user.hover(row("review"));
   lines = [decision, review, send];
   await refresh();
-  expect(await screen.findByRole("button", { name: "1 new · Show" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Show 1 new item" })).toBeInTheDocument();
   expect(document.querySelector('[data-queue-line="send"]')).toBeNull();
   await user.unhover(row("review"));
   expect(await screen.findByText("Send 2 items to Robin Sample")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "1 new · Show" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Show 1 new item" })).toBeNull();
 });
 
 test("with nothing holding the list new lines appear at once", async () => {
@@ -499,7 +499,7 @@ test("a line settled elsewhere stays in place, struck through and muted, until t
   const user = userEvent.setup();
   let lines = [decision, review, send];
   const { refresh } = show([], { "GET today/queue": () => lines });
-  await screen.findByText(/Look over 3 actions/);
+  await screen.findByText(/Look over 3 to-dos/);
   await waitFor(() => expect(row("decision")).toHaveFocus());
   lines = [decision, send];
   await refresh();
@@ -522,7 +522,7 @@ test("a ghost leaves when the cursor moves off it", async () => {
   const user = userEvent.setup();
   let lines = [decision, review, send];
   const { refresh } = show([], { "GET today/queue": () => lines });
-  await screen.findByText(/Look over 3 actions/);
+  await screen.findByText(/Look over 3 to-dos/);
   await waitFor(() => expect(row("decision")).toHaveFocus());
   await user.keyboard("j");
   expect(row("review")).toHaveFocus();
@@ -539,13 +539,13 @@ test("Shift+N shows the waiting lines and keeps the cursor on the line it was on
   const user = userEvent.setup();
   let lines = [decision, review];
   const { refresh } = show([], { "GET today/queue": () => lines });
-  await screen.findByText(/Look over 3 actions/);
+  await screen.findByText(/Look over 3 to-dos/);
   await waitFor(() => expect(row("decision")).toHaveFocus());
   await user.keyboard("j");
   expect(row("review")).toHaveFocus();
   lines = [decision, line("owner", { key: "question:Q-9", text: "Plan the launch", question: "Q-9" }), review, send];
   await refresh();
-  expect(await screen.findByRole("button", { name: "2 new · Show" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Show 2 new items" })).toBeInTheDocument();
   expect(screen.getByRole("status")).toHaveTextContent("2 new lines");
   await user.keyboard("{Shift>}N{/Shift}");
   expect(await screen.findByText("Send 2 items to Robin Sample")).toBeInTheDocument();
@@ -557,11 +557,11 @@ test("Shift+N shows the waiting lines and keeps the cursor on the line it was on
 test("the sidebar's count follows the queue at once, whatever the list is holding back", async () => {
   let lines = [decision, review];
   const { refresh } = show([], { "GET today/queue": () => lines });
-  await screen.findByText(/Look over 3 actions/);
+  await screen.findByText(/Look over 3 to-dos/);
   await waitFor(() => expect(screen.getAllByText(/2 things need you/).length).toBeGreaterThan(0));
   lines = [decision, review, send];
   await refresh();
-  await screen.findByRole("button", { name: "1 new · Show" });
+  await screen.findByRole("button", { name: "Show 1 new item" });
   expect(screen.getAllByText(/3 things need you/).length).toBeGreaterThan(0);
 });
 
@@ -588,12 +588,12 @@ test("an add-on's line sits in the group it names, after the queue's own lines, 
       pluginLine({ id: "loose", text: "Loose end", group: null }),
     ],
   });
-  await screen.findByText(/Look over 3 actions/);
+  await screen.findByText(/Look over 3 to-dos/);
   const group = (name: string) => screen.getByRole("heading", { level: 3, name }).closest("section")!;
   const review_ = within(group("Review")).getAllByRole("listitem");
   // The queue's own line first, then the add-on's by the soonest date; it can't put itself first.
   expect(review_.map((li) => li.textContent)).toEqual([
-    expect.stringContaining("Look over 3 actions"),
+    expect.stringContaining("Look over 3 to-dos"),
     expect.stringContaining("Sooner post"),
     expect.stringContaining("Later post"),
   ]);
@@ -635,14 +635,35 @@ test("a line open under itself holds the list too, even with the cursor and the 
   const user = userEvent.setup();
   let lines = [decision, review];
   const { refresh } = show([], { "GET today/queue": () => lines });
-  await user.click(await within((await screen.findByText(/Look over 3 actions/, { selector: "li *" }).then(() => row("decision")))).findByRole("button", { name: "Answer" }));
+  await user.click(await within((await screen.findByText(/Look over 3 to-dos/, { selector: "li *" }).then(() => row("decision")))).findByRole("button", { name: "Answer" }));
   await within(row("decision")).findByRole("textbox", { name: "Your answer" });
   (document.activeElement as HTMLElement | null)?.blur();
   await user.unhover(row("decision"));
   lines = [decision, review, send];
   await refresh();
-  expect(await screen.findByRole("button", { name: "1 new · Show" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Show 1 new item" })).toBeInTheDocument();
   expect(document.querySelector('[data-queue-line="send"]')).toBeNull();
-  await user.click(screen.getByRole("button", { name: "1 new · Show" }));
+  await user.click(screen.getByRole("button", { name: "Show 1 new item" }));
   expect(await screen.findByText("Send 2 items to Robin Sample")).toBeInTheDocument();
+});
+
+test("a line that counts things and holds none is not shown, so no line says zero", async () => {
+  show([
+    decision,
+    line("overdue", { key: "overdue:none", count: 0 }),
+    line("send", { key: "send:none", count: 0, person: "PER-9", person_name: "Nobody Example" }),
+    line("review", { key: "review:none", count: 0 }),
+    line("first_go", { key: "first_go:none", count: 0 }),
+  ]);
+  expect(await screen.findByText("Matte or soft-touch?")).toBeInTheDocument();
+  expect(document.querySelectorAll("[data-queue-line]")).toHaveLength(1);
+  expect(document.body.textContent).not.toMatch(/\b0 (things|to-dos|questions|items|overdue)/);
+});
+
+test("with nothing to do the Needs you panel has no count, in words or as a badge", async () => {
+  show([]);
+  expect(await screen.findByText("Nothing needs you right now.")).toBeInTheDocument();
+  const panel = screen.getByRole("heading", { level: 2, name: "Needs you" }).closest("section") as HTMLElement;
+  expect(within(panel).queryByText("0")).toBeNull();
+  expect(panel).not.toHaveTextContent(/\b0 things need you/);
 });

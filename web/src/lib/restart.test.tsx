@@ -26,7 +26,7 @@ function tree(hellos: number, seconds = 60) {
 
 const SAYS = "Restarting to use the new settings…";
 const DONE = "Restarted with the new settings.";
-const STUCK = "The app didn't come back after restarting. Close it and start it again to use the new settings.";
+const STUCK = "The restart failed. Close and reopen the app to use the new settings.";
 
 const begin = () => act(() => screen.getByRole("button", { name: "begin" }).click());
 
@@ -142,6 +142,6 @@ test("when asking, the notice says what waits for the restart", () => {
     </WordingProvider>,
   );
   act(() => screen.getByRole("button", { name: "offer" }).click());
-  expect(screen.getByRole("status")).toHaveTextContent("This change needs the app to restart.");
+  expect(screen.getByRole("status")).toHaveTextContent("Restart to finish this change?");
   expect(screen.getByRole("status")).toHaveTextContent("Restart to use: Backups kept.");
 });

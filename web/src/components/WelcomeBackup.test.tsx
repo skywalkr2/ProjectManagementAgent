@@ -105,7 +105,7 @@ test("choosing a folder: open folders, go up, use the one shown, and it is check
   await user.click(within(dialog).getByRole("button", { name: "Drive" }));
   const here = await within(dialog).findByText("You are in /home/me/Drive");
   await waitFor(() => expect(here).toHaveFocus());
-  await user.click(within(dialog).getByRole("button", { name: "Up one folder" }));
+  await user.click(within(dialog).getByRole("button", { name: "Go up one folder" }));
   expect(await within(dialog).findByText("You are in /home/me")).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Drive" }));
   await user.click(await within(dialog).findByRole("button", { name: "Backups" }));
@@ -132,7 +132,7 @@ test("a folder that did not check out is not where the list starts", async () =>
   await user.click(screen.getByRole("button", { name: "Choose…" }));
   // A folder that isn't a good one is not where the list starts.
   expect(await screen.findByText("You are in /home/me")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Up one folder" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Go up one folder" })).toBeDisabled();
 });
 
 test("when a folder can't be listed the reason shows, and Start from the beginning recovers", async () => {

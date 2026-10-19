@@ -27,7 +27,8 @@ export function fileNameOf(typed: string): string {
 
 const VALID_NAME = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
-export function DataForms() {
+/** `level` 2 makes the heading the heading of a section of its own, which takes the cursor when the section opens. */
+export function DataForms(props: { level?: 2 | 3 }) {
   const { t } = useWords();
   const forms = useQuery({ queryKey: ["data-forms"], queryFn: api.dataForms });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
@@ -35,11 +36,14 @@ export function DataForms() {
   const base = useId();
   // Nothing to show until some add-on offers a form.
   if (!forms.data || forms.data.length === 0) return null;
+  const Heading = props.level === 2 ? "h2" : "h3";
   const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
   return (
     <section className="panel-section" aria-labelledby={`${base}-title`}>
       <div className="heading">
-        <h3 id={`${base}-title`}>{t("dataform.title")}</h3>
+        <Heading id={`${base}-title`} {...(props.level === 2 ? { tabIndex: -1, "data-section-heading": "" } : {})}>
+          {t("dataform.title")}
+        </Heading>
       </div>
       <p className="hint">{t("dataform.intro")}</p>
       {choices.length > 0 && (

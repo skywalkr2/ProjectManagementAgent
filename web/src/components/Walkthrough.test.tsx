@@ -207,7 +207,7 @@ describe("opening", () => {
     });
     renderApp(<App rc={rcFixture()} />);
     expect(await screen.findByRole("heading", { level: 1, name: "Set up your workspace" })).toBeInTheDocument();
-    expect(screen.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Go at the end.")).toBeInTheDocument();
+    expect(screen.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Start at the end.")).toBeInTheDocument();
     expect(await screenTitle()).toHaveTextContent("You");
     expect(await screen.findByLabelText("Your full name")).toBeInTheDocument();
     // The cursor starts where the person types, not on a label or the step list.
@@ -519,7 +519,7 @@ describe("each screen", () => {
     expect(await screen.findByLabelText("Your full name")).toBeInTheDocument();
     expect(screen.getByLabelText("Workspace name")).toBeInTheDocument();
     expect(screen.getByLabelText("Your time zone")).toBeInTheDocument();
-    expect(screen.getByText(/Saving your name makes your own record/)).toBeInTheDocument();
+    expect(screen.getByText(/Saving adds you to People/)).toBeInTheDocument();
   });
 
   test("Your AI account: the account form, and what it may spend with its starting values, saved through the settings", async () => {
@@ -534,7 +534,7 @@ describe("each screen", () => {
     open();
     expect(await screenTitle()).toHaveTextContent("Your AI account");
     const spend = await screen.findByRole("form", { name: "What it may spend" });
-    const confirm = within(spend).getByLabelText("Ask me first when a run may cost more than (USD)");
+    const confirm = within(spend).getByLabelText("Ask before an AI task costs more than (USD)");
     const day = within(spend).getByLabelText("Most to spend in a day (USD)");
     expect(confirm).toHaveValue("0.1");
     expect(day).toHaveValue("2");
@@ -720,10 +720,10 @@ describe("Mail and calendar", () => {
     expect(within(mine).getByText("Reads your mail and calendar")).toBeInTheDocument();
     expect(within(mine).getByText("Made by Example")).toBeInTheDocument();
     // The reach details are not on the row until asked for, and they are in plain words.
-    const reach = within(mine).getByText("What it reaches").closest("details")!;
+    const reach = within(mine).getByText("What it can access").closest("details")!;
     expect(reach).not.toHaveAttribute("open");
     expect(within(reach).getByText(/You sign in on the service's own page/)).toBeInTheDocument();
-    expect(within(reach).getByText("Talks over the internet to: api.service.example.com")).toBeInTheDocument();
+    expect(within(reach).getByText("Connects to: api.service.example.com")).toBeInTheDocument();
     for (const jargon of [/Signs in to/, /Internet:/, /Keys you provide/, /^account$/]) expect(mine.textContent).not.toMatch(jargon);
   });
 
@@ -742,7 +742,7 @@ describe("Mail and calendar", () => {
       }),
     });
     open();
-    const reach = within(await row()).getByText("What it reaches").closest("details")!;
+    const reach = within(await row()).getByText("What it can access").closest("details")!;
     expect(within(reach).getByText("Runs these programs on this computer: a-helper")).toBeInTheDocument();
     expect(within(reach).getByText("Needs 2 keys from you")).toBeInTheDocument();
   });
@@ -781,7 +781,7 @@ describe("Mail and calendar", () => {
     open();
     const box = await screen.findByRole("checkbox", { name: "Let the assistant sort what the rules can't" });
     await waitFor(() => expect(box).toBeChecked());
-    expect(screen.getByText(/never the message itself/)).toBeInTheDocument();
+    expect(screen.getByText(/not the message body/)).toBeInTheDocument();
     await user.click(box);
     await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
     expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({
@@ -846,7 +846,7 @@ describe("Mail and calendar", () => {
     const list = reading.closest("[data-reading]") as HTMLElement;
     expect(within(list).getByText("Your inbox")).toBeInTheDocument();
     expect(within(list).getByText("Your calendar")).toBeInTheDocument();
-    expect(within(list).getByText(/The last day of your mail waits for your first Go/)).toBeInTheDocument();
+    expect(within(list).getByText(/The last day of your mail waits for you to start the assistant/)).toBeInTheDocument();
   });
 
   test("two services turned on before the restart still need only the one restart button", async () => {
@@ -890,7 +890,7 @@ describe("Mail and calendar", () => {
     });
     open();
     await user.click(await screen.findByRole("button", { name: "Turn on Service mail-addon" }));
-    expect(await screen.findByText(/Close it and start it again to bring the new add-on in/)).toBeInTheDocument();
+    expect(await screen.findByText(/Close and reopen the app to finish adding the add-on/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Restart to connect/ })).toBeNull();
   });
 
@@ -934,7 +934,7 @@ describe("Mail and calendar", () => {
   test("with no service listed the step still offers the core's mail folder and calendar address", async () => {
     fakeApi(routes({}, CORE.map((c) => step(c)), { step: "mail" }));
     open();
-    expect(await screen.findByText(/No mail or calendar service is listed yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/No services listed/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Another mail or calendar" })).toBeInTheDocument();
   });
 

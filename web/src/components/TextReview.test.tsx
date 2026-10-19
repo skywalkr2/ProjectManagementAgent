@@ -96,7 +96,7 @@ test("when the text moved on, the original is shown too and a passage both sides
   });
   const { dialog } = await open(1);
   const change = within(dialog).getByRole("group", { name: /Change 1 of 1/ });
-  expect(within(change).getByText("Conflict")).toBeInTheDocument();
+  expect(within(change).getByText("Different versions")).toBeInTheDocument();
   expect(within(change).getByText("As it was.")).toBeInTheDocument();
   expect(within(change).getByText("As you left it.")).toBeInTheDocument();
   expect(within(change).getByText("As it came back.")).toBeInTheDocument();
@@ -108,7 +108,7 @@ test("the draft's questions and what couldn't be read back are shown when there 
   const { dialog } = await open();
   const questions = within(dialog).getByRole("region", { name: "Questions from the draft" });
   expect(within(questions).getByText("Is the date right?")).toBeInTheDocument();
-  const unmapped = within(dialog).getByRole("region", { name: "Couldn't be read back" });
+  const unmapped = within(dialog).getByRole("region", { name: "Couldn't read the returned text" });
   expect(within(unmapped).getByText("A table in section 2")).toBeInTheDocument();
 });
 
@@ -116,23 +116,23 @@ test("no questions and nothing unmapped means neither section", async () => {
   show({});
   const { dialog } = await open();
   expect(within(dialog).queryByRole("region", { name: "Questions from the draft" })).toBeNull();
-  expect(within(dialog).queryByRole("region", { name: "Couldn't be read back" })).toBeNull();
+  expect(within(dialog).queryByRole("region", { name: "Couldn't read the returned text" })).toBeNull();
 });
 
-test("Apply my choices sends the record version and every choice, closes, and offers Undo", async () => {
+test("Save my choices sends the record version and every choice, closes, and offers Undo", async () => {
   const calls = show({
     "POST text-versions/V-2/accept": () => ({ changeset: "CS-1" }),
     "POST changesets/CS-1/undo": () => ({ restored: [{ kind: "x", id: "y" }], skipped: [] }),
   });
   const { user, dialog } = await open();
   await user.click(within(within(dialog).getByRole("group", { name: /Change 2 of 2/ })).getByRole("radio", { name: "Keep current" }));
-  await user.click(within(dialog).getByRole("button", { name: "Apply my choices" }));
+  await user.click(within(dialog).getByRole("button", { name: "Save my choices" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.find((c) => c.route === "POST text-versions/V-2/accept")?.body).toEqual({
     read_version: 7,
     choices: { r1: "accept", r2: "reject" },
   });
-  expect(await screen.findByText("Your choices were applied.")).toBeInTheDocument();
+  expect(await screen.findByText("Your choices were saved.")).toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole("button", { name: "Open it" })).toHaveFocus());
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-1/undo"));
@@ -146,7 +146,7 @@ test("Discard this version is in the menu and sends no choices", async () => {
   await user.click(screen.getByRole("menuitem", { name: "Discard this version" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.find((c) => c.route === "POST text-versions/V-2/discard")?.body).toEqual({ read_version: 7, choices: {} });
-  expect(await screen.findByText("That version was set aside.")).toBeInTheDocument();
+  expect(await screen.findByText("That version was discarded.")).toBeInTheDocument();
 });
 
 test("if the text changed meanwhile, the server's words and a hint to reload show, and Reload asks again", async () => {
@@ -156,10 +156,10 @@ test("if the text changed meanwhile, the server's words and a hint to reload sho
     "POST text-versions/V-2/accept": () => new Refuse(409, "the text changed since you opened it"),
   });
   const { user, dialog } = await open();
-  await user.click(within(dialog).getByRole("button", { name: "Apply my choices" }));
+  await user.click(within(dialog).getByRole("button", { name: "Save my choices" }));
   const alert = await within(dialog).findByRole("alert");
   expect(alert).toHaveTextContent("the text changed since you opened it");
-  expect(alert).toHaveTextContent("Reload it to see the latest");
+  expect(alert).toHaveTextContent("Reload it before choosing");
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   await user.click(within(alert).getByRole("button", { name: "Reload" }));
   await waitFor(() => expect(within(dialog).queryByRole("alert")).toBeNull());

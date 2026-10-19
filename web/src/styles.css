@@ -284,18 +284,48 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .key-missing { color: var(--warn); font-weight: var(--weight-semibold); }
 .folder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); max-height: 320px; overflow: auto; }
 .folder-list li { padding: var(--space-1) 0; }
-.settings-tools { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
-.settings-tools .field { flex: 1 1 260px; margin-bottom: 0; max-width: var(--field-max); }
-.settings-groups { display: grid; gap: var(--space-4); }
-.settings-group { gap: var(--space-4); }
+/* Settings: the section list | the settings, each with its help beside it. Below 720px of screen the list sits above and
+   the help stacks under its field; the help is beside a field from 640px of form. */
+.settings-screen { container: settings / inline-size; }
+.settings-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+.settings-side { display: grid; gap: var(--space-3); min-width: 0; }
+.settings-side .field { margin-bottom: 0; }
+.settings-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.settings-nav a { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); text-decoration: none; overflow-wrap: anywhere; }
+.settings-nav a:hover { background: var(--surface-sunk); }
+.settings-nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
+.settings-content { display: grid; gap: var(--space-4); min-width: 0; container: settingsform / inline-size; }
+.settings-content > h2 { margin: 0; }
+.settings-groups { display: grid; gap: var(--space-5); }
+.settings-group { display: grid; gap: var(--space-3); min-width: 0; }
 .settings-group h3 { font-size: var(--text-lg); line-height: var(--lh-lg); margin: 0; }
-.setting { display: grid; gap: var(--space-1); border-top: 1px solid var(--border); padding-top: var(--space-3); }
+.settings-results { display: grid; gap: var(--space-3); }
+.settings-topics { display: grid; gap: 0; }
+.settings-topic { border-top: 1px solid var(--border); }
+.settings-topic > [role="group"] { display: grid; gap: var(--space-3); padding-bottom: var(--space-4); }
+.settings-topic > [role="group"][hidden] { display: none; }
+.settings-topic h3 { margin: 0; }
+.topic-toggle { display: flex; align-items: center; gap: var(--space-2); width: 100%; border: 0; background: none; padding: var(--space-3) 0; font-weight: var(--weight-semibold); font-size: var(--text-md); text-align: left; cursor: pointer; }
+.topic-toggle::before { content: "\25B8"; color: var(--text-muted); }
+.topic-toggle[aria-expanded="true"]::before { content: "\25BE"; }
+.setting { display: grid; gap: var(--space-1) var(--space-5); border-top: 1px solid var(--border); padding-top: var(--space-3); min-width: 0; }
+.setting-main { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }
+.setting-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
 .setting-label { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+.setting-changed { font-size: var(--text-sm); color: var(--text-muted); white-space: nowrap; }
+.setting-changed .link-button { font-size: var(--text-sm); }
+.setting-help { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }
+.setting-help .hint { overflow-wrap: anywhere; min-width: 0; }
 .setting.dependent { border-inline-start: 2px solid var(--border); padding-inline-start: var(--space-3); }
 .setting.waiting .setting-label, .setting.waiting .check-line { color: var(--text-muted); }
 .setting-value { margin: 0; overflow-wrap: anywhere; padding: var(--space-2) var(--space-3); background: var(--surface-sunk); border-radius: var(--radius-md); font-size: var(--text-sm); }
-.setting-foot { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: center; justify-content: space-between; }
-.setting-foot .hint { overflow-wrap: anywhere; min-width: 0; }
+@container settingsform (min-width: 640px) {
+  .setting.beside { grid-template-columns: minmax(0, 1fr) minmax(0, 17rem); }
+}
+@container settings (max-width: 720px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .settings-nav { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+}
 
 /* Sources and the Ask box */
 .asks { display: grid; gap: var(--space-2); margin-top: var(--space-2); }

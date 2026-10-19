@@ -63,8 +63,9 @@ function withNodes(template: string, nodes: Record<string, ReactNode>): ReactNod
 export function AiAccounts(props: {
   /** Whether keys can be pasted here; read from the setup when not given. */
   local?: boolean;
-  /** The level of the section's heading: 3 in Settings, 4 inside a step of the setup guide. */
-  level?: 3 | 4;
+  /** The level of the section's heading: 2 when it is the heading of Settings' own section (it takes the cursor when the
+   * section opens), 3 beside other settings, 4 inside a step of the setup guide. */
+  level?: 2 | 3 | 4;
   /** Opens where a new account is added; the button shows only when given. */
   onAdd?: () => void;
   /** Opens the grid of what each account can do; the button and each row's "See all" show only when given. */
@@ -81,13 +82,13 @@ export function AiAccounts(props: {
   // A list that didn't load says so quietly, without a heading of its own.
   if (accounts.isError) return <p className="hint">{t("ai_accounts.load_failed")}</p>;
   const list = accounts.data;
-  const Heading = props.level === 4 ? "h4" : "h3";
+  const Heading = props.level === 4 ? "h4" : props.level === 2 ? "h2" : "h3";
   const kinds = endpoints.data ?? [];
   const kindOf = (a: Account) => kinds.find((k) => k.id === a.kind);
   return (
     <section className="ai-accounts" aria-labelledby="ai-accounts-title">
       <div className="heading">
-        <Heading id="ai-accounts-title">
+        <Heading id="ai-accounts-title" {...(props.level === 2 ? { tabIndex: -1, "data-section-heading": "" } : {})}>
           {t("ai_accounts.title")}
           {list.length > 0 && (
             <span className={styles.count} aria-label={tn("ai_accounts.count", list.length)}>

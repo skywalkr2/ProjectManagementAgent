@@ -97,7 +97,7 @@ test("it opens on what waits for the person, with a count on each filter", async
   open();
   expect(await screen.findByRole("list", { name: "What Helper knows" })).toBeInTheDocument();
   expect(texts()).toEqual(["Questions about budgets go to finance.", "Catering work goes to the venue lead."]);
-  for (const name of ["Proposed (2)", "Active (3)", "Unused (1)", "Retired (2)"]) {
+  for (const name of ["Proposed (2)", "Active (3)", "Unused (1)", "No longer used (2)"]) {
     expect(screen.getByRole("radio", { name })).toBeInTheDocument();
   }
   expect(screen.getByRole("radio", { name: "Proposed (2)" })).toBeChecked();
@@ -118,7 +118,7 @@ test("Active, Unused and Retired each show their own entries, rules and entries 
   // Unused is active and never applied: the rule and the lesson that were used drop out.
   await user.click(screen.getByRole("radio", { name: "Unused (1)" }));
   expect(texts()).toEqual(["A launch review is the meeting before release."]);
-  await user.click(screen.getByRole("radio", { name: "Retired (2)" }));
+  await user.click(screen.getByRole("radio", { name: "No longer used (2)" }));
   expect(texts()).toEqual(["Never close an action without an owner.", "An old habit."]);
 });
 
@@ -127,12 +127,12 @@ test("the kind list narrows the rows and the counts to one kind", async () => {
   open();
   await screen.findByRole("list", { name: "What Helper knows" });
   await user.selectOptions(screen.getByRole("combobox", { name: "Kind" }), "rule");
-  expect(screen.getByRole("radio", { name: "Proposed (0)" })).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "Proposed" })).toBeInTheDocument();
   await user.click(screen.getByRole("radio", { name: "Active (1)" }));
   expect(texts()).toEqual(["Every question names its reader."]);
-  expect(screen.getByRole("radio", { name: "Retired (1)" })).toBeInTheDocument();
-  await user.click(screen.getByRole("radio", { name: "Proposed (0)" }));
-  expect(screen.getByText("Nothing is waiting for you. What Helper learns shows here first.")).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "No longer used (1)" })).toBeInTheDocument();
+  await user.click(screen.getByRole("radio", { name: "Proposed" }));
+  expect(screen.getByText("Nothing to review. New learning from Helper appears here first.")).toBeInTheDocument();
 });
 
 test("each row says where it came from, what it reaches and how much it was used", async () => {
@@ -142,20 +142,20 @@ test("each row says where it came from, what it reaches and how much it was used
   const [budgets, catering] = rows();
   expect(budgets).toHaveTextContent("Only First project");
   expect(budgets).toHaveTextContent("Never used");
-  expect(catering).toHaveTextContent("Learned from something that came in");
-  expect(catering).toHaveTextContent("From outside");
+  expect(catering).toHaveTextContent("Learned from incoming material");
+  expect(catering).toHaveTextContent("From someone else's material");
   expect(catering).toHaveTextContent("All projects");
   await user.click(screen.getByRole("radio", { name: "Active (3)" }));
   const [glossary, lesson, ruleRow] = rows();
-  expect(ruleRow).toHaveTextContent("A starting entry");
+  expect(ruleRow).toHaveTextContent("Included at setup");
   expect(ruleRow).toHaveTextContent("Used 3 times · last today");
   expect(glossary).toHaveTextContent("All projects except Second project");
   expect(glossary).toHaveTextContent("Never used");
   expect(lesson).toHaveTextContent("Your own words");
   expect(lesson).toHaveTextContent("Used 12 times · last 2 days ago");
   // A word of the row says what it is and what state it is in: status is never colour alone.
-  await user.click(screen.getByRole("radio", { name: "Retired (2)" }));
-  expect(rows()[0]).toHaveTextContent("Retired");
+  await user.click(screen.getByRole("radio", { name: "No longer used (2)" }));
+  expect(rows()[0]).toHaveTextContent("No longer used");
 });
 
 test("Keep acts at once with the version that was read, says so, and Undo undoes that change", async () => {
@@ -218,20 +218,20 @@ test("an active row's one action is Narrow, which narrows to chosen projects, an
   await user.click(screen.getByRole("radio", { name: "Active (3)" }));
   const lesson = rows()[1];
   expect(within(lesson).queryByRole("button", { name: /^Keep/ })).toBeNull();
-  await user.click(within(lesson).getByRole("button", { name: "Narrow: Release dates come from the schedule." }));
+  await user.click(within(lesson).getByRole("button", { name: "Limit where this applies: Release dates come from the schedule." }));
   const only = within(lesson).getByRole("radio", { name: "Only these projects" });
   expect(only).toHaveFocus();
-  expect(within(lesson).getByRole("button", { name: "Narrow" })).toBeDisabled();
+  expect(within(lesson).getByRole("button", { name: "Save limits" })).toBeDisabled();
   expect(within(lesson).getByText("Choose at least one project.")).toBeInTheDocument();
   await user.click(within(lesson).getByRole("checkbox", { name: "First project" }));
-  await user.click(within(lesson).getByRole("button", { name: "Narrow" }));
+  await user.click(within(lesson).getByRole("button", { name: "Save limits" }));
   await waitFor(() => expect(body(calls, "POST knowledge/LES-1/narrow")).toEqual({ read_version: 4, applies_to: { ...WORKSPACE, scope: "projects", projects: ["P-1"], except: [] } }));
-  expect(await screen.findByText("Narrowed.")).toBeInTheDocument();
+  expect(await screen.findByText("Updated where this applies.")).toBeInTheDocument();
   await user.click(within(rows()[1]).getByRole("button", { name: "More actions for Release dates come from the schedule." }));
-  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Retire"]);
-  await user.click(screen.getByRole("menuitem", { name: "Retire" }));
+  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Stop using"]);
+  await user.click(screen.getByRole("menuitem", { name: "Stop using" }));
   await waitFor(() => expect(body(calls, "POST knowledge/LES-1/retire")).toEqual({ read_version: 4 }));
-  expect(await screen.findByText("Retired. It no longer guides Helper's work.")).toBeInTheDocument();
+  expect(await screen.findByText("No longer used by Helper.")).toBeInTheDocument();
 });
 
 test("narrowing a rule that applies everywhere can also leave out some projects, and Escape closes the form", async () => {
@@ -240,13 +240,13 @@ test("narrowing a rule that applies everywhere can also leave out some projects,
   await screen.findByRole("list", { name: "What Helper knows" });
   await user.click(screen.getByRole("radio", { name: "Active (3)" }));
   const row = rows()[2];
-  await user.click(within(row).getByRole("button", { name: "Narrow: Every question names its reader." }));
+  await user.click(within(row).getByRole("button", { name: "Limit where this applies: Every question names its reader." }));
   await user.keyboard("{Escape}");
   expect(within(row).queryByRole("radio")).toBeNull();
-  await user.click(within(row).getByRole("button", { name: "Narrow: Every question names its reader." }));
+  await user.click(within(row).getByRole("button", { name: "Limit where this applies: Every question names its reader." }));
   await user.click(within(row).getByRole("radio", { name: "All projects except these" }));
   await user.click(within(row).getByRole("checkbox", { name: "Second project" }));
-  await user.click(within(row).getByRole("button", { name: "Narrow" }));
+  await user.click(within(row).getByRole("button", { name: "Save limits" }));
   await waitFor(() => expect(body(calls, "POST knowledge/RULE-1/narrow")).toEqual({ read_version: 2, applies_to: { ...WORKSPACE, scope: "workspace", projects: [], except: ["P-2"] } }));
 });
 
@@ -254,7 +254,7 @@ test("rules to look over show as a line that opens the review", async () => {
   const user = userEvent.setup();
   const flagged = { id: "RULE-1", version: 2, name: "n", text: "Every question names its reader.", applies_to: WORKSPACE, present: 4, applied: 0 };
   const { onOpenReview } = open({}, { ...REVIEW, flagged: [flagged], due: true });
-  expect(await screen.findByText("1 rule was given to Helper and never applied. Look it over.")).toBeInTheDocument();
+  expect(await screen.findByText("Review 1 rule Helper hasn't used.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Look over rules" }));
   expect(onOpenReview).toHaveBeenCalled();
 });

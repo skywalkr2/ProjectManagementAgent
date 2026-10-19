@@ -10,17 +10,21 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 
 const slug = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, "-");
 
-export function ValueLists() {
+/** `level` 2 makes the heading the heading of a section of its own, which takes the cursor when the section opens. */
+export function ValueLists(props: { level?: 2 | 3 }) {
   const { t } = useWords();
   const lists = useValueLists();
   // Nothing is shown until the lists have loaded; a failure says so quietly.
   if (lists.isPending) return null;
   if (lists.isError) return <p className="hint">{t("lists.load_failed")}</p>;
   if (lists.data.length === 0) return null;
+  const Heading = props.level === 2 ? "h2" : "h3";
   return (
     <section className="panel-section" aria-labelledby="lists-title">
       <div className="heading">
-        <h3 id="lists-title">{t("lists.title")}</h3>
+        <Heading id="lists-title" {...(props.level === 2 ? { tabIndex: -1, "data-section-heading": "" } : {})}>
+          {t("lists.title")}
+        </Heading>
       </div>
       <p className="hint">{t("lists.intro")}</p>
       <ul className="queue">

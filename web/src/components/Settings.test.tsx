@@ -3,6 +3,7 @@ import { useState } from "react";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import type { SettingsSection } from "../lib/views";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Settings } from "./Settings";
@@ -11,11 +12,12 @@ import { Settings } from "./Settings";
 const WEB = "https" + "://";
 
 function item(key: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
-  const [file, ...rest] = key.split(".");
+  const [file] = key.split(".");
   return {
     key,
     file,
-    group: rest.length > 1 ? `${file}.${rest[0]}` : file,
+    // The test settings sit in the section for "You and the workspace" unless a test says otherwise.
+    group: "workspace",
     description: `What ${key} does`,
     type: "text",
     options: [],
@@ -43,24 +45,49 @@ const ITEMS: S["SettingItem"][] = [
   item("demo.advanced", { value: "deep", basic: false, description: "A rarely needed thing." }),
 ];
 
+const same = (a: unknown, b: unknown) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+
+/** A fake server that behaves like the real one: it keeps the values, answers a save with what changed and a new
+ * fingerprint, and refuses a save made on an old fingerprint. A test may answer saves itself instead. */
 function api(items = ITEMS, extra: Record<string, (body: unknown) => unknown> = {}) {
   let fingerprint = "fp-1";
+  let n = 1;
+  const state = items.map((i) => ({ ...i }));
   return fakeApi({
-    "GET settings": () => ({ fingerprint, items }),
+    "GET settings": () => ({ fingerprint, items: state }),
     ...extra,
     "POST settings": (body) => {
       const handler = extra["POST settings"];
-      const out = handler ? handler(body) : { changes: [], fingerprint, needs_restart: false };
-      if (!(out instanceof Refuse)) fingerprint = (out as S["SettingsSaved"]).fingerprint;
-      return out;
+      if (handler) {
+        const out = handler(body);
+        if (!(out instanceof Refuse)) fingerprint = (out as S["SettingsSaved"]).fingerprint;
+        return out;
+      }
+      const sent = body as S["SettingsSave"];
+      if (sent.fingerprint !== fingerprint) return new Refuse(409, "The settings changed since you opened them. Look again, then save.");
+      const changes: S["SettingChangeView"][] = [];
+      const set = (key: string, after: unknown) => {
+        const at = state.find((i) => i.key === key)!;
+        changes.push({ key, before: at.value, after, was_default: same(at.value, at.default), is_default: same(after, at.default) });
+        at.value = after;
+        at.source = "file";
+      };
+      for (const [key, after] of Object.entries(sent.changes ?? {})) set(key, after);
+      for (const key of sent.reset ?? []) set(key, state.find((i) => i.key === key)!.default);
+      n += 1;
+      fingerprint = `fp-${n}`;
+      return { changes, fingerprint, needs_restart: false };
     },
   });
 }
 
-const open = () => renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+const open = (section: SettingsSection = "you") =>
+  renderApp(<Settings section={section} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
 const posted = (calls: ReturnType<typeof fakeApi>) => calls.filter((c) => c.route === "POST settings").map((c) => c.body);
+const saveButtons = () => screen.queryAllByRole("button", { name: /^Save/ });
+const rowOf = (label: string) => screen.getByText(label).closest(".setting") as HTMLElement;
 
-test("basic settings show first and More settings reveals the rest", async () => {
+test("a section shows its basic settings, and More settings reveals the rest of that section", async () => {
   const user = userEvent.setup();
   api();
   open();
@@ -71,21 +98,70 @@ test("basic settings show first and More settings reveals the rest", async () =>
   expect(screen.getByRole("button", { name: "Fewer settings" })).toHaveAttribute("aria-expanded", "true");
 });
 
-test("the search looks at every setting by its key and description, advanced ones included", async () => {
+test("the section list sits down the side, one link for each section that has something in it, the open one marked", async () => {
+  api([...ITEMS, item("ui.theme", { group: "ui" }), item("storage.sync.folder", { group: "storage.sync" })], {
+    "GET lists": () => [{ id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: [] }],
+  });
+  open();
+  const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+  await waitFor(() => expect(within(nav).getByRole("link", { name: "Lists" })).toBeInTheDocument());
+  expect(within(nav).getAllByRole("link").map((a) => a.textContent)).toEqual([
+    "You and the workspace",
+    "AI accounts",
+    "Sources",
+    "Backups and sync",
+    "Appearance",
+    "Lists",
+  ]);
+  expect(within(nav).getByRole("link", { name: "You and the workspace" })).toHaveAttribute("aria-current", "page");
+  expect(within(nav).getByRole("link", { name: "Backups and sync" })).toHaveAttribute("href", expect.stringMatching(/#settings\/backups$/));
+  expect(within(nav).getByRole("link", { name: "Sources" })).toHaveAttribute("href", expect.stringMatching(/#sources$/));
+});
+
+test("choosing a section shows that section's settings and no others; the choice goes to the address when the screen asks", async () => {
   const user = userEvent.setup();
-  api();
+  api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
+  const chosen = vi.fn();
+  renderApp(<Settings section="you" onSection={chosen} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  await screen.findByLabelText("The display name.");
+  expect(screen.queryByLabelText("How it looks.")).toBeNull();
+  await user.click(screen.getByRole("link", { name: "Appearance" }));
+  expect(chosen).toHaveBeenCalledWith("appearance");
+});
+
+test("without an address to change, the section list still moves between sections", async () => {
+  const user = userEvent.setup();
+  api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  await screen.findByLabelText("The display name.");
+  await user.click(screen.getByRole("link", { name: "Appearance" }));
+  expect(await screen.findByLabelText("How it looks.")).toBeInTheDocument();
+  expect(screen.queryByLabelText("The display name.")).toBeNull();
+  expect(screen.getByRole("heading", { level: 2, name: "Appearance" })).toBeInTheDocument();
+});
+
+test("the search looks at every setting in every section by its key and description, advanced ones included", async () => {
+  const user = userEvent.setup();
+  api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
   open();
   await screen.findByLabelText("The display name.");
-  await user.type(screen.getByRole("searchbox", { name: "Search settings" }), "rarely");
+  const search = screen.getByRole("searchbox", { name: "Search settings" });
+  await user.type(search, "rarely");
   expect(screen.getByLabelText("A rarely needed thing.")).toBeInTheDocument();
   expect(screen.queryByLabelText("The display name.")).toBeNull();
   expect(screen.getByText("1 setting shown.")).toBeInTheDocument();
-  await user.clear(screen.getByRole("searchbox", { name: "Search settings" }));
-  await user.type(screen.getByRole("searchbox", { name: "Search settings" }), "demo.advanced");
+  await user.clear(search);
+  await user.type(search, "demo.advanced");
   expect(screen.getByLabelText("A rarely needed thing.")).toBeInTheDocument();
-  await user.clear(screen.getByRole("searchbox", { name: "Search settings" }));
-  await user.type(screen.getByRole("searchbox", { name: "Search settings" }), "zzz");
+  await user.clear(search);
+  await user.type(search, "looks");
+  expect(screen.getByLabelText("How it looks.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "Appearance" })).toBeInTheDocument();
+  await user.clear(search);
+  await user.type(search, "zzz");
   expect(screen.getByText("No settings match.")).toBeInTheDocument();
+  await user.clear(search);
+  expect(await screen.findByLabelText("The display name.")).toBeInTheDocument();
 });
 
 test("each type has its own control, with its default shown", async () => {
@@ -100,14 +176,28 @@ test("each type has its own control, with its default shown", async () => {
   expect(screen.getByText("Default: Yes")).toBeInTheDocument();
 });
 
+test("a setting's description is the help beside its field, not a line under it, and the field is still described by it", async () => {
+  api([item("workspace.name", { value: "Lantern", default: "Workspace", description: "The name shown at the top of every screen." })]);
+  open();
+  const field = await screen.findByLabelText("Workspace name");
+  const row = field.closest(".setting") as HTMLElement;
+  const help = row.querySelector("[data-help]") as HTMLElement;
+  expect(help).toHaveTextContent("The name shown at the top of every screen.");
+  expect(help).toHaveTextContent("Default: Workspace");
+  const main = row.querySelector("[data-main]") as HTMLElement;
+  expect(main).toContainElement(field);
+  expect(main).not.toHaveTextContent("The name shown at the top");
+  expect(field).toHaveAccessibleDescription(/The name shown at the top of every screen\./);
+});
+
 test("locked settings are disabled and say where they come from; others the screen can't change say which file", async () => {
   api();
   open();
   const env = await screen.findByLabelText("What demo.fixed does");
   expect(env).toBeDisabled();
-  expect(screen.getByText("Set by an environment variable")).toBeInTheDocument();
+  expect(screen.getByText("Set outside the app by an environment variable")).toBeInTheDocument();
   expect(screen.getByLabelText("What demo.flagged does")).toBeDisabled();
-  expect(screen.getByText("Set by a flag")).toBeInTheDocument();
+  expect(screen.getByText("Set by an option used to start the app")).toBeInTheDocument();
   const table = screen.getByText("What demo.table does").closest(".setting") as HTMLElement;
   expect(within(table).getByText("Changed in demo.yaml")).toBeInTheDocument();
   expect(within(table).queryByRole("textbox")).toBeNull();
@@ -116,28 +206,69 @@ test("locked settings are disabled and say where they come from; others the scre
   expect(within(server).getByText("Changed in demo.yaml")).toBeInTheDocument();
 });
 
-test("Save sends only what changed, with the fingerprint, then reads it back", async () => {
+test("there is no Save button: a text setting saves when the cursor leaves it, with the fingerprint, and reads back with Undo", async () => {
   const user = userEvent.setup();
-  const calls = api(ITEMS, {
-    "POST settings": () => ({
-      changes: [{ key: "demo.title", before: "Lantern", after: "Harbor", was_default: false, is_default: false }],
-      fingerprint: "fp-2",
-      needs_restart: false,
-    }),
-  });
+  const calls = api();
   open();
   const title = await screen.findByLabelText("The display name.");
-  const save = screen.getByRole("button", { name: /Save/ });
-  expect(save).toBeDisabled();
+  expect(saveButtons()).toHaveLength(0);
   await user.clear(title);
   await user.type(title, "Harbor");
-  await user.click(save);
+  expect(posted(calls)).toHaveLength(0);
+  await user.tab();
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toEqual({ changes: { "demo.title": "Harbor" }, reset: [], fingerprint: "fp-1" });
   expect(await screen.findByText("Saved. The display name: Harbor")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  expect(screen.getByLabelText("The display name.")).toHaveValue("Harbor");
 });
 
-test("a number that isn't one is refused on screen before anything is sent", async () => {
+test("Enter saves a text setting without leaving it, once", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  const title = await screen.findByLabelText("The display name.");
+  await user.type(title, "x{Enter}");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.title": "Lanternx" } });
+  expect(title).toHaveFocus();
+  await user.tab();
+  expect(posted(calls)).toHaveLength(1);
+});
+
+test("leaving a field that was not changed saves nothing", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  const title = await screen.findByLabelText("The display name.");
+  await user.click(title);
+  await user.tab();
+  await user.type(title, "x");
+  await user.type(title, "{Backspace}");
+  await user.tab();
+  expect(posted(calls)).toHaveLength(0);
+});
+
+test("a choice and a yes/no setting save as soon as they change; a list saves when the cursor leaves it", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await user.click(await screen.findByLabelText("What demo.on does"));
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.on": false } });
+  await user.selectOptions(screen.getByLabelText("What demo.mode does"), "rule");
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  expect(posted(calls)[1]).toMatchObject({ changes: { "demo.mode": "rule" } });
+  const names = screen.getByLabelText("What demo.names does");
+  await user.clear(names);
+  await user.type(names, "one{Enter}two{Enter}{Enter}three");
+  expect(posted(calls)).toHaveLength(2);
+  await user.tab();
+  await waitFor(() => expect(posted(calls)).toHaveLength(3));
+  expect(posted(calls)[2]).toMatchObject({ changes: { "demo.names": ["one", "two", "three"] } });
+});
+
+test("a number that isn't one is refused on screen and nothing is sent", async () => {
   const user = userEvent.setup();
   const calls = api();
   open();
@@ -145,92 +276,107 @@ test("a number that isn't one is refused on screen before anything is sent", asy
   await user.clear(limit);
   await user.type(limit, "lots");
   expect(screen.getByText("Enter a number.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /Save/ })).toBeDisabled();
+  await user.tab();
   expect(posted(calls)).toHaveLength(0);
+  expect(screen.getByLabelText("What demo.limit does")).toHaveValue("lots");
 });
 
-test("Undo sends the old values back, with the fingerprint from the save", async () => {
+test("each save carries the fingerprint from the one before it, so saves in a row are never refused as out of date", async () => {
   const user = userEvent.setup();
-  let n = 0;
-  const calls = api(ITEMS, {
-    "POST settings": () => {
-      n += 1;
-      return n === 1
-        ? {
-            changes: [
-              { key: "demo.title", before: "Lantern", after: "Harbor", was_default: false, is_default: false },
-              { key: "demo.count", before: 4, after: 9, was_default: true, is_default: false },
-            ],
-            fingerprint: "fp-2",
-            needs_restart: false,
-          }
-        : { changes: [], fingerprint: "fp-3", needs_restart: false };
-    },
-  });
+  const calls = api();
   open();
   await user.type(await screen.findByLabelText("The display name."), "x");
-  await user.click(screen.getByRole("button", { name: /Save/ }));
-  await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await waitFor(() => expect(posted(calls)).toHaveLength(2));
-  expect(posted(calls)[1]).toEqual({ changes: { "demo.title": "Lantern" }, reset: ["demo.count"], fingerprint: "fp-2" });
-  expect(await screen.findByText("Undone. It's back as it was.")).toBeInTheDocument();
+  await user.tab();
+  await user.click(screen.getByLabelText("What demo.on does"));
+  await user.selectOptions(screen.getByLabelText("What demo.mode does"), "rule");
+  await waitFor(() => expect(posted(calls)).toHaveLength(3));
+  expect(posted(calls).map((b) => (b as { fingerprint: string }).fingerprint)).toEqual(["fp-1", "fp-2", "fp-3"]);
+  expect(screen.queryByRole("alert")).toBeNull();
 });
 
-test("Back to default is offered where the file sets the value, and sends a reset", async () => {
+test("Undo sends the old values back; after later saves it uses the newest fingerprint, so it still works", async () => {
   const user = userEvent.setup();
-  const calls = api(ITEMS, {
-    "POST settings": () => ({
-      changes: [{ key: "demo.title", before: "Lantern", after: "Workspace", was_default: false, is_default: true }],
-      fingerprint: "fp-2",
-      needs_restart: false,
-    }),
-  });
+  const calls = api();
+  open();
+  await user.type(await screen.findByLabelText("The display name."), "x");
+  await user.tab();
+  await screen.findByText("Saved. The display name: Lanternx");
+  await user.click(screen.getByLabelText("What demo.on does"));
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  await user.click((await screen.findAllByRole("button", { name: "Undo" }))[0]);
+  await waitFor(() => expect(posted(calls)).toHaveLength(3));
+  expect(posted(calls)[2]).toEqual({ changes: { "demo.title": "Lantern" }, reset: [], fingerprint: "fp-3" });
+  expect(await screen.findByText("Undone.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveValue("Lantern"));
+});
+
+test("a changed setting says Changed with a Reset beside its label; one at its default shows nothing", async () => {
+  api();
   open();
   await screen.findByLabelText("The display name.");
-  expect(screen.getAllByRole("button", { name: /Back to default/ })).toHaveLength(1);
-  await user.click(screen.getByRole("button", { name: "Back to default: The display name." }));
+  const changed = rowOf("The display name.");
+  expect(within(changed).getByText("Changed")).toBeInTheDocument();
+  expect(within(changed).getByRole("button", { name: "Reset: The display name." })).toBeInTheDocument();
+  const unchanged = rowOf("What demo.limit does");
+  expect(within(unchanged).queryByText("Changed")).toBeNull();
+  expect(within(unchanged).queryByRole("button", { name: /^Reset/ })).toBeNull();
+  // A setting the screen can't change has nothing to reset.
+  expect(within(rowOf("What demo.fixed does")).queryByRole("button", { name: /^Reset/ })).toBeNull();
+});
+
+test("Reset puts the setting back to its default at once, says so, and can be undone", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await screen.findByLabelText("The display name.");
+  await user.click(screen.getByRole("button", { name: "Reset: The display name." }));
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toEqual({ changes: {}, reset: ["demo.title"], fingerprint: "fp-1" });
   expect(await screen.findByText(/back to the default, Workspace/)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveValue("Workspace"));
+  expect(within(rowOf("The display name.")).queryByText("Changed")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  expect(posted(calls)[1]).toEqual({ changes: { "demo.title": "Lantern" }, reset: [], fingerprint: "fp-2" });
+  await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveValue("Lantern"));
 });
 
-test("when the files changed since the form loaded, the server's words show and the form loads again", async () => {
+test("a change made elsewhere meanwhile is refused in the 'changed since you opened it' words, what was typed stays, and the form loads again", async () => {
   const user = userEvent.setup();
   const calls = api(ITEMS, { "POST settings": () => new Refuse(409, "The settings changed since you opened them. Look again, then save.") });
   open();
   await user.type(await screen.findByLabelText("The display name."), "x");
   const before = calls.filter((c) => c.route === "GET settings").length;
-  await user.click(screen.getByRole("button", { name: /Save/ }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("The settings changed since you opened them. Look again, then save.");
+  await user.tab();
+  const note = await screen.findByRole("alert");
+  expect(note).toHaveTextContent("This was changed since you opened it. What you typed is still here; check it against what is saved now, then save again.");
+  expect(rowOf("The display name.")).toContainElement(note);
+  expect(screen.getByLabelText("The display name.")).toHaveValue("Lanternx");
   await waitFor(() => expect(calls.filter((c) => c.route === "GET settings").length).toBeGreaterThan(before));
+  expect(screen.queryByText(/^Saved/)).toBeNull();
 });
 
-test("a refused value shows the server's words and keeps what was typed", async () => {
+test("a refused value shows the server's words on its own row and keeps what was typed", async () => {
   const user = userEvent.setup();
   api(ITEMS, { "POST settings": () => new Refuse(400, "demo.title can't be empty here") });
   open();
   const title = await screen.findByLabelText("The display name.");
   await user.clear(title);
   await user.type(title, "Nope");
-  await user.click(screen.getByRole("button", { name: /Save/ }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("demo.title can't be empty here");
+  await user.tab();
+  const note = await screen.findByRole("alert");
+  expect(note).toHaveTextContent("demo.title can't be empty here");
+  expect(rowOf("The display name.")).toContainElement(note);
   expect(screen.getByLabelText("The display name.")).toHaveValue("Nope");
 });
 
-test("a list and a yes/no setting send their own kinds of value", async () => {
-  const user = userEvent.setup();
-  const calls = api();
+test("the first field of the section has the cursor when it opens", async () => {
+  api();
   open();
-  const names = await screen.findByLabelText("What demo.names does");
-  await user.clear(names);
-  await user.type(names, "one{Enter}two{Enter}{Enter}three");
-  await user.click(screen.getByLabelText("What demo.on does"));
-  await user.click(screen.getByRole("button", { name: /Save/ }));
-  await waitFor(() => expect(posted(calls)).toHaveLength(1));
-  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.names": ["one", "two", "three"], "demo.on": false } });
+  await waitFor(() => expect(screen.getByLabelText("The display name.")).toHaveFocus());
 });
 
-const ASK = "This change needs the app to restart. It takes a few seconds; anything you're typing elsewhere stays.";
+const ASK = "Restart to finish this change? It takes a few seconds and keeps anything you're typing elsewhere.";
 
 function RestartHarness() {
   const [hellos, setHellos] = useState(1);
@@ -253,7 +399,7 @@ const savedTitle = (needs_restart: boolean) => ({
 
 async function saveTitle(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByLabelText("The display name."), "x");
-  await user.click(screen.getByRole("button", { name: /Save/ }));
+  await user.tab();
   return screen.getAllByRole("status").find((el) => el.classList.contains("restart-slot"))!;
 }
 
@@ -333,7 +479,7 @@ const DEPENDENTS: S["SettingItem"][] = [
   item("demo.keep", { type: "integer", value: 3, default: 3, enabled_by: "demo.folder", description: "How many to keep." }),
 ];
 
-test("a setting that needs a switch is greyed with a reason while it is off, and works once the switch is turned on in the form", async () => {
+test("a setting that needs a switch is greyed with a reason while it is off, and works once the switch is turned on", async () => {
   const user = userEvent.setup();
   const calls = api(DEPENDENTS);
   open();
@@ -342,24 +488,27 @@ test("a setting that needs a switch is greyed with a reason while it is off, and
   expect(hours).toHaveAccessibleDescription(/Turn on “Do it on a schedule\.” to change this\./);
   expect(screen.getByText("Turn on “Do it on a schedule.” to change this.")).toBeInTheDocument();
   expect(hours.closest(".setting")).toHaveClass("dependent");
+  // Turning the switch on is saved at once; the setting then wakes up.
   await user.click(screen.getByLabelText("Do it on a schedule."));
-  expect(screen.getByLabelText("Hours between runs.")).toBeEnabled();
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.auto": true } });
+  await waitFor(() => expect(screen.getByLabelText("Hours between runs.")).toBeEnabled());
   expect(screen.queryByText(/Turn on “Do it on a schedule/)).toBeNull();
   await user.clear(screen.getByLabelText("Hours between runs."));
   await user.type(screen.getByLabelText("Hours between runs."), "8");
-  await user.click(screen.getAllByRole("button", { name: /Save/ })[0]);
-  await waitFor(() => expect(posted(calls)).toHaveLength(1));
-  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.auto": true, "demo.hours": 8 } });
+  await user.tab();
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  expect(posted(calls)[1]).toMatchObject({ changes: { "demo.hours": 8 } });
 });
 
-test("turning the switch back off in the form greys the setting again", async () => {
+test("turning the switch back off greys the setting again", async () => {
   const user = userEvent.setup();
   api(DEPENDENTS);
   open();
   await user.click(await screen.findByLabelText("Do it on a schedule."));
-  expect(screen.getByLabelText("Hours between runs.")).toBeEnabled();
+  await waitFor(() => expect(screen.getByLabelText("Hours between runs.")).toBeEnabled());
   await user.click(screen.getByLabelText("Do it on a schedule."));
-  expect(screen.getByLabelText("Hours between runs.")).toBeDisabled();
+  await waitFor(() => expect(screen.getByLabelText("Hours between runs.")).toBeDisabled());
 });
 
 test("a setting that depends on a text setting waits until that has a value", async () => {
@@ -373,9 +522,9 @@ test("a setting that depends on a text setting waits until that has a value", as
   expect(screen.getByLabelText("How many to keep.")).toBeEnabled();
 });
 
-test("a folder setting offers a chooser that fills the value, and a way to clear it", async () => {
+test("a folder setting offers a chooser that saves the folder picked, and a way to clear it", async () => {
   const user = userEvent.setup();
-  api(DEPENDENTS, {
+  const calls = api(DEPENDENTS, {
     "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["shared"] }),
     [`GET setup/folders?path=${encodeURIComponent("/home/me/shared")}`]: () => ({ path: "/home/me/shared", parent: "/home/me", folders: [] }),
   });
@@ -384,9 +533,13 @@ test("a folder setting offers a chooser that fills the value, and a way to clear
   await user.click(await screen.findByRole("button", { name: "shared" }));
   await user.click(await screen.findByRole("button", { name: "Use this folder" }));
   await waitFor(() => expect(screen.getByLabelText("Where it goes.")).toHaveValue("/home/me/shared"));
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.folder": "/home/me/shared" } });
   expect(screen.getByLabelText("How many to keep.")).toBeEnabled();
   await user.click(screen.getByRole("button", { name: /Clear/ }));
   expect(screen.getByLabelText("Where it goes.")).toHaveValue("");
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  expect(posted(calls)[1]).toMatchObject({ changes: { "demo.folder": "" } });
 });
 
 test("where folders can't be listed the folder setting is a plain text box with no error", async () => {
@@ -403,20 +556,21 @@ test("Add-ons opens the add-ons screen", async () => {
   const onOpenAddons = vi.fn();
   const user = userEvent.setup();
   renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} onChooseSource={() => undefined} />);
-  await user.click(screen.getByRole("button", { name: "Add-ons" }));
+  await user.click(screen.getByRole("button", { name: "Open Add-ons" }));
   expect(onOpenAddons).toHaveBeenCalled();
 });
 
-test("Settings ends with a Lists section where the choices dropdowns offer can be changed", async () => {
+test("Lists is a section of its own, where the choices dropdowns offer can be changed", async () => {
   api(ITEMS, {
     "GET lists": () => [
       { id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] },
     ],
   });
-  open();
-  expect(await screen.findByRole("heading", { name: "Lists" })).toBeInTheDocument();
+  open("lists");
+  expect(await screen.findByRole("heading", { level: 2, name: "Lists" })).toBeInTheDocument();
   expect(screen.getByText("Project status")).toBeInTheDocument();
-  expect(screen.getByRole("textbox", { name: "Add a value to Project status" })).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Add a choice to Project status" })).toBeInTheDocument();
+  expect(screen.queryByLabelText("The display name.")).toBeNull();
 });
 
 // ---- an add-on's settings ------------------------------------------------------------------------------------------
@@ -441,45 +595,41 @@ const ADDON_ITEMS: S["SettingItem"][] = [
   addonItem("other-pack", "limit", { type: "integer", value: 3, default: 3 }),
 ];
 
-test("an add-on's settings sit under its name after the app's own groups, one group each, and never show where they live", async () => {
+test("each add-on has a section of its own, after the app's own, and its settings never show where they live", async () => {
   api([...ADDON_ITEMS, ...ITEMS]);
-  open();
-  await screen.findByLabelText("The display name.");
-  const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-  expect(headings.slice(-2)).toEqual(["Sample pack", "Other pack"]);
-  expect(headings.indexOf("Demo")).toBeLessThan(headings.indexOf("Sample pack"));
+  open("addon/sample-pack");
+  await screen.findByLabelText("What greeting does for the add-on");
+  const nav = screen.getByRole("navigation", { name: "Settings sections" });
+  const links = within(nav).getAllByRole("link").map((a) => a.textContent);
+  expect(links.slice(-2)).toEqual(["Sample pack", "Other pack"]);
+  expect(links.indexOf("You and the workspace")).toBeLessThan(links.indexOf("Sample pack"));
+  expect(within(nav).getByRole("link", { name: "Sample pack" })).toHaveAttribute("aria-current", "page");
   expect(document.body).not.toHaveTextContent("plugins/");
-  const group = screen.getByRole("heading", { name: "Sample pack" }).closest("form")!;
-  expect(within(group).getByLabelText("What greeting does for the add-on")).toHaveValue("Hello");
-  expect(within(group).getByLabelText("What loud does for the add-on")).not.toBeChecked();
-  expect(within(group).getByLabelText("What mode does for the add-on")).toHaveValue("quiet");
-  expect(within(group).getByText("Default: Hi")).toBeInTheDocument();
-  const fixed = within(group).getByText("What fixed does for the add-on").closest(".setting") as HTMLElement;
-  expect(within(fixed).getByText("This add-on's setting is changed outside this screen.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Sample pack" })).toBeInTheDocument();
+  expect(screen.getByLabelText("What greeting does for the add-on")).toHaveValue("Hello");
+  expect(screen.getByLabelText("What loud does for the add-on")).not.toBeChecked();
+  expect(screen.getByLabelText("What mode does for the add-on")).toHaveValue("quiet");
+  expect(screen.getByText("Default: Hi")).toBeInTheDocument();
+  const fixed = screen.getByText("What fixed does for the add-on").closest(".setting") as HTMLElement;
+  expect(within(fixed).getByText("Change this setting outside this screen.")).toBeInTheDocument();
+  // Another add-on's setting is in its own section, and the app's own is in theirs.
+  expect(screen.queryByLabelText("What limit does for the add-on")).toBeNull();
+  expect(screen.queryByLabelText("The display name.")).toBeNull();
 });
 
-test("an add-on's settings save like the app's: only what changed, under the key the file uses, with undo", async () => {
+test("an add-on's settings save like the app's: under the key the file uses, as they change, with undo", async () => {
   const user = userEvent.setup();
-  const calls = api([...ADDON_ITEMS, ...ITEMS], {
-    "POST settings": () => ({
-      changes: [{ key: "plugins/sample-pack.greeting", before: "Hello", after: "Howdy", was_default: false, is_default: false }],
-      fingerprint: "fp-2",
-      needs_restart: false,
-    }),
-  });
-  open();
-  const group = (await screen.findByRole("heading", { name: "Sample pack" })).closest("form")!;
-  await user.clear(within(group).getByLabelText("What greeting does for the add-on"));
-  await user.type(within(group).getByLabelText("What greeting does for the add-on"), "Howdy");
-  await user.click(within(group).getByLabelText("What loud does for the add-on"));
-  await user.click(within(group).getByRole("button", { name: /^Save/ }));
-  await waitFor(() => expect(posted(calls)).toHaveLength(1));
-  expect(posted(calls)[0]).toEqual({
-    changes: { "plugins/sample-pack.greeting": "Howdy", "plugins/sample-pack.loud": true },
-    reset: [],
-    fingerprint: "fp-1",
-  });
-  expect(await screen.findByText(/Saved/)).toBeInTheDocument();
+  const calls = api([...ADDON_ITEMS, ...ITEMS]);
+  open("addon/sample-pack");
+  const greeting = await screen.findByLabelText("What greeting does for the add-on");
+  await user.clear(greeting);
+  await user.type(greeting, "Howdy");
+  // Moving on to the next setting saves the one that was typed in.
+  await user.click(screen.getByLabelText("What loud does for the add-on"));
+  await waitFor(() => expect(posted(calls)).toHaveLength(2));
+  expect(posted(calls)[0]).toEqual({ changes: { "plugins/sample-pack.greeting": "Howdy" }, reset: [], fingerprint: "fp-1" });
+  expect(posted(calls)[1]).toEqual({ changes: { "plugins/sample-pack.loud": true }, reset: [], fingerprint: "fp-2" });
+  expect((await screen.findAllByText(/Saved/)).length).toBeGreaterThan(0);
   expect(document.body).not.toHaveTextContent("plugins/");
 });
 
@@ -491,6 +641,29 @@ test("the search finds an add-on's settings by the add-on's name", async () => {
   await user.type(screen.getByRole("searchbox", { name: "Search settings" }), "other pack");
   expect(screen.getByLabelText("What limit does for the add-on")).toBeInTheDocument();
   expect(screen.queryByLabelText("What greeting does for the add-on")).toBeNull();
+});
+
+test("Advanced groups the rest by topic, each topic closed until it is opened, and the standing instructions point to Knowledge", async () => {
+  const user = userEvent.setup();
+  const onOpenKnowledge = vi.fn();
+  api([
+    item("rules.rules", { type: "list", group: "rules", value: [], default: [], basic: false }),
+    item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false, description: "Learn from corrections." }),
+  ]);
+  renderApp(
+    <Settings section="advanced" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenKnowledge={onOpenKnowledge} />,
+  );
+  const topic = await screen.findByRole("button", { name: "Rules" });
+  expect(topic).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByLabelText("Learn from corrections.")).toBeNull();
+  await user.click(topic);
+  expect(topic).toHaveAttribute("aria-expanded", "true");
+  const region = screen.getByRole("group", { name: "Rules" });
+  expect(region).toHaveTextContent("Review what Helper has learned and your saved rules in Knowledge.");
+  await user.click(within(region).getByRole("button", { name: "Open Knowledge" }));
+  expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
+  // The other topic is still closed.
+  expect(screen.getByRole("button", { name: "Dispatch knowledge", expanded: false })).toBeInTheDocument();
 });
 
 const ACCOUNT: S["AiAccountView"] = {
@@ -525,7 +698,7 @@ const AI_ROUTES = {
 
 test("the AI section lists the accounts that are set up, one row each, with its role, its name and one next step", async () => {
   api(ITEMS, AI_ROUTES);
-  open();
+  open("ai");
   expect(await screen.findByRole("heading", { name: /AI accounts/ })).toBeInTheDocument();
   const row = screen.getByText("Main account", { selector: "li[data-row] span[id$=title]" }).closest("li") as HTMLElement;
   expect(row).toHaveTextContent("Does the work");
@@ -538,7 +711,7 @@ test("Add an account opens its form in a drawer inside Settings, never the setup
   const user = userEvent.setup();
   const onOpenGuide = vi.fn();
   api(ITEMS, AI_ROUTES);
-  renderApp(<Settings onOpenGuide={onOpenGuide} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  renderApp(<Settings section="ai" onOpenGuide={onOpenGuide} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
   await user.click(await screen.findByRole("button", { name: "Add an account" }));
   const drawer = await screen.findByRole("dialog", { name: "Add an account" });
   expect(onOpenGuide).not.toHaveBeenCalled();
@@ -552,7 +725,7 @@ test("Add an account opens its form in a drawer inside Settings, never the setup
 test("a Today line that asks for an account to be added opens the same drawer", async () => {
   api(ITEMS, AI_ROUTES);
   const done = vi.fn();
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} addAccount={Date.now()} onAddAccountOpened={done} />);
+  renderApp(<Settings section="ai" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} addAccount={Date.now()} onAddAccountOpened={done} />);
   expect(await screen.findByRole("dialog", { name: "Add an account" })).toBeInTheDocument();
   expect(done).toHaveBeenCalled();
 });
@@ -561,7 +734,7 @@ test("Compare what they can do opens the grid", async () => {
   const user = userEvent.setup();
   const onOpenCompare = vi.fn();
   api(ITEMS, AI_ROUTES);
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenCompare={onOpenCompare} />);
+  renderApp(<Settings section="ai" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenCompare={onOpenCompare} />);
   await user.click(await screen.findByRole("button", { name: "Compare what they can do" }));
   expect(onOpenCompare).toHaveBeenCalledTimes(1);
 });
@@ -571,27 +744,24 @@ test("an add-on's data files are listed in an Add-on files section, and the sect
     "GET data-forms": () => [{ name: "demo/template", plugin: "demo", label: "Templates", description: "" }],
     "GET data-forms/demo/template/files": () => [{ file: "classic.yaml", layers: ["shipped"], layer: "shipped", problem: null }],
   });
-  open();
+  open("files");
   expect(await screen.findByRole("heading", { name: "Add-on files" })).toBeInTheDocument();
   expect(await screen.findByRole("listitem", { name: "classic.yaml" })).toHaveTextContent("Comes with the add-on");
 });
 
-test("with no add-on data files there is no Add-on files section", async () => {
+test("with no add-on data files there is no Add-on files section in the list", async () => {
   api(ITEMS, { "GET data-forms": () => [] });
   open();
+  const nav = await screen.findByRole("navigation", { name: "Settings sections" });
   await screen.findByLabelText("The display name.");
-  expect(screen.queryByRole("heading", { name: "Add-on files" })).toBeNull();
+  expect(within(nav).queryByRole("link", { name: "Add-on files" })).toBeNull();
 });
 
-test("the standing instructions group points to the Knowledge screen, where the rules now live", async () => {
-  const user = userEvent.setup();
-  api([item("rules.rules", { type: "list", group: "rules", value: [], default: [] })]);
-  const onOpenKnowledge = vi.fn();
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenKnowledge={onOpenKnowledge} />);
-  const group = await screen.findByRole("form", { name: "Standing instructions" });
-  expect(group).toHaveTextContent("The rules Helper learns, and what you've kept, are on the Knowledge screen.");
-  await user.click(within(group).getByRole("button", { name: "Open Knowledge" }));
-  expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
+test("the AI section keeps its spending settings below the accounts, and puts the cursor on its heading", async () => {
+  api([item("ai.budgets.per_run_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "The most one run may cost." })], AI_ROUTES);
+  open("ai");
+  expect(await screen.findByLabelText("Maximum cost per AI task (USD)")).toHaveValue("1");
+  await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: /AI accounts/ })).toHaveFocus());
 });
 
 test("a setting that picks a language shows each tag by its name, sorted by name, and saves the tag", async () => {
@@ -605,7 +775,6 @@ test("a setting that picks a language shows each tag by its name, sorted by name
   expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["English (United Kingdom)", "English (United States)", "French (France)"]);
   expect(select).toHaveValue("en-US");
   await user.selectOptions(select, "fr-FR");
-  await user.click(screen.getByRole("button", { name: /Save/ }));
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toMatchObject({ changes: { "demo.language": "fr-FR" } });
 });

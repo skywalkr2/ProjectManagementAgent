@@ -11,8 +11,28 @@ export type QueueGroupName = QueueLine["group"];
 /** The groups in the order the engine ranks them (6.15); the screen never ranks. */
 export const GROUPS: readonly QueueGroupName[] = ["decide", "risk", "review", "send"];
 
+/** The kinds of line whose words are a count ("3 things need you"): with a count of zero there is nothing to say, so the
+ * line is not shown. */
+const COUNTED: ReadonlySet<QueueLine["kind"]> = new Set([
+  "first_go",
+  "catch_up_go",
+  "restart",
+  "paused",
+  "borrow",
+  "offline",
+  "overdue",
+  "review",
+  "learned",
+  "catch_up",
+  "send",
+  "nudge",
+]);
+
+/** Whether a line has something to count: a line that counts things and holds none is left out. */
+export const hasSomething = (line: QueueLine): boolean => !COUNTED.has(line.kind) || line.count > 0;
+
 export function useQueue() {
-  return useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
+  return useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue, select: (lines) => lines.filter(hasSomething) });
 }
 
 /** How many lines need the person: the queue's, the plugins' and the stages'. Null until the queue has answered, so the

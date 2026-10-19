@@ -11,7 +11,7 @@ import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
-import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
+import { fromHash, parseView, recordView, settingsView, toHash, type View } from "./lib/views";
 import { screenOf, type Screen } from "./lib/walkthrough";
 import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
@@ -103,7 +103,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   };
   const shown = parseView(view);
   // The grid of what each account can do belongs to Settings, so Settings stays marked in the navigation.
-  const navView: View = view === "settings/ai-compare" ? "settings" : view;
+  const navView: View = view === "settings/ai-compare" || (shown.type === "core" && shown.view === "settings") ? "settings" : view;
   const inWalkthrough = shown.type === "core" && shown.view === "setup";
   // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
   // been closed or finished, and setup is not done). A person who arrives at another screen, or has already opened
@@ -134,6 +134,12 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       return;
     }
     window.scrollTo?.(0, 0);
+    // Settings puts the cursor in the open section's first field itself.
+    const now = parseView(view);
+    if (now.type === "core" && now.view === "settings") {
+      ownFocus.current = false;
+      return;
+    }
     if (ownFocus.current) {
       ownFocus.current = false;
       return;
@@ -172,7 +178,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             shortcuts={rc.shortcuts}
             onAddAccount={() => {
               setAddAccount(Date.now());
-              setView("settings");
+              setView(settingsView("ai"));
             }}
           />
         );
@@ -220,12 +226,15 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             onChooseSource={openAddSource}
             onOpenKnowledge={() => setView("records/knowledge")}
             onOpenCompare={() => setView("settings/ai-compare")}
+            onOpenSources={() => setView("sources")}
+            section={shown.section}
+            onSection={(section) => setView(settingsView(section))}
             addAccount={addAccount}
             onAddAccountOpened={() => setAddAccount(null)}
           />
         );
       case "settings/ai-compare":
-        return <AiCompare onBack={() => setView("settings")} />;
+        return <AiCompare onBack={() => setView(settingsView("ai"))} />;
       case "addons":
         return <Addons onBack={() => setView("settings")} />;
       case "handover":

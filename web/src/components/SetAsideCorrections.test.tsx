@@ -73,8 +73,8 @@ test("a Came in row's menu sets the message aside as personal or sales, with Und
   await user.click(screen.getByRole("menuitem", { name: "Set aside: sales" }));
   await waitFor(() => expect(body(calls, "POST mail/SNAP-1/set-aside")).toEqual({ section: "sales" }));
   expect(await screen.findByText("Set aside Spring sale as sales mail.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Always for this domain" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Always for this sender" }));
+  expect(screen.getByRole("button", { name: "Apply to this email domain" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Apply to this sender" }));
   await waitFor(() =>
     expect(body(calls, "POST watch/sorting")).toEqual({ fingerprint: "fp-1", choice: "sales", senders: [SENDER], domains: [] }),
   );

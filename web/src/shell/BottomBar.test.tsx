@@ -46,7 +46,7 @@ test("Work opens a sheet with its views, as links", async () => {
   show();
   await user.click(screen.getByRole("button", { name: "Work" }));
   const sheet = await screen.findByRole("dialog", { name: "Work" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Follow-ups", "Waiting to go out", "Stages"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Follow-ups", "Drafts to approve", "Stages"]);
   expect(within(sheet).getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -59,12 +59,12 @@ test("More lists Records, Sources, Add-ons and Settings, the help items, and thi
   await user.click(screen.getByRole("button", { name: "More" }));
   const sheet = await screen.findByRole("dialog", { name: "More" });
   expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Knowledge", "Sources", "Add-ons", "Settings"]);
-  expect(within(sheet).getByRole("button", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+  expect(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Setup guide" })).toBeInTheDocument();
-  expect(within(sheet).getByRole("button", { name: "Send feedback" })).toBeInTheDocument();
+  expect(within(sheet).getByRole("button", { name: "Write feedback" })).toBeInTheDocument();
   expect(within(sheet).getByText("Version 9.8.7")).toBeInTheDocument();
   expect(within(sheet).getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
-  expect(within(sheet).getByRole("radiogroup", { name: "Density" })).toBeInTheDocument();
-  await user.click(within(sheet).getByRole("button", { name: "Keyboard shortcuts" }));
+  expect(within(sheet).getByRole("radiogroup", { name: "Spacing" })).toBeInTheDocument();
+  await user.click(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" }));
   await waitFor(() => expect(onHelp).toHaveBeenCalledTimes(1));
 });

@@ -10,7 +10,7 @@ function Pusher(props: { undo?: () => void }) {
       <button type="button" onClick={() => push({ message: `Message ${Math.random()}`, undo: props.undo })}>
         push
       </button>
-      <button type="button" onClick={() => push({ message: "Fixed", action: { label: "Go", run: () => undefined } })}>
+      <button type="button" onClick={() => push({ message: "Fixed", action: { label: "Start", run: () => undefined } })}>
         fixed
       </button>
       <button type="button" onClick={undoLast}>
@@ -32,7 +32,7 @@ test("a toast shows in the notifications region, which announces politely, and c
   await user.click(screen.getByRole("button", { name: "fixed" }));
   expect(within(region()).getByText("Fixed")).toBeInTheDocument();
   expect(region().querySelector('[aria-live="polite"]')).not.toBeNull();
-  expect(within(region()).getByRole("button", { name: "Go" })).toBeInTheDocument();
+  expect(within(region()).getByRole("button", { name: "Start" })).toBeInTheDocument();
   await user.click(within(region()).getByRole("button", { name: "Dismiss" }));
   expect(within(region()).queryByText("Fixed")).toBeNull();
 });
@@ -124,7 +124,7 @@ test("dismissAll takes every toast off the screen, and the page is told how many
 function Same(props: { undo?: () => void; many?: (n: number) => string }) {
   const { push } = useToasts();
   return (
-    <button type="button" onClick={() => push({ message: "Filed. Marked as looked over.", undo: props.undo, many: props.many })}>
+    <button type="button" onClick={() => push({ message: "Reviewed and filed.", undo: props.undo, many: props.many })}>
       same
     </button>
   );
@@ -155,7 +155,7 @@ test("a repeated message without its own wording says how many times", async () 
   );
   await user.click(screen.getByRole("button", { name: "same" }));
   await user.click(screen.getByRole("button", { name: "same" }));
-  expect(within(region()).getByText("Filed. Marked as looked over. (2 times)")).toBeInTheDocument();
+  expect(within(region()).getByText("Reviewed and filed. (2 times)")).toBeInTheDocument();
 });
 
 test("reduced motion does not keep a toast longer: it goes after its time like any other", async () => {

@@ -39,8 +39,8 @@ test("runs waiting for the first go are one line with their count and total, and
   });
   renderApp(<WhatChanged />);
   const line = await screen.findByRole("listitem", { name: "Start the assistant: 3 items, about $0.30" });
-  expect(within(line).getByRole("button", { name: "Go" })).toBeInTheDocument();
-  expect(within(line).getByText("Nothing is spent until you press Go.")).toBeInTheDocument();
+  expect(within(line).getByRole("button", { name: "Start" })).toBeInTheDocument();
+  expect(within(line).getByText("Nothing is spent until you press Start.")).toBeInTheDocument();
   expect(screen.getAllByRole("listitem")).toHaveLength(1);
   expect(screen.queryByText("Item REQ-1")).toBeNull();
 });
@@ -71,7 +71,7 @@ test("Go starts them all with one call and says the assistant is on it", async (
   });
   renderApp(<WhatChanged />);
   const line = await screen.findByRole("listitem", { name: /^Start the assistant: 2 items/ });
-  await user.click(within(line).getByRole("button", { name: "Go" }));
+  await user.click(within(line).getByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.filter((c) => c.route === "POST runs/first-go")).toHaveLength(1));
   expect(calls.some((c) => /POST requests\/.*\/go/.test(c.route))).toBe(false);
   expect(await screen.findByText("Approved. Helper is on it.")).toBeInTheDocument();
@@ -79,12 +79,12 @@ test("Go starts them all with one call and says the assistant is on it", async (
 
 test("no line shows when nothing waits for the first go, and a run held for its cost keeps its own row", async () => {
   fakeApi({
-    "GET changes": () => [held("REQ-9", { first_go: false, waiting: "About $0.80. Waiting for your go.", estimate_usd: 0.8 })],
+    "GET changes": () => [held("REQ-9", { first_go: false, waiting: "About $0.80. Waiting for you to start it.", estimate_usd: 0.8 })],
     ...NO_STAGES,
   });
   renderApp(<WhatChanged />);
   const row = await screen.findByRole("listitem", { name: "Item REQ-9" });
-  expect(within(row).getByRole("button", { name: "Go" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "Start" })).toBeInTheDocument();
   expect(screen.queryByText(/Start the assistant/)).toBeNull();
 });
 
@@ -107,7 +107,7 @@ test("a sorting run with no price makes the line say some of it is on the plan's
   });
   renderApp(<WhatChanged />);
   expect(
-    await screen.findByRole("listitem", { name: "Start the assistant: 2 items, about $0.20 for those with a price, and some on your plan's allowance" }),
+    await screen.findByRole("listitem", { name: "Start the assistant: 2 items, about $0.20 plus some of your plan's allowance" }),
   ).toBeInTheDocument();
 });
 

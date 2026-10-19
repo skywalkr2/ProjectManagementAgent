@@ -434,7 +434,7 @@ def test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is
             began = clock()
             worker.run_pending()
             [item] = _changes(client).values()
-            assert item["state"] == "queued" and item["waiting"].startswith("Waiting for the network since ")
+            assert item["state"] == "queued" and item["waiting"].startswith("Waiting for an internet connection since ")
             assert worker.store.read().get("request", item["id"]).data["retries"] == 0
             assert not _lines(client, "offline")
             wait = client.get("/api/status").json()["network_wait"]
@@ -449,7 +449,11 @@ def test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is
             stuck = _changes(client)[item["id"]]
             assert stuck["state"] == "queued" and worker.store.read().get("request", item["id"]).data["retries"] == 0
             [line] = _lines(client, "offline")
-            assert line["group"] == "risk" and line["count"] == 1 and line["waiting"] == "Waiting for the network"
+            assert (
+                line["group"] == "risk"
+                and line["count"] == 1
+                and line["waiting"] == "Waiting for an internet connection"
+            )
             assert datetime.fromisoformat(line["waiting_since"]) == began
             assert not [x for x in client.get("/api/today/queue").json() if x["kind"] in ("failed", "refused", "go")]
 

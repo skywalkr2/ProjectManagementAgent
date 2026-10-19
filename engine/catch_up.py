@@ -32,7 +32,7 @@ LEARNED_FROM = learn.TEACHES
 _PREFIXES = {model.prefix: kind for kind, model in REGISTRY.items()}
 
 #: What the learning runs for the catch-up list wait on until the person's go; Today gathers them into one line.
-WAITING = "Learning from your earlier corrections waits for your go."
+WAITING = "Learning from your earlier corrections waits for you to start it."
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="catch_up.queue")
 _GO = WriteContext(actor="pm", trust="trusted", op="catch_up.go")

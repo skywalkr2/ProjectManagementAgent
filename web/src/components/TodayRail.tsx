@@ -64,7 +64,8 @@ function RailPanel(props: {
         flush
         title={props.title}
         count={
-          props.count === null ? null : (
+          // A panel with nothing in it shows no count, rather than "0".
+          props.count === null || props.count === 0 ? null : (
             <>
               <span aria-hidden="true">{props.count}</span>
               <span className="sr">{props.countText}</span>

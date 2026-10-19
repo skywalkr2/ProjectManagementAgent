@@ -39,9 +39,16 @@ export function lastReadText(source: Source, t: T): string {
   if (!last) return t("sources.never");
   switch (last.outcome) {
     case "ok":
+      // Only what there is: "2 new, 1 removed", never "0 changed".
       return last.new + last.changed + last.removed === 0
         ? t("sources.last.nothing")
-        : t("sources.last.counts", { new: last.new, changed: last.changed, gone: last.removed });
+        : [
+            last.new > 0 ? t("sources.last.new", { n: last.new }) : "",
+            last.changed > 0 ? t("sources.last.changed", { n: last.changed }) : "",
+            last.removed > 0 ? t("sources.last.gone", { n: last.removed }) : "",
+          ]
+            .filter(Boolean)
+            .join(", ");
     case "baseline":
       return t("sources.last.baseline");
     case "offline":
@@ -251,7 +258,7 @@ function SourceRow(props: {
   // Until a read has worked there is no count to give: "0 items" would say it was read and found nothing.
   const facts = [
     source.connector_label || t("sources.kind_none"),
-    source.read_at ? tn("sources.items", source.items) : "",
+    source.read_at && source.items > 0 ? tn("sources.items", source.items) : "",
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
   ].filter(Boolean);
   const schedule = [

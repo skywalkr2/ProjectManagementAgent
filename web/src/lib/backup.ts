@@ -8,7 +8,8 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 export function backupAge(b: S["BackupStatus"], t: T): string | null {
   if (b.age_hours === null) return null;
   const h = b.age_hours;
-  return h < 1 ? t("age.under_hour") : h < 48 ? t("age.hours", { n: Math.floor(h) }) : t("age.days", { n: Math.floor(h / 24) });
+  const hours = Math.floor(h);
+  return h < 1 ? t("age.under_hour") : h < 48 ? t(`age.hours.${hours === 1 ? "one" : "other"}`, { n: hours }) : t("age.days", { n: Math.floor(h / 24) });
 }
 
 /** The backup in one phrase: none set up, none yet, the last one failed, overdue, or how long ago it ran. */

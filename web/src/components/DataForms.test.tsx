@@ -94,7 +94,7 @@ test("each file lists where it comes from, and a file that doesn't fit its form 
   expect(await row("proj.yaml")).toHaveTextContent("This project's copy");
   const both = await row("both.yaml");
   expect(both).toHaveTextContent("Your copy");
-  expect(both).toHaveTextContent("Doesn't fit the form: sizes.body: Input should be a valid integer");
+  expect(both).toHaveTextContent("Can't use these details: sizes.body: Input should be a valid integer");
   expect(await row("classic.yaml")).not.toHaveTextContent("Doesn't fit");
 });
 
@@ -105,7 +105,7 @@ test("opening a file shows it as a form; saving writes your copy with only what 
   });
   await user.click(await screen.findByRole("button", { name: "Change classic.yaml" }));
   const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
-  expect(within(form).getByText(/Saving writes your own copy/)).toBeInTheDocument();
+  expect(within(form).getByText(/Saves your own copy/)).toBeInTheDocument();
   expect(await within(form).findByLabelText("About title")).toHaveValue("Classic");
   expect(within(form).getByLabelText("About sizes.body")).toHaveValue("11");
   // Nothing changed yet, so there is nothing to save.
@@ -140,7 +140,7 @@ test("the form takes a project: its files are those of the project, and saving w
   expect(await row("classic.yaml")).toHaveTextContent("This project's copy");
   await user.click(screen.getByRole("button", { name: "Change classic.yaml" }));
   const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
-  expect(within(form).getByText("Saving writes a copy for this project only.")).toBeInTheDocument();
+  expect(within(form).getByText("Saves a copy for this project only.")).toBeInTheDocument();
   await user.clear(await within(form).findByLabelText("About title"));
   await user.type(within(form).getByLabelText("About title"), "Harbor");
   await user.click(within(form).getByRole("button", { name: "Save classic.yaml" }));
@@ -158,27 +158,27 @@ test("the form takes a project: its files are those of the project, and saving w
   );
 });
 
-test("New file asks for a lowercase name, adds .yaml, starts from the defaults and saves under that name", async () => {
+test("Create file asks for a lowercase name, adds .yaml, starts from the defaults and saves under that name", async () => {
   const { calls, user } = open({
     "GET data-forms/demo/template/file?path=fresh.yaml": () =>
       view("fresh.yaml", { layer: null, layers: [], items: ITEMS.map((i) => ({ ...i, value: i.default, source: "default" as const })) }),
     "POST data-forms/demo/template/file": () => ({ before: null }),
   });
-  await user.click(await screen.findByRole("button", { name: "New file for Templates" }));
-  const ask = await screen.findByRole("form", { name: "New file" });
+  await user.click(await screen.findByRole("button", { name: "Create a file for Templates" }));
+  const ask = await screen.findByRole("form", { name: "Create a file" });
   const name = within(ask).getByLabelText("Name of the new file");
   expect(name).toHaveFocus();
   // A name that can't be used says why, and one already taken is named.
   await user.type(name, "Fresh Start");
-  expect(within(ask).getByText(/Use lowercase letters, digits/)).toBeInTheDocument();
-  expect(within(ask).getByRole("button", { name: "Start from the defaults" })).toBeDisabled();
+  expect(within(ask).getByText(/Start with a letter or number/)).toBeInTheDocument();
+  expect(within(ask).getByRole("button", { name: "Start with the supplied settings" })).toBeDisabled();
   await user.clear(name);
   await user.type(name, "mine");
   expect(within(ask).getByText("There is already a file called mine.yaml.")).toBeInTheDocument();
   await user.clear(name);
   await user.type(name, "fresh.yaml");
-  await user.click(within(ask).getByRole("button", { name: "Start from the defaults" }));
-  const form = await screen.findByRole("form", { name: "New file fresh.yaml" });
+  await user.click(within(ask).getByRole("button", { name: "Start with the supplied settings" }));
+  const form = await screen.findByRole("form", { name: "Create file fresh.yaml" });
   // The defaults, and a new file can be saved as it is.
   expect(await within(form).findByLabelText("About title")).toHaveValue("Plain");
   await user.click(within(form).getByRole("button", { name: "Save fresh.yaml" }));
@@ -227,6 +227,6 @@ test("a copy that doesn't fit the form says so on the form and can be saved to f
   });
   await user.click(await screen.findByRole("button", { name: "Change classic.yaml" }));
   const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
-  expect(await within(form).findByText(/doesn't fit the form, so the defaults are shown/)).toBeInTheDocument();
+  expect(await within(form).findByText(/Your copy couldn't be shown/)).toBeInTheDocument();
   expect(within(form).getByRole("button", { name: "Save classic.yaml" })).toBeEnabled();
 });

@@ -100,14 +100,14 @@ test("every row says its role in words, its own name, what it covers, its state 
   const main = await row("Main account");
   expect(main).toHaveTextContent("Does the work");
   expect(main).toHaveTextContent("Pay as you go · Service A · everyday and harder work");
-  expect(main).toHaveTextContent("Ready · answered 2 h ago · $1.20 today");
+  expect(main).toHaveTextContent("Ready · answered 2 hours ago · $1.20 today");
   const second = await row("Second account");
   expect(second).toHaveTextContent("Backup");
   expect(second).toHaveTextContent("Signed-in app · App A · stands in for everyday and harder work");
   expect(second).toHaveTextContent("Checked for every kind of work · Oct 14");
   const trial = await row("Trial account");
   expect(trial).toHaveTextContent("Not used");
-  expect(trial).toHaveTextContent("Key not found on this computer");
+  expect(trial).toHaveTextContent("Access key not found on this computer");
   // A state that needs attention has an icon as well as words, and no id of the settings is on screen.
   expect(trial.querySelector('[data-icon="alert"]')).not.toBeNull();
   expect(document.body).not.toHaveTextContent(/\b(main|second|trial)\b(?! account)/);
@@ -148,7 +148,7 @@ test("the one next step follows the state: add its key, test, see why, nothing w
   });
   open();
   const buttons = async (name: string) => within(await row(name)).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent);
-  expect(await buttons("Keyless")).toEqual(["Add the key for Keyless", "More actions for Keyless"]);
+  expect(await buttons("Keyless")).toEqual(["Add the access key for Keyless", "More actions for Keyless"]);
   expect(await buttons("Fresh")).toEqual(["Test Fresh", "More actions for Fresh"]);
   expect(await buttons("Broke")).toEqual(["See why Broke's check failed", "More actions for Broke"]);
   expect(await buttons("Paused")).toEqual(["More actions for Paused"]);
@@ -169,9 +169,9 @@ test("a key that ends soon says so in the state line; a far end date is a quiet 
     ],
   });
   open();
-  expect(await row("Soon")).toHaveTextContent("Key stops working on Nov 30");
-  expect(await row("Far")).toHaveTextContent("Ready · answered 1 h ago");
-  expect(await row("Far")).toHaveTextContent("key ends Jan 31");
+  expect(await row("Soon")).toHaveTextContent("Access key stops working on Nov 30");
+  expect(await row("Far")).toHaveTextContent("Ready · answered 1 hour ago");
+  expect(await row("Far")).toHaveTextContent("access key ends Jan 31");
 });
 
 test("the menu holds the rest: test, make main, use as backup or stop, models, key, end date, rename, remove", async () => {
@@ -184,10 +184,10 @@ test("the menu holds the rest: test, make main, use as backup or stop, models, k
     await user.keyboard("{Escape}");
     return found;
   };
-  expect(await items("Main account")).toEqual(["Test", "Change models", "Replace key", "Set when the key ends", "Rename", "Remove"]);
-  expect(await items("Second account")).toEqual(["Test", "Make this the main account", "Stop using as backup", "Change models", "Replace key", "Set when the key ends", "Rename", "Remove"]);
+  expect(await items("Main account")).toEqual(["Test", "Change AI models", "Replace access key", "Set the access key's expiry date", "Rename", "Remove"]);
+  expect(await items("Second account")).toEqual(["Test", "Make this the main account", "Stop using as backup", "Change AI models", "Replace access key", "Set the access key's expiry date", "Rename", "Remove"]);
   // Its key is missing, so it can't be made the main account or a backup until one is added.
-  expect(await items("Trial account")).toEqual(["Test", "Change models", "Replace key", "Set when the key ends", "Rename", "Remove"]);
+  expect(await items("Trial account")).toEqual(["Test", "Change AI models", "Replace access key", "Set the access key's expiry date", "Rename", "Remove"]);
 });
 
 test("Make this the main account shows its check and cost under it, switches, and keeps the one it replaces as the backup when that passes its check", async () => {
@@ -209,7 +209,7 @@ test("Make this the main account shows its check and cost under it, switches, an
   expect(make).toHaveTextContent("Switch and check (about $0.80)");
   await user.click(make);
   // $0.80 is more than the $0.10 the person asked to be asked about, so it waits for their go.
-  expect(await within(await row("Trial account")).findByRole("alert")).toHaveTextContent("This would cost about $0.80, more than the $0.10 you asked to be asked about.");
+  expect(await within(await row("Trial account")).findByRole("alert")).toHaveTextContent("This would cost about $0.80, more than the $0.10 you set for asking first.");
   expect(calls.some((c) => c.route === "POST ai/accounts/trial/switch-check")).toBe(false);
   await user.click(screen.getByRole("button", { name: "Go ahead" }));
   await waitFor(() =>
@@ -232,7 +232,7 @@ test("when the account it replaces fails its check it is not made a backup, and 
   open();
   await menu(user, "Trial account", "Make this the main account");
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/trial")?.body).toEqual({ fingerprint: "fp-1", use: { routine: "everyday", deep: "everyday" } }));
-  expect(await screen.findByText("Helper now works with Trial account. Main account didn't pass its check, so it isn't a backup.")).toBeInTheDocument();
+  expect(await screen.findByText("Helper now uses Trial account. Main account failed its test and isn't a backup.")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST ai/accounts/main")).toBe(false);
 });
 
@@ -290,7 +290,7 @@ test("a change that needs a restart asks first and never restarts by itself", as
     </RestartProvider>,
   );
   await menu(user, "Trial account", "Remove");
-  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("This change needs the app to restart."));
+  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("Restart to finish this change?"));
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
 });
 
@@ -329,8 +329,8 @@ test("Add its key opens the key form with the cursor in it, and the new key is s
   const user = userEvent.setup();
   const calls = api({ "POST ai/accounts/trial": () => SAVED });
   open();
-  await user.click(within(await row("Trial account")).getByRole("button", { name: "Add the key for Trial account" }));
-  const field = await screen.findByLabelText("New key");
+  await user.click(within(await row("Trial account")).getByRole("button", { name: "Add the access key for Trial account" }));
+  const field = await screen.findByLabelText("New access key");
   expect(field).toHaveAttribute("type", "password");
   await waitFor(() => expect(field).toHaveFocus());
   const save = screen.getByRole("button", { name: "Save" });
@@ -338,21 +338,21 @@ test("Add its key opens the key form with the cursor in it, and the new key is s
   await user.type(field, "fresh-secret");
   await user.click(save);
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/trial")?.body).toEqual({ fingerprint: "fp-1", key: "fresh-secret" }));
-  expect(await screen.findByText("Replaced the key for Trial account.")).toBeInTheDocument();
-  await waitFor(() => expect(screen.queryByLabelText("New key")).toBeNull());
+  expect(await screen.findByText("Replaced the access key for Trial account.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByLabelText("New access key")).toBeNull());
 });
 
 test("on a hosted app Replace key asks where the key is and sends a reference", async () => {
   const user = userEvent.setup();
   const calls = api({ "POST ai/accounts/trial": () => SAVED });
   open(false);
-  await menu(user, "Trial account", "Replace key");
-  await user.type(await screen.findByLabelText("Where the key is"), "env:MODEL_KEY");
+  await menu(user, "Trial account", "Replace access key");
+  await user.type(await screen.findByLabelText("Where the access key is kept"), "env:MODEL_KEY");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/trial")?.body).toEqual({ fingerprint: "fp-1", key_ref: "env:MODEL_KEY" }));
 });
 
-test("Set when the key ends sends the day, and clearing it sends the clearing", async () => {
+test("Set the access key's expiry date sends the day, and clearing it sends the clearing", async () => {
   const user = userEvent.setup();
   const calls = api({
     "GET ai/accounts": () => [account("spare", { label: "Spare" }), account("dated", { label: "Dated", credential_expires: "2027-01-31" })],
@@ -360,14 +360,14 @@ test("Set when the key ends sends the day, and clearing it sends the clearing", 
     "POST ai/accounts/dated": () => SAVED,
   });
   open();
-  await menu(user, "Spare", "Set when the key ends");
-  const field = await screen.findByLabelText(/The day this key stops working/);
+  await menu(user, "Spare", "Set the access key's expiry date");
+  const field = await screen.findByLabelText(/Expiry date, if known/);
   expect(field).toHaveAttribute("type", "date");
   await user.type(field, "2027-02-15");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({ fingerprint: "fp-1", credential_expires: "2027-02-15" }));
-  await menu(user, "Dated", "Set when the key ends");
-  await user.clear(await screen.findByLabelText(/The day this key stops working/));
+  await menu(user, "Dated", "Set the access key's expiry date");
+  await user.clear(await screen.findByLabelText(/Expiry date, if known/));
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/dated")?.body).toEqual({ fingerprint: "fp-1", clear_credential_expires: true }));
 });
@@ -380,13 +380,13 @@ test("replacing the key takes the date typed with it, and drops the old key's da
     "POST ai/accounts/dated": () => SAVED,
   });
   open();
-  await menu(user, "Spare", "Replace key");
-  await user.type(await screen.findByLabelText("New key"), "fresh");
-  await user.type(screen.getByLabelText(/The day this key stops working/), "2027-03-01");
+  await menu(user, "Spare", "Replace access key");
+  await user.type(await screen.findByLabelText("New access key"), "fresh");
+  await user.type(screen.getByLabelText(/Expiry date, if known/), "2027-03-01");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({ fingerprint: "fp-1", key: "fresh", credential_expires: "2027-03-01" }));
-  await menu(user, "Dated", "Replace key");
-  await user.type(await screen.findByLabelText("New key"), "newer");
+  await menu(user, "Dated", "Replace access key");
+  await user.type(await screen.findByLabelText("New access key"), "newer");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/dated")?.body).toEqual({ fingerprint: "fp-1", key: "newer", clear_credential_expires: true }));
 });
@@ -405,29 +405,29 @@ test("Rename changes the name the person sees and nothing else", async () => {
   expect(await screen.findByText("Renamed to Spare key.")).toBeInTheDocument();
 });
 
-test("Change models edits the ids it has, can add one for harder work, and Cancel changes nothing", async () => {
+test("Change AI models edits the ids it has, can add one for harder work, and Cancel changes nothing", async () => {
   const user = userEvent.setup();
   const calls = api({ "POST ai/accounts/trial": () => SAVED });
   open();
-  await menu(user, "Trial account", "Change models");
-  const everyday = await screen.findByLabelText("Model for everyday work");
+  await menu(user, "Trial account", "Change AI models");
+  const everyday = await screen.findByLabelText("AI model for everyday work");
   expect(everyday).toHaveValue("model-a");
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Cancel" }));
-  expect(screen.queryByLabelText("Model for everyday work")).toBeNull();
+  expect(screen.queryByLabelText("AI model for everyday work")).toBeNull();
   expect(calls.some((c) => c.route === "POST ai/accounts/trial")).toBe(false);
-  await menu(user, "Trial account", "Change models");
-  const again = await screen.findByLabelText("Model for everyday work");
+  await menu(user, "Trial account", "Change AI models");
+  const again = await screen.findByLabelText("AI model for everyday work");
   await user.clear(again);
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   await user.type(again, "model-z");
-  await user.type(screen.getByLabelText("Model for harder work (optional)"), "model-y");
+  await user.type(screen.getByLabelText("AI model for harder work (optional)"), "model-y");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/trial")?.body).toEqual({ fingerprint: "fp-1", models: { everyday: "model-z", harder: "model-y" } }));
-  expect(await screen.findByText("Changed the models of Trial account.")).toBeInTheDocument();
+  expect(await screen.findByText("Changed the models for Trial account.")).toBeInTheDocument();
 });
 
-test("Change models saves with the fingerprint it opened with: a change made since is refused, the typed ids stay, and saving again is the person's own choice", async () => {
+test("Change AI models saves with the fingerprint it opened with: a change made since is refused, the typed ids stay, and saving again is the person's own choice", async () => {
   const user = userEvent.setup();
   let fingerprint = "fp-1";
   const calls = api({
@@ -438,8 +438,8 @@ test("Change models saves with the fingerprint it opened with: a change made sin
   await screen.findByText("Trial account");
   await waitFor(() => expect(calls.some((c) => c.route === "GET settings")).toBe(true));
   const before = calls.filter((c) => c.route === "GET settings").length;
-  await menu(user, "Trial account", "Change models");
-  const everyday = await screen.findByLabelText("Model for everyday work");
+  await menu(user, "Trial account", "Change AI models");
+  const everyday = await screen.findByLabelText("AI model for everyday work");
   // Something else changed the settings after the form opened and read them.
   await waitFor(() => expect(calls.filter((c) => c.route === "GET settings").length).toBeGreaterThan(before));
   fingerprint = "fp-2";
@@ -448,10 +448,10 @@ test("Change models saves with the fingerprint it opened with: a change made sin
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(await screen.findByText("This was changed since you opened it. What you typed is still here; check it against what is saved now, then save again.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "POST ai/accounts/trial").map((c) => (c.body as { fingerprint: string }).fingerprint)).toEqual(["fp-1"]);
-  expect(screen.getByLabelText("Model for everyday work")).toHaveValue("model-z");
+  expect(screen.getByLabelText("AI model for everyday work")).toHaveValue("model-z");
   await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled());
   await user.click(screen.getByRole("button", { name: "Save" }));
-  expect(await screen.findByText("Changed the models of Trial account.")).toBeInTheDocument();
+  expect(await screen.findByText("Changed the models for Trial account.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "POST ai/accounts/trial").map((c) => (c.body as { fingerprint: string }).fingerprint)).toEqual(["fp-1", "fp-2"]);
 });
 
@@ -463,10 +463,10 @@ test("a backup that gains a harder model offers to move its harder work there, c
     "POST ai/accounts/stand/test?tier=deep&model=harder": answered("stand"),
   });
   open();
-  await menu(user, "Stand", "Change models");
+  await menu(user, "Stand", "Change AI models");
   expect(screen.queryByRole("checkbox")).toBeNull();
-  await user.type(await screen.findByLabelText("Model for harder work (optional)"), "model-y");
-  const move = await screen.findByRole("checkbox", { name: /harder model when it stands in for harder work/ });
+  await user.type(await screen.findByLabelText("AI model for harder work (optional)"), "model-y");
+  const move = await screen.findByRole("checkbox", { name: /harder-work model for backup too/ });
   expect(move).toBeChecked();
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/stand/test?tier=deep&model=harder")).toBe(true));
@@ -486,10 +486,10 @@ test("when the harder model fails its check the models are still saved and harde
     "POST ai/accounts/stand/test?tier=deep&model=harder": () => [{ tier: "account", account: "stand", main: false, ok: false, detail: "no such model" }],
   });
   open();
-  await menu(user, "Stand", "Change models");
-  await user.type(await screen.findByLabelText("Model for harder work (optional)"), "model-y");
+  await menu(user, "Stand", "Change AI models");
+  await user.type(await screen.findByLabelText("AI model for harder work (optional)"), "model-y");
   await user.click(screen.getByRole("button", { name: "Save" }));
-  expect(await screen.findByText(/The harder model didn't pass its check.*no such model/)).toBeInTheDocument();
+  expect(await screen.findByText(/The harder-work model failed its test.*no such model/)).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "POST ai/accounts/stand").length).toBe(1);
 });
 
@@ -497,11 +497,11 @@ test("a refused change shows the server's words and keeps the form open", async 
   const user = userEvent.setup();
   api({ "POST ai/accounts/trial": () => new Refuse(400, "Name at least one model the account uses.") });
   open();
-  await menu(user, "Trial account", "Change models");
-  await user.type(await screen.findByLabelText("Model for harder work (optional)"), "model-y");
+  await menu(user, "Trial account", "Change AI models");
+  await user.type(await screen.findByLabelText("AI model for harder work (optional)"), "model-y");
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Name at least one model the account uses.");
-  expect(screen.getByLabelText("Model for harder work (optional)")).toHaveValue("model-y");
+  expect(screen.getByLabelText("AI model for harder work (optional)")).toHaveValue("model-y");
 });
 
 const OFFER = { offered: true, usd: 0.8, cases: 40, runs: 3 };
@@ -513,15 +513,15 @@ test("changing the model of an account that does the work is a switch: the cost 
     "POST ai/accounts/main/switch-check": () => ({ saved: SAVED, checking: true }),
   });
   open();
-  await menu(user, "Main account", "Change models");
-  const field = await screen.findByLabelText("Model for everyday work");
+  await menu(user, "Main account", "Change AI models");
+  const field = await screen.findByLabelText("AI model for everyday work");
   await user.clear(field);
   await user.type(field, "model-z");
   const go = await screen.findByRole("button", { name: "Switch and check (about $0.80)" });
   expect(screen.getByRole("button", { name: "Switch without checking" })).toBeInTheDocument();
   await user.click(go);
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/main/switch-check")?.body).toEqual({ fingerprint: "fp-1", models: { everyday: "model-z" } }));
-  expect(await screen.findByText("Checking Main account now. Today says if anything needs a look.")).toBeInTheDocument();
+  expect(await screen.findByText("Checking Main account. Today will show anything that needs attention.")).toBeInTheDocument();
 });
 
 test("Use as backup checks the account for each kind of work first, with its cost under it, then adds it with Undo", async () => {
@@ -682,7 +682,7 @@ test("a check that would cost more than the amount the person set asks first, wi
   open();
   await menu(user, "Second", "Use as backup");
   const asked = await within(await row("Second")).findByRole("alert");
-  expect(asked).toHaveTextContent("This would cost about $0.50, more than the $0.10 you asked to be asked about.");
+  expect(asked).toHaveTextContent("This would cost about $0.50, more than the $0.10 you set for asking first.");
   expect(calls.some((c) => c.route.startsWith("POST ai/accounts/second/test"))).toBe(false);
   await user.click(within(asked).getByRole("button", { name: "Cancel" }));
   expect(calls.some((c) => c.route.startsWith("POST ai/accounts/second/test"))).toBe(false);

@@ -47,14 +47,14 @@ const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c
 test("it lists the flagged rules with how often each was given, and the size against its budget and the rules moved", async () => {
   open();
   expect(await screen.findByRole("heading", { level: 1, name: "Rules to look over" })).toBeInTheDocument();
-  expect(await screen.findByText(/none of them showed in its work in the last 30 days/)).toBeInTheDocument();
-  expect(screen.getByText("Sent with every run: 5200 of 6000 characters of rules, lessons and terms.")).toBeInTheDocument();
-  expect(screen.getByText("2 rules moved out of the part sent every time. They go only with the runs they cover.")).toBeInTheDocument();
+  expect(await screen.findByText(/hasn't used them in 30 days/)).toBeInTheDocument();
+  expect(screen.getByText("Instructions sent with every task: 5200 of 6000 characters.")).toBeInTheDocument();
+  expect(screen.getByText("2 rules are now sent only for relevant tasks.")).toBeInTheDocument();
   const [first, second] = rows();
   expect(first).toHaveTextContent("Every question names its reader.");
-  expect(first).toHaveTextContent("Given to 7 runs, never applied");
+  expect(first).toHaveTextContent("Sent for 7 tasks, never used");
   expect(first).toHaveTextContent("All projects");
-  expect(second).toHaveTextContent("Given to 1 run, never applied");
+  expect(second).toHaveTextContent("Sent for 1 task, never used");
   expect(second).toHaveTextContent("All projects except Second project");
 });
 
@@ -67,7 +67,7 @@ test("Keep starts the rule's review clock again with the version that was read, 
   await screen.findByRole("list", { name: "Rules to look over" });
   await user.click(screen.getByRole("button", { name: "Keep: Every question names its reader." }));
   await waitFor(() => expect(body(calls, "POST knowledge/RULE-1/keep-rule")).toEqual({ read_version: 3 }));
-  expect(await screen.findByText("Kept. Its next review starts now.")).toBeInTheDocument();
+  expect(await screen.findByText("Kept for later review.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/undo")).toBe(true));
 });
@@ -80,20 +80,20 @@ test("Narrow and Retire are in each row's menu and act at once with Undo", async
   });
   await screen.findByRole("list", { name: "Rules to look over" });
   await user.click(within(rows()[0]).getByRole("button", { name: "More actions for Every question names its reader." }));
-  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Narrow", "Retire"]);
-  await user.click(screen.getByRole("menuitem", { name: "Narrow" }));
+  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Limit where this applies", "Stop using"]);
+  await user.click(screen.getByRole("menuitem", { name: "Limit where this applies" }));
   const row = rows()[0];
   expect(within(row).getByRole("radio", { name: "Only these projects" })).toHaveFocus();
   await user.click(within(row).getByRole("checkbox", { name: "First project" }));
-  await user.click(within(row).getByRole("button", { name: "Narrow" }));
+  await user.click(within(row).getByRole("button", { name: "Save limits" }));
   await waitFor(() =>
     expect(body(calls, "POST knowledge/RULE-1/narrow")).toEqual({ read_version: 3, applies_to: { ...WORKSPACE, scope: "projects", projects: ["P-1"], except: [] } }),
   );
-  expect(await screen.findByText("Narrowed.")).toBeInTheDocument();
+  expect(await screen.findByText("Updated where this applies.")).toBeInTheDocument();
   await user.click(within(rows()[1]).getByRole("button", { name: "More actions for Close nothing without an owner." }));
-  await user.click(screen.getByRole("menuitem", { name: "Retire" }));
+  await user.click(screen.getByRole("menuitem", { name: "Stop using" }));
   await waitFor(() => expect(body(calls, "POST knowledge/RULE-2/retire")).toEqual({ read_version: 3 }));
-  expect(await screen.findByText("Retired. It no longer guides Helper's work.")).toBeInTheDocument();
+  expect(await screen.findByText("No longer used by Helper.")).toBeInTheDocument();
   expect(within(screen.getByRole("region", { name: "Notifications" })).getAllByRole("button", { name: "Undo" }).length).toBeGreaterThan(0);
 });
 
@@ -115,4 +115,10 @@ test("a failed load says so, with Try again", async () => {
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("list", { name: "Rules to look over" })).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "GET knowledge/rules/review").length).toBeGreaterThan(1);
+});
+
+test("a rule that was given to no run counted shows no count of zero runs", async () => {
+  open({}, { ...REVIEW, flagged: [flagged("RULE-9", "Never say zero.", { present: 0 })] });
+  expect(await screen.findByText("Never say zero.")).toBeInTheDocument();
+  expect(document.body).not.toHaveTextContent(/\b0 tasks?\b/);
 });

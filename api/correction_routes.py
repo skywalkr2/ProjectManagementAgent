@@ -90,7 +90,7 @@ def build_correction_router(ws: Workspace, cfg: Config, store: Store, events: Ev
         """Drop an action that is no longer needed, with a reason and Undo. It is never done or credited, and it leaves
         every list. Records a dropped correction naming the change and run that made it, when there was one."""
         need("action", action_id)
-        return person_op({"op": "action.drop", "id": action_id, "reason": body.reason}, "Dropped an action")
+        return person_op({"op": "action.drop", "id": action_id, "reason": body.reason}, "Dropped a to-do")
 
     @r.post("/actions/{action_id}/reply")
     def review_reply(action_id: str, body: ActionReplyIn) -> Applied:

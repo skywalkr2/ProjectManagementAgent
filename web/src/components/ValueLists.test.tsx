@@ -141,14 +141,14 @@ test("Add a value sends it to its own list, clears the field and offers Undo; a 
   });
   renderApp(<ValueLists />);
   const group = await block("Project group");
-  const field = within(group).getByRole("textbox", { name: "Add a value to Project group" });
+  const field = within(group).getByRole("textbox", { name: "Add a choice to Project group" });
   expect(within(group).getByRole("button", { name: /^Add/ })).toBeDisabled();
   await user.type(field, "Books{Enter}");
   await waitFor(() => expect(calls.find((c) => c.route === "POST lists/project-group/add")?.body).toEqual({ value: "Books" }));
   expect(await screen.findByText("Added Books to Project group.")).toBeInTheDocument();
   await waitFor(() => expect(field).toHaveValue(""));
   const stages = await block("Stages");
-  await user.type(within(stages).getByRole("textbox", { name: "Add a value to Stages" }), "Review");
+  await user.type(within(stages).getByRole("textbox", { name: "Add a choice to Stages" }), "Review");
   await user.click(within(stages).getByRole("button", { name: /^Add/ }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST lists/demo/stages/add")?.body).toEqual({ value: "Review" }));
 });
@@ -158,7 +158,7 @@ test("a refused add shows why and keeps what was typed", async () => {
   api({ "POST lists/project-group/add": () => new Refuse(422, "That is not a valid value.") });
   renderApp(<ValueLists />);
   const group = await block("Project group");
-  const field = within(group).getByRole("textbox", { name: "Add a value to Project group" });
+  const field = within(group).getByRole("textbox", { name: "Add a choice to Project group" });
   await user.type(field, "??{Enter}");
   expect(await within(group).findByRole("alert")).toHaveTextContent("That is not a valid value.");
   expect(field).toHaveValue("??");

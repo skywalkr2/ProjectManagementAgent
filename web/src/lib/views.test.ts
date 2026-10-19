@@ -1,4 +1,4 @@
-import { fromHash, panelView, parseView, recordView, toHash, viewHref } from "./views";
+import { fromHash, panelView, parseView, recordView, settingsSectionOf, settingsView, toHash, viewHref } from "./views";
 
 const routes = [
   "today",
@@ -77,4 +77,26 @@ test("a view's link keeps this page's path and query, so it works in a new tab",
   window.history.replaceState(null, "", "/admin/?token=t");
   expect(viewHref("work/stages")).toBe("/admin/?token=t#work/stages");
   window.history.replaceState(null, "", "/");
+});
+
+test("each section of Settings has its own address, and an add-on's section carries the add-on's name", () => {
+  for (const section of ["you", "ai", "backups", "today", "appearance", "lists", "files", "advanced"] as const) {
+    const view = settingsView(section);
+    expect(toHash(view)).toBe(`settings/${section}`);
+    expect(fromHash(`#${toHash(view)}`)).toBe(view);
+    expect(parseView(view)).toEqual({ type: "core", view: "settings", section });
+    expect(settingsSectionOf(view)).toBe(section);
+  }
+  const addon = settingsView("addon/sample pack");
+  expect(toHash(addon)).toBe("settings/addon/sample%20pack");
+  expect(fromHash(`#${toHash(addon)}`)).toBe(addon);
+  expect(parseView(addon)).toEqual({ type: "core", view: "settings", section: "addon/sample pack" });
+});
+
+test("Settings without a section, the grid of what accounts can do, and a section nobody knows are not sections", () => {
+  expect(settingsSectionOf("settings")).toBeNull();
+  expect(settingsSectionOf("settings/ai-compare")).toBeNull();
+  expect(parseView("settings")).toEqual({ type: "core", view: "settings" });
+  expect(fromHash("#settings/nonsense")).toBe("settings");
+  expect(fromHash("#settings/addon/")).toBe("settings");
 });

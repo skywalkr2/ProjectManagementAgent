@@ -201,15 +201,15 @@ async function expectFullWidthHeader(page: Page, width: number) {
   expect(box!.x).toBeLessThanOrEqual(1);
   expect(box!.x + box!.width).toBeGreaterThanOrEqual(width - 1);
   expect(box!.height).toBeLessThanOrEqual(56);
-  const brand = await header.getByRole("link", { name: /, go to Today$/ }).boundingBox();
-  const menu = await header.getByRole("button", { name: /^Appearance, / }).boundingBox();
+  const brand = await header.getByRole("link", { name: /^Go to Today/ }).boundingBox();
+  const menu = await header.getByRole("button", { name: /^Change appearance, / }).boundingBox();
   expect(brand!.x).toBeLessThanOrEqual(24);
   expect(menu!.x + menu!.width).toBeGreaterThanOrEqual(width - 24);
 }
 
 /** Opens the status chip's popover, which lists every state with its action. */
 async function openStatus(page: Page) {
-  await page.getByRole("button", { name: /^Status: / }).click();
+  await page.getByRole("button", { name: /^App status: / }).click();
   return page.getByRole("dialog", { name: "Status" });
 }
 
@@ -222,9 +222,9 @@ test.describe.serial("acceptance scenario", () => {
   test("signing in, the backup nag, and a clean first screen", async ({ page }) => {
     await signIn(page);
     people = await (await page.request.get("api/people")).json();
-    await expect(page.getByRole("button", { name: /^Status: / })).toContainText("Backup needed");
+    await expect(page.getByRole("button", { name: /^App status: / })).toContainText("Backup needed");
     const status = await openStatus(page);
-    await expect(status).toContainText("No backup has succeeded yet");
+    await expect(status).toContainText("No successful backup yet");
     await page.keyboard.press("Escape");
     await checkAccessibility(page);
   });
@@ -237,10 +237,10 @@ test.describe.serial("acceptance scenario", () => {
     await expect(line).toContainText("Next: Add an AI account and test it");
     // The stand-in assistant is a line in the status popover with a button to the AI step, and no command line.
     const status = await openStatus(page);
-    await expect(status).toContainText("The assistant is a stand-in for trying the app");
+    await expect(status).toContainText("You're using a practice assistant");
     await expect(status).not.toContainText("cockpit");
     await checkAccessibility(page);
-    await status.getByRole("button", { name: "Open the AI step" }).click();
+    await status.getByRole("button", { name: "Open AI account setup" }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     // The cursor starts in the screen's first field (design 7.0, "the cursor starts where you type").
     await expect
@@ -289,9 +289,15 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     await go(page, "Settings");
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Workspace name" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Seconds a message stays on screen" })).toBeVisible();
+    // The sections are down the side; the first has the cursor in its first field, and nothing waits behind a Save button.
+    const sections = page.getByRole("navigation", { name: "Settings sections" });
+    await expect(sections.getByRole("link", { name: "You and the workspace" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("textbox", { name: "Workspace name" })).toBeFocused();
+    await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
     await checkAccessibility(page);
+    await sections.getByRole("link", { name: "Appearance" }).click();
+    await expect(page).toHaveURL(/#settings\/appearance$/);
+    await expect(page.getByRole("textbox", { name: "Seconds a message stays on screen" })).toBeVisible();
     await page.getByRole("button", { name: "More settings" }).click();
     await expect(page.getByRole("button", { name: "Fewer settings" })).toHaveAttribute("aria-expanded", "true");
     await checkAccessibility(page);
@@ -305,8 +311,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await expect(page.getByRole("form", { name: "What it may spend" })).toBeVisible();
     await page.getByRole("radio").first().check();
-    await expect(page.getByRole("heading", { name: "Get a key" })).toBeVisible();
-    await expect(page.getByLabel("Key", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Get an access key" })).toBeVisible();
+    await expect(page.getByLabel("Access key", { exact: true })).toBeVisible();
     await page.getByText("Advanced", { exact: true }).click();
     await expect(page.getByLabel("Account name")).toBeVisible();
     await checkAccessibility(page);
@@ -348,13 +354,13 @@ test.describe.serial("acceptance scenario", () => {
     const help = page.getByRole("button", { name: "Help" });
     await help.click();
     await expect(page.getByRole("menuitem", { name: /^Version / })).toBeDisabled();
-    await page.getByRole("menuitem", { name: "Send feedback" }).click();
-    const dialog = page.getByRole("dialog", { name: "Send feedback" });
+    await page.getByRole("menuitem", { name: "Write feedback" }).click();
+    const dialog = page.getByRole("dialog", { name: "Write feedback" });
     await expect(dialog).toBeVisible();
     await dialog.getByLabel("What happened, or what would help?").fill("The page was slow");
     await expect(dialog.getByLabel("Subject")).toHaveValue("Feedback on PM Cockpit");
     await expect(dialog.getByLabel("Message")).toHaveValue(/^The page was slow\n\nApp version: .+\nScreen: Settings$/);
-    await expect(dialog.getByRole("link", { name: "Open in your mail" })).toHaveAttribute("href", /^mailto:/);
+    await expect(dialog.getByRole("link", { name: "Open in your email app" })).toHaveAttribute("href", /^mailto:/);
     await checkAccessibility(page);
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
@@ -368,7 +374,7 @@ test.describe.serial("acceptance scenario", () => {
     const projects = await getJson<Project[]>(page, "api/projects");
     const row = await handIn(page, notes);
     // One action per task, and every name resolved: no "who is this?" decision for these notes.
-    const actions = row.locator("li.child", { hasText: "Added an action" });
+    const actions = row.locator("li.child", { hasText: "Added a to-do" });
     await expect(actions).toHaveCount(notes.expect!.length);
     await expect(row.getByRole("combobox", { name: /Who is/ })).toHaveCount(0);
     const followups = await getJson<Section[]>(page, "api/followups");
@@ -396,7 +402,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(row.locator("mark").first()).toBeVisible();
     await checkAccessibility(page);
     await row.getByRole("button", { name: "Looks good" }).click();
-    await expect(page.getByText("Filed. Marked as looked over.")).toBeVisible();
+    await expect(page.getByText("Reviewed and filed.")).toBeVisible();
 
     // A first name two contributors share is one decision, and nothing is filed under either until the person picks.
     const sharedCase = byId("shared-first-name");
@@ -570,7 +576,7 @@ test.describe.serial("acceptance scenario", () => {
     const waiting = page.locator("li.line", { has: page.getByRole("heading", { name: target.name }) });
     await expect(waiting).toContainText(/sent (today|.* \(\d+ days?\))/);
     await expect(waiting.locator("li.child")).toHaveCount(questions.length + actions.length);
-    await expect(waiting.getByRole("button", { name: "They finished it" }).first()).toBeVisible();
+    await expect(waiting.getByRole("button", { name: "Mark their work done" }).first()).toBeVisible();
     await checkAccessibility(page);
     // Undo puts it all back to send.
     await page.getByRole("button", { name: "To send" }).click();
@@ -631,13 +637,13 @@ test.describe.serial("acceptance scenario", () => {
     // No backup folder at all: the header chip, its popover and Today's own line each say there is none.
     await helperJson(page, "backup-targets?configured=0", "POST");
     await signIn(page);
-    const chip = page.getByRole("button", { name: /^Status: / });
+    const chip = page.getByRole("button", { name: /^App status: / });
     await expect(chip).toContainText("Backup needed");
     const none = await openStatus(page);
-    await expect(none).toContainText("No off-device backup");
+    await expect(none).toContainText("No backup on another device");
     await page.keyboard.press("Escape");
     const line = page.getByRole("region", { name: "Backup", exact: true });
-    await expect(line).toContainText("No off-device backup is set up");
+    await expect(line).toContainText("Choose a folder for backups on another device");
     await expect(line.getByRole("button", { name: "Set up backups" })).toBeVisible();
     await checkAccessibility(page);
 
@@ -646,14 +652,14 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     await expect(chip).toContainText("Backup needed");
     await expect(chip).not.toContainText("ago");
-    await expect(line).toContainText("No backup has succeeded yet");
+    await expect(line).toContainText("No backup has worked yet");
 
     // After one succeeds Today's line goes, and the header chip itself shows how long ago it ran.
     await line.getByRole("button", { name: "Back up now" }).click();
     await expect(line).toHaveCount(0);
-    await expect(chip).toContainText("Live");
+    await expect(chip).toContainText("Connected");
     await expect(chip).toContainText("Backed up less than an hour ago");
-    await expect(chip).toHaveAccessibleName(/^Status: Live, Backed up less than an hour ago$/);
+    await expect(chip).toHaveAccessibleName(/^App status: Connected, Backed up less than an hour ago$/);
     const status = await openStatus(page);
     await expect(status).toContainText("Backed up less than an hour ago");
     await checkAccessibility(page);
@@ -737,7 +743,7 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     await go(page, "Sources");
     await expect(page.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Auto-closed" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Set aside by rules" })).toBeVisible();
     await checkAccessibility(page);
     // The Ask box: focus goes to the question, Escape closes it, and focus returns to the button that opens it.
     const opener = page.getByRole("button", { name: "Ask", exact: true });
@@ -794,7 +800,7 @@ test.describe.serial("acceptance scenario", () => {
     const inspector = page.getByRole("complementary", { name: "Details" });
     await expect(inspector).toBeVisible();
     await expect(inspector.getByRole("heading", { level: 2 })).not.toHaveText("");
-    await expect(inspector).not.toContainText("Pick a line to see its items here.");
+    await expect(inspector).not.toContainText("Choose an item to see its details.");
     const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
     const box = (await inspector.boundingBox())!;
     const rail = (await page.locator('[data-col="agenda"]').boundingBox())!;
@@ -886,7 +892,7 @@ test.describe.serial("acceptance scenario", () => {
     const status = form.getByRole("combobox", { name: "Status" });
     await expect(status.locator("option")).toContainText(["Not set", "Add to the list…"]);
     await status.selectOption({ label: "Add to the list…" });
-    const field = form.getByRole("textbox", { name: "Add a value to Project status" });
+    const field = form.getByRole("textbox", { name: "Add a choice to Project status" });
     await expect(field).toBeFocused();
     await field.fill("Parked for now");
     await checkAccessibility(page);
@@ -911,6 +917,7 @@ test.describe.serial("acceptance scenario", () => {
   test("Settings lists the value lists, and a value can be renamed and stopped being offered", async ({ page }) => {
     await signIn(page);
     await go(page, "Settings");
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Lists" }).click();
     const lists = page.getByRole("region", { name: "Lists" });
     await expect(lists).toBeVisible();
     const status = lists.locator("li.line", { hasText: "Project status" });
@@ -955,7 +962,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(row.locator(".kind")).toHaveText(item.current_label ?? "Not started");
     await row.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "History" }).click();
-    await expect(row.getByRole("list", { name: "Where it has been" })).toContainText("by undo");
+    await expect(row.getByRole("list", { name: "Where it has been" })).toContainText("after undoing a change");
     await checkAccessibility(page);
 
     // Not started yet: Stages offers the first stage, Today stays quiet about it.
@@ -994,20 +1001,20 @@ test.describe.serial("acceptance scenario", () => {
     ).find((v) => v.record.kind === task.stage_start.kind && v.record.id === task.stage_start.record)!;
     await page.reload();
     await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
-    const today = page.locator("[data-row]", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" });
+    const today = page.locator("[data-row]", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for you to start it" });
     await expect(today).toBeVisible();
     await expect(today).not.toContainText(task.id);
     await checkAccessibility(page);
     await go(page, "Stages");
     const here = page.locator("li.line", { hasText: item.title }).first();
-    await expect(here.getByRole("list", { name: "Waiting for your go" })).toContainText("is waiting for your go");
+    await expect(here.getByRole("list", { name: "Waiting for you to start it" })).toContainText("is waiting for you to start it");
     await checkAccessibility(page);
-    await here.getByRole("button", { name: "Go", exact: true }).click();
+    await here.getByRole("button", { name: "Start", exact: true }).click();
     await expect(page.getByText(/Approved\./)).toBeVisible();
-    await expect(here.getByRole("list", { name: "Waiting for your go" })).toHaveCount(0);
+    await expect(here.getByRole("list", { name: "Waiting for you to start it" })).toHaveCount(0);
     await go(page, "Today");
     await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
-    await expect(page.locator("[data-row]", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" })).toHaveCount(0);
+    await expect(page.locator("[data-row]", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for you to start it" })).toHaveCount(0);
   });
 
   test("a phone-sized screen shows stages in one column", async ({ page }) => {
@@ -1051,13 +1058,13 @@ test.describe.serial("acceptance scenario", () => {
     await expect(review.getByText(first, { exact: true })).toBeVisible();
     await expect(review.getByRole("checkbox", { name: "Include the word count" })).toBeFocused();
     await checkAccessibility(page);
-    await review.getByRole("button", { name: "Apply" }).click();
+    await review.getByRole("button", { name: "Make these changes" }).click();
     await expect(page.getByText("Make a note from short-note.txt: 1 change made.")).toBeVisible();
     await expect(review).toHaveCount(0);
     const notes: Array<{ text: string }> = await (await page.request.get("api/notes")).json();
     expect(notes.map((n) => n.text)).toContain(first);
     await page.getByRole("button", { name: "Undo" }).last().click();
-    await expect(page.getByText("Undone. It's back as it was.")).toBeVisible();
+    await expect(page.getByText("Undone.")).toBeVisible();
     const after: Array<{ text: string }> = await (await page.request.get("api/notes")).json();
     expect(after.map((n) => n.text)).not.toContain(first);
   });
@@ -1074,13 +1081,13 @@ test.describe.serial("acceptance scenario", () => {
   test("Add-ons opens from the views and from Settings, lists the bundled add-on under Installed, and passes the accessibility checks", async ({ page }) => {
     await signIn(page);
     await go(page, "Settings");
-    await page.getByRole("main").getByRole("button", { name: "Add-ons", exact: true }).click();
+    await page.getByRole("main").getByRole("button", { name: "Open Add-ons", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
     await go(page, "Today");
     await go(page, "Add-ons");
     await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Available" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByText(/This copy of the app doesn't list a catalog/)).toBeVisible();
+    await expect(page.getByText(/No add-on catalog is connected/)).toBeVisible();
     await checkAccessibility(page);
     await page.getByRole("tab", { name: "Installed" }).click();
     await expect(page.getByRole("tab", { name: "Installed" })).toHaveAttribute("aria-selected", "true");
@@ -1094,7 +1101,7 @@ test.describe.serial("acceptance scenario", () => {
     const header = page.getByRole("banner");
     expect((await header.boundingBox())!.height).toBe(56);
     const handIn = await header.getByRole("button", { name: "Hand something in" }).boundingBox();
-    const brand = await header.getByRole("link", { name: /, go to Today$/ }).boundingBox();
+    const brand = await header.getByRole("link", { name: /^Go to Today/ }).boundingBox();
     expect(Math.abs(handIn!.y + handIn!.height / 2 - (brand!.y + brand!.height / 2))).toBeLessThan(10);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await expectFullWidthHeader(page, 1280);
@@ -1119,7 +1126,7 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     await go(page, "Settings");
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
-    const brand = page.getByRole("banner").getByRole("link", { name: /, go to Today$/ });
+    const brand = page.getByRole("banner").getByRole("link", { name: /^Go to Today/ });
     await brand.click();
     await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");

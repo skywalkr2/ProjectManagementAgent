@@ -65,7 +65,7 @@ test("a change shows what was done, why, and the highlighted source", async () =
   await user.click(screen.getByRole("button", { name: "Show source" }));
   const mark = await screen.findByText((_, el) => el?.tagName === "MARK");
   expect(mark.textContent).toContain("proof copies will ship on November 5");
-  expect(screen.getByText("outside content")).toBeInTheDocument();
+  expect(screen.getByText("someone else's material")).toBeInTheDocument();
 });
 
 test("Looks good acts at once and offers Undo", async () => {
@@ -211,7 +211,7 @@ test("a review row has no Dismiss, and a dismissed hand-in leaves Needs attentio
 });
 
 const gated = (extra: Partial<S["ChangeItem"]> = {}) =>
-  stopped({ approval: "required", estimate_usd: 0.8, waiting: "About $0.80. Waiting for your go.", ...extra });
+  stopped({ approval: "required", estimate_usd: 0.8, waiting: "About $0.80. Waiting for you to start it.", ...extra });
 
 test("a run held for its cost is its own row: the estimate, Go with the version read, and no Try again", async () => {
   const user = userEvent.setup();
@@ -224,10 +224,10 @@ test("a run held for its cost is its own row: the estimate, Go with the version 
   });
   renderApp(<WhatChanged />);
   const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
-  expect(within(row).getByText("Needs your go")).toBeInTheDocument();
+  expect(within(row).getByText("Waiting for you to start it")).toBeInTheDocument();
   expect(within(row).getByText("About $0.80")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
-  await user.click(within(row).getByRole("button", { name: "Go" }));
+  await user.click(within(row).getByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST requests/REQ-9/go")?.body).toEqual({ read_version: 4 }));
   expect(await screen.findByText("Approved. Helper is on it.")).toBeInTheDocument();
 });
@@ -263,7 +263,7 @@ test("a second opinion is labeled in words, by where it came from", async () => 
   await screen.findByText("From another account");
   const row = (title: string) => screen.getByText(title).closest("li")!;
   expect(within(row("From another account")).getByText("Second opinion from another account")).toBeInTheDocument();
-  expect(within(row("From the same account")).getByText("Second opinion from the same account, as a fresh run")).toBeInTheDocument();
+  expect(within(row("From the same account")).getByText("Second opinion from the same account, starting fresh")).toBeInTheDocument();
   expect(within(row("No second opinion")).queryByText(/Second opinion/)).toBeNull();
 });
 
@@ -307,7 +307,7 @@ test("with no other account, the chooser says so and points to the AI settings",
   fakeApi({ "GET changes": () => [stopped({ refused: true })], "GET requests/REQ-9/accounts": () => [] });
   renderApp(<WhatChanged />);
   await user.click(await screen.findByRole("button", { name: "Send to another account" }));
-  expect(await screen.findByText("No other account can take this. You can add one in the AI settings.")).toBeInTheDocument();
+  expect(await screen.findByText("No other account can do this. Add one in AI accounts.")).toBeInTheDocument();
   const chooser = screen.getByRole("group", { name: /No other account/ });
   expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel"]);
   await user.click(within(chooser).getByRole("button", { name: "Cancel" }));

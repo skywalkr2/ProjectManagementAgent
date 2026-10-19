@@ -108,7 +108,7 @@ test("Confidential and Private are sent as the level the person chose, in plain 
   expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual([
     "The usual",
     "Confidential",
-    "Private: only accounts allowed private material",
+    "Private",
   ]);
   await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
   await user.selectOptions(choice, "Confidential");
@@ -120,7 +120,7 @@ test("Private is sent with the person's own note too", async () => {
   const { user, calls } = await setup();
   await user.click(screen.getByRole("radio", { name: "Mine" }));
   await user.type(screen.getByLabelText("Paste or type it here"), "keep this quiet");
-  await user.selectOptions(screen.getByLabelText("How sensitive is this?"), "Private: only accounts allowed private material");
+  await user.selectOptions(screen.getByLabelText("How sensitive is this?"), "Private");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "keep this quiet", pasted: "", data_level: "restricted" }));
 });

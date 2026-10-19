@@ -3,7 +3,8 @@
 //   #today  #work/changed  #work/followups  #work/outgoing  #work/stages  #work/panel/<name>
 //   #records/projects  #records/people  #records/files  #records/knowledge  #records/rules-review
 //   #records/panel/<name>  #records/<kind>/<id>
-//   #sources  #addons  #settings  #settings/ai-compare (what each AI account can do)  #setup (the guide)  #handover (which copy to keep)  #styleguide
+//   #sources  #addons  #settings  #settings/<section> (you, ai, backups, today, appearance, lists, files, advanced, addon/<name>)
+//   #settings/ai-compare (what each AI account can do)  #setup (the guide)  #handover (which copy to keep)  #styleguide
 // A `View` is that fragment, written without the "#" and with each name or id encoded, so two views compare with ===.
 export type CoreView =
   | "today"
@@ -24,7 +25,10 @@ export type CoreView =
   | "handover"
   | "styleguide";
 export type PanelGroup = "work" | "records";
-export type View = CoreView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}`;
+/** The sections of Settings that are always there; an add-on's own is `addon/<name>`. */
+export const SETTINGS_SECTIONS = ["you", "ai", "backups", "today", "appearance", "lists", "files", "advanced"] as const;
+export type SettingsSection = (typeof SETTINGS_SECTIONS)[number] | `addon/${string}`;
+export type View = CoreView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}` | `settings/${SettingsSection}`;
 
 export const CORE_VIEWS: readonly CoreView[] = [
   "today",
@@ -63,12 +67,32 @@ const enc = encodeURIComponent;
 export const panelView = (name: string, group: PanelGroup = "work"): View => `${group}/panel/${enc(name)}`;
 export const recordView = (kind: string, id: string): View => `records/${enc(kind)}/${enc(id)}`;
 
+export const settingsView = (section: SettingsSection): View =>
+  section.startsWith("addon/") ? `settings/addon/${enc(section.slice("addon/".length))}` : (`settings/${section}` as View);
+
+/** The section of Settings a view names, or null for any other view (Settings itself opens on its first section). */
+export function settingsSectionOf(view: string): SettingsSection | null {
+  if (!view.startsWith("settings/")) return null;
+  const rest = view.slice("settings/".length);
+  if ((SETTINGS_SECTIONS as readonly string[]).includes(rest)) return rest as SettingsSection;
+  if (rest.startsWith("addon/") && rest.length > "addon/".length) {
+    try {
+      return `addon/${decodeURIComponent(rest.slice("addon/".length))}`;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export type ParsedView =
-  | { type: "core"; view: CoreView }
+  | { type: "core"; view: CoreView; section?: SettingsSection }
   | { type: "panel"; group: PanelGroup; name: string }
   | { type: "record"; kind: string; id: string };
 
 export function parseView(view: View): ParsedView {
+  const section = settingsSectionOf(view);
+  if (section) return { type: "core", view: "settings", section };
   if (view.startsWith("work/panel/") || view.startsWith("records/panel/")) {
     const group = view.startsWith("work/") ? "work" : "records";
     return { type: "panel", group, name: decodeURIComponent(view.slice(`${group}/panel/`.length)) };
@@ -86,6 +110,7 @@ export function fromHash(hash: string): View {
   const text = hash.replace(/^#/, "");
   if (!text) return "today";
   if ((CORE_VIEWS as readonly string[]).includes(text)) return text as CoreView;
+  if (text.startsWith("settings/")) return settingsSectionOf(text) ? (text as View) : "settings";
   try {
     // Fragments from earlier versions.
     if (text.startsWith("panel:")) {

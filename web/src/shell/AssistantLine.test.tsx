@@ -31,7 +31,7 @@ test("fine: the line says the assistant is working and when it last ran, with an
   show(statusFixture({}, { assistant: ran }));
   const button = await line();
   expect(button).toHaveTextContent("Assistant");
-  expect(button).toHaveTextContent(/last run 9:42/);
+  expect(button).toHaveTextContent(/last task 9:42/);
   expect(button).toHaveAttribute("data-tone", "ok");
   expect(button.querySelector("[data-icon='check']")).toHaveAccessibleName("Working");
 });
@@ -39,15 +39,15 @@ test("fine: the line says the assistant is working and when it last ran, with an
 test("before the first run the line says there are no runs yet, and still reads as fine", async () => {
   show(statusFixture());
   const button = await line();
-  expect(button).toHaveTextContent("no runs yet");
+  expect(button).toHaveTextContent("no tasks yet");
   expect(button).toHaveAttribute("data-tone", "ok");
 });
 
-test("amber: work waiting for the network is said in words, with its own icon", async () => {
+test("amber: work waiting for an internet connection is said in words, with its own icon", async () => {
   show(statusFixture({ network_wait: { count: 2, since: `${TODAY}T09:00:00+00:00` } }, { assistant: ran }));
   await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "network"));
   expect(lineNow()).toHaveAttribute("data-tone", "warn");
-  expect(lineNow()).toHaveTextContent("waiting for the network");
+  expect(lineNow()).toHaveTextContent("waiting for an internet connection");
   expect(lineNow().querySelector("[data-icon='alert']")).toHaveAccessibleName("Needs a look");
 });
 
@@ -68,7 +68,7 @@ test("red: a failed last run says so with its time, with a different icon and wo
   show(statusFixture({}, { assistant: { ...ran, last_run_failed: true } }));
   await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "run_failed"));
   expect(lineNow()).toHaveAttribute("data-tone", "bad");
-  expect(lineNow()).toHaveTextContent(/last run failed 9:42/);
+  expect(lineNow()).toHaveTextContent(/last task failed 9:42/);
   expect(lineNow().querySelector("[data-icon='close']")).toHaveAccessibleName("Not working");
 });
 
@@ -82,7 +82,7 @@ test("red: an account that can't be used beats the amber states, and the popover
   await waitFor(() => expect(lineNow()).toHaveAttribute("data-alive", "failing"));
   expect(lineNow()).toHaveTextContent("can't use its AI account");
   const dialog = await open(user);
-  await user.click(within(dialog).getByRole("button", { name: "Open the AI step" }));
+  await user.click(within(dialog).getByRole("button", { name: "Open AI account setup" }));
   await waitFor(() => expect(onOpenGuide).toHaveBeenCalledWith("ai"));
 });
 
@@ -109,13 +109,13 @@ test("the popover shows today's runs by account with failures, what waits and si
     ),
   );
   const dialog = await open(user);
-  const runs = within(dialog).getByText("Runs today").closest("li")!;
-  expect(runs).toHaveTextContent("main-account: 5 runs, 1 failed");
-  expect(runs).toHaveTextContent("backup-account: 1 run");
-  expect(runs).not.toHaveTextContent("backup-account: 1 run, ");
+  const runs = within(dialog).getByText("AI tasks today").closest("li")!;
+  expect(runs).toHaveTextContent("main-account: 5 tasks, 1 failed");
+  expect(runs).toHaveTextContent("backup-account: 1 task");
+  expect(runs).not.toHaveTextContent("backup-account: 1 task, ");
   const queue = within(dialog).getByText("Waiting for the assistant").closest("li")!;
   expect(queue).toHaveTextContent(/3 requests, the oldest waiting since 8:15/);
-  const chains = within(dialog).getByText(/^If an account can't serve/).closest("li")!;
+  const chains = within(dialog).getByText(/^If an account can't respond/).closest("li")!;
   expect(chains).toHaveTextContent("Everyday work: main-account then backup-account");
   expect(chains).toHaveTextContent("custom-tier: backup-account");
 });
@@ -124,7 +124,7 @@ test("the popover with nothing to show says so in words, and has no problem row 
   const user = userEvent.setup();
   show(statusFixture());
   const dialog = await open(user);
-  expect(within(dialog).getByText("No runs yet today.")).toBeInTheDocument();
+  expect(within(dialog).getByText("No AI tasks today.")).toBeInTheDocument();
   expect(within(dialog).getByText("Nothing is waiting.")).toBeInTheDocument();
   expect(within(dialog).getByText("No account is set up yet.")).toBeInTheDocument();
   expect(dialog.querySelector("[data-section='problem']")).toBeNull();
@@ -165,4 +165,12 @@ test("accounts are called by the names the person gave them, in the line and in 
   expect(dialog).toHaveTextContent("Main account");
   expect(dialog).toHaveTextContent("Service A account");
   expect(dialog).not.toHaveTextContent(/acct-/);
+});
+
+test("an account with no runs today is not listed as \"0 tasks\"", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { assistant: { ...ran, runs_today: [{ account: "acct-1", count: 0, failed: 0 }, { account: "acct-2", count: 2, failed: 0 }] } }));
+  const dialog = await open(user);
+  expect(dialog).toHaveTextContent("acct-2: 2 tasks");
+  expect(dialog).not.toHaveTextContent(/\b0 tasks?\b/);
 });

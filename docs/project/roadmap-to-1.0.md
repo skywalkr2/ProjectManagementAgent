@@ -1788,7 +1788,7 @@ add-on ships inside the installers (an extension plus packaging: provider code s
 optional, the core stays testable without it); and the owner's target of sharing installers with a small invited
 group on 2026-10-20, which the plan's order (B, S, then I) and the integrity items above don't yet support.
 
-1. **Wave 3, Today follow-ups and Settings:** open promise P19 first (**built 2026-10-19:** no screen wider than the
+1. **Wave 3, Today follow-ups and Settings (done 2026-10-19; the Settings rework in `Settings.test.tsx`, `shell.spec.ts` and `layout.spec.ts`, the wording review's "Applied" section lists what was skipped):** open promise P19 first (**built 2026-10-19:** no screen wider than the
    window, `web/e2e/layout.spec.ts` at six widths with the layout stress strings; the mailbox refusal in plain words
    with advice by key, `tests/test_mailbox_refusal.py`; no zero-count review line and a line that counts the refused
    when everything was refused, `tests/test_today_queue.py::test_work_whose_every_change_was_refused_keeps_a_line_that_counts_the_refused`;

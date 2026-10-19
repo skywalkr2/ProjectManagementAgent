@@ -116,7 +116,7 @@ export function AiCompare(props: { onBack: () => void }) {
     const detail = skill
       ? [
           skill.cost_per_pass_usd != null && skill.cost_per_pass_usd > 0 ? t("ai_compare.cost", { amount: money(skill.cost_per_pass_usd) }) : "",
-          tn("ai_compare.runs", skill.runs),
+          skill.runs > 0 ? tn("ai_compare.runs", skill.runs) : "",
           when(skill.age_days ?? 0) + (state === "old" ? ` ${t("ai_compare.old")}` : ""),
         ]
           .filter(Boolean)

@@ -4,10 +4,10 @@ import {
   formatValue,
   formValues,
   fromDraft,
-  groupItems,
   groupLabel,
   labelForKey,
   labelOf,
+  matches,
   nest,
   prefill,
   restartWhat,
@@ -67,18 +67,16 @@ test("a label comes from the wording sheet when there is one, otherwise it is th
   expect(groupLabel("ai.rate_limits", t, none)).toBe("AI rate limits");
 });
 
-test("basic settings come first, the rest only when asked for, and a search looks at everything", () => {
-  const items = [
-    item({ key: "x.hidden", group: "x", basic: false }),
-    item({ key: "y.shown", group: "y", basic: true }),
-    item({ key: "x.shown", group: "x", basic: true }),
-    item({ key: "z.hidden", group: "z", description: "Needle in here" }),
-  ];
-  const keys = (groups: ReturnType<typeof groupItems>) => groups.flatMap((g) => g.items.map((i) => i.key));
-  expect(keys(groupItems(items, { more: false, query: "" }, t, none))).toEqual(["y.shown", "x.shown"]);
-  expect(keys(groupItems(items, { more: true, query: "" }, t, none))).toEqual(["x.shown", "x.hidden", "y.shown", "z.hidden"]);
-  expect(keys(groupItems(items, { more: false, query: "needle" }, t, none))).toEqual(["z.hidden"]);
-  expect(keys(groupItems(items, { more: false, query: "X.HIDDEN" }, t, none))).toEqual(["x.hidden"]);
+test("a search looks at a setting's key, label, description and add-on, ignoring capitals; an empty search matches nothing", () => {
+  const plain = item({ key: "x.hidden", description: "Needle in here" });
+  const addon = item({ key: "plugins/sample-pack.a", plugin: "sample-pack", description: "Something else" });
+  expect(matches(plain, "needle", t, none)).toBe(true);
+  expect(matches(plain, "X.HIDDEN", t, none)).toBe(true);
+  expect(matches(plain, "nothing like it", t, none)).toBe(false);
+  expect(matches(plain, "  ", t, none)).toBe(false);
+  expect(matches(addon, "sample pack", t, none)).toBe(true);
+  expect(matches(plain, "short label", t, (k) => k === "settings.key.x.hidden")).toBe(false);
+  expect(matches(plain, "short label", () => "Short label", (k) => k === "settings.key.x.hidden")).toBe(true);
 });
 
 test("undo puts back the old values, and returns what was default to default", () => {
@@ -105,16 +103,9 @@ const tw = (key: string, vars: Record<string, string | number> = {}) =>
   (words[key] ?? key).replace(/\{(\w+)\}/g, (_m, name: string) => String(vars[name]));
 const hasWord = (key: string) => key in words;
 
-test("an add-on's group is named for the add-on, never by where it lives, and comes after the app's groups", () => {
-  const items = [
-    item({ key: "plugins/sample-pack.a", group: "plugins/sample-pack", plugin: "sample-pack", basic: true }),
-    item({ key: "demo.x", group: "demo", basic: true }),
-    item({ key: "plugins/other.b", group: "plugins/other", plugin: "other", basic: true }),
-    item({ key: "demo.y", group: "demo.deep", basic: false }),
-  ];
+test("an add-on's group is named for the add-on, never by where it lives", () => {
   expect(groupLabel("plugins/sample-pack", tw, hasWord)).toBe("Sample pack");
-  const groups = groupItems(items, { more: true, query: "" }, tw, hasWord).map((g) => g.group);
-  expect(groups).toEqual(["demo", "demo.deep", "plugins/sample-pack", "plugins/other"]);
+  expect(groupLabel("demo", tw, hasWord)).toBe("Demo group");
 });
 
 test("a key is named by its setting's label, else its group's, else a general phrase", () => {

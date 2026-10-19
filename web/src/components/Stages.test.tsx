@@ -46,7 +46,7 @@ function request(extra: Partial<S["StageRequestView"]> = {}): S["StageRequestVie
     task: "notes",
     state: "needs_you",
     approval: "required",
-    waiting: "Waiting for your go.",
+    waiting: "Waiting for you to start it.",
     stage_start: { kind: "project", record: "A-1", stage: "second", changeset: "CS-1" },
     ...extra,
   };
@@ -111,7 +111,7 @@ test("the menu moves back to each earlier stage and shows the history in plain w
   await user.click(items[1]);
   const list = await within(alpha).findByRole("list", { name: "Where it has been" });
   const lines = within(list).getAllByRole("listitem").map((li) => li.textContent ?? "");
-  expect(lines[0]).toMatch(/^Second step to First step · .* · by undo$/);
+  expect(lines[0]).toMatch(/^Second step to First step · .* · after undoing a change$/);
   expect(lines[1]).toMatch(/^First step to Second step · .* · by a rule$/);
   expect(lines[2]).toMatch(/^Not started to First step · .* · by you$/);
   await user.click(within(alpha).getByRole("button", { name: /More actions for Alpha item/ }));
@@ -137,24 +137,24 @@ test("a task waiting for the go shows under its item, and Go sends the version r
   });
   renderApp(<Stages />);
   const alpha = await screen.findByRole("listitem", { name: "Alpha item" });
-  const waiting = await within(alpha).findByRole("list", { name: "Waiting for your go" });
+  const waiting = await within(alpha).findByRole("list", { name: "Waiting for you to start it" });
   expect(within(waiting).getAllByRole("listitem")).toHaveLength(1);
-  expect(within(waiting).getByText("Filing notes is waiting for your go")).toBeInTheDocument();
-  await user.click(within(waiting).getByRole("button", { name: "Go" }));
+  expect(within(waiting).getByText("Filing notes is waiting for you to start it")).toBeInTheDocument();
+  await user.click(within(waiting).getByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST requests/R-1/go")?.body).toEqual({ read_version: 2 }));
 });
 
 test("with nothing in stages, it says so", async () => {
   fakeApi({ "GET stages/records": () => [], "GET stages/requests": () => [] });
   renderApp(<Stages />);
-  expect(await screen.findByText(/^Nothing moves through stages yet\./)).toBeInTheDocument();
+  expect(await screen.findByText(/^No items have stages yet\./)).toBeInTheDocument();
 });
 
 test("Today lists tasks waiting for a go and items ready to move on, never internal names", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({
     "GET changes": () => [
-      { id: "R-1", version: 2, dismissed: false, state: "needs_you", waiting: "Waiting for your go.", created_at: "2026-10-09T14:00:00Z", note: null, source: null, source_title: null, approval: "required", stage_task: true, estimate_usd: 0.4, changeset: null },
+      { id: "R-1", version: 2, dismissed: false, state: "needs_you", waiting: "Waiting for you to start it.", created_at: "2026-10-09T14:00:00Z", note: null, source: null, source_title: null, approval: "required", stage_task: true, estimate_usd: 0.4, changeset: null },
     ],
     "GET stages/records": () => [ready, blocked],
     "GET stages/ready": () => [ready],
@@ -163,13 +163,13 @@ test("Today lists tasks waiting for a go and items ready to move on, never inter
     "POST stages/move": () => ({ changeset: "CS-7", stages: ready }),
   });
   renderApp(<WhatChanged />);
-  const go = await screen.findByRole("listitem", { name: "Alpha item: Helper's work is waiting for your go" });
+  const go = await screen.findByRole("listitem", { name: "Alpha item: Helper's work is waiting for you to start it" });
   expect(within(go).getByText("About $0.40")).toBeInTheDocument();
   expect(screen.queryByText(/unnamed-kind/)).toBeNull();
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   const moveRow = screen.getByRole("listitem", { name: "Alpha item can move to Third step" });
-  expect(screen.queryByText("Nothing needs a look right now.")).toBeNull();
-  await user.click(within(go).getByRole("button", { name: "Go" }));
+  expect(screen.queryByText("Nothing needs your attention.")).toBeNull();
+  await user.click(within(go).getByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST requests/R-1/go")?.body).toEqual({ read_version: 2 }));
   await user.click(within(moveRow).getByRole("button", { name: "Move to Third step" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST stages/move")?.body).toMatchObject({ to: "third" }));
@@ -182,7 +182,7 @@ test("a task waiting for the go shows its estimate under the item once it has on
   });
   renderApp(<Stages />);
   const alpha = await screen.findByRole("listitem", { name: "Alpha item" });
-  const waiting = await within(alpha).findByRole("list", { name: "Waiting for your go" });
+  const waiting = await within(alpha).findByRole("list", { name: "Waiting for you to start it" });
   const lines = within(waiting).getAllByRole("listitem");
   expect(lines).toHaveLength(2);
   expect(within(lines[0]).getByText("About $0.40")).toBeInTheDocument();

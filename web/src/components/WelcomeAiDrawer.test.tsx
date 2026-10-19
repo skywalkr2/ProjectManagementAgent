@@ -85,9 +85,9 @@ const open = (drawer: Partial<NonNullable<React.ComponentProps<typeof WelcomeAi>
 /** Choose the service, paste its key and check it, which lists its models. */
 async function keyed(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("radio", { name: /Service A/ }));
-  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.type(screen.getByLabelText("Access key"), "secret-value");
   await user.click(screen.getByRole("button", { name: "Check" }));
-  await screen.findByLabelText("Model for everyday work");
+  await screen.findByLabelText("AI model for everyday work");
 }
 const body = (calls: ReturnType<typeof fakeApi>) => calls.find((c) => c.route === "POST ai/accounts")?.body as S["AiAccountAdd"];
 
@@ -108,8 +108,8 @@ test("it asks What is it for? with the three choices and what each does, and the
   const group = screen.getByRole("group", { name: "What is it for?" });
   const choices = within(group).getAllByRole("radio");
   expect(choices.map((c) => c.closest("label")?.querySelector("strong")?.textContent)).toEqual(["Helper's work", "A backup", "Nothing yet"]);
-  expect(group).toHaveTextContent("It becomes the main account. Main account becomes its backup.");
-  expect(group).toHaveTextContent("Stands in when Main account can't answer. Checked for each kind of work first (about $0.006).");
+  expect(group).toHaveTextContent("Use it as the main account and Main account as backup.");
+  expect(group).toHaveTextContent("Backs up Main account. Tests each kind of work first, for about $0.006.");
   expect(group).toHaveTextContent("Kept here to test or compare.");
   // With something already doing the work, a backup is the likely answer.
   expect(within(group).getByRole("radio", { name: /A backup/ })).toBeChecked();
@@ -126,7 +126,7 @@ test("with nothing doing the work there is no backup to be: the account is for t
   const group = screen.getByRole("group", { name: "What is it for?" });
   expect(within(group).queryByRole("radio", { name: /A backup/ })).toBeNull();
   expect(within(group).getByRole("radio", { name: /Helper's work/ })).toBeChecked();
-  expect(group).toHaveTextContent("It becomes the main account.");
+  expect(group).toHaveTextContent("Use it as the main account.");
   expect(group).not.toHaveTextContent("becomes its backup");
 });
 
@@ -229,7 +229,7 @@ test("when the account it replaces fails its check it is not kept as a backup", 
   await user.click(screen.getByRole("radio", { name: /Helper's work/ }));
   await user.click(screen.getByRole("button", { name: /Add and check/ }));
   await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
-  expect(await screen.findByText("Helper now works with Service A account. Main account didn't pass its check, so it isn't a backup.")).toBeInTheDocument();
+  expect(await screen.findByText("Helper now uses Service A account. Main account failed its test and isn't a backup.")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST ai/accounts/main")).toBe(false);
 });
 
@@ -239,7 +239,7 @@ test("a typed key is unsaved text the drawer asks about, and Cancel closes it", 
   const handlers = open();
   await user.click(await screen.findByRole("radio", { name: /Service A/ }));
   expect(handlers.onDirty).toHaveBeenLastCalledWith(false);
-  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.type(screen.getByLabelText("Access key"), "secret-value");
   expect(handlers.onDirty).toHaveBeenLastCalledWith(true);
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   expect(handlers.onCancel).toHaveBeenCalledTimes(1);
@@ -257,7 +257,7 @@ test("a check that would cost more than the amount the person set asks for a sec
   // model-a is $3 and $15 per million: 1M read and 0.2M written is $6.
   await user.click(screen.getByRole("button", { name: "Add and check (about $6.00)" }));
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
-  expect(screen.getByRole("alert")).toHaveTextContent("The check would cost about $6.00, more than the $0.10 you asked to be asked about.");
+  expect(screen.getByRole("alert")).toHaveTextContent("The check would cost about $6.00, more than the $0.10 you set for asking first.");
   await user.click(screen.getByRole("button", { name: "Go ahead and check (about $6.00)" }));
   await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(true);

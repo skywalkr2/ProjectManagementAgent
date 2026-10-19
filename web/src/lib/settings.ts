@@ -129,29 +129,13 @@ export function restartWhat(keys: string[], items: Item[], t: T, has: Has): stri
   return t("restart.for", { what: trimEnd(list) });
 }
 
-export interface Group {
-  group: string;
-  items: Item[];
-}
-
-/** The items to show, grouped: basic ones first, the rest only when asked for or when searching, which looks at every
- * setting by its key, label and description. */
-export function groupItems(items: Item[], opts: { more: boolean; query: string }, t: T, has: Has): Group[] {
-  const q = opts.query.trim().toLowerCase();
-  const shown = items.filter((item) => {
-    if (!q) return opts.more || item.basic;
-    const addon = item.plugin ? [addonLabel(item.plugin, t, has)] : [];
-    return [item.key, labelOf(item, t, has), item.description, ...addon].some((x) => x.toLowerCase().includes(q));
-  });
-  const groups = new Map<string, Item[]>();
-  for (const item of shown) groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
-  const out = [...groups].map(([group, list]) => ({
-    group,
-    items: [...list.filter((i) => i.basic), ...list.filter((i) => !i.basic)],
-  }));
-  const ordered = [...out.filter((g) => g.items.some((i) => i.basic)), ...out.filter((g) => !g.items.some((i) => i.basic))];
-  // The app's own groups come first; each add-on's follows, one group each.
-  return [...ordered.filter((g) => addonOf(g.group) === null), ...ordered.filter((g) => addonOf(g.group) !== null)];
+/** Whether a setting matches a search: by its key, its label, its description or the name of the add-on it belongs to,
+ * ignoring capitals. An empty search matches nothing. */
+export function matches(item: Item, query: string, t: T, has: Has): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+  const addon = item.plugin ? [addonLabel(item.plugin, t, has)] : [];
+  return [item.key, labelOf(item, t, has), item.description, ...addon].some((x) => x.toLowerCase().includes(q));
 }
 
 /** The setting that switches this one on or off, if there is one. */
@@ -217,7 +201,7 @@ export function prefill(items: Item[], values: unknown): Item[] {
 }
 
 /** Whether a setting is on screen as its default: an empty box and no default are the same thing. */
-function isDefault(item: Item, value: unknown): boolean {
+export function isDefault(item: Item, value: unknown): boolean {
   const norm = (v: unknown) => (v === null || v === undefined ? (item.type === "yes_no" ? false : item.type === "list" ? [] : "") : v);
   return JSON.stringify(norm(value)) === JSON.stringify(norm(item.default));
 }

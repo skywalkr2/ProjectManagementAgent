@@ -34,7 +34,7 @@ test.describe.serial("journeys", () => {
     // spent until I press Go at the end. Nothing else is on the page: no header, no sidebar.
     await page.goto(`?token=${info.token}`);
     await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
-    await expect(page.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Go at the end.")).toBeVisible();
+    await expect(page.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Start at the end.")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Views" })).toHaveCount(0);
     await visit(page);
 
@@ -54,12 +54,12 @@ test.describe.serial("journeys", () => {
     await expect(main.getByRole("form", { name: "What it may spend" })).toBeVisible();
     await main.getByText("More options").click();
     await main.getByLabel(/^Another service that speaks/).check();
-    await main.getByRole("textbox", { name: "Address" }).fill(info.ai_base_url);
+    await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("button", { name: "Check", exact: true }).click();
-    const everyday = main.getByLabel("Model for everyday work");
+    const everyday = main.getByLabel("AI model for everyday work");
     await expect(everyday.locator("option")).toHaveCount(2);
-    await main.getByText(/^Models:/).click();
+    await main.getByText(/^Selected model:/).click();
     await everyday.selectOption("fake-small");
     // The usual hand-in is internal material; an account only takes what it is allowed to see.
     await main.getByLabel("Internal material").check();
@@ -126,17 +126,17 @@ test.describe.serial("journeys", () => {
     const go = page.locator('[data-queue-line="first_go"]');
     await expect(go).toHaveCount(1);
     await expect(go).toContainText(/Start the assistant: 1 item, (about \$\d+\.\d\d|less than a cent)/);
-    await expect(go).toContainText("Nothing is spent until you press Go.");
+    await expect(go).toContainText("Nothing is spent until you press Start.");
     await visit(page);
     expect(await requests()).toEqual(afterTest);
 
     // Go starts it, and the result is on Today: my action in To do, and the assistant's work to look over.
-    await go.getByRole("button", { name: "Go", exact: true }).click();
+    await go.getByRole("button", { name: "Start", exact: true }).click();
     await expect(page.getByText("Send the venue list by 2026-11-02.").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
     // The assistant's work waits behind "N new · Show" while the cursor is in the queue, so the list doesn't move under it.
     const review = page.locator('[data-queue-line="review"]');
-    const showNew = page.getByRole("button", { name: /new · Show/ });
+    const showNew = page.getByRole("button", { name: /^Show \d+ new items?$/ });
     await expect(review.first().or(showNew).first()).toBeVisible({ timeout: 20_000 });
     if (await showNew.count()) await showNew.click();
     await expect(review).toHaveCount(1);
@@ -148,7 +148,7 @@ test.describe.serial("journeys", () => {
     // with no owner asks who it belongs to, and the hand-in did not stop anywhere.
     await review.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Look closer" }).click();
-    await expect(review.getByText("Added an action").first()).toBeVisible();
+    await expect(review.getByText("Added a to-do").first()).toBeVisible();
     await expect(review.getByText(new RegExp(`${info.people[0]} · due`))).toBeVisible();
     await expect(review.getByText("Who owns this?")).toBeVisible();
     await visit(page);
@@ -264,7 +264,7 @@ test.describe.serial("journeys", () => {
       await expect(form.getByLabel("Full name", { exact: true })).toHaveValue(name);
       await visit(page);
       await form.getByRole("button", { name: "Add and use" }).click();
-      await expect(toasts).toContainText(`Added ${name}. What waited on the name went ahead.`);
+      await expect(toasts).toContainText(`Added ${name}. Related work has resumed.`);
       expect(await people()).toContain(name);
       const waiting = async () => (await actionsOf()).filter((a) => a.text.startsWith("Confirm the catering menu"));
       const owned = async () => (await json<Person[]>("api/people")).find((p) => p.name === name)?.id;
@@ -418,7 +418,7 @@ test.describe.serial("journeys", () => {
 
     // Install puts it in place and says a restart is needed; it does not turn it on.
     await row.getByRole("button", { name: "Install Example panel" }).click();
-    await expect(row.getByText(/is installed\. It is ready after a restart/)).toBeVisible();
+    await expect(row.getByText(/is installed\. Restart, then turn it on/)).toBeVisible();
     expect(existsSync(join(String(info.install_target), "journey_panel"))).toBe(true);
     await visit(page);
 
@@ -464,7 +464,7 @@ test.describe.serial("journeys", () => {
     // The restart below must come after the removal has been answered, not race it.
     expect((await removed).ok()).toBe(true);
     await expect(installed.getByRole("alert")).toHaveCount(0);
-    await page.getByRole("button", { name: /^Status: / }).click();
+    await page.getByRole("button", { name: /^App status: / }).click();
     await page.getByRole("dialog", { name: "Status" }).getByRole("button", { name: "Restart now" }).click();
     await expect(page.getByText("Restarted with the new settings.").first()).toBeVisible({ timeout: 90_000 });
     // Close the status popover with Escape before using the sidebar.

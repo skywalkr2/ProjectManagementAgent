@@ -205,7 +205,7 @@ test("review of the assistant's answer opens that answer's review in What change
     </>,
   );
   // Finished work is not in the default list.
-  await screen.findByText("Nothing needs a look right now.");
+  await screen.findByText("Nothing needs your attention.");
   await user.click(await screen.findByRole("button", { name: "Review" }));
   const row = await screen.findByRole("listitem", { name: "Email from the printer" });
   expect(within(row).getByText("One thing was filed.")).toBeInTheDocument();
@@ -235,12 +235,12 @@ test("go gives the go to the queued request with the version read, shows its est
   });
   renderApp(<PluginToday />);
   expect(await screen.findByText("About $0.80")).toBeInTheDocument();
-  await user.click(await screen.findByRole("button", { name: "Give the go" }));
+  await user.click(await screen.findByRole("button", { name: "Start" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST requests/REQ-4/go")?.body).toEqual({ read_version: 7 }));
   expect(await screen.findByText("Approved. Helper is on it.")).toBeInTheDocument();
   // The refreshed request no longer waits, so the line's button becomes the record's.
   expect(await screen.findByRole("button", { name: "Open" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Give the go" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
 });
 
 test("go on a request that no longer waits just opens it", async () => {
@@ -250,7 +250,7 @@ test("go on a request that no longer waits just opens it", async () => {
   });
   renderApp(<PluginToday />);
   expect(await screen.findByRole("button", { name: "Open" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Give the go" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
 });
 
 test("answer opens the question where the questions list shows it", async () => {

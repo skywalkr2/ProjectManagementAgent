@@ -42,7 +42,7 @@ test("each draft or file a change made is a Made link on its row, with what it i
   const list = await screen.findByRole("list", { name: "Made:" });
   const links = within(list).getAllByRole("link");
   expect(list.closest(".body")).toBeNull();
-  expect(links.map((l) => l.textContent)).toEqual(["Call minutes, a draft not yet reviewed", "call-minutes.pdf, a file"]);
+  expect(links.map((l) => l.textContent)).toEqual(["Call minutes, an unreviewed draft", "call-minutes.pdf, a file"]);
   // The links sit on the row itself, outside its details. A draft opens on the record it is for,
   // a file in the files list.
   expect(links[0].getAttribute("href")).toMatch(/#records\/minutes\/MIN-2$/);

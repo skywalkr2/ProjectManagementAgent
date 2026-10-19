@@ -104,7 +104,7 @@ test("Skip posts the step and turns into a way back; Reopen undoes it", async ()
   const button = await screen.findByRole("button", { name: "Skip: Choose a backup folder" });
   await user.click(button);
   await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup/skip")).toBe(true));
-  const back = await screen.findByRole("button", { name: "Do it now: Choose a backup folder" });
+  const back = await screen.findByRole("button", { name: "Set up: Choose a backup folder" });
   // The same button stays in place, so keyboard focus is not lost.
   expect(back).toBe(button);
   expect(back).toHaveFocus();
@@ -221,10 +221,10 @@ test("the template step applies one template and asks before the app restarts", 
     </RestartProvider>,
   );
   expect(await screen.findByText("Chapters and drafts.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Apply Event" }));
+  await user.click(screen.getByRole("button", { name: "Use Event" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST templates/apply")?.body).toEqual({ id: "tpl-b" }));
   expect(await screen.findByText("Applied Event.")).toBeInTheDocument();
-  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("This change needs the app to restart."));
+  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("Restart to finish this change?"));
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
 });
 
@@ -374,7 +374,7 @@ describe("a sign-in's step", () => {
     expect(within(section("demo/mail")).queryByRole("button", { name: "Sign in to Demo Mail" })).toBeNull();
     expect(section("demo/other")).toHaveTextContent("Skipped");
     expect(within(section("demo/other")).getByRole("button", { name: "Sign in to Demo Other" })).toBeInTheDocument();
-    expect(within(section("demo/other")).getByRole("button", { name: /^Do it now/ })).toBeInTheDocument();
+    expect(within(section("demo/other")).getByRole("button", { name: /^Set up: / })).toBeInTheDocument();
   });
 });
 
@@ -413,22 +413,22 @@ test("each template lists what it adds as short lists, and one already set up sa
   open();
   const book = (await screen.findByText("Book project")).closest("li") as HTMLElement;
   const chapters = within(book).getByText("Chapters").closest("li") as HTMLElement;
-  expect(within(chapters).getAllByRole("listitem").map((l) => l.textContent)).toEqual(["Fields: Title, Length", "Steps: Outline → Draft → Final"]);
+  expect(within(chapters).getAllByRole("listitem").map((l) => l.textContent)).toEqual(["Details: Title, Length", "Steps: Outline → Draft → Final"]);
   // A kind with no fields or steps is just named.
   const notes = within(book).getByText("Notes").closest("li") as HTMLElement;
   expect(within(notes).queryAllByRole("listitem")).toHaveLength(0);
-  expect(within(book).getByRole("button", { name: "Apply Book project" })).toBeInTheDocument();
+  expect(within(book).getByRole("button", { name: "Use Book project" })).toBeInTheDocument();
   const trip = screen.getByText("Trip").closest("li") as HTMLElement;
   expect(trip).toHaveTextContent("Already set up");
   expect(within(trip).queryByRole("button")).toBeNull();
-  expect(within(trip).getByText("Fields: Where")).toBeInTheDocument();
+  expect(within(trip).getByText("Details: Where")).toBeInTheDocument();
   expect(within(trip).queryByText(/^Steps:/)).toBeNull();
 });
 
 test("the step says plainly that applying turns on item types and may need a restart, which is asked first", async () => {
   api([step("template")]);
   open();
-  expect(await screen.findByText(/Applying one turns on the item types it lists and may need a restart; the app asks you first\./)).toBeInTheDocument();
+  expect(await screen.findByText(/A restart may be needed; you'll be asked first\./)).toBeInTheDocument();
 });
 
 const installed = (name: string, enabled: boolean): S["InstalledPackView"] =>
@@ -448,7 +448,7 @@ test("the add-ons step says what add-ons do, names the ones installed but off, a
   const addons = await screen.findByRole("heading", { name: "Turn on your add-ons" });
   expect(addons).toBeInTheDocument();
   expect(section("addons")).toHaveTextContent(
-    "Add-ons connect the assistant to your mail, calendar and other tools. Turn on the ones you installed, then sign in to them.",
+    "Turn on installed add-ons, then sign in to connect your mail, calendar and other tools.",
   );
   const off = await within(section("addons")).findByRole("list", { name: "Installed but turned off" });
   expect(within(off).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Mail sample", "Notes sample"]);

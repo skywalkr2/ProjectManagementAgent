@@ -50,7 +50,7 @@ test("with no sign-ins, the section says when they appear and offers to open Add
   renderApp(<SignIns onOpenAddons={onOpenAddons} onChooseSource={() => undefined} />);
   await waitFor(() => expect(calls.some((c) => c.route === "GET sign-ins")).toBe(true));
   const section = (await screen.findByRole("heading", { name: "Accounts" })).closest("section") as HTMLElement;
-  expect(section).toHaveTextContent("Sign-ins appear here once an add-on that signs in (mail, calendar) is turned on.");
+  expect(section).toHaveTextContent("Turn on a mail or calendar add-on to see its sign-in options.");
   await user.click(within(section).getByRole("button", { name: "Open Add-ons" }));
   expect(onOpenAddons).toHaveBeenCalledTimes(1);
 });
@@ -67,7 +67,7 @@ test("each status is in words, with one action per row", async () => {
   expect(choose).toHaveTextContent("Choose what to read");
   expect(choose).toHaveClass("primary");
   const two = row("Service demo/two");
-  expect(within(two).getByText("Sign-in ran out")).toBeInTheDocument();
+  expect(within(two).getByText("Sign-in expired")).toBeInTheDocument();
   expect(within(two).getByRole("button", { name: "Sign in again to Service demo/two" })).toHaveTextContent("Sign in again");
   const three = row("Service demo/three");
   expect(within(three).getByText("Not signed in")).toBeInTheDocument();
@@ -123,7 +123,7 @@ test("a permission that wasn't allowed is named, with Sign in again as a seconda
   open();
   const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
   const note = within(one).getByText(
-    "Permissions not allowed: Mail.Read, Calendars.Read. Sign in again and allow them to use everything.",
+    "Allow these missing permissions to use all features: Mail.Read, Calendars.Read. Sign in again to choose.",
   );
   // Choosing what to read stays the row's one primary action.
   expect(within(one).getByRole("button", { name: "Choose what to read from Service demo/one" })).toHaveClass("primary");
@@ -273,7 +273,7 @@ describe("the app registration", () => {
     await user.click(menuOf(three));
     await user.click(await screen.findByRole("menuitem", { name: "Use your own app registration" }));
     const form = await within(three).findByRole("form", { name: "Your own app registration for Service demo/three" });
-    await waitFor(() => expect(within(form).getByLabelText("Client ID")).toHaveFocus());
+    await waitFor(() => expect(within(form).getByLabelText("Client ID from the service")).toHaveFocus());
     // Cancel closes it and focus goes back to the menu button.
     await user.click(within(form).getByRole("button", { name: /^Cancel/ }));
     expect(within(three).queryByRole("form")).toBeNull();
@@ -311,7 +311,7 @@ describe("the app registration", () => {
     expect(within(three).queryByText("Set the add-on's app registration first. Then you can sign in.")).toBeNull();
     expect(within(three).getByRole("button", { name: "Sign in to Service demo/three" })).toBeDisabled();
     // No secret asked for.
-    expect(within(form).queryByLabelText("Client secret")).toBeNull();
+    expect(within(form).queryByLabelText("Client secret from the service")).toBeNull();
   });
 
   test("a row with no registration and no way to paste keeps the not-ready line", async () => {
@@ -335,9 +335,9 @@ describe("the app registration", () => {
     open();
     const save = await screen.findByRole("button", { name: "Save the app registration for Service demo/three" });
     expect(save).toBeDisabled();
-    await user.type(screen.getByLabelText("Client ID"), "   ");
+    await user.type(screen.getByLabelText("Client ID from the service"), "   ");
     expect(save).toBeDisabled();
-    await user.type(screen.getByLabelText("Client ID"), " abc-123 {Enter}");
+    await user.type(screen.getByLabelText("Client ID from the service"), " abc-123 {Enter}");
     await waitFor(() => expect(calls.filter((c) => c.route === "POST sign-ins/demo/three/app")).toHaveLength(1));
     expect(calls.find((c) => c.route === "POST sign-ins/demo/three/app")?.body).toEqual({ client_id: "abc-123" });
     expect(await screen.findByText("Saved your app registration for Service demo/three. Sign in to use it.")).toBeInTheDocument();
@@ -353,10 +353,10 @@ describe("the app registration", () => {
       "POST sign-ins/demo/three/app": () => signIn("demo/three", { app: "pasted", can_paste: true, needs_secret: true }),
     });
     open();
-    const secret = await screen.findByLabelText("Client secret");
+    const secret = await screen.findByLabelText("Client secret from the service");
     expect(secret).toHaveAttribute("type", "password");
     expect(secret).toHaveAttribute("autocomplete", "off");
-    await user.type(screen.getByLabelText("Client ID"), "abc-123{Enter}");
+    await user.type(screen.getByLabelText("Client ID from the service"), "abc-123{Enter}");
     expect(calls.some((c) => c.route === "POST sign-ins/demo/three/app")).toBe(false);
     expect(screen.getByRole("button", { name: /^Save the app registration/ })).toBeDisabled();
     await user.type(secret, " s3cret {Enter}");
@@ -375,10 +375,10 @@ describe("the app registration", () => {
       "POST sign-ins/demo/three/app": () => new Refuse(422, "That client ID isn't valid."),
     });
     open();
-    await user.type(await screen.findByLabelText("Client ID"), "nope");
+    await user.type(await screen.findByLabelText("Client ID from the service"), "nope");
     await user.click(screen.getByRole("button", { name: /^Save the app registration/ }));
     expect(await within(row("Service demo/three")).findByRole("alert")).toHaveTextContent("That client ID isn't valid.");
-    expect(screen.getByLabelText("Client ID")).toHaveValue("nope");
+    expect(screen.getByLabelText("Client ID from the service")).toHaveValue("nope");
     expect(screen.getByRole("button", { name: /^Save the app registration/ })).toBeEnabled();
   });
 

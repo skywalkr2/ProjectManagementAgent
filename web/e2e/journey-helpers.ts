@@ -82,7 +82,7 @@ export async function readScreen(page: Page): Promise<string> {
  * when its event stream has connected again. Waits for the header's status to leave offline, connecting and restarting,
  * which is the state the next step needs: the page holds what the new start holds. */
 export async function connectedAgain(page: Page) {
-  await expect(page.getByRole("button", { name: /^Status: (?!Offline|Connecting|Restarting)/ })).toBeVisible({
+  await expect(page.getByRole("button", { name: /^App status: (?!Offline|Connecting|Restarting)/ })).toBeVisible({
     timeout: 90_000,
   });
 }

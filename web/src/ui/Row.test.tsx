@@ -7,7 +7,7 @@ test("a row has a pill column, a title, a meta line, then the primary action and
     <ul>
       <Row
         pill={<span>Decision</span>}
-        title="Answer 1 decision"
+        title="Make 1 decision"
         meta="From an email"
         primary={<button type="button">Answer</button>}
         menu={<button type="button">More</button>}
@@ -16,7 +16,7 @@ test("a row has a pill column, a title, a meta line, then the primary action and
   );
   const row = screen.getByRole("listitem");
   expect(row).toHaveAttribute("data-row");
-  expect(within(row).getByText("Answer 1 decision")).toBeInTheDocument();
+  expect(within(row).getByText("Make 1 decision")).toBeInTheDocument();
   expect(within(row).getByText("From an email")).toBeInTheDocument();
   const buttons = within(row).getAllByRole("button");
   // The menu is the last thing on the row.

@@ -133,10 +133,10 @@ test("the header says who made it, the publisher, when it was updated and whethe
     }),
   );
   const mine = await row("Name of mine");
-  expect(mine).toHaveTextContent("Made by the app's maintainers · Publisher of mine · updated 2026-09-01 · Works with this version");
-  expect(await row("Name of theirs")).toHaveTextContent("Third party · Publisher of theirs · updated 2026-09-01 · Needs a different version of the app");
+  expect(mine).toHaveTextContent("Made by the app's developers · Publisher of mine · updated 2026-09-01 · Works with this version");
+  expect(await row("Name of theirs")).toHaveTextContent("Made by someone else · Publisher of theirs · updated 2026-09-01 · Needs a different version of the app");
   const unknown = await row("Name of unknown");
-  expect(unknown).toHaveTextContent("Third party · Publisher of unknown · updated 2026-09-01");
+  expect(unknown).toHaveTextContent("Made by someone else · Publisher of unknown · updated 2026-09-01");
   expect(unknown).not.toHaveTextContent("Works with");
   expect(unknown).not.toHaveTextContent("Needs a different");
   expect(within(mine).getByText("What mine does")).toBeInTheDocument();
@@ -161,22 +161,22 @@ test("Adds, Reaches and Keeps are short lists in plain words, and zeros are left
   const full = await row("Name of full");
   const adds = within(full).getByRole("list", { name: "Adds" });
   expect(within(adds).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-    "Item types: book, chapter",
+    "Kinds of items: book, chapter",
     "1 screen",
-    "1 kind of line on Today",
+    "1 kind of item on Today",
     "2 kinds of AI work",
     "3 actions",
     "1 setup step",
     "2 places it keeps reading",
   ]);
-  const reaches = within(full).getByRole("list", { name: "Reaches" });
+  const reaches = within(full).getByRole("list", { name: "What it can access" });
   expect(within(reaches).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
     "Signs in to: print service",
-    `Internet: ${SITE}, files.example.com`,
+    `Websites: ${SITE}, files.example.com`,
     "Programs on this computer: ebook-checker",
-    "Keys you provide: 1",
+    "Access keys you provide: 1",
   ]);
-  expect(full).toHaveTextContent("May hold private material. It goes only to AI accounts you allow for private material.");
+  expect(full).toHaveTextContent("May store private material; only approved AI accounts can read it.");
 
   const plain = await row("Name of plain");
   expect(within(within(plain).getByRole("list", { name: "Adds" })).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["2 screens"]);
@@ -211,7 +211,7 @@ test("AI cost shows a price, the size of the work, or that no account is set up"
   expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
     "Drafting a chapter: about $0.04",
     "Checking a line: about $0.004",
-    "Reading a source: about 10,000 words of AI work (an estimate)",
+    "Reading a source: about 10,000 words to process",
     "Reviewing a book: no AI account set up for this yet",
   ]);
   expect(costly).not.toHaveTextContent(/tokens/i);
@@ -233,9 +233,9 @@ test("How to get it shows the install text to copy and the demo line, and Copy p
   await user.click(within(tool).getByRole("button", { name: "How to get Name of tool" }));
   const dialog = await screen.findByRole("dialog", { name: "How to get Name of tool" });
   expect(within(dialog).getByText("get-pack tool --yes")).toBeInTheDocument();
-  expect(within(dialog).getByText("To try it on made-up data first:")).toBeInTheDocument();
+  expect(within(dialog).getByText("Try it with sample data first:")).toBeInTheDocument();
   expect(within(dialog).getByText("cockpit demo --plugin tool")).toBeInTheDocument();
-  expect(within(dialog).getByText(/Read it before you run anything/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Read these publisher instructions before running anything/)).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Copy the install steps" }));
   expect(await navigator.clipboard.readText()).toBe("get-pack tool --yes");
   await user.click(within(dialog).getByRole("button", { name: "Copy the demo command" }));
@@ -321,33 +321,33 @@ test("an installed pack that is off says how to turn it on, and a newer version 
 
 test("when the catalog is off, nothing is listed and the reason is given", async () => {
   open(view({ enabled: false, feeds: [] }));
-  expect(await screen.findByText("The catalog is off in this workspace's settings.")).toBeInTheDocument();
+  expect(await screen.findByText("The add-on catalog is turned off in Settings.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull();
 });
 
 test("with no catalog it says so and points to Installed", async () => {
   open(view({ feeds: [] }));
   expect(
-    await screen.findByText("This copy of the app doesn't list a catalog. Packs you install still show under Installed."),
+    await screen.findByText("No add-on catalog is connected. Installed add-ons still appear under Installed."),
   ).toBeInTheDocument();
 });
 
 test("a catalog with no packs says none are listed yet", async () => {
   open(view());
-  expect(await screen.findByText("No packs are listed yet.")).toBeInTheDocument();
+  expect(await screen.findByText("No add-ons are listed yet.")).toBeInTheDocument();
   expect(screen.getByText(`${HOST} · read`, { exact: false })).toBeInTheDocument();
 });
 
 test("a catalog that couldn't be read is not described as having no packs, and says why", async () => {
   open(view({ feeds: [feed({ error: "couldn't read it (outage): the host is down", read_at: null })] }));
-  expect(await screen.findByText("The catalog couldn't be read, so no packs are listed. The reason is below; refresh it once that is fixed.")).toBeInTheDocument();
-  expect(screen.queryByText("No packs are listed yet.")).toBeNull();
+  expect(await screen.findByText("The catalog couldn't be read: no add-ons are listed. Check the reason below, then refresh.")).toBeInTheDocument();
+  expect(screen.queryByText("No add-ons are listed yet.")).toBeNull();
   expect(screen.getByText("This catalog couldn't be read: couldn't read it (outage): the host is down")).toBeInTheDocument();
 });
 
 test("with one catalog read and another failing, the list is still just empty", async () => {
   open(view({ feeds: [feed(), feed({ domain: "other.example.com", error: "it isn't a catalog file" })] }));
-  expect(await screen.findByText("No packs are listed yet.")).toBeInTheDocument();
+  expect(await screen.findByText("No add-ons are listed yet.")).toBeInTheDocument();
 });
 
 test("each catalog shows its domain and when it was read, an error in words, and its notes behind a disclosure", async () => {
@@ -423,8 +423,8 @@ test("Installed lists one row per pack with its version, description, status and
   expect(alpha).toHaveTextContent("Does alpha things");
   expect(alpha).toHaveTextContent("On and running");
   expect(within(alpha).getByRole("list", { name: "Adds" })).toHaveTextContent("1 screen");
-  expect(within(alpha).getByRole("list", { name: "Reaches" })).toHaveTextContent(`Internet: ${SITE}`);
-  expect(alpha).toHaveTextContent("May hold private material");
+  expect(within(alpha).getByRole("list", { name: "What it can access" })).toHaveTextContent(`Websites: ${SITE}`);
+  expect(alpha).toHaveTextContent("May store private material");
   expect(await row("beta")).toHaveTextContent("Off");
   expect(await row("gamma")).toHaveTextContent("Turned off because: it needs a newer version of the app");
   expect(screen.getAllByRole("listitem", { name: /^(alpha|beta|gamma)$/ })).toHaveLength(3);
@@ -542,7 +542,7 @@ test("turning an add-on on that needs a restart asks first, and never restarts b
   );
   await user.click(await screen.findByRole("tab", { name: "Installed" }));
   await user.click(within(await row("beta")).getByRole("button", { name: "Turn on beta" }));
-  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("This change needs the app to restart."));
+  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("Restart to finish this change?"));
   expect(screen.getByRole("button", { name: "Restart now" })).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
 });
@@ -640,7 +640,7 @@ test("an add-on with a release has Install as its one action: it installs, then 
   expect(within(tool).queryByRole("button", { name: /How to get/ })).toBeNull();
   await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST packs/tool/install")).toBe(true));
-  const note = await within(tool).findByText(/Name of tool is installed\. It is ready after a restart\. Then turn it on\./);
+  const note = await within(tool).findByText(/Name of tool is installed\. Restart, then turn it on\./);
   expect(note).toBeInTheDocument();
   expect(within(tool).queryByRole("button", { name: "Install Name of tool" })).toBeNull();
   // The restart is the person's choice: nothing restarted by itself.
@@ -789,7 +789,7 @@ test("Remove is in the menu only for an add-on the app installed that is off, an
   await user.click(within(mine).getByRole("button", { name: "More actions for Name of mine" }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(true));
-  expect(await within(mine).findByText(/Name of mine is removed\. The app lets go of it after a restart\./)).toBeInTheDocument();
+  expect(await within(mine).findByText(/Name of mine is removed\. Restart to finish\./)).toBeInTheDocument();
 });
 
 test("on Installed, Remove is offered for an add-on the app installed that is off", async () => {
@@ -815,7 +815,7 @@ test("on Installed, Remove is offered for an add-on the app installed that is of
 
 test("the introduction says installing happens here and that the app never takes payment", async () => {
   open(view());
-  const intro = await screen.findByText(/Packs add a whole kind of work/);
+  const intro = await screen.findByText(/Add-ons add a whole kind of work/);
   expect(intro).toHaveTextContent("Installing one from the list happens here");
   expect(intro).toHaveTextContent("never takes payment");
   expect(intro).not.toHaveTextContent("never installs");
@@ -831,7 +831,7 @@ describe("adding a catalog from the screen", () => {
 
   test("with no catalog listed the screen offers an address field, with the cursor in it", async () => {
     open(view({ feeds: [] }));
-    expect(await screen.findByText(/This copy of the app doesn't list a catalog/)).toBeInTheDocument();
+    expect(await screen.findByText(/No add-on catalog is connected/)).toBeInTheDocument();
     const field = await screen.findByLabelText("Catalog address");
     await waitFor(() => expect(field).toHaveFocus());
     expect(screen.getByRole("button", { name: "Add catalog" })).toBeDisabled();
@@ -901,7 +901,7 @@ describe("a read token for a private release", () => {
   };
   const PRIVATE = () => pack("tool", { installable: true, release_host: "files.example.com" });
 
-  test("a refusal that a token would fix offers Add a read token in the row, and no other refusal does", async () => {
+  test("a refusal that a token would fix offers Add a download access key in the row, and no other refusal does", async () => {
     const user = userEvent.setup();
     let answer: unknown = new Refuse(409, "The release file couldn't be read: it may be private.", { "X-Cockpit-Needs": "read-token" });
     fakeApi({ ...TOKEN_ROUTES(), "GET packs": () => view({ available: [PRIVATE()] }), "POST packs/tool/install": () => answer });
@@ -909,7 +909,7 @@ describe("a read token for a private release", () => {
     const tool = await row("Name of tool");
     expect(within(tool).queryByRole("button", { name: /Add a read token/ })).toBeNull();
     await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
-    expect(await within(tool).findByRole("button", { name: "Add a read token for Name of tool" })).toBeInTheDocument();
+    expect(await within(tool).findByRole("button", { name: "Add a download access key for Name of tool" })).toBeInTheDocument();
     answer = new Refuse(409, "The file doesn't match the checksum, so it wasn't installed.");
     await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
     expect(await within(tool).findByText(/doesn't match the checksum/)).toBeInTheDocument();
@@ -932,15 +932,15 @@ describe("a read token for a private release", () => {
     renderApp(<Addons onBack={() => undefined} />);
     const tool = await row("Name of tool");
     await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
-    await user.click(await within(tool).findByRole("button", { name: "Add a read token for Name of tool" }));
-    expect(within(tool).getByText(/kept privately at files\.example\.com/)).toHaveTextContent("It needs read access only to where the add-on's files are kept, and it is sent only to files.example.com.");
-    const box = within(tool).getByLabelText("Read token");
+    await user.click(await within(tool).findByRole("button", { name: "Add a download access key for Name of tool" }));
+    expect(within(tool).getByText(/private files at files\.example\.com/)).toHaveTextContent("Enter a read-only access key for the add-on's private files at files.example.com. It is sent only to files.example.com.");
+    const box = within(tool).getByLabelText("Download access key");
     expect(box).toHaveAttribute("type", "password");
     expect(box).toHaveFocus();
     await user.type(box, "typed-token");
-    await user.click(within(tool).getByRole("button", { name: "Save token" }));
+    await user.click(within(tool).getByRole("button", { name: "Save access key" }));
     await waitFor(() => expect(calls.find((c) => c.route === "POST packs/tool/token")?.body).toEqual({ token: "typed-token", fingerprint: "fp-1" }));
-    expect(await within(tool).findByText("The read token is saved. Press Install to try again.")).toBeInTheDocument();
+    expect(await within(tool).findByText("Access key saved. Choose Install to retry.")).toBeInTheDocument();
     expect(within(tool).queryByRole("alert")).toBeNull();
     await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
     await waitFor(() => expect(calls.filter((c) => c.route === "POST packs/tool/install")).toHaveLength(2));
@@ -958,12 +958,12 @@ describe("a read token for a private release", () => {
     renderApp(<Addons onBack={() => undefined} />);
     const tool = await row("Name of tool");
     await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
-    await user.click(await within(tool).findByRole("button", { name: "Add a read token for Name of tool" }));
-    const box = within(tool).getByLabelText("Read token");
+    await user.click(await within(tool).findByRole("button", { name: "Add a download access key for Name of tool" }));
+    const box = within(tool).getByLabelText("Download access key");
     await waitFor(() => expect(box).toHaveAttribute("type", "text"));
     expect(within(tool).queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
     await user.type(box, "RELEASE_TOKEN");
-    await user.click(within(tool).getByRole("button", { name: "Save token" }));
+    await user.click(within(tool).getByRole("button", { name: "Save access key" }));
     await waitFor(() => expect(calls.find((c) => c.route === "POST packs/tool/token")?.body).toEqual({ reference: "env:RELEASE_TOKEN", fingerprint: "fp-1" }));
   });
 

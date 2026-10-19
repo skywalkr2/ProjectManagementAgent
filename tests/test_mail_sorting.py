@@ -253,14 +253,14 @@ CANT = [
         id="over its budget",
     ),
     pytest.param(
-        [("first_go: false", "first_go: true")], "first go in this workspace wasn't given", id="no first go yet"
+        [("first_go: false", "first_go: true")], "you haven't started the assistant yet", id="no first go yet"
     ),
     pytest.param(
         [
             ("confirm_above_usd: 0.10", "confirm_above_usd: 0.0001"),
             ("prices: {}", "prices: {stub/default: {input_per_million: 100, output_per_million: 100}}"),
         ],
-        "your go wasn't given",
+        "you haven't started it",
         id="above the amount to be asked about",
     ),
 ]
@@ -469,7 +469,9 @@ def test_the_first_go_sorts_the_mail_handed_in_before_it_sets_aside_the_newslett
     store = created.state.store
     try:
         result = read(ws, store)
-        assert len(result.new) == 3 and "first go" in result.note and seen == [], "no go: no sorting, all as work"
+        assert len(result.new) == 3 and "haven't started the assistant" in result.note and seen == [], (
+            "no go: no sorting, all as work"
+        )
         for req in requests_in(store, "queued"):
             assert process(ws, store, cfg, Router(cfg, store, env={}), req.id, now=NOW) is None
         assert len([r for r in store.read().list("request") if r.data["state"] == "needs_you"]) == 3

@@ -103,10 +103,10 @@ test.describe("the visual system", () => {
   test("the user menu's theme and density are kept for this device", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: HEIGHT });
     await signIn(page);
-    await page.getByRole("button", { name: /^Appearance, / }).click();
+    await page.getByRole("button", { name: /^Change appearance, / }).click();
     await page.getByRole("menuitemradio", { name: "Dark" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page.getByRole("button", { name: /^Appearance, / }).click();
+    await page.getByRole("button", { name: /^Change appearance, / }).click();
     await page.getByRole("menuitemradio", { name: "Compact" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-density", "compact");
     await page.reload();
@@ -254,7 +254,7 @@ test.describe("screen use and the shell", () => {
       const line = page.locator('[data-queue-line="first_go"]');
       await expect(line).toBeFocused();
       await expect(line).toBeInViewport({ ratio: 1 });
-      await expect(line.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(line.getByRole("button", { name: "Start", exact: true })).toBeInViewport({ ratio: 1 });
       await shoot(page, `first-go-${width}`);
     });
   }
@@ -311,7 +311,7 @@ test.describe("screen use and the shell", () => {
     await signIn(page);
     const frame = async () => {
       const header = (await page.getByRole("banner").boundingBox())!;
-      const brand = (await page.getByRole("banner").getByRole("link", { name: /, go to Today$/ }).boundingBox())!;
+      const brand = (await page.getByRole("banner").getByRole("link", { name: /^Go to Today/ }).boundingBox())!;
       const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
       return [header, brand, nav].map((b) => [b.x, b.y, b.width, b.height]);
     };
@@ -346,7 +346,7 @@ test.describe("screen use and the shell", () => {
       // small row under the rest, so the first row keeps its room and nothing squeezes.
       const wide = width >= 1280;
       expect((await header.boundingBox())!.height).toBe(wide ? 56 : 88);
-      const statusRow = header.getByRole("button", { name: /^Status: / });
+      const statusRow = header.getByRole("button", { name: /^App status: / });
       const assistant = header.getByRole("button", { name: /^Assistant/ });
       const rowOf = async (selector: Locator) => {
         const box = (await selector.boundingBox())!;
@@ -355,12 +355,12 @@ test.describe("screen use and the shell", () => {
       expect(Math.abs((await rowOf(statusRow)) - (await rowOf(assistant)))).toBeLessThan(6);
       const tops = await header.locator("a, button").evaluateAll((els, includeStatus) =>
         els
-          .filter((e) => (e as HTMLElement).getClientRects().length > 0 && (includeStatus || !/^(Status: |Assistant)/.test(e.getAttribute("aria-label") ?? e.textContent ?? "")))
+          .filter((e) => (e as HTMLElement).getClientRects().length > 0 && (includeStatus || !/^(App status: |Assistant)/.test(e.getAttribute("aria-label") ?? e.textContent ?? "")))
           .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)),
       wide);
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(12);
       if (!wide) expect(await rowOf(statusRow)).toBeGreaterThan(56);
-      const menu = (await header.getByRole("button", { name: /^Appearance, / }).boundingBox())!;
+      const menu = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
       expect(menu.x + menu.width).toBeLessThanOrEqual(width);
       // The plugin panels are in the sidebar, under Work and Records, and scroll there if they don't fit.
       await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /number 1$/ })).toHaveCount(1);
@@ -374,11 +374,11 @@ test.describe("screen use and the shell", () => {
     const nav = page.getByRole("navigation", { name: "Views" });
     expect((await nav.boundingBox())!.width).toBeLessThan(80);
     await expect(nav.getByRole("link", { name: "Stages" })).toBeVisible();
-    await nav.getByRole("button", { name: "Pin the sidebar open" }).click();
+    await nav.getByRole("button", { name: "Keep the side menu open" }).click();
     expect((await nav.boundingBox())!.width).toBeGreaterThan(200);
     await page.reload();
     expect((await page.getByRole("navigation", { name: "Views" }).boundingBox())!.width).toBeGreaterThan(200);
-    await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Collapse the sidebar" }).click();
+    await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Hide the side menu" }).click();
     expect((await page.getByRole("navigation", { name: "Views" }).boundingBox())!.width).toBeLessThan(80);
   });
 
@@ -392,7 +392,7 @@ test.describe("screen use and the shell", () => {
       "#today": "Today",
       "#work/changed": "What changed",
       "#work/followups": "Follow-ups",
-      "#work/outgoing": "Waiting to go out",
+      "#work/outgoing": "Drafts to approve",
       "#work/stages": "Stages",
       "#records/projects": "Projects",
       "#records/people": "People",
@@ -430,15 +430,15 @@ test.describe("screen use and the shell", () => {
   test("going offline shows in the status chip within five seconds, and coming back clears it", async ({ page, context }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page);
-    const chip = page.getByRole("button", { name: /^Status: / });
+    const chip = page.getByRole("button", { name: /^App status: / });
     // Connected: the chip says a state (live, or something to do), not that it is still connecting.
     await expect(chip).not.toContainText("Connecting");
-    await expect(chip).not.toContainText("Offline");
+    await expect(chip).not.toContainText("Disconnected");
     await context.setOffline(true);
-    await expect(chip).toContainText("Offline", { timeout: 5000 });
+    await expect(chip).toContainText("Disconnected", { timeout: 5000 });
     await expect(chip).toContainText("reconnecting");
     await context.setOffline(false);
-    await expect(chip).not.toContainText("Offline", { timeout: 20_000 });
+    await expect(chip).not.toContainText("Disconnected", { timeout: 20_000 });
   });
 
   test("on a phone the bottom bar is visible, the page does not scroll sideways, and the sheets list the views", async ({ page }) => {
@@ -543,7 +543,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
   test("Settings: the summary line, a row with a role pill, a state line and one next step each, and the add drawer opens in place", async ({ page }) => {
     await mockAccounts(page);
     await page.setViewportSize({ width: 1440, height: 900 });
-    await signIn(page, "settings");
+    await signIn(page, "settings/ai");
     const section = page.getByRole("region", { name: /^AI accounts/ });
     await expect(section.getByRole("heading", { name: /^AI accounts/ })).toBeVisible();
     await expect(section.getByRole("group", { name: "Who does the work" })).toContainText("Main account does");
@@ -551,29 +551,70 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     const rows = section.locator("li[data-row]");
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText("Does the work");
-    await expect(rows.nth(0)).toContainText("Ready · answered 2 h ago · $1.20 today");
+    await expect(rows.nth(0)).toContainText("Ready · answered 2 hours ago · $1.20 today");
     await expect(rows.nth(1)).toContainText("Backup");
     await expect(rows.nth(1)).toContainText("Checked for every kind of work · Oct 14");
-    await expect(rows.nth(2)).toContainText("Key not found on this computer");
-    await expect(rows.nth(2).getByRole("button", { name: "Add the key for Trial account" })).toBeVisible();
+    await expect(rows.nth(2)).toContainText("Access key not found on this computer");
+    await expect(rows.nth(2).getByRole("button", { name: "Add the access key for Trial account" })).toBeVisible();
     await section.scrollIntoViewIfNeeded();
     await shoot(page, "accounts-1440");
     await expectNoViolations(page);
-    // The form opens here, as a drawer, and the address stays Settings.
+    // The form opens here, as a drawer, and the address stays the AI accounts section of Settings.
     await section.getByRole("button", { name: "Add an account" }).click();
     const drawer = page.getByRole("dialog", { name: "Add an account" });
     await expect(drawer).toBeVisible();
-    await expect(page).toHaveURL(/#settings$/);
+    await expect(page).toHaveURL(/#settings\/ai$/);
     await expectNoViolations(page);
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
     await expect(section.getByRole("button", { name: "Add an account" })).toBeFocused();
   });
 
+  test("Settings saves each change as it is made, with Changed and Reset, a toast with Undo, and no Save button", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page, "settings/appearance");
+    const seconds = page.getByRole("textbox", { name: "Seconds a message stays on screen" });
+    await expect(seconds).toBeFocused();
+    await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
+    const before = await seconds.inputValue();
+    await seconds.fill("17");
+    await seconds.press("Enter");
+    const toasts = page.getByRole("region", { name: "Notifications" });
+    await expect(toasts).toContainText("Seconds a message stays on screen: 17");
+    const row = page.locator(".setting", { has: seconds });
+    await expect(row.getByText("Changed", { exact: true })).toBeVisible();
+    await toasts.getByRole("button", { name: "Undo" }).first().click();
+    await expect(seconds).toHaveValue(before);
+    // Reset puts it back to its default at once, and says so.
+    await seconds.fill("19");
+    await seconds.press("Enter");
+    await expect(toasts).toContainText("Seconds a message stays on screen: 19");
+    await row.getByRole("button", { name: /^Reset/ }).click();
+    await expect(row.getByText("Changed", { exact: true })).toHaveCount(0);
+    await expectNoViolations(page);
+  });
+
+  test("Settings: the help sits beside each setting on a wide screen and under it on a phone, and the section list stacks above", async ({ page }) => {
+    await signIn(page, "settings/backups");
+    const row = page.locator(".setting").filter({ hasText: "Hours between backups" }).first();
+    await expect(row).toBeVisible();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const wide = { field: (await row.locator("[data-main]").boundingBox())!, help: (await row.locator("[data-help]").boundingBox())! };
+    expect(wide.help.x).toBeGreaterThan(wide.field.x + wide.field.width - 1);
+    const nav = page.getByRole("navigation", { name: "Settings sections" });
+    const list = (await nav.boundingBox())!;
+    expect(list.x + list.width).toBeLessThan(wide.field.x + 1);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const narrow = { field: (await row.locator("[data-main]").boundingBox())!, help: (await row.locator("[data-help]").boundingBox())! };
+    expect(narrow.help.y).toBeGreaterThan(narrow.field.y + narrow.field.height - 1);
+    expect((await nav.boundingBox())!.y + (await nav.boundingBox())!.height).toBeLessThan(narrow.field.y + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
   test("Settings on a phone: no sideways scroll, and the rows keep their one button", async ({ page }) => {
     await mockAccounts(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await signIn(page, "settings");
+    await signIn(page, "settings/ai");
     const section = page.getByRole("region", { name: /^AI accounts/ });
     await section.scrollIntoViewIfNeeded();
     await expect(section.locator("li[data-row]").first()).toBeVisible();
@@ -586,7 +627,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await page.emulateMedia({ colorScheme: scheme });
       await mockAccounts(page);
       await page.setViewportSize({ width: 1440, height: 900 });
-      await signIn(page, "settings");
+      await signIn(page, "settings/ai");
       await page.getByRole("button", { name: "Compare what they can do" }).click();
       await expect(page.getByRole("heading", { level: 1, name: "Compare what accounts can do" })).toBeVisible();
       await expect(page.getByRole("navigation", { name: "Views" }).locator("a[aria-current=page]")).toHaveAttribute("href", /#settings$/);
@@ -595,7 +636,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await expect(table).toContainText("✓ Cheapest that passes");
       await expect(table).toContainText("Below 80%");
       await expect(table).toContainText("(old)");
-      await expect(table.getByRole("button", { name: "Measure Main account · everyday" })).toContainText("Measure (about $0.12)");
+      await expect(table.getByRole("button", { name: "Test Main account · everyday" })).toContainText("Test performance (about $0.12)");
       if (scheme === "light") await shoot(page, "grid-1440");
       await expectNoViolations(page);
       await page.setViewportSize({ width: 390, height: 844 });
@@ -629,7 +670,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     await page.getByRole("radio", { name: "Table" }).click();
     const tables = page.getByRole("table");
     await expect(tables).toHaveCount(2);
-    await expect(tables.first().getByRole("columnheader")).toHaveText(["Project", "Action", "Due", "Link", "Your update"]);
+    await expect(tables.first().getByRole("columnheader")).toHaveText(["Project", "To-do", "Due", "Link", "Your update"]);
     await expect(tables.nth(1).getByRole("columnheader")).toHaveText(["Project", "Question", "First asked", "Link", "Your answer"]);
     await expect(tables.first()).toContainText("overdue");
     await expect(page.getByRole("button", { name: "Copy as table" })).toBeVisible();
@@ -659,5 +700,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     // The button ends where the row's padding does, however long the words are.
     expect(lineBox!.x + lineBox!.width - (buttonBox!.x + buttonBox!.width)).toBeLessThan(24);
     await shoot(page, "backup-line-1440");
+    // The status route may still be answering a poll as the page closes; that is not a failure of the test.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 });

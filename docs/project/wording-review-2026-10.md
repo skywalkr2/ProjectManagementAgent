@@ -1,8 +1,8 @@
 # Screen wording review (2026-10-17)
 
 An outside assistant reviewed every entry of `web/src/wording/en.json` (2,308 entries, about 700 proposals in the
-table below). This file keeps the review and the main session's triage. Phase B wave 3 applies it (roadmap), with the
-browser tests updated in the same change; nothing here is applied yet.
+table below). This file keeps the review and the main session's triage. Phase B wave 3 applied it (roadmap), with the
+browser tests updated in the same change; see "Applied" below for what was and was not.
 
 ## Triage
 
@@ -34,6 +34,34 @@ the rule that no line counts zero things). A test covers each screen that shows 
 - `followups.empty` → "Nothing needs sending yet": changes the meaning; keep the current meaning, shorter.
 - `setup_step.mail.explanation` and `walkthrough.why.mail` ("only reads"): true today; rewritten when phase S1b's acts
   after a yes are built, not now.
+
+## Applied (2026-10-19)
+
+Phase B wave 3 applied the triage above: of the 734 rows, 545 were changed in `web/src/wording/en.json` (the browser and unit tests that
+pinned the old words were updated in the same change), 80 rows were zero-count lines whose words needed no change (their callers were checked
+instead), and 109 were not applied, for the reasons below. A row whose proposal dropped what a test protected (the add-on introduction, the
+feedback hint, a sign-in status that repeated its own button) was worded by the designer's judgment, not pasted. "Go" is "Start" and "Waiting
+for you to start it" (the triage's answer to the rejected "Approve"); an abbreviation spelled out has its own singular (`.one` and `.other`).
+The server's own wording that mirrors the sheet follows it (`engine/dispatcher.py`, `engine/backup.py`, `engine/catch_up.py`, `engine/mail_sorting.py`,
+`api/routes.py`, `api/correction_routes.py`, `engine/applier.py`, `engine/config/schema.py`). The 110 zero-count callers were each read: a Today line
+that counts things and holds none is not shown, a panel with nothing shows no badge, and the other screens that could say zero now leave it out or
+say it in other words (Handover, Knowledge's filters, the AI comparison grid, organizations and project notes, Sources, Welcome's local servers,
+the rules review, the network wait, the assistant's runs); each has a test beside its screen.
+
+Not applied, with the reason:
+
+- The triage's rejection of "workspace" to "work" (the proposal dropped the word): 18 rows (`queue.handover.elsewhere`, `queue.handover.elsewhere_unknown`, `setup.sync_off`, `setup.sync_stopped`, `handover.elsewhere`, `handover.elsewhere_unknown`, `handover.elsewhere_wait.one`, `handover.elsewhere_wait.other`, `setup.language_same_workspace`, `setup_step.workspace`, `setup_step.backup.explanation`, `welcome.workspace.name`, `welcome.backup.path_hint`, `settings.key.workspace.name`, `settings.group.workspace`, `demo.region`, `walkthrough.title`, `walkthrough.why.backup`)
+- The triage's rejection of "owner" to "person responsible": 9 rows (`setup.owner`, `setup.owned_by`, `op.status.owner`, `ask.owner`, `toast.owner_set`, `setup_step.people.explanation`, `walkthrough.why.people`, `queue.act.pick_owner`, `queue.owner`)
+- Rows whose proposal was "Approve" for a yes that is not outward ("Go ahead", "Looks good", "All looks good"); kept as they are: 4 rows (`changes.looks_good`, `ai_accounts.go_ahead`, `ai_add.go_ahead`, `queue.act.all_good`)
+- Working-copy status words: the triage rejects Download and Upload and names only "Open a working copy" and "Bring back your edits"; the rest is kept: 5 rows (`copies.handed_out`, `copies.status.out`, `copies.status.returned`, `copies.handed_on`, `copies.unchanged`)
+- The data levels' names: 7 rows (`changes.level.open`, `changes.level.internal`, `changes.level.restricted`, `welcome.ai.data.open`, `welcome.ai.data.internal`, `welcome.ai.data.restricted`, `welcome.ai.data_internal_note`)
+- The "only reads" line `setup_step.mail.explanation` (`walkthrough.why.mail` was changed only so that "Go" reads "start"): 1 row
+- The product's name (`app.name`): 1 row
+- The style guide (every `styleguide.*` row): a developer page whose words are the design system's own names (Primary, Ghost, Segmented control); for the designer to confirm: 43 rows.
+- The own-sign-in lines that replace the services' own term "app registration" with "connection registration"; for the designer to confirm: 15 rows (`sign_in.not_ready`, `sign_in.default_unusable`, `sign_in.callback`, `sign_in.callback_hint`, `sign_in.own.use`, `sign_in.own.using`, `sign_in.own.bring_back`, `sign_in.own.form`, `sign_in.own.lead`, `sign_in.own.steps_title`, `sign_in.own.save_named`, `sign_in.own.cancel_named`, `sign_in.own.saved_toast`, `sign_in.own.stopped_toast`, `sign_in.own.brought_back_toast`)
+- "Default" to "Original setting" in the Settings screen, which the rework keeps in plain words: 2 rows (`settings.default`, `settings.saved_default`)
+- Rows the Settings rework or an earlier change had already worded (`settings.intro`, `queue.title.pasted`): 2 rows (`settings.intro`, `queue.title.pasted`)
+- Rows whose key is gone: `settings.back_to_default` and `settings.back_to_default_named` ("Reset" replaces them): 2 rows. The four spelled-out hours and days that became singular and plural pairs are counted as applied, and `sources.last.counts` became one line for each count (zeros left out).
 
 ## The review as received
 

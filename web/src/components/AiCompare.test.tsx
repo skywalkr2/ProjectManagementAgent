@@ -93,7 +93,7 @@ test("kinds of work down the side, one column for each account and model with th
   const rows = screen.getAllByRole("rowheader").map((r) => r.textContent);
   expect(rows).toEqual(["Pull actions from meeting notes", "Route a question to who decides", "Use a known term", "Write an update in your voice"]);
   expect(screen.getByRole("heading", { level: 1, name: "Compare what accounts can do" })).toBeInTheDocument();
-  expect(screen.getByText("right answers · cost per right answer · minimum 80%")).toBeInTheDocument();
+  expect(screen.getByText("Correct answers · cost per correct answer · pass mark 80%")).toBeInTheDocument();
   // The model's own id is never shown.
   expect(document.body).not.toHaveTextContent("m-1");
 });
@@ -103,7 +103,7 @@ test("each cell has the pass rate first, then cost per right answer, runs and ag
   renderApp(<AiCompare onBack={() => undefined} />);
   const c = await cellOf("Pull actions from meeting notes", "Main account · everyday");
   expect(c).toHaveTextContent("94%");
-  expect(c).toHaveTextContent("$0.03 · 18 runs · 2 days ago");
+  expect(c).toHaveTextContent("$0.03 · 18 tasks · 2 days ago");
   // Pass rate comes before the cost in reading order.
   expect(c.textContent?.indexOf("94%")).toBeLessThan(c.textContent?.indexOf("$0.03") ?? 0);
 });
@@ -134,11 +134,11 @@ test("an old measurement says so and counts as unknown; one never measured offer
   renderApp(<AiCompare onBack={() => undefined} />);
   const old = await cellOf("Write an update in your voice", "Main account · harder");
   expect(old).toHaveTextContent("40 days ago (old)");
-  expect(old).toHaveTextContent("Counts as unknown");
+  expect(old).toHaveTextContent("Result unknown");
   expect(old).not.toHaveTextContent("Cheapest");
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  expect(none).toHaveTextContent("— Not measured");
-  expect(await within(none).findByRole("button", { name: "Measure Main account · everyday" })).toHaveTextContent("Measure (about $0.12)");
+  expect(none).toHaveTextContent("— Not tested");
+  expect(await within(none).findByRole("button", { name: "Test Main account · everyday" })).toHaveTextContent("Test performance (about $0.12)");
 });
 
 test("Measure starts the measuring of that model with the person's go only when it was asked for, and the grid says it is measuring", async () => {
@@ -153,10 +153,10 @@ test("Measure starts the measuring of that model with the person's go only when 
   });
   renderApp(<AiCompare onBack={() => undefined} />);
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  await user.click(await within(none).findByRole("button", { name: "Measure Main account · everyday" }));
+  await user.click(await within(none).findByRole("button", { name: "Test Main account · everyday" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/skills/main/measure")?.body).toEqual({ model: "everyday", confirmed: false }));
-  expect(await screen.findByText("Measuring. The grid fills in as it finishes.")).toBeInTheDocument();
-  expect(await within(await cellOf("Write an update in your voice", "Main account · everyday")).findByText("Measuring…")).toBeInTheDocument();
+  expect(await screen.findByText("Testing. Results appear as each test finishes.")).toBeInTheDocument();
+  expect(await within(await cellOf("Write an update in your voice", "Main account · everyday")).findByText("Testing…")).toBeInTheDocument();
 });
 
 test("a measuring above the amount the person set asks first, with the cost, and starts only after the go", async () => {
@@ -167,14 +167,14 @@ test("a measuring above the amount the person set asks first, with the cost, and
   });
   renderApp(<AiCompare onBack={() => undefined} />);
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  await user.click(await within(none).findByRole("button", { name: "Measure Main account · everyday" }));
+  await user.click(await within(none).findByRole("button", { name: "Test Main account · everyday" }));
   expect(calls.some((c) => c.route === "POST ai/skills/main/measure")).toBe(false);
-  expect(within(await cellOf("Write an update in your voice", "Main account · everyday")).getByRole("alert")).toHaveTextContent("This would cost about $0.50, more than the $0.10 you asked to be asked about.");
-  await user.click(screen.getByRole("button", { name: "Measure anyway" }));
+  expect(within(await cellOf("Write an update in your voice", "Main account · everyday")).getByRole("alert")).toHaveTextContent("This would cost about $0.50, more than the $0.10 you set for asking first.");
+  await user.click(screen.getByRole("button", { name: "Test anyway" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/skills/main/measure")?.body).toEqual({ model: "everyday", confirmed: true }));
 });
 
-test("Measure again shows the total estimate first and, below the amount the person set, measures each account at once", async () => {
+test("Test again shows the total estimate first and, below the amount the person set, measures each account at once", async () => {
   const user = userEvent.setup();
   const calls = api({
     "POST ai/skills/main/estimate": () => estimate(0.03),
@@ -183,22 +183,22 @@ test("Measure again shows the total estimate first and, below the amount the per
     "POST ai/skills/second/measure": () => ({ started: ["everyday"], already: [], estimate: estimate(0.02) }),
   });
   renderApp(<AiCompare onBack={() => undefined} />);
-  await user.click(await screen.findByRole("button", { name: "Measure again (about $0.05)" }));
+  await user.click(await screen.findByRole("button", { name: "Test again (about $0.05)" }));
   await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/measure")).map((c) => c.route)).toEqual(["POST ai/skills/main/measure", "POST ai/skills/second/measure"]));
   expect(calls.find((c) => c.route === "POST ai/skills/main/measure")?.body).toEqual({ confirmed: false });
 });
 
-test("Measure again above that amount asks first, with the total, and measures only after the go", async () => {
+test("Test again above that amount asks first, with the total, and measures only after the go", async () => {
   const user = userEvent.setup();
   const calls = api({
     "POST ai/skills/main/measure": () => ({ started: ["everyday", "harder"], already: [], estimate: estimate(0.4) }),
     "POST ai/skills/second/measure": () => ({ started: ["everyday"], already: [], estimate: estimate(0.08) }),
   });
   renderApp(<AiCompare onBack={() => undefined} />);
-  await user.click(await screen.findByRole("button", { name: "Measure again (about $0.48)" }));
+  await user.click(await screen.findByRole("button", { name: "Test again (about $0.48)" }));
   expect(calls.some((c) => c.route.endsWith("/measure"))).toBe(false);
-  expect(screen.getByRole("alert")).toHaveTextContent("This would cost about $0.48, more than the $0.10 you asked to be asked about.");
-  await user.click(screen.getByRole("button", { name: "Measure anyway" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("This would cost about $0.48, more than the $0.10 you set for asking first.");
+  await user.click(screen.getByRole("button", { name: "Test anyway" }));
   await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/measure")).length).toBe(2));
   expect(calls.find((c) => c.route === "POST ai/skills/main/measure")?.body).toEqual({ confirmed: true });
 });
@@ -228,4 +228,12 @@ test("with nothing measured and no accounts it says there is nothing to compare"
   api({ "GET ai/accounts": () => [] }, { min_score: 0.8, stale_days: 60, accounts: [] });
   renderApp(<AiCompare onBack={() => undefined} />);
   expect(await screen.findByText("There is nothing to compare yet. Add an account first.")).toBeInTheDocument();
+});
+
+test("a cell that was never measured says so and never counts zero tasks", async () => {
+  api();
+  renderApp(<AiCompare onBack={() => undefined} />);
+  const c = await cellOf("Write an update in your voice", "Main account · everyday");
+  expect(c).toHaveTextContent("Not tested");
+  expect(c).not.toHaveTextContent(/\b0 tasks?\b/);
 });

@@ -103,7 +103,10 @@ test("the worst state wins, and the next step follows it", () => {
 test("how long ago is said in the sheet's words", () => {
   const now = new Date("2026-10-16T12:00:00Z");
   expect(ago("2026-10-16T11:59:40Z", now, t)).toBe("ai_accounts.ago.now");
-  expect(ago("2026-10-16T11:30:00Z", now, t)).toBe('ai_accounts.ago.min{"n":30}');
-  expect(ago("2026-10-16T10:00:00Z", now, t)).toBe('ai_accounts.ago.hours{"n":2}');
+  expect(ago("2026-10-16T11:30:00Z", now, t)).toBe('ai_accounts.ago.min.other{"n":30}');
+  expect(ago("2026-10-16T10:00:00Z", now, t)).toBe('ai_accounts.ago.hours.other{"n":2}');
+  // One minute and one hour are singular, never "1 minutes" or "1 hours".
+  expect(ago("2026-10-16T11:59:00Z", now, t)).toBe('ai_accounts.ago.min.one{"n":1}');
+  expect(ago("2026-10-16T11:00:00Z", now, t)).toBe('ai_accounts.ago.hours.one{"n":1}');
   expect(ago("2026-10-12T12:00:00Z", now, t)).toBe('ai_accounts.ago.days{"n":4}');
 });

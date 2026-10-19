@@ -53,6 +53,10 @@ BASIC = frozenset(
         "ai.budgets.per_day_usd",
         "ai.budgets.per_month_usd",
         "ui.toast_seconds",
+        "ui.theme",
+        "ui.density",
+        "ui.brand.color",
+        "ui.brand.logo",
     }
 )
 #: Keys the screens never change: a wrong value would stop the app from being reached or starting, or the setting is

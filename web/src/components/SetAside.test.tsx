@@ -66,18 +66,18 @@ test("an empty folder says so, and a deleted count is told in words", async () =
   expect(screen.getByText("14 set-aside messages were deleted from here after you confirmed them.")).toBeInTheDocument();
 });
 
-test("This is work hands the message in with the version that was read, and offers Always for the sender and the domain", async () => {
+test("Treat as work hands the message in with the version that was read, and offers Always for the sender and the domain", async () => {
   const user = userEvent.setup();
   const calls = open({
     "POST set-aside/a/work": () => ({ id: "a", version: 5, section: "sales", address: addr("a"), domain: "lists.example.com" }),
     "POST watch/sorting": () => SAVED,
   });
   const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
-  await user.click(within(sales).getByRole("button", { name: "This is work: Offer a" }));
+  await user.click(within(sales).getByRole("button", { name: "Treat as work: Offer a" }));
   await waitFor(() => expect(body(calls, "POST set-aside/a/work")).toEqual({ read_version: 3 }));
   expect(await screen.findByText("Handed in Offer a. Helper is on it.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Always for this domain" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Always for this sender" }));
+  expect(screen.getByRole("button", { name: "Apply to this email domain" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Apply to this sender" }));
   await waitFor(() =>
     expect(body(calls, "POST watch/sorting")).toEqual({
       fingerprint: "fp-1",
@@ -89,35 +89,35 @@ test("This is work hands the message in with the version that was read, and offe
   expect(await screen.findByText(`From now on, mail from ${addr("a")} stays with Helper.`)).toBeInTheDocument();
 });
 
-test("This is work offers only Always for this sender when the server sends no domain", async () => {
+test("Treat as work offers only Apply to this sender when the server sends no domain", async () => {
   const user = userEvent.setup();
   open({
     "POST set-aside/a/work": () => ({ id: "a", version: 5, section: "sales", address: addr("a"), domain: null }),
   });
-  await user.click(await screen.findByRole("button", { name: "This is work: Offer a" }));
-  expect(await screen.findByRole("button", { name: "Always for this sender" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Always for this domain" })).not.toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Treat as work: Offer a" }));
+  expect(await screen.findByRole("button", { name: "Apply to this sender" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Apply to this email domain" })).not.toBeInTheDocument();
 });
 
-test("Always for this domain writes a keep rule for the domain", async () => {
+test("Apply to this email domain writes a keep rule for the domain", async () => {
   const user = userEvent.setup();
   const calls = open({
     "POST set-aside/a/work": () => ({ id: "a", version: 5, section: "sales", address: addr("a"), domain: "lists.example.com" }),
     "POST watch/sorting": () => SAVED,
   });
-  await user.click(await screen.findByRole("button", { name: "This is work: Offer a" }));
-  await user.click(await screen.findByRole("button", { name: "Always for this domain" }));
+  await user.click(await screen.findByRole("button", { name: "Treat as work: Offer a" }));
+  await user.click(await screen.findByRole("button", { name: "Apply to this email domain" }));
   await waitFor(() => expect(body(calls, "POST watch/sorting")).toMatchObject({ choice: "never", senders: [], domains: ["lists.example.com"] }));
 });
 
-test("Undo of This is work sets the message aside again in its section", async () => {
+test("Undo of Treat as work sets the message aside again in its section", async () => {
   const user = userEvent.setup();
   const calls = open({
     "POST set-aside/c/work": () => ({ id: "c", version: 5, section: "personal", address: addr("c"), domain: "lists.example.com" }),
     "POST mail/c/set-aside": () => ({ id: "c", version: 6, section: "personal", address: addr("c"), domain: "lists.example.com" }),
   });
   const personal = await screen.findByRole("region", { name: /Personal/ });
-  await user.click(within(personal).getByRole("button", { name: "This is work: Offer c" }));
+  await user.click(within(personal).getByRole("button", { name: "Treat as work: Offer c" }));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(body(calls, "POST mail/c/set-aside")).toEqual({ section: "personal" }));
 });
@@ -166,7 +166,7 @@ test("Confirm all confirms what the section lists in one save, and offers a rule
   await waitFor(() => expect(body(calls, "POST set-aside/confirm")).toEqual({ fingerprint: "fp-1", ids: ["a", "b"] }));
   expect(calls.filter((c) => c.route === "POST set-aside/confirm")).toHaveLength(1);
   expect(await screen.findByText("From now on, mail from 2 senders is set aside as sales mail.")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Always for lists.example.com" }));
+  await user.click(screen.getByRole("button", { name: "Apply to lists.example.com" }));
   await waitFor(() =>
     expect(body(calls, "POST watch/sorting")).toEqual({
       fingerprint: "fp-1",

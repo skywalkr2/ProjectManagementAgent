@@ -6,7 +6,7 @@ import { RestartAnnouncer, RestartProvider, useRestart } from "../lib/restart";
 import { Refuse, fakeApi, renderApp, statusFixture } from "../test-utils";
 import { StatusMenu } from "./StatusMenu";
 
-const NEEDED = "A change needs the app to restart. New AI work waits until then.";
+const NEEDED = "Restart the app to resume the assistant's work.";
 
 function show(
   status: S["Status"],
@@ -27,7 +27,7 @@ function show(
   return calls;
 }
 
-const chip = () => screen.findByRole("button", { name: /^Status: /, hidden: true });
+const chip = () => screen.findByRole("button", { name: /^App status: /, hidden: true });
 const chipNow = () => document.querySelector("[data-status]") as HTMLElement;
 const chipText = (text: string) => waitFor(() => expect(chipNow()).toHaveTextContent(text));
 const chipIs = (kind: string) => waitFor(() => expect(chipNow()).toHaveAttribute("data-status", kind));
@@ -39,10 +39,10 @@ const open = async (user: ReturnType<typeof userEvent.setup>) => {
 test("all good: the chip says Live in words, and the popover says when the screen last updated", async () => {
   const user = userEvent.setup();
   show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false } }));
-  expect(await chip()).toHaveTextContent("Live");
+  expect(await chip()).toHaveTextContent("Connected");
   expect(await chip()).toHaveAttribute("data-status", "live");
   const dialog = await open(user);
-  expect(within(dialog).getByText(/Live · updated/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Updated /)).toBeInTheDocument();
   expect(within(dialog).getByText("Backed up less than an hour ago")).toBeInTheDocument();
 });
 
@@ -55,9 +55,9 @@ test("the popover says the backup is encrypted when it is", async () => {
 
 test("once a backup has succeeded the chip itself shows its age, and its name says it too", async () => {
   show(statusFixture({}, { backup: { configured: true, age_hours: 3, needs_attention: false } }));
-  await chipText("Live");
-  await chipText("Backed up 3 h ago");
-  expect(await chip()).toHaveAccessibleName("Status: Live, Backed up 3 h ago");
+  await chipText("Connected");
+  await chipText("Backed up 3 hours ago");
+  expect(await chip()).toHaveAccessibleName("App status: Connected, Backed up 3 hours ago");
 });
 
 test("an overdue backup keeps its age on the chip beside the warning", async () => {
@@ -83,7 +83,7 @@ test("offline shows as soon as the connection is lost, and Refresh asks for ever
   const user = userEvent.setup();
   const refresh = vi.fn();
   show(statusFixture(), {}, { live: "offline", refresh });
-  expect(await chip()).toHaveTextContent("Offline · reconnecting");
+  expect(await chip()).toHaveTextContent("Disconnected · reconnecting");
   const dialog = await open(user);
   await user.click(within(dialog).getByRole("button", { name: "Refresh" }));
   expect(refresh).toHaveBeenCalledTimes(1);
@@ -93,7 +93,7 @@ test("Back up now runs the backup, and without one the popover offers to set bac
   const user = userEvent.setup();
   const calls = show(statusFixture({}, {}, ), { "POST backup": () => statusFixture() });
   const dialog = await open(user);
-  expect(within(dialog).getByText("No off-device backup")).toBeInTheDocument();
+  expect(within(dialog).getByText("No backup on another device")).toBeInTheDocument();
   expect(within(dialog).queryByText(/storage\./)).toBeNull();
   expect(within(dialog).queryByRole("button", { name: "Back up now" })).toBeNull();
   expect(calls.some((c) => c.route === "POST backup")).toBe(false);
@@ -119,7 +119,7 @@ test("an unconfigured backup opens the setup guide at the backup step", async ()
 test("the spend line shows today's and this month's cost, and says which limit it is near", async () => {
   const user = userEvent.setup();
   show(statusFixture({}, { backup: { configured: true, age_hours: 1 }, spend: { today_usd: 1.7, month_usd: 5, warn: true, warn_today: true } }));
-  await chipText("Spend near limit");
+  await chipText("Spending near limit");
   const dialog = await open(user);
   expect(within(dialog).getByText("AI today $1.70 · this month $5.00 · near today's limit")).toBeInTheDocument();
 });
@@ -148,7 +148,7 @@ test("when this copy can't restart itself, it says to close and start the app ag
   const user = userEvent.setup();
   show(statusFixture({ restart_needed: "A setting changed.", can_restart: false }));
   const dialog = await open(user);
-  expect(within(dialog).getByText(/Close the app and start it again/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Close and reopen the app/)).toBeInTheDocument();
   expect(within(dialog).queryByRole("button", { name: "Restart now" })).toBeNull();
 });
 
@@ -216,7 +216,7 @@ test("when a change asks about restarting, the chip says so and the popover hold
   expect(await chip()).toHaveAttribute("data-status", "live");
   await user.click(screen.getByRole("button", { name: "Ask about restarting" }));
   await chipIs("restart");
-  expect(screen.getAllByRole("status", { hidden: true }).some((el) => /This change needs the app to restart/.test(el.textContent ?? ""))).toBe(true);
+  expect(screen.getAllByRole("status", { hidden: true }).some((el) => /Restart to finish this change/.test(el.textContent ?? ""))).toBe(true);
   const dialog = await open(user);
   expect(within(dialog).getAllByRole("button", { name: "Restart now" })).toHaveLength(1);
   await user.click(within(dialog).getByRole("button", { name: "Later" }));
@@ -230,7 +230,7 @@ test("an assistant with no account says so and what to do, with a button, and no
   const dialog = await open(user);
   expect(within(dialog).getByText("The assistant isn't set up yet")).toBeInTheDocument();
   expect(dialog).not.toHaveTextContent(/cockpit /);
-  await user.click(within(dialog).getByRole("button", { name: "Open the AI step" }));
+  await user.click(within(dialog).getByRole("button", { name: "Open AI account setup" }));
   await waitFor(() => expect(onOpenGuide).toHaveBeenCalledWith("ai"));
 });
 
@@ -238,7 +238,7 @@ test("the stand-in assistant is a line in the popover, not a banner", async () =
   const user = userEvent.setup();
   show(statusFixture({}, { ai: { state: "stand_in", detail: null } }));
   const dialog = await open(user);
-  expect(within(dialog).getByText("The assistant is a stand-in for trying the app")).toBeInTheDocument();
+  expect(within(dialog).getByText("You're using a practice assistant")).toBeInTheDocument();
   expect(dialog).not.toHaveTextContent(/cockpit /);
 });
 
@@ -247,7 +247,7 @@ test("a failing account shows the provider's own reason", async () => {
   show(statusFixture({}, { ai: { state: "failing", detail: "auth: User not found" } }));
   const dialog = await open(user);
   expect(within(dialog).getByText("The assistant can't use its AI account")).toBeInTheDocument();
-  expect(within(dialog).getByText("The account said: auth: User not found")).toBeInTheDocument();
+  expect(within(dialog).getByText("The AI service said: auth: User not found")).toBeInTheDocument();
 });
 
 test("nothing about the assistant shows when it is working", async () => {
@@ -264,30 +264,38 @@ test("a demo workspace says so in the popover, with the sentence", async () => {
   expect(within(dialog).getByText("Everything here is made up. Nothing you do here reaches anyone.")).toBeInTheDocument();
 });
 
-test("requests waiting for the network show on the chip and in the popover, with the count and since when", async () => {
+test("requests waiting for an internet connection show on the chip and in the popover, with the count and since when", async () => {
   const user = userEvent.setup();
   show(statusFixture({ network_wait: { count: 2, since: "2026-10-13T14:05:00+00:00" } }));
   await chipIs("network");
-  await chipText("Waiting for the network");
-  expect(await chip()).toHaveAccessibleName("Status: Waiting for the network");
+  await chipText("Waiting for an internet connection");
+  expect(await chip()).toHaveAccessibleName("App status: Waiting for an internet connection");
   const dialog = await open(user);
   const line = dialog.querySelector('[data-state="network"]') as HTMLElement;
-  expect(line).toHaveTextContent(/^Network2 requests have been waiting for the network since \w{3}, \w{3} \d{1,2}, \d{1,2}:05/);
-  expect(line).toHaveTextContent("They run again by themselves as soon as the network is back. Nothing is lost and no try is used up.");
+  expect(line).toHaveTextContent(/^Internet connection2 requests have been waiting for an internet connection since \w{3}, \w{3} \d{1,2}, \d{1,2}:05/);
+  expect(line).toHaveTextContent("Work resumes when your internet connection returns. Nothing is lost, and retry attempts aren't used up.");
   expect(line.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
 });
 
-test("one request waiting for the network reads as one, and no network line shows when none waits", async () => {
+test("one request waiting for an internet connection reads as one, and no network line shows when none waits", async () => {
   const user = userEvent.setup();
   show(statusFixture({ network_wait: { count: 1, since: "2026-10-13T14:05:00+00:00" } }));
   const dialog = await open(user);
-  expect(dialog.querySelector('[data-state="network"]')).toHaveTextContent("1 request has been waiting for the network since");
+  expect(dialog.querySelector('[data-state="network"]')).toHaveTextContent("1 request has been waiting for an internet connection since");
 });
 
-test("with nothing waiting for the network the chip and popover say nothing about it", async () => {
+test("with nothing waiting for an internet connection the chip and popover say nothing about it", async () => {
   const user = userEvent.setup();
   show(statusFixture());
   await chipIs("live");
   const dialog = await open(user);
   expect(dialog.querySelector('[data-state="network"]')).toBeNull();
+});
+
+test("a network wait with a count of zero shows no network line", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({ network_wait: { count: 0, since: "2026-10-13T14:05:00+00:00" } }));
+  const dialog = await open(user);
+  expect(dialog.querySelector('[data-state="network"]')).toBeNull();
+  expect(dialog).not.toHaveTextContent(/\b0 requests?\b/);
 });

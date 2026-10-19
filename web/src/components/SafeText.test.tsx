@@ -6,7 +6,7 @@ import { Highlighted, SafeText, findQuote } from "./SafeText";
 
 const wrap = (ui: React.ReactNode) => render(<WordingProvider>{ui}</WordingProvider>);
 
-test("markup in outside content stays text", () => {
+test("markup in someone else's material stays text", () => {
   const { container } = wrap(<SafeText text={'<img src=x onerror="alert(1)"> hello <b>bold</b>'} />);
   expect(container.querySelector("img")).toBeNull();
   expect(container.querySelector("b")).toBeNull();

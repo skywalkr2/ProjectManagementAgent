@@ -35,7 +35,7 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   },
   { name: "Follow-ups", hash: "work/followups", ready: (page) => heading(page, "Follow-ups") },
   { name: "What changed", hash: "work/changed", ready: (page) => heading(page, "What changed") },
-  { name: "Outgoing", hash: "work/outgoing", ready: (page) => heading(page, "Waiting to go out") },
+  { name: "Outgoing", hash: "work/outgoing", ready: (page) => heading(page, "Drafts to approve") },
   { name: "Stages", hash: "work/stages", ready: (page) => heading(page, "Stages") },
   { name: "Projects", hash: "records/projects", ready: (page) => text(page, strings["token-02"]) },
   { name: "People", hash: "records/people", ready: (page) => text(page, strings["email-03"]) },
@@ -51,8 +51,16 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   },
   { name: "Add-ons", hash: "addons", ready: (page) => heading(page, "Add-ons") },
   { name: "Settings", hash: "settings", ready: (page) => heading(page, "Settings") },
+  // Each section of Settings, with its help beside the settings or under them.
+  { name: "Settings: AI accounts", hash: "settings/ai", ready: (page) => section(page, "AI accounts") },
+  { name: "Settings: Backups and sync", hash: "settings/backups", ready: (page) => section(page, "Backups and sync") },
+  { name: "Settings: Today", hash: "settings/today", ready: (page) => section(page, "Today") },
+  { name: "Settings: Appearance", hash: "settings/appearance", ready: (page) => section(page, "Appearance") },
+  { name: "Settings: Lists", hash: "settings/lists", ready: (page) => section(page, "Lists") },
+  { name: "Settings: Advanced", hash: "settings/advanced", ready: (page) => section(page, "Advanced") },
 ];
 
+const section = (page: Page, name: string) => expect(page.getByRole("heading", { level: 2, name: new RegExp(`^${name}`) })).toBeVisible();
 const heading = (page: Page, name: string) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible();
 const text = (page: Page, words: string) => expect(page.getByText(words.slice(0, 12)).first()).toBeAttached();
 

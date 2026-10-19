@@ -161,7 +161,7 @@ def test_the_estimate_counts_only_what_the_account_may_see_and_nothing_to_run_co
 def test_a_cost_above_the_amount_asked_about_is_refused_without_the_go_and_nothing_starts(env):
     ws, app, client, _priced = env
     refused = client.post(f"{api(ws)}/ai/skills/{OTHER}/measure", json={})
-    assert refused.status_code == 409 and "go" in refused.json()["detail"]
+    assert refused.status_code == 409 and "confirmation" in refused.json()["detail"]
     assert measure.read(ws) == {} and app.state.worker._measuring is None
     assert client.post(f"{api(ws)}/ai/skills/{OTHER}/measure").status_code == 409  # no body at all
 

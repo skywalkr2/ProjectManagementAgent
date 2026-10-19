@@ -1645,7 +1645,7 @@ STAGE_WORDING = {
     "not_waiting": "this stage task is not waiting for approval",
     "request_changed": "the request changed since it was read",
     "stage_left": "the record is no longer in the stage that requested this task",
-    "stage_left_before_go": "Not started: it left this stage before you gave the go.",
+    "stage_left_before_go": "Not started: it left this stage before you started it.",
     "retry_blocked": "stage tasks need an explicit go before they can run",
     "type_unavailable": "The record type plugin is disabled.",
     "check_unavailable": "The entry check is unavailable.",
@@ -1655,7 +1655,7 @@ STAGE_WORDING = {
     "rule_scope": "The record is outside this rule's scope.",
     "rule_prose": "This rule needs a deterministic code check before it can allow a move.",
     "confirm": "This stage move waits for you to confirm it.",
-    "waiting": "Waiting for your go before starting this task.",
+    "waiting": "Waiting for you to start it before this task runs.",
 }
 
 

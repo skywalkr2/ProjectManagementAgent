@@ -244,6 +244,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   **Impact:** design 7.1, 7.5 to 7.7 and the follow-up rule in Part 6 edited (CHANGES.md section 83). Left, in open
   promise P26: the tie between a to-do and the question it waits on (answer 35), and the nudge's "answered, left out"
   list and the suggested escalation after a second follow-up (answer 36).
+- **Also (2026-10-19): Settings saved as made, and the screen wording review applied.** Settings has sections down
+  the side (each reachable by its own address), saves each change as it is made with Undo (no Save button), shows
+  "Changed · Reset" and puts help beside the field where it fits. The wording review's triage is applied (545 rows
+  changed, 80 zero counts checked, 109 not applied with reasons kept in the review file); "Go" reads "Start" on screen.
+  **Impact:** design 7.9 edited to what was built (CHANGES.md section 84); left from the old 7.9 text: help that
+  follows focus with "what reads this", two columns of fields, a save bar for settings that need a restart, separate
+  admin sections. Phase B wave 3 is done; wave 4 (records) is next.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

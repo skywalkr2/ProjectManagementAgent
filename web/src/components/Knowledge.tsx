@@ -84,7 +84,8 @@ export function Knowledge(props: { onOpenReview: () => void }) {
           onChange={setChosen}
           options={FILTERS.map((f) => ({
             value: f,
-            label: t("knowledge.filter.count", { label: t(`knowledge.filter.${f}`), n: number[f] }),
+            // A filter with nothing under it is only its name: no "(0)".
+            label: number[f] > 0 ? t("knowledge.filter.count", { label: t(`knowledge.filter.${f}`), n: number[f] }) : t(`knowledge.filter.${f}`),
           }))}
         />
         <div className={styles.kind}>

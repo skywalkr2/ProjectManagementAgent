@@ -122,7 +122,7 @@ test("changing a choice asks again with every current value and keeps focus on t
   expect(screen.getByRole("combobox", { name: "Style" })).toHaveValue("long");
 });
 
-test("Apply applies exactly what was reviewed, says what happened in words and offers Undo", async () => {
+test("Use applies exactly what was reviewed, says what happened in words and offers Undo", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({
     [PREVIEW_URL]: () => proposal(),
@@ -133,14 +133,14 @@ test("Apply applies exactly what was reviewed, says what happened in words and o
   const start = screen.getByRole("button", { name: "Start it" });
   await user.click(start);
   await screen.findByRole("dialog");
-  await user.click(await screen.findByRole("button", { name: "Apply" }));
+  await user.click(await screen.findByRole("button", { name: "Make these changes" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.find((c) => c.route === "POST plugin-actions/apply")?.body).toEqual({ token: "tok-1" });
   expect(await screen.findByText("Make a note from notes.txt: 2 changes made, 1 waiting for you.")).toBeInTheDocument();
   await waitFor(() => expect(start).toHaveFocus());
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-4/undo"));
-  expect(await screen.findByText("Undone. It's back as it was.")).toBeInTheDocument();
+  expect(await screen.findByText("Undone.")).toBeInTheDocument();
 });
 
 test("when every change was refused it says so instead of reporting success, and there is nothing to undo", async () => {
@@ -151,8 +151,8 @@ test("when every change was refused it says so instead of reporting success, and
   });
   renderApp(<Harness />);
   await user.click(screen.getByRole("button", { name: "Start it" }));
-  await user.click(await screen.findByRole("button", { name: "Apply" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Nothing was applied because a change was refused.");
+  await user.click(await screen.findByRole("button", { name: "Make these changes" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("No changes were made because one was refused.");
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   expect(screen.queryByText(/1 refused/)).toBeNull();
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
@@ -167,11 +167,11 @@ test("some refused but some applied is still reported as the usual summary", asy
   });
   renderApp(<Harness />);
   await user.click(screen.getByRole("button", { name: "Start it" }));
-  await user.click(await screen.findByRole("button", { name: "Apply" }));
+  await user.click(await screen.findByRole("button", { name: "Make these changes" }));
   expect(await screen.findByText("Make a note from notes.txt: 1 change made, 1 refused.")).toBeInTheDocument();
 });
 
-test("if the review expired or the item changed, the dialog shows the server's text and Run it again asks afresh", async () => {
+test("if the review expired or the item changed, the dialog shows the server's text and Try again asks afresh", async () => {
   const user = userEvent.setup();
   let round = 0;
   const calls = fakeApi({
@@ -183,14 +183,14 @@ test("if the review expired or the item changed, the dialog shows the server's t
   });
   renderApp(<Harness />);
   await user.click(screen.getByRole("button", { name: "Start it" }));
-  await user.click(await screen.findByRole("button", { name: "Apply" }));
+  await user.click(await screen.findByRole("button", { name: "Make these changes" }));
   const alert = await screen.findByRole("alert");
   expect(alert).toHaveTextContent("that review has expired; run the action again");
-  expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
-  await user.click(screen.getByRole("button", { name: "Run it again" }));
+  expect(screen.getByRole("button", { name: "Make these changes" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "Try again" }));
   await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-  await waitFor(() => expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled());
-  await user.click(screen.getByRole("button", { name: "Apply" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Make these changes" })).toBeEnabled());
+  await user.click(screen.getByRole("button", { name: "Make these changes" }));
   expect(await screen.findByText("Make a note from notes.txt: 1 change made.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "POST plugin-actions/apply").map((c) => c.body)).toEqual([{ token: "tok-1" }, { token: "tok-2" }]);
 });
@@ -202,7 +202,7 @@ test("an action that can't make a proposal shows why, with no Apply to press", a
   await user.click(screen.getByRole("button", { name: "Start it" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Only plain text files can be turned into a note.");
   expect(screen.getByRole("dialog", { name: "Make a note" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Make these changes" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
@@ -253,7 +253,7 @@ test("items sit under their group's heading and explanation with a count, and ti
   expect(within(changes).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Note two"]);
   expect(calls.filter((c) => c.route === PREVIEW_URL)).toHaveLength(1);
 
-  await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+  await user.click(within(dialog).getByRole("button", { name: "Make these changes" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.find((c) => c.route === "POST plugin-actions/apply")?.body).toEqual({
     token: "tok-1",
@@ -357,10 +357,10 @@ test("work the action also starts is listed with what it is about, and says each
   });
   renderApp(<Harness />);
   await user.click(screen.getByRole("button", { name: "Start it" }));
-  const section = (await screen.findByRole("region", { name: "Also starts" })) as HTMLElement;
+  const section = (await screen.findByRole("region", { name: "Additional work" })) as HTMLElement;
   expect(await within(section).findByText("Check the chapter (about The first chapter)")).toBeInTheDocument();
   expect(within(section).getByText("Summarize everything")).toBeInTheDocument();
-  expect(within(section).getByText("2 of 2 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  expect(within(section).getByText("2 of 2 AI tasks wait for you to start them.")).toBeInTheDocument();
 });
 
 test("an item that can't apply says why and starts dropped, and other problems are listed", async () => {
@@ -387,8 +387,8 @@ test("an item that can't apply says why and starts dropped, and other problems a
   const dialog = await screen.findByRole("dialog");
   const refused = await within(dialog).findByRole("checkbox", { name: "Add Lighthouse" });
   expect(refused).not.toBeChecked();
-  expect(refused).toHaveAccessibleDescription("Can't be applied as it stands: there is already a project called Lighthouse");
-  expect(within(dialog).getByRole("alert")).toHaveTextContent("Change a choice above");
+  expect(refused).toHaveAccessibleDescription("Can't make this change: there is already a project called Lighthouse");
+  expect(within(dialog).getByRole("alert")).toHaveTextContent("Update your choices");
 });
 
 type Req = S["ActionRequestView"];
@@ -401,10 +401,10 @@ async function openWith(extra: Partial<S["ActionProposalView"]>) {
   const calls = fakeApi({ [PREVIEW_URL]: () => proposal(extra), [APPLY]: applied });
   renderApp(<Harness />);
   await user.click(screen.getByRole("button", { name: "Start it" }));
-  const section = (await screen.findByRole("region", { name: "Also starts" })) as HTMLElement;
+  const section = (await screen.findByRole("region", { name: "Additional work" })) as HTMLElement;
   const dialog = screen.getByRole("dialog");
   const applyBody = async () => {
-    await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+    await user.click(within(dialog).getByRole("button", { name: "Make these changes" }));
     await waitFor(() => expect(calls.some((c) => c.route === APPLY)).toBe(true));
     return calls.find((c) => c.route === APPLY)?.body;
   };
@@ -416,9 +416,9 @@ test("each piece of queued work has a tick, ticked as offered, and an untick is 
   const boxes = within(section).getAllByRole("checkbox");
   expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, false]);
   expect(within(section).getAllByRole("listitem")).toHaveLength(3);
-  expect(within(section).getByText("2 of 3 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  expect(within(section).getByText("2 of 3 AI tasks wait for you to start them.")).toBeInTheDocument();
   await user.click(within(section).getByRole("checkbox", { name: "Check r2" }));
-  expect(within(section).getByText("1 of 3 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  expect(within(section).getByText("1 of 3 AI tasks wait for you to start them.")).toBeInTheDocument();
   expect(await applyBody()).toEqual({ token: "tok-1", kept_requests: { r2: false } });
 });
 
@@ -439,9 +439,9 @@ test("work that goes with an item follows it: dropped with the item, disabled, w
   await user.click(within(dialog).getByRole("checkbox", { name: "Change the first thing" }));
   expect(first).not.toBeChecked();
   expect(first).toBeDisabled();
-  expect(first).toHaveAccessibleDescription("Goes with Change the first thing");
+  expect(first).toHaveAccessibleDescription("Part of Change the first thing");
   expect(within(section).getByRole("checkbox", { name: "Check r3" })).toBeEnabled();
-  expect(within(section).getByText("1 of 3 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  expect(within(section).getByText("1 of 3 AI tasks wait for you to start them.")).toBeInTheDocument();
   await user.click(within(dialog).getByRole("checkbox", { name: "Change the first thing" }));
   expect(first).toBeEnabled();
   expect(first).toBeChecked();
@@ -464,7 +464,7 @@ test("a group's Keep all and Drop all set the work that belongs to the group", a
   renderApp(<Harness />);
   await user.click(screen.getByRole("button", { name: "Start it" }));
   const group = (await screen.findByRole("region", { name: "Likely duplicates" })) as HTMLElement;
-  const section = screen.getByRole("region", { name: "Also starts" });
+  const section = screen.getByRole("region", { name: "Additional work" });
   await user.click(within(group).getByRole("button", { name: "More actions for Likely duplicates" }));
   await user.click(await screen.findByRole("menuitem", { name: "Drop all" }));
   expect(within(section).getAllByRole("checkbox").map((b) => (b as HTMLInputElement).checked)).toEqual([false, false, true]);
@@ -479,14 +479,14 @@ test("more than five pieces of work get Keep all and Drop all, and fewer do not"
   const many = Array.from({ length: 6 }, (_, i) => req(`r${i + 1}`));
   const { user, section, applyBody } = await openWith({ requests: many });
   expect(within(section).getByText("6 of 6 kept")).toBeInTheDocument();
-  await user.click(within(section).getByRole("button", { name: "More actions for Also starts" }));
+  await user.click(within(section).getByRole("button", { name: "More actions for Additional work" }));
   await user.click(await screen.findByRole("menuitem", { name: "Drop all" }));
   expect(within(section).getByText("0 of 6 kept")).toBeInTheDocument();
-  expect(within(section).getByText("0 of 6 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  expect(within(section).getByText("0 of 6 AI tasks wait for you to start them.")).toBeInTheDocument();
   for (const box of within(section).getAllByRole("checkbox")) expect(box).not.toBeChecked();
-  await user.click(within(section).getByRole("button", { name: "More actions for Also starts" }));
+  await user.click(within(section).getByRole("button", { name: "More actions for Additional work" }));
   await user.click(await screen.findByRole("menuitem", { name: "Keep all" }));
-  expect(within(section).getByText("6 of 6 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  expect(within(section).getByText("6 of 6 AI tasks wait for you to start them.")).toBeInTheDocument();
   await user.click(within(section).getByRole("checkbox", { name: "Check r4" }));
   expect(await applyBody()).toEqual({ token: "tok-1", kept_requests: { r4: false } });
 });

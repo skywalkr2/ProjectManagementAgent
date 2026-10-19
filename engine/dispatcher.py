@@ -243,7 +243,7 @@ def process(
             state="needs_you",
             approval="required",
             estimate_usd=round(estimate, 4),
-            waiting=f"About ${estimate:.2f}. Waiting for your go.",
+            waiting=f"About ${estimate:.2f}. Waiting for you to start it.",
         )
         return None
     kind = store.plugins.task_kind(req.data["task"])
@@ -862,12 +862,12 @@ UNREADABLE = (
     "account for this work."
 )
 #: What a request waits on while no AI account can be reached for want of a network connection.
-OFFLINE_WAITING = "Waiting for the network"
+OFFLINE_WAITING = "Waiting for an internet connection"
 #: What a run waits on while the workspace has no person set; the setup step that names them clears it.
 SAY_WHO_FIRST = "Say who you are first"
-UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for your go."
+UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for you to start it."
 #: What a run waits on until the person's first go in the workspace; Today gathers every such request into one line.
-FIRST_GO = "Waiting for your first go."
+FIRST_GO = "Waiting for you to start the assistant."
 
 
 def waits_on_first_go(request: dict) -> bool:

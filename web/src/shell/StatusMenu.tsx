@@ -131,7 +131,7 @@ export function StatusMenu(props: {
                 )}
               </li>
             )}
-            {wait && (
+            {wait && wait.count > 0 && (
               <li className={[styles.state, styles.warn].join(" ")} data-state="network">
                 <p className={styles.name}>{t("status.network")}</p>
                 <p className={`${styles.text} ${styles.full}`}>

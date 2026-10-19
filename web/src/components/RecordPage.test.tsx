@@ -175,7 +175,7 @@ test("what the plugins offer: the first is the primary button, the rest are in t
   const user = userEvent.setup();
   const calls = fakeApi(
     routes({
-      [`GET plugin-actions?${on}`]: () => [{ name: "demo/export", label: "Export", on: KIND }],
+      [`GET plugin-actions?${on}`]: () => [{ name: "demo/export", label: "Save a copy", on: KIND }],
       [`GET task-kinds?${on}`]: () => [
         { name: "demo/check", label: "Check it", on: KIND },
         { name: "demo/polish", label: "Polish it", on: KIND },
@@ -196,7 +196,7 @@ test("what the plugins offer: the first is the primary button, the rest are in t
   );
   renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
   const group = await screen.findByRole("group", { name: "Things to do here" });
-  const primary = within(group).getByRole("button", { name: "Export" });
+  const primary = within(group).getByRole("button", { name: "Save a copy" });
   await user.click(primary);
   await screen.findByRole("dialog", { name: "Export the chapter" });
   await user.click(screen.getByRole("button", { name: "Cancel" }));

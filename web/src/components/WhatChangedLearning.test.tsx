@@ -94,7 +94,7 @@ test("a card says which knowledge shaped it, linked to the entry", async () => {
 test("a first run on a standing-in account says which one", async () => {
   show([change("REQ-1", { first_on_account: "second" })]);
   renderApp(<WhatChanged />);
-  expect(await screen.findByText("First run on second")).toBeInTheDocument();
+  expect(await screen.findByText("First task using second")).toBeInTheDocument();
 });
 
 test("This doesn't apply here narrows the entry by leaving a project out, at once with Undo", async () => {
@@ -103,15 +103,15 @@ test("This doesn't apply here narrows the entry by leaving a project out, at onc
   renderApp(<WhatChanged />);
   await user.click(await screen.findByRole("button", { name: `More actions for ${RULE}` }));
   await user.click(screen.getByRole("menuitem", { name: "This doesn't apply here" }));
-  const pick = await screen.findByRole("combobox", { name: "Stop it applying to" });
-  expect(screen.getByRole("button", { name: "Narrow it" })).toBeDisabled();
+  const pick = await screen.findByRole("combobox", { name: "Stop using this for" });
+  expect(screen.getByRole("button", { name: "Limit where it applies" })).toBeDisabled();
   await waitFor(() => expect(within(pick).getAllByRole("option")).toHaveLength(3));
   await user.selectOptions(pick, "PRJ-1");
-  await user.click(screen.getByRole("button", { name: "Narrow it" }));
+  await user.click(screen.getByRole("button", { name: "Limit where it applies" }));
   await waitFor(() =>
     expect(posted(calls, "POST knowledge/LES-3/narrow")).toEqual({ read_version: 2, applies_to: { scope: "workspace", except: ["PRJ-1"] } }),
   );
-  expect(await screen.findByText("Narrowed. It no longer applies there.")).toBeInTheDocument();
+  expect(await screen.findByText("Updated. It no longer applies there.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-9/undo"));
 });
@@ -122,9 +122,9 @@ test("This doesn't apply here can retire the entry instead, with Undo", async ()
   renderApp(<WhatChanged />);
   await user.click(await screen.findByRole("button", { name: `More actions for ${RULE}` }));
   await user.click(screen.getByRole("menuitem", { name: "This doesn't apply here" }));
-  await user.click(await screen.findByRole("button", { name: "Retire it" }));
+  await user.click(await screen.findByRole("button", { name: "Stop using it" }));
   await waitFor(() => expect(posted(calls, "POST knowledge/LES-3/retire")).toEqual({ read_version: 2 }));
-  expect(await screen.findByText("Retired. It won't guide the assistant any more.")).toBeInTheDocument();
+  expect(await screen.findByText("No longer used by the assistant.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-9/undo"));
 });
@@ -135,9 +135,9 @@ test("an entry for one project only can be retired but not narrowed, and says so
   renderApp(<WhatChanged />);
   await user.click(await screen.findByRole("button", { name: `More actions for ${RULE}` }));
   await user.click(screen.getByRole("menuitem", { name: "This doesn't apply here" }));
-  expect(await screen.findByText("It applies to one project only, so the way to stop it is to retire it.")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Narrow it" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Retire it" })).toBeInTheDocument();
+  expect(await screen.findByText("This applies to just one project. Stop using it to remove it there.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Limit where it applies" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Stop using it" })).toBeInTheDocument();
 });
 
 test("a fact, or an entry already retired, shows no menu to change it", async () => {

@@ -701,7 +701,7 @@ def test_a_run_estimated_above_the_amount_to_confirm_waits_for_the_go(env):
     request = store.read().get("request", handed.request)
     assert cs_id is None and asked == []
     assert request.data["approval"] == "required" and request.data["estimate_usd"] > 0.01
-    assert "Waiting for your go" in request.data["waiting"]
+    assert "Waiting for you to start it" in request.data["waiting"]
     approve_stage_request(store, handed.request, request.version)
     assert process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW) is not None
     assert len(asked) == 1

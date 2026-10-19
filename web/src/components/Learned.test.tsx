@@ -62,7 +62,7 @@ test("Just this time sets it aside at once and says nothing is kept", async () =
 
 test("a correction said to be just this time before says how many times", async () => {
   show([learnedLine({ proposal: proposal({ just_this_time_before: 2 }) })]);
-  expect(await screen.findByText("You said “just this time” to this 2 times before.")).toBeInTheDocument();
+  expect(await screen.findByText("You previously chose “Just this time” 2 times.")).toBeInTheDocument();
 });
 
 test("Edit opens a drawer, and Keep there keeps the person's own wording", async () => {
@@ -123,16 +123,16 @@ test("the person's own words are already kept, so the line shows Undo instead of
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-7/undo"));
 });
 
-test("what came from outside content shows the words beside it, marked as from outside", async () => {
+test("what came from someone else's material shows the words beside it, marked as from outside", async () => {
   show([learnedLine({ proposal: proposal({ trust: "untrusted", evidence: { quote: "interior files go to the editor", source: "SRC-1" } }) })]);
   const evidence = await screen.findByText(/interior files go to the editor/);
-  expect(evidence.closest("p")).toHaveTextContent("From: interior files go to the editor From outside");
+  expect(evidence.closest("p")).toHaveTextContent("From: interior files go to the editor From someone else's material");
 });
 
 test("words the person's own correction gave carry no outside mark", async () => {
   show([learnedLine()]);
   await screen.findByText(/go to the editor first/);
-  expect(screen.queryByText("From outside")).toBeNull();
+  expect(screen.queryByText("From someone else's material")).toBeNull();
 });
 
 test("a line shows on the card it was learned from and on the records it names, and nowhere else", async () => {

@@ -116,7 +116,7 @@ function SideRow(props: { title: string; side?: Side | null }) {
     <li className={styles.side}>
       <strong>{props.title}</strong>
       {side?.computer && <span className="sub">{t("handover.made_on", { computer: side.computer })}</span>}
-      {side && <span>{tn("handover.changes", side.changes)}</span>}
+      {side && side.changes > 0 && <span>{tn("handover.changes", side.changes)}</span>}
       {side?.latest && <span className="sub">{t("handover.latest", { when: when(side.latest) })}</span>}
     </li>
   );

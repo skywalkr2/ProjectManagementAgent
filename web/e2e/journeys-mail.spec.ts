@@ -54,12 +54,12 @@ test.describe.serial("journey: mail", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByText("More options").click();
     await main.getByLabel(/^Another service that speaks/).check();
-    await main.getByRole("textbox", { name: "Address" }).fill(info.ai_base_url);
+    await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("button", { name: "Check", exact: true }).click();
-    const everyday = main.getByLabel("Model for everyday work");
+    const everyday = main.getByLabel("AI model for everyday work");
     await expect(everyday.locator("option")).toHaveCount(2);
-    await main.getByText(/^Models:/).click();
+    await main.getByText(/^Selected model:/).click();
     await everyday.selectOption("fake-small");
     await main.getByLabel("Internal material").check();
     await main.getByRole("button", { name: "Add account" }).click();
@@ -96,11 +96,11 @@ test.describe.serial("journey: mail", () => {
     let seen = await service();
     expect(seen).toMatchObject({ authorizations: 1, exchanges: 1, refused: 0 });
     expect(page.url()).not.toMatch(/code=|state=|sign_in=/);
-    // The screen says what is read now, and that the last day's mail waits for the first Go.
+    // The screen says what is read now, and that the last day's mail waits for you to start the assistant.
     const reading = main.locator("[data-reading]");
     await expect(reading.getByText("Your inbox")).toBeVisible();
     await expect(reading.getByText("Your calendar")).toBeVisible();
-    await expect(reading.getByText(/waits for your first Go/)).toBeVisible();
+    await expect(reading.getByText(/waits for you to start the assistant/)).toBeVisible();
     await expect(page.locator('[data-screen="mail"][data-state]')).toContainText("Done");
     await visit(page);
     // The mailbox also holds a social update (the service's own category) and a sales mail (a bulk flag), both from the
@@ -156,12 +156,12 @@ test.describe.serial("journey: mail", () => {
     const go = page.locator('[data-queue-line="first_go"]');
     await expect(go).toHaveCount(1);
     await expect(go).toContainText(new RegExp(`Start the assistant: ${handedIn} items, (about \\$\\d+\\.\\d\\d|less than a cent)`));
-    await expect(go).toContainText("Nothing is spent until you press Go.");
+    await expect(go).toContainText("Nothing is spent until you press Start.");
     await visit(page);
     expect((await requests()).work).toBe(0);
 
     // Go: one request for each item handed in, each item once, and the line goes.
-    await go.getByRole("button", { name: "Go", exact: true }).click();
+    await go.getByRole("button", { name: "Start", exact: true }).click();
     await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
     const asked = await requests();
@@ -176,7 +176,7 @@ test.describe.serial("journey: mail", () => {
     // The assistant's results are on Today for review, one line for each item. They wait behind "N new · Show" while the
     // cursor is in the queue, so the list doesn't move under it.
     const reviews = page.locator('[data-queue-line="review"]');
-    const showNew = page.getByRole("button", { name: /new · Show/ });
+    const showNew = page.getByRole("button", { name: /^Show \d+ new items?$/ });
     await expect(reviews.first().or(showNew).first()).toBeVisible({ timeout: 30_000 });
     if (await showNew.count()) await showNew.click();
     await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });
@@ -204,7 +204,7 @@ test.describe.serial("journey: mail", () => {
     await visit(page);
 
     // This is work on the sales mail hands it in: it gets its own request, and nothing else is asked.
-    await salesRow.getByRole("button", { name: `This is work: ${sales}` }).click();
+    await salesRow.getByRole("button", { name: `Treat as work: ${sales}` }).click();
     await expect(page.getByText(`Handed in ${sales}.`)).toBeVisible();
     await expect(folder.locator("li.line", { hasText: sales })).toHaveCount(0);
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn + 1);

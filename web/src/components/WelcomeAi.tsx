@@ -486,7 +486,9 @@ export function WelcomeAi(props: {
               const chosen = usingFound && kindId === s.endpoint;
               return (
                 <div key={s.endpoint} className="found-local" data-chosen={chosen ? "true" : undefined}>
-                  <p id={`ai-found-${s.endpoint}`}>{tn("welcome.ai.local_found", s.models.length, { name: s.name })}</p>
+                  <p id={`ai-found-${s.endpoint}`}>
+                    {s.models.length > 0 ? tn("welcome.ai.local_found", s.models.length, { name: s.name }) : t("welcome.ai.local_found_none", { name: s.name })}
+                  </p>
                   <div className="inline-field">
                     <button
                       type="button"

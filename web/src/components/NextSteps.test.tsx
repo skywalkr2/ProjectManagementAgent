@@ -48,8 +48,8 @@ test("Add a new person opens a form with the cursor in the full name, filled in 
   expect(screen.getByRole("textbox", { name: /First name/ })).toHaveValue("Jordan");
   expect(screen.getByRole("combobox", { name: /Organization/ })).toHaveValue("Fernhill Press");
   expect(screen.getByRole("textbox", { name: "Role" })).toHaveValue("Sign printer");
-  expect(screen.getByRole("combobox", { name: /kind/ })).toHaveValue("email");
-  expect(screen.getByRole("textbox", { name: /address or number/ })).toHaveValue("jordan@example.org");
+  expect(screen.getByRole("combobox", { name: /Contact type/ })).toHaveValue("email");
+  expect(screen.getByRole("textbox", { name: /Email address or phone number/ })).toHaveValue("jordan@example.org");
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("textbox", { name: "Full name" })).toBeNull();
 });
@@ -71,7 +71,7 @@ test("adding the person sends the form, says what went ahead and Undo takes the 
     contact_kind: "email",
     contact_value: "jordan@example.org",
   }));
-  expect(await screen.findByText("Added Jordan Pike. What waited on the name went ahead.")).toBeInTheDocument();
+  expect(await screen.findByText("Added Jordan Pike. Related work has resumed.")).toBeInTheDocument();
   expect(screen.queryByRole("textbox", { name: "Full name" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.filter((c) => c.route.endsWith("/undo")).map((c) => c.route)).toEqual([

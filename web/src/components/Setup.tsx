@@ -334,7 +334,7 @@ function OrganizationRow(props: { org: S["OrganizationView"] }) {
         ),
     },
   ];
-  const sub = [tn("setup.org_people", o.people), o.aliases.length ? t("setup.also_called", { names: o.aliases.join(", ") }) : ""]
+  const sub = [o.people > 0 ? tn("setup.org_people", o.people) : "", o.aliases.length ? t("setup.also_called", { names: o.aliases.join(", ") }) : ""]
     .filter(Boolean)
     .join(" · ");
   return (
@@ -442,7 +442,10 @@ function ProjectRow(props: { project: S["ProjectView"]; projects: S["ProjectView
   const menu: MenuAction[] = [
     {
       id: "notes",
-      label: t(showNotes ? "setup.notes_hide" : "setup.notes", { n: props.notes.length }),
+      // With no notes there is no count to give: "Notes (0)" would be a number for nothing.
+      label: props.notes.length
+        ? t(showNotes ? "setup.notes_hide" : "setup.notes", { n: props.notes.length })
+        : t(showNotes ? "setup.notes_hide_plain" : "setup.notes_plain"),
       run: () => setShowNotes((v) => !v),
     },
     {

@@ -101,6 +101,36 @@ def test_a_feature_switch_comes_first_and_its_settings_name_it(tmp_path):
     assert all(s.type == "text" for s in found if s.picker)
 
 
+def test_the_appearance_settings_are_shown_first_so_that_section_has_something_without_more_settings(tmp_path):
+    from engine import settings
+
+    _, cfg, store = make(tmp_path)
+    store.close()
+    basic = {s.key for s in settings.describe(cfg) if s.basic}
+    assert {"ui.theme", "ui.density", "ui.brand.color", "ui.brand.logo"} <= basic
+
+
+def test_saves_in_a_row_each_use_the_fingerprint_the_one_before_answered_with(tmp_path):
+    """The Settings screen saves each change as it is made: the next save carries the answer of the last one, a
+    save made on an older fingerprint is refused whole, and what was refused changes nothing."""
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    first = c.post(f"{api}/settings", json={"changes": {"workspace.name": "First"}, "fingerprint": fingerprint})
+    assert first.status_code == 200, first.text
+    second = c.post(
+        f"{api}/settings", json={"changes": {"ui.toast_seconds": 9}, "fingerprint": first.json()["fingerprint"]}
+    )
+    assert second.status_code == 200, second.text
+    stale = c.post(f"{api}/settings", json={"changes": {"workspace.name": "Stale"}, "fingerprint": fingerprint})
+    assert stale.status_code == 409
+    now = load_config(ws.config_dir, env={})
+    assert now.workspace.name == "First" and now.ui.toast_seconds == 9
+    # Reset is a save like any other: the key goes back to its default, and the answer says it is the default now.
+    reset = c.post(f"{api}/settings", json={"reset": ["workspace.name"], "fingerprint": second.json()["fingerprint"]})
+    assert reset.status_code == 200 and reset.json()["changes"][0]["is_default"] is True
+
+
 def test_a_save_writes_the_file_records_the_change_and_never_races(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)

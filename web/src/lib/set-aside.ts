@@ -96,7 +96,9 @@ export function useSetAside() {
             ? done.senders.length === 1
               ? t("setaside.rule_sender", { sender: done.senders[0], what: words })
               : tn("setaside.confirmed_senders", done.senders.length, { what: words })
-            : tn("setaside.confirmed_none", done.confirmed);
+            : done.confirmed > 0
+              ? tn("setaside.confirmed_none", done.confirmed)
+              : t("setaside.confirmed_nothing");
           const domains = done.domain_offers.map((o) => ({
             label: t("setaside.always_domain_named", { domain: o.domain }),
             run: () => always(o.section, [], [o.domain], t("setaside.rule_domain", { domain: o.domain, what: what(o.section) })),

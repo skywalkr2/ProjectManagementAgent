@@ -181,14 +181,14 @@ def state(ws: Workspace, cfg: Config, now: datetime | None = None) -> BackupStat
     targets = cfg.storage.backups.targets
     encrypted = bool(cfg.storage.backups.encrypt)
     if not targets:
-        return BackupState(False, None, None, True, "No off-device backup is set up.", encrypted=encrypted)
+        return BackupState(False, None, None, True, "No backup on another device is set up.", encrypted=encrypted)
     status = _load(ws)
     errors = [s["last_error"] for t in targets if (s := status.get(t.path)) and s.get("last_error")]
     successes = [s["last_success"] for t in targets if (s := status.get(t.path)) and s.get("last_success")]
     if not successes:
         why = f" The last try failed: {errors[0]}" if errors else ""
         return BackupState(
-            True, None, None, True, "No backup has succeeded yet." + why, errors[0] if errors else None, encrypted
+            True, None, None, True, "No successful backup yet." + why, errors[0] if errors else None, encrypted
         )
     last = max(successes)
     age = (now - datetime.fromisoformat(last)).total_seconds() / 3600

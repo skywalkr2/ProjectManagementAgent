@@ -5,7 +5,7 @@ import { longDay } from "../lib/dates";
 import { useMediaQuery } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { useQueue, useTodayCount } from "../lib/today";
-import type { View } from "../lib/views";
+import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { BackupLine } from "../shell/BackupLine";
 import { SetupLine } from "../shell/SetupLine";
@@ -53,7 +53,7 @@ export function Today(props: {
   }, [shown, selected]);
 
   const handlers: QueueHandlers = {
-    onOpenAiAccounts: () => props.onView("settings"),
+    onOpenAiAccounts: () => props.onView(settingsView("ai")),
     onOpenHandover: () => props.onView("handover"),
     onOpenRules: () => props.onView("records/rules-review"),
     onOpenKnowledge: () => props.onView("records/knowledge"),

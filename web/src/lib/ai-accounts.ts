@@ -69,14 +69,15 @@ export function summarize(accounts: Account[]): Summary {
   return { empty: accounts.length === 0, mains, backups, gaps: tiers.filter((tier) => !covered.has(tier)) };
 }
 
-/** How long ago, in the words the sheet gives: "just now", "12 min ago", "2 h ago", "3 days ago". */
+/** How long ago, in the words the sheet gives: "just now", "12 minutes ago", "2 hours ago", "3 days ago". */
 export function ago(iso: string, now: Date, t: T): string {
   const then = new Date(iso);
   const minutes = Math.max(0, Math.round((now.getTime() - then.getTime()) / 60_000));
   if (minutes < 1) return t("ai_accounts.ago.now");
-  if (minutes < 60) return t("ai_accounts.ago.min", { n: minutes });
+  const form = (n: number) => (n === 1 ? "one" : "other");
+  if (minutes < 60) return t(`ai_accounts.ago.min.${form(minutes)}`, { n: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 48) return t("ai_accounts.ago.hours", { n: hours });
+  if (hours < 48) return t(`ai_accounts.ago.hours.${form(hours)}`, { n: hours });
   return t("ai_accounts.ago.days", { n: Math.round(hours / 24) });
 }
 

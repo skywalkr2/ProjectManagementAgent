@@ -125,7 +125,7 @@ test("a source shows its kind, how often it is read and its last read in words",
   const item = await row("Source a");
   expect(item).toHaveTextContent("A folder · 3 items");
   expect(item).toHaveTextContent(/Read every 15 minutes · last read /);
-  expect(item).toHaveTextContent("2 new, 1 changed, 0 gone");
+  expect(item).toHaveTextContent("2 new, 1 changed");
 });
 
 test("every outcome has its own words", async () => {
@@ -141,8 +141,8 @@ test("every outcome has its own words", async () => {
     source("fresh", { last: null, read_at: null }),
   ]);
   expect(await row("Source quiet")).toHaveTextContent("Nothing new");
-  expect(await row("Source first")).toHaveTextContent("First read: noted what is there");
-  expect(await row("Source away")).toHaveTextContent("Not read: no network");
+  expect(await row("Source first")).toHaveTextContent("First check complete; existing items noted");
+  expect(await row("Source away")).toHaveTextContent("Not checked: no internet connection");
   const broken = await row("Source broken");
   expect(broken).toHaveTextContent("Couldn't be read");
   expect(broken).toHaveTextContent("Failed 3 times in a row");
@@ -153,7 +153,7 @@ test("every outcome has its own words", async () => {
 test("a source that found no network shows when it was last really read, not the try", async () => {
   open([source("away", { last: run({ outcome: "offline", started_at: "2026-03-05T08:00:00+00:00" }), read_at: "2026-03-04T10:30:00+00:00" })]);
   const item = await row("Source away");
-  expect(item).toHaveTextContent("Not read: no network");
+  expect(item).toHaveTextContent("Not checked: no internet connection");
   expect(item).toHaveTextContent(`last read ${whenText("2026-03-04T10:30:00+00:00")}`);
   expect(item).not.toHaveTextContent(whenText("2026-03-05T08:00:00+00:00"));
 });
@@ -228,10 +228,10 @@ test("Read now reads that source and shows what the read returned", async () => 
   renderApp(<Sources onAsk={() => {}} />);
   const user = userEvent.setup();
   await choose(user, "Source a", "Read now");
-  await waitFor(() => expect(screen.getByRole("listitem", { name: "Source a" })).toHaveTextContent("4 new, 0 changed, 0 gone"));
+  await waitFor(() => expect(screen.getByRole("listitem", { name: "Source a" })).toHaveTextContent("4 new"));
   expect(screen.getByRole("listitem", { name: "Source a" })).toHaveTextContent("7 items");
   expect(calls.some((c) => c.route === "POST watch/a/read")).toBe(true);
-  expect(await screen.findByText("Source a: 4 new, 0 changed, 0 gone")).toBeInTheDocument();
+  expect(await screen.findByText("Source a: 4 new")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST watch/b/read")).toBe(false);
 });
 
@@ -247,7 +247,7 @@ test("a read that fails says why in the message", async () => {
 
 test("with no sources, the screen says what a source is and offers to ask how", async () => {
   const { onAsk } = open([]);
-  expect(await screen.findByText(/A source says what Helper keeps reading for you/)).toBeInTheDocument();
+  expect(await screen.findByText(/No sources yet/)).toBeInTheDocument();
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Ask how to add one" }));
   expect(onAsk).toHaveBeenCalledWith("How do I add a source for Helper to keep reading?");
@@ -259,7 +259,7 @@ test("auto-closed items show their title, source, reason and time", async () => 
   expect(first).toHaveTextContent("Changed");
   expect(first).toHaveTextContent("Source a");
   expect(first).toHaveTextContent("Set aside because: only spacing changed");
-  expect(await row("Other item")).toHaveTextContent("Gone");
+  expect(await row("Other item")).toHaveTextContent("Removed");
 });
 
 test("nothing set aside says so", async () => {
@@ -309,7 +309,7 @@ describe("adding a source", () => {
     const form = await screen.findByRole("form", { name: "Add a source" });
     expect(form.querySelector("[data-first-read]")).toBeNull();
     await user.click(within(form).getByRole("radio", { name: "A folder" }));
-    expect(within(form).getByText("Items already there are noted, not handed in. New ones go to the assistant. To hand in what arrived or changed in the last day, choose Look at the last day in its menu.")).toBeInTheDocument();
+    expect(within(form).getByText("Existing items aren't sent to the assistant. New items are. Choose Look at the last day to include recent arrivals and changes.")).toBeInTheDocument();
     // A kind that also hands in the recent past has nothing to explain.
     await user.click(within(form).getByRole("radio", { name: "A mailbox" }));
     expect(form.querySelector("[data-first-read]")).toBeNull();
@@ -416,7 +416,7 @@ describe("adding a source", () => {
     const user = userEvent.setup();
     open([], [], { "GET watch/kinds": () => [] });
     await user.click(await screen.findByRole("button", { name: "Add a source" }));
-    expect(await screen.findByText(/No kind of source is available yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Turn on a mail or calendar add-on, then sign in to add a source/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add source" })).toBeDisabled();
   });
 });
@@ -665,7 +665,7 @@ describe("a secret setting typed on the screen", () => {
     const calls = open([mine], [], routes(true, [mine])).calls;
     await choose(user, "Source a", "Change");
     const form = await screen.findByRole("form", { name: /Change/ });
-    expect(await within(form).findByText("Read from the secret named MAIL_PASSWORD")).toBeInTheDocument();
+    expect(await within(form).findByText("Stored in the setting named MAIL_PASSWORD")).toBeInTheDocument();
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(post(calls, "POST watch/sources/a")).toBeDefined());
     expect(post(calls, "POST watch/sources/a")).not.toHaveProperty("secrets");
@@ -678,7 +678,23 @@ describe("a secret setting typed on the screen", () => {
     await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
     const box = await screen.findByLabelText("Where the password is kept, as a reference.");
     await waitFor(() => expect(box).toHaveAttribute("type", "text"));
-    expect(screen.getByText(/takes secrets only from its own environment/)).toBeInTheDocument();
+    expect(screen.getByText(/Enter the name of the environment variable storing this secret/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
   });
+});
+
+test("a count that is zero is never said: a read that found nothing has no item count, and the counts of a read leave out the zeros", async () => {
+  open([
+    source("a", { items: 0, last: run({ new: 0, changed: 3, removed: 0 }) }),
+    source("b", { items: 5, last: run({ new: 0, changed: 0, removed: 2 }) }),
+  ]);
+  const a = await row("Source a");
+  expect(a).toHaveTextContent("A folder");
+  expect(a).not.toHaveTextContent(/\b0 items?\b/);
+  expect(a).toHaveTextContent("3 changed");
+  expect(a).not.toHaveTextContent(/\b0 (new|removed)\b/);
+  const b = await row("Source b");
+  expect(b).toHaveTextContent("5 items");
+  expect(b).toHaveTextContent("2 removed");
+  expect(b).not.toHaveTextContent(/\b0 (new|changed)\b/);
 });

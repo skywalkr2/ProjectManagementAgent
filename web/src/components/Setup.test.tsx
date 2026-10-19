@@ -62,8 +62,8 @@ test("a project with no notes says so", async () => {
   renderApp(<Setup />);
   const row = (await screen.findByText(second.name)).closest("li")!;
   await user.click(within(row).getByRole("button", { name: /More actions for/ }));
-  await user.click(await screen.findByRole("menuitem", { name: "Notes (0)" }));
-  expect(within(row).getByText("No notes are filed under this project yet.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("menuitem", { name: "Notes" }));
+  expect(within(row).getByText("No notes for this project yet.")).toBeInTheDocument();
 });
 
 test("notes with no project are grouped at the end", async () => {
@@ -145,7 +145,7 @@ test("with no synced folder it says what one is for and offers to choose, withou
   const calls = others({ "GET jobs": () => [] }, "");
   renderApp(<Setup />);
   const sync = await section("Synced folder");
-  expect(await within(sync).findByText(/A synced folder keeps a readable copy/)).toBeInTheDocument();
+  expect(await within(sync).findByText(/Keep a readable copy of your work/)).toBeInTheDocument();
   expect(within(sync).getByRole("button", { name: "Choose a folder" })).toBeInTheDocument();
   expect(within(sync).queryByText(/status didn't load/)).toBeNull();
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -188,7 +188,7 @@ test("choosing a folder saves it as the synced folder setting and asks before re
     fingerprint: "fp-1",
   });
   const live = screen.getAllByRole("status").find((el) => el.classList.contains("restart-slot"))!;
-  await waitFor(() => expect(live).toHaveTextContent("This change needs the app to restart."));
+  await waitFor(() => expect(live).toHaveTextContent("Restart to finish this change?"));
   expect(within(live).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
   expect(live).not.toHaveTextContent("Restarting");
 });
@@ -281,7 +281,7 @@ test("an outside edit that became a version can be reviewed; one that failed sho
   expect(within(rows[2]).getByText("Waiting for you in What changed.")).toBeInTheDocument();
   expect(within(rows[2]).queryByRole("button")).toBeNull();
   expect(within(sync).getByText("book/chapter-1 (conflicted copy).md")).toBeInTheDocument();
-  expect(within(sync).getByText(/These copies were not loaded/)).toBeInTheDocument();
+  expect(within(sync).getByText(/These copies weren't imported/)).toBeInTheDocument();
   await user.click(within(rows[0]).getByRole("button", { name: "Review: book/chapter-1.md" }));
   expect(await screen.findByRole("dialog", { name: "Review the changes" })).toBeInTheDocument();
 });
@@ -297,7 +297,7 @@ test("after choosing a folder the question about sharing comes first, can be gon
   expect(first).toHaveFocus(); // the cursor starts in the first field of the step
   expect(first).not.toBeChecked();
   expect(within(sync).getByRole("radio", { name: "Yes, someone else can" })).not.toBeChecked();
-  expect(within(sync).getByText(/never taken as your own words/)).toBeInTheDocument();
+  expect(within(sync).getByText(/never as your instructions/)).toBeInTheDocument();
   await user.click(within(sync).getByRole("button", { name: "Choose another folder" }));
   expect(await within(sync).findByLabelText("Folder")).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST settings")).toBe(false);
@@ -316,13 +316,13 @@ test("whether others can change the folder is shown, switched with a save that n
   });
   renderApp(<Setup />);
   const sync = await section("Synced folder");
-  const box = await within(sync).findByRole("checkbox", { name: "Others can change this folder" });
+  const box = await within(sync).findByRole("checkbox", { name: "Mark this folder as editable by others" });
   expect(box).not.toBeChecked();
   expect(within(sync).queryByText(/arrive as outside content to check/)).toBeNull();
   expect(within(sync).queryByText(/these may be someone else's changes/)).toBeNull();
   await user.click(box);
   await waitFor(() => expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "storage.sync.shared": true } }));
-  expect(await within(sync).findByText(/arrive as outside content to check, not as your own words/)).toBeInTheDocument();
+  expect(await within(sync).findByText(/You'll review changes from this folder as information/)).toBeInTheDocument();
   expect(within(sync).getByText("The folder is shared, so these may be someone else's changes.")).toBeInTheDocument();
 });
 
@@ -414,12 +414,12 @@ test("the project form offers Inside (never itself), Language with the inherited
   const inside = within(row).getByRole("combobox", { name: "Inside" });
   expect(within(inside).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "The series"]);
   expect(inside).toHaveValue("PRJ-1");
-  const language = within(row).getByRole("combobox", { name: /spells and writes/ });
+  const language = within(row).getByRole("combobox", { name: /Writing preferences/ });
   expect(language).toHaveValue("");
   const labels = within(language).getAllByRole("option").map((o) => o.textContent);
   expect(labels[0]).toBe("Same as English (United Kingdom)");
   expect(labels.slice(1)).toEqual(["English (Australia)", "English (United Kingdom)", "English (United States)", "French (Canada)"]);
-  expect(within(row).getByText("(inherited; pick one to set its own)")).toBeInTheDocument();
+  expect(within(row).getByText("Choose a writing preference to override the parent project's choice.")).toBeInTheDocument();
   const budget = within(row).getByRole("spinbutton", { name: /Budget \(USD\)/ });
   expect(budget).toHaveValue(null);
   await user.selectOptions(language, "en-AU");
@@ -435,7 +435,7 @@ test("a project with no project around it names the workspace as what an empty l
   others({ "GET projects": () => [], "GET sync": () => syncView({ folder: "" }), "GET jobs": () => [] });
   renderApp(<Setup />);
   await user.click(await screen.findByRole("button", { name: "Add a project" }));
-  const language = await screen.findByRole("combobox", { name: /spells and writes/ });
+  const language = await screen.findByRole("combobox", { name: /Writing preferences/ });
   expect(within(language).getAllByRole("option")[0]).toHaveTextContent("Same as the workspace");
 });
 
@@ -449,7 +449,7 @@ test("a project's own language that isn't on the list is still shown, never repl
   renderApp(<Setup />);
   const row = (await screen.findByText("The series")).closest("li")!;
   await user.click(within(row).getByRole("button", { name: "Edit" }));
-  expect(within(row).getByRole("combobox", { name: /spells and writes/ })).toHaveValue("tlh");
+  expect(within(row).getByRole("combobox", { name: /Writing preferences/ })).toHaveValue("tlh");
 });
 
 test("a project's row says when the person only watches it, and the form's Your role list changes it with Undo", async () => {
@@ -497,7 +497,7 @@ test("choosing Same as for the language and clearing the budget send nothing, so
   renderApp(<Setup />);
   const row = (await screen.findByText("The series")).closest("li")!;
   await user.click(within(row).getByRole("button", { name: "Edit" }));
-  const language = within(row).getByRole("combobox", { name: /spells and writes/ });
+  const language = within(row).getByRole("combobox", { name: /Writing preferences/ });
   expect(language).toHaveValue("en-GB");
   await user.selectOptions(language, "");
   await user.clear(within(row).getByRole("spinbutton", { name: /Budget/ }));
@@ -692,7 +692,7 @@ test("the organizations section has one row each with how many people work there
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("Org one");
   expect(rows[0]).toHaveTextContent("2 people");
-  expect(rows[1]).toHaveTextContent("0 people");
+  expect(rows[1]).not.toHaveTextContent(/people/);
   expect(section).not.toHaveTextContent("ORG-1");
 });
 
@@ -747,7 +747,7 @@ test("an organization people still work for can't be removed, and the menu says 
   await user.click(within(row).getByRole("button", { name: /More actions for/ }));
   const remove = await screen.findByRole("menuitem", { name: "Remove" });
   expect(remove).toHaveAttribute("aria-disabled", "true");
-  expect(remove).toHaveTextContent("People still work for it. Change their organization first.");
+  expect(remove).toHaveTextContent("Change the organization for its remaining contacts before removing it.");
   await user.click(remove);
   expect(calls.some((c) => c.route.endsWith("/remove"))).toBe(false);
 });

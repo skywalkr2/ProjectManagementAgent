@@ -38,7 +38,7 @@ function show(first: S["HandoverView"], routes: (set: (page: S["HandoverView"]) 
 test("both sides are said in plain words, each with its count, its computer and its latest change", async () => {
   show(view());
   expect(await screen.findByRole("heading", { name: "Which copy to keep" })).toBeInTheDocument();
-  expect(await screen.findByText(/Nothing was merged, and nothing is being written to the folder/)).toBeInTheDocument();
+  expect(await screen.findByText(/No changes have been combined/)).toBeInTheDocument();
   const sides = screen.getAllByRole("listitem").filter((li) => /change/.test(li.textContent ?? ""));
   expect(sides[0]).toHaveTextContent("This computer");
   expect(sides[0]).toHaveTextContent("Made on Desk");
@@ -53,9 +53,9 @@ test("each choice says what it does, and the cursor starts on the first", async 
   show(view());
   const here = await screen.findByRole("button", { name: "Keep this computer's copy" });
   expect(here).toHaveFocus();
-  expect(screen.getByText(/The synced folder is brought up to date with this computer's copy/)).toBeInTheDocument();
+  expect(screen.getByText(/The synced folder's copy is backed up, then replaced with this computer's copy/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Keep the synced folder's copy" })).toBeInTheDocument();
-  expect(screen.getByText(/This computer's copy is replaced with the folder's/)).toBeInTheDocument();
+  expect(screen.getByText(/This computer's copy is backed up, then replaced with the folder's/)).toBeInTheDocument();
 });
 
 test("choosing notes the choice and then asks for the restart, which only the click starts", async () => {
@@ -67,7 +67,7 @@ test("choosing notes the choice and then asks for the restart, which only the cl
   await user.click(await screen.findByRole("button", { name: "Keep the synced folder's copy" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST sync/handover")!.body).toEqual({ which: "folder" }));
   expect(await screen.findByText("You chose to keep the synced folder's copy.")).toBeInTheDocument();
-  expect(screen.getByText(/Until then nothing changes, and you can still change your mind/)).toBeInTheDocument();
+  expect(screen.getByText(/You can change it until then/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Keep this computer's copy" })).toBeNull();
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
   await user.click(await screen.findByRole("button", { name: "Restart now" }));
@@ -85,7 +85,7 @@ test("a choice already noted shows as chosen, and Change my mind takes it back",
 
 test("when the app can't restart itself the page says to close and start it, with no restart button", async () => {
   show(view({ state: "chosen", chosen: "folder" }), () => ({}), false);
-  expect(await screen.findByText(/Close it and start it again to keep the copy you chose/)).toBeInTheDocument();
+  expect(await screen.findByText(/Close and reopen the app to keep your chosen copy/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Restart now" })).toBeNull();
 });
 
@@ -102,15 +102,15 @@ test("a refusal, such as the other computer being open, is shown in the server's
 test("a workspace open on another computer shows who, since when and the wait, and offers no choice", async () => {
   show(view({ state: "elsewhere", here: null, folder: null, computer: "Laptop", last_seen: "2026-10-12T16:10:00-05:00", minutes_left: 6 }));
   expect(await screen.findByText(/Laptop opened this workspace, so this copy stopped writing to the synced folder/)).toBeInTheDocument();
-  expect(screen.getByText(/That computer was last seen \w{3}, \w{3} 12, 4:10\s?PM\./)).toBeInTheDocument();
+  expect(screen.getByText(/Last connected \w{3}, \w{3} 12, 4:10\s?PM\./)).toBeInTheDocument();
   expect(screen.getByText("If it is off or asleep, the workspace can be opened here in about 6 minutes.")).toBeInTheDocument();
-  expect(screen.getByText(/you may be asked which to keep/)).toBeInTheDocument();
+  expect(screen.getByText(/You may need to choose one to keep/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Keep/ })).toBeNull();
 });
 
 test("with nothing to settle it says so", async () => {
   show(view({ state: "clear", here: null, folder: null }));
-  expect(await screen.findByText(/There is nothing to settle/)).toBeInTheDocument();
+  expect(await screen.findByText(/Both copies match/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Keep/ })).toBeNull();
 });
 
@@ -122,4 +122,11 @@ test("a page that doesn't load can be tried again", async () => {
   ok = true;
   await user.click(retry);
   expect(await within(document.body).findByRole("button", { name: "Keep this computer's copy" })).toBeInTheDocument();
+});
+
+test("a side with no changes of its own says nothing about a count, never \"0 changes\"", async () => {
+  show(view({ folder: { computer: "Laptop", changes: 0, latest: null } }));
+  expect(await screen.findByRole("heading", { name: "Which copy to keep" })).toBeInTheDocument();
+  expect(await screen.findByText(/7 changes the other copy doesn't have/)).toBeInTheDocument();
+  expect(document.body).not.toHaveTextContent(/\b0 changes?\b/);
 });

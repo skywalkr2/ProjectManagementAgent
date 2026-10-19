@@ -104,7 +104,7 @@ test("a note that could not be sent stays in the box", async () => {
   expect(screen.getByRole("textbox", { name: "Your note" })).toHaveValue(NOTE);
 });
 
-test("They finished it takes a note, and the plain button sends none", async () => {
+test("Mark their work done takes a note, and the plain button sends none", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({ "GET followups": () => waiting(), ...routes });
   renderApp(<FollowUps />);
@@ -117,12 +117,12 @@ test("They finished it takes a note, and the plain button sends none", async () 
   expect(await screen.findByText("Marked done for Robin. Helper will read your note.")).toBeInTheDocument();
 });
 
-test("They finished it with no note sends no body", async () => {
+test("Mark their work done with no note sends no body", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({ "GET followups": () => waiting(), ...routes });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
-  await user.click(await screen.findByRole("button", { name: "They finished it" }));
+  await user.click(await screen.findByRole("button", { name: "Mark their work done" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/finished")).toBe(true));
   expect(calls.find((c) => c.route === "POST followups/PER-2/actions/ACT-1/finished")!.body).toBeUndefined();
 });
@@ -134,11 +134,11 @@ test("Followed up takes a note: the box offers both acts, the row's main one fir
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const box = await openNote(user, "Send the index");
   const form = box.closest("form") as HTMLElement;
-  expect(within(form).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel", "Followed up", "They finished it"]);
+  expect(within(form).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel", "Followed up", "Mark their work done"]);
   await user.type(box, NOTE);
   await user.keyboard("{Enter}");
   await waitFor(() => expect(calls.find((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")?.body).toEqual({ note: NOTE }));
-  expect(await screen.findByText(/Recorded that you followed up with Robin. It stays open. Helper will read your note./)).toBeInTheDocument();
+  expect(await screen.findByText(/Recorded your follow-up with Robin. It stays open. Helper will read your note./)).toBeInTheDocument();
 });
 
 test("Followed up with no note sends no body", async () => {
@@ -164,7 +164,7 @@ describe("adding an action waiting for an owner to the nearest one", () => {
     const user = userEvent.setup();
     const calls = fakeApi(routes);
     renderApp(<AskChooser ask={ask} fold={{ changeset: "CS-1", index: 0 }} />);
-    expect(await screen.findByRole("button", { name: "Add the action" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Add the to-do" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add to “Confirm the printer slot”" }));
     await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/ops/0/fold")?.body).toEqual({ into: "ACT-5", read_version: 4 }));
     expect(await screen.findByText("Added to Confirm the printer slot.")).toBeInTheDocument();
@@ -175,14 +175,14 @@ describe("adding an action waiting for an owner to the nearest one", () => {
   test("nothing is offered without a near action", async () => {
     fakeApi(routes);
     renderApp(<AskChooser ask={{ ...ask, suggestion: { ...near, fold_into: null, fold_into_text: null, fold_version: null } }} fold={{ changeset: "CS-1", index: 0 }} />);
-    expect(await screen.findByRole("button", { name: "Add the action" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Add the to-do" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Add to / })).toBeNull();
   });
 
   test("nothing is offered where the change isn't known", async () => {
     fakeApi(routes);
     renderApp(<AskChooser ask={ask} />);
-    expect(await screen.findByRole("button", { name: "Add the action" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Add the to-do" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Add to / })).toBeNull();
   });
 });
@@ -211,7 +211,7 @@ describe("picking an owner", () => {
     const calls = fakeApi({ "GET people": people, "POST questions/Q-7/answer": () => ({ ok: "Q-7", request: null }) });
     renderApp(<AskChooser ask={ask} />);
     await user.selectOptions(await screen.findByRole("combobox", { name: "Who owns this?" }), "PER-2");
-    await user.click(screen.getByRole("button", { name: "Add the action" }));
+    await user.click(screen.getByRole("button", { name: "Add the to-do" }));
     await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-7/answer")?.body).toEqual({ person: "PER-2" }));
   });
 });

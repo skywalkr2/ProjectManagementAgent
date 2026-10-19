@@ -597,7 +597,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 if result.outcome == "failed" and why:
                     problems.append(f"{name} can't be read: {why}")
                 elif result.outcome == "offline":
-                    problems.append(f"{name} wasn't read: there is no network connection. It is tried again by itself.")
+                    problems.append(
+                        f"{name} couldn't be checked without an internet connection. It will retry automatically."
+                    )
                 else:
                     problems.append(f"{name} couldn't be read just now. It is tried again by itself.")
             else:

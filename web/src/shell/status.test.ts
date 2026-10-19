@@ -48,7 +48,7 @@ test("initials are up to two letters of the name", () => {
   expect(initials("émile zola")).toBe("ÉZ");
 });
 
-test("work waiting for the network is its own state: after offline, before a restart or a backup", () => {
+test("work waiting for an internet connection is its own state: after offline, before a restart or a backup", () => {
   const waiting = { count: 2, since: "2026-10-13T14:05:00+00:00" };
   const all = status({ restart_needed: "settings", network_wait: waiting }, { needs_attention: true }, { warn: true });
   expect(worstState({ live: "live", status: all, restartPhase: "idle" })).toBe("network");

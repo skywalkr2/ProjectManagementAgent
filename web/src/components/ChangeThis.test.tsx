@@ -111,10 +111,10 @@ test("a question that isn't sent yet offers reword, ask someone else, drop, alre
   const user = userEvent.setup();
   fakeApi(openQuestion());
   renderApp(<RecordPage kind="question" id="Q-5" onBack={() => undefined} />);
-  expect(await menuOf(user, "Which cover?")).toEqual(["Reword", "Ask someone else", "Drop", "Already sent", "Change this"]);
+  expect(await menuOf(user, "Which cover?")).toEqual(["Reword", "Ask someone else", "Drop", "Mark as already sent", "Change this"]);
 });
 
-test("a question already sent has no Already sent", async () => {
+test("a question already sent has no Mark as already sent", async () => {
   const user = userEvent.setup();
   fakeApi(openQuestion({}, "sent"));
   renderApp(<RecordPage kind="question" id="Q-5" onBack={() => undefined} />);
@@ -168,12 +168,12 @@ test("Drop needs a reason", async () => {
   expect(await screen.findByText("Dropped.")).toBeInTheDocument();
 });
 
-test("Already sent acts at once", async () => {
+test("Mark as already sent acts at once", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(openQuestion({ "POST questions/Q-5/sent": () => ({ changeset: "CS-5" }) }));
   renderApp(<RecordPage kind="question" id="Q-5" onBack={() => undefined} />);
   await menuOf(user, "Which cover?");
-  await user.click(screen.getByRole("menuitem", { name: "Already sent" }));
+  await user.click(screen.getByRole("menuitem", { name: "Mark as already sent" }));
   await waitFor(() => expect(posted(calls, "POST questions/Q-5/sent")).toEqual({}));
   expect(await screen.findByText("Marked as already sent.")).toBeInTheDocument();
 });

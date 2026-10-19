@@ -227,7 +227,7 @@ def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header],
     budgets = cfg.ai.budgets
     estimate = router.estimate(task, tier=tier, data_level=level)
     if estimate is None and budgets.confirm_unpriced and not go:
-        return _Try(why="its cost can't be estimated and your go wasn't given", stop=True)
+        return _Try(why="its cost can't be estimated and you haven't started it", stop=True)
     if estimate is not None and estimate > budgets.per_run_usd:
         return _Try(why=f"it would cost about ${estimate:.2f}, above the most one run may cost", stop=True)
     if (
@@ -237,9 +237,9 @@ def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header],
         and not store.read().has("run")
         and has_account(cfg, KIND, level, tier, None, frozenset(), None)
     ):
-        return _Try(why="your first go in this workspace wasn't given yet", stop=True)
+        return _Try(why="you haven't started the assistant yet", stop=True)
     if estimate is not None and estimate > budgets.confirm_above_usd and not go:
-        return _Try(why=f"it would cost about ${estimate:.2f} and your go wasn't given", stop=True)
+        return _Try(why=f"it would cost about ${estimate:.2f} and you haven't started it", stop=True)
     first = _rounds(cfg, router, task, ids, tier, level)
     if first.answers is not None or first.stop:
         return first

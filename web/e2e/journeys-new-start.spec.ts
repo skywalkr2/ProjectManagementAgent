@@ -51,7 +51,7 @@ test.describe.serial("journey: new start", () => {
     // 1. I open the link the start command printed. The walkthrough opens by itself and says nothing is spent yet.
     await page.goto(`?token=${info.token}`);
     await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
-    await expect(page.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Go at the end.")).toBeVisible();
+    await expect(page.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Start at the end.")).toBeVisible();
     await visit(page);
     const main = page.locator("main#main");
 
@@ -75,12 +75,12 @@ test.describe.serial("journey: new start", () => {
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByText("More options").click();
     await main.getByLabel(/^Another service that speaks/).check();
-    await main.getByRole("textbox", { name: "Address" }).fill(info.ai_base_url);
+    await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.locator("#ai-key").fill("a-made-up-key");
     await main.getByRole("button", { name: "Check", exact: true }).click();
-    const everyday = main.getByLabel("Model for everyday work");
+    const everyday = main.getByLabel("AI model for everyday work");
     await expect(everyday.locator("option")).toHaveCount(2);
-    await main.getByText(/^Models:/).click();
+    await main.getByText(/^Selected model:/).click();
     await everyday.selectOption("fake-small");
     await main.getByLabel("Internal material").check();
     await visit(page);
@@ -98,9 +98,9 @@ test.describe.serial("journey: new start", () => {
     await expect(row).toContainText("Reads your mail and calendar");
     await expect(row).toContainText("Not on this computer yet");
     // What it reaches is behind a disclosure, in plain words, and none of the settings jargon is on the row.
-    await expect(row.getByText("What it reaches")).toBeVisible();
-    expect(await row.innerText()).not.toMatch(/Signs in to|Internet:|Keys you provide/);
-    await row.getByText("What it reaches").click();
+    await expect(row.getByText("What it can access")).toBeVisible();
+    expect(await row.innerText()).not.toMatch(/Signs in to|Websites:|Access keys you provide/);
+    await row.getByText("What it can access").click();
     await expect(row).toContainText("You sign in on the service's own page");
     await expect(main.getByText(/Restart to connect/)).toHaveCount(0);
     await visit(page);
@@ -145,11 +145,11 @@ test.describe.serial("journey: new start", () => {
     let seen = await service();
     expect(seen).toMatchObject({ authorizations: 1, exchanges: 1, refused: 0 });
     expect(page.url()).not.toMatch(/code=|state=|sign_in=/);
-    // The screen says what is read now, and that the last day's mail waits for the first Go.
+    // The screen says what is read now, and that the last day's mail waits for you to start the assistant.
     const reading = main.locator("[data-reading]");
     await expect(reading.getByText("Your inbox")).toBeVisible();
     await expect(reading.getByText("Your calendar")).toBeVisible();
-    await expect(reading.getByText(/waits for your first Go/)).toBeVisible();
+    await expect(reading.getByText(/waits for you to start the assistant/)).toBeVisible();
     await expect(page.locator('[data-screen="mail"][data-state]')).toContainText("Done");
     await visit(page);
     expect((await requests()).work).toBe(0);
@@ -191,10 +191,10 @@ test.describe.serial("journey: new start", () => {
     await expect(go).toBeFocused();
     // Go is fully on the screen without scrolling, not clipped by the short card it sits in.
     await expect(go).toBeInViewport({ ratio: 1 });
-    await expect(go.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(go.getByRole("button", { name: "Start", exact: true })).toBeInViewport({ ratio: 1 });
     // The first backup was made while setting up, so Today doesn't ask for one and the header chip doesn't say one is needed.
     await expect(page.getByRole("region", { name: "Backup", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /^Status: / })).not.toContainText("Backup needed");
+    await expect(page.getByRole("button", { name: /^App status: / })).not.toContainText("Backup needed");
 
     // 8. The recent mail is on Came in within seconds, and today's meetings are on the agenda; what is older isn't.
     const came = page.getByRole("region", { name: "Came in" });
@@ -207,15 +207,15 @@ test.describe.serial("journey: new start", () => {
 
     // 9. The first-go line shows the count and an estimate. Nothing has been asked of the assistant yet.
     await expect(go).toContainText(new RegExp(`Start the assistant: ${handedIn} items, (about \\$\\d+\\.\\d\\d|less than a cent)`));
-    await expect(go).toContainText("Nothing is spent until you press Go.");
+    await expect(go).toContainText("Nothing is spent until you press Start.");
     await visit(page);
     expect((await requests()).work).toBe(0);
     seen = await service();
     expect(seen).toMatchObject({ mail_reads: 1, calendar_reads: 1, unauthorized: 0 });
 
-    await expect(go.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(go.getByRole("button", { name: "Start", exact: true })).toBeInViewport({ ratio: 1 });
     // Go: one request for each item handed in, each item once, and the line goes.
-    await go.getByRole("button", { name: "Go", exact: true }).click();
+    await go.getByRole("button", { name: "Start", exact: true }).click();
     await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
     const asked = await requests();
@@ -227,7 +227,7 @@ test.describe.serial("journey: new start", () => {
     // The assistant's results are on Today for review, one line for each item. They wait behind "N new · Show" while the
     // cursor is in the queue, so the list doesn't move under it.
     const reviews = page.locator('[data-queue-line="review"]');
-    const showNew = page.getByRole("button", { name: /new · Show/ });
+    const showNew = page.getByRole("button", { name: /^Show \d+ new items?$/ });
     await expect(reviews.first().or(showNew).first()).toBeVisible({ timeout: 30_000 });
     if (await showNew.count()) await showNew.click();
     await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });

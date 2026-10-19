@@ -115,9 +115,9 @@ async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
 /** Choose a service, paste its key and check it. */
 async function keyed(user: ReturnType<typeof userEvent.setup>, service = "Service A") {
   await pick(user, service);
-  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.type(screen.getByLabelText("Access key"), "secret-value");
   await user.click(screen.getByRole("button", { name: "Check" }));
-  await screen.findByLabelText("Model for everyday work");
+  await screen.findByLabelText("AI model for everyday work");
 }
 
 test("an assistant with no name of its own is called your assistant in the heading, never Assistant", async () => {
@@ -138,8 +138,8 @@ test("the key hint says in plain words where the key is kept and that it isn't i
   api();
   open();
   await pick(user, "Service A");
-  const hint = await screen.findByText(/^Kept on this computer only/);
-  expect(hint).toHaveTextContent("Kept on this computer only, in a private folder. It is never saved in your settings or copied into backups.");
+  const hint = await screen.findByText(/^Saved only in a private folder on this computer/);
+  expect(hint).toHaveTextContent("Saved only in a private folder on this computer, outside your settings and backups.");
   expect(hint.textContent ?? "").not.toMatch(/settings file/i);
 });
 
@@ -148,18 +148,18 @@ test("the model choice is one line under the key until it is opened, so the acco
   api();
   open();
   await keyed(user);
-  const details = screen.getByText(/^Models: model-a/).closest("details")!;
+  const details = screen.getByText(/^Selected model: model-a/).closest("details")!;
   expect(details).not.toHaveAttribute("open");
-  expect(details).toContainElement(screen.getByLabelText("Model for everyday work"));
-  expect(details).toContainElement(screen.getByLabelText("Model for harder work (optional)"));
+  expect(details).toContainElement(screen.getByLabelText("AI model for everyday work"));
+  expect(details).toContainElement(screen.getByLabelText("AI model for harder work (optional)"));
   // The service choice comes first and Add account follows the model line, the level choice and nothing long in between.
   const order = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
   const services = screen.getByRole("group", { name: "Which AI should Helper use?" });
   expect(order(services, details)).toBeTruthy();
   expect(order(details, screen.getByRole("button", { name: "Add account" }))).toBeTruthy();
   // Choosing another model through the line still works.
-  await user.selectOptions(screen.getByLabelText("Model for everyday work"), "model-b");
-  expect(screen.getByText(/^Models: model-b/)).toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("AI model for everyday work"), "model-b");
+  expect(screen.getByText(/^Selected model: model-b/)).toBeInTheDocument();
 });
 
 test("services that need a key are large choices with their notes; the rest wait under More options", async () => {
@@ -174,7 +174,7 @@ test("services that need a key are large choices with their notes; the rest wait
   expect(within(more).getByRole("radio", { name: /A server on this computer/, hidden: true })).toBeInTheDocument();
   expect(within(more).getByRole("radio", { name: /Another service/, hidden: true })).toBeInTheDocument();
   expect(within(more).getByRole("radio", { name: /A command-line program/, hidden: true })).toBeInTheDocument();
-  expect(screen.queryByLabelText("Key")).toBeNull();
+  expect(screen.queryByLabelText("Access key")).toBeNull();
 });
 
 test("choosing a service shows where to make a key, with its real domain, and a hidden key field", async () => {
@@ -182,12 +182,12 @@ test("choosing a service shows where to make a key, with its real domain, and a 
   api();
   open();
   await pick(user, "Service A");
-  const link = screen.getByRole("link", { name: "Open console.service-a.example.com and make a key" });
+  const link = screen.getByRole("link", { name: "Open console.service-a.example.com and create an access key" });
   expect(link).toHaveAttribute("href", `${WEB}console.service-a.example.com/keys`);
   expect(link).toHaveAttribute("target", "_blank");
   expect(link).toHaveAttribute("rel", "noopener noreferrer");
   expect(screen.getByText("Paste it here")).toBeInTheDocument();
-  const key = screen.getByLabelText("Key");
+  const key = screen.getByLabelText("Access key");
   expect(key).toHaveAttribute("type", "password");
   expect(key).toHaveAttribute("autocomplete", "off");
   await user.click(screen.getByRole("button", { name: "Show" }));
@@ -197,7 +197,7 @@ test("choosing a service shows where to make a key, with its real domain, and a 
   // Without a page for making keys there is no link to open.
   await pick(user, "Service B");
   expect(screen.queryByRole("link")).toBeNull();
-  expect(screen.getByText("Make a key on the service's own website")).toBeInTheDocument();
+  expect(screen.getByText("Create an access key on the service's website")).toBeInTheDocument();
 });
 
 test("Check lists the service's models, and the selects fill with what each costs", async () => {
@@ -207,18 +207,18 @@ test("Check lists the service's models, and the selects fill with what each cost
   await pick(user, "Service A");
   const check = screen.getByRole("button", { name: "Check" });
   expect(check).toBeDisabled();
-  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.type(screen.getByLabelText("Access key"), "secret-value");
   await user.click(check);
-  const everyday = await screen.findByLabelText("Model for everyday work");
+  const everyday = await screen.findByLabelText("AI model for everyday work");
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key: "secret-value" });
   expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(["model-a", "model-b", "model-c"]);
   expect(everyday).toHaveValue("model-a");
-  expect(screen.getByText(/Takes in about 200,000 tokens at a time\. Costs \$3\.00 per million tokens read and \$15\.00 per million tokens written\./)).toBeInTheDocument();
-  const harder = screen.getByLabelText("Model for harder work (optional)");
+  expect(screen.getByText(/Reads up to about 200,000 text units at once\. These units are called tokens\. Per million text units \(tokens\): \$3\.00 to read, \$15\.00 to write\./)).toBeInTheDocument();
+  const harder = screen.getByLabelText("AI model for harder work (optional)");
   expect(within(harder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Same as the everyday model", "model-a", "model-b", "model-c"]);
   expect(harder).toHaveValue("");
   await user.selectOptions(everyday, "model-c");
-  expect(screen.getByText("Costs $0.25 per million tokens read.")).toBeInTheDocument();
+  expect(screen.getByText("Reading costs $0.25 per million text units (tokens).")).toBeInTheDocument();
 });
 
 test("pasting a key into the empty field checks it at once", async () => {
@@ -226,9 +226,9 @@ test("pasting a key into the empty field checks it at once", async () => {
   const calls = api();
   open();
   await pick(user, "Service A");
-  await user.click(screen.getByLabelText("Key"));
+  await user.click(screen.getByLabelText("Access key"));
   await user.paste("pasted-key");
-  await screen.findByLabelText("Model for everyday work");
+  await screen.findByLabelText("AI model for everyday work");
   expect(modelsAsked(calls)).toHaveLength(1);
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key: "pasted-key" });
 });
@@ -238,11 +238,11 @@ test("a problem listing the models is shown in an alert, with no list to pick fr
   api({ "POST ai/models": () => ({ models: [], problem: "That key was not accepted." }) });
   open();
   await pick(user, "Service A");
-  await user.type(screen.getByLabelText("Key"), "wrong");
+  await user.type(screen.getByLabelText("Access key"), "wrong");
   await user.click(screen.getByRole("button", { name: "Check" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("That key was not accepted.");
-  expect(screen.queryByLabelText("Model for everyday work")).toBeNull();
-  expect(screen.queryByLabelText("Model name")).toBeNull();
+  expect(screen.queryByLabelText("AI model for everyday work")).toBeNull();
+  expect(screen.queryByLabelText("AI model name")).toBeNull();
   expect(screen.getByRole("button", { name: "Add account" })).toBeDisabled();
 });
 
@@ -251,10 +251,10 @@ test("a service that lists no models asks for the model's name instead", async (
   const calls = api({ "POST ai/models": () => ({ models: [] }) });
   open();
   await pick(user, "Service A");
-  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.type(screen.getByLabelText("Access key"), "secret-value");
   await user.click(screen.getByRole("button", { name: "Check" }));
-  await user.type(await screen.findByLabelText("Model name"), "typed-model");
-  expect(screen.getByText(/Copy the name from the service's own page/)).toBeInTheDocument();
+  await user.type(await screen.findByLabelText("AI model name"), "typed-model");
+  expect(screen.getByText(/Copy the model name from the service's website/)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).models).toEqual({ everyday: "typed-model" });
@@ -266,8 +266,8 @@ test("a long list can be narrowed by typing", async () => {
   api({ "POST ai/models": () => ({ models: many }) });
   open();
   await keyed(user);
-  const everyday = screen.getByLabelText("Model for everyday work");
-  const harder = screen.getByLabelText("Model for harder work (optional)");
+  const everyday = screen.getByLabelText("AI model for everyday work");
+  const harder = screen.getByLabelText("AI model for harder work (optional)");
   expect(everyday).toHaveValue("model-00");
   await user.selectOptions(harder, "model-05");
   await user.type(screen.getByLabelText("Find a model"), "model-1");
@@ -298,8 +298,8 @@ test("when nothing matches the search there is no model to pick and Add stays of
   expect(add).toBeEnabled();
   await user.type(screen.getByLabelText("Find a model"), "zzz");
   expect(screen.getByText("No model matches.")).toBeInTheDocument();
-  expect(screen.queryByLabelText("Model for everyday work")).toBeNull();
-  expect(screen.queryByLabelText("Model for harder work (optional)")).toBeNull();
+  expect(screen.queryByLabelText("AI model for everyday work")).toBeNull();
+  expect(screen.queryByLabelText("AI model for harder work (optional)")).toBeNull();
   expect(add).toBeDisabled();
   await user.clear(screen.getByLabelText("Find a model"));
   expect(screen.queryByText("No model matches.")).toBeNull();
@@ -311,15 +311,15 @@ test("Enter in the key field runs Check and never adds the account", async () =>
   const calls = api();
   open();
   await pick(user, "Service A");
-  await user.type(screen.getByLabelText("Key"), "secret-value{Enter}");
-  await screen.findByLabelText("Model for everyday work");
+  await user.type(screen.getByLabelText("Access key"), "secret-value{Enter}");
+  await screen.findByLabelText("AI model for everyday work");
   expect(modelsAsked(calls)).toHaveLength(1);
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key: "secret-value" });
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
   // Enter in any other field does nothing.
   const advanced = screen.getByText("Advanced").closest("details")!;
   await user.type(within(advanced).getByLabelText("Account name", { selector: "input" }), "{Enter}");
-  await user.type(within(advanced).getByLabelText("Or where the key is"), "{Enter}");
+  await user.type(within(advanced).getByLabelText("Use a saved access key instead"), "{Enter}");
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
   expect(modelsAsked(calls)).toHaveLength(1);
 });
@@ -329,11 +329,11 @@ test("Enter in the address field does not add the account either", async () => {
   const calls = api();
   open();
   await pick(user, "Another service");
-  await user.type(screen.getByLabelText("Address"), "http://model-host:8080/v1{Enter}");
+  await user.type(screen.getByLabelText("Service address"), "http://model-host:8080/v1{Enter}");
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
   await user.click(screen.getByRole("button", { name: "Check" }));
-  await screen.findByLabelText("Model for everyday work");
-  await user.type(screen.getByLabelText("Address"), "{Enter}");
+  await screen.findByLabelText("AI model for everyday work");
+  await user.type(screen.getByLabelText("Service address"), "{Enter}");
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
 });
 
@@ -384,7 +384,7 @@ test("adding sends the kind, both models, the data levels the kind allows and wh
   expect(screen.getByLabelText("Internal material")).toBeChecked();
   expect(screen.getByLabelText("Restricted material")).not.toBeChecked();
   expect(screen.getByLabelText("Use it for my work")).toBeChecked();
-  await user.selectOptions(screen.getByLabelText("Model for harder work (optional)"), "model-b");
+  await user.selectOptions(screen.getByLabelText("AI model for harder work (optional)"), "model-b");
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
@@ -401,7 +401,7 @@ test("adding sends the kind, both models, the data levels the kind allows and wh
   });
   expect(await screen.findByText("Added the account service-a. Testing it now.")).toBeInTheDocument();
   // The pasted key is not left on screen after it was sent.
-  expect(screen.getByLabelText("Key")).toHaveValue("");
+  expect(screen.getByLabelText("Access key")).toHaveValue("");
 });
 
 test("with one model chosen, both kinds of work use it; with the box off, nothing is switched over", async () => {
@@ -450,13 +450,13 @@ test("Advanced holds the account name, the fixed address read-only and the key's
   await pick(user, "Service A");
   const advanced = screen.getByText("Advanced").closest("details")!;
   expect(advanced).not.toHaveAttribute("open");
-  const address = within(advanced).getByLabelText("Address", { selector: "input", exact: true });
+  const address = within(advanced).getByLabelText("Service address", { selector: "input", exact: true });
   expect(address).toHaveValue(`${WEB}api.service-a.example.com/v1`);
   expect(address).toHaveAttribute("readonly");
-  await user.type(within(advanced).getByLabelText("Or where the key is"), "env:MODEL_KEY");
-  expect(screen.getByLabelText("Key")).toBeDisabled();
+  await user.type(within(advanced).getByLabelText("Use a saved access key instead"), "env:MODEL_KEY");
+  expect(screen.getByLabelText("Access key")).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Check" }));
-  await screen.findByLabelText("Model for everyday work");
+  await screen.findByLabelText("AI model for everyday work");
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });
   await user.clear(within(advanced).getByLabelText("Account name", { selector: "input" }));
   await user.type(within(advanced).getByLabelText("Account name", { selector: "input" }), "Bad Name");
@@ -488,8 +488,8 @@ test("a server found on this computer is offered first and is added without a ke
   await user.click(use);
   expect(use).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByText("Chosen")).toBeInTheDocument();
-  expect(screen.queryByLabelText("Key")).toBeNull();
-  const everyday = screen.getByLabelText("Model for everyday work");
+  expect(screen.queryByLabelText("Access key")).toBeNull();
+  const everyday = screen.getByLabelText("AI model for everyday work");
   expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(["small-1", "small-2"]);
   expect(modelsAsked(calls)).toHaveLength(0);
   expect(screen.getByLabelText("Restricted material")).toBeChecked();
@@ -513,9 +513,9 @@ test("a computer-local kind that isn't running is under More options and lists i
   const calls = api();
   open();
   await pick(user, "A server on this computer");
-  expect(await screen.findByLabelText("Model for everyday work")).toBeInTheDocument();
+  expect(await screen.findByLabelText("AI model for everyday work")).toBeInTheDocument();
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "local-box" });
-  expect(screen.queryByLabelText("Key")).toBeNull();
+  expect(screen.queryByLabelText("Access key")).toBeNull();
 });
 
 test("another service asks for its address first, then lists models, with an optional key", async () => {
@@ -525,9 +525,9 @@ test("another service asks for its address first, then lists models, with an opt
   await pick(user, "Another service");
   const check = screen.getByRole("button", { name: "Check" });
   expect(check).toBeDisabled();
-  await user.type(screen.getByLabelText("Address"), "http://model-host:8080/v1");
+  await user.type(screen.getByLabelText("Service address"), "http://model-host:8080/v1");
   await user.click(check);
-  await screen.findByLabelText("Model for everyday work");
+  await screen.findByLabelText("AI model for everyday work");
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "other", base_url: "http://model-host:8080/v1" });
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
@@ -540,15 +540,15 @@ test("a command-line program asks for a command and how it is fed, and sends its
   const calls = api();
   open();
   await pick(user, "A command-line program");
-  expect(screen.queryByLabelText("Address")).toBeNull();
-  expect(screen.queryByLabelText("Key")).toBeNull();
+  expect(screen.queryByLabelText("Service address")).toBeNull();
+  expect(screen.queryByLabelText("Access key")).toBeNull();
   expect(screen.queryByRole("button", { name: "Check" })).toBeNull();
-  expect(screen.getByRole("radio", { name: "On its input" })).toBeChecked();
-  expect(screen.getByRole("radio", { name: "On its output" })).toBeChecked();
-  await user.type(screen.getByLabelText("Command"), "runner --locked  --model {{model}");
+  expect(screen.getByRole("radio", { name: "Directly to the app" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "Directly from the app" })).toBeChecked();
+  await user.type(screen.getByLabelText("Command to start the AI app"), "runner --locked  --model {{model}");
   await user.click(screen.getByRole("radio", { name: "As a file" }));
   await user.click(screen.getByRole("radio", { name: "As a file in a folder" }));
-  await user.type(screen.getByLabelText("Model name"), "std");
+  await user.type(screen.getByLabelText("AI model name"), "std");
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
@@ -570,15 +570,15 @@ test("an app that is not on this computer asks for the key's variable name and s
   const calls = api();
   open({ local: false });
   await pick(user, "Service A");
-  expect(screen.queryByLabelText("Key")).toBeNull();
+  expect(screen.queryByLabelText("Access key")).toBeNull();
   expect(screen.queryByRole("button", { name: "Show" })).toBeNull();
-  const where = screen.getByLabelText("Where the key is");
-  expect(screen.getByText(/takes keys only from its environment/)).toBeInTheDocument();
+  const where = screen.getByLabelText("Where the access key is kept");
+  expect(screen.getByText(/Enter the environment variable name that stores your access key/)).toBeInTheDocument();
   const check = screen.getByRole("button", { name: "Check" });
   expect(check).toBeDisabled();
   await user.type(where, "MODEL_KEY");
   await user.click(check);
-  await screen.findByLabelText("Model for everyday work");
+  await screen.findByLabelText("AI model for everyday work");
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
@@ -593,8 +593,8 @@ test("a refusal shows the server's words and keeps what was typed", async () => 
   await keyed(user);
   await user.click(screen.getByRole("button", { name: "Add account" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("There is already an account called service-a.");
-  expect(screen.getByLabelText("Key")).toHaveValue("secret-value");
-  expect(screen.getByLabelText("Model for everyday work")).toHaveValue("model-a");
+  expect(screen.getByLabelText("Access key")).toHaveValue("secret-value");
+  expect(screen.getByLabelText("AI model for everyday work")).toHaveValue("model-a");
 });
 
 test("there is no Test button before an account exists to test", async () => {
@@ -647,7 +647,7 @@ test("adding stays on the step and shows no restart notice, because accounts app
   expect(screen.queryByText(/restart/i)).toBeNull();
   expect(screen.queryByRole("button", { name: "Restart now" })).toBeNull();
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
-  expect(screen.getByLabelText("Key")).toBeInTheDocument();
+  expect(screen.getByLabelText("Access key")).toBeInTheDocument();
 });
 
 test("a failure shows its reason with the word and a cross, not colour alone", async () => {
@@ -686,9 +686,9 @@ test("an installed app asks for no key and no command, and says it is installed"
   api();
   open();
   await pick(user, "App A");
-  expect(screen.queryByLabelText("Key")).toBeNull();
-  expect(screen.queryByLabelText("Command")).toBeNull();
-  expect(screen.queryByRole("radio", { name: "On its input" })).toBeNull();
+  expect(screen.queryByLabelText("Access key")).toBeNull();
+  expect(screen.queryByLabelText("Command to start the AI app")).toBeNull();
+  expect(screen.queryByRole("radio", { name: "Directly to the app" })).toBeNull();
   expect(screen.getByText("Installed on this computer")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Check" })).toBeEnabled();
 });
@@ -698,8 +698,8 @@ test("an app left to choose its own model is added with no models and works thro
   const calls = api();
   open();
   await pick(user, "App A");
-  const model = screen.getByLabelText("Model");
-  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the program choose", "alpha", "beta", "Another model"]);
+  const model = screen.getByLabelText("AI model");
+  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the app choose", "alpha", "beta", "Another AI model"]);
   expect(model).toHaveValue("");
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
@@ -721,8 +721,8 @@ test("an app that picks its own model and names no examples asks for no model", 
   const calls = api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-a" ? { ...k, model_examples: [] } : k)) });
   open();
   await pick(user, "App A");
-  expect(screen.queryByLabelText("Model")).toBeNull();
-  expect(screen.getByText("This program picks its own model; change it in the program's own settings.")).toBeInTheDocument();
+  expect(screen.queryByLabelText("AI model")).toBeNull();
+  expect(screen.getByText("Change the model in that app's settings.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).models).toEqual({});
@@ -734,7 +734,7 @@ test("an app's example models can be chosen, and another model can be typed", as
   const calls = api();
   open();
   await pick(user, "App A");
-  await user.selectOptions(screen.getByLabelText("Model"), "beta");
+  await user.selectOptions(screen.getByLabelText("AI model"), "beta");
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).models).toEqual({ everyday: "beta" });
@@ -747,10 +747,10 @@ test("choosing another model asks for its name, and Add waits for it", async () 
   const calls = api();
   open();
   await pick(user, "App A");
-  await user.selectOptions(screen.getByLabelText("Model"), "Another model");
+  await user.selectOptions(screen.getByLabelText("AI model"), "Another AI model");
   const add = screen.getByRole("button", { name: "Add account" });
   expect(add).toBeDisabled();
-  await user.type(screen.getByLabelText("Model name"), "typed-model");
+  await user.type(screen.getByLabelText("AI model name"), "typed-model");
   expect(add).toBeEnabled();
   await user.click(add);
   await waitFor(() => expect(body(calls)).toBeDefined());
@@ -762,8 +762,8 @@ test("an app whose model must be named starts on its first example", async () =>
   const calls = api();
   open();
   await pick(user, "App B");
-  const model = screen.getByLabelText("Model");
-  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["gamma", "delta", "Another model"]);
+  const model = screen.getByLabelText("AI model");
+  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["gamma", "delta", "Another AI model"]);
   expect(model).toHaveValue("gamma");
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
@@ -777,7 +777,7 @@ test("an app that is not found says what to do, and Check looks again", async ()
   const calls = api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-b" ? { ...k, installed } : k)) });
   open();
   await pick(user, "App B");
-  expect(screen.getByText("Not found on this computer: install it, sign in once in a terminal, then press Check")).toBeInTheDocument();
+  expect(screen.getByText("Install the app, sign in using its command-line instructions, then choose Check.")).toBeInTheDocument();
   installed = true;
   await user.click(screen.getByRole("button", { name: "Check" }));
   expect(await screen.findByText("Installed on this computer")).toBeInTheDocument();
@@ -813,8 +813,15 @@ test("the level choice says that notes, mail and meetings are internal, beside t
   open();
   await pick(user, "App B");
   const levels = screen.getByRole("group", { name: "What it may see" });
-  expect(within(levels).getByText("Material marked with a level goes only to accounts allowed to see that level.")).toBeInTheDocument();
+  expect(within(levels).getByText("Material goes only to AI accounts you've allowed for its privacy level.")).toBeInTheDocument();
   expect(
     within(levels).getByText("Your notes, mail and meetings are internal, so the assistant can work on them only once Internal is ticked."),
   ).toBeInTheDocument();
+});
+
+test("a server found with no models says so, never \"0 models\"", async () => {
+  api({ "GET ai/local": () => [{ endpoint: "local-box", name: "A server on this computer", models: [] }] });
+  open();
+  expect(await screen.findByText(/Found A server on this computer on this computer, but it has no models yet/)).toBeInTheDocument();
+  expect(document.body).not.toHaveTextContent(/\b0 models?\b/);
 });

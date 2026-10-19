@@ -1,7 +1,7 @@
 // One setting as a form control, with its label, hint, default and a way back to the default. Used by the Settings screen
 // and by every other form built from setting items (a source's settings, an add-on's data file).
 import { useRef, useState } from "react";
-import { depthOf, fileName, formatValue, fromDraft, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
+import { depthOf, fileName, formatValue, fromDraft, isDefault, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
 import { languageChoices } from "../lib/languages";
 import { useWords } from "../lib/wording";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
@@ -12,8 +12,15 @@ export function SettingRow(props: {
   item: Item;
   draft: Draft;
   onChange: (draft: Draft) => void;
-  /** Puts the setting back to its default; the button is shown only where there is one to go back to. */
+  /** Puts the setting back to its default; "Reset" is shown beside the label only while the value differs from it. */
   onReset?: () => void;
+  /** Saves as it is made: a choice or a switch when it changes, a box when the cursor leaves it or Enter is pressed (a
+   * list on leaving only). Given the value, since the draft held by the caller may not have caught up yet. */
+  commit?: (draft: Draft) => void;
+  /** What went wrong with the last save of this setting, said on its own row. */
+  problem?: string | null;
+  /** Lays the row out with its help (the description and the default) in a column beside the field. */
+  beside?: boolean;
   /** Added to the control's id, so two forms on a screen never share one. */
   idPrefix?: string;
   disabled: boolean;
@@ -41,8 +48,20 @@ export function SettingRow(props: {
   const hint = label !== item.description ? item.description : null;
   const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft) : null;
   const invalid = parsed && !parsed.ok ? t(`settings.invalid.${parsed.problem}`) : null;
+  // Changed from the default: what is on screen, so it shows as soon as it is typed and Reset undoes it.
+  const edited = !readOnly && !item.locked ? fromDraft(item, draft) : null;
+  const changed = edited !== null && (!edited.ok || !isDefault(item, edited.value));
+  const problem = props.problem || null;
   const waiting = props.gate ? t(props.gate.type === "yes_no" ? "settings.needs_on" : "settings.needs_value", { label: labelOf(props.gate, t, has) }) : null;
-  const describedBy = [hint && `${id}-hint`, waiting && `${id}-waiting`, item.type === "list" && `${id}-list`, invalid && `${id}-bad`, note && `${id}-note`, `${id}-default`]
+  const describedBy = [
+    hint && `${id}-hint`,
+    waiting && `${id}-waiting`,
+    item.type === "list" && `${id}-list`,
+    invalid && `${id}-bad`,
+    problem && `${id}-problem`,
+    note && `${id}-note`,
+    `${id}-default`,
+  ]
     .filter(Boolean)
     .join(" ");
   const off = item.locked || props.disabled || props.gate !== null;
@@ -86,12 +105,24 @@ export function SettingRow(props: {
         checked={draft === true}
         disabled={off}
         aria-describedby={describedBy}
-        onChange={(e) => props.onChange(e.target.checked)}
+        onChange={(e) => {
+          props.onChange(e.target.checked);
+          props.commit?.(e.target.checked);
+        }}
       />
     );
   } else if (item.type === "choice") {
     control = (
-      <select id={id} value={String(draft)} disabled={off} aria-describedby={describedBy} onChange={(e) => props.onChange(e.target.value)}>
+      <select
+        id={id}
+        value={String(draft)}
+        disabled={off}
+        aria-describedby={describedBy}
+        onChange={(e) => {
+          props.onChange(e.target.value);
+          props.commit?.(e.target.value);
+        }}
+      >
         {choices.map((c) => (
           <option key={c.tag} value={c.tag}>
             {c.label}
@@ -108,6 +139,7 @@ export function SettingRow(props: {
         disabled={off}
         aria-describedby={describedBy}
         onChange={(e) => props.onChange(e.target.value)}
+        onBlur={props.commit ? (e) => props.commit?.(e.target.value) : undefined}
       />
     );
   } else {
@@ -118,9 +150,20 @@ export function SettingRow(props: {
         inputMode={item.type === "text" ? undefined : "decimal"}
         value={String(draft)}
         disabled={off}
-        aria-invalid={invalid ? true : undefined}
+        aria-invalid={invalid || problem ? true : undefined}
         aria-describedby={describedBy}
         onChange={(e) => props.onChange(e.target.value)}
+        onBlur={props.commit ? (e) => props.commit?.(e.target.value) : undefined}
+        onKeyDown={
+          props.commit
+            ? (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  props.commit?.(e.currentTarget.value);
+                }
+              }
+            : undefined
+        }
       />
     );
     // A folder can be picked from a list where the app can list folders; otherwise it is typed, with no fuss.
@@ -133,7 +176,15 @@ export function SettingRow(props: {
             <span className="sr"> {label}</span>
           </button>
           {String(draft) !== "" && (
-            <button type="button" className="btn quiet" disabled={off} onClick={() => props.onChange("")}>
+            <button
+              type="button"
+              className="btn quiet"
+              disabled={off}
+              onClick={() => {
+                props.onChange("");
+                props.commit?.("");
+              }}
+            >
               {t("settings.clear_value")}
               <span className="sr"> {label}</span>
             </button>
@@ -145,70 +196,84 @@ export function SettingRow(props: {
   }
 
   const checkbox = item.type === "yes_no" && !readOnly;
+  const labelNode = checkbox ? (
+    <label className="check-line" htmlFor={id}>
+      {control}
+      <span>{label}</span>
+    </label>
+  ) : readOnly ? (
+    <span className="setting-label">{label}</span>
+  ) : typedSecret ? (
+    <span className="setting-label" id={`${id}-label`}>
+      {label}
+    </span>
+  ) : (
+    <label className="setting-label" htmlFor={id}>
+      {label}
+    </label>
+  );
   return (
     <div
-      className={`setting${props.depth ? " dependent" : ""}${props.gate ? " waiting" : ""}`}
+      className={`setting${props.depth ? " dependent" : ""}${props.gate ? " waiting" : ""}${props.beside ? " beside" : ""}`}
       data-key={item.key}
       style={props.depth ? { marginInlineStart: `${Math.min(props.depth, 3) * 20}px` } : undefined}
     >
-      {checkbox ? (
-        <label className="check-line" htmlFor={id}>
-          {control}
-          <span>{label}</span>
-        </label>
-      ) : readOnly ? (
-        <span className="setting-label">{label}</span>
-      ) : typedSecret ? (
-        <span className="setting-label" id={`${id}-label`}>
-          {label}
-        </span>
-      ) : (
-        <label className="setting-label" htmlFor={id}>
-          {label}
-        </label>
-      )}
-      {checkbox ? null : control}
-      {hint && (
-        <p className="hint" id={`${id}-hint`}>
-          {hint}
-        </p>
-      )}
-      {waiting && (
-        <p className="hint" id={`${id}-waiting`}>
-          {waiting}
-        </p>
-      )}
-      {item.type === "list" && !readOnly && (
-        <p className="hint" id={`${id}-list`}>
-          {t("settings.list_hint")}
-        </p>
-      )}
-      {invalid && (
-        <p className="problem-note" id={`${id}-bad`}>
-          {invalid}
-        </p>
-      )}
-      {note && (
-        <p className="hint" id={`${id}-note`}>
-          {note}
-        </p>
-      )}
-      <div className="setting-foot">
+      <div className="setting-main" data-main>
+        <div className="setting-head">
+          {labelNode}
+          {changed && props.onReset && (
+            <span className="setting-changed">
+              <span>{t("settings.changed")}</span>
+              <span aria-hidden="true"> · </span>
+              <button
+                type="button"
+                className="link-button"
+                disabled={props.disabled}
+                aria-label={t("settings.reset_named", { label })}
+                onClick={props.onReset}
+              >
+                {t("settings.reset")}
+              </button>
+            </span>
+          )}
+        </div>
+        {checkbox ? null : control}
+        {waiting && (
+          <p className="hint" id={`${id}-waiting`}>
+            {waiting}
+          </p>
+        )}
+        {item.type === "list" && !readOnly && (
+          <p className="hint" id={`${id}-list`}>
+            {t("settings.list_hint")}
+          </p>
+        )}
+        {invalid && (
+          <p className="problem-note" id={`${id}-bad`}>
+            {invalid}
+          </p>
+        )}
+        {problem && (
+          <p className="problem-note" id={`${id}-problem`} role="alert">
+            {problem}
+          </p>
+        )}
+        {note && (
+          <p className="hint" id={`${id}-note`}>
+            {note}
+          </p>
+        )}
+      </div>
+      <div className="setting-help" data-help>
+        {hint && (
+          <p className="hint" id={`${id}-hint`}>
+            {hint}
+          </p>
+        )}
         {item.type !== "other" && (
           <p className="hint" id={`${id}-default`}>
             {t("settings.default", { value: formatValue(item.default, t) })}
           </p>
-        )}
-        {item.source === "file" && item.editable && !item.locked && props.onReset && (
-          <button
-            type="button"
-            className="btn quiet small"
-            disabled={props.disabled}
-            aria-label={t("settings.back_to_default_named", { label })}
-            onClick={props.onReset}
-          >
-            {t("settings.back_to_default")}
-          </button>
         )}
       </div>
       {picking && (
@@ -221,6 +286,7 @@ export function SettingRow(props: {
           onPick={(picked) => {
             setPicking(false);
             props.onChange(picked);
+            props.commit?.(picked);
             restoreFocus(() => chooser.current);
           }}
         />

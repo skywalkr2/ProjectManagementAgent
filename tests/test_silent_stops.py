@@ -337,7 +337,10 @@ def test_a_lost_network_waits_without_counting_a_try_and_runs_when_the_network_i
     assert datetime.fromisoformat(waiting["cause"]["since"]) == began
     wait = timedelta(seconds=cfg.dispatch.offline_check_seconds)
     assert datetime.fromisoformat(waiting["cause"]["until"]) == began + wait
-    assert waiting["waiting"].startswith("Waiting for the network since ") and "Checking again at" in waiting["waiting"]
+    assert (
+        waiting["waiting"].startswith("Waiting for an internet connection since ")
+        and "Checking again at" in waiting["waiting"]
+    )
     # It is looked at again only after its wait, never in a loop, and more times than a failing service gets tries.
     assert worker.run_pending() == 0 and provider.calls == 1
     for _ in range(cfg.dispatch.retries + 1):
@@ -413,7 +416,7 @@ def test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_
     clock.move(minutes=1)
     worker.run_pending()
     [line] = [x for x in queue(ws, store, cfg, clock()) if x.kind == "offline"]
-    assert line.group == "risk" and line.count == 2 and line.waiting == "Waiting for the network"
+    assert line.group == "risk" and line.count == 2 and line.waiting == "Waiting for an internet connection"
     assert line.waiting_since == START.isoformat()
     set_responder(Scripted(ANSWER))
     clock.move(seconds=cfg.dispatch.offline_check_seconds)

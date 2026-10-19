@@ -205,7 +205,7 @@ test("a new action shows as a button above the rows, opens its review with no ta
   await user.click(add);
   await screen.findByRole("dialog", { name: "Add a goal" });
   expect(calls.find((c) => c.route === "POST plugin-actions/demo/goal.add/preview")?.body).toEqual({ target: null, choices: {} });
-  await user.click(await screen.findByRole("button", { name: "Apply" }));
+  await user.click(await screen.findByRole("button", { name: "Make these changes" }));
   expect(await screen.findByText("A brand new goal")).toBeInTheDocument();
   await waitFor(() => expect(add).toHaveFocus());
 });

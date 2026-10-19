@@ -1,6 +1,6 @@
 // What follows any saved settings (the Settings screen and the guided setup steps): the question about restarting when a change needs one, a refresh of
 // what the saved files change, and a toast that reads back what changed with Undo.
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, type S } from "./api";
 import { useRestart } from "./restart";
@@ -10,6 +10,16 @@ import { useWords } from "./wording";
 
 const SHOWN = 3;
 
+/** Where the newest settings fingerprint this screen knows is kept: the one a save answered with, so the next save, and an
+ * Undo of an earlier one, never go out with an old one. A reload of the settings replaces it. */
+const FINGERPRINT = ["settings-fingerprint"] as const;
+
+export const rememberFingerprint = (client: QueryClient, fingerprint: string) => client.setQueryData(FINGERPRINT, fingerprint);
+
+/** The fingerprint to save against: the newest one a save answered with, else the one the settings loaded with. */
+export const knownFingerprint = (client: QueryClient, loaded?: string): string | undefined =>
+  client.getQueryData<string>(FINGERPRINT) ?? loaded;
+
 export function useAfterSave() {
   const client = useQueryClient();
   const { push } = useToasts();
@@ -17,6 +27,7 @@ export function useAfterSave() {
   const restart = useRestart();
   return useCallback(
     (saved: S["SettingsSaved"], opts: { message?: string } = {}): Promise<void> => {
+      rememberFingerprint(client, saved.fingerprint);
       if (saved.needs_restart) restart.offer();
       const refreshed = client.invalidateQueries();
       if (!saved.changes.length) {
@@ -34,7 +45,9 @@ export function useAfterSave() {
       push({
         message: opts.message ?? t("settings.saved", { changes: lines.join("; ") }),
         undo: async () => {
-          const undone = await api.saveSettings(undoBody(saved.changes, saved.fingerprint));
+          // Saves made since then moved the fingerprint on; a change made elsewhere still gets the refusal.
+          const undone = await api.saveSettings(undoBody(saved.changes, knownFingerprint(client, saved.fingerprint) ?? saved.fingerprint));
+          rememberFingerprint(client, undone.fingerprint);
           if (undone.needs_restart) restart.offer();
           await client.invalidateQueries();
         },

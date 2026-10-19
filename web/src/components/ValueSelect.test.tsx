@@ -92,14 +92,14 @@ test("Add to the list opens a field; Add sends the value, selects it and offers 
   const select = await screen.findByRole("combobox", { name: "State" });
   await waitFor(() => expect(options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
-  const field = screen.getByRole("textbox", { name: "Add a value to Demo state" });
+  const field = screen.getByRole("textbox", { name: "Add a choice to Demo state" });
   expect(field).toHaveFocus();
   expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   await user.type(field, "  Parked ");
   await user.click(screen.getByRole("button", { name: "Add" }));
   await waitFor(() => expect(screen.getByLabelText("chosen")).toHaveTextContent("Parked"));
   expect(calls.find((c) => c.route === "POST lists/demo-state/add")?.body).toEqual({ value: "Parked" });
-  expect(screen.queryByRole("textbox", { name: "Add a value to Demo state" })).toBeNull();
+  expect(screen.queryByRole("textbox", { name: "Add a choice to Demo state" })).toBeNull();
   await waitFor(() => expect(options(screen.getByRole("combobox", { name: "State" }))).toContain("Parked"));
   expect(screen.getByRole("combobox", { name: "State" })).toHaveValue("Parked");
   expect(await screen.findByText("Added Parked to Demo state.")).toBeInTheDocument();
@@ -115,7 +115,7 @@ test("Enter in the field adds without sending the form around it", async () => {
   const select = await screen.findByRole("combobox", { name: "State" });
   await waitFor(() => expect(options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
-  await user.type(screen.getByRole("textbox", { name: "Add a value to Demo state" }), "Parked{Enter}");
+  await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "Parked{Enter}");
   await waitFor(() => expect(screen.getByLabelText("chosen")).toHaveTextContent("Parked"));
   expect(calls.some((c) => c.route === "POST lists/demo-state/add")).toBe(true);
   expect(sent).not.toHaveBeenCalled();
@@ -128,8 +128,8 @@ test("Escape cancels the field and does not reach the form, and nothing is sent"
   const select = await screen.findByRole("combobox", { name: "State" });
   await waitFor(() => expect(options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
-  await user.type(screen.getByRole("textbox", { name: "Add a value to Demo state" }), "Parked{Escape}");
-  expect(screen.queryByRole("textbox", { name: "Add a value to Demo state" })).toBeNull();
+  await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "Parked{Escape}");
+  expect(screen.queryByRole("textbox", { name: "Add a choice to Demo state" })).toBeNull();
   expect(document.body.dataset.closed).toBeUndefined();
   expect(screen.getByLabelText("chosen")).toHaveTextContent("Open");
   await waitFor(() => expect(screen.getByRole("combobox", { name: "State" })).toHaveFocus());
@@ -143,7 +143,7 @@ test("a value the list already offers is selected without asking the server", as
   const select = await screen.findByRole("combobox", { name: "State" });
   await waitFor(() => expect(options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
-  await user.type(screen.getByRole("textbox", { name: "Add a value to Demo state" }), "waiting{Enter}");
+  await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "waiting{Enter}");
   await waitFor(() => expect(screen.getByLabelText("chosen")).toHaveTextContent("Waiting"));
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
 });
@@ -155,10 +155,10 @@ test("a refusal shows in an alert, keeps the field open with what was typed, and
   const select = await screen.findByRole("combobox", { name: "State" });
   await waitFor(() => expect(options(select)).toContain("Add to the list…"));
   await user.selectOptions(select, "Add to the list…");
-  await user.type(screen.getByRole("textbox", { name: "Add a value to Demo state" }), "Bad");
+  await user.type(screen.getByRole("textbox", { name: "Add a choice to Demo state" }), "Bad");
   await user.click(screen.getByRole("button", { name: "Add" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("That value is not allowed here.");
-  expect(screen.getByRole("textbox", { name: "Add a value to Demo state" })).toHaveValue("Bad");
+  expect(screen.getByRole("textbox", { name: "Add a choice to Demo state" })).toHaveValue("Bad");
   expect(screen.getByLabelText("chosen")).toHaveTextContent("Open");
 });
 
