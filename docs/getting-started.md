@@ -1,8 +1,9 @@
 # Getting started
 
 This page takes you from a computer with nothing on it to your first result: the assistant has read your mail and
-turned it into actions and questions you can look over. It takes about 10 minutes of your time. Nothing is spent on AI
-until you press **Go** at the very end, and you see the estimate first.
+turned it into actions and questions you can look over. It takes about 10 minutes of your time. The assistant spends nothing
+on your own material until you press **Go** at the very end, and you see the estimate first. The one thing before that
+which costs anything is the check of your AI account, which you start yourself and which shows its cost beforehand (in the walkthrough's AI account step).
 
 You do three things in order: install the app, start your own workspace, and follow the setup walkthrough that opens by
 itself.
@@ -55,7 +56,7 @@ Nothing is spent so far, and nothing has left your computer.
 ## 3. The setup walkthrough
 
 The first time you open a new workspace, the walkthrough opens by itself and says: *Set up your workspace. About 10
-minutes. Nothing is spent until you press Go at the end.* It shows one screen at a time, in the order you need them.
+minutes. The assistant spends nothing on your own material until you press Go at the end.* It shows one screen at a time, in the order you need them.
 Every screen says why it matters and can be skipped and done later. **Finish later** closes it; it then stays closed until
 you open it again from the **Setup** line on Today, from **Help**, or from **Settings**. It remembers where you were, also
 after a restart.
@@ -81,7 +82,10 @@ the most it may spend in a day (it starts at $2.00). You can change both here or
 
 Your key stays on this computer, in a private folder only you can read. The settings refer to it and never hold it.
 
-*Cost: the test itself is a few small requests, normally a fraction of a cent in all.* Nothing else is spent here.
+*Cost: the test is the one thing in setup that spends money, and you start it.* It sends a few small requests to your AI
+service, normally a fraction of a cent in all. The button shows the estimate when the app can work it out, and when you add an
+account the app asks first if the estimate is above the amount you set under *What it may spend*. None of your own material is sent. Nothing
+else is spent here.
 *If it fails:* the test says in plain words what went wrong. The usual causes are a key copied only in part, a key that has
 been switched off, an account with no credit, or a service that is busy; copy the key again, check the service's account
 page, or try again in a minute. Press **Test again** after you change something.

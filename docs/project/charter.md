@@ -109,5 +109,7 @@ complete (phase C); the order of work is `roadmap-to-1.0.md`. The original crite
 
 ## Out of scope (for now)
 
-Hosted deployment, sign-in providers, social media and email integrations, distributor or retailer integrations, the workplace
-pack in real use, multi-user. See `scope.md`.
+Hosted deployment, sign-in providers, social media, newsletter and bulk-mail channels, distributor or retailer
+integrations, the workplace pack in real use, multi-user. Reading mail and calendars is in, and so are sending mail and
+changing calendar entries after the person approves the exact content (phase S1b, not built yet; decisions, 2026-10-17,
+"Mail and calendar management after the person's yes"). See `scope.md`.

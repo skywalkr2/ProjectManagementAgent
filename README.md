@@ -13,9 +13,10 @@ specific to one kind of work comes from plugins:
 
 Any AI vendor can be used through configuration.
 
-It runs either on your own computer or on a web host you control, for example under a path such as
-`https://example.com/admin`, with sign-in and start-up security checks. Branding, layout, wording, schedules, sign-in and
-storage are all settings, so you can change an installation without changing code.
+It runs on your own computer today, reachable only from that computer. Running it on a server you control, for example under
+a path such as `https://example.com/admin`, with sign-in and start-up security checks, is planned (design Part 11) and isn't
+available yet: the app refuses to start in hosted mode. Branding, layout, wording, schedules and storage are settings, so you
+can change an installation without changing code.
 
 ## Status
 

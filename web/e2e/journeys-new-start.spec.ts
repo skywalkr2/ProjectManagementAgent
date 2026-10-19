@@ -51,7 +51,7 @@ test.describe.serial("journey: new start", () => {
     // 1. I open the link the start command printed. The walkthrough opens by itself and says nothing is spent yet.
     await page.goto(`?token=${info.token}`);
     await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
-    await expect(page.getByText("About 10 minutes. Nothing is spent until you press Go at the end.")).toBeVisible();
+    await expect(page.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Go at the end.")).toBeVisible();
     await visit(page);
     const main = page.locator("main#main");
 

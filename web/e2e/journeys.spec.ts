@@ -34,7 +34,7 @@ test.describe.serial("journeys", () => {
     // spent until I press Go at the end. Nothing else is on the page: no header, no sidebar.
     await page.goto(`?token=${info.token}`);
     await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
-    await expect(page.getByText("About 10 minutes. Nothing is spent until you press Go at the end.")).toBeVisible();
+    await expect(page.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Go at the end.")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Views" })).toHaveCount(0);
     await visit(page);
 

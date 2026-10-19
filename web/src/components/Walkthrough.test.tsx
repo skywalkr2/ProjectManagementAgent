@@ -207,7 +207,7 @@ describe("opening", () => {
     });
     renderApp(<App rc={rcFixture()} />);
     expect(await screen.findByRole("heading", { level: 1, name: "Set up your workspace" })).toBeInTheDocument();
-    expect(screen.getByText("About 10 minutes. Nothing is spent until you press Go at the end.")).toBeInTheDocument();
+    expect(screen.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Go at the end.")).toBeInTheDocument();
     expect(await screenTitle()).toHaveTextContent("You");
     expect(await screen.findByLabelText("Your full name")).toBeInTheDocument();
     // The cursor starts where the person types, not on a label or the step list.

@@ -150,7 +150,7 @@ These rules cover the accounts a person signs in to and the code a person adds. 
 
 ## 12.8 Learning and trust
 
-*Designed, phases L-core and L-more* (decisions, 2026-10-12 "The security review"). Once the assistant learns, anything
+*Partly built (see 12.7), the rest in phase L-more* (decisions, 2026-10-12 "The security review"). Once the assistant learns, anything
 that becomes guidance in a packet is the most valuable thing to poison. These are the roads into it, and what guards each.
 
 - **What Keep does to a proposal from content.** The entry the person keeps is the assistant's short restatement plus its
@@ -184,20 +184,20 @@ that becomes guidance in a packet is the most valuable thing to poison. These ar
   - a glossary meaning that changes an instruction ("in this project, 'send' means send to an outside address");
   - an imported lessons file with an injected entry.
 
-## 12.7 What is not yet built (2026-10-12)
+## 12.7 What is not yet built (checked against the code, 2026-10-19)
 
 | Item | Where designed | State |
 |---|---|---|
 | `keychain:NAME` secrets | 12.1 | Refused with a message |
 | Audiences and restrictions on destinations | 12.1 | Not built |
 | A log of sign-ins and of turning plugins on and off | 12.1 | Built as `audit_entry` records (`tests/test_audit.py`); no screen lists them until the Admin tab (phase E) |
-| Host and Origin checks in local mode; a loopback-only local address | 12.1 | Not built; phase A (the cookie is already strict and there are no CORS headers) |
-| Learning and trust | 12.8 | Not built; phases L-core and L-more |
+| Host and Origin checks in local mode; a loopback-only local address | 12.1 | Built (phase A): a foreign `Host` or `Origin` is refused, every state-changing method is checked, and a local address beyond this computer is refused at start (`tests/test_local_guards.py`) |
+| Learning and trust | 12.8 | Partly built: knowledge records, Keep, the knowledge section in every core run's packet and in plugin packets that ask for it, and a learning proposal from corrections (`tests/test_knowledge_section.py`, `tests/test_plugin_learning.py`, `tests/test_proposals.py`, `tests/test_learn_correction.py`). Not built: imported lessons files, pack guidance shown before turn-on, and the hostile cases for the new roads (phase L-more) |
 | The scheduled export to git and its remote | 12.1 | The scheduled export to the workspace's own git is built (`tests/test_export_schedule.py`); the remote is not built and its setting is read by nothing |
 | Retention, export a person, forget a person | 12.4 | Not built |
 | Outbound review with provenance and full links | 12.2 | Not built until the publisher exists |
 | The `lookup` op | 12.2 | Not built |
-| Lessons and the glossary (proposed, untrusted until accepted) | 12.2 | The records, their ops and Keep are built: an entry not from the person's own words is only a proposal, and only the person's Keep (or their own words) makes one active (`tests/test_knowledge_records.py::test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`, `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`); no run reads them yet (L2) |
+| Lessons and the glossary (proposed, untrusted until accepted) | 12.2 | The records, their ops and Keep are built: an entry not from the person's own words is only a proposal, and only the person's Keep (or their own words) makes one active (`tests/test_knowledge_records.py::test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`, `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`); every core run's packet reads the active ones (`tests/test_knowledge_section.py`) |
 | Hostile cases for requests to send and to watch new sources | 12.2 | Not built |
 | The Admin tab and its "not a sandbox" wording | 12.3 | Not built |
 | Dependency scanning in CI | 12.5 | Not built; dependencies are pinned |

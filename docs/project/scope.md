@@ -48,7 +48,9 @@ The design (`docs/design/`, version 1.1 of 2026-10-12, which folds the decisions
 | Automation `Issue` renamed `Problem` | n/a (naming) | must | 5.1 |
 | Native adapters (vendors with their own API format), aggregator adapter with catalog and routing options, Add account flow, models from provider catalogs | won't | must | 6.16 |
 | Hosted mode, sign-in providers | won't | won't | Part 11 |
-| Social, email and newsletter channels | won't | won't | 3.7 |
+| Reading mail and calendars (an inbox, a subscribed calendar link, the Google and Microsoft add-ons) | read through open protocols, built | must | 6.2, 6.32 |
+| Acting on mail and calendars after the person approves the exact content: send, reply, forward, archive, label, create or change events (phase S1b; not built yet) | won't | must | 6.3, 6.12, 6.32 |
+| Social, newsletter and bulk-mail channels | won't | won't | 3.7 |
 | Sales pack (accounts, opportunities, proposals, SOWs, contracts, regulatory data per jurisdiction) | won't | won't | 13.3 |
 | Plugins working together: interfaces, event subscriptions, requests for another plugin's work, shared core records | won't | must | 3.9 |
 | Long text fields with versions and authorship | won't | must | 5.0 |
@@ -65,6 +67,8 @@ The design (`docs/design/`, version 1.1 of 2026-10-12, which folds the decisions
 From design 1.0 on, a change to scope or design is accepted only with a one-line impact note in `docs/decisions.md`: what it
 adds, which horizon it lands in, and what it delays. The same change edits the design section it affects. The November
 freeze in `schedule.md` was set aside with the go/no-go (decisions, 2026-10-12).
+
+The email exclusion was narrowed on 2026-10-17: approved mail and calendar acts are in version 1 (decisions, 2026-10-17, "Mail and calendar management after the person's yes").
 
 ## Candidate changes waiting for a decision
 
