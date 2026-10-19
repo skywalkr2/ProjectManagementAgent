@@ -149,7 +149,33 @@ class Context:
 # ---- checks ----------------------------------------------------------------------------------------------------------
 
 
+def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
+    """A promise said again with a date outside the merge window is a move of the open promise, never a second one
+    (design 6.33): each such `action.add` becomes an `action.move` on the open promise, with the new words and quote.
+    The same changeset always gives the same result, so a check and the apply that follows see the same ops."""
+    view = ctx.store.read()
+    ops = list(cs.ops)
+    for i, op in enumerate(ops):
+        if not isinstance(op, ActionAddOp) or op.due_at_event or op.waiting_for:
+            continue
+        same = _same_promise(view, ctx, op)
+        if same is None:
+            continue
+        due, _ = _due(view, ctx, ctx.inputs.source, op.due_words, op.due)
+        if due is None or _within_window(same.data.get("due"), due, ctx):
+            continue
+        ops[i] = ActionMoveOp(
+            id=same.id,
+            due_words=op.due_words,
+            due=None if (op.due_words or "").strip() else op.due,
+            evidence=op.evidence,
+            group=op.group,
+        )
+    return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
+
+
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    cs = restatements(cs, ctx)
     problems: list[Problem] = _validate_in_order(cs, ctx)
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
@@ -1191,6 +1217,7 @@ def apply_changeset(
     """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id. With `all_or_nothing`,
     one refused op rolls everything back, and the changeset is recorded as rejected with every op refused."""
     now = now or datetime.now(UTC)
+    cs = restatements(cs, ctx)
     # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
     problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
     today = now.date()

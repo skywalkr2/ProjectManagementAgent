@@ -185,13 +185,20 @@ test("a held close reads as one line: Keep, what the input says happened, and it
 
 test.each([
   [{ ask: "drop", reason: "no longer needed" } as Partial<S["HeldAsk"]>, "Keep: 'Send the floor plan' is called off"],
-  [{ ask: "move", due_words: "next Tuesday" } as Partial<S["HeldAsk"]>, "Keep: 'Send the floor plan' moves to next Tuesday"],
-  [{ ask: "move", due_words: null, value: "2026-11-03" } as Partial<S["HeldAsk"]>, `Keep: 'Send the floor plan' moves to ${day("2026-11-03")}`],
+  [{ ask: "move", due_words: "next Tuesday" } as Partial<S["HeldAsk"]>, "Keep: 'Send the floor plan' is now due next Tuesday"],
+  [{ ask: "move", due_words: null, value: "2026-11-03" } as Partial<S["HeldAsk"]>, `Keep: 'Send the floor plan' is now due ${day("2026-11-03")}`],
   [{ ask: "part", delivered: "the draft", left: "Send the final plan" } as Partial<S["HeldAsk"]>, "Keep: Robin Sample delivered the draft, and what is left is 'Send the final plan'"],
 ])("a held ending %# reads as one Keep line", async (held, title) => {
   show([ending(held)]);
   const row = await rowOf(title);
   expect(within(row).getByRole("button", { name: "Keep" })).toBeInTheDocument();
+});
+
+test("a promise said again with a new date reads as a move with both quotes under it", async () => {
+  show([ending({ ask: "move", due_words: "by October 30", quote: "I will send the floor plan by October 30.", earlier: "I will send the floor plan by Tuesday." })]);
+  const row = await rowOf("Keep: 'Send the floor plan' is now due by October 30");
+  expect(row).toHaveTextContent("“I will send the floor plan by October 30.”");
+  expect(row).toHaveTextContent("Said before: “I will send the floor plan by Tuesday.”");
 });
 
 test("Keep releases the ending and says what happened, with Undo", async () => {

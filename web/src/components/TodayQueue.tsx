@@ -617,7 +617,7 @@ function QueueRow(props: {
             tone: "warn",
             meta: (
               <>
-                {meta(ask.quote ? t("queue.held.quote", { quote: ask.quote }) : "", ask.reporter ? t("queue.held.e.said_by", { name: ask.reporter }) : "", what)}
+                {meta(ask.quote ? t("queue.held.quote", { quote: ask.quote }) : "", ask.earlier ? t("queue.held.e.earlier", { quote: ask.earlier }) : "", ask.reporter ? t("queue.held.e.said_by", { name: ask.reporter }) : "", what)}
                 {ask.ask === "drop" && told.length > 0 && (
                   <>
                     {" · "}

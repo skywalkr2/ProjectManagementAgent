@@ -5539,7 +5539,7 @@
         "type": "object"
       },
       "HeldAsk": {
-        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered), `item` the words of what it is about, `value` and `from_value`\nthe new and the present date, `to_name` the person it would go to, `told` the people a drop would leave out of the\nloop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action also carries what\nthe input says happened: the action's id in `record`, its `owners` in the owner format, `reporter` (who said it),\nand by ask the words of a new date (`due_words`), what was `delivered` and what is `left`, or the `reason` it is\ncalled off. The screen words the title and the answers from these.",
+        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered), `item` the words of what it is about, `value` and `from_value`\nthe new and the present date, `to_name` the person it would go to, `told` the people a drop would leave out of the\nloop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action also carries what\nthe input says happened: the action's id in `record`, its `owners` in the owner format, `reporter` (who said it),\nand by ask the words of a new date (`due_words`) with the promise's own earlier words (`earlier`), what was\n`delivered` and what is `left`, or the `reason` it is called off. The screen words the title and the answers from\nthese.",
         "properties": {
           "ask": {
             "enum": [
@@ -5575,6 +5575,17 @@
               }
             ],
             "title": "Due Words"
+          },
+          "earlier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earlier"
           },
           "from_value": {
             "anyOf": [
