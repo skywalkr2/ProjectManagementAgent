@@ -339,8 +339,8 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   Decided by the main session (the steward proposal said "builds on actions and follow-ups").
   **Impact:** design 6.33 (CHANGES.md section 94); every action ending from an input now waits for the person, where
   before `action.close` applied at once.
-- **Also (2026-10-19): a new source is taken in quietly (S1, designer F6).** `first_run: intake` is the default, and
-  sign-in sources use it: mail of the last `first_run_days` (14) and every item of any other kind are taken in as one
+- **Also (2026-10-19): a new source is taken in quietly (S1, designer F6).** `first_run: intake` is the default (sign-in
+  sources keep `recent` until batch S1-3 rewrites journeys J2 and J6 for it, with the five-minute first success): mail of the last `first_run_days` (14) and every item of any other kind are taken in as one
   priced total, started by itself under the amount to confirm (and when known, or when unpriced runs need no go),
   otherwise held for one go; results fold into one "Look over what was found" line; "Not looked at before <date>" with
   a look further back that shows count and cost first. A source taken whole (a tracker, a folder) has no window, since

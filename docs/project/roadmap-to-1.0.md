@@ -2172,6 +2172,9 @@ S1. **Promises, and how they end:**
 - [ ] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
   their voice to edit and copy; "No reply needed" is a choice the assistant learns from. (Drafting follow-ups is now
   expected of any assistant; Thimbleby's difference is promises kept across every source, with the people around them.)
+- [ ] **Sign-in sources taken in quietly** (designer F6, from the intake built 2026-10-19): sources a sign-in adds use
+  `first_run: intake`, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found"
+  line instead of a review line per item. *Today:* sign-in sources still read the last day (`first_run: recent`).
 - [ ] **A first success in five minutes:** the walkthrough connects one mailbox and an AI account, looks back over the
   last two weeks of the person's own mail (estimate first), and shows a handful of real open promises with one follow-up
   ready, before any project, area, pack or extra account is asked about.
