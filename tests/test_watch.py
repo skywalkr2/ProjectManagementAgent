@@ -30,7 +30,15 @@ def folder_source(tmp_path):
     (folder / "plan.md").write_text("Line one\nLine two\n")
     ws, cfg, store = make(
         tmp_path,
-        [{"id": "shared", "connector": "folder", "label": "Shared notes", "settings": {"path": str(folder)}}],
+        [
+            {
+                "id": "shared",
+                "connector": "folder",
+                "label": "Shared notes",
+                "first_run": "baseline",
+                "settings": {"path": str(folder)},
+            }
+        ],
     )
     yield ws, cfg, store, folder
     store.close()

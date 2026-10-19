@@ -151,7 +151,7 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
-from engine import catch_up, learned
+from engine import catch_up, learned, source_intake
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -605,7 +605,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     problems.append(f"{name} couldn't be read just now. It is tried again by itself.")
             else:
                 read += 1
-            handed += len(result.new) + len(result.changed) + len(result.removed)
+            handed += len(result.new) + len(result.changed) + len(result.removed) + len(result.taken_in)
         events.changed()
         if handed:
             worker.poke()
@@ -1310,8 +1310,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             d = req.data
             if d.get("set_aside"):
                 continue  # mail set aside as not work is listed in the Set aside folder
-            if catch_up.waits_on_go(d):
-                continue  # learning runs held for the catch-up list's go are one line on Today
+            if catch_up.waits_on_go(d) or source_intake.waits_on_go(d):
+                continue  # learning runs held for the catch-up list's go, and a new source's intake, are one line
             view = None
             cs = None
             source = sources.get(d.get("source") or "")
@@ -1359,6 +1359,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     redoes=learned.request_changeset(store.read(), d.get("previous")),
                     changeset=view,
                     mail_item=mail.get((watched.get("source"), watched.get("key"))) if watched else None,
+                    intake=d.get("intake"),
                     title=_title_view(
                         title_for(
                             d,

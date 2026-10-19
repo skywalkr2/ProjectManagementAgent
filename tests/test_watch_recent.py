@@ -142,7 +142,7 @@ def folder_with_files(tmp_path, now):
         (folder / name).write_text(f"Text of {name}.")
         stamp = (now - timedelta(hours=hours)).timestamp()
         os.utime(folder / name, (stamp, stamp))
-    sources = [{"id": "box", "connector": "folder", "settings": {"path": str(folder)}}]
+    sources = [{"id": "box", "connector": "folder", "first_run": "baseline", "settings": {"path": str(folder)}}]
     ws, cfg, store = make(tmp_path, sources)
     return ws, cfg, store
 

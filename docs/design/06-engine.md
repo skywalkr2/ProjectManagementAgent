@@ -133,7 +133,9 @@ with the structured fields of 6.2) and compares:
 
 **First reads** (`first_run`, 4.5). What a source does on its first read is a setting, so connecting a full folder or
 mailbox neither floods the queue nor runs up cost on day one:
-- `baseline` (the default): the first read only notes what is there.
+- `intake` (the default): the first read is taken in quietly (6.32): the last `first_run_days` of mail and everything else
+  the source holds is handed in together, priced as one total, and left as one list to look over.
+- `baseline`: the first read only notes what is there.
 - `recent`: it also hands in what arrived, changed or happens within `first_run_hours` of the read (24 by default): the last
   day's mail, today's meetings. A message counts by when it was received, an event by when it starts (before or after now),
   anything else by when it changed.
@@ -2588,7 +2590,32 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   a mistake, and doesn't count against the request's spending figure.
 - **A newly added source is taken in quietly.** Nothing in it is reported as new: one summary line ("found 12 open promises
   in the last 14 days") and a list to review. Every open item in it is followed from then on, whatever its age; age decides
-  only whether it is raised as news.
+  only whether it is raised as news. This is `first_run: intake`, the default (`engine/source_intake.py`):
+  - The first read notes everything the source holds. It then hands in the mail of the last `first_run_days` (14) and every
+    item of any other kind of source, through the same triage and sorting as any hand-in; each request is marked with the
+    source (`intake`). Older mail isn't read, and the source records the day before which it wasn't looked at
+    (`looked_back_to` on its first `watch_run`); the coverage line says "Not looked at before Oct 5".
+  - The whole intake is priced as one total (the requests' estimates and the sorting run for its mail). When the total is
+    known and not above `ai.budgets.confirm_above_usd` it starts by itself; otherwise the requests are held and Today has one
+    line for the source ("Take in Inbox: 12 items from the last 14 days", or "<n> items" for a source with no mail) with the
+    total, and one Go starts them all (`POST /api/watch/{source}/intake/go`; the mail waiting for sorting is sorted first).
+    The first-go rule applies on top of an intake that starts by itself. A Go is itself a go: it covers the first go, as the
+    catch-up list's Go does.
+  - Until the person opens the list, the requests' review lines and held lines are not on Today. Once all of them are
+    finished (done, stopped or waiting for the person) there is one line, "Look over what was found in Inbox: 4 items", with
+    what they did counted ("3 actions, 2 questions, 4 held for you"). It opens What changed narrowed to that source's intake
+    and marks it seen (`POST /api/watch/{source}/intake/seen`, with Undo); after that, whatever still needs a look shows
+    line by line. Held items stay held, and nothing applied is undone or hidden from the records screens.
+  - "Look further back" on the coverage line offers a list of days (`watch.look_back_choices`: 30, 90, 365 more), shows the
+    count and about what it costs before anything is read (`GET /api/watch/{source}/look-back?days=`), and takes in the older
+    mail the source already returned the same quiet way, under the same go rules, moving the date back. The core can only take
+    in what the connector returned: when the source holds no mail that far back the result says "Only mail from <date> is
+    available to read" and the date moves only as far as that mail goes. Built: `tests/test_source_intake.py`,
+    `tests/test_source_intake_routes.py`, `web/src/components/LookBack.test.tsx`, `web/src/shell/HeldLines.test.tsx`,
+    `web/src/components/Today.test.tsx`, `web/src/components/WhatChanged.test.tsx`. *Not built:* a source's sign-in still
+    starts it with `first_run: recent` (6.27); a connector's own first read is bounded by its own settings (the mailbox
+    connector takes its latest `first_read` messages, with no date), so the date a first read says it looked back to is the
+    window the core applied, not a promise about what the connector returned.
 - **Coverage on Today.** "Couldn't read" and "read, nothing new" are different words and never share a color. A source that
   has failed for longer than its usual gap becomes a line for the person ("work mail hasn't been read since yesterday
   6 PM: sign in again?"). A day whose right top line is "nothing needs you, and here is what was read" is a test case.

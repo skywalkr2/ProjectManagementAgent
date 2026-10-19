@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from engine import held_ask, move_groups, watch
+from engine import held_ask, move_groups, source_intake, watch
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -52,9 +52,13 @@ class Line:
     item waiting for the person's yes), go (a run waiting for the person's go), first_go (every run waiting for the
     first go in the workspace, as one line: `estimate_usd` is their total estimate and `unpriced` how many have
     none), catch_up_go (the learning runs for the catch-up list, held together for one go: `count` runs, their total
-    `estimate_usd` and `unpriced` how many have none), refused, restart (work held until the person restarts the app:
-    `count` is how many requests wait), handover (the synced folder can't be used until the person settles it: `state`
-    is diverged, chosen or elsewhere and `text` the other computer), failed,
+    `estimate_usd` and `unpriced` how many have none), intake_go (a newly added `source`, `subject` its label, taken in
+    quietly: its `count` items held together for one go, their total `estimate_usd`, `unpriced` how many have none and
+    `days` how far back its mail was read, none for a source with no mail), intake_review (what was found in a newly
+    added `source`: `count` items with something to look over and their results counted in `outcome`, which replace
+    the lines each would have had until the person opens the list), refused, restart (work held until the person
+    restarts the app: `count` is how many requests wait), handover (the synced folder can't be used until the person
+    settles it: `state` is diverged, chosen or elsewhere and `text` the other computer), failed,
     paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), borrow (a
     question: every account a kind of work can use is paused, so may another kind of work's free `account` (with its
     `model`) take that work, the `tier`'s, until `until`, when the paused account `text` resets? `count` waiting items
@@ -169,6 +173,11 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         if found is not None:
             unread[watched_source.id] = found
     requests = {r.id: r for r in reader.list("request")}
+    # What a newly added source's intake found has one line for the whole source, not one for each item, until the
+    # person opens the list.
+    on = {s.id for s in cfg.watch.sources}
+    intake_unseen = {source: found for source, found in source_intake.unseen(reader).items() if source in on}
+    hidden = {r.id for found in intake_unseen.values() for r in found}
     by_changeset: dict[str, Any] = {}
     for req in requests.values():
         if req.data.get("changeset"):
@@ -213,7 +222,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     # Decide: held items with no question (they wait for the person's yes), and runs waiting for a go.
     for cs_id, cs in changesets.items():
         req = by_changeset.get(cs_id)
-        if req is None or req.data.get("dismissed"):
+        if req is None or req.data.get("dismissed") or req.id in hidden:
             continue
         for outcome in cs.get("ops", []):
             if outcome.get("status") != "held" or outcome.get("question"):
@@ -239,6 +248,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
 
     first_go: list[Any] = []
     catch_up_go: list[Any] = []
+    intake_go: dict[str, list[Any]] = {}
     for req in requests.values():
         d = req.data
         if d.get("dismissed") or d.get("state") not in ("needs_you", "failed"):
@@ -248,6 +258,9 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             continue
         if catch_up.waits_on_go(d):
             catch_up_go.append(req)
+            continue
+        if source_intake.waits_on_go(d):
+            intake_go.setdefault(d["intake"], []).append(req)
             continue
         if d["state"] == "failed":
             kind, group = "failed", "risk"
@@ -361,6 +374,26 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 unpriced=unpriced,
                 waiting=catch_up.WAITING,
                 since=min(str(r.data.get("created_at") or "") for r in catch_up_go),
+            )
+        )
+
+    for source_id, held_for_go in sorted(intake_go.items()):
+        # One line for each newly added source, with the total of everything its go starts.
+        count, total, unpriced = source_intake.total_waiting(ws, store, cfg, source_id)
+        label = next((s.label or s.id for s in cfg.watch.sources if s.id == source_id), source_id)
+        lines.append(
+            Line(
+                key=f"intake_go:{source_id}",
+                group="decide",
+                kind="intake_go",
+                count=count or len(held_for_go),
+                source=source_id,
+                subject=label,
+                days=source_intake.days_taken(reader, source_id),
+                estimate_usd=total,
+                unpriced=unpriced,
+                waiting=source_intake.WAITING,
+                since=min(str(r.data.get("created_at") or "") for r in held_for_go),
             )
         )
 
@@ -519,21 +552,12 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     # Review: the assistant's work waiting for a look.
     for req in requests.values():
         d = req.data
-        if d.get("dismissed") or d.get("state") != "review" or not d.get("changeset"):
+        if d.get("dismissed") or d.get("state") != "review" or not d.get("changeset") or req.id in hidden:
             continue
         cs = changesets.get(d["changeset"]) or {}
         if cs.get("reviewed"):
             continue
-        outcome: dict[str, int] = {}
-        for o in cs.get("ops", []):
-            status = o.get("status")
-            if status in ("held", "refused"):
-                outcome[status] = outcome.get(status, 0) + 1
-            if status != "applied" and status != "held":
-                continue
-            word = _OUTCOME.get((o.get("op") or {}).get("op", ""), "other")
-            outcome[word] = outcome.get(word, 0) + 1
-        shown = [o for o in cs.get("ops", []) if o.get("status") in ("applied", "held")]
+        outcome, shown = _outcome_of(cs)
         counted = len(shown)
         if not counted and not outcome.get("refused"):
             continue  # nothing applied, held or refused, so nothing to look over
@@ -556,6 +580,40 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 since=str(d.get("created_at") or ""),
             )
         )
+
+    # Review: what a newly added source's intake found, as one line for the source once all of its work is finished.
+    for source_id, found in sorted(intake_unseen.items()):
+        if any(source_intake.unfinished(r.data) for r in found):
+            continue
+        total: dict[str, int] = {}
+        items = 0
+        for req in found:
+            cs = changesets.get(req.data.get("changeset") or "")
+            if not cs or req.data.get("set_aside") or req.data.get("folded_into"):
+                continue
+            outcome, shown = _outcome_of(cs)
+            if cs.get("reviewed"):
+                outcome = {"held": outcome["held"]} if outcome.get("held") else {}
+            elif not shown and not outcome.get("refused"):
+                continue
+            if not outcome:
+                continue
+            items += 1
+            for word, n in outcome.items():
+                total[word] = total.get(word, 0) + n
+        if items:
+            lines.append(
+                Line(
+                    key=f"intake_review:{source_id}",
+                    group="review",
+                    kind="intake_review",
+                    count=items,
+                    source=source_id,
+                    subject=next((s.label or s.id for s in cfg.watch.sources if s.id == source_id), source_id),
+                    outcome=total,
+                    since=min(str(r.data.get("created_at") or "") for r in found),
+                )
+            )
 
     # Review: the standing rules to look over, offered at most once a period.
     from engine.rule_review import due, last_acted, review
@@ -765,6 +823,7 @@ _KIND_ORDER = {
     "held": 3,
     "go": 4,
     "catch_up_go": 4,
+    "intake_go": 4,
     "refused": 5,
     "question": 6,
     "failed": 0,
@@ -777,6 +836,7 @@ _KIND_ORDER = {
     "no_account": 0,
     "extractor": 1,
     "review": 0,
+    "intake_review": 0,
     "rule_review": 1,
     "learned": 2,
     "catch_up": 3,
@@ -785,6 +845,21 @@ _KIND_ORDER = {
     "send": 0,
     "nudge": 1,
 }
+
+
+def _outcome_of(cs: dict[str, Any]) -> tuple[dict[str, int], list[dict[str, Any]]]:
+    """What a changeset did, counted by the outcome word the screen uses (held and refused ops counted as such), and
+    the ops that were applied or are held."""
+    outcome: dict[str, int] = {}
+    for o in cs.get("ops", []):
+        status = o.get("status")
+        if status in ("held", "refused"):
+            outcome[status] = outcome.get(status, 0) + 1
+        if status != "applied" and status != "held":
+            continue
+        word = _OUTCOME.get((o.get("op") or {}).get("op", ""), "other")
+        outcome[word] = outcome.get(word, 0) + 1
+    return outcome, [o for o in cs.get("ops", []) if o.get("status") in ("applied", "held")]
 
 
 def _aware(stamp: str) -> datetime:

@@ -1290,6 +1290,8 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `auto_closed` | dict[str, str] \| None | `None` | For a watched change a triage rule closed: {rule, reason}. Taking a closer look clears it. |
 | `set_aside` | dict[str, str \| None] \| None | `None` | For a watched mail item set aside as not work: {section, rule, reason}, and for one the person set aside after it was handed in, {from_state, from_waiting} to put it back. It is never queued for the assistant while this is set. This is work clears it. |
 | `folded_into` | str \| None | `None` | The newer request this one's change was folded into, so they are read in order, once. |
+| `intake` | str \| None | `None` | The id of the watched source this request was taken in from when the source was newly added (or looked at further back): its results are gathered into one line on Today and one list, not one line each. |
+| `intake_seen` | bool | `False` | For a request taken in from a new source: the person opened the list of what was found (or marked it seen), so its results show on Today one by one again if they still need a look. |
 | `attempts` | int | `0` | How many times the assistant has started on it. |
 | `retries` | int | `0` | How many times it was tried again by itself after a run that gave no usable answer. |
 | `created_at` | datetime | required | When the request was made. |
@@ -1781,14 +1783,14 @@ What a watched item looked like when last read: its text is kept in the sources 
 
 ### `watch_run` (WRUN-n)
 
-One read of a watched source and what came of it. The watcher writes it; nothing changes it.
+One read of a watched source and what came of it. The watcher writes it; only a look further back changes it (`looked_back_to`).
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `source` | str | required | The id of the watched source. |
 | `started_at` | datetime | required | When the read started. |
 | `seconds` | float | `0.0` | How long it took. |
-| `outcome` | Literal['ok', 'baseline', 'failed', 'offline', 'throttled'] | required | ok: read and compared. baseline: a first read that only noted what is there. failed: it couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait. |
+| `outcome` | Literal['ok', 'baseline', 'failed', 'offline', 'throttled'] | required | ok: read and compared. baseline: a first read that only noted what is there, or took it in quietly. failed: it couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait. |
 | `retry_at` | datetime \| None | `None` | For a throttled read: not read again before this time. |
 | `error_kind` | str \| None | `None` | For a failed read: auth, no_access, not_found, outage, or addon (its add-on isn't running). |
 | `error` | str \| None | `None` | What went wrong, in the connector's words. |
@@ -1797,6 +1799,7 @@ One read of a watched source and what came of it. The watcher writes it; nothing
 | `changed` | int | `0` | Items handed in as changed. |
 | `removed` | int | `0` | Items handed in as gone. |
 | `state` | dict[str, Any] | `{}` | What the connector keeps between reads. |
+| `looked_back_to` | date \| None | `None` | For a source's first read that took it in quietly: the day before which its mail was not looked at. A look further back moves it earlier; none for a source with no mail or another kind of first read. |
 
 ### `text_version` (TXT-n)
 

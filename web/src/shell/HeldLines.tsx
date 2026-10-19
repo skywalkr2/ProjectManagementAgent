@@ -27,7 +27,7 @@ import styles from "./HeldLines.module.css";
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "extractor", "source_unread", "rule_review", "catch_up_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -69,6 +69,8 @@ export function HeldLine(props: {
       return <NoAccountLine line={line} onAdd={props.onAddAccount ?? props.onOpenAiAccounts} />;
     case "catch_up_go":
       return <CatchUpGoLine line={line} />;
+    case "intake_go":
+      return <IntakeGoLine line={line} />;
     default:
       return <PausedLine line={line} onOpenAiAccounts={props.onOpenAiAccounts} />;
   }
@@ -437,6 +439,45 @@ function CatchUpGoLine(props: { line: Line }) {
       <div className={styles.actions}>
         <Button size="sm" variant="primary" data-key="primary" loading={busy} onClick={() => void go()}>
           {t("queue.catch_up_go.run")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** A newly added source taken in quietly, held for one go: how many items (from how many days of mail, when it has mail),
+ * what they would cost together, and the one Go that starts them all. */
+function IntakeGoLine(props: { line: Line }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const estimate = useEstimate();
+  const [busy, setBusy] = useState(false);
+  const { line } = props;
+  const source = line.subject ?? line.source ?? "";
+  const text =
+    line.days != null
+      ? tn("queue.intake_go.mail", line.count, { source, since: tn("queue.intake_go.days", line.days) })
+      : tn("queue.intake_go.items", line.count, { source });
+  const cost = line.estimate_usd == null ? null : estimate(line.estimate_usd);
+  const sub = t(cost === null ? "queue.intake_go.cost.unpriced" : line.unpriced > 0 ? "queue.intake_go.cost.mixed" : "queue.intake_go.cost.priced", { cost: cost ?? "" });
+  const go = async () => {
+    setBusy(true);
+    await act(
+      () => api.intakeGo(line.source ?? ""),
+      () => ({ message: t("queue.intake_go.started", { source }) }),
+    );
+    setBusy(false);
+  };
+  return (
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.intake_go.label")} data-queue-line="intake_go">
+      <Pill tone="warn">{t("queue.intake_go.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{text}</p>
+        <p className={styles.sub}>{sub}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" data-key="primary" loading={busy} onClick={() => void go()}>
+          {t("queue.intake_go.run")}
         </Button>
       </div>
     </section>

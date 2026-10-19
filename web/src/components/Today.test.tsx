@@ -246,6 +246,43 @@ test("All looks good acts at once on the whole review card, with Undo", async ()
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/reopen")).toBe(true));
 });
 
+const intakeReview: Line = line("intake_review", {
+  key: "intake_review:m",
+  group: "review",
+  source: "m",
+  subject: "Inbox",
+  count: 4,
+  outcome: { actions_added: 3, questions: 2, held: 4 },
+});
+
+test("what a new source's intake found is one review line that counts it in plain words", async () => {
+  show([intakeReview]);
+  expect(await screen.findByText("Look over what was found in Inbox: 4 items")).toBeInTheDocument();
+  expect(within(row("intake_review")).getByText("3 actions, 2 questions, 4 held for you")).toBeInTheDocument();
+});
+
+test("Look over opens the changes and marks the intake seen, and Undo puts the line back", async () => {
+  const user = userEvent.setup();
+  const { calls, onView } = show([intakeReview], {
+    "POST watch/m/intake/seen": () => ({ requests: ["REQ-1", "REQ-2"] }),
+    "POST watch/m/intake/unseen": () => ({ restored: 2 }),
+  });
+  await user.click(await screen.findByRole("button", { name: "Look over" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST watch/m/intake/seen")).toBe(true));
+  expect(onView).toHaveBeenCalledWith("work/changed");
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST watch/m/intake/unseen")?.body).toEqual({ requests: ["REQ-1", "REQ-2"] }));
+});
+
+test("a line for one source's intake can be marked seen from its menu without opening the changes", async () => {
+  const user = userEvent.setup();
+  const { calls, onView } = show([intakeReview], { "POST watch/m/intake/seen": () => ({ requests: ["REQ-1"] }) });
+  await user.click(await screen.findByRole("button", { name: /More|Actions|Menu/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Mark as seen" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST watch/m/intake/seen")).toBe(true));
+  expect(onView).not.toHaveBeenCalled();
+});
+
 test("the first go is one line with its price, and Go starts the tasks", async () => {
   const user = userEvent.setup();
   const { calls } = show([line("first_go", { key: "first_go", count: 3, estimate_usd: 0.3 })], { "POST runs/first-go": () => ({ started: 3 }) });

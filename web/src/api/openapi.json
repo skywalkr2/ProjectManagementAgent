@@ -3151,6 +3151,18 @@
             "title": "Id",
             "type": "string"
           },
+          "intake": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the newly added source whose first read (or look further back) took this in, so its results can be listed together.",
+            "title": "Intake"
+          },
           "mail_item": {
             "anyOf": [
               {
@@ -5841,6 +5853,69 @@
         "title": "InstalledPackView",
         "type": "object"
       },
+      "IntakeSeen": {
+        "properties": {
+          "requests": {
+            "description": "The requests of the source's intake marked seen, which Undo (POST /api/watch/{source}/intake/unseen) gives back.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requests"
+        ],
+        "title": "IntakeSeen",
+        "type": "object"
+      },
+      "IntakeStarted": {
+        "properties": {
+          "started": {
+            "description": "How many requests of the source's intake the go started.",
+            "title": "Started",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "started"
+        ],
+        "title": "IntakeStarted",
+        "type": "object"
+      },
+      "IntakeUnseen": {
+        "properties": {
+          "restored": {
+            "description": "How many requests were put back as not yet seen.",
+            "title": "Restored",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "restored"
+        ],
+        "title": "IntakeUnseen",
+        "type": "object"
+      },
+      "IntakeUnseenIn": {
+        "additionalProperties": false,
+        "properties": {
+          "requests": {
+            "description": "The requests POST /api/watch/{source}/intake/seen marked.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requests"
+        ],
+        "title": "IntakeUnseenIn",
+        "type": "object"
+      },
       "ItemTitle": {
         "description": "An item's title in parts (design 7.14); the screen puts them into words: \"{kind} from {person} \u00b7 {topic}\".",
         "properties": {
@@ -6690,6 +6765,98 @@
           "models"
         ],
         "title": "LocalServerView",
+        "type": "object"
+      },
+      "LookBackIn": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "description": "How many days further back to look, one of the source's choices.",
+            "minimum": 1.0,
+            "title": "Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "title": "LookBackIn",
+        "type": "object"
+      },
+      "LookBackView": {
+        "description": "What looking further back takes in (GET) or took in (POST): the items, what they cost and how far the source\nreaches.",
+        "properties": {
+          "available_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The oldest mail the source has returned, when it is later.",
+            "title": "Available From"
+          },
+          "count": {
+            "description": "Items the look takes in (before: would take in); none that a rule closes.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About what they cost; after the look, what everything held for the source's go costs. None when no price is known.",
+            "title": "Estimate Usd"
+          },
+          "from_date": {
+            "description": "The day asked for: mail from this day on is looked at.",
+            "format": "date",
+            "title": "From Date",
+            "type": "string"
+          },
+          "reaches": {
+            "description": "False when the source holds no mail as far back as asked: `available_from` is where its mail starts and nothing earlier can be taken in.",
+            "title": "Reaches",
+            "type": "boolean"
+          },
+          "started": {
+            "default": false,
+            "description": "After the look: they started at once; False when they wait for the go or none was made.",
+            "title": "Started",
+            "type": "boolean"
+          },
+          "taken": {
+            "default": 0,
+            "description": "After the look: the requests made.",
+            "title": "Taken",
+            "type": "integer"
+          },
+          "unpriced": {
+            "default": 0,
+            "description": "How many of the items have no price.",
+            "title": "Unpriced",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "from_date",
+          "count",
+          "reaches"
+        ],
+        "title": "LookBackView",
         "type": "object"
       },
       "MadeView": {
@@ -10370,7 +10537,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled).",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled).",
         "properties": {
           "account": {
             "anyOf": [
@@ -10466,7 +10633,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a rule_review line: how many days the flagged rules have been given and never applied.",
+            "description": "For a rule_review line: how many days the flagged rules have been given and never applied. For an intake_go line: how many days back the source's mail was read; none when it holds no mail.",
             "title": "Days"
           },
           "due": {
@@ -10490,7 +10657,7 @@
                 "type": "null"
               }
             ],
-            "description": "The estimated cost of everything the line starts (first_go, catch_up_go), when any has a price.",
+            "description": "The estimated cost of everything the line starts (first_go, catch_up_go, intake_go), when any has a price.",
             "title": "Estimate Usd"
           },
           "expired": {
@@ -10553,6 +10720,8 @@
               "go",
               "first_go",
               "catch_up_go",
+              "intake_go",
+              "intake_review",
               "refused",
               "restart",
               "handover",
@@ -10866,7 +11035,7 @@
           },
           "unpriced": {
             "default": 0,
-            "description": "How many of the things the line starts have no price (first_go, catch_up_go).",
+            "description": "How many of the things the line starts have no price (first_go, catch_up_go, intake_go).",
             "title": "Unpriced",
             "type": "integer"
           },
@@ -15090,9 +15259,10 @@
         "description": "A kind of source the assistant can keep reading, with the form its settings take.",
         "properties": {
           "first_run": {
-            "default": "baseline",
-            "description": "What the first read of a source of this kind added here does: baseline only notes what is there, recent also hands in the last day's, all hands everything in.",
+            "default": "intake",
+            "description": "What the first read of a source of this kind added here does: intake takes it in quietly (one summary and one list to look over), baseline only notes what is there, recent also hands in the last day's, all hands everything in.",
             "enum": [
+              "intake",
               "baseline",
               "recent",
               "all"
@@ -15442,6 +15612,27 @@
                 "type": "null"
               }
             ]
+          },
+          "look_back_choices": {
+            "description": "When `looked_back_to` is set: how many more days the person can ask to look, to pick from.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Look Back Choices",
+            "type": "array"
+          },
+          "looked_back_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a source whose first read took it in quietly: the day before which its mail wasn't looked at. None for a source with no mail or another kind of first read.",
+            "title": "Looked Back To"
           },
           "problem": {
             "anyOf": [
@@ -24030,6 +24221,233 @@
           }
         },
         "summary": "Watch Remove"
+      }
+    },
+    "/api/watch/{source_id}/intake/go": {
+      "post": {
+        "description": "The person's go for a newly added source's intake: the mail waiting for sorting is sorted, then every request\nheld for the go starts.",
+        "operationId": "intake_go_api_watch__source_id__intake_go_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Intake Go"
+      }
+    },
+    "/api/watch/{source_id}/intake/seen": {
+      "post": {
+        "description": "The person opened the list of what the intake found: its results show on Today one by one again if they\nstill need a look. Undo is POST /api/watch/{source_id}/intake/unseen.",
+        "operationId": "intake_seen_api_watch__source_id__intake_seen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeSeen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Intake Seen"
+      }
+    },
+    "/api/watch/{source_id}/intake/unseen": {
+      "post": {
+        "description": "Undo marking the intake seen: the results are one line on Today again.",
+        "operationId": "intake_unseen_api_watch__source_id__intake_unseen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntakeUnseenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeUnseen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Intake Unseen"
+      }
+    },
+    "/api/watch/{source_id}/look-back": {
+      "get": {
+        "description": "What looking `days` further back would take in and about what it would cost, and whether the source holds\nmail that far back. Writes nothing.",
+        "operationId": "look_back_preview_api_watch__source_id__look_back_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": true,
+            "schema": {
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookBackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Look Back Preview"
+      },
+      "post": {
+        "description": "Look further back: the older mail the source already returned is taken in the same quiet way as its first\nread, under the same go rules, and the day it was looked back to moves.",
+        "operationId": "look_back_api_watch__source_id__look_back_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookBackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookBackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Look Back"
       }
     },
     "/api/watch/{source_id}/read": {

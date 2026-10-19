@@ -366,9 +366,11 @@ def queue_learning(ws: Any, store: Any, cfg: Any, router: Any = None, now: datet
     return made
 
 
-def _price(ws: Any, store: Any, cfg: Any, router: Any, request_ids: list[str], now: datetime) -> None:
+def _price(
+    ws: Any, store: Any, cfg: Any, router: Any, request_ids: list[str], now: datetime, ctx: WriteContext | None = None
+) -> None:
     """Put each queued run's estimate on its request, so the line can show one total. A run with no price is left
-    without one."""
+    without one. `ctx`: who writes the estimate (the engine's own, by default)."""
     import os
 
     from engine.ai.router import Router
@@ -385,7 +387,11 @@ def _price(ws: Any, store: Any, cfg: Any, router: Any, request_ids: list[str], n
         with store.transaction() as tx:
             current = tx.get("request", request_id)
             tx.update(
-                "request", request_id, {"estimate_usd": round(estimate, 4)}, _ENGINE, read_version=current.version
+                "request",
+                request_id,
+                {"estimate_usd": round(estimate, 4)},
+                ctx or _ENGINE,
+                read_version=current.version,
             )
 
 

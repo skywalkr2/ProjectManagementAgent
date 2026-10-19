@@ -2190,8 +2190,10 @@ S1. **Promises, and how they end:**
   `tests/test_silent_closes.py`, `tests/test_join_by_id.py`, `Sources.test.tsx`. Left (with the gate week's instruments
   below): the silent-close measure on the Quality screen and a Today line; Undo on "Looks right"; a triage alias too
   short to be a word matches inside other words.
-- [ ] **A newly added source is taken in quietly** (designer F6): one summary line and a list to review, every open item
-  followed whatever its age.
+- [x] **A newly added source is taken in quietly** (designer F6): one summary line and a list to review, every open item
+  followed whatever its age. *Built (S1):* `tests/test_source_intake.py`, `tests/test_source_intake_routes.py`,
+  `tests/test_source_intake_sorting.py`, `LookBack.test.tsx`. Left: the core mailbox's first read takes only its latest
+  `first_read` messages, so a look further back can only reach what that read returned (it says so).
 - [ ] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence.
 - [x] **A request's spending as a range** (designer F14): the estimate covers the whole request with its retries and the
   stronger model, stops at the upper figure, outage retries are free, and the finished item shows what was spent.

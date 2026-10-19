@@ -1032,6 +1032,17 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Promises (6.33) | Named in 6.32, no shape | Actions gain `promised_to`, `basis`, `said_by`, `due_words`, `due_check` and `news`; dates read by rules first; endings `action.close`, `action.move`, `action.drop`, `action.part`, `action.news`; an ending from an input waits for the person; a promise past its date with no news is a line with its choices; every promise shows why |
 
+## 93. A new source taken in quietly (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| A source's first read (6.4, 6.32, 4.5) | `baseline` (the default) noted what was there and handed in nothing, so an existing collection's open items were never followed; `recent` handed in the last day one by one | `intake` is the default: the first read notes everything, then hands in the mail of the last `first_run_days` (14) and every item of any other kind of source, each request marked with its source; nothing is reported as new, every open item found is followed whatever its age, and the other first runs work as before. Built: `tests/test_source_intake.py` |
+| What the intake costs (6.16, 6.32) | n/a | Priced as one total (the requests and the sorting of its mail); below `ai.budgets.confirm_above_usd` it starts by itself (the first-go rule still applies on top); unpriced or above it, one Today line per source, "Take in Inbox: 12 items from the last 14 days", and one Go (`POST /api/watch/{source}/intake/go`). Built: `tests/test_source_intake.py`, `tests/test_source_intake_routes.py`, `web/src/shell/HeldLines.test.tsx` |
+| What it found (7.7, 6.32) | n/a | Its results have no line of their own on Today until the list is opened; once all its work is finished, one line "Look over what was found in Inbox: 4 items" counts what was done and held, opens What changed narrowed to that source's intake and marks it seen (`POST /api/watch/{source}/intake/seen`, with Undo). Built: `tests/test_source_intake.py`, `tests/test_source_intake_routes.py`, `web/src/components/Today.test.tsx`, `web/src/components/WhatChanged.test.tsx` |
+| How far back it looked (6.32, 7.7) | Older mail was silently not read | The first `watch_run` keeps `looked_back_to`; the coverage line says "Not looked at before Oct 5" with "Look further back": pick 30, 90 or 365 more days from a list, see the count and cost, confirm (`GET`/`POST /api/watch/{source}/look-back`); the older mail the connector already returned is taken in the same way and the date moves; a source that holds no mail that far back says "Only mail from <date> is available to read". Built: `tests/test_source_intake.py`, `tests/test_source_intake_routes.py`, `web/src/components/LookBack.test.tsx` |
+| Settings (4.5, 4.9) | n/a | `watch.sources[].first_run: intake` (new default) and `first_run_days` (14); `watch.look_back_choices` ([30, 90, 365]); demo values in both fictional workspaces. Records: `request.intake`, `request.intake_seen`, `watch_run.looked_back_to` |
+
+
 ## 92. No close goes unseen, and records join by id (2026-10-19)
 
 | Where | Before | Now |

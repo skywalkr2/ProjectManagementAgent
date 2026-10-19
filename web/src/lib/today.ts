@@ -16,6 +16,8 @@ export const GROUPS: readonly QueueGroupName[] = ["decide", "risk", "review", "s
 const COUNTED: ReadonlySet<QueueLine["kind"]> = new Set([
   "first_go",
   "catch_up_go",
+  "intake_go",
+  "intake_review",
   "restart",
   "paused",
   "borrow",

@@ -745,7 +745,8 @@ class Snapshot(Record):
 
 
 class WatchRun(Record):
-    """One read of a watched source and what came of it. The watcher writes it; nothing changes it."""
+    """One read of a watched source and what came of it. The watcher writes it; only a look further back changes it
+    (`looked_back_to`)."""
 
     record_kind: ClassVar[str] = "watch_run"
     prefix: ClassVar[str] = "WRUN"
@@ -754,8 +755,9 @@ class WatchRun(Record):
     started_at: datetime = Field(description="When the read started.")
     seconds: float = Field(0.0, description="How long it took.")
     outcome: Literal["ok", "baseline", "failed", "offline", "throttled"] = Field(
-        description="ok: read and compared. baseline: a first read that only noted what is there. failed: it "
-        "couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait."
+        description="ok: read and compared. baseline: a first read that only noted what is there, or took it in "
+        "quietly. failed: it couldn't be read. offline: no network here, so it wasn't tried. throttled: the service "
+        "asked to wait."
     )
     retry_at: datetime | None = Field(None, description="For a throttled read: not read again before this time.")
     error_kind: str | None = Field(
@@ -770,6 +772,12 @@ class WatchRun(Record):
     changed: int = Field(0, description="Items handed in as changed.")
     removed: int = Field(0, description="Items handed in as gone.")
     state: dict[str, Any] = Field(default_factory=dict, description="What the connector keeps between reads.")
+    looked_back_to: date | None = Field(
+        None,
+        description="For a source's first read that took it in quietly: the day before which its mail was not "
+        "looked at. A look further back moves it earlier; none for a source with no mail or another kind of first "
+        "read.",
+    )
 
 
 class SettingChange(Record):
@@ -1026,6 +1034,16 @@ class Request(Record):
     )
     folded_into: str | None = Field(
         None, description="The newer request this one's change was folded into, so they are read in order, once."
+    )
+    intake: str | None = Field(
+        None,
+        description="The id of the watched source this request was taken in from when the source was newly added (or "
+        "looked at further back): its results are gathered into one line on Today and one list, not one line each.",
+    )
+    intake_seen: bool = Field(
+        False,
+        description="For a request taken in from a new source: the person opened the list of what was found (or "
+        "marked it seen), so its results show on Today one by one again if they still need a look.",
     )
     attempts: int = Field(0, description="How many times the assistant has started on it.")
     retries: int = Field(

@@ -529,9 +529,9 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
               ))}
             </select>
           </div>
-          {adding && kind.first_run === "baseline" && (
+          {adding && (kind.first_run === "baseline" || kind.first_run === "intake") && (
             <p className="hint" data-first-read="">
-              {t("sources.first_read_noted")}
+              {t(kind.first_run === "intake" ? "sources.first_read_intake" : "sources.first_read_noted")}
             </p>
           )}
           {adding && choices.length > 0 && (

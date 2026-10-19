@@ -418,3 +418,25 @@ test("a finished item shows what it cost beside its estimate", async () => {
   );
   expect(await screen.findByText("Cost $0.03, estimated at $0.02 to $0.08")).toBeInTheDocument();
 });
+
+test("a Today line for a new source's intake narrows the list to what that intake found, until it is cleared", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET changes": () => [
+      change("REQ-1", { intake: "m" }),
+      change("REQ-2", { intake: "other", changeset: { ...change("REQ-2").changeset!, ops: [{ ...change("REQ-2").changeset!.ops[0], title: "Another source's thing" }] } }),
+      change("REQ-3", { changeset: { ...change("REQ-3").changeset!, ops: [{ ...change("REQ-3").changeset!.ops[0], title: "A pasted note's thing" }] } }),
+    ],
+    "GET watch": () => [{ id: "m", label: "Inbox", connector: "kind-a", connector_label: "A kind", enabled: true, every_minutes: 15, items: 0, last: null, read_at: null, failures: 0, problem: null }],
+  });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Another source's thing")).toBeInTheDocument();
+  revealOrKeep("intake", "m");
+  await waitFor(() => expect(screen.queryByText("Another source's thing")).toBeNull());
+  expect(screen.getByText("Proof copies ship Nov 5")).toBeInTheDocument();
+  expect(screen.queryByText("A pasted note's thing")).toBeNull();
+  expect(await screen.findByText("Found in Inbox")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Show everything" }));
+  expect(await screen.findByText("A pasted note's thing")).toBeInTheDocument();
+  expect(screen.getByText("Another source's thing")).toBeInTheDocument();
+});

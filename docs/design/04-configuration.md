@@ -195,10 +195,15 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
     address) and `mailbox` (a mail folder over IMAP); a plugin's are `<plugin>/<name>` (6.2);
   - `every_minutes` (60, at least 5): how often it is read while the app runs;
   - `project`: the project its changes are about, when they all are;
-  - `first_run`: what the first read does. `baseline` (default): it only notes what is there, so connecting a full folder
-    or mailbox doesn't flood the queue. `recent`: it also hands in what arrived, changed or happens within
-    `first_run_hours` of the read (the last day's mail, today's meetings). `all`: everything there is is handed in as new;
+  - `first_run`: what the first read does. `intake` (default): it is taken in quietly: the mail of the last
+    `first_run_days` and everything in any other kind of source is handed in together, priced as one total, held for one go
+    above `ai.budgets.confirm_above_usd`, and left as one list to look over (6.32). `baseline`: it only notes what is
+    there, so connecting a full folder or mailbox doesn't flood the queue. `recent`: it also hands in what arrived,
+    changed or happens within `first_run_hours` of the read (the last day's mail, today's meetings). `all`: everything
+    there is is handed in as new. Only a source never read is affected;
   - `first_run_hours` (24, 1 to 336): how many hours around the first read count as recent;
+  - `first_run_days` (14, 1 to 365): with `intake`, for mail, how many days back the first read looks; older mail isn't
+    read and Today says "Not looked at before <date>". Any other kind of source is taken in whole;
   - `report_removed` (true): hand in an item that disappeared from a complete listing;
   - `data_level` (open, internal or restricted; empty): how sensitive its items are, so they go only to AI accounts allowed
     that level. Empty: the level for its kind of source (`connector_data_levels`, below), else `default_data_level`;
@@ -231,6 +236,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
 - `public_mail_domains_extra` (empty list): mail domains anyone can have an address at, added to the list the app ships. No
   sorting rule is offered or saved for a whole public mail domain, only for a sender (6.5).
+- `look_back_choices` (30, 90, 365): how many more days further back than a new source's first read the person can ask a mail
+  source to look, offered as a list to pick from; each shows its item count and cost first (6.32).
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per
   read.
 - `unread_gap_factor` (2): how many of a source's own read intervals (`every_minutes`) it may go unread, failing, before

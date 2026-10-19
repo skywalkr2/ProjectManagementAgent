@@ -317,6 +317,38 @@ test("the catch-up learning runs are one line with the count and the total, and 
   await waitFor(() => expect(screen.queryByRole("region", { name: "Waiting for you to start it" })).toBeNull());
 });
 
+test("a new source's intake is one line with its items and days and the total, and Go starts that source's items", async () => {
+  const user = userEvent.setup();
+  let started = false;
+  const { calls } = show([], {
+    "GET today/queue": () => (started ? [] : [line("intake_go", { key: "intake_go:m", group: "decide", source: "m", subject: "Inbox", count: 12, days: 14, estimate_usd: 0.42 })]),
+    "POST watch/m/intake/go": () => {
+      started = true;
+      return { started: 12 };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Waiting for you to start it" });
+  expect(row).toHaveTextContent("Take in Inbox: 12 items from the last 14 days");
+  expect(row).toHaveTextContent("About $0.42 in all. Nothing is spent until you press Start.");
+  await user.click(within(row).getByRole("button", { name: "Start" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST watch/m/intake/go")).toHaveLength(1));
+  expect(await screen.findByText("Taking in Inbox has started.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Waiting for you to start it" })).toBeNull());
+});
+
+test("a source with no mail says items without days, one item and one day are singular, and no price says so", async () => {
+  show([
+    line("intake_go", { key: "intake_go:pages", group: "decide", source: "pages", subject: "Pages", count: 3, days: null, estimate_usd: null, unpriced: 3 }),
+    line("intake_go", { key: "intake_go:m", group: "decide", source: "m", subject: "Inbox", count: 1, days: 1, estimate_usd: 0.004, unpriced: 1 }),
+  ]);
+  const rows = await screen.findAllByRole("region", { name: "Waiting for you to start it" });
+  expect(rows[0]).toHaveTextContent("Take in Pages: 3 items");
+  expect(rows[0]).not.toHaveTextContent("from the last");
+  expect(rows[0]).toHaveTextContent("It uses your plan's allowance. Nothing is spent until you press Start.");
+  expect(rows[1]).toHaveTextContent("Take in Inbox: 1 item from the last day");
+  expect(rows[1]).toHaveTextContent("plus some of your plan's allowance");
+});
+
 test("catch-up runs with no price say they use the plan's allowance", async () => {
   show([line("catch_up_go", { key: "catch_up_go", group: "decide", count: 1, estimate_usd: null, unpriced: 1 })]);
   expect(await screen.findByRole("region", { name: "Waiting for you to start it" })).toHaveTextContent(

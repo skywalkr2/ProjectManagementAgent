@@ -2,8 +2,9 @@
 what was seen last time, and every real difference is handed in for the assistant to read, like something the person
 pasted, but marked as outside content.
 
-- A source's first read only notes what is there (`first_run: baseline`), so connecting a full folder doesn't hand
-  in everything it holds; `all` hands everything in.
+- A source's first read is taken in quietly (`first_run: intake`, see `engine/source_intake.py`): nothing is reported
+  as new one by one. `baseline` only notes what is there, so connecting a full folder doesn't hand in everything it
+  holds; `recent` also hands in the last hours; `all` hands everything in.
 - A changed item is handed in with a readable diff and its text now; a new one with its text; one that disappeared
   from a complete listing, as gone (unless the source turns that off).
 - No network is not a failure and files nothing. A source that fails `failures_before_asking` reads in a row files one
@@ -35,6 +36,8 @@ _WATCHER = WriteContext(actor="watcher", trust="untrusted", op="watch.read")
 _SORTER = WriteContext(actor="engine", trust="trusted", op="watch.sort")
 #: Lines of unchanged text shown around each change in a diff.
 CONTEXT_LINES = 2
+#: What a request waits on when it has just been handed in and the assistant is about to take it.
+STARTING = "With the assistant, starting now"
 
 
 @dataclass
@@ -44,6 +47,7 @@ class Result:
     new: list[str] = field(default_factory=list)  # request ids handed in
     changed: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
+    taken_in: list[str] = field(default_factory=list)  # request ids a first read took in quietly (not reported as new)
     problem: str | None = None
     note: str | None = None  # something to tell the person that isn't a problem with the source
 
@@ -227,9 +231,13 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     read_before = any(
         r.data["outcome"] in ("ok", "baseline") for r in store.read().find("watch_run", {"source": source.id})
     )
-    baseline = not read_before and source.first_run in ("baseline", "recent")
+    taking_in = not read_before and source.first_run == "intake"
+    baseline = not read_before and source.first_run in ("baseline", "recent", "intake")
     recent = timedelta(hours=source.first_run_hours) if baseline and source.first_run == "recent" else None
     result = _compare(ws, store, cfg, source, poll, now, baseline, recent, router)
+    from engine import source_intake
+
+    back_to = source_intake.looked_back_to(source, poll.items, now) if taking_in else None
     _record(
         store,
         source.id,
@@ -240,7 +248,10 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
         changed=len(result.changed),
         removed=len(result.removed),
         state=poll.state,
+        looked_back_to=back_to.isoformat() if back_to else None,
     )
+    if taking_in:
+        result.taken_in = source_intake.take_in(ws, store, cfg, source, now, router, back_to)
     _close_question(store, source.id)
     result.outcome = "baseline" if baseline else "ok"
     return result
@@ -402,10 +413,14 @@ def _assistant_sorted(
     return marks, sorted_.note
 
 
-def _awaiting_sorting(ws: Any, store: Any, cfg: Any) -> dict[str, list[tuple[Any, Any, SourceItem, dict[str, Any]]]]:
+def _awaiting_sorting(
+    ws: Any, store: Any, cfg: Any, only: str | None = None
+) -> dict[str, list[tuple[Any, Any, SourceItem, dict[str, Any]]]]:
     """The mail the first go's sorting covers, by source id: each as (request, snapshot, item, facts). Mail handed in
     unsorted while the go was pending, still waiting for it or queued, whose message was never sorted. Mail the person
-    pulled back as work, mail a rule now places or keeps, and changed messages are left out."""
+    pulled back as work, mail a rule now places or keeps, and changed messages are left out. Mail a new source's
+    intake holds for its own go is covered too; `only` limits it to one source."""
+    from engine import source_intake
     from engine.connectors import EventDetails
     from engine.dispatcher import waits_on_first_go
 
@@ -422,13 +437,13 @@ def _awaiting_sorting(ws: Any, store: Any, cfg: Any) -> dict[str, list[tuple[Any
             continue
         if data.get("set_aside") or data.get("auto_closed") or data.get("folded_into") or data.get("dismissed"):
             continue
-        if not (data["state"] == "queued" or waits_on_first_go(data)):
+        if not (data["state"] == "queued" or waits_on_first_go(data) or source_intake.waits_on_go(data)):
             continue
         record = view.get("source", data["source"])
         watched = (record.data.get("watched") if record else None) or {}
         snap = snaps.get((watched.get("source"), watched.get("key")))
         source = sources.get(watched.get("source", ""))
-        if watched.get("change") != "new" or snap is None or source is None:
+        if watched.get("change") != "new" or snap is None or source is None or (only and source.id != only):
             continue
         sd = snap.data
         if not sd.get("message") or sd.get("set_aside") or sd.get("gone") or sd.get("deleted"):
@@ -450,12 +465,15 @@ def _awaiting_sorting(ws: Any, store: Any, cfg: Any) -> dict[str, list[tuple[Any
     return waiting
 
 
-def first_go_sorting(ws: Any, store: Any, cfg: Any, router: Any = None) -> tuple[int, float | None, int]:
+def first_go_sorting(
+    ws: Any, store: Any, cfg: Any, router: Any = None, only: str | None = None
+) -> tuple[int, float | None, int]:
     """What the first go's sorting run adds to the spend: how many runs it makes, what the runs that have a price cost
-    together (None when none has one) and how many have no price. Nothing when no mail waits for the sorting."""
+    together (None when none has one) and how many have no price. Nothing when no mail waits for the sorting.
+    `only` limits it to the mail of one source (a new source's intake)."""
     from engine import mail_sorting
 
-    found = _awaiting_sorting(ws, store, cfg)
+    found = _awaiting_sorting(ws, store, cfg, only)
     if not found:
         return 0, None, 0
     if router is None:
@@ -474,18 +492,28 @@ def first_go_sorting(ws: Any, store: Any, cfg: Any, router: Any = None) -> tuple
     return runs, (total if runs > unpriced else None), unpriced
 
 
-def sort_before_first_go(ws: Any, store: Any, cfg: Any, router: Any = None, now: datetime | None = None) -> int:
+def sort_before_first_go(
+    ws: Any,
+    store: Any,
+    cfg: Any,
+    router: Any = None,
+    now: datetime | None = None,
+    only: str | None = None,
+    go: bool = True,
+) -> int:
     """The person's first go covers the sorting of the mail that was handed in unsorted while it was pending: the
     mail requests still waiting for the go (or queued) whose message was never sorted go through the sorting run first,
     in the usual batches. Those it sets aside are closed as set aside, with the snapshot marked, and don't run; the
     rest are left for the go to start. Mail the person pulled back as work, mail a rule now places or keeps, and
-    changed messages are left alone. Returns how many were set aside. Call it before the go is granted."""
-    waiting = _awaiting_sorting(ws, store, cfg)
+    changed messages are left alone. Returns how many were set aside. Call it before the go is granted. `only`
+    limits it to one source's mail (a new source's intake); `go` is False when nobody has given a go, so the
+    sorting keeps the checks that wait for one."""
+    waiting = _awaiting_sorting(ws, store, cfg, only)
     sources = {s.id: s for s in cfg.watch.sources}
     set_aside = 0
     for source_id, found in waiting.items():
         marks, _note = _assistant_sorted(
-            ws, store, cfg, sources[source_id], router, {item.key: facts for _, _, item, facts in found}, go=True
+            ws, store, cfg, sources[source_id], router, {item.key: facts for _, _, item, facts in found}, go=go
         )
         for req, snap, item, _facts in found:
             mark = marks.get(item.key)
@@ -624,10 +652,12 @@ def _hand_in(
     now: datetime,
     closed: dict[str, Any] | None,
     ctx: WriteContext = _WATCHER,
+    extra: dict[str, Any] | None = None,
 ) -> str:
     """Save the input's text and queue it for the assistant, as outside content: closed at once when a triage rule
     matches, and with any older change to the same item that is still waiting folded in, so they are read once, in
-    order. The records are written as `ctx`."""
+    order. The records are written as `ctx`. `extra`: more fields for the request (a first read taking a source in
+    holds it for one go); a request closed at once keeps only its `intake` mark."""
     folded = [] if closed else _waiting_for(tx, source.id, item.key)
     if folded:
         earlier = [_read_text(ws, tx.get("source", r.data["source"]).data["content_hash"]) for r in folded]
@@ -664,7 +694,7 @@ def _hand_in(
         "source": record.id,
         "origin": "input",
         "state": "queued",
-        "waiting": "With the assistant, starting now",
+        "waiting": STARTING,
         "created_at": now.isoformat(),
     }
     if closed and closed.get("section"):
@@ -675,6 +705,8 @@ def _hand_in(
         )
     elif closed:
         data.update(state="done", waiting=f"Closed by {closed['rule']}: {closed['reason']}", auto_closed=closed)
+    if extra:
+        data.update({k: v for k, v in extra.items() if not closed or k == "intake"})
     request = tx.create("request", data, ctx)
     for older in folded:
         tx.update(
@@ -872,6 +904,22 @@ def hand_in_snapshot_in(
     )
 
 
+def item_of_snapshot(ws: Any, data: dict[str, Any]) -> SourceItem:
+    """A noted item as the connector's own type, with its saved text."""
+    from engine.connectors import EventDetails
+
+    return SourceItem(
+        data["key"],
+        data["title"],
+        _read_text(ws, data["content_hash"]),
+        author=data.get("author"),
+        changed_at=data.get("changed_at"),
+        link=data.get("link"),
+        event=EventDetails(**data["event"]) if data.get("event") else None,
+        message=_message_of(data.get("message")),
+    )
+
+
 def _message_of(details: dict[str, Any] | None) -> Any:
     """A snapshot's kept message details as the connector's own type."""
     from engine.connectors import MessageDetails
@@ -884,13 +932,35 @@ def _message_of(details: dict[str, Any] | None) -> Any:
 def _hand_in_recent(
     ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None, router: Any = None
 ) -> list[str]:
-    from engine.connectors import EventDetails
-
     now = now or datetime.now(UTC)
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)
     if source is None:
         raise StoreError(f"there is no source {source_id}")
     window = timedelta(hours=source.first_run_hours)
+    return _hand_in_window(
+        ws, store, cfg, source_id, now, router, lambda data: is_recent(data, data.get("changed_at"), now, window)
+    )
+
+
+def _hand_in_window(
+    ws: Any,
+    store: Any,
+    cfg: Any,
+    source_id: str,
+    now: datetime,
+    router: Any,
+    accept: Any,
+    extra: dict[str, Any] | None = None,
+    sort: bool = True,
+) -> list[str]:
+    """Hand the assistant the items a source holds that were never handed in and that `accept` takes (it is given
+    the snapshot's data), with the usual triage and, when `sort`, the assistant's sorting of mail. `extra` goes on
+    each request made."""
+    from engine.connectors import EventDetails
+
+    source = next((s for s in cfg.watch.sources if s.id == source_id), None)
+    if source is None:
+        raise StoreError(f"there is no source {source_id}")
     handed = {
         (s.data.get("watched") or {}).get("key")
         for s in store.read().list("source")
@@ -902,7 +972,7 @@ def _hand_in_recent(
         data = snap.data
         if data.get("gone") or data.get("deleted") or data.get("set_aside") or data["key"] in handed:
             continue
-        if not is_recent(data, data.get("changed_at"), now, window):
+        if not accept(data):
             continue
         item = SourceItem(
             data["key"],
@@ -919,7 +989,7 @@ def _hand_in_recent(
         if closed is None and not kept and item.message is not None:
             unplaced[item.key] = facts
         pending.append((snap, item, closed))
-    marks, _note = _assistant_sorted(ws, store, cfg, source, router, unplaced)
+    marks, _note = _assistant_sorted(ws, store, cfg, source, router, unplaced) if sort else ({}, None)
     made = []
     for snap, item, closed in pending:
         sorted_aside = marks.get(item.key) if closed is None else None
@@ -940,6 +1010,7 @@ def _hand_in_recent(
                     _input_text(source, item, "new", None),
                     now,
                     closed or sorted_aside,
+                    extra=extra,
                 )
             )
     return made

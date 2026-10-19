@@ -24,6 +24,11 @@
 .head .coverage { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; font-size: var(--text-xs); line-height: var(--lh-xs); }
 .coverageSource[data-coverage="unread"] { color: var(--danger); font-weight: var(--weight-semibold); }
 .coverageSource[data-coverage="pending"] { font-style: italic; }
+/* The look further back under the coverage line: the list of days, what it would take in, and its buttons; it wraps, never scrolls. */
+.lookBack { flex: 1 1 100%; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); font-size: var(--text-sm); }
+.lookBack select { max-width: 100%; }
+.lookBackFound { flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; margin: 0; }
+.lookBackActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .full { grid-column: 1 / -1; min-width: 0; }
 .full:empty { display: none; }
 

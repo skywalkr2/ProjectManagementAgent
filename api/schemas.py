@@ -553,6 +553,11 @@ class ChangeItem(BaseModel):
     mail_item: str | None = Field(
         None, description="For work on a mail message the app is holding: its id, for 'Set aside' on the row."
     )
+    intake: str | None = Field(
+        None,
+        description="The id of the newly added source whose first read (or look further back) took this in, so its "
+        "results can be listed together.",
+    )
 
 
 class UndoReport(BaseModel):
@@ -1496,7 +1501,12 @@ class QueueLineView(BaseModel):
     POST /api/ai/borrow); `offline` is work that has waited for the network longer than
     the configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;
     `catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,
-    `unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on
+    `unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its
+    label) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how
+    far back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);
+    `intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with
+    something to look over, `outcome` their results counted), one line in place of a line for each until the list is
+    opened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on
     `due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and
     `places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model
     whose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`
@@ -1521,6 +1531,8 @@ class QueueLineView(BaseModel):
         "go",
         "first_go",
         "catch_up_go",
+        "intake_go",
+        "intake_review",
         "refused",
         "restart",
         "handover",
@@ -1573,10 +1585,11 @@ class QueueLineView(BaseModel):
     untrusted: bool = Field(False, description="Built from outside content.")
     estimate_usd: float | None = Field(
         None,
-        description="The estimated cost of everything the line starts (first_go, catch_up_go), when any has a price.",
+        description="The estimated cost of everything the line starts (first_go, catch_up_go, intake_go), when any has "
+        "a price.",
     )
     unpriced: int = Field(
-        0, description="How many of the things the line starts have no price (first_go, catch_up_go)."
+        0, description="How many of the things the line starts have no price (first_go, catch_up_go, intake_go)."
     )
     account: str | None = Field(None, description="The AI account waiting for its limit to reset (paused).")
     until: datetime | None = Field(
@@ -1612,7 +1625,9 @@ class QueueLineView(BaseModel):
         "they go only to the runs they cover.",
     )
     days: int | None = Field(
-        None, description="For a rule_review line: how many days the flagged rules have been given and never applied."
+        None,
+        description="For a rule_review line: how many days the flagged rules have been given and never applied. For "
+        "an intake_go line: how many days back the source's mail was read; none when it holds no mail.",
     )
     origins: dict[str, int] = Field(
         default_factory=dict,
@@ -1693,6 +1708,57 @@ class FirstGoStarted(BaseModel):
 
 class CatchUpStarted(BaseModel):
     started: int = Field(description="How many learning runs for the catch-up list the go started.")
+
+
+class IntakeStarted(BaseModel):
+    started: int = Field(description="How many requests of the source's intake the go started.")
+
+
+class IntakeSeen(BaseModel):
+    requests: list[str] = Field(
+        description="The requests of the source's intake marked seen, which Undo "
+        "(POST /api/watch/{source}/intake/unseen) gives back."
+    )
+
+
+class IntakeUnseenIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    requests: list[str] = Field(description="The requests POST /api/watch/{source}/intake/seen marked.")
+
+
+class IntakeUnseen(BaseModel):
+    restored: int = Field(description="How many requests were put back as not yet seen.")
+
+
+class LookBackIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    days: int = Field(ge=1, description="How many days further back to look, one of the source's choices.")
+
+
+class LookBackView(BaseModel):
+    """What looking further back takes in (GET) or took in (POST): the items, what they cost and how far the source
+    reaches."""
+
+    days: int
+    from_date: date = Field(description="The day asked for: mail from this day on is looked at.")
+    count: int = Field(description="Items the look takes in (before: would take in); none that a rule closes.")
+    estimate_usd: float | None = Field(
+        None,
+        description="About what they cost; after the look, what everything held for the source's go costs. None when "
+        "no price is known.",
+    )
+    unpriced: int = Field(0, description="How many of the items have no price.")
+    reaches: bool = Field(
+        description="False when the source holds no mail as far back as asked: `available_from` is where its mail "
+        "starts and nothing earlier can be taken in."
+    )
+    available_from: date | None = Field(None, description="The oldest mail the source has returned, when it is later.")
+    taken: int = Field(0, description="After the look: the requests made.")
+    started: bool = Field(
+        False, description="After the look: they started at once; False when they wait for the go or none was made."
+    )
 
 
 class FirstGoSorting(BaseModel):
@@ -2640,6 +2706,15 @@ class WatchSourceView(BaseModel):
     )
     failures: int = Field(0, description="Failed reads in a row.")
     problem: ScreenText | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
+    looked_back_to: date | None = Field(
+        None,
+        description="For a source whose first read took it in quietly: the day before which its mail wasn't looked "
+        "at. None for a source with no mail or another kind of first read.",
+    )
+    look_back_choices: list[int] = Field(
+        default_factory=list,
+        description="When `looked_back_to` is set: how many more days the person can ask to look, to pick from.",
+    )
     secrets: list[SourceSecretView] = Field(
         default_factory=list, description="Where each secret setting it has set is read from."
     )
@@ -3070,10 +3145,11 @@ class WatchKindView(BaseModel):
     name: str
     label: str
     plugin: str | None = Field(None, description="The add-on it comes from; None for the app's own.")
-    first_run: Literal["baseline", "recent", "all"] = Field(
-        "baseline",
-        description="What the first read of a source of this kind added here does: baseline only notes what is "
-        "there, recent also hands in the last day's, all hands everything in.",
+    first_run: Literal["intake", "baseline", "recent", "all"] = Field(
+        "intake",
+        description="What the first read of a source of this kind added here does: intake takes it in quietly (one "
+        "summary and one list to look over), baseline only notes what is there, recent also hands in the last day's, "
+        "all hands everything in.",
     )
     items: list[SettingItem]
 

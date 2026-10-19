@@ -57,6 +57,16 @@ export const api = {
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
 
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
+  /** The go for a newly added source's intake: every item held for it starts. */
+  intakeGo: (source: string) => call<S["IntakeStarted"]>("POST", `watch/${id(source)}/intake/go`),
+  /** Opening what a newly added source's intake found: its results show on Today one by one again. */
+  intakeSeen: (source: string) => call<S["IntakeSeen"]>("POST", `watch/${id(source)}/intake/seen`),
+  intakeUnseen: (source: string, requests: string[]) =>
+    call<S["IntakeUnseen"]>("POST", `watch/${id(source)}/intake/unseen`, { requests }),
+  /** What looking further back would take in and cost, before anything is read. */
+  lookBackPreview: (source: string, days: number) =>
+    call<S["LookBackView"]>("GET", `watch/${id(source)}/look-back?days=${days}`),
+  lookBack: (source: string, days: number) => call<S["LookBackView"]>("POST", `watch/${id(source)}/look-back`, { days }),
   watchKinds: () => call<S["WatchKindView"][]>("GET", "watch/kinds"),
   watchAuthors: () => call<S["WatchAuthorOption"][]>("GET", "watch/authors"),
   addSource: (body: S["WatchSourceIn"]) => call<S["SettingsSaved"]>("POST", "watch/sources", body),

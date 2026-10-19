@@ -34,11 +34,14 @@ sources:
     label: Project mail
     enabled: false        # turn on once an app password is set
     every_minutes: 15
+    first_run: intake     # the first read takes in the last first_run_days of mail quietly: one list to look over
+    first_run_days: 14    # older mail isn't read; Today says "Not looked at before <date>"
     settings:
       host: mail.example.com
       user: pm@example.com
       password: env:PROJECT_MAIL_PASSWORD
       folder: Projects
+look_back_choices: [30, 90, 365]   # days a mail source can be asked to look further back, shown as a list
 failures_before_asking: 3
 unread_gap_factor: 2   # a failing source becomes a line on Today after this many of its own read intervals
 default_data_level: internal   # how sensitive a watched source's items are when nothing else says

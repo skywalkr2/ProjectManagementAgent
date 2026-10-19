@@ -13,6 +13,12 @@ from api.schemas import (
     CloseKindCountView,
     CloseMeasureView,
     Created,
+    IntakeSeen,
+    IntakeStarted,
+    IntakeUnseen,
+    IntakeUnseenIn,
+    LookBackIn,
+    LookBackView,
     ReadVersion,
     RecordRef,
     SetAsideDone,
@@ -28,7 +34,7 @@ from api.schemas import (
     WatchRunView,
     WatchSourceView,
 )
-from engine import closes, set_aside, setup, watch
+from engine import closes, set_aside, setup, source_intake, watch
 from engine import settings as settings_screens
 from engine.config import Config, ConfigError, load_config
 from engine.connectors import declared_reads, reads
@@ -82,6 +88,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         failures = watch.failures_in_a_row(store, source.id)
         items = [s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]]
         problem = watch.problem_text(store, source.id)
+        back_to = source_intake.back_to_of(store.read(), source.id)
         return WatchSourceView(
             id=source.id,
             label=source.label or source.id,
@@ -106,6 +113,8 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             read_at=str(read.data["started_at"]) if read else None,
             failures=failures,
             problem=problem,
+            looked_back_to=back_to,
+            look_back_choices=list(current().watch.look_back_choices) if back_to else [],
             secrets=secret_states(connector, source.settings),
         )
 
@@ -139,9 +148,73 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         events.changed()
-        if result.new or result.changed or result.removed:
+        if result.new or result.changed or result.removed or result.taken_in:
             worker.poke()
         return view(source)
+
+    def need_source(source_id: str) -> None:
+        if not any(s.id == source_id for s in cfg.watch.sources):
+            raise HTTPException(status_code=404, detail=f"there is no source {source_id}")
+
+    @r.post("/watch/{source_id}/intake/go")
+    def intake_go(source_id: str) -> IntakeStarted:
+        """The person's go for a newly added source's intake: the mail waiting for sorting is sorted, then every request
+        held for the go starts."""
+        need_source(source_id)
+        try:
+            started = source_intake.grant_go(ws, store, current(), source_id)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        if started:
+            worker.poke()
+            events.changed()
+        return IntakeStarted(started=started)
+
+    @r.post("/watch/{source_id}/intake/seen")
+    def intake_seen(source_id: str) -> IntakeSeen:
+        """The person opened the list of what the intake found: its results show on Today one by one again if they
+        still need a look. Undo is POST /api/watch/{source_id}/intake/unseen."""
+        need_source(source_id)
+        marked = source_intake.mark_seen(store, source_id)
+        if marked:
+            events.changed()
+        return IntakeSeen(requests=marked)
+
+    @r.post("/watch/{source_id}/intake/unseen")
+    def intake_unseen(source_id: str, body: IntakeUnseenIn) -> IntakeUnseen:
+        """Undo marking the intake seen: the results are one line on Today again."""
+        need_source(source_id)
+        restored = source_intake.mark_unseen(store, body.requests)
+        if restored:
+            events.changed()
+        return IntakeUnseen(restored=restored)
+
+    def look_back_view(found: source_intake.LookBack) -> LookBackView:
+        return LookBackView(**vars(found))
+
+    @r.get("/watch/{source_id}/look-back")
+    def look_back_preview(source_id: str, days: int) -> LookBackView:
+        """What looking `days` further back would take in and about what it would cost, and whether the source holds
+        mail that far back. Writes nothing."""
+        need_source(source_id)
+        try:
+            return look_back_view(source_intake.look_back_preview(ws, store, current(), source_id, days))
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+
+    @r.post("/watch/{source_id}/look-back")
+    def look_back(source_id: str, body: LookBackIn) -> LookBackView:
+        """Look further back: the older mail the source already returned is taken in the same quiet way as its first
+        read, under the same go rules, and the day it was looked back to moves."""
+        need_source(source_id)
+        try:
+            found = source_intake.look_further_back(ws, store, current(), source_id, body.days)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        if found.taken:
+            worker.poke()
+            events.changed()
+        return look_back_view(found)
 
     @r.get("/auto-closed")
     def auto_closed() -> list[AutoClosedView]:

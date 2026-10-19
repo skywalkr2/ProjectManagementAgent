@@ -47,6 +47,14 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   const latest = useRef(changes.data);
   latest.current = changes.data;
   const [wanted, setWanted] = useState<string | null>(null);
+  // A Today line for what a newly added source's intake found: the list narrows to that source's intake until it is cleared.
+  const [intake, setIntake] = useState<string | null>(null);
+  const watched = useQuery({ queryKey: ["watch"], queryFn: api.watchSources, enabled: intake !== null });
+  useReveal("intake", (source) => {
+    setFilter("all");
+    setIntake(source);
+    return true;
+  });
   const openChangeset = (changeset: string): boolean => {
     const all = latest.current;
     const item = all?.find((c) => c.changeset?.id === changeset);
@@ -100,7 +108,7 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   const firstLine = filter === "attention" && first.count > 0;
   const rows = (changes.data ?? []).filter(
     (c) =>
-      shown?.has(c.id) &&
+      (intake !== null ? c.intake === intake : shown?.has(c.id)) &&
       !waitingGo.has(c.id) &&
       !(firstLine && c.first_go) &&
       (filter === "all" || (filter === "attention") === needsAttention(c)),
@@ -123,6 +131,14 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
       <p className="sr" aria-live="polite">
         {announce}
       </p>
+      {intake !== null && (
+        <p className="hint" data-intake-filter="">
+          {t("changes.intake.title", { source: watched.data?.find((w) => w.id === intake)?.label ?? intake })}{" "}
+          <button type="button" className="btn" onClick={() => setIntake(null)}>
+            {t("changes.intake.show_all")}
+          </button>
+        </p>
+      )}
       {waiting.length > 0 && (
         <button
           type="button"

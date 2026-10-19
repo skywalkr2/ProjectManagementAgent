@@ -1790,14 +1790,23 @@ class WatchSource(ConfigModel):
     enabled: bool = Field(True, description="Off keeps its history and stops reading it.")
     every_minutes: int = Field(60, ge=5, description="How often it is read while the app runs.")
     project: str | None = Field(None, description="The project its changes are about, if they all are.")
-    first_run: Literal["baseline", "recent", "all"] = Field(
-        "baseline",
-        description="baseline: the first read only notes what is there; recent: it also hands in what arrived, "
-        "changed or happens within first_run_hours of the read (the last day's mail, today's meetings); all: "
-        "everything there is handed in as new.",
+    first_run: Literal["intake", "baseline", "recent", "all"] = Field(
+        "intake",
+        description="What the first read of a source does. intake: it is taken in quietly: nothing is reported as new "
+        "one by one; the mail of the last first_run_days and everything in any other kind of source is handed in "
+        "together, priced as one total, and left as one list to look over. baseline: it only notes what is there; "
+        "recent: it also hands in what arrived, changed or happens within first_run_hours of the read (the last "
+        "day's mail, today's meetings); all: everything there is handed in as new.",
     )
     first_run_hours: int = Field(
         24, ge=1, le=336, description="With first_run recent: how many hours around the first read count as recent."
+    )
+    first_run_days: int = Field(
+        14,
+        ge=1,
+        le=365,
+        description="With first_run intake, for mail: how many days back the first read looks. Older mail isn't "
+        "read, and Today says so. Any other kind of source is taken in whole.",
     )
     report_removed: bool = Field(True, description="Hand in an item that disappeared from the source.")
     data_level: Literal["open", "internal", "restricted"] | None = Field(
@@ -1866,6 +1875,11 @@ class WatchFile(FileModel):
         "each message's sender, subject line and the mail service's category (never the text) and says work, "
         "personal or sales; unsure counts as work, so nothing is hidden on a guess. rules: no run; only the rules "
         "set mail aside.",
+    )
+    look_back_choices: list[int] = Field(
+        default_factory=lambda: [30, 90, 365],
+        description="How many more days further back than the first read the person can ask a mail source to look, "
+        "offered as a list to pick from. Each shows its item count and cost before anything is read.",
     )
     sorting_batch: int = Field(
         25,

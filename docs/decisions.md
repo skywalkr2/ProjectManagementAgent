@@ -339,6 +339,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   Decided by the main session (the steward proposal said "builds on actions and follow-ups").
   **Impact:** design 6.33 (CHANGES.md section 94); every action ending from an input now waits for the person, where
   before `action.close` applied at once.
+- **Also (2026-10-19): a new source is taken in quietly (S1, designer F6).** `first_run: intake` is the default, and
+  sign-in sources use it: mail of the last `first_run_days` (14) and every item of any other kind are taken in as one
+  priced total, started by itself under the amount to confirm (and when known, or when unpriced runs need no go),
+  otherwise held for one go; results fold into one "Look over what was found" line; "Not looked at before <date>" with
+  a look further back that shows count and cost first. A source taken whole (a tracker, a folder) has no window, since
+  the designer's miss was old open items in a tracker. Decided by the main session.
+  **Impact:** design 6.32, 6.4, 4 and 5 (CHANGES.md section 93).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

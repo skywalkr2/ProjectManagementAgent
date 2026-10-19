@@ -13,6 +13,7 @@ import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { onShowNewLines } from "../lib/queue-hold";
 import { afterMove, heldAnswers, heldTitle, moveTitle } from "../lib/queue-words";
+import { revealOrKeep } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
@@ -458,6 +459,17 @@ function reviewParts(line: QueueLine) {
   return { kinds, done, refusedOnly };
 }
 
+/** What an intake's results were, in the order a person thinks of them: "3 actions, 2 questions, 4 held for you". */
+const INTAKE_KINDS = [...REVIEW_KINDS, "other", "held", "refused"] as const;
+
+function useIntakeWords(): (line: QueueLine) => string {
+  const { tn } = useWords();
+  return (line) =>
+    INTAKE_KINDS.filter((k) => ((line.outcome ?? {})[k] ?? 0) > 0)
+      .map((k) => tn(`queue.intake_review.${k}`, (line.outcome ?? {})[k] ?? 0))
+      .join(", ");
+}
+
 /** The words a review line counts, "3 actions it added" when it did one kind of thing, else "3 things it did". */
 function useReviewCount(): (line: QueueLine) => string {
   const { tn } = useWords();
@@ -504,6 +516,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return line.count === 1 && line.subject ? line.subject : tn("queue.overdue", line.count);
       case "review":
         return line.count === 1 && line.subject && !reviewParts(line).refusedOnly ? line.subject : reviewCount(line);
+      case "intake_review":
+        return tn("queue.intake_review.title", line.count, { source: line.subject ?? line.source ?? "" });
       case "send": {
         const q = (line.questions ?? []).length;
         const a = (line.actions ?? []).length;
@@ -531,6 +545,7 @@ function QueueRow(props: {
   const titleWords = useTitleWords();
   const lineTitle = useLineTitle();
   const reviewCount = useReviewCount();
+  const intakeWords = useIntakeWords();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes, enabled: props.line.kind === "go" });
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
   const { line } = props;
@@ -687,6 +702,30 @@ function QueueRow(props: {
             run: () => void act(() => api.looksGood(line.changeset ?? ""), () => ({ message: t("toast.looks_good"), many: (n) => tn("toast.looks_good_many", n), undo: () => api.reopen(line.changeset ?? "") })),
           },
           menu: [show, { id: "send-back", label: t("changes.send_back"), run: () => select(true, true) }],
+        };
+      }
+      case "intake_review": {
+        // Opening the list is what clears the line (Undo puts it back); the list narrows to what the source's intake found.
+        const source = line.source ?? "";
+        const label = line.subject ?? source;
+        const seen = () =>
+          act(
+            () => api.intakeSeen(source),
+            (done) => ({ message: t("queue.intake_review.seen_done", { source: label }), undo: () => api.intakeUnseen(source, done.requests) }),
+          );
+        return {
+          pill: t("queue.pill.review"),
+          tone: "neutral",
+          meta: meta(intakeWords(line)),
+          primary: {
+            label: t("queue.intake_review.open"),
+            run: () => {
+              props.handlers.onOpenView?.("work/changed");
+              revealOrKeep("intake", source);
+              void seen();
+            },
+          },
+          menu: [{ id: "seen", label: t("queue.intake_review.seen"), run: () => void seen() }],
         };
       }
       case "send": {

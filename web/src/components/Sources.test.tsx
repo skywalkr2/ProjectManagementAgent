@@ -385,6 +385,16 @@ describe("adding a source", () => {
     expect(form.querySelector("[data-first-read]")).toBeNull();
   });
 
+  test("a kind that is taken in quietly says what the first read does: one list to look over, and older mail isn't read", async () => {
+    const user = userEvent.setup();
+    open([], [], { "GET watch/kinds": () => [kind("folder", "A folder", null, [field("path", "text")], "intake")] });
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    const form = await screen.findByRole("form", { name: "Add a source" });
+    await user.click(within(form).getByRole("radio", { name: "A folder" }));
+    expect(within(form).getByText(/taken in quietly: you get one list to look over, not a line for each item/)).toBeInTheDocument();
+    expect(within(form).getByText(/Older mail isn't read, and Today says how far back it looked/)).toBeInTheDocument();
+  });
+
   test("how often is 15, 30, 60 or 240 minutes", async () => {
     const user = userEvent.setup();
     open([]);
