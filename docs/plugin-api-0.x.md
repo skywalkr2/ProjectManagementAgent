@@ -10,6 +10,18 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.81 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change: a Today line without a `group` works as before.
+
+- **A Today line names its group:** `TodayLine.group` is one of `TODAY_GROUPS` (`"decide"`, `"risk"`, `"review"`,
+  `"send"`), the groups of the core's own queue. The line sits among the core's lines of that kind, below them and in
+  `until` order (earliest first), so a plugin can't put itself first; its second line names the plugin quietly. A line
+  with no group shows under "More for today" at the end, and `cockpit pack check` warns about it (a warning, not a
+  failure). A group that isn't one of the four fails the contributor like any other bad line.
+- **Core record:** `Question.followed_up` (the days the person was chased about a question after it went out, oldest
+  first). A chase restarts the wait for an answer and never changes `sent_at`. A plugin that reads questions sees it.
+
 ## What 0.3.80 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.

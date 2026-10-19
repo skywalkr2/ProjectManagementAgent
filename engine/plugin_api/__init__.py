@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.80"
+PLUGIN_API_VERSION = "0.3.81"
 
 
 class Settings(BaseModel):
@@ -783,6 +783,11 @@ CORE_LINE_ACTIONS: dict[str, str | None] = {
 }
 
 
+#: The groups of Today's queue, in the order the core ranks them: what to decide, what is at risk, what to review and
+#: what to send or follow up on. A plugin's Today line names one of them as its `group`.
+TODAY_GROUPS: tuple[str, ...] = ("decide", "risk", "review", "send")
+
+
 @dataclass
 class TodayLine:
     """One line a plugin adds to Today: `text` is one plain line for the person (no internal terms); `about` is the
@@ -791,7 +796,12 @@ class TodayLine:
     record, "review" what waits on it (the assistant's answer as a `changeset`, or a draft on the record), give the
     "go" to a queued `request`, "answer" a `question`, or "move-stage" (a kind with stages). A core action needs
     `about`. `why` and `until` say why it is waiting and until when, when it is. `id` is stable across calls, so the
-    same line isn't shown twice."""
+    same line isn't shown twice. `group` is where it sits among the core's own lines, one of `TODAY_GROUPS`: "decide"
+    (a choice or an answer the person owes), "risk" (something that will go wrong if left), "review" (work to look
+    over or approve) or "send" (something to send or follow up). Within its group the core ranks lines (its own first,
+    then plugins' by `until`, earliest first), so a plugin can't put itself first, and the line names its plugin quietly
+    in its second line. A line with no `group` shows under "More for today" at the end, and the plugin check warns
+    about it; any other value fails the contributor like any bad line."""
 
     id: str
     text: str
@@ -799,6 +809,7 @@ class TodayLine:
     action: str | None = None
     why: str = ""
     until: str | None = None  # an ISO date
+    group: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1562,7 +1573,8 @@ class Registrar:
         whenever Today is shown, so it must be quick and deterministic and never call AI. A line's `action` is one
         of this plugin's person actions or task kinds, or one of the core's own (`CORE_LINE_ACTIONS`), which need
         `about`: "go" a `request` waiting for the go, "answer" a `question`, "move-stage" a record of a kind with
-        stages, and "open" or "review" any record. A line that counts several items ("three runs wait for your go")
+        stages, and "open" or "review" any record. A line names the `group` it belongs in (`TODAY_GROUPS`), so it sits
+        among the core's own lines of that kind. A line that counts several items ("three runs wait for your go")
         names the one record its button acts on as `about`; when no single record fits, use "open" on the most
         relevant one, or leave `action` unset and let the line inform. A line naming a core action with the wrong
         `about` fails the contributor like any bad line."""
@@ -2083,6 +2095,7 @@ __all__ = [
     "InterfaceItem",
     "TodayLine",
     "CORE_LINE_ACTIONS",
+    "TODAY_GROUPS",
     "PacketContext",
     "LongText",
     "Unit",

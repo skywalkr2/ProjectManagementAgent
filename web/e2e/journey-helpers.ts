@@ -99,8 +99,7 @@ export async function visit(page: Page) {
 
 export const setupStep = (page: Page, name: string) => page.getByLabel(name, { exact: true });
 
-/** Puts away the toasts on screen, as a person does before moving on. From 1280px they sit over the navigation column
- * (design 7.6), and with motion reduced, as these tests ask, they stay until dismissed. */
+/** Puts away the toasts on screen, as a person does before moving on. */
 export async function dismissToasts(page: Page) {
   const dismiss = page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Dismiss" });
   while (await dismiss.count()) await dismiss.last().click();

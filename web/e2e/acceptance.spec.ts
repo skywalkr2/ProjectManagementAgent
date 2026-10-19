@@ -119,7 +119,7 @@ async function handIn(page: Page, c: Case) {
 
 /** Opens a view from the sidebar, or on a phone from the bottom bar's sheets. */
 async function go(page: Page, label: string) {
-  // As a person does before moving on: from 1280px the toasts sit over the navigation, and with motion reduced they stay.
+  // As a person does before moving on.
   const dismiss = page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Dismiss" });
   while (await dismiss.count()) await dismiss.last().click();
   const nav = page.getByRole("navigation", { name: "Views" });
@@ -553,12 +553,10 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
     await card.getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toBeVisible();
-    // From 1280px the toast is at the bottom left, over the navigation column, so it never covers a row's controls.
+    // From 1280px the toast is at the bottom left of the content area, never over the navigation.
     const toast = (await page.getByRole("region", { name: "Notifications" }).boundingBox())!;
     const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
-    const content = (await page.getByRole("main").boundingBox())!;
-    expect(toast.x).toBeGreaterThanOrEqual(0);
-    expect(toast.x + toast.width).toBeLessThanOrEqual(Math.max(nav.x + nav.width, content.x));
+    expect(toast.x).toBeGreaterThanOrEqual(nav.x + nav.width);
     const sent = (await getJson<Section[]>(page, "api/followups")).find((x) => x.person === target.person)!;
     for (const q of questions) {
       const now = sent.questions.find((x) => x.id === q.id)!;
@@ -790,12 +788,13 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("from 1680px the inspector sits between the queue and the rail, empty until a line is picked", async ({ page }) => {
+  test("from 1680px the inspector sits between the queue and the rail, and is never blank: it shows the first line, or says nothing needs you", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1000 });
     await signIn(page);
     const inspector = page.getByRole("complementary", { name: "Details" });
     await expect(inspector).toBeVisible();
-    await expect(inspector).toContainText("Pick a line to see its items here.");
+    await expect(inspector.getByRole("heading", { level: 2 })).not.toHaveText("");
+    await expect(inspector).not.toContainText("Pick a line to see its items here.");
     const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
     const box = (await inspector.boundingBox())!;
     const rail = (await page.locator('[data-col="agenda"]').boundingBox())!;

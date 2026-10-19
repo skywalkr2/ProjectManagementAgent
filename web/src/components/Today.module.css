@@ -36,7 +36,14 @@
 .item[data-selected] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .empty { margin: 0; padding: var(--space-6) var(--row-px); color: var(--text-muted); font-size: var(--text-sm); }
 .empty p { margin: 0; }
-.newbar { display: flex; justify-content: center; padding: var(--space-2) var(--row-px); border-bottom: 1px solid var(--border); background: var(--surface); }
+/* "N new · Show" sticks to the top of the queue while the list scrolls under it, so it is always in reach. */
+.newbar {
+  position: sticky; top: var(--header-h); z-index: 2; display: flex; justify-content: center;
+  padding: var(--space-2) var(--row-px); border-bottom: 1px solid var(--border); background: var(--surface);
+}
+/* A line settled somewhere else: muted and struck through, with nothing to press, until the person moves on. */
+.item [data-ghost] { background: var(--surface-sunk); color: var(--text-muted); }
+.item [data-ghost] s { color: var(--text-muted); }
 .tag {
   display: inline-block; margin-right: var(--space-2); padding: 0 var(--space-2); border-radius: var(--radius-sm);
   background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs);

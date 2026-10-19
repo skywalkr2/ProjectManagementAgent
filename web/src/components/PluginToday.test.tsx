@@ -3,11 +3,28 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
-import { PluginToday } from "./PluginToday";
+import { PluginRows, usePluginToday } from "./PluginToday";
+import { QueueGroup } from "./QueueGroup";
 import { WhatChanged } from "./WhatChanged";
 
 function line(extra: Partial<S["TodayLineView"]> = {}): S["TodayLineView"] {
   return { plugin: "demo", id: "L-1", text: "Chapter 3 is ready to look at", about: null, action: null, action_is: null, why: "", until: null, ...extra };
+}
+
+/** Today's own placing of the lines, as the queue does it: the ones naming no group under the fallback heading. */
+function PluginToday(props: { onOpenRecord?: (kind: string, id: string) => void }) {
+  const plugins = usePluginToday(props.onOpenRecord);
+  const loose = plugins.in(null);
+  return (
+    <>
+      {loose.length > 0 && (
+        <QueueGroup id="plugin-today-title" title="More for today">
+          <PluginRows lines={loose} plugins={plugins} />
+        </QueueGroup>
+      )}
+      {plugins.review}
+    </>
+  );
 }
 
 const about = { kind: "demo/chapter", id: "CH-3" };
@@ -245,7 +262,7 @@ test("answer opens the question where the questions list shows it", async () => 
       name: "Pat Example",
       is_pm: true,
       questions: [
-        { id: "Q-5", title: "Which cover?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
+        { id: "Q-5", title: "Which cover?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
       ],
       actions: [],
       message: "",

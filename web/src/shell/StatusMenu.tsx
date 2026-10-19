@@ -13,8 +13,10 @@ import type { LiveState } from "../lib/live";
 import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
+import { Icon } from "../ui/Icon";
 import { StatusChip } from "../ui/StatusChip";
 import { afterClose } from "../ui/afterClose";
+import { useAlive } from "./AssistantLine";
 import { isWarn, worstState, type StatusKind } from "./status";
 import styles from "./StatusMenu.module.css";
 
@@ -52,6 +54,8 @@ export function StatusMenu(props: {
   demo: boolean;
   /** Opens the setup guide, at a step when one is named. */
   onOpenGuide: (step?: string) => void;
+  /** A phone: the header has no room for the assistant's own line, so the popover says its state. */
+  narrow?: boolean;
 }) {
   const { t, tn } = useWords();
   const act = useAct();
@@ -59,6 +63,7 @@ export function StatusMenu(props: {
   const what = useRestartWhat();
   const total = useTotal();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const alive = useAlive();
   const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase });
   const word = t(CHIP_WORD[kind]);
   const b = status.data?.backup;
@@ -103,6 +108,14 @@ export function StatusMenu(props: {
                 {t("status.refresh")}
               </Button>
             </li>
+            {props.narrow && alive && (
+              <li className={[styles.state, alive.tone === "ok" ? "" : styles.warn].join(" ")} data-state="alive" data-tone={alive.tone}>
+                <p className={styles.name}>{t("alive.name")}</p>
+                <p className={`${styles.text} ${styles.full}`}>
+                  <Icon name={alive.icon} size={16} label={t(`alive.icon.${alive.tone}`)} /> {alive.say}
+                </p>
+              </li>
+            )}
             {b && (
               <li className={[styles.state, b.needs_attention ? styles.warn : ""].join(" ")} data-state="backup">
                 <p className={styles.name}>{t("status.backup")}</p>

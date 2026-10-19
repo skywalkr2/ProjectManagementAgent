@@ -1141,6 +1141,36 @@ class MessageSettings(ConfigModel):
     greeting: str = Field("Hi {first_name},", description="The first line of a copied message.")
     actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
     closing: str = Field("Thanks!", description="The last line of a copied message.")
+    nudge_intro: str = Field(
+        "Following up on {count} things from my note on {date}:",
+        description="The line above the list in a follow-up message: {count} is how many things it lists and {date} "
+        "is when the first message about them went out.",
+    )
+    nudge_intro_one: str = Field(
+        "Following up on one thing from my note on {date}:",
+        description="The same line when the follow-up message lists one thing.",
+    )
+    nudge_ask: str = Field(
+        "A quick yes or no, or a date, for each is plenty.",
+        description="The line under the list in a follow-up message, asking for the smallest useful reply.",
+    )
+    nudge_ask_one: str = Field(
+        "A quick yes or no, or a date, is plenty.",
+        description="The same line when the follow-up message lists one thing.",
+    )
+    nudge_overdue: str = Field(
+        "(it was due {date})",
+        description="What follows an action in a follow-up message when its due date has passed: {date} is that date.",
+    )
+    nudge_second_intro: str = Field(
+        "Checking in again on what I first asked on {date}:",
+        description="The line above the list in a second or later follow-up message: {date} is when the first message "
+        "went out.",
+    )
+    nudge_second_ask: str = Field(
+        "Is there someone else I should ask, or a date I can plan around?",
+        description="The line under the list in a second or later follow-up message.",
+    )
     folded_note: str = Field(
         "Also came up: {text} (\u201c{quote}\u201d)",
         description="The line added to an action's notes when another action is added to it instead of being kept "
@@ -1432,6 +1462,7 @@ DEFAULT_SHORTCUTS = {
     "ask": "/",
     "next_pane": "]",
     "previous_pane": "[",
+    "show_new": "N",
 }
 
 
@@ -1466,6 +1497,13 @@ class FollowupsSettings(ConfigModel):
         le=365,
         description="A question sent to a person is chased once this many days have passed with no reply. A dated "
         "action is also chased only after this many days with no word.",
+    )
+    second_nudge_items: int = Field(
+        2,
+        ge=1,
+        le=20,
+        description="A second or later follow-up message to a person names only this many of what is still waiting, "
+        "the longest-waiting first, and asks who else to ask or for a date.",
     )
 
 

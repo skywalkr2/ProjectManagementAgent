@@ -167,6 +167,7 @@ class PluginHost:
         self.candidates: dict[str, Path] = {}
         self.notes: dict[str, list[str]] = {}  # things the person should know about a plugin that still loads
         self.failures: dict[tuple[str, str], int] = {}  # (plugin, where) -> failures in a row
+        self._ungrouped: set[tuple[str, str]] = set()  # Today contributors already warned about lines with no group
         self._items: dict[str, tuple[str, str, Any]] = {}  # interface item key -> (provider, interface, raw item)
         self._modules: list[str] = []
         self._queue: deque = deque()
@@ -513,7 +514,7 @@ class PluginHost:
 
     def today(self) -> list[tuple[str, Any]]:
         """(plugin, TodayLine) from every running plugin's Today contributors, each checked."""
-        from engine.plugin_api import CORE_LINE_ACTIONS, ReadView, TodayLine
+        from engine.plugin_api import CORE_LINE_ACTIONS, TODAY_GROUPS, ReadView, TodayLine
 
         found = []
         for plugin, registrar in sorted(self.registrars.items()):
@@ -528,6 +529,8 @@ class PluginHost:
                             raise ValueError("lines must be TodayLine objects")
                         if not line.text.strip() or "\n" in line.text or len(line.text) > 300:
                             raise ValueError("a Today line is one line of up to 300 characters")
+                        if line.group is not None and line.group not in TODAY_GROUPS:
+                            raise ValueError(f"a Today line's group is one of {', '.join(TODAY_GROUPS)}")
                         if line.action in CORE_LINE_ACTIONS:
                             needs = CORE_LINE_ACTIONS[line.action]
                             if line.about is None or (needs is not None and line.about[0] != needs):
@@ -546,6 +549,15 @@ class PluginHost:
                     self.failed(plugin, f"Today lines {name}", err)
                     continue
                 self.succeeded(plugin, f"Today lines {name}")
+                if any(line.group is None for line in lines) and (plugin, name) not in self._ungrouped:
+                    self._ungrouped.add((plugin, name))
+                    log.warning(
+                        "Plugin %s: Today lines %s name no group, so they show under the fallback heading; "
+                        "set group= on each line to one of %s",
+                        plugin,
+                        name,
+                        ", ".join(TODAY_GROUPS),
+                    )
                 found += [(plugin, line) for line in lines]
         return found
 

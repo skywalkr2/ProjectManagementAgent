@@ -16,10 +16,11 @@ from typing import Any
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
+from engine.plugin_api import TODAY_GROUPS
 from engine.titles import Title, head_of, title_for
 from engine.today import zone
 
-GROUPS = ("decide", "risk", "review", "send")
+GROUPS = TODAY_GROUPS
 
 # What a changeset's ops did, by the outcome word the screen uses.
 _OUTCOME = {
@@ -74,7 +75,8 @@ class Line:
     the person last looked), catch_up (what the assistant learned from corrections made before it could: `count`
     waiting and `left_out`, how many kinds of correction were too many for one list), extractor (a kind of file that
     isn't being read: `file_kind` is the kind, and `text` why), send or nudge. `count` is how
-    many things the line covers; `text` the decision, question or held item in one line; `title` the input the line
+    many things the line covers; `text` the decision, question or held item in one line; `subject` the one thing's own
+    words when a review or overdue line covers exactly one (the screen titles it by them); `title` the input the line
     is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as the engine said
     it."""
 
@@ -89,6 +91,7 @@ class Line:
     due: str | None = None
     waiting_days: int | None = None
     waiting: str | None = None
+    subject: str | None = None
     request: str | None = None
     changeset: str | None = None
     question: str | None = None
@@ -470,6 +473,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 actions=[a for _, a in overdue],
                 due=overdue[0][0].isoformat(),
                 waiting_days=(today - overdue[0][0]).days,
+                subject=_one_text(reader, overdue[0][1]) if len(overdue) == 1 else None,
                 since=overdue[0][0].isoformat(),
             )
         )
@@ -491,7 +495,8 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 continue
             word = _OUTCOME.get((o.get("op") or {}).get("op", ""), "other")
             outcome[word] = outcome.get(word, 0) + 1
-        counted = sum(1 for o in cs.get("ops", []) if o.get("status") in ("applied", "held"))
+        shown = [o for o in cs.get("ops", []) if o.get("status") in ("applied", "held")]
+        counted = len(shown)
         if not counted and not outcome.get("refused"):
             continue  # nothing applied, held or refused, so nothing to look over
         # When everything was refused, the line counts what was refused, so the work never waits without a line.
@@ -503,6 +508,9 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 kind="review",
                 count=counted,
                 title=title(d, cs),
+                subject=(shown[0].get("label") or _op_text(shown[0].get("op") or {}) or None)
+                if len(shown) == 1
+                else None,
                 request=req.id,
                 changeset=d["changeset"],
                 outcome=outcome,
@@ -754,6 +762,11 @@ def _op_text(op: dict[str, Any]) -> str:
         if op.get(key):
             return str(op[key])
     return ""
+
+
+def _one_text(reader: Any, action_id: str) -> str | None:
+    action = reader.get("action", action_id)
+    return str(action.data["text"]) if action is not None and action.data.get("text") else None
 
 
 def _created(reader: Any, kind: str, record_id: str) -> str:

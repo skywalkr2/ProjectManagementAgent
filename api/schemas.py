@@ -77,6 +77,27 @@ class OwnerPick(BaseModel):
     )
 
 
+class NudgeSent(BaseModel):
+    """A follow-up message the PM sent: what it listed (from `FollowupSection.nudge`) and its text as sent, to notice
+    edits."""
+
+    text: str | None = Field(None, description="The message as the PM sent it, to notice edits.")
+    question_ids: list[str] = []
+    action_ids: list[str] = []
+
+
+class NudgeUnsent(BaseModel):
+    """What undoes a follow-up marked as sent: the response that recorded it, sent back."""
+
+    question_ids: list[str] = []
+    action_ids: list[str] = []
+    on: str = Field(description="The day the chases were recorded.")
+    previous_told: dict[str, str | None] = Field(
+        default_factory=dict, description="The day each action's person was told before the chase, by action id."
+    )
+    signal_at: str | None = Field(None, description="When the edit of the message was recorded, if it was edited.")
+
+
 class Unfollow(BaseModel):
     on: str = Field(description="The day the chase was recorded, from the response that recorded it.")
     previous_told: str | None = Field(None, description="The day they were told before the chase, if any.")
@@ -206,6 +227,18 @@ class FollowedUp(BaseModel):
     request: str | None = Field(
         None, description="The work queued for the assistant from the note that came with the chase, if there was one."
     )
+
+
+class NudgeRecorded(BaseModel):
+    questions: int
+    actions: int
+    question_ids: list[str]
+    action_ids: list[str]
+    on: str = Field(description="The day the chases were recorded (a date).")
+    previous_told: dict[str, str | None] = Field(
+        description="The day each action's person was told before, by action id."
+    )
+    signal_at: str | None = Field(None, description="When an edit of the message was recorded, if it was edited.")
 
 
 class HoldChanged(BaseModel):
@@ -555,8 +588,12 @@ class FollowupQuestion(BaseModel):
     kind: str
     status: Literal["open", "sent"]
     project_name: str | None = Field(None, description="The projects it is about, by name, joined with commas.")
-    sent: str | None
-    waiting_days: int | None
+    sent: str | None = Field(description="The day it was first sent; chases never change it.")
+    followed_up: str | None = Field(None, description="The day the person was last chased about it (a date).")
+    chases: int = Field(0, description="How many times the person was chased about it after it was sent.")
+    waiting_days: int | None = Field(
+        description="Days since the last word to the person: the message, or the latest chase."
+    )
     chase_due: bool = Field(
         False, description="Whether it has gone unanswered as long as the follow-up rule says, so chasing is next."
     )
@@ -576,6 +613,7 @@ class FollowupAction(BaseModel):
     told: str | None
     told_days: int | None
     followed_up: str | None = Field(None, description="The day the person was last chased about it (a date).")
+    chases: int = Field(0, description="How many times the person was chased about it.")
     on_hold: str | None = Field(
         None, description="What the action waits for while it is on hold; an action on hold is never chased."
     )
@@ -587,6 +625,17 @@ class FollowupAction(BaseModel):
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
 
 
+class NudgeView(BaseModel):
+    """A drafted follow-up message for one person (built from a template, no AI run): what has gone unanswered as long
+    as the follow-up rule says. `round` is which follow-up it is: 1, or 2 and up once the person was chased before, when
+    it lists less and asks who else to ask. The ids are what it lists, and what Mark sent records a chase on."""
+
+    text: str
+    round: int
+    question_ids: list[str]
+    action_ids: list[str]
+
+
 class FollowupSection(BaseModel):
     person: str
     name: str
@@ -595,6 +644,7 @@ class FollowupSection(BaseModel):
     actions: list[FollowupAction]
     message: str
     to_send: int
+    nudge: NudgeView | None = Field(None, description="The follow-up message to draft, when anything is due one.")
 
 
 class SentCounts(BaseModel):
@@ -1312,6 +1362,11 @@ class QueueLineView(BaseModel):
     due: date | None = None
     waiting_days: int | None = None
     waiting: ScreenText | None = Field(None, description="Why the work stopped, in plain words.")
+    subject: str | None = Field(
+        None,
+        description="The one thing's own words when a review or overdue line covers exactly one, which the screen "
+        "uses as the line's title; null when the line groups several.",
+    )
     request: str | None = None
     changeset: str | None = None
     question: str | None = None
@@ -1476,6 +1531,10 @@ class TodayLineView(BaseModel):
     )
     why: ScreenText = ""
     until: str | None = None
+    group: Literal["decide", "risk", "review", "send"] | None = Field(
+        None,
+        description="Which of the queue's groups the line sits in; none puts it under the fallback heading at the end.",
+    )
 
 
 class PanelView(BaseModel):

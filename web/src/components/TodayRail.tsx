@@ -348,6 +348,7 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
   const noted = useNoted();
   const row = useRef<HTMLLIElement>(null);
   const [noting, setNoting] = useState(false);
+  const [ticked, setTicked] = useState(false);
   const { item } = props;
   const hold = useHold({ id: item.action, on_hold: item.on_hold });
   const change = useChangeThis({ kind: "action", id: item.action }, () => row.current?.focus());
@@ -363,8 +364,23 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
         undo: () => api.actionStatus(item.action, "open"),
       }),
     );
+  // A tick marks it done at once, with Undo on the toast; the row's menu has the way to add a note to it.
+  const tick = async () => {
+    setTicked(true);
+    if ((await done()) === undefined) setTicked(false);
+  };
   return (
     <li className={noting ? "tb-row noting" : "tb-row"} data-row tabIndex={-1} ref={row}>
+      <label className="tb-tick">
+        <input
+          type="checkbox"
+          data-key="primary"
+          checked={ticked}
+          disabled={ticked}
+          aria-label={t("today.todo.done_named", { text: item.text })}
+          onChange={() => void tick()}
+        />
+      </label>
       <div className="tb-what">
         <div className="tb-title">
           {item.text}
@@ -373,15 +389,6 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
         {meta && <div className="tb-meta">{meta}</div>}
         <OriginLink origin={item.origin} />
       </div>
-      <button
-        type="button"
-        className="btn small"
-        data-key="primary"
-        aria-label={t("today.todo.done_named", { text: item.text })}
-        onClick={() => void done()}
-      >
-        {t("followups.mark_done")}
-      </button>
       <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry, drop.entry]} />
       {noting && (
         <NoteBox

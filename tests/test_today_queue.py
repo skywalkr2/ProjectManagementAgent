@@ -216,3 +216,62 @@ def test_work_whose_every_change_was_refused_keeps_a_line_that_counts_the_refuse
             read_version=found.version,
         )
     assert not [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "review"]
+
+
+def test_a_line_that_holds_one_thing_carries_that_things_own_words_as_its_subject(api):
+    """The screen titles a one-item line by the item itself, and keeps counted titles for lines that group several."""
+    from datetime import date, timedelta
+
+    from engine.storage import WriteContext
+
+    client, base, worker = api
+    store = client.app_store
+    request = hand_in(client, base, worker, "production-checkin", topic="production check-in notes")
+    (review,) = [line for line in client.get(f"{base}/today/queue").json() if line["key"] == f"review:{request}"]
+    assert review["count"] > 1 and review["subject"] is None
+
+    changeset = review["changeset"]
+    found = store.read().get("changeset", changeset)
+    first = found.data["ops"][0]
+    with store.transaction() as tx:
+        tx.update(
+            "changeset",
+            changeset,
+            {"ops": [first]},
+            WriteContext(actor="engine", trust="trusted", op="test.queue"),
+            read_version=found.version,
+        )
+    (one,) = [line for line in client.get(f"{base}/today/queue").json() if line["key"] == f"review:{request}"]
+    assert one["count"] == 1 and one["subject"]
+    assert one["subject"] == (first.get("label") or first["op"].get("text") or first["op"].get("title"))
+
+    # The person's own overdue to-dos: one gives its words, several give none.
+    actions = [
+        a
+        for a in store.read().list("action")
+        if a.data["status"] == "open" and a.data.get("owners") and not a.data.get("on_hold")
+    ]
+    mine = client.get(f"{base}/me").json()["person"]
+    mine_open = [a for a in actions if any(o["person"] == mine for o in a.data["owners"])]
+    assert len(mine_open) >= 2
+    past = (date.today() - timedelta(days=400)).isoformat()
+    future = (date.today() + timedelta(days=400)).isoformat()
+
+    def set_due(due_by_id):
+        for action_id, due in due_by_id.items():
+            rec = store.read().get("action", action_id)
+            with store.transaction() as tx:
+                tx.update(
+                    "action",
+                    action_id,
+                    {"due": due},
+                    WriteContext(actor="pm", trust="trusted", op="test.queue"),
+                    read_version=rec.version,
+                )
+
+    set_due({a.id: future for a in mine_open} | {mine_open[0].id: past})
+    (overdue,) = [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "overdue"]
+    assert overdue["count"] == 1 and overdue["subject"] == mine_open[0].data["text"]
+    set_due({mine_open[1].id: past})
+    (overdue,) = [line for line in client.get(f"{base}/today/queue").json() if line["kind"] == "overdue"]
+    assert overdue["count"] == 2 and overdue["subject"] is None

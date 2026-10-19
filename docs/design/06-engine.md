@@ -959,7 +959,9 @@ is marked *designed*, with the phase.
   its own due date is within `ui.followups.action_due_within_days` days (default 7) or past, and only after it has waited as
   long as a question; an action due later is left alone, so a deadline weeks away is not nagged about. An action with no
   due date is chased after `ui.followups.undated_after_days` days with no word (default 14). An action on hold is never
-  chased. A chase starts the wait again (it counts as told again, above). The Follow-ups pill reads "waiting Nd" and, once
+  chased. A chase starts the wait again (it counts as told again, above); a question is chased the same way (`Question.followed_up`
+  lists the days, the wait counts from the last one and `sent_at` stays when it was first asked), which is what Draft a nudge
+  records (7.5). The Follow-ups pill reads "waiting Nd" and, once
   the rule says it is time, "waiting Nd · follow up" in the warning color, so status is never color alone. `ui.today.nudge_after_days`
   is replaced by `question_after_days`: a workspace file that still has the old key is read as the new one
   (`tests/test_on_hold_and_follow_ups.py::test_the_old_nudge_setting_is_read_as_the_question_wait`). Each branch has a test
@@ -1176,7 +1178,8 @@ order, each line with a kind:
 | **Send** | messages to send, one line per person (`send`); something sent to a person that is due a follow-up by the rule in 6.9 (`nudge`: questions sent and actions told, 4.11) |
 
 Within a group, a kind has a fixed place (decisions first, then who-is, owner, held, go, refused, questions), then the line that
-has waited longest, or is due first, comes first; a nudge goes by its longest wait. **Held items and decisions are always
+has waited longest, or is due first, comes first; a nudge goes by its longest wait. A review or overdue line that covers exactly
+one thing carries its words as `subject`, which the screen uses as the line's title (7.7). **Held items and decisions are always
 top-level lines**, never only inside a review. A line has a key that stays the same while the thing it stands for waits, the
 count it covers, the record ids it covers (actions, questions), the title of the input it is about, whether the input was
 untrusted, and why it waits, in the engine's own words (7.6). Plugin Today lines and stage lines ("ready to move on", 6.26)

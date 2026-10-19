@@ -53,6 +53,17 @@ def follow_up_due(
 
 
 @dataclass
+class Nudge:
+    """A follow-up message to one person about what has gone unanswered as long as the follow-up rule says: its `text`,
+    which follow-up it is (`round`: 1, or 2 and up once chased before) and the ids of what it lists."""
+
+    text: str
+    round: int
+    question_ids: list[str]
+    action_ids: list[str]
+
+
+@dataclass
 class Section:
     person: str
     name: str
@@ -61,6 +72,7 @@ class Section:
     actions: list[dict[str, Any]] = field(default_factory=list)
     message: str = ""
     to_send: int = 0
+    nudge: Nudge | None = None
 
 
 def sections(store: Store, cfg: Config, today: date) -> list[Section]:
@@ -81,7 +93,10 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
         if (d.get("resolves") or {}).get("kind") in ROUTING:
             continue  # answered where the item waits (What changed), so it isn't shown twice
         sent = datetime.fromisoformat(d["sent_at"]).date() if d.get("sent_at") else None
-        waiting = (today - sent).days if sent else None
+        chased = sorted(str(day) for day in d.get("followed_up") or [])
+        # The wait counts from the last word to the person: the message, or the latest chase after it.
+        last_word = date.fromisoformat(chased[-1]) if chased else sent
+        waiting = (today - last_word).days if last_word else None
         section(d["to"]).questions.append(
             {
                 "id": q.id,
@@ -92,6 +107,8 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                 "status": d["status"],
                 "project_name": ", ".join(projects[p] for p in d.get("projects", []) if p in projects),
                 "sent": sent.isoformat() if sent else None,
+                "followed_up": chased[-1] if chased else None,
+                "chases": len(chased),
                 "waiting_days": waiting,
                 "chase_due": d["status"] == "sent" and follow_up_due(cfg, today, waiting_days=waiting),
                 "options": d.get("options", []),
@@ -121,6 +138,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                     "told": told,
                     "told_days": told_days,
                     "followed_up": last_chase,
+                    "chases": len(chases),
                     "on_hold": hold["waiting_for"] if hold else None,
                     "chase_due": follow_up_due(
                         cfg,
@@ -137,6 +155,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
         if not s.is_pm:
             s.to_send = sum(q["status"] == "open" for q in s.questions) + sum(a["told"] is None for a in s.actions)
             s.message = compose(s, cfg, people)
+            s.nudge = compose_nudge(s, cfg, people, today)
     return sorted(by_person.values(), key=lambda s: (not s.is_pm, s.name.lower()))
 
 
@@ -185,6 +204,49 @@ def compose(s: Section, cfg: Config, people: People) -> str:
         lines.append("")
     lines.append(words.closing)
     return "\n".join(lines)
+
+
+def compose_nudge(s: Section, cfg: Config, people: People, today: date) -> Nudge | None:
+    """The follow-up message for one person, built from the settings' wording with no AI run: only what is still
+    waiting and due a follow-up, numbered, with when it was first asked and an overdue due date said as a fact. A second
+    or later follow-up lists only the longest-waiting few and asks who else to ask, or for a date. None when nothing is
+    due."""
+    words = cfg.language.messages
+    shown = lambda day: date.fromisoformat(str(day)).strftime(words.date_format)  # noqa: E731
+    due = [
+        *(("question", q["id"], q["title"], q["chases"], q["sent"], None) for q in s.questions if q["chase_due"]),
+        *(("action", a["id"], a["text"], a["chases"], a["told"], a["due"]) for a in s.actions if a["chase_due"]),
+    ]
+    if not due:
+        return None
+    round_ = 1 + max(item[3] for item in due)
+    if round_ > 1:
+        due = sorted(due, key=lambda item: (-item[3], item[4] or "9999", item[2]))[
+            : cfg.ui.followups.second_nudge_items
+        ]
+    first = min((item[4] for item in due if item[4]), default=None) or today.isoformat()
+    lines = [words.greeting.format(first_name=people.first_name(s.person)), ""]
+    if round_ > 1:
+        lines.append(words.nudge_second_intro.format(date=shown(first)))
+    elif len(due) == 1:
+        lines.append(words.nudge_intro_one.format(date=shown(first)))
+    else:
+        lines.append(words.nudge_intro.format(count=len(due), date=shown(first)))
+    lines.append("")
+    for n, (kind, _id, text, _chases, _asked, due_on) in enumerate(due, 1):
+        line = f"{n}. {text}" if len(due) > 1 else text
+        if kind == "action" and due_on and date.fromisoformat(str(due_on)) < today:
+            line += " " + words.nudge_overdue.format(date=shown(due_on))
+        lines.append(line)
+    lines.append("")
+    lines.append(words.nudge_second_ask if round_ > 1 else words.nudge_ask if len(due) > 1 else words.nudge_ask_one)
+    lines += ["", words.closing]
+    return Nudge(
+        "\n".join(lines),
+        round_,
+        [item[1] for item in due if item[0] == "question"],
+        [item[1] for item in due if item[0] == "action"],
+    )
 
 
 def mark_sent(
@@ -266,6 +328,82 @@ def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: 
                 tx.update("action", aid, {"told": told}, _PM, read_version=rec.version)
     if stamps:
         learn.net_out(store, "draft_edited", [person], at=stamps)
+
+
+def mark_followed_up(
+    store: Store,
+    cfg: Config,
+    person: str,
+    question_ids: list[str],
+    action_ids: list[str],
+    *,
+    sent_text: str | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Record that the follow-up went to `person`: today is added to each question's and action's chases, so the wait
+    for an answer starts again while a question keeps when it was first sent. Edited before sending, the message is
+    recorded as a quality signal, as an edited first message is. Returns what `unmark_followed_up` takes."""
+    now = now or datetime.now(UTC)
+    today = now.date().isoformat()
+    current = next((s for s in sections(store, cfg, now.date()) if s.person == person), None)
+    drafted = current.nudge.text if current is not None and current.nudge is not None else None
+    previous: dict[str, str | None] = {}
+    with store.transaction() as tx:
+        for qid in question_ids:
+            rec = tx.get("question", qid)
+            if rec is None or rec.data["status"] != "sent" or rec.data["to"] != person:
+                raise FollowUpError("that question isn't waiting for an answer")
+            chases = [*(rec.data.get("followed_up") or []), today]
+            tx.update("question", qid, {"followed_up": chases}, _PM, read_version=rec.version)
+        for aid in action_ids:
+            rec = _owned_open_action(tx, aid, person)
+            previous[aid] = str(rec.data["told"][person]) if rec.data.get("told", {}).get(person) else None
+            chases = dict(rec.data.get("followed_up") or {})
+            chases[person] = [*chases.get(person, []), today]
+            told = {**rec.data.get("told", {}), person: today}
+            tx.update("action", aid, {"followed_up": chases, "told": told}, _PM, read_version=rec.version)
+    signal_at = None
+    if sent_text is not None and drafted is not None and normalize(sent_text) != normalize(drafted):
+        changeset, run = _written_by(store, question_ids)
+        signal(store, "draft_edited", [person, *question_ids], note=sent_text, now=now, changeset=changeset, run=run)
+        signal_at = now.isoformat()
+    return {
+        "questions": len(question_ids),
+        "actions": len(action_ids),
+        "question_ids": question_ids,
+        "action_ids": action_ids,
+        "on": today,
+        "previous_told": previous,
+        "signal_at": signal_at,
+    }
+
+
+def unmark_followed_up(
+    store: Store,
+    person: str,
+    question_ids: list[str],
+    action_ids: list[str],
+    *,
+    on: str,
+    previous_told: dict[str, str | None],
+    signal_at: str | None = None,
+) -> None:
+    """Take back a follow-up marked as sent on day `on`: each chase leaves the questions and actions, and an action's
+    told day goes back to what it was. What the assistant would have learned from an edit of the message goes with
+    it."""
+    with store.transaction() as tx:
+        for qid in question_ids:
+            rec = tx.get("question", qid)
+            if rec is None:
+                continue
+            days = [str(d) for d in rec.data.get("followed_up") or []]
+            if on in days:
+                days.remove(on)
+            tx.update("question", qid, {"followed_up": days}, _PM, read_version=rec.version)
+    for aid in action_ids:
+        undo_follow_up(store, aid, person, on, previous_told.get(aid))
+    if signal_at:
+        learn.net_out(store, "draft_edited", [person], at=[signal_at])
 
 
 class FollowUpError(ValueError):

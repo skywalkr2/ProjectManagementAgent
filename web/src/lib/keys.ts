@@ -46,6 +46,8 @@ export interface GlobalHandlers {
   hand_in: () => void;
   ask: () => void;
   help: () => void;
+  /** Shows the lines Today is holding back (Shift+N). */
+  show_new?: () => void;
 }
 
 export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandlers): void {
@@ -91,6 +93,9 @@ export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandl
           break;
         case "help":
           handlers.help();
+          break;
+        case "show_new":
+          handlers.show_new?.();
           break;
         default:
           return;

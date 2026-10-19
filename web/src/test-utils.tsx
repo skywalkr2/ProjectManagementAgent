@@ -39,7 +39,7 @@ export function fakeApi(routes: Routes) {
 
 export function renderApp(ui: ReactNode, overrides: Record<string, string> = {}, options: { unnamed?: boolean } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const rendered = render(
     <WordingProvider overrides={overrides} base={{ assistant: "Helper" }} unnamed={options.unnamed}>
       <QueryClientProvider client={client}>
         <ToastProvider seconds={0}>
@@ -48,6 +48,8 @@ export function renderApp(ui: ReactNode, overrides: Record<string, string> = {},
       </QueryClientProvider>
     </WordingProvider>,
   );
+  // The client is returned too, for a test that makes the app fetch again, as the live stream does.
+  return Object.assign(rendered, { client });
 }
 
 /** A status answer with nothing wrong, for tests to change a part of. */

@@ -52,6 +52,24 @@ export function FollowUps(props: { compact?: boolean }) {
     setRevealed({ id: question, n: Date.now() });
     return true;
   });
+  // A link to a person's group (a to-do that waits on them): the filter that shows them is chosen, and their group is looked at.
+  const [seeking, setSeeking] = useState<{ id: string; n: number } | null>(null);
+  useReveal("person", (person) => {
+    const found = latest.current?.find((s) => !s.is_pm && s.person === person);
+    if (!found) return false;
+    setFilter(waitingQuestions(found).length + waitingActions(found).length > 0 ? "waiting" : "send");
+    setSeeking({ id: person, n: Date.now() });
+    return true;
+  });
+  useEffect(() => {
+    if (!seeking) return;
+    const group = document.getElementById(`w-${seeking.id}`) ?? document.getElementById(`p-${seeking.id}`);
+    const row = group?.closest<HTMLElement>("li");
+    if (row) {
+      showRow(row);
+      setSeeking(null);
+    }
+  }, [seeking, filter, followups.data]);
   const sections = (followups.data ?? []).filter((s) => s.questions.length || (s.actions.length && !(compact && s.is_pm)));
   const shown = sections.filter((s) =>
     filter === "send" ? s.is_pm || s.to_send > 0 : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
@@ -478,14 +496,14 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
 }
 
 // What each person has already been sent or told, one line each, with the step that closes it.
-export function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean }) {
+export function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean; nudgeOpen?: boolean }) {
   const { tn } = useWords();
   const s = props.section;
   const Heading = props.compact ? "h4" : "h3";
   const questions = waitingQuestions(s);
   const actions = waitingActions(s);
   return (
-    <li className="line" aria-labelledby={`w-${s.person}`}>
+    <li className="line" tabIndex={-1} aria-labelledby={`w-${s.person}`}>
       <div className="row single">
         <div className="text">
           <Heading className="name" id={`w-${s.person}`}>
@@ -495,6 +513,7 @@ export function WaitingSection(props: { section: S["FollowupSection"]; compact: 
         </div>
       </div>
       <div className="body">
+        {s.nudge && <NudgeCard section={s} nudge={s.nudge} start={!!props.nudgeOpen} />}
         <ul className="children">
           {questions.map((q) => (
             <WaitingQuestion key={q.id} question={q} person={s.name} />
@@ -505,6 +524,143 @@ export function WaitingSection(props: { section: S["FollowupSection"]; compact: 
         </ul>
       </div>
     </li>
+  );
+}
+
+/** The drafted follow-up to one person, from a template with no AI run: what it lists, the message to edit, then Copy and
+ * Mark sent, as for every message. Marking it sent records a chase on each item and starts the wait again; what the
+ * message listed was first asked stays on each item. */
+function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]; start: boolean }) {
+  const { t, tn, has } = useWords();
+  const act = useAct();
+  const { push } = useToasts();
+  const s = props.section;
+  const { nudge } = props;
+  const [open, setOpen] = useState(props.start);
+  const [focusBox, setFocusBox] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const area = useRef<HTMLTextAreaElement>(null);
+  const text = draft ?? nudge.text;
+  const today = localDate(new Date());
+  const questions = s.questions.filter((q) => nudge.question_ids.includes(q.id));
+  const actions = s.actions.filter((a) => nudge.action_ids.includes(a.id));
+  const first = s.name.split(" ")[0];
+  const round = has(`followups.nudge.round.${nudge.round}`) ? t(`followups.nudge.round.${nudge.round}`) : t("followups.nudge.round_n", { n: nudge.round });
+  const copy = async () => {
+    if (!text.trim()) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      setCopied(false);
+      area.current?.focus();
+      area.current?.select();
+      push({ message: t("toast.copy_blocked") });
+      return;
+    }
+    setCopied(true);
+    push({ message: t("toast.copied") });
+  };
+  const markSent = async () => {
+    if (!text.trim()) return;
+    const done = await act(
+      () => api.nudgeSent(s.person, { text, question_ids: nudge.question_ids, action_ids: nudge.action_ids }),
+      (result) => ({
+        message: t("toast.followed_up", { name: first }),
+        undo: () =>
+          api.nudgeUnsent(s.person, {
+            question_ids: result.question_ids,
+            action_ids: result.action_ids,
+            on: result.on,
+            previous_told: result.previous_told,
+            signal_at: result.signal_at ?? null,
+          }),
+      }),
+    );
+    if (done) {
+      setDraft(null);
+      setCopied(false);
+      setOpen(false);
+    }
+  };
+  if (!open)
+    return (
+      <div className="nudge-start">
+        <button
+          type="button"
+          className="btn primary"
+          onClick={() => {
+            setFocusBox(true);
+            setOpen(true);
+          }}
+        >
+          {t("followups.nudge.draft")}
+        </button>
+      </div>
+    );
+  return (
+    <div className="nudge" data-nudge="">
+      <div className="what" id={`nudge-${s.person}`}>
+        {t("followups.in_message")}
+      </div>
+      <ul className="plain-list" aria-labelledby={`nudge-${s.person}`}>
+        {questions.map((q) => (
+          <li key={q.id}>
+            <span className="title">{q.title}</span>
+            <span className="meta">
+              {[
+                q.sent ? t("followups.nudge.first_asked", { date: day(q.sent) }) : "",
+                q.followed_up ? t("followups.followed_up_on", { date: day(q.followed_up) }) : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </li>
+        ))}
+        {actions.map((a) => (
+          <li key={a.id}>
+            <span className="title">{a.text}</span>
+            <span className="meta">
+              {[
+                a.due ? t(a.due < today ? "followups.nudge.overdue" : "op.meta.due", { date: day(a.due) }) : "",
+                a.told ? tn("followups.sent_on", a.told_days ?? 0, { date: day(a.told) }) : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="message">
+        <label className="hint" htmlFor={`nudge-msg-${s.person}`}>
+          {t("followups.message_label", { name: s.name })}
+        </label>
+        <textarea
+          id={`nudge-msg-${s.person}`}
+          className="msg"
+          ref={area}
+          autoFocus={focusBox}
+          value={text}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <div className="row-end">
+          <span className="hint">{round}</span>
+          {draft !== null && (
+            <button type="button" className="btn quiet" onClick={() => setDraft(null)}>
+              {t("followups.reset")}
+            </button>
+          )}
+          {!copied && (
+            <button type="button" className="btn quiet" onClick={() => void markSent()}>
+              {t("followups.mark_sent")}
+            </button>
+          )}
+          <button type="button" className="btn primary" onClick={() => void (copied ? markSent() : copy())}>
+            {copied ? t("followups.mark_sent") : t("followups.nudge.copy")}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

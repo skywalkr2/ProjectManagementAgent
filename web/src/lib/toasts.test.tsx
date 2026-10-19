@@ -120,3 +120,100 @@ test("dismissAll takes every toast off the screen, and the page is told how many
   expect(document.documentElement).not.toHaveAttribute("data-toasts");
   expect(document.documentElement.style.getPropertyValue("--toasts")).toBe("");
 });
+
+function Same(props: { undo?: () => void; many?: (n: number) => string }) {
+  const { push } = useToasts();
+  return (
+    <button type="button" onClick={() => push({ message: "Filed. Marked as looked over.", undo: props.undo, many: props.many })}>
+      same
+    </button>
+  );
+}
+
+test("the same message pushed again is one toast with a count, and its Undo takes back the newest one", async () => {
+  const user = userEvent.setup();
+  const undo = vi.fn();
+  render(
+    <ToastProvider seconds={0}>
+      <Same undo={undo} many={(n) => `Filed ${n} reviews`} />
+    </ToastProvider>,
+  );
+  for (let i = 0; i < 3; i++) await user.click(screen.getByRole("button", { name: "same" }));
+  expect(within(region()).getAllByRole("button", { name: "Dismiss" })).toHaveLength(1);
+  expect(within(region()).getByText("Filed 3 reviews")).toBeInTheDocument();
+  await user.click(within(region()).getByRole("button", { name: "Undo last" }));
+  expect(undo).toHaveBeenCalledTimes(1);
+  expect(within(region()).getByText("Filed 2 reviews")).toBeInTheDocument();
+});
+
+test("a repeated message without its own wording says how many times", async () => {
+  const user = userEvent.setup();
+  render(
+    <ToastProvider seconds={0}>
+      <Same />
+    </ToastProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "same" }));
+  await user.click(screen.getByRole("button", { name: "same" }));
+  expect(within(region()).getByText("Filed. Marked as looked over. (2 times)")).toBeInTheDocument();
+});
+
+test("reduced motion does not keep a toast longer: it goes after its time like any other", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }));
+  render(
+    <ToastProvider seconds={2}>
+      <Pusher />
+    </ToastProvider>,
+  );
+  act(() => screen.getByRole("button", { name: "fixed" }).click());
+  act(() => {
+    vi.advanceTimersByTime(2100);
+  });
+  expect(within(region()).queryByText("Fixed")).toBeNull();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+test("a toast waits while the pointer or the cursor is on it, and goes once both have left", async () => {
+  vi.useFakeTimers();
+  render(
+    <ToastProvider seconds={2}>
+      <Pusher />
+    </ToastProvider>,
+  );
+  act(() => screen.getByRole("button", { name: "fixed" }).click());
+  const toast = within(region()).getByText("Fixed").parentElement!;
+  act(() => {
+    toast.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+  });
+  act(() => {
+    vi.advanceTimersByTime(5000);
+  });
+  expect(within(region()).getByText("Fixed")).toBeInTheDocument();
+  act(() => {
+    toast.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+  });
+  act(() => {
+    vi.advanceTimersByTime(2100);
+  });
+  expect(within(region()).queryByText("Fixed")).toBeNull();
+  vi.useRealTimers();
+});
+
+test("F6 moves the cursor to the newest toast, and Escape puts it away and gives the cursor back", async () => {
+  const user = userEvent.setup();
+  render(
+    <ToastProvider seconds={0}>
+      <Pusher />
+    </ToastProvider>,
+  );
+  const opener = screen.getByRole("button", { name: "fixed" });
+  await user.click(opener);
+  opener.focus();
+  await user.keyboard("{F6}");
+  expect(region().contains(document.activeElement)).toBe(true);
+  await user.keyboard("{Escape}");
+  expect(within(region()).queryByText("Fixed")).toBeNull();
+  expect(opener).toHaveFocus();
+});

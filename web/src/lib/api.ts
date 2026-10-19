@@ -135,6 +135,10 @@ export const api = {
     call<S["SentCounts"]>("POST", `followups/${id(person)}/mark-sent`, { text }),
   unmarkSent: (person: string, body: S["Unmark"]) =>
     call<S["Ok"]>("POST", `followups/${id(person)}/unmark-sent`, body),
+  nudgeSent: (person: string, body: S["NudgeSent"]) =>
+    call<S["NudgeRecorded"]>("POST", `followups/${id(person)}/followed-up`, body),
+  nudgeUnsent: (person: string, body: S["NudgeUnsent"]) =>
+    call<S["Ok"]>("POST", `followups/${id(person)}/unfollow`, body),
   followedUp: (person: string, action: string, note?: string) =>
     call<S["FollowedUp"]>("POST", `followups/${id(person)}/actions/${id(action)}/followed-up`, note ? { note } : undefined),
   unfollow: (person: string, action: string, body: S["Unfollow"]) =>

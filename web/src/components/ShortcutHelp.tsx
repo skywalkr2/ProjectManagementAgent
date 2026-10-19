@@ -5,7 +5,7 @@ import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
 import styles from "./ShortcutHelp.module.css";
 
-const ORDER = ["next", "previous", "primary", "send_back", "copy", "edit", "undo", "hand_in", "ask", "help"];
+const ORDER = ["next", "previous", "primary", "send_back", "copy", "edit", "undo", "hand_in", "ask", "show_new", "help"];
 
 export function ShortcutHelp(props: { open: boolean; onClose: () => void; keys: Record<string, string> }) {
   const { t } = useWords();

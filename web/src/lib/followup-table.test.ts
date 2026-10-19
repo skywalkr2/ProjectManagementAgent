@@ -30,7 +30,7 @@ const action = (id: string, text: string, due: string | null, extra: Partial<S["
   told_days: null,
   followed_up: null,
   on_hold: null,
-  chase_due: false,
+  chase_due: false, chases: 0,
   origin: null,
   ...extra,
 });
@@ -44,7 +44,7 @@ const question = (id: string, title: string, sent: string | null, extra: Partial
   project_name: "Book",
   sent,
   waiting_days: null,
-  chase_due: false,
+  chase_due: false, chases: 0,
   about: null,
   options: [],
   ...extra,

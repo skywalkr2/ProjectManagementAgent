@@ -15,7 +15,7 @@ const action = (over: Partial<S["FollowupAction"]> = {}): S["FollowupAction"] =>
   told: null,
   told_days: null,
   followed_up: null,
-  chase_due: false,
+  chase_due: false, chases: 0,
   ...over,
 });
 
@@ -30,7 +30,7 @@ const question = (over: Partial<S["FollowupQuestion"]> = {}): S["FollowupQuestio
   waiting_days: null,
   about: null,
   options: [],
-  chase_due: false,
+  chase_due: false, chases: 0,
   ...over,
 });
 

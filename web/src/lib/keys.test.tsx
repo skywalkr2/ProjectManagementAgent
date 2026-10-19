@@ -58,3 +58,18 @@ test("on a row the arrow keys walk the rows as j and k do, and in a field they a
   await user.keyboard("{ArrowDown}");
   expect(screen.getByLabelText("Typing")).toHaveFocus();
 });
+
+test("Shift+N runs the show-new action, and never while typing", async () => {
+  const user = userEvent.setup();
+  const show_new = vi.fn();
+  function Probe() {
+    useShortcuts({ ...SHORTCUTS, show_new: "N" }, { undo: () => undefined, hand_in: () => undefined, ask: () => undefined, help: () => undefined, show_new });
+    return <input aria-label="field" />;
+  }
+  render(<Probe />);
+  await user.keyboard("{Shift>}N{/Shift}");
+  expect(show_new).toHaveBeenCalledTimes(1);
+  await user.click(screen.getByRole("textbox"));
+  await user.keyboard("{Shift>}N{/Shift}");
+  expect(show_new).toHaveBeenCalledTimes(1);
+});

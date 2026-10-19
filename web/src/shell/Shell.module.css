@@ -9,8 +9,9 @@
 :global([data-narrow]) .app { grid-template-columns: minmax(0, 1fr); }
 .main {
   min-width: 0; padding: var(--page-pad); display: grid; align-content: start; gap: var(--space-6);
-  /* Room under the last row for the toasts, so no button ever sits under one (design 7.6). */
-  padding-bottom: calc(var(--page-pad) + var(--space-12) + var(--space-4));
+  /* Room under the last row for the toasts, so no button ever sits under one (design 7.6): their stack's height when any
+     show, else a little. */
+  padding-bottom: calc(var(--page-pad) + max(var(--space-12) + var(--space-4), var(--toast-h, 0px) + var(--space-6)));
 }
 .main:focus { outline: none; }
-:global([data-narrow]) .main { padding-bottom: calc(var(--bottombar-h) + var(--space-6) + env(safe-area-inset-bottom, 0px)); }
+:global([data-narrow]) .main { padding-bottom: calc(var(--bottombar-h) + var(--space-6) + var(--toast-h, 0px) + env(safe-area-inset-bottom, 0px)); }

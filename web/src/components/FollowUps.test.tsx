@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
@@ -13,7 +13,7 @@ const sections: S["FollowupSection"][] = [
     name: "Pat Example",
     is_pm: true,
     questions: [],
-    actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false }],
+    actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
     message: "",
     to_send: 0,
   },
@@ -22,9 +22,9 @@ const sections: S["FollowupSection"][] = [
     name: "Robin Sample",
     is_pm: false,
     questions: [
-      { id: "Q-1", title: "Is the index final?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
+      { id: "Q-1", title: "Is the index final?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
     ],
-    actions: [{ id: "ACT-1", text: "Send the index", due: "2026-10-16", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false }],
+    actions: [{ id: "ACT-1", text: "Send the index", due: "2026-10-16", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 }],
     message: "Hi Robin,\n\nIs the index final?\n\nAction items with you:\n- Send the index\n\nThanks!",
     to_send: 2,
   },
@@ -122,9 +122,9 @@ test("a card lists only what is still to send, with no buttons or pills on the i
   const user = userEvent.setup();
   const mixed = structuredClone(sections);
   mixed[1].questions.push({
-    id: "Q-2", title: "Did the cover ship?", text: "", links: [], kind: "question", status: "sent", sent: "2026-10-08", waiting_days: 2, chase_due: false, about: null, options: [],
+    id: "Q-2", title: "Did the cover ship?", text: "", links: [], kind: "question", status: "sent", sent: "2026-10-08", waiting_days: 2, chase_due: false, chases: 0, about: null, options: [],
   });
-  mixed[1].actions.push({ id: "ACT-2", text: "Return the proof", due: null, project_name: "Book", told: "2026-10-08", told_days: 2, followed_up: null, chase_due: false });
+  mixed[1].actions.push({ id: "ACT-2", text: "Return the proof", due: null, project_name: "Book", told: "2026-10-08", told_days: 2, followed_up: null, chase_due: false, chases: 0 });
   mixed[1].to_send = 2;
   fakeApi({ "GET followups": () => mixed, "GET people": () => [] });
   renderApp(<FollowUps />);
@@ -290,7 +290,7 @@ test("a question to the PM shows as a decision or as a question by its stored ki
     status: "open",
     sent: null,
     waiting_days: null,
-    chase_due: false,
+    chase_due: false, chases: 0,
     about: null,
     options: [],
   });
@@ -427,12 +427,12 @@ const tableSections: S["FollowupSection"][] = [
     name: "Robin Sample",
     is_pm: false,
     questions: [
-      { id: "Q-1", title: "Is the index final?", text: "", links: [{ label: "Book page", url: `${WEB}example.com/book` }], kind: "question", status: "open", project_name: "Book", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
-      { id: "Q-2", title: "Who writes the jacket copy?", text: "", links: [], kind: "question", status: "open", project_name: "Book", sent: "2026-10-10", waiting_days: null, chase_due: false, about: null, options: [] },
+      { id: "Q-1", title: "Is the index final?", text: "", links: [{ label: "Book page", url: `${WEB}example.com/book` }], kind: "question", status: "open", project_name: "Book", sent: null, waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
+      { id: "Q-2", title: "Who writes the jacket copy?", text: "", links: [], kind: "question", status: "open", project_name: "Book", sent: "2026-10-10", waiting_days: null, chase_due: false, chases: 0, about: null, options: [] },
     ],
     actions: [
-      { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Book", links: [], told: null, told_days: null, followed_up: null, chase_due: false },
-      { id: "ACT-1", text: "Send the index", due: "2020-10-14", project_name: "Book", links: [{ label: "Book page", url: `${WEB}example.com/book` }], told: null, told_days: null, followed_up: null, chase_due: false },
+      { id: "ACT-2", text: "Send the acknowledgments page", due: "2099-10-23", project_name: "Book", links: [], told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 },
+      { id: "ACT-1", text: "Send the index", due: "2020-10-14", project_name: "Book", links: [{ label: "Book page", url: `${WEB}example.com/book` }], told: null, told_days: null, followed_up: null, chase_due: false, chases: 0 },
     ],
     message: "Hi Robin",
     to_send: 4,
@@ -569,4 +569,126 @@ test("the two copy buttons are named for where the table goes, with one hint, an
   await user.click(screen.getAllByRole("button", { name: "Mark sent" })[0]);
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/mark-sent")).toBe(true));
   expect(await screen.findByText("Marked as sent to Robin Sample")).toBeInTheDocument();
+});
+
+test("a link to a person's group opens the list that shows them, with the cursor on their group", async () => {
+  const waiting: S["FollowupSection"] = {
+    person: "PER-3",
+    name: "Quinn Sample",
+    is_pm: false,
+    questions: [
+      { id: "Q-5", title: "Can proof copies ship by Nov 3?", text: "", links: [], kind: "question", status: "sent", sent: "2026-10-12", waiting_days: 6, chase_due: false, chases: 0, about: null, options: [] },
+    ],
+    actions: [],
+    message: "",
+    to_send: 0,
+  };
+  fakeApi({ "GET followups": () => [...sections, waiting], "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await screen.findByRole("button", { name: /^Robin Sample/ });
+  expect(screen.getByRole("button", { name: "To send" })).toHaveAttribute("aria-pressed", "true");
+  const { reveal } = await import("../lib/reveal");
+  act(() => {
+    expect(reveal("person", "PER-3")).toBe(true);
+  });
+  expect(await screen.findByRole("heading", { name: "Quinn Sample" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Waiting on them" })).toHaveAttribute("aria-pressed", "true");
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Quinn Sample" }).closest("li")).toHaveFocus());
+});
+
+const waitingQuestion = (extra: Partial<S["FollowupQuestion"]> = {}): S["FollowupQuestion"] => ({
+  id: "Q-7",
+  title: "Do we have written permission for the epigraph?",
+  text: "",
+  links: [],
+  kind: "question",
+  status: "sent",
+  sent: "2026-10-10",
+  followed_up: null,
+  chases: 0,
+  waiting_days: 6,
+  chase_due: true,
+  about: null,
+  options: [],
+  ...extra,
+});
+
+const nudgeText = "Hi Quinn,\n\nFollowing up on one thing from my note on Sat, Oct 10:\n\nDo we have written permission for the epigraph?\n\nA quick yes or no, or a date, is plenty.\n\nThanks!";
+const nudgeSection = (extra: Partial<S["FollowupSection"]> = {}): S["FollowupSection"] => ({
+  person: "PER-4",
+  name: "Quinn Sample",
+  is_pm: false,
+  questions: [waitingQuestion()],
+  actions: [],
+  message: "",
+  to_send: 0,
+  nudge: { text: nudgeText, round: 1, question_ids: ["Q-7"], action_ids: [] },
+  ...extra,
+});
+
+const nudgeRoutes = {
+  "GET followups": () => [nudgeSection()],
+  "GET people": () => [],
+  "POST followups/PER-4/followed-up": () => ({ questions: 1, actions: 0, question_ids: ["Q-7"], action_ids: [], on: "2026-10-16", previous_told: {}, signal_at: null }),
+  "POST followups/PER-4/unfollow": () => ({ ok: "PER-4" }),
+};
+
+test("a person who hasn't answered gets a drafted nudge: the items, the box with the template's text, then Copy and Mark sent", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(nudgeRoutes);
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  await user.click(await screen.findByRole("button", { name: "Draft a nudge" }));
+  // The cursor is in the message, and what it lists is above it.
+  const box = screen.getByRole("textbox", { name: /Message to Quinn Sample/ });
+  expect(box).toHaveFocus();
+  expect(box).toHaveValue(nudgeText);
+  const card = box.closest("[data-nudge]") as HTMLElement;
+  expect(within(card).getByText("Do we have written permission for the epigraph?", { selector: "li *, li" })).toBeInTheDocument();
+  expect(within(card).getByText("1st follow-up")).toBeInTheDocument();
+  // Copy puts the edited text on the clipboard and records nothing; Mark sent records the text as sent, with Undo.
+  await user.type(box, " PS");
+  await user.click(within(card).getByRole("button", { name: "Copy" }));
+  expect(await navigator.clipboard.readText()).toBe(nudgeText + " PS");
+  expect(calls.filter((c) => c.route.startsWith("POST"))).toHaveLength(0);
+  await user.click(within(card).getByRole("button", { name: "Mark sent" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST followups/PER-4/followed-up")?.body).toEqual({ text: nudgeText + " PS", question_ids: ["Q-7"], action_ids: [] }));
+  expect(await screen.findByText(/Recorded that you followed up with Quinn/)).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST followups/PER-4/unfollow")?.body).toEqual({
+      question_ids: ["Q-7"],
+      action_ids: [],
+      on: "2026-10-16",
+      previous_told: {},
+      signal_at: null,
+    }),
+  );
+});
+
+test("a second nudge says which follow-up it is, and an item chased before shows when", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    ...nudgeRoutes,
+    "GET followups": () => [
+      nudgeSection({
+        questions: [waitingQuestion({ chases: 1, followed_up: "2026-10-12" })],
+        nudge: { text: "Hi Quinn,\n\nChecking in again.", round: 2, question_ids: ["Q-7"], action_ids: [] },
+      }),
+    ],
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  await user.click(await screen.findByRole("button", { name: "Draft a nudge" }));
+  expect(screen.getByText("2nd follow-up")).toBeInTheDocument();
+  expect(screen.getByText(/first asked/)).toBeInTheDocument();
+});
+
+test("nothing is offered to draft while nothing has waited long enough", async () => {
+  const user = userEvent.setup();
+  fakeApi({ ...nudgeRoutes, "GET followups": () => [nudgeSection({ nudge: null, questions: [waitingQuestion({ chase_due: false, chases: 0, waiting_days: 1 })] })] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  await screen.findByRole("heading", { name: "Quinn Sample" });
+  expect(screen.queryByRole("button", { name: "Draft a nudge" })).toBeNull();
 });

@@ -234,6 +234,16 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   by itself over a hand-in the person had already started and lost what they typed; it no longer opens over anything
   the person has open (`Walkthrough.test.tsx`, "it does not take the person from a hand-in they already started").
   **Impact:** P19 leaves the open promises.
+- **Also (2026-10-19): the UI designer's answers 33 to 38, built.** Toasts sit beside the navigation, merge repeats
+  and wait while looked at; from 1680 pixels the details pane follows the cursor and a one-item line is titled by the
+  item; a hold's named person links to their Follow-ups group; "Draft a nudge" makes one message per person from a
+  template, with "Mark sent" counting a chase that restarts the wait and keeps when the question was first sent
+  (`Question.followed_up`); an add-on's Today line goes into the core group it names (plugin API 0.3.81); "N new · Show"
+  holds the list while the person is in it; on a phone the header keeps the logo, status and avatar; the rail's to-dos
+  are checkboxes.
+  **Impact:** design 7.1, 7.5 to 7.7 and the follow-up rule in Part 6 edited (CHANGES.md section 83). Left, in open
+  promise P26: the tie between a to-do and the question it waits on (answer 35), and the nudge's "answered, left out"
+  list and the suggested escalation after a second follow-up (answer 36).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

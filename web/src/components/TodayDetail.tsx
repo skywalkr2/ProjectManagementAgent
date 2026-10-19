@@ -89,7 +89,7 @@ function NudgeDetail(props: { line: QueueLine }) {
   if (!section) return <Gone />;
   return (
     <ol className="queue">
-      <WaitingSection section={section} compact />
+      <WaitingSection section={section} compact nudgeOpen />
     </ol>
   );
 }

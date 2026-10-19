@@ -146,3 +146,33 @@ test("on a phone only the brand, the status chip and the user menu remain", asyn
   expect(within(header).queryByRole("button", { name: "Help" })).toBeNull();
   expect(within(header).getByText("Demo")).toBeInTheDocument();
 });
+
+test("on a phone only the logo, the status chip and the avatar are in the header: no workspace name, no assistant label", async () => {
+  show({ narrow: true });
+  const header = screen.getByRole("banner");
+  const brand = within(header).getByRole("link", { name: "Example Workspace, go to Today" });
+  // The name is the link's accessible name; it takes no room on screen.
+  expect(brand).not.toHaveTextContent("Example Workspace");
+  expect(brand).toHaveTextContent("EW");
+  await within(header).findByRole("button", { name: /^Status: / });
+  expect(within(header).queryByRole("button", { name: /^Assistant/ })).toBeNull();
+  expect(Array.from(header.querySelectorAll("button, a")).map((el) => el.getAttribute("aria-label") ?? el.textContent)).toHaveLength(3);
+});
+
+test("on a phone the assistant's state is in the status chip's popover", async () => {
+  const user = userEvent.setup();
+  show({ narrow: true });
+  await user.click(await screen.findByRole("button", { name: /^Status: / }));
+  const dialog = await screen.findByRole("dialog", { name: "Status" });
+  const alive = within(dialog).getByText("Assistant", { selector: "p" }).closest("li")!;
+  expect(alive).toHaveAttribute("data-state", "alive");
+  expect(alive).toHaveTextContent("no runs yet");
+});
+
+test("from a wider screen the assistant's line is beside the chip and the popover doesn't repeat it", async () => {
+  const user = userEvent.setup();
+  show();
+  await user.click(await screen.findByRole("button", { name: /^Status: / }));
+  const dialog = await screen.findByRole("dialog", { name: "Status" });
+  expect(dialog.querySelector('[data-state="alive"]')).toBeNull();
+});

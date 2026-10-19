@@ -1026,6 +1026,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 83. The UI designer's answers 33 to 38 (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Toasts (7.6) | Bottom left over the navigation column, 216px wide, capped at 45% of the height, kept longer with reduced motion | Bottom left of the content area, just right of the navigation (bottom center below 1280px), one line each (360 to 420px), at most three, a repeated message merged with a count, scroll padding for a focused row, F6 and Esc. Built: `web/src/lib/toasts.test.tsx`, `web/e2e/shell.spec.ts` |
+| The inspector (7.7) | Empty until a line was clicked | Shows the line that has the cursor from the moment Today opens, headed by the line's subject and "1 of 9 · j / k"; remembers the line; "Nothing needs you" and the next check when empty. Built: `web/src/components/Today.test.tsx` |
+| Line titles (7.7) | "Answer 1 decision" | A line that holds one item is titled by the item (`QueueLineView.subject`); several keep the count. Built: `tests/test_today_queue.py`, `web/src/components/Today.test.tsx` |
+| To-do that waits on a person (7.7) | Words only | The person's name is a link to their group in Follow-ups when it matches one known full name. Built: `web/src/components/OnHold.test.tsx` |
+| Draft a nudge (7.5) | "Follow up" opened the waiting items | One drafted message per person from a template, Copy then Mark sent, a shorter second one; questions record chases (`Question.followed_up`). Built: `tests/test_nudge.py`, `web/src/components/FollowUps.test.tsx` |
+| Add-on lines on Today (7.7, 3.3) | All under "More for today" | `TodayLine.group` names one of the core's groups (plugin API 0.3.81); the fallback stays for lines with none, and the pack check warns. Built: `tests/test_plugin_api_0381.py` |
+| "N new · Show" (7.7) | Held only while the cursor is in the queue | Held for the pointer, an open line and typing too; removals held as struck-through lines; a sticky pill; `Shift+N`; announced once; the sidebar count at once. Built: `web/src/components/Today.test.tsx` |
+| Phone header (7.1) | The assistant's label beside the avatar | Only the logo, the status chip and the avatar; the assistant's state is in the chip's popover. Built: `web/src/shell/Header.test.tsx` |
+| Rail to-dos (7.7) | A "Mark done" button in each row | A checkbox before the words, with Undo on the toast. Built: `web/src/components/TodayRail.test.tsx` |
+
 ## 82. Languages from a list, secrets typed on the screen, and add-ons from the screen (2026-10-16)
 
 | Where | Before | Now |

@@ -77,6 +77,10 @@ from api.schemas import (
     Noted,
     NoteIn,
     NoteView,
+    NudgeRecorded,
+    NudgeSent,
+    NudgeUnsent,
+    NudgeView,
     Ok,
     Option,
     OpView,
@@ -167,6 +171,7 @@ from engine.dispatcher import (
 )
 from engine.followups import (
     follow_up,
+    mark_followed_up,
     mark_sent,
     put_on_hold,
     restore_hold,
@@ -174,6 +179,7 @@ from engine.followups import (
     take_off_hold,
     they_finished,
     undo_follow_up,
+    unmark_followed_up,
     unmark_sent,
 )
 from engine.intake import IntakeError, hand_in, note_as_input, source_text
@@ -660,6 +666,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     action_is=action_is,
                     why=line.why,
                     until=line.until,
+                    group=line.group,
                 )
             )
         return lines
@@ -1615,6 +1622,35 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         return SentCounts(**counts)
 
+    @r.post("/followups/{person}/followed-up")
+    def nudge_sent(person: str, body: NudgeSent) -> NudgeRecorded:
+        """Record that the follow-up message went to a person: each question and action it listed counts as chased
+        today, and the wait for an answer starts again."""
+        need("person", person)
+        done = guard(
+            lambda: mark_followed_up(store, cfg, person, body.question_ids, body.action_ids, sent_text=body.text)
+        )
+        changed()
+        return NudgeRecorded(**done)
+
+    @r.post("/followups/{person}/unfollow")
+    def nudge_unsent(person: str, body: NudgeUnsent) -> Ok:
+        """Undo a follow-up marked as sent."""
+        need("person", person)
+        guard(
+            lambda: unmark_followed_up(
+                store,
+                person,
+                body.question_ids,
+                body.action_ids,
+                on=body.on,
+                previous_told=body.previous_told,
+                signal_at=body.signal_at,
+            )
+        )
+        changed()
+        return Ok(ok=person)
+
     @r.post("/followups/{person}/unmark-sent")
     def unsent(person: str, body: Unmark) -> Ok:
         need("person", person)
@@ -2051,6 +2087,8 @@ def _section(s: Any, people: People, action_origin: dict[str, Any], question_ori
                 status=q["status"],
                 project_name=q["project_name"],
                 sent=q["sent"],
+                followed_up=q["followed_up"],
+                chases=q["chases"],
                 waiting_days=q["waiting_days"],
                 chase_due=q["chase_due"],
                 about=resolves.get("kind"),
@@ -2068,6 +2106,7 @@ def _section(s: Any, people: People, action_origin: dict[str, Any], question_ori
             told=a["told"],
             told_days=a["told_days"],
             followed_up=a["followed_up"],
+            chases=a["chases"],
             on_hold=a["on_hold"],
             chase_due=a["chase_due"],
             origin=action_origin.get(a["id"]),
@@ -2082,4 +2121,5 @@ def _section(s: Any, people: People, action_origin: dict[str, Any], question_ori
         actions=actions,
         message=s.message,
         to_send=s.to_send,
+        nudge=NudgeView(**vars(s.nudge)) if s.nudge is not None else None,
     )

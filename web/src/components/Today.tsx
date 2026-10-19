@@ -1,5 +1,5 @@
-// The Today screen (design 7.7): what needs the person as a ranked queue, the selected line's items in the inspector
-// (from 1680px; below that they open under the line), and the rail of the agenda, the person's to-dos and what came in.
+// The Today screen (design 7.7): what needs the person as a ranked queue, the line that has the cursor in the inspector
+// (from 1680px; below that a line's items open under it), and the rail of the agenda, the person's to-dos and what came in.
 import { useEffect, useRef, useState } from "react";
 import { longDay } from "../lib/dates";
 import { useMediaQuery } from "../lib/media";
@@ -9,9 +9,7 @@ import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { BackupLine } from "../shell/BackupLine";
 import { SetupLine } from "../shell/SetupLine";
-import { Button } from "../ui/Button";
-import { Panel } from "../ui/Panel";
-import { LineDetail, opensItems } from "./TodayDetail";
+import { opensItems } from "./TodayDetail";
 import { TodayQueue, type QueueHandlers, type Selection } from "./TodayQueue";
 import { TodayRail } from "./TodayRail";
 import styles from "./Today.module.css";
@@ -27,13 +25,14 @@ export function Today(props: {
   /** Opens the form that adds an AI account, in Settings. */
   onAddAccount?: () => void;
   onOpenRecord: (kind: string, id: string) => void;
+  /** The configured shortcut keys, for the inspector's "j / k". */
+  shortcuts?: Record<string, string>;
 }) {
   const { t, tn } = useWords();
   const beside = useMediaQuery(INSPECTOR_FROM);
   const queue = useQueue();
   const count = useTodayCount();
   const [selected, setSelected] = useState<Selection | null>(null);
-  const line = selected ? queue.data?.find((l) => l.key === selected.key) : undefined;
 
   // Another part of the screen asks for an answer or a question to be looked at: its line opens, with the cursor on it.
   const [shown, setShown] = useState<string | null>(null);
@@ -74,29 +73,7 @@ export function Today(props: {
       <div className={styles.full}>
         <BackupLine onOpenGuide={props.onOpenGuide} />
       </div>
-      <TodayQueue selected={selected} onSelect={setSelected} beside={beside} handlers={handlers} />
-      {beside && (
-        <aside className={styles.inspector} aria-label={t("queue.inspector.title")}>
-          <Panel
-            title={t("queue.inspector.title")}
-            actions={
-              line && (
-                <Button size="sm" variant="ghost" onClick={() => setSelected(null)}>
-                  {t("action.close")}
-                </Button>
-              )
-            }
-          >
-            {line ? (
-              <div className={styles.detail}>
-                <LineDetail line={line} sendBack={selected?.sendBack} onOpenGuide={props.onOpenGuide} />
-              </div>
-            ) : (
-              <p className={styles.inspectorEmpty}>{t("queue.inspector.empty")}</p>
-            )}
-          </Panel>
-        </aside>
-      )}
+      <TodayQueue selected={selected} onSelect={setSelected} beside={beside} handlers={handlers} shortcuts={props.shortcuts} />
       <TodayRail onView={props.onView} onAddSource={props.onAddSource} />
     </div>
   );

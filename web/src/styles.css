@@ -4,6 +4,9 @@
 
 * { box-sizing: border-box; }
 html, body { background: var(--canvas); color: var(--text); margin: 0; }
+/* While toasts show, a row the cursor reaches scrolls clear of their stack (WCAG 2.4.11); the stack's height is set by the toasts. */
+html[data-toasts] { scroll-padding-bottom: calc(var(--toast-h, 0px) + var(--space-6)); }
+html[data-toasts][data-narrow] { scroll-padding-bottom: calc(var(--toast-h, 0px) + var(--bottombar-h) + var(--space-6)); }
 body { font-family: var(--font-ui); font-size: var(--text-md); line-height: var(--lh-md); }
 button, input, textarea, select { font: inherit; color: inherit; }
 /* A row shows its ring only for keyboard focus (a click or the code moving focus shows none). The ring sits inside the
@@ -65,6 +68,7 @@ main p { max-width: var(--measure); }
 .name { margin: 0; font-size: var(--text-md); }
 .kind, .pill { font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); padding: 0 var(--pill-px); min-height: var(--pill-h); display: inline-flex; align-items: center; white-space: nowrap; }
 .pill { margin-left: var(--space-2); }
+.pill a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .k-review { background: var(--surface-sunk); color: var(--text-muted); }
 .k-send { background: var(--accent-soft); color: var(--accent-text); }
 .k-held { background: var(--warn-soft); color: var(--warn); }
@@ -376,6 +380,9 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
 .tb-row.unread .tb-title { font-weight: var(--weight-semibold); }
 .tb-row .btn.small { flex: none; }
+/* A to-do's tick sits before its words, so the words get the row's width; on a touch screen its target is a full tap. */
+.tb-tick { flex: none; display: grid; place-items: center; margin-top: var(--space-1); cursor: pointer; }
+@media (pointer: coarse) { .tb-tick { min-width: var(--tap-min); min-height: var(--tap-min); margin-top: 0; } }
 .tb-row.noting { flex-wrap: wrap; }
 .tb-row .note-box { flex: 1 1 100%; }
 .now-line { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1); color: var(--danger); font-size: var(--text-xs); font-weight: var(--weight-semibold); }

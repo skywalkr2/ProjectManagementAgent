@@ -63,6 +63,9 @@ ROUTES: dict[str, Declared] = {
     "POST /api/followups/{person}/mark-sent": _local(
         "the message as sent, compared with the draft for a quality signal; not a note"
     ),
+    "POST /api/followups/{person}/followed-up": _local(
+        "the follow-up message as sent, compared with the draft for a quality signal; not a note"
+    ),
     "POST /api/questions/{qid}/reword": _local(
         "the person's own new wording of a question, kept as the question's text and recorded as a correction; not a "
         "note"

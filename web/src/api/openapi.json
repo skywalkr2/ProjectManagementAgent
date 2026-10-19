@@ -4203,6 +4203,12 @@
             "title": "Chase Due",
             "type": "boolean"
           },
+          "chases": {
+            "default": 0,
+            "description": "How many times the person was chased about it.",
+            "title": "Chases",
+            "type": "integer"
+          },
           "due": {
             "anyOf": [
               {
@@ -4322,6 +4328,24 @@
             "title": "Chase Due",
             "type": "boolean"
           },
+          "chases": {
+            "default": 0,
+            "description": "How many times the person was chased about it after it was sent.",
+            "title": "Chases",
+            "type": "integer"
+          },
+          "followed_up": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the person was last chased about it (a date).",
+            "title": "Followed Up"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -4376,6 +4400,7 @@
                 "type": "null"
               }
             ],
+            "description": "The day it was first sent; chases never change it.",
             "title": "Sent"
           },
           "status": {
@@ -4403,6 +4428,7 @@
                 "type": "null"
               }
             ],
+            "description": "Days since the last word to the person: the message, or the latest chase.",
             "title": "Waiting Days"
           }
         },
@@ -4441,6 +4467,17 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "nudge": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NudgeView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The follow-up message to draft, when anything is due one."
           },
           "person": {
             "title": "Person",
@@ -6189,6 +6226,202 @@
           "ok"
         ],
         "title": "Noted",
+        "type": "object"
+      },
+      "NudgeRecorded": {
+        "properties": {
+          "action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Action Ids",
+            "type": "array"
+          },
+          "actions": {
+            "title": "Actions",
+            "type": "integer"
+          },
+          "on": {
+            "description": "The day the chases were recorded (a date).",
+            "title": "On",
+            "type": "string"
+          },
+          "previous_told": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "The day each action's person was told before, by action id.",
+            "title": "Previous Told",
+            "type": "object"
+          },
+          "question_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Question Ids",
+            "type": "array"
+          },
+          "questions": {
+            "title": "Questions",
+            "type": "integer"
+          },
+          "signal_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When an edit of the message was recorded, if it was edited.",
+            "title": "Signal At"
+          }
+        },
+        "required": [
+          "questions",
+          "actions",
+          "question_ids",
+          "action_ids",
+          "on",
+          "previous_told"
+        ],
+        "title": "NudgeRecorded",
+        "type": "object"
+      },
+      "NudgeSent": {
+        "description": "A follow-up message the PM sent: what it listed (from `FollowupSection.nudge`) and its text as sent, to notice\nedits.",
+        "properties": {
+          "action_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Action Ids",
+            "type": "array"
+          },
+          "question_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Question Ids",
+            "type": "array"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The message as the PM sent it, to notice edits.",
+            "title": "Text"
+          }
+        },
+        "title": "NudgeSent",
+        "type": "object"
+      },
+      "NudgeUnsent": {
+        "description": "What undoes a follow-up marked as sent: the response that recorded it, sent back.",
+        "properties": {
+          "action_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Action Ids",
+            "type": "array"
+          },
+          "on": {
+            "description": "The day the chases were recorded.",
+            "title": "On",
+            "type": "string"
+          },
+          "previous_told": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "The day each action's person was told before the chase, by action id.",
+            "title": "Previous Told",
+            "type": "object"
+          },
+          "question_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Question Ids",
+            "type": "array"
+          },
+          "signal_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the edit of the message was recorded, if it was edited.",
+            "title": "Signal At"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "NudgeUnsent",
+        "type": "object"
+      },
+      "NudgeView": {
+        "description": "A drafted follow-up message for one person (built from a template, no AI run): what has gone unanswered as long\nas the follow-up rule says. `round` is which follow-up it is: 1, or 2 and up once the person was chased before, when\nit lists less and asks who else to ask. The ids are what it lists, and what Mark sent records a chase on.",
+        "properties": {
+          "action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Action Ids",
+            "type": "array"
+          },
+          "question_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Question Ids",
+            "type": "array"
+          },
+          "round": {
+            "title": "Round",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "round",
+          "question_ids",
+          "action_ids"
+        ],
+        "title": "NudgeView",
         "type": "object"
       },
       "Ok": {
@@ -9602,6 +9835,18 @@
             "description": "For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name.",
             "title": "State"
           },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one thing's own words when a review or overdue line covers exactly one, which the screen uses as the line's title; null when the line groups several.",
+            "title": "Subject"
+          },
           "suggestion": {
             "anyOf": [
               {
@@ -12735,6 +12980,24 @@
             ],
             "description": "action: run it as a person action (/plugin-actions); task: start it as AI work; core: one of the core's own (open, review, go, answer, move-stage) on `about`.",
             "title": "Action Is"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "enum": [
+                  "decide",
+                  "risk",
+                  "review",
+                  "send"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which of the queue's groups the line sits in; none puts it under the fallback heading at the end.",
+            "title": "Group"
           },
           "id": {
             "title": "Id",
@@ -16016,6 +16279,56 @@
         "summary": "Action Unfollowed"
       }
     },
+    "/api/followups/{person}/followed-up": {
+      "post": {
+        "description": "Record that the follow-up message went to a person: each question and action it listed counts as chased\ntoday, and the wait for an answer starts again.",
+        "operationId": "nudge_sent_api_followups__person__followed_up_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person",
+            "required": true,
+            "schema": {
+              "title": "Person",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NudgeSent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NudgeRecorded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nudge Sent"
+      }
+    },
     "/api/followups/{person}/mark-sent": {
       "post": {
         "operationId": "sent_api_followups__person__mark_sent_post",
@@ -16063,6 +16376,56 @@
           }
         },
         "summary": "Sent"
+      }
+    },
+    "/api/followups/{person}/unfollow": {
+      "post": {
+        "description": "Undo a follow-up marked as sent.",
+        "operationId": "nudge_unsent_api_followups__person__unfollow_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person",
+            "required": true,
+            "schema": {
+              "title": "Person",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NudgeUnsent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nudge Unsent"
       }
     },
     "/api/followups/{person}/unmark-sent": {

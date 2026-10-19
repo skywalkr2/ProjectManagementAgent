@@ -12,8 +12,6 @@
 .line[data-tone="warn"] .name, .line[data-tone="warn"] .say, .line[data-tone="warn"] svg { color: var(--warn); }
 .line[data-tone="bad"] .name, .line[data-tone="bad"] .say, .line[data-tone="bad"] svg { color: var(--danger); }
 .line[data-tone="warn"] .say, .line[data-tone="bad"] .say { font-weight: var(--weight-semibold); }
-/* On a phone the words after the icon go while all is well; a problem keeps its words. The popover says the rest. */
-:global([data-narrow]) .line[data-tone="ok"] .say { display: none; }
 
 .popover { width: min(420px, calc(100vw - var(--space-4))); }
 .popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }

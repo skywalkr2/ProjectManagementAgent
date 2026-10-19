@@ -244,6 +244,21 @@ export function StyleGuide() {
             trigger={<Button icon="chevron-down">{t("styleguide.open_menu")}</Button>}
           />
           <Button onClick={() => push({ message: t("styleguide.toast"), undo: () => undefined })}>{t("styleguide.show_toast")}</Button>
+          <Button
+            onClick={() => {
+              push({ message: t("styleguide.toast"), undo: () => undefined });
+              push({ message: t("styleguide.toast_b"), undo: () => undefined });
+              // Several choices and an Undo: the buttons wrap under the words, which keep a width that reads.
+              push({
+                message: t("styleguide.toast_c"),
+                action: { label: t("styleguide.toast_c_action"), run: () => undefined },
+                more: [{ label: t("styleguide.toast_c_more"), run: () => undefined }],
+                undo: () => undefined,
+              });
+            }}
+          >
+            {t("styleguide.show_toasts")}
+          </Button>
         </div>
       </Section>
 

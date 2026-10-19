@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
+import { showNewLines } from "./lib/queue-hold";
 import { useNarrow } from "./lib/media";
 import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
@@ -116,7 +117,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup.data]);
   const handlers = useMemo(
-    () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: () => setAsk({}), help: () => setHelp(true) }),
+    () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: () => setAsk({}), help: () => setHelp(true), show_new: showNewLines }),
     [undoLast],
   );
   const keys = rc.shortcuts;
@@ -168,6 +169,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             onAddSource={() => openAddSource()}
             onOpenRecord={openRecord}
             onOpenGuide={openGuide}
+            shortcuts={rc.shortcuts}
             onAddAccount={() => {
               setAddAccount(Date.now());
               setView("settings");

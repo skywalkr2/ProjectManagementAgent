@@ -13,29 +13,42 @@ import { recordView, toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
-import { QueueGroup } from "./QueueGroup";
+import { addonLabel } from "../lib/settings";
 import { SafeText } from "./SafeText";
 
-/** The lines the enabled plugins add, one row each in a group of the Today queue. A plugin line names no group of its own
- * yet, so they follow the queue's own lines. Nothing is drawn when no plugin has anything to say. */
-export function PluginToday(props: { onOpenRecord?: (kind: string, id: string) => void }) {
-  const { t } = useWords();
+type PluginLine = S["TodayLineView"];
+type Group = NonNullable<PluginLine["group"]>;
+
+/** The lines the enabled plugins add, placed in the groups they name (design 7.7). Within a group the queue's own lines come
+ * first and a plugin's follow, soonest `until` first, so a plugin can't put itself first; a line naming no group is the
+ * fallback "More for today" at the end. Nothing is drawn when no plugin has anything to say. */
+export function usePluginToday(onOpenRecord?: (kind: string, id: string) => void) {
   const lines = useQuery({ queryKey: ["plugin-today"], queryFn: api.pluginToday });
   const { run, review } = usePluginRun();
   // Opening a record's page: the app's own way when it is given, else the address it keeps the screen in.
   const open = (kind: string, id: string) => {
-    if (props.onOpenRecord) props.onOpenRecord(kind, id);
+    if (onOpenRecord) onOpenRecord(kind, id);
     else window.location.hash = toHash(recordView(kind, id));
   };
-  if (!lines.data || lines.data.length === 0) return null;
+  const all = lines.data ?? [];
+  const soon = (a: PluginLine, b: PluginLine) => (a.until ?? "9999").localeCompare(b.until ?? "9999") || a.text.localeCompare(b.text);
+  return {
+    count: all.length,
+    /** The lines naming this group, or, for null, those naming none. */
+    in: (group: Group | null) => all.filter((line) => (line.group ?? null) === group).sort(soon),
+    run,
+    open,
+    review,
+  };
+}
+
+/** The rows for some plugin lines, in the list of the group they sit in. */
+export function PluginRows(props: { lines: PluginLine[]; plugins: Pick<ReturnType<typeof usePluginToday>, "run" | "open"> }) {
   return (
     <>
-      <QueueGroup id="plugin-today-title" title={t("today.plugins.title")}>
-        {lines.data.map((line) => (
-          <TodayRow key={`${line.plugin}:${line.id}`} line={line} run={run} open={open} />
-        ))}
-      </QueueGroup>
-      {review}
+      {props.lines.map((line) => (
+        <TodayRow key={`${line.plugin}:${line.id}`} line={line} run={props.plugins.run} open={props.plugins.open} />
+      ))}
     </>
   );
 }
@@ -53,7 +66,7 @@ type Open = (kind: string, id: string) => void;
 type Run = (offer: Offer, target: S["RecordReference"] | null) => void;
 
 function TodayRow(props: { line: S["TodayLineView"]; run: Run; open: Open }) {
-  const { t } = useWords();
+  const { t, has } = useWords();
   const { line } = props;
   const about = line.about ?? null;
   const isAction = line.action_is === "action";
@@ -64,7 +77,8 @@ function TodayRow(props: { line: S["TodayLineView"]; run: Run; open: Open }) {
   const tasks = useTaskKinds(about?.kind, about?.id, !!line.action && isTask);
   const found = (isAction ? actions.data : tasks.data)?.find((x) => x.name === line.action);
   const label = found?.label ?? t("today.plugins.go");
-  const wait = waiting(line, t);
+  // The add-on is named quietly after the rest, so the person knows why the line is there and where to turn it off.
+  const wait = [waiting(line, t), t("today.plugins.from", { addon: addonLabel(line.plugin, t, has) })].filter(Boolean).join(" · ");
   const titleId = `today-${line.plugin}-${line.id}`.replace(/[^A-Za-z0-9_-]/g, "-");
   return (
     <Row

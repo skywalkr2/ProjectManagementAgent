@@ -144,7 +144,7 @@ test.describe("the visual system", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(dialogOpener).toBeFocused();
-    // From 1280px a toast sits at the bottom left, over the navigation column, so it never covers a row's controls.
+    // From 1280px a toast sits at the bottom left of the content area, just right of the navigation and never over it, in one line.
     await page.getByRole("button", { name: "Show a toast" }).click();
     const notices = page.getByRole("region", { name: "Notifications" });
     const toast = notices.getByText("Marked as sent to Sample Person");
@@ -152,8 +152,10 @@ test.describe("the visual system", () => {
     const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
     const box = (await toast.boundingBox())!;
     const region = (await notices.boundingBox())!;
-    expect(region.x).toBeLessThan(16);
-    expect(region.x + region.width).toBeLessThanOrEqual(nav.x + nav.width);
+    expect(region.x).toBeGreaterThanOrEqual(nav.x + nav.width);
+    expect(region.width).toBeGreaterThanOrEqual(360);
+    expect(region.width).toBeLessThanOrEqual(420);
+    expect(box.height).toBeLessThan(30);
     expect(box.y).toBeGreaterThan(HEIGHT - 150);
     // Narrower, it is at the bottom center, above the bottom bar.
     await page.setViewportSize({ width: 390, height: HEIGHT });
@@ -163,6 +165,36 @@ test.describe("the visual system", () => {
     const bar = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
     expect(phone.y + phone.height).toBeLessThanOrEqual(bar.y);
   });
+
+  // WCAG 2.4.11 (axe does not check it): with three toasts showing, no control the cursor reaches is hidden under them.
+  for (const width of [390, 1440]) {
+    test(`with three toasts showing, Tab never leaves a control under them at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: HEIGHT });
+      await signIn(page, "styleguide");
+      await page.getByRole("button", { name: "Show three toasts" }).click();
+      const notices = page.getByRole("region", { name: "Notifications" });
+      await expect(notices.getByRole("button", { name: "Dismiss" })).toHaveCount(3);
+      // Even with several buttons the words keep a width that reads: the buttons wrap under them.
+      expect((await notices.getByText("Added Sample Project").boundingBox())!.width).toBeGreaterThan(150);
+      await page.getByRole("heading", { level: 1 }).first().focus();
+      const hidden: string[] = [];
+      for (let i = 0; i < 400; i++) {
+        await page.keyboard.press("Tab");
+        const covered = await page.evaluate(() => {
+          const active = document.activeElement as HTMLElement | null;
+          const region = document.querySelector("[data-toast-region]");
+          if (!active || !region || region.contains(active)) return null;
+          const r = active.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) return null;
+          const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return top && region.contains(top) ? (active.getAttribute("aria-label") ?? active.textContent ?? active.tagName).trim().slice(0, 40) : null;
+        });
+        if (covered) hidden.push(covered);
+        if (await page.evaluate(() => document.activeElement === document.body)) break;
+      }
+      expect(hidden).toEqual([]);
+    });
+  }
 });
 
 test.describe("screen use and the shell", () => {

@@ -34,15 +34,26 @@ function sayText(kind: AliveKind, a: S["AssistantStatus"], t: (key: string, vars
   }
 }
 
-export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
-  const { t, tn, has } = useWords();
+/** The assistant's alive state in words, for the line beside the status chip and for the chip's popover on a phone; null
+ * until the status has answered. */
+export function useAlive(): { kind: AliveKind; tone: AliveTone; say: string; icon: IconName } | null {
+  const { t } = useWords();
   const restart = useRestart();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const nameOf = useAccountNames();
   if (!status.data) return null;
-  const a = status.data.assistant;
   const { kind, tone } = aliveState({ status: status.data, restartPhase: restart.phase });
-  const say = sayText(kind, a, t, nameOf);
+  return { kind, tone, say: sayText(kind, status.data.assistant, t, nameOf), icon: ICON[tone] };
+}
+
+export function AssistantLine(props: { onOpenGuide: (step?: string) => void }) {
+  const { t, tn, has } = useWords();
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const nameOf = useAccountNames();
+  const alive = useAlive();
+  if (!status.data || !alive) return null;
+  const a = status.data.assistant;
+  const { kind, tone, say } = alive;
   const work = (tier: string) => (has(`welcome.ai.tier.${tier}`) ? t(`welcome.ai.tier.${tier}`) : tier);
   const toGuide = (close: () => void) => {
     close();

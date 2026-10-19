@@ -60,7 +60,6 @@
   --header-h: var(--header-row-h);
   --sidebar-w: 232px;          /* left navigation, expanded (>= 1280px) */
   --sidebar-w-collapsed: 64px; /* icons only (below 1280px, or collapsed by the person) */
-  --toast-w-rail: 280px;       /* a toast at the bottom left while the navigation is folded to icons */
   --bottombar-h: 64px;         /* phone bottom bar */
   --gutter: 24px;              /* between panes and grid columns */
   --page-pad: 24px;            /* inside the content area */

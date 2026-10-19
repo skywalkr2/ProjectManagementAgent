@@ -17,7 +17,7 @@ const action = (over: Partial<S["FollowupAction"]> = {}): S["FollowupAction"] =>
   told: null,
   told_days: null,
   followed_up: null,
-  chase_due: false,
+  chase_due: false, chases: 0,
   ...over,
 });
 
@@ -129,7 +129,7 @@ test("They finished it with no note sends no body", async () => {
 
 test("Followed up takes a note: the box offers both acts, the row's main one first", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({ "GET followups": () => waiting({ told_days: 5, chase_due: true }), ...routes });
+  const calls = fakeApi({ "GET followups": () => waiting({ told_days: 5, chase_due: true, chases: 0 }), ...routes });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   const box = await openNote(user, "Send the index");
@@ -143,7 +143,7 @@ test("Followed up takes a note: the box offers both acts, the row's main one fir
 
 test("Followed up with no note sends no body", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({ "GET followups": () => waiting({ told_days: 5, chase_due: true }), ...routes });
+  const calls = fakeApi({ "GET followups": () => waiting({ told_days: 5, chase_due: true, chases: 0 }), ...routes });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
   await user.click(await screen.findByRole("button", { name: "Followed up" }));

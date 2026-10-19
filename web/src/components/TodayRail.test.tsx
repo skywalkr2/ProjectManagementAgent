@@ -196,7 +196,7 @@ test("marking a to-do done uses the action path and offers Undo", async () => {
   const { calls } = open({
     "POST actions/ACT-1/status": () => ({ ok: "ACT-1" }),
   });
-  await user.click(await screen.findByRole("button", { name: "Mark done: Send the index" }));
+  await user.click(await screen.findByRole("checkbox", { name: "Mark done: Send the index" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-1/status")).toBe(true));
   expect(calls.find((c) => c.route === "POST actions/ACT-1/status")!.body).toEqual({ status: "done" });
   expect(await screen.findByText("Marked done.")).toBeInTheDocument();

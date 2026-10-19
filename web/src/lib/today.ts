@@ -34,3 +34,20 @@ export function inGroup(lines: QueueLine[], group: QueueGroupName): QueueLine[] 
 export function mixesProjects(lines: QueueLine[]): boolean {
   return new Set(lines.map((line) => line.project).filter(Boolean)).size > 1;
 }
+
+// The line the inspector showed last, for the rest of the session: returning to Today (or a live refresh) opens the same
+// line, and when it is gone, the line now in its place.
+let remembered: { key: string; index: number } | null = null;
+
+export function rememberLine(key: string, index: number): void {
+  remembered = { key, index };
+}
+
+export function recallLine(): { key: string; index: number } | null {
+  return remembered;
+}
+
+/** Forgets the remembered line, so the inspector starts on the first one. */
+export function forgetLine(): void {
+  remembered = null;
+}

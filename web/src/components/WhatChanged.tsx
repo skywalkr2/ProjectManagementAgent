@@ -218,7 +218,7 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
     cs &&
     act(
       () => api.looksGood(cs.id),
-      () => ({ message: t("toast.looks_good"), undo: () => api.reopen(cs.id) }),
+      () => ({ message: t("toast.looks_good"), many: (n) => tn("toast.looks_good_many", n), undo: () => api.reopen(cs.id) }),
     );
   const undoAll = () =>
     cs &&

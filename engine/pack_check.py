@@ -54,13 +54,18 @@ from engine.yaml_load import load_yaml
 class Report:
     passed: list[str] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
+    warned: list[str] = field(default_factory=list)  # worth fixing, but they don't fail the check
 
     @property
     def ok(self) -> bool:
         return not self.failed
 
     def lines(self) -> list[str]:
-        return [f"PASS  {p}" for p in self.passed] + [f"FAIL  {f}" for f in self.failed]
+        return (
+            [f"PASS  {p}" for p in self.passed]
+            + [f"WARN  {w}" for w in self.warned]
+            + [f"FAIL  {f}" for f in self.failed]
+        )
 
 
 def _declared(values: dict[str, Any]) -> dict[str, Any]:
@@ -150,6 +155,11 @@ def _load_in_demo(plugin: str, name: str, report: Report) -> None:
                 report.passed.append("it loads and registers in a demo workspace")
                 for note in status.notes if status else []:
                     report.failed.append(f"it loads, with a note: {note}")
+                if any(line.group is None for owner, line in store.plugins.today() if owner == name):
+                    report.warned.append(
+                        "some of its Today lines name no group, so they show under the fallback heading at the "
+                        "end: set group= on each line to one of decide, risk, review or send"
+                    )
             else:
                 reason = status.reason if status else "it wasn't found"
                 report.failed.append(f"it doesn't load in a demo workspace: {reason}")

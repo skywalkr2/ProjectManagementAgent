@@ -475,6 +475,11 @@ class Question(Record):
         "answer. dropped: closed without one.",
     )
     sent_at: datetime | None = Field(None, description="When it was marked as sent.")
+    followed_up: list[date] = Field(
+        default_factory=list,
+        description="The days the person was chased about it after it went out, oldest first. A chase restarts the "
+        "wait for an answer and never changes when the question was first sent (`sent_at`).",
+    )
     answer: str | None = Field(None, description="The answer, once answered.")
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     options: list[str] = Field(default_factory=list, description="Choices offered, for routing and decisions.")

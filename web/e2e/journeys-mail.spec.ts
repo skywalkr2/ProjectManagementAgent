@@ -177,7 +177,7 @@ test.describe.serial("journey: mail", () => {
     // cursor is in the queue, so the list doesn't move under it.
     const reviews = page.locator('[data-queue-line="review"]');
     const showNew = page.getByRole("button", { name: /new · Show/ });
-    await expect(reviews.first().or(showNew)).toBeVisible({ timeout: 30_000 });
+    await expect(reviews.first().or(showNew).first()).toBeVisible({ timeout: 30_000 });
     if (await showNew.count()) await showNew.click();
     await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });
     for (const title of [...mail, ...events]) await expect(reviews.filter({ hasText: title })).toHaveCount(1);

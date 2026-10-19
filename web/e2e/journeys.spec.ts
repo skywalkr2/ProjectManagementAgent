@@ -137,7 +137,7 @@ test.describe.serial("journeys", () => {
     // The assistant's work waits behind "N new · Show" while the cursor is in the queue, so the list doesn't move under it.
     const review = page.locator('[data-queue-line="review"]');
     const showNew = page.getByRole("button", { name: /new · Show/ });
-    await expect(review.first().or(showNew)).toBeVisible({ timeout: 20_000 });
+    await expect(review.first().or(showNew).first()).toBeVisible({ timeout: 20_000 });
     if (await showNew.count()) await showNew.click();
     await expect(review).toHaveCount(1);
     await expect(review).toContainText(/Look over 3 things Assistant did/);
@@ -369,7 +369,7 @@ test.describe.serial("journeys", () => {
     row = await handIn(agenda, agenda);
     // The to-do is in the rail of Today, beside the queue.
     await page.getByRole("link", { name: /^Today/ }).first().click();
-    const todo = page.locator("li", { has: page.getByRole("button", { name: "Mark done: Print the agenda." }) });
+    const todo = page.locator("li", { has: page.getByRole("checkbox", { name: "Mark done: Print the agenda." }) });
     await expect(todo).toHaveCount(1, { timeout: 20_000 });
     await todo.getByRole("button", { name: "More actions for Print the agenda." }).click();
     await page.getByRole("menuitem", { name: "Drop" }).click();
