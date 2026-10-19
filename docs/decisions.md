@@ -251,6 +251,11 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   **Impact:** design 7.9 edited to what was built (CHANGES.md section 84); left from the old 7.9 text: help that
   follows focus with "what reads this", two columns of fields, a save bar for settings that need a restart, separate
   admin sections. Phase B wave 3 is done; wave 4 (records) is next.
+- **Also (2026-10-19): which model does what is a setting on screen (owner).** The owner asked that routing to the
+  stronger model be on the Settings screen and make sense there. It is a setting (config with schema, already in
+  `ai.yaml`: `tasks.<kind>.tier`, `tiers.<tier>.escalate_to`, `routing`), so Settings gets a section for it under AI
+  accounts. Escalation stays tied to failed checks, never to a model's own confidence.
+  **Impact:** open promise P27; design 7.9 gains the section when it is built.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
