@@ -7,11 +7,12 @@ import type { QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
+import { PromiseWhy } from "./PromiseWhy";
 import { TodoRow } from "./TodayRail";
 import { ChangeRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
-const OPENS = new Set<QueueLine["kind"]>(["decision", "question", "who_is", "owner", "held", "moved", "go", "refused", "failed", "review", "send", "nudge", "overdue"]);
+const OPENS = new Set<QueueLine["kind"]>(["decision", "question", "who_is", "owner", "held", "moved", "go", "refused", "failed", "review", "send", "nudge", "overdue", "promise"]);
 
 export function opensItems(line: QueueLine): boolean {
   return OPENS.has(line.kind);
@@ -33,6 +34,8 @@ export function LineDetail(props: { line: QueueLine; sendBack?: boolean; onOpenG
       return <NudgeDetail line={line} />;
     case "overdue":
       return <OverdueDetail line={line} />;
+    case "promise":
+      return <PromiseWhy action={(line.actions ?? [])[0] ?? ""} />;
     default:
       return <ChangeDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} />;
   }

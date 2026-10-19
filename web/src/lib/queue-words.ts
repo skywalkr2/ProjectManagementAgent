@@ -9,8 +9,31 @@ type Tn = (key: string, n: number, vars?: Record<string, string | number>) => st
 
 const first = (name: string | null | undefined) => (name ?? "").trim().split(/\s+/)[0] ?? "";
 
+/** An ending of an action read from an input: the line says what the input says happened, and the person keeps it, asks
+ * for it later, or changes the action. Questions and every other hold keep their own words. */
+export function isEnding(held: S["HeldAsk"]): boolean {
+  return !!held.record && (held.ask === "close" || held.ask === "drop" || held.ask === "move" || held.ask === "part");
+}
+
+function endingTitle(held: S["HeldAsk"], t: T): string {
+  const item = held.item;
+  const owners = held.owners ?? [];
+  const who = owners.length > 0 ? owners.join(", ") : t("queue.held.e.someone");
+  switch (held.ask) {
+    case "drop":
+      return t("queue.held.e.drop", { item });
+    case "move":
+      return t("queue.held.e.move", { item, when: held.due_words || (held.value ? day(held.value) : t("queue.held.e.new_date")) });
+    case "part":
+      return t("queue.held.e.part", { who, delivered: held.delivered ?? "", left: held.left ?? "" });
+    default:
+      return t("queue.held.e.close", { who, item });
+  }
+}
+
 export function heldTitle(held: S["HeldAsk"], t: T): string {
   const item = held.item;
+  if (isEnding(held)) return endingTitle(held, t);
   switch (held.ask) {
     case "close":
       return t("queue.held.q.close", { item });
@@ -22,10 +45,13 @@ export function heldTitle(held: S["HeldAsk"], t: T): string {
       return t("queue.held.q.routing", { item, name: held.to_name ?? "" });
     case "drop":
       return t("queue.held.q.drop", { item });
+    default:
+      return item;
   }
 }
 
 export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other: string } {
+  if (isEnding(held)) return { primary: t("queue.held.e.keep"), other: t("queue.held.e.not_yet") };
   switch (held.ask) {
     case "close":
       return { primary: t("queue.held.a.close"), other: t("queue.held.k.close") };
@@ -46,6 +72,8 @@ export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other:
       };
     case "drop":
       return { primary: t("queue.held.a.drop"), other: t("queue.held.k.drop") };
+    default:
+      return { primary: t("queue.held.e.keep"), other: t("queue.held.e.not_yet") };
   }
 }
 

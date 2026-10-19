@@ -2711,7 +2711,10 @@ promise and applies at once, shown on it. A held ending kept by the person count
 
 **No news by its date.** A promise past its date with no ending and no news is a line with its choices: for a waiting-on,
 "Chase Ana: the floor plan, due Tuesday" with Followed up (a nudge: it stays open), New date, Done and Drop; for the
-person's own, the same choices without Chase. A nudge never ends it.
+person's own, the same choices without Chase. A nudge never ends it. A waiting-on is not left to go stale: with a date it
+gets its line from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
+`steward.chase_undated_days` (14) with no news since it was made or since its last news ("Chase Ana: the floor plan, no
+date, nothing heard for 14 days"). Never while it is on hold.
 
 **Every promise shows why:** the exact words, who owes it to whom, the date and the words it came from, where it came
 from (a link to the source), and "said" or "inferred". Each of these is one click to correct, and each correction is a
@@ -2728,9 +2731,20 @@ and the twenty learning pairs become harness pairs in a workspace's `pairs/` fol
 
 *Built so far (S1):* the fields, rules-first dates, `action.move`, `action.part` and `action.news`, and endings from an
 input held for the person (the person's own note, edit or sent mail applies at once; keeping a held close credits who
-the input said reported it) (`tests/test_promises.py`). *Not built yet:* the prompts and playbook entries that ask for
-promises both ways, the sent folder offered as a source, the line for a promise past its date with its choices, the
-"why" on every promise with one-click corrections, and the golden cases and harness pairs.
+the input said reported it) (`tests/test_promises.py`). **On screen:** every promise shows why (the words, who owes it to
+whom in the owner format, the day with its words and "Check this date", where it came from, "Said" or "Worked out", the
+news under it, newest first, a delivered part credited to the owners), each of owner, promised to, day and basis one click
+to correct from a list or date picker as the person's own edit with Undo, a signal the assistant learns from
+(`tests/test_promise_routes.py`, `web/src/components/PromiseWhy.test.tsx`); a held ending reads as one line, "Keep:
+Ana finished 'Send the floor plan'", with its words under it, Keep first and Not yet and Change in the menu
+(`tests/test_promise_lines.py`, `web/src/components/TodayPromises.test.tsx`); a promise needing a look is one Today
+line with its choices and on no other line: the person's own past their day, and those owed by someone else from
+`steward.chase_dated_days` (7) before their day or past it, or, with no day, after `steward.chase_undated_days` (14) with
+nothing heard, never while on hold or with news since their day (`tests/test_promise_lines.py`); the sent folder offered
+under a mailbox, the server's marked folder picked, taken in quietly (`tests/test_sent_folder.py`,
+`web/src/components/Sources.test.tsx`). The prompts and playbook entries ask for promises both
+ways, and the golden cases and harness pairs are in demo-b (`tests/test_followups_backup_eval.py`,
+`tests/test_evaluate_harness.py`). *Not built yet:* the sent folder offered by a plugin's sign-in sources.
 
 **From three weeks of running** (the designer's S1-1 notes, 2026-10-19, `docs/project/designer-s1-1-notes-2026-10-19.md`):
 - **On hold until a trigger** is its own state: `action.hold` stores what it waits for, and a held promise is out of due

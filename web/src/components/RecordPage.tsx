@@ -16,6 +16,7 @@ import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
 import { PersonDrawer } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
+import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
 import { RecordActivity } from "./RecordActivity";
@@ -110,6 +111,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       {data && (
         <div className="record-grid">
           <div className="record-main">
+          {kind === "action" && <PromiseWhy action={id} quiet omitOrigin />}
           {page.data && <RecordActivity page={page.data} />}
           {data.long_text.map((field) => (
             <TextSection

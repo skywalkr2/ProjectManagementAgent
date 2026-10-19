@@ -12,7 +12,7 @@ import { day, wallTime } from "../lib/dates";
 import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { onShowNewLines } from "../lib/queue-hold";
-import { afterMove, heldAnswers, heldTitle, moveTitle } from "../lib/queue-words";
+import { afterMove, heldAnswers, heldTitle, isEnding, moveTitle } from "../lib/queue-words";
 import { revealOrKeep } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
@@ -24,6 +24,7 @@ import { Pill, type PillTone } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { NothingNeedsYou } from "./Coverage";
+import { usePromiseChoices } from "./PromiseLine";
 import { LearnedLine, isLearned } from "./LearnedToday";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
@@ -525,6 +526,11 @@ export function useLineTitle(): (line: QueueLine) => string {
       }
       case "nudge":
         return t("queue.nudge", { name });
+      case "promise": {
+        const vars = { name, text: line.text ?? "", date: line.due ? day(line.due) : "" };
+        if (!line.due) return tn("queue.promise.chase_undated", line.waiting_days ?? 0, { ...vars, n: line.waiting_days ?? 0 });
+        return t(line.person ? "queue.promise.chase" : "queue.promise.own", vars);
+      }
       default:
         return line.text ?? line.kind;
     }
@@ -569,6 +575,7 @@ function QueueRow(props: {
     if (props.beside) intoPane();
   };
   const show: MenuAction = { id: "look", label: t("queue.look_closer"), run: choose };
+  const promiseRow = usePromiseChoices(line, () => ref.current?.focus());
 
   const what = titleWords(line.title);
   const title = lineTitle(line);
@@ -592,6 +599,40 @@ function QueueRow(props: {
         const index = line.op;
         const words = heldAnswers(ask, t);
         const told = ask.told ?? [];
+        const release = () =>
+          void act(
+            () => api.release(cs, index),
+            () => ({ message: t("queue.held.done", { what: ask.item }), undo: () => api.undo(cs, [index]) }),
+          );
+        const decline = () =>
+          void act(
+            () => api.declineOp(cs, index),
+            () => ({ message: t("queue.held.kept", { what: ask.item }), undo: () => api.undeclineOp(cs, index) }),
+          );
+        if (isEnding(ask)) {
+          // An ending an input says happened reads as one line: Keep is the primary; Not yet and Change are in the menu.
+          const record = ask.record ?? "";
+          return {
+            pill: t("queue.pill.waiting"),
+            tone: "warn",
+            meta: (
+              <>
+                {meta(ask.quote ? t("queue.held.quote", { quote: ask.quote }) : "", ask.reporter ? t("queue.held.e.said_by", { name: ask.reporter }) : "", what)}
+                {ask.ask === "drop" && told.length > 0 && (
+                  <>
+                    {" · "}
+                    <strong>{ask.told_on ? t("queue.held.told_on", { names: told.join(", "), date: day(ask.told_on) }) : t("queue.held.told", { names: told.join(", ") })}</strong>
+                  </>
+                )}
+              </>
+            ),
+            primary: { label: words.primary, run: release },
+            menu: [
+              { id: "not-yet", label: words.other, run: decline },
+              ...(props.handlers.onOpenRecord ? [{ id: "change", label: t("queue.held.e.change"), run: () => props.handlers.onOpenRecord?.("action", record) }] : []),
+            ],
+          };
+        }
         return {
           pill: t("queue.pill.waiting"),
           tone: "warn",
@@ -749,6 +790,19 @@ function QueueRow(props: {
           menu: [],
         };
       }
+      case "promise": {
+        const days = line.waiting_days ?? 0;
+        // A date still ahead and no date at all are the waiting-ons that ask for a nudge early; only a passed date is late.
+        const pill = !line.due ? t("queue.pill.undated") : days > 0 ? t("queue.pill.overdue") : t("queue.pill.due_soon");
+        const meta = !line.due ? t("queue.promise.undated") : days > 0 ? tn("queue.promise.late", days, { n: days }) : days === 0 ? t("queue.promise.today") : tn("queue.promise.ahead", -days, { n: -days });
+        return {
+          pill,
+          tone: days > 0 ? "danger" : "warn",
+          meta,
+          primary: promiseRow.primary,
+          menu: [show, ...promiseRow.menu],
+        };
+      }
       default:
         // A kind the screen has no words for yet still shows, so nothing the engine ranks is hidden.
         return { pill: "", tone: "neutral", meta: meta(line.waiting), primary: null, menu: [] };
@@ -819,15 +873,20 @@ function QueueRow(props: {
       menu={d.menu.length > 0 ? <RowMenu label={title} actions={d.menu} /> : undefined}
       onClick={onClick}
     >
-      {inPlace && (
-        <div id={detailId} className={styles.detail}>
-          <LineDetail line={line} sendBack={props.selection?.sendBack} onOpenGuide={props.handlers.onOpenGuide} />
-          <div className={styles.detailEnd}>
-            <Button size="sm" variant="ghost" onClick={() => select(false)}>
-              {t("action.close")}
-            </Button>
-          </div>
-        </div>
+      {(inPlace || promiseRow.form) && (
+        <>
+          {inPlace && (
+            <div id={detailId} className={styles.detail}>
+              <LineDetail line={line} sendBack={props.selection?.sendBack} onOpenGuide={props.handlers.onOpenGuide} />
+              <div className={styles.detailEnd}>
+                <Button size="sm" variant="ghost" onClick={() => select(false)}>
+                  {t("action.close")}
+                </Button>
+              </div>
+            </div>
+          )}
+          {promiseRow.form}
+        </>
       )}
     </Row>
   );

@@ -18,6 +18,7 @@ import { Because } from "./Because";
 import { LearnedLines } from "./Learned";
 import { FirstGoRow } from "./FirstGoRow";
 import { useChangeThis, type ChangeKind } from "./ChangeThis";
+import { PromiseWhy } from "./PromiseWhy";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
 import { StageTodayRows, useStageToday } from "./StageToday";
@@ -438,6 +439,9 @@ const OP_PILL: Record<S["OpView"]["status"], string | null> = {
 /** The kinds of item a review card's row can be changed as (the kinds the change route takes). */
 const CHANGEABLE: ChangeKind[] = ["action", "question", "decision", "event", "fact"];
 
+/** The ops about a promise: the row shows why it exists and how it ended, beside the words the op rests on. */
+const PROMISE_OPS = new Set(["action.add", "action.close", "action.drop", "action.move", "action.part", "action.news"]);
+
 function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string | null }) {
   const { t, tn } = useWords();
   const act = useAct();
@@ -502,6 +506,11 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
         </div>
       )}
       {showSource && op.evidence && props.source && <SourcePanel id={props.source} quote={op.evidence.quote} />}
+      {op.record?.kind === "action" && PROMISE_OPS.has(op.op) && op.status !== "undone" && (
+        <div className="full">
+          <PromiseWhy action={op.record.id} quiet omitQuote />
+        </div>
+      )}
       {changeKind && change.form}
       {ask && (
         <div className="full">

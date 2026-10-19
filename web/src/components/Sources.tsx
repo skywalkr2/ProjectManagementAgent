@@ -281,6 +281,7 @@ function SourceRow(props: {
               {problem}
             </p>
           )}
+          {source.connector === "mailbox" && source.enabled && !problem && <SentFolderOffer source={source} save={save} />}
         </div>
         <div className="acts">
           <RowMenu label={source.label} actions={actions} buttonId={menuId} />
@@ -298,6 +299,47 @@ function SourceRow(props: {
         />
       )}
     </li>
+  );
+}
+
+/** One line under a mailbox: the folder of mail the person sent, as a second source, so promises they make are noticed. The
+ * list is the mailbox's own, with the folder its server marks as sent picked already (the person picks when it marks none);
+ * a folder already read isn't offered. It is taken in quietly like any new source. */
+function SentFolderOffer(props: { source: Source; save: ReturnType<typeof useSourceSave> }) {
+  const { t } = useWords();
+  const id = useId();
+  const found = useQuery({ queryKey: ["watch-folders", props.source.id], queryFn: () => api.watchFolders(props.source.id), retry: false, staleTime: 300_000 });
+  const [picked, setPicked] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const data = found.data;
+  if (!data) return null;
+  const taken = data.taken ?? [];
+  const options = data.folders.filter((f) => !taken.includes(f));
+  if (options.length === 0 || (data.sent && taken.includes(data.sent))) return null;
+  const marked = data.sent && options.includes(data.sent) ? data.sent : "";
+  const folder = picked ?? marked;
+  const add = async () => {
+    setBusy(true);
+    await props.save((fingerprint) => api.addSentFolder(props.source.id, { folder, label: t("sources.sent.label", { label: props.source.label }), fingerprint }), t("sources.sent.added_toast", { label: props.source.label }));
+    setBusy(false);
+  };
+  return (
+    <div className="sent-offer" data-sent-offer="">
+      <label className="sub" htmlFor={id}>
+        {t("sources.sent.offer")}
+      </label>
+      <select id={id} aria-label={t("sources.sent.folder")} value={folder} onChange={(e) => setPicked(e.target.value)}>
+        {!marked && <option value="">{t("sources.sent.choose")}</option>}
+        {options.map((f) => (
+          <option key={f} value={f}>
+            {f}
+          </option>
+        ))}
+      </select>
+      <button type="button" className="btn small" disabled={!folder || busy} onClick={() => void add()}>
+        {t("sources.sent.add")}
+      </button>
+    </div>
   );
 }
 

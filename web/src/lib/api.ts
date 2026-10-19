@@ -74,6 +74,9 @@ export const api = {
     call<S["SettingsSaved"]>("POST", `watch/sources/${id(src)}`, body),
   removeSource: (src: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `watch/sources/${id(src)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
+  /** The folders of a mailbox source, and which one its server marks as sent mail. */
+  watchFolders: (src: string) => call<S["MailFoldersView"]>("GET", `watch/${id(src)}/folders`),
+  addSentFolder: (src: string, body: S["SentFolderIn"]) => call<S["SettingsSaved"]>("POST", `watch/${id(src)}/sent-folder`, body),
   readSource: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/read`),
   handInRecent: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/recent`),
   autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
@@ -267,6 +270,9 @@ export const api = {
     call<S["Applied"]>("POST", `lists/${named(list)}/rename`, { value, to }),
   listRetire: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/retire`, { value }),
   editRecord: (body: S["RecordEdit"]) => call<S["Applied"]>("POST", "records/edit", body),
+  /** Why a promise exists: its words, who owes it to whom, its day, how it is known and what was heard since. */
+  promise: (action: string) => call<S["PromiseView"]>("GET", `promises/${id(action)}`),
+  correctPromise: (action: string, body: S["PromiseCorrection"]) => call<S["Applied"]>("POST", `promises/${id(action)}/correct`, body),
   kindView: (kind: string) => call<S["KindView"]>("GET", `kinds/${named(kind)}`),
   record: (kind: string, record: string) =>
     call<S["GenericRecordView"]>("GET", `record?kind=${id(kind)}&id=${id(record)}`),

@@ -120,7 +120,7 @@ def record(tx: Any, cfg: Any, data: dict[str, Any], write: Any, now: datetime | 
 
 #: The fields whose edit by the person corrects the assistant, by record kind; others (a status, a note) are their own.
 EDITED_FIELDS = {
-    "action": ("text", "due", "owners", "project"),
+    "action": ("text", "due", "owners", "project", "promised_to", "basis"),
     "question": ("title", "text", "to", "matters_for", "projects"),
     "fact": ("key", "value", "as_of", "project"),
     "event": ("title", "start", "end", "project"),

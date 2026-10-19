@@ -51,11 +51,13 @@ from api.schemas import (
     FolderCheckView,
     FolderListView,
     LocalServerView,
+    MailFoldersView,
     MeIn,
     MeView,
     Ok,
     PackTokenIn,
     RestartAsked,
+    SentFolderIn,
     SettingChangeView,
     SettingItem,
     SettingsSave,
@@ -559,6 +561,68 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise
         worker.read_sources_now()  # its first read happens now, not at the next minute's check
         return done
+
+    def mailbox_of(source_id: str) -> tuple[dict[str, Any], Any]:
+        """A mailbox source as the files hold it, and its settings; anything else has no folders to list."""
+        from engine.connectors.mailbox import MailboxSettings
+
+        found = next((s for s in sources_now() if s["id"] == source_id), None)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"There is no source {source_id}.")
+        if found["connector"] != "mailbox":
+            raise HTTPException(status_code=409, detail="That source isn't a mailbox.")
+        return found, MailboxSettings.model_validate(found["settings"])
+
+    def read_folders(settings: Any) -> Any:
+        from engine.connectors import ConnectorError
+        from engine.connectors.mailbox import list_folders
+
+        try:
+            return list_folders(settings)
+        except ConnectorError as err:
+            raise HTTPException(status_code=409, detail=err.detail or str(err)) from None
+
+    def taken_folders(settings: Any) -> list[str]:
+        from engine.connectors.mailbox import MailboxSettings
+
+        return sorted(
+            {
+                MailboxSettings.model_validate(s["settings"]).folder
+                for s in sources_now()
+                if s["connector"] == "mailbox"
+                and s["settings"].get("host") == settings.host
+                and s["settings"].get("user") == settings.user
+            }
+        )
+
+    @r.get("/watch/{source_id}/folders")
+    def watch_folders(source_id: str) -> MailFoldersView:
+        """The folders of a mailbox source, and which the server marks as sent mail, for offering the sent folder as a
+        source of its own. Reads the mailbox; nothing there changes."""
+        _, settings = mailbox_of(source_id)
+        found = read_folders(settings)
+        return MailFoldersView(folders=list(found.names), sent=found.sent, taken=taken_folders(settings))
+
+    @r.post("/watch/{source_id}/sent-folder")
+    def watch_sent_folder(source_id: str, body: SentFolderIn) -> SettingsSaved:
+        """Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the
+        folder picked from its list, and the person as its author, since what is in it is their own mail. It is taken in
+        quietly like any new source."""
+        found, settings = mailbox_of(source_id)
+        listed = read_folders(settings)
+        if body.folder not in listed.names or body.folder in taken_folders(settings):
+            raise HTTPException(status_code=400, detail="Choose a folder from the list.")
+        person = current().workspace.user.person
+        return watch_add(
+            WatchSourceIn(
+                connector="mailbox",
+                label=body.label,
+                every_minutes=found["every_minutes"],
+                author=person or None,
+                settings={**found["settings"], "folder": body.folder},
+                fingerprint=body.fingerprint,
+            )
+        )
 
     @r.post("/watch/sources/{source_id}")
     def watch_change(source_id: str, body: WatchSourceChange) -> SettingsSaved:

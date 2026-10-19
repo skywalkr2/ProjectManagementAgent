@@ -193,6 +193,7 @@ from engine.origin import origins
 from engine.owners import suggest_owner
 from engine.plugin_api import CORE_LINE_ACTIONS
 from engine.plugin_host import check_about
+from engine.promises import ENDING_NAMES
 from engine.prompts import render
 from engine.records import Scope, referrers
 from engine.stages import approve_stage_request, record_status, stage_history
@@ -2068,6 +2069,10 @@ def _op_view(
         if rec is not None and ref["kind"] in ("action", "question", "fact", "event", "note", "person", "project"):
             record = (ref["kind"], rec)
             break
+    if record is None and op["op"] in ENDING_NAMES:
+        # An ending that waits for the person has made nothing yet, so it is about the action it would end.
+        rec = store.read().get("action", op.get("id", ""))
+        record = ("action", rec) if rec is not None else None
     title = o.get("label") or op.get("text") or op.get("title") or op.get("answer") or op.get("full_name") or ""
     if op["op"] == "answer":
         title = op["text"]  # the whole answer is what the person reads, not its one-line label

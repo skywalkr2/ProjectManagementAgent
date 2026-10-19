@@ -1459,12 +1459,15 @@ class TodoView(BaseModel):
 
 class HeldAsk(BaseModel):
     """A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change
-    its date, give it to another owner, send a question to someone else instead, or drop it), `item` the words of what
-    it is about, `value` and `from_value` the new and the present date, `to_name` the person it would go to, `told`
-    the people a drop would leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it
-    on. The screen words the title and the two answers from these."""
+    its date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a
+    promise, move its date or record a part delivered), `item` the words of what it is about, `value` and `from_value`
+    the new and the present date, `to_name` the person it would go to, `told` the people a drop would leave out of the
+    loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action also carries what
+    the input says happened: the action's id in `record`, its `owners` in the owner format, `reporter` (who said it),
+    and by ask the words of a new date (`due_words`), what was `delivered` and what is `left`, or the `reason` it is
+    called off. The screen words the title and the answers from these."""
 
-    ask: Literal["close", "date", "owner", "routing", "drop"]
+    ask: Literal["close", "date", "owner", "routing", "drop", "move", "part"]
     item: str
     value: str | None = None
     from_value: str | None = None
@@ -1472,6 +1475,64 @@ class HeldAsk(BaseModel):
     told: list[str] = Field(default_factory=list)
     told_on: str | None = None
     quote: str | None = None
+    record: str | None = None
+    owners: list[str] = Field(default_factory=list)
+    reporter: str | None = None
+    due_words: str | None = None
+    delivered: str | None = None
+    left: str | None = None
+    reason: str | None = None
+
+
+class PromisePerson(BaseModel):
+    id: str
+    name: str = Field(description="The person's name; for an owner, written in the workspace's owner format.")
+
+
+class PromiseNews(BaseModel):
+    """Something heard about a promise that didn't end it. A part that was delivered is `delivered` and credited to the
+    owners (in the owner format), so it reads as done."""
+
+    on: date
+    text: str
+    quote: str | None = None
+    delivered: bool = False
+    credited: list[str] = Field(default_factory=list)
+
+
+class PromiseView(BaseModel):
+    """Why a promise exists and what is known of it (design 6.33): the exact words (`quote`) and where they came from
+    (`origin`), who owes it (`owners`, in the owner format) and to whom (`promised_to`), its day with the words it was
+    read from (`due_words`, and `due_check` when the reading is doubtful), how it is known (`basis`: said outright or
+    worked out; never a score), and what was heard since (`news`, newest first). `mine` is true when the person owes it.
+    `version` is what a correction states it read."""
+
+    action: str
+    version: int
+    text: str
+    status: Literal["held", "open", "done", "dropped"]
+    quote: str | None = None
+    owners: list[PromisePerson]
+    mine: bool
+    promised_to: list[PromisePerson]
+    due: date | None = None
+    due_words: str | None = None
+    due_check: bool = False
+    basis: Literal["inferred", "said"] | None = None
+    said_by: str | None = None
+    origin: Origin | None = None
+    news: list[PromiseNews]
+
+
+class PromiseCorrection(BaseModel):
+    """One correction to a promise, picked from a list: who owes it (a person's id), to whom (person ids), how it is
+    known, or a new day. Only the fields given change; `read_version` is the version the screen showed."""
+
+    read_version: int = Field(ge=1)
+    owner: str | None = Field(None, description="The person who owes it now; they become its only owner.")
+    promised_to: list[str] | None = Field(None, description="The people it is promised to, replacing the list.")
+    basis: Literal["inferred", "said"] | None = None
+    due: date | None = Field(None, description="The new day; the words the old one came from are dropped.")
 
 
 class AfterMove(BaseModel):
@@ -1516,7 +1577,12 @@ class QueueLineView(BaseModel):
     isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;
     `source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its
     label, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last
-    read, or first tried when it never was), which clears once it is read again; `unfiled` is
+    read, or first tried when it never was), which clears once it is read again; `promise` is one open action that
+    needs a look: the person's own past its date, or one someone else owes with its date near or past, or with none and
+    nothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is
+    undated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and
+    `person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET
+    /api/promises/{id} says why it exists); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1541,6 +1607,7 @@ class QueueLineView(BaseModel):
         "borrow",
         "offline",
         "overdue",
+        "promise",
         "account_check",
         "switch_failed",
         "credential",
@@ -2718,6 +2785,27 @@ class WatchSourceView(BaseModel):
     secrets: list[SourceSecretView] = Field(
         default_factory=list, description="Where each secret setting it has set is read from."
     )
+
+
+class MailFoldersView(BaseModel):
+    """The folders of a mailbox source to pick from (design 6.33): every folder that can be read, `sent` the one the
+    mail server marks as the sent mail (none when it marks none, so the person picks), and `taken` the folders already
+    read by a source of the same mailbox, the source's own included."""
+
+    folders: list[str]
+    sent: str | None = None
+    taken: list[str] = Field(default_factory=list)
+
+
+class SentFolderIn(BaseModel):
+    """Read a mailbox source's sent folder as a source of its own: the `folder`, picked from GET
+    /api/watch/{source}/folders, and the `label` the new source is shown by."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    folder: str
+    label: str
+    fingerprint: str
 
 
 class WatchAuthorOption(BaseModel):

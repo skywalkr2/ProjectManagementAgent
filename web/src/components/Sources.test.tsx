@@ -778,3 +778,43 @@ test("a count that is zero is never said: a read that found nothing has no item 
   expect(b).toHaveTextContent("2 removed");
   expect(b).not.toHaveTextContent(/\b0 (new|changed)\b/);
 });
+
+// ---- the sent folder, offered as a second source (design 6.33) ----------------------------------------------------
+
+const mailbox = (extra: Partial<Source> = {}) => source("work-mail", { connector: "mailbox", connector_label: "A mail folder (IMAP)", reads: ["mail"], ...extra });
+const folders = (extra: Partial<S["MailFoldersView"]> = {}): S["MailFoldersView"] => ({ folders: ["INBOX", "Sent Items", "Drafts"], sent: "Sent Items", taken: ["INBOX"], ...extra });
+
+test("a mailbox offers the folder its server marks as sent, picked already, with one button to read it too", async () => {
+  const user = userEvent.setup();
+  const { calls } = open([mailbox()], [], {
+    "GET watch/work-mail/folders": () => folders(),
+    "POST watch/work-mail/sent-folder": () => SAVED([], []),
+  });
+  const item = await row("Source work-mail");
+  const list = await within(item).findByRole("combobox", { name: "Folder of the mail you sent" });
+  expect(list).toHaveValue("Sent Items");
+  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Sent Items", "Drafts"]); // INBOX is read already
+  expect(item).toHaveTextContent("Also read the mail you sent, so promises you make are noticed.");
+  await user.click(within(item).getByRole("button", { name: "Read it too" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST watch/work-mail/sent-folder")?.body).toMatchObject({ folder: "Sent Items", label: "Source work-mail, sent" }));
+});
+
+test("when the server marks no sent folder the person picks, and the button waits for the pick", async () => {
+  const user = userEvent.setup();
+  open([mailbox()], [], { "GET watch/work-mail/folders": () => folders({ sent: null }) });
+  const item = await row("Source work-mail");
+  const list = await within(item).findByRole("combobox", { name: "Folder of the mail you sent" });
+  expect(list).toHaveValue("");
+  expect(within(item).getByRole("button", { name: "Read it too" })).toBeDisabled();
+  await user.selectOptions(list, "Drafts");
+  expect(within(item).getByRole("button", { name: "Read it too" })).toBeEnabled();
+});
+
+test("nothing is offered once the sent folder is read, for another kind of source, or while the mailbox can't be read", async () => {
+  open([mailbox(), source("a"), mailbox({ id: "broken", label: "Broken", problem: "It can't be read: refused." })], [], {
+    "GET watch/work-mail/folders": () => folders({ taken: ["INBOX", "Sent Items"] }),
+  });
+  await row("Source work-mail");
+  await waitFor(() => expect(document.querySelector("[data-sent-offer]")).toBeNull());
+  expect(screen.queryByRole("button", { name: "Read it too" })).toBeNull();
+});

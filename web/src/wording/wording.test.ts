@@ -89,7 +89,7 @@ test("no internal terms reach the screen", () => {
 // The same patterns as the server's wording check (api/screen_text.py): text the screen shows never names a settings
 // file, a secret reference, a settings key, a manifest field or a command. The settings files' names and the command
 // line's subcommands are listed here by hand; a server test checks that this list is the command line's own.
-const SETTINGS_FILES = ["workspace", "server", "storage", "ai", "dispatch", "checks", "language", "ui", "stages", "rules", "watch"];
+const SETTINGS_FILES = ["workspace", "server", "storage", "ai", "dispatch", "checks", "language", "ui", "stages", "rules", "watch", "steward"];
 const COMMANDS = [
   "ai",
   "backup",

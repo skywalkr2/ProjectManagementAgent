@@ -73,7 +73,15 @@ def test_close_date_and_routing_holds_are_asked_as_what_they_would_change(env):
     view = store.read()
     mine = OPEN[0]
     close = held_ask.describe(view, people, {"op": "action.close", "id": mine["id"], "evidence": {"quote": "done"}})
-    assert close == {"ask": "close", "item": " ".join(mine["text"].split()), "quote": "done"}
+    owners = [people.owner(o) for o in view.get("action", mine["id"]).data["owners"]]
+    assert close == {
+        "ask": "close",
+        "item": " ".join(mine["text"].split()),
+        "quote": "done",
+        "record": mine["id"],
+        "owners": owners,
+        "reporter": None,
+    }
     moved = held_ask.describe(
         view, people, {"op": "record.set", "kind": "action", "id": mine["id"], "field": "due", "value": "2030-11-05"}
     )

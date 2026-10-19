@@ -16,6 +16,7 @@ import imaplib
 import re
 import socket
 import ssl
+from dataclasses import dataclass
 from email.message import EmailMessage
 from email.utils import getaddresses
 from typing import Any
@@ -167,7 +168,8 @@ def _refusal(err: imaplib.IMAP4.error, host: str) -> ConnectorError:
     )
 
 
-def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: ConnectorContext) -> Poll:
+def _open(settings: MailboxSettings) -> imaplib.IMAP4_SSL:
+    """A signed-in connection to the server. Refusals and unreachable servers become connector errors."""
     from engine.secrets import SecretError, resolve_secret
 
     try:
@@ -181,10 +183,24 @@ def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: Conn
     except (socket.gaierror, ConnectionError, OSError) as err:
         raise ConnectorError("offline", f"couldn't reach the mail server: {err}") from None
     try:
-        try:
-            server.login(settings.user, password or "")
-        except imaplib.IMAP4.error as err:
-            raise _refusal(err, settings.host) from None
+        server.login(settings.user, password or "")
+    except imaplib.IMAP4.error as err:
+        _close(server)
+        raise _refusal(err, settings.host) from None
+    except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
+        _close(server)
+        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    return server
+
+
+def _close(server: imaplib.IMAP4) -> None:
+    with contextlib.suppress(imaplib.IMAP4.error, OSError):
+        server.logout()
+
+
+def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: ConnectorContext) -> Poll:
+    server = _open(settings)
+    try:
         status, data = server.select(_quoted(settings.folder), readonly=True)
         if status != "OK":
             raise ConnectorError("not_found", f"there is no folder {settings.folder}")
@@ -211,8 +227,54 @@ def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: Conn
     except (imaplib.IMAP4.abort, TimeoutError, OSError) as err:
         raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
     finally:
-        with contextlib.suppress(imaplib.IMAP4.error, OSError):
-            server.logout()
+        _close(server)
+
+
+@dataclass(frozen=True)
+class Folders:
+    """The folders of a mailbox that can be read, and the one the server marks as the sent mail (None when it marks
+    none)."""
+
+    names: tuple[str, ...]
+    sent: str | None
+
+
+_LISTED = re.compile(rb'^\((?P<flags>[^)]*)\) (?:"(?:[^"\\]|\\.)*"|NIL) (?P<name>"(?:[^"\\]|\\.)*"|\S+)\s*$')
+
+
+def parse_folders(lines: list[Any]) -> Folders:
+    """The folders in a server's LIST answer. A folder flagged as not selectable is left out; the one flagged `\\Sent`
+    (the server's own word for the sent mail, where it gives one) is the sent folder."""
+    names: list[str] = []
+    sent: str | None = None
+    for line in lines:
+        found = _LISTED.match(line) if isinstance(line, bytes) else None
+        if found is None:
+            continue
+        flags = {f.lower() for f in found["flags"].decode("ascii", "replace").split()}
+        name = found["name"].decode("utf-8", "replace")
+        if name.startswith('"'):
+            name = re.sub(r"\\(.)", r"\1", name[1:-1])
+        if "\\noselect" in flags or "\\nonexistent" in flags:
+            continue
+        names.append(name)
+        if "\\sent" in flags and sent is None:
+            sent = name
+    return Folders(tuple(names), sent)
+
+
+def list_folders(settings: MailboxSettings) -> Folders:
+    """The mailbox's folders, read without changing anything there."""
+    server = _open(settings)
+    try:
+        status, data = server.list()
+        if status != "OK":
+            raise ConnectorError("outage", "the mail server didn't list its folders")
+        return parse_folders(list(data or []))
+    except (imaplib.IMAP4.abort, imaplib.IMAP4.error, TimeoutError, OSError) as err:
+        raise ConnectorError("outage", f"the mail server stopped answering: {err}") from None
+    finally:
+        _close(server)
 
 
 def _quoted(folder: str) -> str:

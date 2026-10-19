@@ -1935,6 +1935,26 @@ class WatchFile(FileModel):
         return self
 
 
+# ---- config/steward.yaml ---------------------------------------------------------------------------------------------
+
+
+class StewardFile(FileModel):
+    chase_undated_days: int = Field(
+        14,
+        ge=1,
+        le=365,
+        description="A promise someone owes the person that has no date gets one line on Today after this many days "
+        "with no news, counted from when it was made or from its latest news. Nothing is shown while it is on hold.",
+    )
+    chase_dated_days: int = Field(
+        7,
+        ge=0,
+        le=365,
+        description="A promise someone owes the person that has a date gets a line on Today only from this many days "
+        "before its date, and once the date has passed. Nothing is shown while it is on hold.",
+    )
+
+
 FILES: dict[str, type[FileModel]] = {
     "workspace": WorkspaceFile,
     "server": ServerFile,
@@ -1947,6 +1967,7 @@ FILES: dict[str, type[FileModel]] = {
     "stages": StagesFile,
     "rules": RulesFile,
     "watch": WatchFile,
+    "steward": StewardFile,
 }
 
 #: The newest version each file format has reached.

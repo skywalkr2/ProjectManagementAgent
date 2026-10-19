@@ -276,8 +276,11 @@ def test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_h
 
     def view():
         rows = {a["id"]: a for s in client.get(f"{base}/followups").json() for a in s["actions"]}
-        nudge = [line for line in client.get(f"{base}/today/queue").json() if line["key"] == f"nudge:{owner}"]
-        return rows, (nudge[0]["actions"] if nudge else [])
+        # Today asks for the chase on one line: the follow-up line, or, once the day has passed, the promise's own.
+        lines = client.get(f"{base}/today/queue").json()
+        chase = [a for line in lines if line["key"] == f"nudge:{owner}" for a in line["actions"]]
+        chase += [a for line in lines if line["kind"] == "promise" and line["person"] == owner for a in line["actions"]]
+        return rows, chase
 
     rows, nudged = view()
     assert rows[chased]["chase_due"] and not rows[calm]["chase_due"]

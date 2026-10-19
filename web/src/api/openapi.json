@@ -5539,7 +5539,7 @@
         "type": "object"
       },
       "HeldAsk": {
-        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, or drop it), `item` the words of what\nit is about, `value` and `from_value` the new and the present date, `to_name` the person it would go to, `told`\nthe people a drop would leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it\non. The screen words the title and the two answers from these.",
+        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered), `item` the words of what it is about, `value` and `from_value`\nthe new and the present date, `to_name` the person it would go to, `told` the people a drop would leave out of the\nloop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action also carries what\nthe input says happened: the action's id in `record`, its `owners` in the owner format, `reporter` (who said it),\nand by ask the words of a new date (`due_words`), what was `delivered` and what is `left`, or the `reason` it is\ncalled off. The screen words the title and the answers from these.",
         "properties": {
           "ask": {
             "enum": [
@@ -5547,10 +5547,34 @@
               "date",
               "owner",
               "routing",
-              "drop"
+              "drop",
+              "move",
+              "part"
             ],
             "title": "Ask",
             "type": "string"
+          },
+          "delivered": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered"
+          },
+          "due_words": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Words"
           },
           "from_value": {
             "anyOf": [
@@ -5567,6 +5591,24 @@
             "title": "Item",
             "type": "string"
           },
+          "left": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left"
+          },
+          "owners": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
           "quote": {
             "anyOf": [
               {
@@ -5577,6 +5619,39 @@
               }
             ],
             "title": "Quote"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "record": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record"
+          },
+          "reporter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporter"
           },
           "to_name": {
             "anyOf": [
@@ -6890,6 +6965,41 @@
           "record"
         ],
         "title": "MadeView",
+        "type": "object"
+      },
+      "MailFoldersView": {
+        "description": "The folders of a mailbox source to pick from (design 6.33): every folder that can be read, `sent` the one the\nmail server marks as the sent mail (none when it marks none, so the person picks), and `taken` the folders already\nread by a source of the same mailbox, the source's own included.",
+        "properties": {
+          "folders": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Folders",
+            "type": "array"
+          },
+          "sent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent"
+          },
+          "taken": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Taken",
+            "type": "array"
+          }
+        },
+        "required": [
+          "folders"
+        ],
+        "title": "MailFoldersView",
         "type": "object"
       },
       "MeIn": {
@@ -9741,6 +9851,277 @@
         "title": "ProjectView",
         "type": "object"
       },
+      "PromiseCorrection": {
+        "description": "One correction to a promise, picked from a list: who owes it (a person's id), to whom (person ids), how it is\nknown, or a new day. Only the fields given change; `read_version` is the version the screen showed.",
+        "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inferred",
+                  "said"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The new day; the words the old one came from are dropped.",
+            "title": "Due"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person who owes it now; they become its only owner.",
+            "title": "Owner"
+          },
+          "promised_to": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The people it is promised to, replacing the list.",
+            "title": "Promised To"
+          },
+          "read_version": {
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_version"
+        ],
+        "title": "PromiseCorrection",
+        "type": "object"
+      },
+      "PromiseNews": {
+        "description": "Something heard about a promise that didn't end it. A part that was delivered is `delivered` and credited to the\nowners (in the owner format), so it reads as done.",
+        "properties": {
+          "credited": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Credited",
+            "type": "array"
+          },
+          "delivered": {
+            "default": false,
+            "title": "Delivered",
+            "type": "boolean"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "on",
+          "text"
+        ],
+        "title": "PromiseNews",
+        "type": "object"
+      },
+      "PromisePerson": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The person's name; for an owner, written in the workspace's owner format.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PromisePerson",
+        "type": "object"
+      },
+      "PromiseView": {
+        "description": "Why a promise exists and what is known of it (design 6.33): the exact words (`quote`) and where they came from\n(`origin`), who owes it (`owners`, in the owner format) and to whom (`promised_to`), its day with the words it was\nread from (`due_words`, and `due_check` when the reading is doubtful), how it is known (`basis`: said outright or\nworked out; never a score), and what was heard since (`news`, newest first). `mine` is true when the person owes it.\n`version` is what a correction states it read.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inferred",
+                  "said"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "due_check": {
+            "default": false,
+            "title": "Due Check",
+            "type": "boolean"
+          },
+          "due_words": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Words"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "news": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseNews"
+            },
+            "title": "News",
+            "type": "array"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/PromisePerson"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "promised_to": {
+            "items": {
+              "$ref": "#/components/schemas/PromisePerson"
+            },
+            "title": "Promised To",
+            "type": "array"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "said_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Said By"
+          },
+          "status": {
+            "enum": [
+              "held",
+              "open",
+              "done",
+              "dropped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "version",
+          "text",
+          "status",
+          "owners",
+          "mine",
+          "promised_to",
+          "news"
+        ],
+        "title": "PromiseView",
+        "type": "object"
+      },
       "ProposalApply": {
         "additionalProperties": false,
         "properties": {
@@ -10537,7 +10918,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled).",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled).",
         "properties": {
           "account": {
             "anyOf": [
@@ -10730,6 +11111,7 @@
               "borrow",
               "offline",
               "overdue",
+              "promise",
               "account_check",
               "switch_failed",
               "credential",
@@ -12068,6 +12450,31 @@
           "action_ids"
         ],
         "title": "SentCounts",
+        "type": "object"
+      },
+      "SentFolderIn": {
+        "additionalProperties": false,
+        "description": "Read a mailbox source's sent folder as a source of its own: the `folder`, picked from GET\n/api/watch/{source}/folders, and the `label` the new source is shown by.",
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "folder": {
+            "title": "Folder",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder",
+          "label",
+          "fingerprint"
+        ],
+        "title": "SentFolderIn",
         "type": "object"
       },
       "SentText": {
@@ -20887,6 +21294,96 @@
         "summary": "Set Project Role"
       }
     },
+    "/api/promises/{action_id}": {
+      "get": {
+        "description": "Why a promise exists and what is known of it: its words, who owes it to whom, its day and the words it came\nfrom, where it came from, how it is known, and what was heard since.",
+        "operationId": "promise_api_promises__action_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromiseView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Promise"
+      }
+    },
+    "/api/promises/{action_id}/correct": {
+      "post": {
+        "description": "Correct who owes a promise, to whom, how it is known or its day, with Undo. Records an edited correction\nfor what the assistant had set.",
+        "operationId": "correct_api_promises__action_id__correct_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromiseCorrection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Correct"
+      }
+    },
     "/api/quality": {
       "get": {
         "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, over the configured window.",
@@ -24223,6 +24720,46 @@
         "summary": "Watch Remove"
       }
     },
+    "/api/watch/{source_id}/folders": {
+      "get": {
+        "description": "The folders of a mailbox source, and which the server marks as sent mail, for offering the sent folder as a\nsource of its own. Reads the mailbox; nothing there changes.",
+        "operationId": "watch_folders_api_watch__source_id__folders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailFoldersView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch Folders"
+      }
+    },
     "/api/watch/{source_id}/intake/go": {
       "post": {
         "description": "The person's go for a newly added source's intake: the mail waiting for sorting is sorted, then every request\nheld for the go starts.",
@@ -24527,6 +25064,56 @@
           }
         },
         "summary": "Recent"
+      }
+    },
+    "/api/watch/{source_id}/sent-folder": {
+      "post": {
+        "description": "Read a mailbox's sent folder as a source of its own, with Undo: the same mailbox, the same sign-in, the\nfolder picked from its list, and the person as its author, since what is in it is their own mail. It is taken in\nquietly like any new source.",
+        "operationId": "watch_sent_folder_api_watch__source_id__sent_folder_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SentFolderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch Sent Folder"
       }
     },
     "/api/working-copies": {

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from engine import held_ask, move_groups, source_intake, watch
+from engine import held_ask, move_groups, promises, source_intake, watch
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -83,7 +83,10 @@ class Line:
     waiting and `left_out`, how many kinds of correction were too many for one list), extractor (a kind of file that
     isn't being read: `file_kind` is the kind, and `text` why), source_unread (a source that has failed for longer than
     its usual gap: `source` is its id, `subject` its label, `problem_kind` the kind of failure, `text` what went wrong
-    and what to do, and `waiting_since` when it was last read, or first tried when it never was), send or nudge.
+    and what to do, and `waiting_since` when it was last read, or first tried when it never was), promise (one open
+    action that needs a look: its id in `actions`, its words in `text`, its day in `due` (none when undated),
+    `waiting_days` (days past its date, below zero while the date is ahead, or days with nothing heard when undated),
+    and in `person` the one to chase, none when it is the person's own), send or nudge.
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
     one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
@@ -238,7 +241,12 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     changeset=cs_id,
                     op=outcome["index"],
                     waiting=outcome.get("reason"),
-                    held=held_ask.describe(reader, people, outcome.get("op") or {}),
+                    held=held_ask.describe(
+                        reader,
+                        people,
+                        outcome.get("op") or {},
+                        reporter=outcome.get("reporter"),
+                    ),
                     untrusted=cs.get("trust") == "untrusted",
                     since=str(req.data.get("created_at") or ""),
                 )
@@ -522,11 +530,44 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # A promise past its date with nothing heard since is a line of its own, with its choices (design 6.33). It is on no
+    # other line of the queue: not the overdue line, and not the follow-up line.
+    live = {
+        cs_id
+        for cs_id, req in by_changeset.items()
+        if cs_id in changesets and not req.data.get("dismissed") and req.id not in hidden
+    }
+
+    def made(action_id: str) -> date | None:
+        stamp = _created(reader, "action", action_id)
+        return _aware(stamp).astimezone(zone(cfg)).date() if stamp else None
+
+    late = promises.late(reader, cfg, people.pm, today, promises.held_endings(changesets, live), made)
+    on_a_line = {x.action for x in late}
+    for x in late:
+        lines.append(
+            Line(
+                key=f"promise:{x.action}",
+                group="send" if x.owner else "risk",
+                kind="promise",
+                text=x.text,
+                person=x.owner,
+                project=x.project,
+                due=x.due.isoformat() if x.due else None,
+                waiting_days=x.quiet,
+                actions=[x.action],
+                subject=x.text,
+                since=x.since.isoformat(),
+            )
+        )
+
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
     for action in reader.list("action"):
         d = action.data
         if d.get("status") != "open" or not d.get("due") or d.get("on_hold") or people.pm is None:
+            continue
+        if action.id in on_a_line:
             continue
         if not any(o.get("person") == people.pm for o in d.get("owners") or []):
             continue
@@ -708,7 +749,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
         waiting = [q for q in s.questions if q["chase_due"]]
-        told = [a for a in s.actions if a["chase_due"]]
+        told = [a for a in s.actions if a["chase_due"] and a["id"] not in on_a_line]
         if waiting or told:
             longest = max([q["waiting_days"] or 0 for q in waiting] + [a["told_days"] or 0 for a in told])
             lines.append(
@@ -830,6 +871,7 @@ _KIND_ORDER = {
     "paused": 1,
     "offline": 1,
     "overdue": 2,
+    "promise": 2,
     "account_check": 1,
     "switch_failed": 1,
     "credential": 1,

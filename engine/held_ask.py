@@ -1,12 +1,13 @@
 """A held item as a question (design 7.6, 7.7): what the person is asked to confirm, in structured form so the screen
-words it as "Close 'X'?" with a button that names the result. Only the holds that rest on an inference, or that would
-drop something that already reached someone, are shaped here; any other hold is shown by its label. Reads only."""
+words it as "Close 'X'?" with a button that names the result. Only the holds that rest on an inference, that end or move
+a promise, or that would drop something that already reached someone, are shaped here; any other hold is shown by its
+label. Reads only."""
 
 from __future__ import annotations
 
 from typing import Any
 
-CLOSE, DATE, OWNER, ROUTING, DROP = "close", "date", "owner", "routing", "drop"
+CLOSE, DATE, OWNER, ROUTING, DROP, MOVE, PART = "close", "date", "owner", "routing", "drop", "move", "part"
 
 
 def _text(record: Any) -> str:
@@ -30,16 +31,47 @@ def _told(view: Any, people: Any, record: Any) -> tuple[list[str], str | None]:
     return [], None
 
 
-def describe(view: Any, people: Any, op: dict[str, Any]) -> dict[str, Any] | None:
-    """The held op as a question, or None when it isn't one of the shaped holds: `ask` (close, date, owner, routing or
-    drop), `item` (the words of what it is about), `value` (what it would change to), `from_value` (what it is now),
-    `to_name`, `told` (people already reached) and `told_on`, and `quote` (the words the assistant rested it on)."""
+def _ending(people: Any, found: Any, op: dict[str, Any], reporter: str | None) -> dict[str, Any]:
+    """What an ending read from an input says happened, for the line that asks the person to keep it: the `record` it is
+    about, who owns it (`owners`, as the workspace writes an owner) and who the input says reported it, and for a move
+    its new day (`value`) or the words of it (`due_words`), for a part what was delivered and what is left, and for a
+    drop the reason."""
+    owners = [people.owner(o) for o in found.data.get("owners") or []]
+    shown: dict[str, Any] = {
+        "record": found.id,
+        "owners": owners,
+        "reporter": people.name(reporter) if reporter else None,
+    }
+    if op["op"] == "action.move":
+        shown |= {"value": str(op["due"]) if op.get("due") else None, "due_words": op.get("due_words")}
+    elif op["op"] == "action.part":
+        shown |= {"delivered": op.get("delivered"), "left": op.get("left")}
+    elif op["op"] == "action.drop":
+        shown["reason"] = op.get("reason")
+    return shown
+
+
+def describe(view: Any, people: Any, op: dict[str, Any], *, reporter: str | None = None) -> dict[str, Any] | None:
+    """The held op as a question, or None when it isn't one of the shaped holds: `ask` (close, date, owner, routing,
+    drop, move or part), `item` (the words of what it is about), `value` (what it would change to), `from_value`
+    (what it is now), `to_name`, `told` (people already reached) and `told_on`, and `quote` (the words the
+    assistant rested it on). An ending of an action also says what the input says happened (see `_ending`);
+    `reporter` is who said it."""
     name = op.get("op", "")
     quote = (op.get("evidence") or {}).get("quote")
+    if name in ("action.move", "action.part"):
+        found = view.get("action", op.get("id", ""))
+        if found is None:
+            return None
+        ask = MOVE if name == "action.move" else PART
+        return {"ask": ask, "item": _text(found), "quote": quote, **_ending(people, found, op, reporter)}
     if name in ("action.close", "question.done"):
         kind = "action" if name == "action.close" else "question"
         found = view.get(kind, op.get("id", ""))
-        return {"ask": CLOSE, "item": _text(found), "quote": quote} if found is not None else None
+        if found is None:
+            return None
+        shown = {"ask": CLOSE, "item": _text(found), "quote": quote}
+        return shown | _ending(people, found, op, reporter) if kind == "action" else shown
     if name == "record.set" and op.get("kind") == "action" and op.get("field") in ("due", "owners", "owner"):
         found = view.get("action", op.get("id", ""))
         if found is None:
@@ -81,5 +113,6 @@ def describe(view: Any, people: Any, op: dict[str, Any]) -> dict[str, Any] | Non
         if found is None:
             return None
         told, on = _told(view, people, found)
-        return {"ask": DROP, "item": _text(found), "told": told, "told_on": on, "quote": quote}
+        shown = {"ask": DROP, "item": _text(found), "told": told, "told_on": on, "quote": quote}
+        return shown | _ending(people, found, op, reporter) if kind == "action" else shown
     return None
