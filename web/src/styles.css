@@ -414,6 +414,8 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .reminder-item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .reminder-item > span { flex: 1 1 12rem; min-width: 0; }
 .reminder-item .answer-form { flex: 1 0 100%; }
+.reply-draft { display: grid; gap: var(--space-1); overflow-wrap: anywhere; }
+.reply-draft .reply-text { margin: 0; white-space: pre-wrap; font-size: var(--text-sm); }
 .notify-permission { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
 /* A to-do's tick sits before its words, so the words get the row's width; on a touch screen its target is a full tap. */
 .tb-tick { flex: none; display: grid; place-items: center; margin-top: var(--space-1); cursor: pointer; }

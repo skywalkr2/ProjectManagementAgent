@@ -1,0 +1,37 @@
+id: reply-owed-answered-by-another-recipient
+title: 'A reply the person owes is answered by another recipient on the thread: the close waits for the person to keep it'
+skills: [close-right-item, evidence]
+received: '2026-10-09'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-201
+  fields:
+    text: Tell Mira Hale when the interior proofs ship
+    owners:
+    - person: PER-1
+    reply_owed: true
+    asker: PER-101
+    reply: The interior proofs ship on November 3 (the printer's published schedule).
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Mira Hale <mira@example.com>, Avery Lane
+  Subject: Re: Interior proofs
+
+  Mira, the interior proofs ship on November 3. I have the printer's schedule open if you need the page.
+expect:
+- op: action.close
+  id: ACT-201
+forbid:
+- op: action.add
+- op: action.drop
+  id: ACT-201
+# Someone other than the person answered, so the ending is read from an input: it is held for Keep, and the Keep line
+# names Tavish Reeve as the one who said it.
+stub_answer:
+  summary: Tavish answered Mira's question about the proofs.
+  ops:
+  - op: action.close
+    id: ACT-201
+    evidence:
+      quote: the interior proofs ship on November 3

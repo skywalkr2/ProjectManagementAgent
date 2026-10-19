@@ -2890,6 +2890,23 @@ the asks' recipients.
   answered.
 "No reply needed" stays a choice the assistant learns from (6.22).
 
+*Built so far (S1-2, replies owed):* `action.add` takes `reply_owed`, and the applier stores `reply_owed`, `replies_to`
+(the input's source) and `asker` (the person its sender is, when known) on the action; before it does, the rules in
+`engine/replies_owed.py` read the message's headers and new text, and automatic mail, mail the person sent and a message
+that says no reply is needed are refused (`reply-not-owed`, a refusal rather than a return: the rules are certain
+there, and a message whose headers can't be read is left to the model's reading). Each open reply owed is one Today line
+in "Send and follow up", oldest message first, `Reply to {name}: {subject}`, with the draft under it marked as a draft
+until the person has copied, edited or written it: Copy reply (which approves it as it is) is the one button, and the
+menu has No reply needed (a drop with the reason, recorded as the `no_reply_needed` signal the learning loop reads),
+Answered another way (a short form with the cursor in the words; closes it as done, credited to the person, the words
+as the evidence) and Edit. A message the person sent on the same conversation to the asker after the ask ends it at
+once, as their own act, by rules when the sent folder's mail is taken in (`engine/reply_lines.py`, one conversation by
+`engine/mail_threads.py`: the same subject and a person in common within `steward.reply_thread_days`, 14 by default,
+because the mail details carry no thread headers yet); an answer from someone else is the model's `action.close` held
+for Keep, whose line names who answered, and the open list a run reads marks each reply owed so it can be closed
+(`tests/test_reply_lines.py`, `web/src/components/TodayReplies.test.tsx`, the golden case
+`workspaces/demo-b/evals/reply-owed-answered-by-another-recipient.yaml`).
+
 **A sender's distribution limit travels with the content (S1-2).** Some messages say who may see them: a marking
 ("internal only", "not for the client"), a named group, or the sender's own words.
 - When a message carries a limit, the source records it as its audience: the named group, or the message's own

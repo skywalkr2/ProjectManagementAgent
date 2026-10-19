@@ -2059,6 +2059,14 @@ class StewardFile(FileModel):
     reminders: RemindersSettings = Field(
         default_factory=RemindersSettings, description="When a reminder on a dated thing reaches the person."
     )
+    reply_thread_days: int = Field(
+        14,
+        ge=0,
+        le=365,
+        description="Two messages with the same subject and a person in common count as one conversation when they "
+        "are no more than this many days apart and carry no thread headers. It decides whether a message you sent "
+        "answers a reply you owe.",
+    )
 
 
 FILES: dict[str, type[FileModel]] = {

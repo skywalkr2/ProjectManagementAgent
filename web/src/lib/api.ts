@@ -184,6 +184,8 @@ export const api = {
   rerouteQuestion: (q: string, to: string) => call<S["Applied"]>("POST", `questions/${id(q)}/reroute`, { to }),
   /** Drop an action that is no longer needed, with Undo. */
   dropAction: (a: string, reason: string) => call<S["Applied"]>("POST", `actions/${id(a)}/drop`, { reason }),
+  reviewReply: (a: string, body: S["ActionReplyIn"]) => call<S["Applied"]>("POST", `actions/${id(a)}/reply`, body),
+  answeredAnotherWay: (a: string, body: S["AnsweredAnotherWayIn"]) => call<S["Applied"]>("POST", `replies/${id(a)}/answered`, body),
   /** Add an action waiting for an owner to the open action it nearly repeats; `readVersion` is that action's version as read. */
   foldAction: (cs: string, index: number, into: string, readVersion: number) =>
     call<S["Applied"]>("POST", `changesets/${id(cs)}/ops/${index}/fold`, { into, read_version: readVersion }),

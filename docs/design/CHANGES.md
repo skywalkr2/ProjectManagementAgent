@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 104. Replies owed, and how they end (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Replies owed (6.32, 6.35) | The prompt added an action with a drafted reply for each message that asked the person something; nothing marked it as a reply, and the rules in `engine/replies_owed.py` were called by nothing | `action.add` takes `reply_owed`; the action stores `reply_owed`, `replies_to` and `asker`; the rules refuse a reply owed to automatic mail, mail the person sent or a message that says none is needed (`reply-not-owed`); one Today line each in "Send and follow up", oldest message first, `Reply to {name}: {subject}`, with the draft under it marked as a draft; Copy reply first (it approves the draft), then No reply needed, Answered another way and Edit in the menu. Built: `tests/test_reply_lines.py`, `web/src/components/TodayReplies.test.tsx` |
+| Learning (6.22) | A dropped action was one `dropped` signal | Dropping a reply owed is the `no_reply_needed` signal, which the learning loop reads and the repeat-correction rate counts |
+| Endings (6.33, 6.35) | A reply owed ended only by the model or by the person's tick | A message the person sent on the same conversation to the asker after the ask closes it at once, as their own act with the sent words as evidence, by rules when the sent folder's mail is taken in; Answered another way closes it for the person, with their words as the evidence when given; an answer by someone else is the model's `action.close` held for Keep, naming who answered (prompt, open list, golden case `reply-owed-answered-by-another-recipient`). `action.close` takes no evidence from the person's own act, like the other endings |
+| Settings (4.0) | None | `steward.reply_thread_days` (14): how far apart two messages with the same subject and a person in common may be to count as one conversation, until the mail details carry thread headers; demo values in both fictional workspaces |
+| Not yet | | Learning a style from the sent version, drafting rules for messages to others, sending (S1b) |
+
 ## 102. A rejected ask is dropped (2026-10-19)
 
 | Where | Before | Now |

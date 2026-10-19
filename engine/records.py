@@ -421,6 +421,19 @@ class Action(Record):
         description="False until the person approves the drafted reply or writes their own; a reply that is not "
         "reviewed is shown as a draft.",
     )
+    reply_owed: bool = Field(
+        False,
+        description="The action is a reply the person owes: someone's message asked them something and nothing has "
+        "answered it yet (design 6.35). It is a line on Today with the drafted reply under it, and it ends when the "
+        "person sends a reply, says it was answered another way, or says none is needed.",
+    )
+    replies_to: str | None = Field(
+        None,
+        description="For a reply owed: the id of the source (the message) that asked, whose date orders the line.",
+    )
+    asker: Annotated[str | None, RefTo("person")] = Field(
+        None, description="For a reply owed: the id of the person the reply is to, when the message's sender is known."
+    )
     remind_at: AwareDatetime | None = Field(
         None,
         description="When to remind the person of it, as a moment with its time zone. The person sets it, and moves it "
@@ -1677,6 +1690,7 @@ class Signal(Record):
         "answered_assistant",
         "edited",
         "not_now",
+        "no_reply_needed",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -1687,7 +1701,8 @@ class Signal(Record):
         "this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a "
         "note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed "
         "fields the assistant had set (the note says which, from what to what); not_now, put off the rules review "
-        "line for its week (not a correction of anything the assistant made)."
+        "line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the "
+        "assistant thought was owed is not."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")

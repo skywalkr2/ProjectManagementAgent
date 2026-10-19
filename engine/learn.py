@@ -30,7 +30,16 @@ LEARNING_TASKS = (TASK,)
 AT_ONCE = ("sent_back", "routed", "answered_assistant", "change_requested")
 #: Corrections made without writing anything: looked at in the next batch. `edited` is the person's own direct edit of
 #: something the assistant set.
-SILENT = ("undone", "pulled_back", "draft_edited", "dropped", "reworded", "held_declined", "edited")
+SILENT = (
+    "undone",
+    "pulled_back",
+    "draft_edited",
+    "dropped",
+    "reworded",
+    "held_declined",
+    "edited",
+    "no_reply_needed",
+)
 TEACHES = AT_ONCE + SILENT
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="learn.queue")
@@ -52,6 +61,7 @@ KIND_WORDS = {
     "reworded": "The person reworded a question the assistant filed; the note is the new wording.",
     "held_declined": "The person declined something the assistant had held for them.",
     "edited": "The person changed a field the assistant had set.",
+    "no_reply_needed": "The person said no reply was owed for a message the assistant added a reply for.",
 }
 
 

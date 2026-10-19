@@ -31,6 +31,14 @@ invariants:
     seed: >-
       A promise owed to someone has exactly one owner. When two people each owe it, add one action for each, each
       with its own owner and the same people it is owed to.
+  reply-not-owed:
+    ops:
+      - action.add
+    line: A reply owed is the person's own, and none is owed to automatic mail, mail the person sent or a message that says no reply is needed.
+    seed: >-
+      Mark an action as a reply owed only for a message that asks the person something and is for them. Automatic
+      mail, mail the person sent and a message that says no reply is needed owe nothing, and a reply owed is never
+      owned by someone else. Leave the action out, or record what the message says as a fact.
   targets:
     ops:
       - note

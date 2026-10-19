@@ -163,6 +163,14 @@ How to answer:
   words. The reply is a draft for the PM to read, so write it as the PM would say it, to the one who asked. When they
   don't hold the answer, leave "reply" out and the action's text says what is missing ("Reply to <who> about <what>: no
   recorded fact gives the date"); never invent an answer.
+  - Set "reply_owed": true on that one action (and only on it). The rules then read the message: automatic mail, mail
+    the PM sent and a message that says no reply is needed are refused, so don't add a reply owed for them. A message
+    that only copies the PM, or asks someone else, is not a reply owed to the PM.
+  - A reply owed shows in the open actions as "reply owed to <who>". When a message on the same conversation, from
+    someone other than the PM, answers what a reply owed asks (another recipient gave the answer, or the asker took
+    it back), close that action with "action.close", quoting the words that answer it as the evidence. It waits for
+    the PM to keep it, and the line names who answered. A message from the PM that answers it needs nothing from you:
+    the rules close it. A message that only acknowledges the question or says someone will answer leaves it open.
 - When the input uses a term the request's glossary explains, write what the term means in the text you write; never
   only the bare term. Who reads the text decides the order:
   - In the PM's own list (an action, a fact, a question to the PM), keep the shorthand the PM and the input use and put

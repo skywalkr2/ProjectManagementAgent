@@ -76,6 +76,10 @@ ROUTES: dict[str, Declared] = {
     "POST /api/actions/{action_id}/drop": _local(
         "the reason the person dropped an action, kept with it and with the correction; not a note"
     ),
+    "POST /api/replies/{action_id}/answered": _local(
+        "the few words the person gives for how a reply they owed was answered, kept as the evidence of the close; "
+        "not a note"
+    ),
     "POST /api/actions/{action_id}/reply": _local(
         "the person's own wording of a reply the assistant drafted, kept with the action and recorded as a correction; "
         "not a note"

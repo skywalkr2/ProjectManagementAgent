@@ -41,6 +41,7 @@ CORRECTIONS = frozenset(
         "edited",
         "change_requested",
         "set_aside",
+        "no_reply_needed",
     }
 )
 #: The knowledge a repeat is counted against: what the person keeps as a lesson or a rule.

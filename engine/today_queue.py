@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from engine import held_ask, move_groups, promises, reminder_lines, source_intake, watch
+from engine import held_ask, move_groups, promises, reminder_lines, reply_lines, source_intake, watch
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -91,7 +91,10 @@ class Line:
     clock, `late` when it came due while the app or the computer was not running, and in `snoozes` the choices that
     still have a time, each `choice` with the `at` it resolves to), reminder_digest (reminders that fell in quiet hours,
     or, by the person's choice, were missed while the computer slept, arriving together: `reminders` lists each with
-    its action, words and `at`, and `late` says which of the two it is), send or nudge.
+    its action, words and `at`, and `late` says which of the two it is), reply (a reply owed, one open action: its id in
+    `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`
+    as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest first), send
+    or nudge.
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
     one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
@@ -148,6 +151,9 @@ class Line:
     late: bool | None = None
     snoozes: list[dict[str, str]] = field(default_factory=list)
     reminders: list[dict[str, str]] = field(default_factory=list)
+    reply: str | None = None
+    reply_reviewed: bool | None = None
+    sender: str | None = None
     since: str = ""
 
 
@@ -609,6 +615,26 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
 
+    # Send and follow up: a reply the person owes, one line each, with the draft and its choices (design 6.35). The
+    # oldest message comes first.
+    for owed in reply_lines.plan(ws, reader):
+        lines.append(
+            Line(
+                key=f"reply:{owed.action}",
+                group="send",
+                kind="reply",
+                text=owed.text,
+                subject=owed.subject,
+                person=owed.asker,
+                sender=owed.sender,
+                project=owed.project,
+                actions=[owed.action],
+                reply=owed.reply,
+                reply_reviewed=owed.reviewed,
+                since=owed.received.isoformat(),
+            )
+        )
+
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
     for action in reader.list("action"):
@@ -922,6 +948,7 @@ _KIND_ORDER = {
     "promise": 2,
     "reminder": 0,
     "reminder_digest": 1,
+    "reply": -1,
     "account_check": 1,
     "switch_failed": 1,
     "credential": 1,

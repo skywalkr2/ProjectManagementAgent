@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import draft_checks, knowledge, learn, proposals, scope
+from engine import draft_checks, knowledge, learn, proposals, reply_lines, scope
 from engine import search as workspace_search
 from engine import series as series_module
 from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
@@ -535,6 +535,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "one-owner", "one promise per owner: add one action for each person who owes it")
             if op.due_at_event and not (op.event or op.series):
                 refuse(i, "targets", "a date at a calendar entry needs the entry: give its event or series")
+            if op.reply_owed and (why := _reply_owed_problem(view, ctx, op)) is not None:
+                refuse(i, "reply-not-owed", why)
             for existing in [] if _same_promise(view, ctx, op) is not None else known_actions:
                 if _similar(op.text, existing.data["text"]) >= similarity:
                     state = {"done": "done action", "dropped": "dropped action"}.get(
@@ -925,6 +927,34 @@ def _same_promise(view: Any, ctx: Context, op: Any) -> Any | None:
         if set(data.get("promised_to") or []) == owed and _similar(op.text, data["text"]) >= similarity:
             return existing
     return None
+
+
+def _reply_owed_problem(view: Any, ctx: Context, op: ActionAddOp) -> str | None:
+    """Why an action marked as a reply owed can't be one, or None: it is the person's own to do, the rules (design 6.35)
+    find no reply owed for the message it answers (automatic mail, mail the person sent, a message that says none is
+    needed; a message whose headers can't be read is the model's reading), and no open reply owed already answers that
+    message."""
+    for name in op.owners:
+        found = ctx.people.resolve(name)
+        if found.status == "ok" and found.person != ctx.people.pm:
+            return "a reply owed is the person's own to do: it can't be owned by someone else"
+    source = view.get("source", ctx.inputs.source) if ctx.inputs.source else None
+    if source is not None:
+        for other in view.list("action"):
+            if (
+                other.data.get("reply_owed")
+                and other.data.get("replies_to") == source.id
+                and other.data["status"] in ("open", "held")
+            ):
+                return f"{other.id} is already the reply owed for this message"
+    received = (source.data.get("sent_at") or source.data["received_at"]) if source is not None else None
+    bulk = False
+    if source is not None and (source.data.get("watched") or {}).get("source"):
+        watched = source.data["watched"]
+        snap = next(iter(view.find("snapshot", {"source": watched["source"], "key": watched["key"]})), None)
+        bulk = bool(((snap.data.get("message") if snap is not None else None) or {}).get("bulk"))
+    when = datetime.fromisoformat(str(received)) if received else None
+    return reply_lines.refusal(view, ctx.cfg, ctx.inputs.raw_input, when, bulk)
 
 
 def _input_project(tx: Any, request_id: str | None, source_id: str | None) -> str | None:
@@ -1896,6 +1926,9 @@ def _apply_op(
             "status": "open" if owners else "held",
             "reply": op.reply,  # a draft: it stays unreviewed until the person approves or rewords it
             "reply_reviewed": False,
+            "reply_owed": op.reply_owed,
+            "replies_to": source if op.reply_owed else None,
+            "asker": reply_lines.asker_of(ctx.people, ctx.inputs.raw_input) if op.reply_owed else None,
         }
         action = tx.create("action", data, w)
         made("action", action.id)
@@ -1942,7 +1975,10 @@ def _apply_op(
         tx.update("action", op.id, {"status": "dropped", "dropped_reason": reason}, w, read_version=cur.version)
         made("action", op.id)
         if ctx.actor == "pm":
-            _record_dropped(tx, ctx, "action", op.id, reason)
+            # Dropping a reply the assistant said was owed says none was: its own kind of correction.
+            _record_dropped(
+                tx, ctx, "action", op.id, reason, "no_reply_needed" if cur.data.get("reply_owed") else "dropped"
+            )
     elif isinstance(op, ActionMoveOp):
         cur = tx.get("action", op.id)
         due, check = _due(tx, ctx, source, op.due_words, op.due)
@@ -2172,15 +2208,16 @@ def _review_reply(tx: Tx, op: ActionReplyOp, ctx: Context, w: WriteContext) -> l
     return [{"kind": "action", "id": op.id}]
 
 
-def _record_dropped(tx: Tx, ctx: Context, kind: str, record_id: str, reason: str) -> None:
-    """The person's own drop of something the assistant may have made: a `dropped` signal naming it and, when the
-    assistant made it, the changeset and run. It is written apart from the change, so Undo leaves it as it was."""
+def _record_dropped(tx: Tx, ctx: Context, kind: str, record_id: str, reason: str, signal: str = "dropped") -> None:
+    """The person's own drop of something the assistant may have made: a `dropped` signal (or the `signal` given)
+    naming it and, when the assistant made it, the changeset and run. It is written apart from the change, so Undo
+    leaves it as it was."""
     changeset, run = _made_by(tx, kind, record_id)
     learn.record(
         tx,
         ctx.cfg,
         {
-            "kind": "dropped",
+            "kind": signal,
             "refs": [record_id],
             "changeset": changeset,
             "run": run,
@@ -2821,8 +2858,11 @@ def move_stage(store: Store, op: StageMoveOp, *, actor: Literal["pm", "rule"] = 
     return cs_id
 
 
-def apply_as_person(store: Store, cfg: Config, ops: list[dict[str, Any]], summary: str, task: str = "notes") -> str:
-    """Apply ops the person made on screen (an edit, a review's choices) as theirs. Returns the changeset id."""
+def apply_as_person(
+    store: Store, cfg: Config, ops: list[dict[str, Any]], summary: str, task: str = "notes", note: str = ""
+) -> str:
+    """Apply ops the person made on screen (an edit, a review's choices) as theirs. Returns the changeset id. `note` is
+    words the person wrote with the change, which an op may quote as its evidence."""
     from engine.names import People
     from engine.ops import CHANGESET
 
@@ -2838,7 +2878,7 @@ def apply_as_person(store: Store, cfg: Config, ops: list[dict[str, Any]], summar
         cfg,
         People(store, cfg),
         tuple(store.plugins.ops),
-        Inputs(request.id, None, "", "", "trusted"),
+        Inputs(request.id, None, "", note, "trusted"),
         confirmed_by_pm=True,
         actor="pm",
     )

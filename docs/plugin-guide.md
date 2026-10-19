@@ -650,7 +650,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `action.drop`, `action.hold`, `action.move`, `action.part`, `action.reply`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `action.close`, `action.drop`, `action.hold`, `action.move`, `action.part`, `action.reply`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1172,6 +1172,9 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `notes` | str \| None | `None` | Extra detail about the action. |
 | `reply` | str \| None | `None` | The reply the assistant drafted for a question someone asked the person, ready to copy. Empty when no recorded fact holds the answer; the action's text then says what is missing. |
 | `reply_reviewed` | bool | `False` | False until the person approves the drafted reply or writes their own; a reply that is not reviewed is shown as a draft. |
+| `reply_owed` | bool | `False` | The action is a reply the person owes: someone's message asked them something and nothing has answered it yet (design 6.35). It is a line on Today with the drafted reply under it, and it ends when the person sends a reply, says it was answered another way, or says none is needed. |
+| `replies_to` | str \| None | `None` | For a reply owed: the id of the source (the message) that asked, whose date orders the line. |
+| `asker` | str \| None | `None` | For a reply owed: the id of the person the reply is to, when the message's sender is known. |
 | `remind_at` | AwareDatetime \| None | `None` | When to remind the person of it, as a moment with its time zone. The person sets it, and moves it when they snooze; the reminder is a line on Today while the action is open and not on hold, and it is never a correction of the assistant's work. |
 | `on_hold` | OnHold \| None | see below | Set while the action waits for something outside the person's control; the person sets and clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due date for when it comes off hold. |
 | `on_hold.waiting_for` | str | required | What it waits for, in plain words. |
@@ -1636,7 +1639,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited', 'not_now'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what); not_now, put off the rules review line for its week (not a correction of anything the assistant made). |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited', 'not_now', 'no_reply_needed'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what); not_now, put off the rules review line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the assistant thought was owed is not. |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `run` | str \| None | `None` | The id of the AI run whose work was corrected, when there was one. |
 | `changeset` | str \| None | `None` | The id of the changeset the correction is about, when there is one. |
@@ -1886,6 +1889,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `due_at_event` | bool | `False` | The date is the calendar entry's in `event` ('by Thursday's meeting', 'after the review'): it is due on the entry's day and moves when the entry moves. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
+| `reply_owed` | bool | `False` | True for the one action that is the reply the person owes to a message that asks them something (owned by the person). The rules then read the message: automatic mail, mail the person sent and a message that says no reply is needed are refused. Leave it false for any other action. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
@@ -1893,13 +1897,13 @@ A new action: something a person will do. Owners are people (name or id); leave 
 
 ### `action.close`
 
-Close an open action the input says is done. Refused if the action doesn't exist or is already done; evidence is required.
+Close an open action the input says is done. Refused if the action doesn't exist or is already done; evidence is required (the input's words, or the person's note).
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the open action that is done. |
-| `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `action.drop`

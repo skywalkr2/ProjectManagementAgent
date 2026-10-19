@@ -301,6 +301,12 @@ class ActionAddOp(OpModel):
         "recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the "
         "answer. It stays marked as a draft until the person approves it.",
     )
+    reply_owed: bool = Field(
+        False,
+        description="True for the one action that is the reply the person owes to a message that asks them something "
+        "(owned by the person). The rules then read the message: automatic mail, mail the person sent and a message "
+        "that says no reply is needed are refused. Leave it false for any other action.",
+    )
     event: Annotated[str | None, RefTo("event")] = Field(
         None, description="The calendar entry it is for, when the input ties it to one."
     )
@@ -328,11 +334,13 @@ class ActionReplyOp(OpModel):
 
 class ActionCloseOp(OpModel):
     """Close an open action the input says is done. Refused if the action doesn't exist or is already done; evidence
-    is required."""
+    is required (the input's words, or the person's note)."""
 
     op: Literal["action.close"]
     id: str = Field(description="The id of the open action that is done.")
-    evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
 
 
 class ActionHoldOp(OpModel):
@@ -1221,7 +1229,15 @@ NEEDS_EVIDENCE = {
 }
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.
-EVIDENCE_UNLESS_PERSON = {"action.hold", "action.unhold", "action.drop", "action.move", "action.part", "question.drop"}
+EVIDENCE_UNLESS_PERSON = {
+    "action.close",
+    "action.hold",
+    "action.unhold",
+    "action.drop",
+    "action.move",
+    "action.part",
+    "question.drop",
+}
 EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner", "event", "series"}
 
 #: Fields record.set may change, per kind.

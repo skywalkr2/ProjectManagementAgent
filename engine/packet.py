@@ -734,8 +734,10 @@ def _open_actions(store: Store, people: People) -> str:
         owners = ", ".join(people.name(o["person"]) for o in d.get("owners", [])) or "no owner yet"
         due = f"; due {d['due']}" if d.get("due") else ""
         hold = f"; on hold, waiting for {d['on_hold']['waiting_for']}" if d.get("on_hold") else ""
+        owed = f"; reply owed to {people.name(d['asker'])}" if d.get("reply_owed") and d.get("asker") else ""
+        owed = owed or ("; a reply owed" if d.get("reply_owed") else "")
         project = f"[{d['project']}] " if d.get("project") else ""
-        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{due}{hold}{_belongs_to(d)})")
+        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{due}{hold}{owed}{_belongs_to(d)})")
     return "\n".join(lines) or "(none)"
 
 

@@ -135,6 +135,16 @@ class ActionDropIn(BaseModel):
     reason: str = Field(min_length=1, max_length=500, description="Why the action isn't needed, in plain words.")
 
 
+class AnsweredAnotherWayIn(BaseModel):
+    note: str | None = Field(
+        None,
+        min_length=3,
+        max_length=500,
+        description="A few words on how it was answered (a call, a chat); kept as the evidence of the close. Left out, "
+        "the reply owed closes with none.",
+    )
+
+
 class ActionReplyIn(BaseModel):
     text: str | None = Field(
         None,
@@ -1618,7 +1628,11 @@ class QueueLineView(BaseModel):
     app or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it
     moves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown
     together: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while
-    the computer slept (`late` true), each in `reminders`; `unfiled` is
+    the computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id
+    in `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`
+    as written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No
+    reply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with
+    Undo); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1646,6 +1660,7 @@ class QueueLineView(BaseModel):
         "promise",
         "reminder",
         "reminder_digest",
+        "reply",
         "account_check",
         "switch_failed",
         "credential",
@@ -1810,6 +1825,17 @@ class QueueLineView(BaseModel):
     )
     reminders: list[ReminderItemView] = Field(
         default_factory=list, description="For a reminder_digest line: the reminders it lists, oldest first."
+    )
+    reply: str | None = Field(
+        None,
+        description="For a reply line: the reply the assistant drafted, none when no recorded fact holds the answer.",
+    )
+    reply_reviewed: bool | None = Field(
+        None,
+        description="For a reply line: whether the person has approved or written the reply; until then it is a draft.",
+    )
+    sender: str | None = Field(
+        None, description="For a reply line to nobody known: who the message is from, as the message writes it."
     )
     after_move: AfterMove | None = Field(
         None,

@@ -26,6 +26,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { NothingNeedsYou } from "./Coverage";
 import { usePromiseChoices } from "./PromiseLine";
 import { ReminderItems, digestTitle, reminderTitle, useReminderChoices, useReminderNotices } from "./ReminderLine";
+import { ReplyDraft, replyTitle, useReplyChoices } from "./ReplyLine";
 import { LearnedLine, isLearned } from "./LearnedToday";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
@@ -540,6 +541,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return reminderTitle(line, t);
       case "reminder_digest":
         return digestTitle(line, t);
+      case "reply":
+        return replyTitle(line, t);
       default:
         return line.text ?? line.kind;
     }
@@ -585,6 +588,7 @@ function QueueRow(props: {
   };
   const show: MenuAction = { id: "look", label: t("queue.look_closer"), run: choose };
   const promiseRow = usePromiseChoices(line, () => ref.current?.focus());
+  const replyRow = useReplyChoices(line, () => ref.current?.focus());
   const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
 
   const what = titleWords(line.title);
@@ -824,6 +828,8 @@ function QueueRow(props: {
         };
       case "reminder_digest":
         return { pill: t("queue.pill.reminder"), tone: "neutral", meta: undefined, primary: null, menu: [] };
+      case "reply":
+        return { pill: t("queue.pill.reply"), tone: "warn", meta: meta(), primary: replyRow.primary, menu: replyRow.menu };
       default:
         // A kind the screen has no words for yet still shows, so nothing the engine ranks is hidden.
         return { pill: "", tone: "neutral", meta: meta(line.waiting), primary: null, menu: [] };
@@ -896,6 +902,12 @@ function QueueRow(props: {
     >
       {line.kind === "reminder_digest" && <ReminderItems line={line} />}
       {line.kind === "reminder" && reminderRow.form}
+      {line.kind === "reply" && (
+        <>
+          <ReplyDraft line={line} />
+          {replyRow.form}
+        </>
+      )}
       {(inPlace || promiseRow.form) && (
         <>
           {inPlace && (
