@@ -36,6 +36,9 @@ from engine.ops import (
     ActionCloseOp,
     ActionDropOp,
     ActionHoldOp,
+    ActionMoveOp,
+    ActionNewsOp,
+    ActionPartOp,
     ActionReplyOp,
     ActionUnholdOp,
     AnswerOp,
@@ -140,6 +143,7 @@ class Context:
     # search-first check leaves alone.
     searched: bool | None = None
     data_level: str = "restricted"  # the most sensitive material a search may quote back, for an AI run
+    reporter: str | None = None  # who reported a held ending, as worked out when it was held; set when it is kept
 
 
 # ---- checks ----------------------------------------------------------------------------------------------------------
@@ -328,6 +332,15 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"action {op.id} was dropped, so it can't be closed")
             elif evidence is not None and not _shares_words(evidence.quote, target.data["text"]):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+        if isinstance(op, (ActionMoveOp, ActionPartOp, ActionNewsOp)):
+            why = action_hold_problem(view, op)
+            if why:
+                refuse(i, "targets", why)
+            elif evidence is not None and not _shares_words(evidence.quote, view.get("action", op.id).data["text"]):
+                lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+        if isinstance(op, ENDING_OPS) and not _persons_own(view, ctx):
+            # How a promise ends is the person's to keep when it was read from what came in (design 6.33).
+            problems.append(Problem("ending-confirm", "hold", i, ENDING_WAITS))
         if isinstance(op, (ActionHoldOp, ActionDropOp)):
             why = action_hold_problem(view, op)
             if why:
@@ -555,6 +568,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 held = why if reported else "changes how the product behaves; needs your confirmation"
             problems.append(Problem("tier", "hold", i, held))
     problems += _inference_holds(cs, ctx, view)
+    # An ending held for a more particular reason says that reason alone.
+    held_else = {p.op for p in problems if p.severity == "hold" and p.check != "ending-confirm"}
+    problems = [p for p in problems if not (p.check == "ending-confirm" and p.op in held_else)]
     if ctx.actor != "pm":
         problems += _made_problems(cs, ctx, lints)
     return problems
@@ -817,9 +833,25 @@ def _shares_words(a: str, b: str) -> bool:
     return bool(set(_WORD.findall(normalize(without_links(a)))) & set(_WORD.findall(normalize(without_links(b)))))
 
 
-def action_hold_problem(view: Any, op: ActionHoldOp | ActionDropOp) -> str | None:
-    """Why an action can't be put on hold or dropped, or None. It must exist and be open: one waiting for an owner is
-    given one (or folded into another action) where it waits, and a finished or dropped one is closed already."""
+#: The ops that end an action or change its date: read from what came in, each waits for the person to keep it.
+ENDING_OPS = (ActionCloseOp, ActionDropOp, ActionMoveOp, ActionPartOp)
+ENDING_WAITS = "Something that came in says this ended or moved: keep it, or change it."
+
+
+def _persons_own(view: Any, ctx: Context) -> bool:
+    """Whether a change is the person's own: made on a screen, confirmed by them, read from their own words, or read
+    from their own work in a watched source (their edit, or mail they sent)."""
+    if ctx.actor == "pm" or ctx.confirmed_by_pm or _from_pm(view, ctx):
+        return True
+    request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    source = _source_data(view, request) if request is not None else None
+    return bool(((source or {}).get("watched") or {}).get("by_you"))
+
+
+def action_hold_problem(view: Any, op: Any) -> str | None:
+    """Why an action can't be put on hold, dropped, moved, partly delivered or given news, or None. It must exist and be
+    open: one waiting for an owner is given one (or folded into another action) where it waits, and a finished or
+    dropped one is closed already."""
     found = view.get("action", op.id)
     if found is None:
         return f"there is no action {op.id}"
@@ -979,6 +1011,7 @@ class OpOutcome:
     question: str | None = None
     problems: list[dict[str, Any]] = field(default_factory=list)
     label: str | None = None
+    reporter: str | None = None  # for a held ending: who the input says reported it, credited when it is kept
 
 
 def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | None:
@@ -1143,6 +1176,8 @@ def apply_changeset(
                 elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
                     outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
                     outcome.reason = "Waiting for you to say who this is"
+                if outcome.status == "held" and isinstance(op, ENDING_OPS):
+                    outcome.reporter = _reporter(ctx)
                 outcomes.append(outcome)
             status = "held" if any(o.status == "held" for o in outcomes) else "applied"
             if whole:
@@ -1222,7 +1257,7 @@ def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
 def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
     names: list[str] = []
     if isinstance(op, ActionAddOp):
-        names = op.owners
+        names = [*op.owners, *op.promised_to]
     elif isinstance(op, QuestionAddOp):
         names = [op.to]
     for name in names:
@@ -1329,6 +1364,8 @@ def _reporter(ctx: Context) -> str | None:
     (its sender or author); none when that isn't one known person."""
     view = ctx.store.read()
     request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    if ctx.reporter is not None:
+        return ctx.reporter
     if request is None:
         return None
     if request.data["origin"] == "pm" and ctx.inputs.trust == "trusted":
@@ -1689,10 +1726,17 @@ def _apply_op(
     elif isinstance(op, ActionAddOp):
         owners = [{"person": ctx.people.resolve(n).person} for n in op.owners]
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
+        due, check = _due(tx, ctx, source, op.due_words, op.due)
+        said = ctx.people.resolve(op.said_by) if op.said_by else None
         data = {
             "text": op.text,
             "owners": owners,
-            "due": op.due.isoformat() if op.due else None,
+            "due": due.isoformat() if due else None,
+            "due_words": " ".join(op.due_words.split()) if op.due_words else None,
+            "due_check": check,
+            "promised_to": [ctx.people.resolve(n).person for n in op.promised_to],
+            "basis": op.basis,
+            "said_by": said.person if said is not None and said.status == "ok" else None,
             "project": op.project,
             "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
             "series": op.series,
@@ -1741,6 +1785,29 @@ def _apply_op(
         made("action", op.id)
         if ctx.actor == "pm":
             _record_dropped(tx, ctx, "action", op.id, reason)
+    elif isinstance(op, ActionMoveOp):
+        cur = tx.get("action", op.id)
+        due, check = _due(tx, ctx, source, op.due_words, op.due)
+        words = " ".join(op.due_words.split()) if op.due_words else None
+        changes = {"due": due.isoformat() if due else None, "due_words": words, "due_check": check}
+        tx.update("action", op.id, changes, w, read_version=cur.version)
+        made("action", op.id)
+    elif isinstance(op, (ActionPartOp, ActionNewsOp)):
+        cur = tx.get("action", op.id)
+        quote = op.evidence.quote if op.evidence is not None else None
+        heard = op.delivered if isinstance(op, ActionPartOp) else op.text
+        entry = {
+            "on": today.isoformat(),
+            "text": " ".join(heard.split()),
+            "quote": quote,
+            "source": source,
+            "delivered": isinstance(op, ActionPartOp),
+        }
+        changes: dict[str, Any] = {"news": [*cur.data.get("news", []), entry]}
+        if isinstance(op, ActionPartOp):
+            changes["text"] = " ".join(op.left.split())
+        tx.update("action", op.id, changes, w, read_version=cur.version)
+        made("action", op.id)
     elif isinstance(op, QuestionAddOp):
         to = ctx.people.resolve(op.to).person
         data = {
@@ -1802,6 +1869,37 @@ def _apply_op(
         tx.update("person", op.person, {"how_to_reach": reach}, w, read_version=found.version)
         made("person", op.person)
     return touched, None
+
+
+def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: date | None) -> tuple[date | None, bool]:
+    """An action's due date and whether the person should check it. Words are read by the rules
+    (`engine/due_phrases.py`) against when the input was received, and their reading wins over a date the model gave;
+    words the rules can't read give no date. Without words, the given date stands. A workspace whose language the
+    rules don't read keeps the given date."""
+    from engine.due_phrases import resolve
+
+    language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
+    if not (words or "").strip() or not language.lower().startswith("en"):
+        return given, False
+    locale = "en_US" if language.lower().startswith("en-us") else "en_GB"
+    found = resolve(words, _received_at(tx, ctx, source), zone(ctx.cfg), locale=locale)
+    day = found.end or found.start
+    if day is None:
+        return None, False
+    # One day read with doubt ("next Friday", a year-less date far ahead) is checked; a range is due at its end.
+    return day, not found.exact and found.start == found.end
+
+
+def _received_at(tx: Tx, ctx: Context, source: str | None) -> datetime:
+    """When the input was received: its source's time, else when its request was made, else now."""
+    saved = tx.get("source", source) if source else None
+    request = tx.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    for stored, key in ((saved, "received_at"), (request, "created_at")):
+        value = stored.data.get(key) if stored is not None else None
+        if value:
+            stamp = datetime.fromisoformat(str(value))
+            return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=UTC)
+    return datetime.now(UTC)
 
 
 def _made_by(tx: Tx, kind: str, record_id: str) -> tuple[str | None, str | None]:
@@ -2069,7 +2167,7 @@ def _release_one(
         store, cfg, cs.data["request"], text, learns=request_learns(store, req.data) if req is not None else True
     )
     inputs = Inputs(cs.data["request"], req.data.get("source") if req else None, "", "", cs.data["trust"])
-    ctx = Context(store, cfg, people, tuple(), inputs, confirmed_by_pm=True)
+    ctx = Context(store, cfg, people, tuple(), inputs, confirmed_by_pm=True, reporter=outcome.get("reporter"))
     refusals = store.plugins.validators(op)
     if refusals:
         raise StoreError("; ".join(refusals))

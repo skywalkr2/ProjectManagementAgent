@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from engine import closes
-from engine.applier import apply_as_person, undo
+from engine.applier import apply_as_person, release, undo
 from engine.dispatcher import looks_good
 from engine.set_aside import confirm_items, set_aside_item
 from engine.storage import Store, WriteContext
@@ -51,16 +51,31 @@ def closed_by_a_rule(tmp_path):
 
 
 # ---- the assistant's own drops and closes ---------------------------------------------------------------------------
+# An action's ending read from an input waits for the person (design 6.33), so it is never a silent close; a
+# question's drop or answer from an input still applies at once and is one.
+
+
+def question(store, n: int = 0) -> str:
+    return store.read().list("question")[n].id
+
+
+def question_drop(question_id: str) -> dict:
+    return {
+        "op": "question.drop",
+        "id": question_id,
+        "reason": "  No longer   needed ",
+        "evidence": {"quote": DROPPING},
+    }
 
 
 def test_an_assistant_drop_applied_as_data_is_a_silent_close_and_is_listed_with_what_when_by_and_why(env):
     _, cfg, store = env
-    target = an_action(cfg, mine=False)
-    text = store.read().get("action", target).data["text"]
-    cs_id, statuses = from_input(store, cfg, [drop_op(target)])
+    target = question(store)
+    text = store.read().get("question", target).data["title"]
+    cs_id, statuses = from_input(store, cfg, [question_drop(target)])
     assert statuses == ["applied"]
     (found,) = closes.silent(store.read())
-    assert (found.kind, found.how, found.record) == ("assistant", "dropped", ("action", target))
+    assert (found.kind, found.how, found.record) == ("assistant", "dropped", ("question", target))
     assert found.title == text
     assert found.why == "No longer needed"
     assert found.changeset == cs_id and found.request == store.read().get("changeset", cs_id).data["request"]
@@ -68,20 +83,22 @@ def test_an_assistant_drop_applied_as_data_is_a_silent_close_and_is_listed_with_
     assert not found.by_person and not found.approved
 
 
-def test_an_assistant_close_of_an_action_and_an_answered_question_are_silent_closes_too(env):
+def test_an_answered_question_is_a_silent_close_and_a_held_action_close_is_none_until_kept_then_seen(env):
     _, cfg, store = env
     target = an_action(cfg, mine=False)
-    from_input(store, cfg, [{"op": "action.close", "id": target, "evidence": {"quote": WAITING}}])
-    question = store.read().list("question")[0].id
+    held, statuses = from_input(store, cfg, [{"op": "action.close", "id": target, "evidence": {"quote": WAITING}}])
+    assert statuses == ["held"]
+    answered = question(store)
     from_input(
         store,
         cfg,
-        [{"op": "question.done", "id": question, "answer": "Yes", "evidence": {"quote": DROPPING}}],
+        [{"op": "question.done", "id": answered, "answer": "Yes", "evidence": {"quote": DROPPING}}],
     )
     rows = {c.record: c for c in closes.silent(store.read())}
-    assert set(rows) == {("action", target), ("question", question)}
-    assert rows[("action", target)].how == "closed" and rows[("question", question)].how == "answered"
-    assert "waiting on the proof" in rows[("action", target)].why
+    assert set(rows) == {("question", answered)} and rows[("question", answered)].how == "answered"
+    release(store, cfg, held, 0)
+    kept = next(c for c in closes.collect(store.read()) if c.record == ("action", target))
+    assert kept.how == "closed" and not kept.silent and "waiting on the proof" in kept.why
 
 
 def test_the_persons_own_close_is_not_silent_but_is_counted_in_all_closes(env):
@@ -104,7 +121,7 @@ def test_a_close_from_the_persons_own_note_is_theirs(env):
 
 def test_a_close_the_person_looked_over_and_approved_is_not_silent(env):
     _, cfg, store = env
-    cs_id, _ = from_input(store, cfg, [drop_op(an_action(cfg, mine=False))])
+    cs_id, _ = from_input(store, cfg, [question_drop(question(store))])
     assert len(closes.silent(store.read())) == 1
     looks_good(store, cs_id)
     assert closes.silent(store.read()) == []
@@ -178,12 +195,11 @@ def test_mail_a_rule_sets_aside_is_silent_until_confirmed_and_what_the_person_se
 
 def test_the_measure_gives_silent_closes_out_of_all_closes_with_the_denominators_by_kind_and_period(env):
     _, cfg, store = env
-    mine, theirs, other = an_action(cfg, mine=True), an_action(cfg, mine=False), None
-    other = next(a.id for a in store.read().list("action") if a.id not in (mine, theirs) and a.data["status"] == "open")
+    mine, theirs = an_action(cfg, mine=True), an_action(cfg, mine=False)
     apply_as_person(store, cfg, [{"op": "action.drop", "id": mine, "reason": "Not needed"}], "Dropped")
-    approved, _ = from_input(store, cfg, [drop_op(theirs)])
-    looks_good(store, approved)
-    from_input(store, cfg, [drop_op(other)])
+    held, _ = from_input(store, cfg, [drop_op(theirs)])
+    release(store, cfg, held, 0)  # the person kept the assistant's drop
+    from_input(store, cfg, [question_drop(question(store))])
     now = datetime.now(UTC)
     whole = closes.measure(store.read(), now - timedelta(days=1), now + timedelta(days=1))
     assert (whole.total, whole.silent, whole.by_person, whole.approved) == (3, 1, 1, 1)
@@ -203,7 +219,7 @@ def client_for(ws, cfg):
 
 def test_the_api_serves_the_count_the_list_and_the_measure_and_marking_one_seen_lowers_the_count(tmp_path):
     ws, cfg, store, request = closed_by_a_rule(tmp_path)
-    cs_id, _ = from_input(store, cfg, [drop_op(an_action(cfg, mine=False))])
+    cs_id, _ = from_input(store, cfg, [question_drop(question(store))])
     store.close()
     client, api = client_for(ws, cfg)
     body = client.get(f"{api}/silent-closes").json()

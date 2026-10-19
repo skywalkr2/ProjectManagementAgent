@@ -331,6 +331,14 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   record that is gone gives a rule nothing to match, so it closes nothing. Names an outside system gives (an author)
   stay names. Decided by the main session from the subagent's audit.
   **Impact:** design 6.32 and 4 (CHANGES.md section 92).
+- **Also (2026-10-19): promises are actions (design 6.33).** A promise both ways is an action with `promised_to`,
+  `basis`, `due_words`, `due_check` and `news`, not a new record kind: actions already carry owners, dates, endings,
+  credit, follow-ups and holds, and one kind keeps one Today, one list and one learning loop. Endings are ops with
+  evidence (`action.move`, `action.part` and `action.news` are new); an ending from an input waits for the person, one
+  from their own note applies with Undo. Dates come from the rules (`engine/due_phrases.py`) before the model's.
+  Decided by the main session (the steward proposal said "builds on actions and follow-ups").
+  **Impact:** design 6.33 (CHANGES.md section 94); every action ending from an input now waits for the person, where
+  before `action.close` applied at once.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

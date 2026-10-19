@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
-from engine.applier import REACHED_WAITS, apply_as_person, fold_unowned, pick_owner, undo
+from engine.applier import ENDING_WAITS, REACHED_WAITS, apply_as_person, fold_unowned, pick_owner, release, undo
 from engine.corrections import request_change
 from engine.dispatcher import process, undo_changeset
 from engine.followups import put_on_hold, sections
@@ -160,7 +160,8 @@ def test_action_drop_is_never_done_or_credited_records_no_signal_and_undo_opens_
     _, cfg, store = env
     target = an_action(cfg, mine=False)
     cs_id, result = from_input(store, cfg, [drop_op(target)])
-    assert result == ["applied"]
+    assert result == ["held"]  # an ending read from an input waits for the person to keep it (design 6.33)
+    release(store, cfg, cs_id, 0)
     gone = data(store, "action", target)
     assert (gone["status"], gone["dropped_reason"]) == ("dropped", "No longer needed")
     assert gone["done_by"] == [] and gone["reported_by"] is None
@@ -298,9 +299,11 @@ def test_the_assistants_drop_of_an_action_someone_was_told_about_or_chased_for_w
             tx.update("action", action_id, {field: value}, _TEST, read_version=current.version)
     ops = [drop_op(action_id) for action_id in (told, chased, untouched)]
     cs_id, result = from_input(store, cfg, ops)
-    assert result == ["held", "held", "applied"]
-    assert all(REACHED_WAITS in o["reason"] for o in store.read().get("changeset", cs_id).data["ops"][:2])
-    assert [data(store, "action", a)["status"] for a in (told, chased, untouched)] == ["open", "open", "dropped"]
+    assert result == ["held", "held", "held"]
+    held = store.read().get("changeset", cs_id).data["ops"]
+    assert all(REACHED_WAITS in o["reason"] for o in held[:2])
+    assert ENDING_WAITS in held[2]["reason"]  # any ending from an input waits; one someone was told about says so
+    assert [data(store, "action", a)["status"] for a in (told, chased, untouched)] == ["open", "open", "open"]
     apply_as_person(store, cfg, [{"op": "action.drop", "id": told, "reason": "Not needed"}], "Drop")
     assert data(store, "action", told)["status"] == "dropped"
 

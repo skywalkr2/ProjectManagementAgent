@@ -2612,3 +2612,62 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   daily budget is now $2, changed elsewhere at 9:14").
 - **Kept secrets** that nothing refers to are removed after 30 days, and with their source or account, never while an Undo
   still points at one.
+
+## 6.33 Promises (phase S1, designed 2026-10-19)
+
+A promise is something someone owes someone: "I'll send it Friday" is the person's own; "they'll get back to me Tuesday"
+is a waiting-on. Promises are **actions**, not a new kind of record: an action already has owners, a due date, done and
+dropped, who did it and who reported it, follow-ups and holds, and its evidence in the ledger. Which way a promise runs
+is read from it, never stored twice: owned by the person, it is theirs to keep; owned by someone else and promised to
+the person, the person is waiting on it.
+
+**What an action gains.**
+- `promised_to`: the people it was promised to, by id (the person, for a waiting-on; the other party, for the person's
+  own promise). Empty for a plain to-do.
+- `basis`: said (someone said it outright) or inferred (the assistant read it between the lines), as facts carry it
+  (6.7), with `said_by` when the input names the speaker. Never a model's confidence.
+- `due_words`: the exact words the date came from ("by Friday", "early next week"), and `due_check` when the rules'
+  reading is uncertain (next Friday, a past "this Friday", a year-less date far ahead), so the person checks it.
+- `news`: what was heard that doesn't end it ("replied, but didn't say when"), each entry with its date, words and
+  source.
+
+**Dates by rules first.** `action.add` and `action.move` take `due_words`; the applier reads them with
+`engine/due_phrases.py` against the date the input was received, and the rules' date wins over a date the model gave.
+Anything vague or tied to an event stays "no date". A due date with no words behind it is kept as given only when
+the person wrote it.
+
+**How a promise ends, each an op with its evidence:**
+- done: `action.close` (credited to its owners, with who reported it, as today);
+- date changed: `action.move` (new `due_words`, or a date the person gives);
+- called off: `action.drop` with the reason;
+- partly delivered: `action.part`: what was delivered goes into its news, credited, and the text becomes what is left,
+  which stays open;
+- answered without an answer: `action.news`: the waiting-on stays open and says why.
+
+**Never a silent close.** An ending (close, drop, move, part) that comes from an input or the assistant's own initiative
+is held for the person: one line, "Keep: Ana sent the floor plan", with the words it came from, and Keep, Change or Not
+yet. One from the person's own note or a button applies at once with Undo. `action.news` changes nothing about the
+promise and applies at once, shown on it. A held ending kept by the person counts as seen (6.32's silent closes).
+
+**No news by its date.** A promise past its date with no ending and no news is a line with its choices: for a waiting-on,
+"Chase Ana: the floor plan, due Tuesday" with Followed up (a nudge: it stays open), New date, Done and Drop; for the
+person's own, the same choices without Chase. A nudge never ends it.
+
+**Every promise shows why:** the exact words, who owes it to whom, the date and the words it came from, where it came
+from (a link to the source), and "said" or "inferred". Each of these is one click to correct, and each correction is a
+signal (6.22).
+
+**Where promises come from:** every input, the person's own sent mail and notes included. When a mailbox is connected,
+its sent folder is offered as a second source, taken in quietly like any new source (6.32). A message's new text is
+split from its quoted history and signature first (`engine/reply_split.py`), so a promise quoted again is never found
+twice, and automatic mail never ends a promise (`engine/automatic_mail.py`). Messages join their conversation by rules
+(`engine/mail_threads.py`), so a reply is read against the promises of its thread.
+
+**Evaluation:** the 120 single examples and 25 whole threads (`docs/project/steward-promise-*.yaml`) become golden cases,
+and the twenty learning pairs become harness pairs in a workspace's `pairs/` folder.
+
+*Built so far (S1):* the fields, rules-first dates, `action.move`, `action.part` and `action.news`, and endings from an
+input held for the person (the person's own note, edit or sent mail applies at once; keeping a held close credits who
+the input said reported it) (`tests/test_promises.py`). *Not built yet:* the prompts and playbook entries that ask for
+promises both ways, the sent folder offered as a source, the line for a promise past its date with its choices, the
+"why" on every promise with one-click corrections, and the golden cases and harness pairs.

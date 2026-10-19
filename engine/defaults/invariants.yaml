@@ -39,6 +39,9 @@ invariants:
       - action.hold
       - action.unhold
       - action.drop
+      - action.move
+      - action.part
+      - action.news
       - action.reply
       - question.add
       - question.done
@@ -96,6 +99,9 @@ invariants:
       - action.hold
       - action.unhold
       - action.drop
+      - action.move
+      - action.part
+      - action.news
       - question.drop
       - question.done
       - person.contact

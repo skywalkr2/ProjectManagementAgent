@@ -650,7 +650,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `action.drop`, `action.hold`, `action.reply`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `action.drop`, `action.hold`, `action.move`, `action.part`, `action.reply`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1184,6 +1184,17 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `evidence` | Evidence \| None | see below | The words in the source that justify the action. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
+| `promised_to` | list[Annotated[str, RefTo(kind='person')]] | `[]` | For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33). |
+| `basis` | Literal['said', 'inferred'] \| None | `None` | For a promise: said outright, or inferred by the assistant; never a confidence score. |
+| `said_by` | str \| None | `None` | The id of the person who said it, when the input names them. |
+| `due_words` | str \| None | `None` | The exact words its due date was read from. |
+| `due_check` | bool | `False` | The rules' reading of `due_words` is uncertain, so the person checks the date. |
+| `news` | list[ActionNews] | `[]` | What was heard about it that didn't end it, oldest first. |
+| `news[].on` | date | required | The day it was heard. |
+| `news[].text` | str | required | What was heard, in plain words. |
+| `news[].quote` | str \| None | `None` | The exact words it came from, when an input said it. |
+| `news[].source` | str \| None | `None` | The id of the source it came from, if any. |
+| `news[].delivered` | bool | `False` | It records a part that was delivered, credited to the owners. |
 
 ### `question` (Q-n)
 
@@ -1856,6 +1867,10 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `text` | str | required | A verb that does something, e.g. 'Send the final file to the printer'. |
 | `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the PM to say who. |
 | `due` | date \| None | `None` | The day it is due, if one is stated. |
+| `due_words` | str \| None | `None` | The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The rules read the date from them, and their date wins over `due`. |
+| `promised_to` | list[str] | `[]` | For a promise: the people it was promised to, each by name or id (the person this app is for, when someone else promised them something). Empty for a plain to-do. |
+| `basis` | Literal['said', 'inferred'] \| None | `None` | For a promise: said, when someone said it outright; inferred, when you read it between the lines. |
+| `said_by` | str \| None | `None` | Who said it, by name or id, when the input names them. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
@@ -1895,6 +1910,44 @@ Put an open action on hold: it waits for something outside the person's control 
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the open action to put on hold. |
 | `waiting_for` | str | required | What it waits for, in plain words. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `action.move`
+
+The input says an open action's date changed: give the new date's exact words, or a date. Refused if the action doesn't exist or isn't open; evidence is required (the input's words, or the person's note).
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the open action whose date changed. |
+| `due_words` | str \| None | `None` | The exact words of the new date, copied from the input ('next Tuesday'). |
+| `due` | date \| None | `None` | The new date, when there are no words to read it from. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `action.news`
+
+News about an open action that doesn't end it or change its date, such as a reply that didn't answer: it stays open and says why. Refused if the action doesn't exist or isn't open; evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the open action the news is about. |
+| `text` | str | required | What was heard, in plain words. |
+| `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `action.part`
+
+The input says part of an open action was delivered: say what was delivered and what is left. What was delivered is credited in its news; the action's text becomes what is left, which stays open. Refused if the action doesn't exist or isn't open; evidence is required (the input's words, or the person's note).
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the open action that was partly delivered. |
+| `delivered` | str | required | What was delivered, in plain words. |
+| `left` | str | required | What is left to do, starting with a verb. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -1972,7 +2025,7 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `key` | bool | `False` | True only for a fact that matters most to the project; it is shown first. |
 | `as_of` | date \| None | `None` | The day the fact was true as of, written YYYY-MM-DD, when the input or the person's note names one (a note often reports something said earlier); left out, it is the day the input was received or the note was typed. |
 | `supersedes` | str \| None | `None` | The id of an existing fact this one replaces (the same thing, newer). The older fact stays on record. |
-| `basis` | Literal['inferred', 'said'] \| None | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
+| `basis` | Literal['said', 'inferred'] \| None | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
 | `said_by` | str \| None | `None` | With basis said: who said it, by name or id, when the input names someone. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |

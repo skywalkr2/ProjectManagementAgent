@@ -2151,6 +2151,10 @@ S1. **Promises, and how they end:**
   Twenty learning pairs for promises (`docs/project/steward-learning-pairs.yaml`, shape checked by
   `tests/test_steward_learning_pairs.py`) become harness pairs in a workspace's `pairs/` folder once promise
   records and ops exist; this item isn't done until they run there.
+  *Built so far (2026-10-19, design 6.33):* promises are actions with `promised_to`, `basis`, `due_words`, `due_check`
+  and `news`; dates read by the rules first; `action.move`, `action.part`, `action.news`; endings from an input wait
+  for the person (`tests/test_promises.py`). Left: the prompts and playbook for promises both ways, the sent folder as
+  a source, the golden cases and harness pairs.
   Messages join their conversation by rules (`engine/mail_threads.py`, `tests/test_mail_threads.py`): the reply
   headers first, then the same subject with a shared correspondent within a set number of days (a setting, 14 by
   default), never on an ambiguous match.

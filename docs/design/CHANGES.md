@@ -1026,6 +1026,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 94. Promises are actions (2026-10-19, designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Promises (6.33) | Named in 6.32, no shape | Actions gain `promised_to`, `basis`, `said_by`, `due_words`, `due_check` and `news`; dates read by rules first; endings `action.close`, `action.move`, `action.drop`, `action.part`, `action.news`; an ending from an input waits for the person; a promise past its date with no news is a line with its choices; every promise shows why |
+
 ## 92. No close goes unseen, and records join by id (2026-10-19)
 
 | Where | Before | Now |

@@ -267,6 +267,22 @@ class ActionAddOp(OpModel):
         "known person waits for the PM to say who.",
     )
     due: date | None = Field(None, description="The day it is due, if one is stated.")
+    due_words: str | None = Field(
+        None,
+        max_length=120,
+        description="The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The "
+        "rules read the date from them, and their date wins over `due`.",
+    )
+    promised_to: list[str] = Field(
+        default_factory=list,
+        description="For a promise: the people it was promised to, each by name or id (the person this app is for, "
+        "when someone else promised them something). Empty for a plain to-do.",
+    )
+    basis: Literal["said", "inferred"] | None = Field(
+        None,
+        description="For a promise: said, when someone said it outright; inferred, when you read it between the lines.",
+    )
+    said_by: str | None = Field(None, description="Who said it, by name or id, when the input names them.")
     project: str | None = Field(None, description="Project id, if the action belongs to one.")
     reply: str | None = Field(
         None,
@@ -353,6 +369,60 @@ class ActionDropOp(OpModel):
 
     def describe(self) -> str | None:
         return f"Drop action {self.id}"
+
+
+class ActionMoveOp(OpModel):
+    """The input says an open action's date changed: give the new date's exact words, or a date. Refused if the action
+    doesn't exist or isn't open; evidence is required (the input's words, or the person's note)."""
+
+    op: Literal["action.move"] = "action.move"
+    id: str = Field(description="The id of the open action whose date changed.")
+    due_words: str | None = Field(
+        None, max_length=120, description="The exact words of the new date, copied from the input ('next Tuesday')."
+    )
+    due: date | None = Field(None, description="The new date, when there are no words to read it from.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
+
+    @model_validator(mode="after")
+    def _a_date(self) -> ActionMoveOp:
+        if not (self.due_words or "").strip() and self.due is None:
+            raise ValueError("give the new date's words or the date")
+        return self
+
+    def describe(self) -> str | None:
+        return f"Move the date of action {self.id}"
+
+
+class ActionPartOp(OpModel):
+    """The input says part of an open action was delivered: say what was delivered and what is left. What was
+    delivered is credited in its news; the action's text becomes what is left, which stays open. Refused if the action
+    doesn't exist or isn't open; evidence is required (the input's words, or the person's note)."""
+
+    op: Literal["action.part"] = "action.part"
+    id: str = Field(description="The id of the open action that was partly delivered.")
+    delivered: str = Field(min_length=1, max_length=300, description="What was delivered, in plain words.")
+    left: str = Field(min_length=1, max_length=300, description="What is left to do, starting with a verb.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
+
+    def describe(self) -> str | None:
+        return f"Mark part of action {self.id} delivered"
+
+
+class ActionNewsOp(OpModel):
+    """News about an open action that doesn't end it or change its date, such as a reply that didn't answer: it stays
+    open and says why. Refused if the action doesn't exist or isn't open; evidence is required."""
+
+    op: Literal["action.news"] = "action.news"
+    id: str = Field(description="The id of the open action the news is about.")
+    text: str = Field(min_length=1, max_length=300, description="What was heard, in plain words.")
+    evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
+
+    def describe(self) -> str | None:
+        return f"Add news to action {self.id}"
 
 
 class QuestionAddOp(OpModel):
@@ -967,6 +1037,9 @@ Op = Annotated[
     | ActionHoldOp
     | ActionUnholdOp
     | ActionDropOp
+    | ActionMoveOp
+    | ActionPartOp
+    | ActionNewsOp
     | QuestionAddOp
     | QuestionDoneOp
     | QuestionUpdateOp
@@ -1021,6 +1094,9 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "action.hold": ActionHoldOp,
     "action.unhold": ActionUnholdOp,
     "action.drop": ActionDropOp,
+    "action.move": ActionMoveOp,
+    "action.part": ActionPartOp,
+    "action.news": ActionNewsOp,
     "question.add": QuestionAddOp,
     "question.done": QuestionDoneOp,
     "question.update": QuestionUpdateOp,
@@ -1114,6 +1190,9 @@ NEEDS_EVIDENCE = {
     "action.hold",
     "action.unhold",
     "action.drop",
+    "action.move",
+    "action.part",
+    "action.news",
     "question.drop",
     "question.done",
     "person.contact",
@@ -1121,7 +1200,7 @@ NEEDS_EVIDENCE = {
 }
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.
-EVIDENCE_UNLESS_PERSON = {"action.hold", "action.unhold", "action.drop", "question.drop"}
+EVIDENCE_UNLESS_PERSON = {"action.hold", "action.unhold", "action.drop", "action.move", "action.part", "question.drop"}
 EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner", "event", "series"}
 
 #: Fields record.set may change, per kind.

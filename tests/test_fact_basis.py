@@ -6,7 +6,7 @@ Names and ids come from the fixtures.
 
 from __future__ import annotations
 
-from engine.applier import Context, Inputs, apply_changeset, release
+from engine.applier import ENDING_WAITS, Context, Inputs, apply_changeset, release
 from engine.names import People
 from engine.ops import CHANGESET
 from engine.tasks import TASKS
@@ -115,10 +115,14 @@ def test_a_close_that_rests_only_on_an_inference_is_held_with_a_plain_reason_and
 
 def test_a_close_that_rests_on_something_said_or_on_the_persons_own_note_applies_at_once(app):  # noqa: F811
     _, store, cfg, _ = app
-    _, statuses = from_outside(store, cfg, [fact(), done("action")])
+    _, statuses = from_outside(store, cfg, [fact(), done("question")])
     assert statuses == ["applied", "applied"]
-    # the person's own deduction closes it as theirs
-    _, statuses = from_the_person(store, cfg, [fact(), done("question")])
+    # an action's ending read from outside waits for the person whatever it rests on (design 6.33), but not as an
+    # inference
+    cs_id, statuses = from_outside(store, cfg, [fact(), done("action")])
+    assert statuses == ["applied", "held"] and reasons(store, cs_id)[1] == ENDING_WAITS
+    # the person's own deduction closes it as theirs, at once
+    _, statuses = from_the_person(store, cfg, [fact(), done("action")])
     assert statuses == ["applied", "applied"]
 
 
@@ -126,13 +130,13 @@ def test_a_close_shares_nothing_with_an_inference_when_it_quotes_other_words_and
     _, store, cfg, _ = app
     other = {"evidence": {"quote": "Delivered"}}
     raw = f"{FROM}\nDelivered"
-    _, statuses = from_outside(store, cfg, [fact(basis="inferred"), done("action", **other)], raw=raw)
+    _, statuses = from_outside(store, cfg, [fact(basis="inferred"), done("question", **other)], raw=raw)
     assert statuses == ["applied", "applied"]
 
 
 def test_a_close_resting_on_an_inference_and_on_something_said_is_not_held(app):  # noqa: F811
     _, store, cfg, _ = app
-    _, statuses = from_outside(store, cfg, [fact(basis="inferred"), fact(), done("action")])
+    _, statuses = from_outside(store, cfg, [fact(basis="inferred"), fact(), done("question")])
     assert statuses == ["applied", "applied", "applied"]
 
 

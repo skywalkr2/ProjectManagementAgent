@@ -248,6 +248,18 @@ class OnHold(BaseModel):
     since: date = Field(description="The day it was put on hold.")
 
 
+class ActionNews(BaseModel):
+    """Something heard about an action that doesn't end it: a reply that didn't answer, or a part delivered."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    on: date = Field(description="The day it was heard.")
+    text: str = Field(min_length=1, description="What was heard, in plain words.")
+    quote: str | None = Field(None, description="The exact words it came from, when an input said it.")
+    source: str | None = Field(None, description="The id of the source it came from, if any.")
+    delivered: bool = Field(False, description="It records a part that was delivered, credited to the owners.")
+
+
 class Person(Record):
     """Someone the workspace works with or tracks. Added by `person.add`; role, org and why_they_matter change through
     `record.set`; the person edits the rest in the app."""
@@ -431,6 +443,23 @@ class Action(Record):
     )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     evidence: Evidence | None = Field(None, description="The words in the source that justify the action.")
+    promised_to: list[Annotated[str, RefTo("person")]] = Field(
+        default_factory=list,
+        description="For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33).",
+    )
+    basis: Literal["said", "inferred"] | None = Field(
+        None, description="For a promise: said outright, or inferred by the assistant; never a confidence score."
+    )
+    said_by: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The id of the person who said it, when the input names them."
+    )
+    due_words: str | None = Field(None, description="The exact words its due date was read from.")
+    due_check: bool = Field(
+        False, description="The rules' reading of `due_words` is uncertain, so the person checks the date."
+    )
+    news: list[ActionNews] = Field(
+        default_factory=list, description="What was heard about it that didn't end it, oldest first."
+    )
 
     @model_validator(mode="after")
     def _owners_unless_held(self) -> Action:

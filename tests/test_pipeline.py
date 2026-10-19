@@ -505,12 +505,15 @@ def _close(action: dict, quote: str) -> dict:
 
 
 def test_closing_an_action_from_a_message_credits_its_owners_and_names_the_sender(env):
-    _, _, store = env
+    _, cfg, store = env
     action = _open_action_with_owners()
     sender = person("Cover designer")
     quote = f"{action['text']} is finished"
     answers(_close(action, quote))
-    run(env, f"From: {sender['full_name']} <someone@example.com>\nSubject: Update\n\n{quote}.")
+    _, cs_id = run(env, f"From: {sender['full_name']} <someone@example.com>\nSubject: Update\n\n{quote}.")
+    # An ending read from a message waits for the person (design 6.33); keeping it credits as the message said.
+    assert outcomes(store, cs_id)[0]["status"] == "held"
+    release(store, cfg, cs_id, 0)
     data = store.read().get("action", action["id"]).data
     assert data["status"] == "done"
     assert data["done_by"] == [o["person"] for o in action["owners"]]
@@ -529,11 +532,12 @@ def test_closing_an_action_from_the_pms_own_note_is_reported_by_the_pm(env):
 
 
 def test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty(env):
-    _, _, store = env
+    _, cfg, store = env
     action = _open_action_with_owners()
     quote = f"{action['text']} is finished"
     answers(_close(action, quote))
-    run(env, f"From: someone@example.com\nSubject: Update\n\n{quote}.")
+    _, cs_id = run(env, f"From: someone@example.com\nSubject: Update\n\n{quote}.")
+    release(store, cfg, cs_id, 0)
     data = store.read().get("action", action["id"]).data
     assert data["status"] == "done" and data["reported_by"] is None
     assert data["done_by"] == [o["person"] for o in action["owners"]]
