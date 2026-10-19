@@ -147,5 +147,14 @@ def test_an_under_review_claim_is_skipped_and_a_stale_entry_is_reported(root):
     assert len(stale) == 1 and "under review but now passes" in stale[0].message
 
 
+def test_the_file_of_finished_roadmap_work_is_checked_like_the_roadmap(root: Path):
+    docs = root / "docs" / "project"
+    docs.mkdir(parents=True)
+    (docs / "roadmap-to-1.0.md").write_text("- [ ] Open, no test yet.\n", encoding="utf-8")
+    (docs / "roadmap-done.md").write_text("- [x] Done. Built: `tests/test_missing.py`.\n", encoding="utf-8")
+    findings = scan_built_claims(root)
+    assert len(findings) == 1 and findings[0].path == "docs/project/roadmap-done.md"
+
+
 def test_the_roadmap_and_the_design_make_no_unproven_claim_of_built():
     assert scan_built_claims() == []

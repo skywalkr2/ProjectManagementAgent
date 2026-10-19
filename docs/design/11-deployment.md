@@ -135,12 +135,12 @@ package, checks that it installs and starts the demo, and attaches it to a relea
 (decisions, 2026-10-11 "The package carries its screens, templates and demos"). A workspace is a separate folder and is never
 touched by an install or an update. The scripts exist and are not yet tested.
 
-**One update command.** `cockpit update` is planned (roadmap phase A1). It pulls, syncs the Python environment without dropping
+**One update command.** `cockpit update` is planned (roadmap phase A1, see roadmap-done.md). It pulls, syncs the Python environment without dropping
 installed add-ons, installs the web tools, builds, and then says whether a restart is needed, so updating never needs a list of
 commands (review of 2026-10-12).
 
 **A starting workspace.** The start is `cockpit init` with no template, then `cockpit serve --open` (`docs/install.md` shows
-it; the README still sends a person to a fictional workspace, which roadmap A1 corrects). `cockpit demo` makes a labeled demo of fictional data for trying the app; it is the
+it; the README still sends a person to a fictional workspace, which roadmap A1 (see roadmap-done.md) corrects). `cockpit demo` makes a labeled demo of fictional data for trying the app; it is the
 sandbox, never the start.
 
 **One-click add-on install.** The Add-ons screen installs a pack from its catalog entry: the app downloads the release the

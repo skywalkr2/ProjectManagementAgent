@@ -1,7 +1,8 @@
 # What changed since the first design
 
 This note is for the author of the first version of this design (the single `DESIGN.md` that started this repository). It
-summarizes what changed, why, and where everything now lives, so you can review the new version without diffing 1,400 lines.
+summarizes what changed, why, and where everything now lives (roadmap phases 0, A and L cited below are in
+`docs/project/roadmap-done.md`), so you can review the new version without diffing 1,400 lines.
 
 The first design's core held up: the AI writes only changesets, a deterministic applier checks and applies them, the PM approves
 everything outward, rules run before AI, any AI vendor can be used through configuration, and scans keep specifics out of code.

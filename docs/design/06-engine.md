@@ -292,7 +292,7 @@ original designer's L1 check-in, 2026-10-14; built): a note on the person's own 
 said / says / confirmed …", or a passage in quotation marks; the words are the setting `language.reported_speech`) is
 reported content too. Its source is marked `reported` and its author stays the person who typed it; facts and dates from it
 apply, and a system op from it is held. Built: `tests/test_note_input.py::test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person`.
-**More reported speech, and two that aren't** (functional designer's answers, 2026-10-15; built, roadmap L7): "mentioned", "replied", "responded",
+**More reported speech, and two that aren't** (functional designer's answers, 2026-10-15; built, roadmap L7 (see roadmap-done.md)): "mentioned", "replied", "responded",
 "noted", "commented" and "pinged" join the speech words (`language.reported_speech.verbs`), and "per" and "according to"
 (`lead_words`, which come before the speaker, who starts with a capital letter) mark reported speech too; a pasted chat
 is reported content as a whole (lines of a time and a name, `chat_line_patterns`, at least `chat_min_lines` of them; a
@@ -569,7 +569,7 @@ entry. **Built:** `tests/test_event_set.py`, the golden case `moved-meeting-move
 
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
 day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
-evidence, which is required. **Calendar entries are for real events only** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): meetings, launches, delivery
+evidence, which is required. **Calendar entries are for real events only** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7 (see roadmap-done.md)): meetings, launches, delivery
 windows, appointments. An action's due date lives on the action and never gets an entry of its own, and a new date for an
 open action is one op, `record.set` on its due, with no fact and no history entry (a date-only move). The cases' check is
 turned round with it: it fails an entry made for an action's own date. *As built until L7:* the notes prompt asks for an
@@ -703,7 +703,7 @@ is per field across groups but all or nothing within a group:
 a system op, or otherwise needs a decision. Everything else is filed quietly (still findable). The change it came from closes as
 "no change needed" automatically, so the PM never clicks "Looks good" on nothing.
 
-**Follow-on changes** (functional designer's lessons from running, 2026-10-15; roadmap L7). The links, the series and the
+**Follow-on changes** (functional designer's lessons from running, 2026-10-15; roadmap L7 (see roadmap-done.md)). The links, the series and the
 one request on a move are **built** (what is left is listed at the end of this part). When the
 person moves or retitles a dated record (a calendar entry's day or time, or a new day typed in its notes), or a fact is
 replaced, one save makes **one** request to the assistant listing what changed, never one per field. The request asks it
@@ -720,7 +720,7 @@ the entries that haven't ended, with their ids, beside the open actions and ques
 belongs to (`::test_the_packet_lists_the_series_and_the_entries_to_come_and_what_each_item_belongs_to`); the notes prompt says
 when to name one (`::test_the_notes_prompt_says_when_to_tie_an_item_to_an_entry_or_a_series`). A date-only move writes no history entry of its own;
 marking a meeting done starts no run (its notes come in as their own input). The meeting's agenda and its items belong to
-the project management pack (6.24), which builds on these links. From the functional designer's answers (functional designer's answers, 2026-10-15; roadmap L7):
+the project management pack (6.24), which builds on these links. From the functional designer's answers (functional designer's answers, 2026-10-15; roadmap L7 (see roadmap-done.md)):
 - **A series** (**built**): an entry can be one instance of a series ("then every three days"). A series is its own record
   (`series`: title, project and `repeats`, how often in the person's words, which no date is worked out from); each instance
   is a calendar entry that names it (`event.series`), added by `event.add`, `series.add` or `series.link`, with Undo. An
@@ -761,7 +761,7 @@ the project management pack (6.24), which builds on these links. From the functi
   stays as it was: a `question.add` to that person (open, so it waits for the person; nothing is sent). The run may
   also `note`; the `follow-on-reach` check refuses any other question, and the packet marks every record as outside
   content. A request whose move was undone or changed again before it runs is closed without a call
-  (`tests/test_follow_on.py`, listed in the roadmap's L7 item: `test_no_due_or_text_change_ever_applies_from_a_follow_on_run`,
+  (`tests/test_follow_on.py`, listed in the roadmap's L7 item (see roadmap-done.md): `test_no_due_or_text_change_ever_applies_from_a_follow_on_run`,
   `test_an_action_due_between_the_old_and_the_new_day_is_tied_and_one_outside_it_is_not`,
   `test_an_action_due_between_the_old_and_new_day_gets_a_question_to_its_owner_that_waits_and_undoes`,
   `test_a_moved_entry_that_carried_more_than_a_dated_action_asks_the_person_whether_the_plan_holds`; replay
@@ -770,7 +770,7 @@ the project management pack (6.24), which builds on these links. From the functi
   input (data tier, evidence required, Undo; offered to reading notes, not to the follow-on run), and its save starts the
   run like the person's edit (`tests/test_event_set.py::test_the_assistants_move_from_an_input_queues_one_follow_on_request_for_the_save`).
   *Not built:* a correction for an action's notice with no link to carry (it becomes a note), and a move written by a
-  connected calendar's sync (a sync writes `snapshot` records with no changeset; see the roadmap's L7 item).
+  connected calendar's sync (a sync writes `snapshot` records with no changeset; see the roadmap's L7 item (see roadmap-done.md)).
 - **What applies at once:** changes to the person's own items and the agenda apply with Undo. Anything that already
   reached someone (a question or a notice sent that named the old date) gets a drafted correction to send, not a silent
   edit.
@@ -895,7 +895,7 @@ is marked *designed*, with the phase.
 - Aging: "waiting Nd" after Mark sent (built); chase suggestions by the one follow-up rule (6.9, built); one escalation suggestion when `routing.escalation` says so (4.3, 6.24; *designed, phase C2*, with the
   project management pack: no `routing` setting exists today).
 
-**From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7):
+**From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7 (see roadmap-done.md)):
 - **A question someone asks the person** is one item: an action owned by the person ("Reply to the shop: when the cover
   proofs ship"). When the facts hold the answer, the action carries a drafted reply, ready to copy, citing the fact and its
   source; when they don't, it carries no draft and says what's missing. Never an action and an output for one reply.
@@ -1089,7 +1089,7 @@ system tier) and `question.mark_sent` (the person sent it themselves; person-onl
 project's role, putting an action on hold or dropping any item as an op the assistant may use, and the weekly list on
 Quality.
 
-- **Built (roadmap A2): runs a stop left unfinished.** When the worker starts, every request left running goes back in the
+- **Built (roadmap A2, see roadmap-done.md): runs a stop left unfinished.** When the worker starts, every request left running goes back in the
   queue with the note "The app closed while this ran; it runs again now." and raises `request.queued`. One found running
   after it was already put back once goes to needs you instead ("Stopped twice when the app closed during it"), its
   approval untouched, so Try again and Dismiss apply and a request that stops the app can't loop. The number of
@@ -1239,7 +1239,7 @@ up through the catalog, with no code change.
 
 **What a model can do, measured: the capability matrix** (owner, 2026-10-15: "very full featured … not just in claude
 but all the others"; step 1 (the skills list, the matrix, staleness and the grid in Settings) is built, apart from
-"Measure" and the export, which the roadmap lists; step 2 (using it) is *designed, not yet built*; roadmap L7 step 1,
+"Measure" and the export, which the roadmap lists; step 2 (using it) is *designed, not yet built*; roadmap L7 (see roadmap-done.md) step 1,
 C0 step 2). Capabilities above are features a catalog
 states. Whether a model *does* a kind of work well is measured, the same way for every account the product supports:
 native vendor APIs, OpenAI-compatible endpoints (local servers included), aggregators and command-line agents. Nothing is
@@ -1610,7 +1610,7 @@ none is, the request goes to the PM instead. Secrets come from secret references
 **Naming.** The assistant's display name is configuration and is the only name people see; vendor and model names appear only in
 `config/ai.yaml`, the adapters, the usage reports and the evaluation reports.
 
-**Replaying the real event** (functional designer's lessons from running, 2026-10-15; built, roadmap L7). Every
+**Replaying the real event** (functional designer's lessons from running, 2026-10-15; built, roadmap L7 (see roadmap-done.md)). Every
 real miss becomes a replayable case: the starting records, the person's action through the same entry point the screen
 uses (an edit, a move, a button), and the expected end state, scored on the records as they end up as well as on the ops.
 Replays run in a throwaway copy, never the person's workspace, since Undo rightly refuses to roll back a record that has
@@ -1624,7 +1624,7 @@ replays are one per real miss: "Not a project" and "It's part of" each keep the 
 run, a moved decision stays a decision, a question marked as already asked is filed as sent, and a calendar entry sent
 back is undone with the work queued again. **Built:** `tests/test_replays.py`.
 
-**Extras are weighed and tracked** (functional designer's answers, 2026-10-15; built, roadmap L7). Missing and forbidden ops stay exact. An op a case didn't expect is weighed
+**Extras are weighed and tracked** (functional designer's answers, 2026-10-15; built, roadmap L7 (see roadmap-done.md)). Missing and forbidden ops stay exact. An op a case didn't expect is weighed
 by its reach: a fact is free (a note is never counted); any other extra that stays inside the workspace (an action, a calendar entry, a question to the person, an extra
 knowledge entry from a learning stage) costs 0.5; anything that reaches another person (a question to someone else, an
 op of the outbound tier) fails the run. A run passes when nothing is missing or forbidden, no extra reaches another person
@@ -1659,7 +1659,7 @@ check-up and the UI all ask it; no other part of the product decides scope on it
   **watch** it (per person id, so an organization install, 11.8, works the same). The resolver reads that role, not a
   global list: on a project the person runs, another team's blocking defect is a risk and an action, not a parked note. "I'm
   running X now" or "they want me to PM X" in any input or note proposes the role change as a system op the person
-  confirms, and it takes effect that day. A learning pair proves it (roadmap L4). **A slice comes before real use** (the
+  confirms, and it takes effect that day. A learning pair proves it (roadmap L4, see roadmap-done.md). **A slice comes before real use** (the
   original designer, 2026-10-14; the rest stays in phase E): the role and its proposal; on a project the person only
   watches, facts only (no actions, no questions to other people), enforced by the applier from the role; and another
   team's item on any project is a fact unless the input says the person owes them something. *As built (the slice,
@@ -1667,7 +1667,7 @@ check-up and the UI all ask it; no other part of the product decides scope on it
   the lints `watched-project` and `other-team-item` (default `return`; returned once, then held and never applied even
   when the item reaches no one); "the person owes it" when the quote names the person or their team or holds a word in
   `language.owed_words`; the person's own note is exempt from both; the packet's project list says the person's part
-  when it isn't "run". **Built:** `tests/test_scope_slice.py`. **Who owes what, revised** (functional designer's answers, 2026-10-15; the words are built, roadmap L7): "we", "us"
+  when it isn't "run". **Built:** `tests/test_scope_slice.py`. **Who owes what, revised** (functional designer's answers, 2026-10-15; the words are built, roadmap L7 (see roadmap-done.md)): "we", "us"
 and "our" are usually the sender's own team committing to something, which is not owed to the person; what is owed is a
 request addressed to them ("you", "your team", "please send", in `language.owed_words`, or their name or their team's
 followed by a request word, `language.request_words`). Built: `tests/test_scope_slice.py::test_a_quote_that_addresses_the_person_is_one_the_person_owes`.
@@ -1690,7 +1690,7 @@ looked up.
   the watcher picks it up.
 - **Enforced:** the applier refuses questions for these facts (6.7), so a model that ignores the packet can't send one.
 
-**How a fact is known** (functional designer's lessons from running, 2026-10-15; roadmap L7, *partly built*). Every fact
+**How a fact is known** (functional designer's lessons from running, 2026-10-15; roadmap L7 (see roadmap-done.md), *partly built*). Every fact
 says who it rests on, with its source: the person said it, the assistant inferred it, or someone else said it (named).
 The person's own deduction is recorded as their inference, and a question it settles closes with that as the reason.
 When the person says they asked someone directly, the question is filed as already asked, so the reply has a place to
@@ -1982,7 +1982,7 @@ names it; otherwise as **present**. Both are checked without asking the model; t
 as a hint on the evidence line and is never counted. A rule present but not applied for `knowledge.rule_review_days` (30)
 is offered for review on the weekly card, most-present first, with Keep (resets the clock), Narrow and Retire. A rule
 enforced by a code check or an invariant is never flagged: the check holds it whether or not anything triggers.
-**Checks on every output** (functional designer's answers, 2026-10-15; built, roadmap L7): a rule with a check runs it on every run's output in its scope, not only
+**Checks on every output** (functional designer's answers, 2026-10-15; built, roadmap L7 (see roadmap-done.md)): a rule with a check runs it on every run's output in its scope, not only
 on stage moves, so a checked rule counts as applied each time. *As built* (`engine/rule_use.py::record_applied`, `engine/stages.py::output_check_ran`): once a
 run's changeset is applied, each active rule the run was given that names a code check has the check run on every record the changeset's applied ops wrote
 (as the records are then) that the rule's scope covers (`task_kinds` names the run's kind of work or is empty, `records` and `filter` take in the record, the
@@ -2027,7 +2027,7 @@ run. **Built:** `tests/test_refusals.py::test_the_same_check_refusing_the_floor_
 `::test_a_check_counts_once_per_run_for_the_floor_and_the_floor_is_a_setting`,
 `::test_a_packet_carries_the_floored_lesson_and_logs_it`.
 
-**From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7):
+**From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7 (see roadmap-done.md)):
 - **Terms by audience.** On the person's own list the assistant keeps their shorthand with the meaning beside it the
   first time ("Approve the HLP (Harrowgate layout proof)"); in anything that goes to others, the meaning comes first and
   the term only if the reader uses it. A term nobody has defined stays unknown, never guessed.
@@ -2461,7 +2461,7 @@ ends when the app closes.
   header `X-Cockpit-Needs: read-token`, which is how the row knows to ask. `POST /api/packs/catalogs` (and `/remove`) add and
   take away a feed address, https only.
   Only a wheel of pure Python whose needs the app already has (each requirement present at an allowed version) is installed
-  this way; anything else is refused with what to do instead. Installing a pack's own libraries is planned (roadmap, A2).
+  this way; anything else is refused with what to do instead. Installing a pack's own libraries is planned (roadmap, A2; see roadmap-done.md).
   Paths outside the install place are refused. An earlier install of the same pack is replaced only if it was installed from
   here (the install marks its metadata).
 - **Update** is the same call. **Remove** (`POST /api/packs/{id}/uninstall`) takes away only the files an install from here

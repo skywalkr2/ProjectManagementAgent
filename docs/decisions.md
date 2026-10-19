@@ -1,6 +1,7 @@
 # Product decisions
 
-Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
+Dated entries: what was decided, who decided, why. Newest first. Entries that cite roadmap phases 0, A or L (L0 to L7) refer to
+`docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
 ## 2026-10-17: Repeating events are expanded by `engine/recurrence.py`, on `python-dateutil`

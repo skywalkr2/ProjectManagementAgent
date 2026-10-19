@@ -159,7 +159,7 @@ time. These rules hold for the main session and every subagent.
 - Nothing is "ready to test" until the journey tests pass. The message to the owner gives the exact commands and what
   they should see.
 - Never mark a plan item done on a part of it: say what is left. "Built" means a named test exists and passes: a checked
-  roadmap box or a "Built" row cites it (the self-check enforces this from phase L0).
+  roadmap box or a "Built" row cites it (the self-check enforces this from phase L0, see `docs/project/roadmap-done.md`; it reads both roadmap files).
 - Nothing lives only in the conversation. Every commitment to the owner or a plugin builder ("I'll add X", "Y is next") is
   written in the same turn to the roadmap or to `docs/project/open-promises.md`. That list is shown to the session when it
   starts, resumes or comes back from a compaction (the hook in `.claude/settings.json`). Reconcile it before other work. A

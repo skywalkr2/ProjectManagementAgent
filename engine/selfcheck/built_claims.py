@@ -20,7 +20,7 @@ from pathlib import Path
 
 from engine.selfcheck.scans import REPO, Finding
 
-ROADMAP = "docs/project/roadmap-to-1.0.md"
+ROADMAPS = ("docs/project/roadmap-to-1.0.md", "docs/project/roadmap-done.md")
 DESIGN_DIR = "docs/design"
 READING = re.compile(r"checked by reading", re.IGNORECASE)
 
@@ -246,7 +246,9 @@ def check_claims(
 def scan_built_claims(root: Path = REPO, under_review: Iterable[str] | None = None) -> list[Finding]:
     """Every claim in the roadmap and the design files, plus any under-review entry that no longer fails."""
     exceptions = set(UNDER_REVIEW if under_review is None else under_review)
-    files = [(ROADMAP, True)] + [(f"{DESIGN_DIR}/{p.name}", False) for p in sorted((root / DESIGN_DIR).glob("*.md"))]
+    files = [(rel, True) for rel in ROADMAPS] + [
+        (f"{DESIGN_DIR}/{p.name}", False) for p in sorted((root / DESIGN_DIR).glob("*.md"))
+    ]
     findings: list[Finding] = []
     failing: set[str] = set()
     for rel, roadmap in files:
