@@ -81,6 +81,7 @@ from engine.ops import (
 )
 from engine.plugin_api import NeedsPerson
 from engine.records import entry_problem, model_for
+from engine.rule_use import RULE_CHECK, failing_rules
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
 from engine.text_shape import error_problem, items_problem, text_problem
@@ -99,6 +100,7 @@ class Problem:
     message: str
     passage: str | None = None  # the exact words it is about, when a lint names them
     guidance: str | None = None  # how to fix it
+    rule: str | None = None  # the rule record whose check found it
 
 
 @dataclass
@@ -144,9 +146,7 @@ class Context:
 
 
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    problems: list[Problem] = [
-        Problem("plugin-validator", "refuse", i, message) for i, message in _validate_in_order(cs, ctx)
-    ]
+    problems: list[Problem] = _validate_in_order(cs, ctx)
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
     problems += _learning_reach(cs, ctx)
@@ -1120,6 +1120,16 @@ def apply_changeset(
                     try:
                         outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
                         outcome.question = question
+                        stopped = _rule_problems(tx, ctx, i, op, outcome.records)
+                        if stopped:
+                            # What the op wrote breaks a rule the earlier check didn't see: none of it is kept.
+                            tx.sql("ROLLBACK TO plugin_op")
+                            del tx.pending[pending:]
+                            outcome.records, outcome.question = [], None
+                            outcome.problems += [asdict(p) for p in stopped]
+                            refused = any(p.severity == "refuse" for p in stopped)
+                            outcome.status = "refused" if refused else "held"
+                            outcome.reason = "; ".join(p.message for p in stopped)
                     except NeedsPerson as err:
                         tx.sql("ROLLBACK TO plugin_op")
                         del tx.pending[pending:]
@@ -1203,9 +1213,10 @@ def _reaches_someone_else(op: OpModel, ctx: Context) -> bool:
 
 def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
     """Whether a lint still returned after the fix round holds the op: one that reaches someone else, or one of the
-    scope checks, which hold whoever the item reaches."""
+    scope checks or a rule's check, which hold whoever the item reaches."""
     returned = [p for p in mine if p.severity == "return"]
-    return bool(returned) and (_reaches_someone_else(op, ctx) or any(p.check in scope.HELD_LINTS for p in returned))
+    holds = scope.HELD_LINTS | {RULE_CHECK}
+    return bool(returned) and (_reaches_someone_else(op, ctx) or any(p.check in holds for p in returned))
 
 
 def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
@@ -1337,20 +1348,22 @@ class _DryRun(Exception):
     pass
 
 
-def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[tuple[int, str]]:
+def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     """Run plugin validators op by op against a transaction where the earlier ops are applied, then roll it all back,
-    so a validator sees what earlier ops in the same changeset created. Nothing is kept and no event is published."""
-    found: list[tuple[int, str]] = []
+    so a validator sees what earlier ops in the same changeset created. The checks of the active rules run on what
+    each op wrote there. Nothing is kept and no event is published."""
+    found: list[Problem] = []
     try:
         with ctx.store.transaction(notify=False) as tx:
             for i, op in enumerate(cs.ops):
                 messages = ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
-                found += [(i, m) for m in messages]
+                found += [Problem("plugin-validator", "refuse", i, m) for m in messages]
                 if messages or op.op not in ctx.allowed_ops:
                     continue
                 tx.sql("SAVEPOINT dry_op")
                 try:
-                    _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), datetime.now(UTC).date())
+                    written, _ = _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), datetime.now(UTC).date())
+                    found += _rule_problems(tx, ctx, i, op, written)
                 except Exception:
                     tx.sql("ROLLBACK TO dry_op")
                 finally:
@@ -1359,6 +1372,20 @@ def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[tuple[int, str]]:
     except _DryRun:
         pass
     return found
+
+
+def _rule_problems(tx: Tx, ctx: Context, i: int, op: OpModel, refs: list[dict[str, Any]]) -> list[Problem]:
+    """Each active rule whose check fails on what the op wrote (design 6.22): sent back to the assistant once and then
+    held for the person, or refused for an outward act. A change the person makes or confirms is theirs to make."""
+    if ctx.actor == "pm" or ctx.confirmed_by_pm or not refs:
+        return []
+    written = [found for ref in refs if (found := tx.get(ref.get("kind", ""), ref.get("id", ""))) is not None]
+    severity: Severity = "refuse" if ctx.store.plugins.tiers.get(op.op) == "outbound" else "return"
+    task = origin_of(ctx).get("task")
+    return [
+        Problem(RULE_CHECK, severity, i, f"{rule.data['text']}: {reason}", rule=rule.id)
+        for rule, reason in failing_rules(ctx.store, tx, task, written)
+    ]
 
 
 def refusals(cs: ChangesetIn, ctx: Context) -> dict[int, str]:

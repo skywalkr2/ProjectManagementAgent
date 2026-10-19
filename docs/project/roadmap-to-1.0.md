@@ -2178,9 +2178,9 @@ S1. **Promises, and how they end:**
 - [x] **The coverage line on Today** (designer F4, F9): what was read and when, "couldn't read" and "nothing new" in
   different words, a source failed longer than its usual gap as a line for the person, an honest empty Today.
   *Built (S1):* `tests/test_watch.py`, `coverage.test.ts`, `Coverage.test.tsx`, `Today.test.tsx`, `HeldLines.test.tsx`.
-- [ ] **A rule's check runs before the change applies** (moved from phase E, 2026-10-19): today a rule's check runs after
-  the change is written and is only counted (`engine/stages.py` `output_check_ran`); it moves into the applier, and a
-  failing check holds the change (an outward act is refused). Needed before S1b.
+- [x] **A rule's check runs before the change applies** (moved from phase E, 2026-10-19): the applier's trial apply runs
+  each active rule's check on what an op would write; a failure returns once, then holds the op (an outward act is
+  refused). *Built (S1):* `tests/test_rule_check_before_apply.py`.
 - [ ] **No close goes unseen, and records join by id** (design 6.32): every close by a rule or the assistant that the
   person didn't see is counted and reviewable; anything that names a record to follow holds its id.
 - [ ] **A newly added source is taken in quietly** (designer F6): one summary line and a list to review, every open item
@@ -2686,9 +2686,8 @@ Order by what protects real data first, then by what the packs ask for:
 - [ ] **"Which team is <name> on?" asked once**, with the scope resolver (moved from L7, decisions 2026-10-16): when the
   resolver needs a team the person on file doesn't have, one question to the person, never repeated for them; the
   answer sets the team with Undo. *Today:* a person with no team counts as outside the tracked area.
-- [ ] *(Moved to phase S1, 2026-10-19.)* **A rule's check that fails on an output** runs before the change applies: one return to the assistant with the
-  rule's guidance, then a hold for the person when the output reaches someone, as lints do (decisions, 2026-10-16).
-  *Today:* checks run after the change applies and a failure only counts.
+- [x] *(Moved to phase S1 and built there, 2026-10-19.)* **A rule's check that fails on an output** runs before the
+  change applies. *Built (S1):* `tests/test_rule_check_before_apply.py`.
 - [ ] **The governor:** (outage handling moved to phase S1, 2026-10-19) stale-item sweeps, outage handling, `sync.sources` (sources above a level encrypted or left out of the synced folder), the scheduled export with its remote; restore to a point in
   time (a single record comes in phase L).
   Outage handling includes a draft cut off at the output limit whose continuation call finds no network: today it is

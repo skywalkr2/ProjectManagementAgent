@@ -1976,9 +1976,16 @@ on stage moves, so a checked rule counts as applied each time. *As built* (`engi
 run's changeset is applied, each active rule the run was given that names a code check has the check run on every record the changeset's applied ops wrote
 (as the records are then) that the rule's scope covers (`task_kinds` names the run's kind of work or is empty, `records` and `filter` take in the record, the
 same test a stage entry uses), and the rule is counted as applied on the run's knowledge log whether the check held or not (6.22: "passing or refusing"). A
-rule whose scope covers nothing the output wrote stays present. A failing check changes nothing yet; it counts as applied, as the design above says (decisions, 2026-10-16). Running it
-before the change applies, with one return to the assistant and then a hold for the person when the output reaches
-someone, as lints do, is phase E. **Built:** `tests/test_rule_output_checks.py`.
+rule whose scope covers nothing the output wrote stays present. **Before the change applies** (phase S1, 2026-10-19;
+`engine/rule_use.py::failing_rules`, `engine/applier.py`): the applier's trial apply runs every active rule's check on
+what each op would write, as it would be written (earlier ops of the same changeset applied), when the rule's scope covers
+the record and the run's kind of work. A failing check goes back to the assistant once with the rule's words and the
+check's reason; if the answer still fails, the op is held for the person whoever the item reaches, with the same words
+as its reason, and an outward act is refused. The write itself checks again, so nothing that breaks a rule is kept even
+if records changed in between. A change the person makes or confirms (a person action, a release from hold) is theirs
+to make and isn't stopped by their own rule. A rule whose check stopped an op counts as applied on the run. A check that
+is missing or turned off fails, as a stage entry check does. **Built:** `tests/test_rule_output_checks.py`,
+`tests/test_rule_check_before_apply.py`.
 
 **Search before asking.** A run that needs more than its packet holds asks for it with a `search` request: words, ids, a
 project, which kinds (facts, past inputs, records, knowledge). It is not a live tool call, so it works on every kind of AI

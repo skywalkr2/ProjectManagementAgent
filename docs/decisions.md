@@ -311,6 +311,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   starts with the verb ("Sign in to Work mail again: not read since …"), in place of the "can't be read" question line.
   An empty Today says what was read, and never "nothing needs you" alone while a source is unread.
   **Impact:** design 7.7 (CHANGES.md section 89). Left: the heading's times are computed when Today renders and don't tick.
+- **Also (2026-10-19): a rule's check runs before the change applies (S1, brought forward from phase E).** The
+  applier's trial apply runs each active rule's check on what an op would write; a failure returns to the assistant
+  once, then holds the op for the person whoever it reaches (not only when it reaches someone, as lints do: a rule is
+  the person's own standing word, and S1b's sending must never get past one). An outward act is refused. A change the
+  person makes or confirms isn't stopped by their rule. Decided by the main session, within the designer's point 4.
+  **Impact:** design 6.22 (CHANGES.md section 90); the decision of 2026-10-16 that a failing check changes nothing is
+  superseded.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

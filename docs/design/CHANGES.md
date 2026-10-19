@@ -1026,6 +1026,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 90. A rule's check runs before the change applies (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| A rule's check on an output (6.22) | Ran after the change was written and only counted the rule as applied | Runs in the applier's trial apply on what each op would write; a failure goes back to the assistant once, then holds the op for the person (an outward act is refused); the write checks again; the person's own or confirmed changes aren't stopped. Built: `tests/test_rule_check_before_apply.py` |
+
 ## 89. Coverage on Today (2026-10-19)
 
 | Where | Before | Now |

@@ -14,10 +14,44 @@ from typing import Any
 
 from engine.config.schema import RuleScope
 from engine.records import Rule
-from engine.stages import output_check_ran
+from engine.stages import covers, output_check_ran
 from engine.storage import WriteContext
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="run.knowledge")
+
+#: The name a change's problem carries when an active rule's check fails on what the change would write.
+RULE_CHECK = "rule-check"
+
+
+def _scope(data: dict[str, Any]) -> RuleScope:
+    return RuleScope.model_validate(
+        {k: v for k, v in (data.get("applies_to") or {}).items() if k in RuleScope.model_fields}
+    )
+
+
+def failing_rules(store: Any, view: Any, task: str | None, records: Iterable[Any]) -> list[tuple[Any, str]]:
+    """Each active rule with a code check whose scope covers one of `records` (as they are in `view`) and the task
+    kind, and whose check fails on it: (the rule record, the check's reason). One entry per rule, for the first record
+    it fails on. A check that is missing or turned off fails, as a stage entry check does."""
+    written = list(records)
+    found: list[tuple[Any, str]] = []
+    if not written:
+        return found
+    for rule in view.list("rule"):
+        data = rule.data
+        if data.get("status") != "active" or not data.get("check"):
+            continue
+        scope = _scope(data)
+        if scope.task_kinds and task not in scope.task_kinds:
+            continue
+        for record in written:
+            if not covers(scope, record):
+                continue
+            result = store.plugins.stage_check(data["check"], record, view)
+            if not result.passed:
+                found.append((rule, result.reason))
+                break
+    return found
 
 
 def _set(value: Any) -> bool:
@@ -79,12 +113,19 @@ def record_applied(store: Any, run_id: str, changeset_id: str, checks_ran: Colle
     """After a run's changeset is applied: mark each rule the run was given that its ops, or a check that ran on its
     output, show applied. A rule's code check runs on the records the changeset wrote when the rule's scope covers
     them (engine/stages.py), and the rule counts as applied whether the check held or not. `checks_ran` adds names
-    of checks a caller knows ran on the output. Returns the rule ids marked."""
+    of checks a caller knows ran on the output. A rule whose check held or refused one of the changeset's ops before it
+    applied counts as applied too. Returns the rule ids marked."""
     view = store.read()
     run, changeset = view.get("run", run_id), view.get("changeset", changeset_id)
     if run is None or changeset is None or not run.data.get("knowledge"):
         return []
     ops = [o.get("op") or {} for o in changeset.data.get("ops", [])]
+    stopped = {
+        p.get("rule")
+        for o in changeset.data.get("ops", [])
+        for p in o.get("problems") or []
+        if p.get("check") == RULE_CHECK
+    }
     request = view.get("request", changeset.data.get("request") or "")
     task = request.data.get("task") if request is not None else None
     written = None
@@ -96,12 +137,11 @@ def record_applied(store: Any, run_id: str, changeset_id: str, checks_ran: Colle
         if rule is None or rule.data.get("status") != "active":
             continue
         ran = set(checks_ran)
-        if rule.data.get("check") and rule.data["check"] not in ran:
+        if rule_id in stopped:
+            ran.add(rule.data.get("check") or RULE_CHECK)
+        elif rule.data.get("check") and rule.data["check"] not in ran:
             written = _written(view, changeset) if written is None else written
-            scope = RuleScope.model_validate(
-                {k: v for k, v in (rule.data.get("applies_to") or {}).items() if k in RuleScope.model_fields}
-            )
-            if output_check_ran(store, rule.data["check"], scope, task, written, view):
+            if output_check_ran(store, rule.data["check"], _scope(rule.data), task, written, view):
                 ran.add(rule.data["check"])
         if applied_by(rule, ops, ran):
             shown.append(rule_id)
