@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 148, each in exactly one batch; 196 done items are in `roadmap-done.md`.
+- **Open items:** 152, each in exactly one batch; 196 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -59,20 +59,23 @@ keep each item's full text.
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (4 open items; size: about a day)
+2. **S1-2 What the person owes and misses** (6 open items; size: about a day and a half)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
-    - *Exit:* a journey test for each.
+    - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
+    - *Exit:* a journey test for each; the stance gate holds a design question drafted to someone the person works alongside; the new learning pairs pass.
 
-3. **S1-3 Ready for the gate week** (3 open items; size: about half a day)
+3. **S1-3 Ready for the gate week** (4 open items; size: about a day)
     - *Covers:* *Sign-in sources taken in quietly* (S1, designer's F6: sources a sign-in adds use the quiet intake, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line; a new item in S1); *A first success in five minutes* (S1); *The gate week's instruments* (S1).
+    - *Also covers* (the designer's lessons, 2026-10-19): *Which sign-in an agent runs as* (design 6.16), so the gate week runs on a known account.
     - *Exit:* the owner can start the two measured days; journeys J2 and J6 pass with one total, one go and one "Look over what was found" line.
 
 4. **B-5 Sources and accounts** (3 open items, plus the numbered wave 5 entry; size: about one to two days)
     - *Covers:* *Wave 5* with P17 (.ics calendars, full featured) and P18 (several accounts of one service); the items that belong with it: *Passwords, keys and private addresses typed on the screen* (P16), *Add-ons install from the screen* (P15), *Mailbox and calendar passwords and addresses entered on screen* (all in phase B, built to S's shape).
     - *Exit:* the tests each item names pass; the owner adds an .ics link and file and a second account of one service, and types a password and a key on screen, with no file edit.
 
-5. **B-6a The rest of B: records, Settings and forms** (17 open items, plus the numbered wave 6 entry; size: about one to two days)
+5. **B-6a The rest of B: records, Settings and forms** (18 open items, plus the numbered wave 6 entry; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): the designer's F12 and F13 and P26 (in the wave 6 entry), *Lists, not typing*, *The cursor starts where you type*, *Value-list values carry meaning*, *Follow-ups' Later*, *An action can be blocked*, *The obvious next steps on screen*; and the open items that fit this area: *A project's "what the assistant knows"*, *"Overlaps with …"*, *The Quality screen*, *Where a fact came from* (29), *A series page* (30), *A date move isn't news*, *Settings*, *Learning on screen*, *Action items and open questions, cleaned up*, *The app's own kit*, *Found by the phase A journeys*.
+    - *Also covers* (the designer's lessons, 2026-10-19): *An unknown status stays unknown, and an add from a link says when nothing could read it* (design 6.19).
     - *Exit:* the tests each item names pass, and the browser test of every main screen at several widths shows no sideways scroll; the owner works through their own open items on a laptop and a phone.
 
 6. **B-6b The rest of B: Today and the shell** (17 open items; size: about one to two days)
@@ -288,6 +291,9 @@ signing for the installers (phase I).
 `reviews/ui-ux-2026-10/` are marked Done or explained, with screenshots in `reviews/ui-ux-2026-10/after/`.
 
 From L3 (design 7.18):
+- [ ] [B-6a] **An unknown status stays unknown** (the designer's lessons, 2026-10-19; design 6.19): `project.add` refuses a
+  status with no words behind it, as `record.set` does; an add from a link says "not read" when nothing set up can open
+  the link. Reading the link's system of record is C4's fact lookups.
 - [ ] [B-6a] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
   glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
 - [ ] [B-6a] "Overlaps with …" on the Learned line, linking the entry a proposal would merge with.
@@ -579,6 +585,14 @@ S1. **Promises, and how they end:**
   into batches): the gate's first slice names one plain "what changed since yesterday" line, kept in the first slice even
   as one line because it is how the person notices a miss, and no item stood for it. Exit: a journey test reads the line
   after a day in which promises arrived, closed and moved. The morning brief (S2) builds on it later.
+- [ ] [S1-2] **A stance per person** (the designer's lessons, 2026-10-19; design 6.34): the stance field from a value list
+  with meanings (I manage them, I work alongside them, I report to them, I only watch; `track_only` becomes the last),
+  `people.default_stance` (alongside) and `steward.tracks` (dates and decisions) as settings with schema, defaults and
+  demo values, and the gate on every question or drafted message to someone else, as a lint (one return, then a hold);
+  a correction like "not my job" proposes a stance for that person or role. Learning pairs for each stance.
+- [ ] [S1-2] **A rejected ask is dropped, not reworded** (the designer's lessons, 2026-10-19; design 6.22): a correction
+  that rejects the asking ends as `question.drop` with the person's reason; "check X first" checks X in that run and
+  closes the question when X answers it. One learning pair for each.
 - [ ] [S1-2] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence.
 - [ ] [S1-3] **Sign-in sources taken in quietly** (designer F6, from the intake built 2026-10-19): sources a sign-in adds use
   `first_run: intake`, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line
@@ -586,6 +600,10 @@ S1. **Promises, and how they end:**
 - [ ] [S1-3] **A first success in five minutes:** the walkthrough connects one mailbox and an AI account, looks back over the
   last two weeks of the person's own mail (estimate first), and shows a handful of real open promises with one follow-up
   ready, before any project, area, pack or extra account is asked about.
+- [ ] [S1-3] **Which sign-in an agent runs as** (the designer's lessons, 2026-10-19; design 6.16): the account check reads
+  the identity each command-line agent runs as from the tool itself (an adapter capability), Settings shows it beside
+  the account, and a change of identity, or one that doesn't fit the work's data level, is a Today line; runs that would
+  reach a level the new identity isn't allowed wait for the person. Risk R15.
 - [ ] [S1-3] **The gate week's instruments** (design 6.32 measures): silent closes, missed out of present (against the owner's
   own list), wrong endings, Missed-one per week, the replay set.
 
@@ -878,7 +896,9 @@ C4. **What the packs need from the core.**
   overwritten; after a few tries, go to the person once. Text written into someone else's table stays short and
   scannable (a key, a status word, a few words), explanations go in the assistant's own notes, and a cell where nothing
   was found stays blank.
-- [ ] [C4] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked.
+- [ ] [C4] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked. Includes
+  "add from <link>" reading the link's system of record first: its status, what shipped and its dates, and a finished
+  item added with its facts and a question whether to mark it complete (the designer's lessons, 2026-10-19).
 - [ ] [C4] Anything else either pack's builder asks for, answered in one weekly round.
 - [ ] [C4] **Rounds 34 to 48 and 52, answered 2026-10-16** in `docs/project/plugin-answers-34-48.md` (sent to the builder, who
   confirmed and will adapt once): built together as phase C's first plugin API release, the dependency install in C1, and

@@ -20,6 +20,7 @@ Reviewed at each phase exit in `roadmap-to-1.0.md`. The go/no-go date and the No
 | R12 | Renames detach links: records joined by display names drift apart silently (designer, 2026-10-19) | medium | high | Records join by id, never by a display name (design 5.1, 6.32); anything that names a record to follow holds its id | open |
 | R13 | Rules close things without the person seeing them (designer, 2026-10-19) | medium | high | Every unseen close is counted and reviewable ("silent closes", design 6.32), and is one of the gate's measures | open |
 | R14 | Testers connect their employer's mailbox, against their employer's rules on copying work mail into a personal tool and outside AI accounts (designer, 2026-10-19) | high | high | The tester invitation says personal mail, or work mail only with the employer's OK; the "administrator approval required" screen is explained, not worked around | open |
+| R15 | A command-line agent runs under a sign-in nobody chose (borrowed from another tool), so work goes through the wrong account, its allowance and its data settings (designer, 2026-10-19) | medium | high | The account check reports who each agent runs as; a change or a level mismatch is a Today line (roadmap S1-3, design 6.16) | open |
 
 ## Assumptions
 

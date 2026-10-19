@@ -1633,6 +1633,16 @@ and the extras together cost no more than `ai.evaluation.extra_allowance` (defau
 in the report's JSON, so a case's `allow` list can't hide a trend. *Not built:* a view of the weight across saved reports.
 Built: `tests/test_evaluate_harness.py::test_the_weighed_extras_must_stay_within_the_allowance`.
 
+**Which sign-in an agent runs as** (designer's lessons, 2026-10-19; roadmap S1-3). A command-line agent that was never
+signed in on its own can borrow another tool's stored sign-in, so runs go through an account nobody chose, with its own
+allowance and its own data settings. The account check therefore reports the identity each agent runs as, read from the
+tool itself (its own sign-in status command or log, through an adapter capability, so no vendor name leaves the
+adapter), and Settings shows it beside the account. A change of identity between runs is a Today line ("The agent now
+runs as <other account>: keep it or sign in again?"), and so is an identity that doesn't fit the data level of the work
+it reads (a personal account on a work area). Until the person answers, runs that would reach a level the new identity
+isn't allowed wait, as any run does with no allowed account. A tool that can't report who it runs as says so on the
+account, never a guess. The same leak in the other direction is risk R14.
+
 ## 6.17 Periodic jobs (later)
 
 - **Weekly check-up:** suggested goals (the AI replaces automatic goals with 3 to 5 real ones), meetings to hold, actions due by
@@ -1727,6 +1737,15 @@ question goes to whoever made the claim or owns the thing it is about; when neit
 person about who to ask, never a guess from a passing mention. **Built:** the prompt rule and the golden cases
 `follow-up-goes-to-who-made-the-claim` and `follow-up-with-no-clear-owner-asks-who`
 (`tests/test_obvious_steps_f.py::test_the_prompt_says_a_follow_up_goes_to_the_claims_maker_or_owner_and_otherwise_asks_who`).
+
+**Adding a record from a link** (designer's lessons, 2026-10-19; roadmap B-6a, C4). "Track this as a project, from
+<link>" reads the link before anything is added, through whatever configured source can read it: its status, what
+shipped and its dates, each as a fact with its evidence. Something the source says is finished isn't new work: it is
+added with those facts, and the person is asked whether to mark it complete. A status nobody stated stays unknown,
+never "not started": status is an evidence field, so a status with no words behind it is refused (built today for
+`record.set`; B-6a makes `project.add` follow the same rule). When no source can read the link, the add says so ("not
+read: nothing set up can open this link") instead of filling the record from the link's text alone. The full lookup of
+a system of record is phase C4's fact lookups.
 
 ## 6.20 Quality signals
 
@@ -2256,6 +2275,13 @@ Both land before the owner's real use (phase D).
 The knowledge records are in 5.1, the packet layout in 6.6, the signal in 6.20, the settings in 4.25, and the screens in
 7.18.
 
+**A rejected ask is dropped, not reworded** (designer's lessons, 2026-10-19; roadmap S1-2). When the person's correction of
+a question rejects the asking ("not my job", "why are we asking this?"), the correction ends as `question.drop` with
+the person's words as the reason, never as a politer version of the same ask. "Check X first" means check X in that
+run (the search round, 6.6) and close the question if X answers it. A reword is right only when the person objects to
+the wording, not to the asking. Each such correction also proposes the learning it implies, and when it is about who
+the person is to the recipient, a stance (6.34). Learning pairs cover each case.
+
 ## 6.23 Dependencies and baselines
 
 **Provided by the project management pack (9.10).** Dependencies and baselines now belong to the project management pack, an add-on,
@@ -2704,3 +2730,35 @@ input held for the person (the person's own note, edit or sent mail applies at o
 the input said reported it) (`tests/test_promises.py`). *Not built yet:* the prompts and playbook entries that ask for
 promises both ways, the sent folder offered as a source, the line for a promise past its date with its choices, the
 "why" on every promise with one-click corrections, and the golden cases and harness pairs.
+
+## 6.34 Stance: who each person is to the person (phase S1-2, designed 2026-10-19)
+
+The designer's lessons from running (2026-10-19): polite, accurate questions to another team's architect were each the
+wrong thing for this person to send that person ("not my job to tell the architects how to do their jobs"). Another user
+might manage those architects and want exactly those questions. So who each person is to the person decides what the
+assistant may draft or ask them. It is the person's own rule, kept per person, beside the role per project (6.18).
+
+- **The stance** is a field on the person record, from a value list (6.31) whose values carry their meaning: *I manage
+  them*, *I work alongside them*, *I report to them*, *I only watch* (the existing `track_only` becomes this value).
+  Personal life uses the same meanings with its own words in the list (a client, family). A new person starts at
+  `people.default_stance`, *I work alongside them* by default: quizzing someone you don't manage costs more than a
+  missed question.
+- **What the person tracks** is a setting, `steward.tracks` (delivery dates and decisions by default; design quality is
+  an option), overridable per project: a person who tracks dates gets no design questions drafted, whatever the
+  stance.
+- **The gate on drafts and questions**, checked in the applier on every question or drafted message to someone other
+  than the person:
+  - *manage*: anything within what the person tracks, design detail included, and chasing their dates;
+  - *alongside*: follow-ups on promises made to the person, and an apparent big mistake: a contradiction with a recorded
+    decision or fact, with links to both sides; nothing a standing rule already answers, and no questions about how
+    they do their own work;
+  - *report to*: no chasing at all; a question to them is drafted only when the person asks for it;
+  - *only watch*: nothing is drafted to them.
+  The question's kind (date, decision, design, mistake) is the model's label, so the gate is a lint (one return, then a
+  hold for the person, as 6.22's rule checks), except the deterministic part: a "mistake" with fewer than two links to
+  what it contradicts is returned.
+- **Corrections propose a stance.** A reply like "not my job" or "we are not their boss" about a question to someone
+  becomes a proposed stance for that person, or for their role, which the person keeps or changes (6.22). It is
+  probably the most common correction a steward gets.
+- **Not yet:** the full scope resolver (6.18, phase E) takes the stance as one of its inputs; until then the gate above
+  is the whole of it.

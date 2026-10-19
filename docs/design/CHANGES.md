@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 97. Stance, agent identity, dropped asks and adding from a link (2026-10-19, designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Stance (6.34, new) | A role per project only; nothing said who a person is to the person | A stance per person gates what may be drafted or asked them; "alongside" by default; what the person tracks is a setting; corrections propose a stance |
+| Agent identity (6.16) | The account check proved a tier runs | It also reports which sign-in an agent runs as; a change or a level mismatch is a Today line |
+| Corrections (6.22) | A rejecting correction could become a reworded ask | It drops the question with the person's reason; "check X first" checks X |
+| Adding from a link (6.19) | Not said | The link is read first; an unknown status stays unknown; an unread link is said plainly |
+
 ## 95. The gate week freezes what it measures (2026-10-19)
 
 | Where | Before | Now |

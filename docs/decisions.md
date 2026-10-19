@@ -365,6 +365,16 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   go to `docs/project/gate-week-fixes.md` and land after it, except anything that loses or wrongly closes a promise, which
   is fixed at once and noted in the week's log. Decided by the main session on the owner's review.
   **Impact:** roadmap and charter only; design 6.32's gate gains the freeze and the inherited thresholds.
+- **Also (2026-10-19): the designer's evening lessons from running** (`docs/project/designer-lessons-2026-10-19.md`).
+  (1) A stance per person (I manage them, alongside, report to, only watch) gates what may be drafted or asked them,
+  with "alongside" the default and what the person tracks as a setting; a minimal stance comes forward to S1-2, the
+  scope resolver stays in E. Classed as a core concept with two settings (`people.default_stance`, `steward.tracks`).
+  (2) The account check reports which sign-in each command-line agent runs as, and a change or a level mismatch is a
+  Today line (S1-3; risk R15): a core capability through the adapter. (3) A correction that rejects the asking drops
+  the question with the person's reason; "check X first" checks X in that run (S1-2): learning-loop behavior with
+  pairs. (4) An unknown status stays unknown and an add from a link says when nothing could read it (B-6a); reading
+  the system of record is C4's fact lookups. Decided by the main session.
+  **Impact:** design 6.34 (new), 6.16, 6.19, 6.22 (CHANGES.md section 97); roadmap S1-2, S1-3, B-6a, C4; risks R15.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
