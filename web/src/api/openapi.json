@@ -7075,6 +7075,40 @@
         "title": "MeView",
         "type": "object"
       },
+      "MissedIn": {
+        "properties": {
+          "text": {
+            "description": "What the assistant missed, in a plain sentence in the person's own words; it needs no source.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "MissedIn",
+        "type": "object"
+      },
+      "MissedSent": {
+        "properties": {
+          "request": {
+            "description": "The work queued for the assistant to add what was missed.",
+            "title": "Request",
+            "type": "string"
+          },
+          "signal": {
+            "description": "The id of the correction recorded for it.",
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request",
+          "signal"
+        ],
+        "title": "MissedSent",
+        "type": "object"
+      },
       "NetworkWait": {
         "description": "Work waiting for the network connection to come back.",
         "properties": {
@@ -10712,6 +10746,47 @@
         "title": "QualityKnowledgeUsed",
         "type": "object"
       },
+      "QualityMissedWeek": {
+        "description": "\"Missed one\" for one person in one week (design 6.32): how often they said the assistant missed something.",
+        "properties": {
+          "count": {
+            "description": "How many times they said the assistant missed something that week.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "person": {
+            "description": "The id of the person.",
+            "title": "Person",
+            "type": "string"
+          },
+          "person_name": {
+            "description": "The person's name, as shown.",
+            "title": "Person Name",
+            "type": "string"
+          },
+          "week": {
+            "description": "The Monday of the week, in the person's time zone.",
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          },
+          "week_end": {
+            "description": "The Sunday of the week.",
+            "format": "date",
+            "title": "Week End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "person_name",
+          "week",
+          "week_end",
+          "count"
+        ],
+        "title": "QualityMissedWeek",
+        "type": "object"
+      },
       "QualityMissingGroup": {
         "description": "What several answers said no op could do, in one wording.",
         "properties": {
@@ -10841,7 +10916,7 @@
         "type": "object"
       },
       "QualityView": {
-        "description": "The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week and the weekly\nmissing-op list, over the configured window.",
+        "description": "The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly\nmissing-op list and \"Missed one\" for each person and week, over the configured window.",
         "properties": {
           "days": {
             "description": "The window the figures cover, in days.",
@@ -10859,6 +10934,14 @@
             "description": "The fewest corrections a week needs for its rate to show.",
             "title": "Min Corrections Per Week",
             "type": "integer"
+          },
+          "missed": {
+            "description": "\"Missed one\" for each person and week, oldest week first; a person with any in the window has a row for every week, so a week with none is zero. It should fall from week to week.",
+            "items": {
+              "$ref": "#/components/schemas/QualityMissedWeek"
+            },
+            "title": "Missed",
+            "type": "array"
           },
           "missing": {
             "items": {
@@ -20605,6 +20688,45 @@
         "summary": "Me Save"
       }
     },
+    "/api/missed": {
+      "post": {
+        "description": "\"Missed one\" (design 6.32): the person says in a plain sentence what the assistant missed. Records a missed\ncorrection for them and hands the words in as their own note, marked as a miss, so the run adds what was\nmissed. The request's own changes have their own Undo.",
+        "operationId": "missed_api_missed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MissedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissedSent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Missed"
+      }
+    },
     "/api/notes": {
       "get": {
         "description": "Every filed note, newest first, with the project it was filed under (if any).",
@@ -22036,7 +22158,7 @@
     },
     "/api/quality": {
       "get": {
-        "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, over the configured window.",
+        "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, and \"Missed one\" for each person and week (design 6.32), over the configured\nwindow.",
         "operationId": "quality_view_api_quality_get",
         "responses": {
           "200": {

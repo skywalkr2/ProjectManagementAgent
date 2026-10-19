@@ -23,6 +23,7 @@ import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
 import { Knowledge } from "./components/Knowledge";
+import { MissedOneProvider } from "./components/MissedOne";
 import { Panel } from "./components/Panel";
 import { People } from "./components/People";
 import { Projects } from "./components/Projects";
@@ -49,7 +50,9 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const live = useLive();
   return (
     <RestartProvider hellos={live.hellos}>
-      <Shell rc={props.rc} live={live} />
+      <MissedOneProvider>
+        <Shell rc={props.rc} live={live} />
+      </MissedOneProvider>
     </RestartProvider>
   );
 }

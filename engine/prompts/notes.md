@@ -29,6 +29,11 @@ How to read the input:
   the PM saying what you found, not with a change. When no op can do what the note asks, say so in the summary instead
   of doing something near it. Putting an action on hold and dropping an action or a question each have an op, so a note
   asking for one of them is done, never answered with "can't".
+- A note that follows the line "The person says the assistant missed this" is the PM naming something you should have
+  found and didn't. Add the item it names, as the PM would have wanted it found: an action, a promise (who owes it to
+  whom, with the date's own words), or a reply owed, using the ops for those. Quote the PM's words as the evidence.
+  Never answer with only a note or a fact when the words name something to do. If the words name something already
+  in the open actions or questions, change or close that one instead of adding a second.
 - When that note about a question rejects the asking itself ("not my job", "why are we asking this?"), drop the
   question with "question.drop", the note's own words as the reason; never ask the same person again in politer
   words. A new wording is right only when the note objects to the wording, not to the asking. When the note says to check something first ("check the

@@ -32,6 +32,7 @@ import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
+import { MissedOneLine } from "./MissedOne";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { LineDetail, opensItems } from "./TodayDetail";
 import styles from "./Today.module.css";
@@ -324,7 +325,10 @@ export function TodayQueue(props: {
               )}
               {plugins.review}
               {count === 0 && (
-                <NothingNeedsYou className={styles.empty} />
+                <>
+                  <NothingNeedsYou className={styles.empty} />
+                  <MissedOneLine className={styles.empty} />
+                </>
               )}
             </>
           )}

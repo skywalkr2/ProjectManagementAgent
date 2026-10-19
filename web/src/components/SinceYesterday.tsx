@@ -13,6 +13,7 @@ import { Button } from "../ui/Button";
 import { LoadFailed } from "../ui/LoadFailed";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
+import { MissedOneLine } from "./MissedOne";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 type Entry = S["SinceEntryView"];
@@ -93,7 +94,10 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
       ) : drawn.status === "failed" ? (
         <LoadFailed message={t("since.load_failed")} onRetry={() => void load()} />
       ) : entries.length === 0 ? (
-        <p className="empty">{t("since.empty")}</p>
+        <>
+          <p className="empty">{t("since.empty")}</p>
+          <MissedOneLine className="empty" />
+        </>
       ) : (
         <ul className="queue" aria-label={t("since.list_label")}>
           {entries.map((e) => (

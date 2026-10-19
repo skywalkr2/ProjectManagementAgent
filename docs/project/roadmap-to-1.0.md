@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 149, each in exactly one batch; 205 done items are in `roadmap-done.md`.
+- **Open items:** 148, each in exactly one batch; 206 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -59,7 +59,7 @@ keep each item's full text.
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (4 open items; size: about two and a half days)
+2. **S1-2 What the person owes and misses** (3 open items; size: about two and a half days)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
     - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
@@ -564,7 +564,6 @@ S1. **Promises, and how they end:**
   with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Left: records made from a limited source
   carrying the limit (a fact quoted later), and a packet leaving a limited source out once a task drafts to a named
   recipient.
-- [ ] [S1-2] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence.
 - [ ] [S1-3] **Sign-in sources taken in quietly** (designer F6, from the intake built 2026-10-19): sources a sign-in adds use
   `first_run: intake`, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line
   instead of a review line per item. *Today:* sign-in sources still read the last day (`first_run: recent`).
@@ -581,6 +580,8 @@ S1. **Promises, and how they end:**
   arrives as one group. Exit: a test with an input at night and a reminder the person set for early morning.
 - [ ] [S1-3] **The gate week's instruments** (design 6.32 measures): silent closes, missed out of present (against the owner's
   own list), wrong endings, Missed-one per week, the replay set.
+  The "Missed one" count per person per week is in `GET /api/quality` (`missed`); the Quality screen shows it with the
+  other measures here.
 
 S1b. **Acting for you, after your yes** (owner, 2026-10-17: "if we can have the app actually able to do mail/calendar
 management (not just read only) lets do it"):

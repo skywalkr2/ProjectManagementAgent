@@ -8,10 +8,11 @@ reviewed and undone like any other work of its own.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from engine.config import Config
-from engine.intake import IntakeError, note_as_input
+from engine.intake import IntakeError, missed_note, note_as_input
 from engine.storage import Store
 from engine.workspace import Workspace
 
@@ -43,6 +44,22 @@ def request_change(
     first: dict[str, Any] | None = next(iter(view.ledger(kind=record_kind, record_id=record_id)), None)
     made = first["changeset"] if first is not None else None
     signal_id = signal(store, "change_requested", [record_id], note=" ".join(note.split()), changeset=made)
+    return request, signal_id
+
+
+def missed_one(ws: Workspace, store: Store, cfg: Config, text: str, now: datetime | None = None) -> tuple[str, str]:
+    """Record that the person said, in a plain sentence, what the assistant missed (design 6.32): their words go in as
+    their own note marked as a miss, so the run adds what they name, and one `missed` signal counts it for the person
+    and teaches at once. No record and no run is named, because the sentence is all the person knows. Returns the
+    request made and the signal's id."""
+    from engine.dispatcher import signal
+    from engine.names import People
+
+    words = " ".join(text.split())
+    if not words:
+        raise IntakeError("Say what the assistant missed.")
+    request = missed_note(ws, store, cfg, text=text, now=now)
+    signal_id = signal(store, "missed", [], note=words, now=now, person=People(store, cfg).pm)
     return request, signal_id
 
 

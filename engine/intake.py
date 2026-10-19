@@ -119,16 +119,19 @@ NOTE_ROUTES = {
     "answered": "answered the question",
     "answered_for": "recorded the answer of the person the question was asked of",
     "change_requested": "asked for this record to be changed",
+    "missed_one": "said the assistant missed something",
 }
 
 #: The buttons whose note is the whole point of pressing them, so it is read however short it is.
-ALWAYS_READ_ROUTES = frozenset({"change_requested"})
+ALWAYS_READ_ROUTES = frozenset({"change_requested", "missed_one"})
 
 #: The buttons whose note is content the person reports, not their own words: what someone else did or said, as the
 #: person tells it. Such a note is authored by that other person, and nothing it says changes how the product behaves
 #: until the person confirms it.
 REPORTED_ROUTES = frozenset({"they_finished", "followed_up", "answered_for"})
 NOTE_KIND = "note:"
+#: The source kind of a sentence the person typed to say what the assistant missed: no record, no source.
+MISSED_KIND = NOTE_KIND + "missed_one"
 
 
 def is_reported_note(source_kind: str | None) -> bool:
@@ -247,6 +250,49 @@ def note_as_input(
                 "waiting": "With the assistant, starting now",
                 "created_at": now.isoformat(),
                 **({"project": project} if project else {}),
+            },
+            ctx,
+        )
+    return request.id
+
+
+def missed_note(ws: Workspace, store: Store, cfg: Config, *, text: str, now: datetime | None = None) -> str:
+    """Hand in a sentence the person typed to say what the assistant missed: saved as the person's own trusted words,
+    kept whole, and the usual notes work queued with it, under the usual cost rules. It is about no record and has no
+    source to read; the packet marks it as a miss so the run adds what the words name. Returns the request's id."""
+    note = text.strip()
+    if not note:
+        raise IntakeError("Say what the assistant missed.")
+    now = now or datetime.now(UTC)
+    digest = hashlib.sha256(note.encode("utf-8")).hexdigest()
+    ws.sources_dir.mkdir(parents=True, exist_ok=True)
+    path = ws.sources_dir / f"{digest}.txt"
+    if not path.exists():
+        path.write_text(note, encoding="utf-8")
+    ctx = WriteContext(actor="pm", trust="trusted", op="note.missed_one")
+    author = People(store, cfg).pm
+    with store.transaction() as tx:
+        source = tx.create(
+            "source",
+            {
+                "received_at": now.isoformat(),
+                "kind": MISSED_KIND,
+                "title": " ".join(note.split())[:120],
+                "content_hash": digest,
+                "trust": "trusted",
+                **({"author": author} if author else {}),
+            },
+            ctx,
+        )
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "source": source.id,
+                "origin": "pm",
+                "state": "queued",
+                "waiting": "With the assistant, starting now",
+                "created_at": now.isoformat(),
             },
             ctx,
         )

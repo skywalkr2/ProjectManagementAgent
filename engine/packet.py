@@ -15,7 +15,7 @@ from html import escape
 from engine.ai.task import AiTask
 from engine.cleaning import Cleaned, clean
 from engine.config import Config
-from engine.intake import source_text
+from engine.intake import MISSED_KIND, source_text
 from engine.knowledge_section import per_input_section, stable_section, with_ancestors
 from engine.learn import is_learning
 from engine.learning import offered_ops, request_learns
@@ -153,6 +153,8 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         request_parts.append(learned.per_input)
     if kind.name == "notes" and own_words and req.data.get("about"):
         request_parts.append(_item_block(ws, store, cfg, req, saved))
+    if kind.name == "notes" and own_words and saved.data["kind"] == MISSED_KIND:
+        request_parts.append(MISSED_MARKER)
     if req.data.get("previous"):
         redo = _redo_block(store, req)
         if redo:
@@ -347,6 +349,12 @@ def _item_block(ws: Workspace, store: Store, cfg: Config, req: Stored, source: S
         '<untrusted source="record">\n' + json.dumps(context, ensure_ascii=False) + "\n</untrusted>"
     )
 
+
+#: The line that marks the person's note as a miss: the person says the assistant missed something it should have found.
+MISSED_MARKER = (
+    "The person says the assistant missed this. The note below names something it should have found and didn't: add "
+    "what it names (an action, a promise, a reply owed or a date), as the person would have wanted it found."
+)
 
 #: How many of the items a sent-back changeset touched are shown in the packet of its redo.
 REDO_ITEMS = 12

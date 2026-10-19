@@ -3,12 +3,13 @@ records alone."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter
 
 from api.schemas import (
     QualityKnowledgeUsed,
+    QualityMissedWeek,
     QualityMissingGroup,
     QualityMissingWeek,
     QualityRepeatWeek,
@@ -16,6 +17,7 @@ from api.schemas import (
 )
 from engine import quality
 from engine.config import Config
+from engine.names import People
 from engine.storage import Store
 from engine.today import zone
 
@@ -27,8 +29,10 @@ def build_quality_router(cfg: Config, store: Store) -> APIRouter:
     def quality_view() -> QualityView:
         """The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week
         (only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,
-        grouped by wording with counts, over the configured window."""
+        grouped by wording with counts, and "Missed one" for each person and week (design 6.32), over the configured
+        window."""
         view = store.read()
+        people = People(store, cfg)
         now = datetime.now(UTC)
         settings = cfg.dispatch.knowledge
         days, here = settings.quality_window_days, zone(cfg)
@@ -69,6 +73,16 @@ def build_quality_router(cfg: Config, store: Store) -> APIRouter:
                     ],
                 )
                 for w in quality.missing_list(view, now, days, here)
+            ],
+            missed=[
+                QualityMissedWeek(
+                    person=w.person,
+                    person_name=people.name(w.person),
+                    week=w.week,
+                    week_end=w.week + timedelta(days=6),
+                    count=w.count,
+                )
+                for w in quality.missed_per_week(view, now, days, here)
             ],
         )
 

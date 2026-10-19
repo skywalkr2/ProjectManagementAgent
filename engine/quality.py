@@ -42,6 +42,7 @@ CORRECTIONS = frozenset(
         "change_requested",
         "set_aside",
         "no_reply_needed",
+        "missed",
     }
 )
 #: The knowledge a repeat is counted against: what the person keeps as a lesson or a rule.
@@ -256,6 +257,32 @@ def repeat_corrections(
         for week in weeks
         if total[(task, week)]
     ]
+
+
+# ---- missed one, per person and week ---------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class MissedWeek:
+    person: str
+    week: date  # the Monday
+    count: int  # "Missed one" sentences the person sent in the week
+
+
+def missed_per_week(view: Any, now: datetime, days: int, here: tzinfo) -> list[MissedWeek]:
+    """How many times each person said the assistant missed something, for each week of the last `days` days, oldest
+    week first. A person with any in the window has a row for every week of it, so a week with none reads as zero. A
+    signal that names no person is counted for nobody."""
+    start = now - timedelta(days=days)
+    weeks = _weeks_in(now, days, here)
+    counts: dict[tuple[str, date], int] = defaultdict(int)
+    for signal in view.list("signal"):
+        person = signal.data.get("person")
+        when = at_of(signal.data["at"])
+        if signal.data["kind"] != "missed" or not person or when < start or when > now:
+            continue
+        counts[(person, week_of(when, here))] += 1
+    return [MissedWeek(p, week, counts[(p, week)]) for p in sorted({p for p, _ in counts}) for week in weeks]
 
 
 # ---- the missing-op list ---------------------------------------------------------------------------------------------

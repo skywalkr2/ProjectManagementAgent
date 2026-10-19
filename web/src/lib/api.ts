@@ -102,6 +102,7 @@ export const api = {
 
   ask: (question: string) => call<S["Created"]>("POST", "ask", { question }),
   asks: () => call<S["AskView"][]>("GET", "asks"),
+  missed: (text: string) => call<S["MissedSent"]>("POST", "missed", { text } satisfies S["MissedIn"]),
   applyProposal: (proposal: string, body: S["ProposalApply"]) =>
     call<S["SettingsSaved"]>("POST", `setting-proposals/${id(proposal)}/apply`, body),
   dismissProposal: (proposal: string, readVersion: number) =>

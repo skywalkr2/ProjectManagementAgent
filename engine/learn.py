@@ -27,7 +27,7 @@ from engine.storage import WriteContext
 TASK = "learn-correction"
 LEARNING_TASKS = (TASK,)
 #: Corrections the person wrote something for: looked at when they happen, while the person is still looking.
-AT_ONCE = ("sent_back", "routed", "answered_assistant", "change_requested")
+AT_ONCE = ("sent_back", "routed", "answered_assistant", "change_requested", "missed")
 #: Corrections made without writing anything: looked at in the next batch. `edited` is the person's own direct edit of
 #: something the assistant set.
 SILENT = (
@@ -62,6 +62,7 @@ KIND_WORDS = {
     "held_declined": "The person declined something the assistant had held for them.",
     "edited": "The person changed a field the assistant had set.",
     "no_reply_needed": "The person said no reply was owed for a message the assistant added a reply for.",
+    "missed": "The person said the assistant missed something; the note is their sentence, and no run is named.",
 }
 
 
@@ -508,7 +509,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
 
     note = data.get("note") or ""
     correction = [KIND_WORDS.get(data["kind"], "The person corrected the assistant's work.")]
-    if note and data["kind"] in ("sent_back", "draft_edited", "answered_assistant"):
+    if note and data["kind"] in ("sent_back", "draft_edited", "answered_assistant", "missed"):
         correction.append(f"<note>\n{note}\n</note>")
     elif note:
         correction.append(f'<untrusted source="the note">\n{_marked(_cut(note, limit))}\n</untrusted>')

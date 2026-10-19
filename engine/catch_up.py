@@ -297,7 +297,7 @@ def waits_on_go(request: Any) -> bool:
 
 #: The kinds of correction whose note is what the person wrote: a send-back's note, what they asked to change, their
 #: answer, the new wording of a question, the text of a message as they used it.
-THEIR_WORDS = ("sent_back", "change_requested", "answered_assistant", "reworded", "draft_edited")
+THEIR_WORDS = ("sent_back", "change_requested", "answered_assistant", "reworded", "draft_edited", "missed")
 
 
 def holds_their_words(signal: dict[str, Any]) -> bool:

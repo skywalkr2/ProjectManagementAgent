@@ -20,6 +20,8 @@ from api.schemas import (
     DroppedQuestionView,
     FoldIn,
     ListMergeIn,
+    MissedIn,
+    MissedSent,
     NewPersonDone,
     NewPersonIn,
     NewPersonPrefillView,
@@ -31,7 +33,7 @@ from api.schemas import (
 )
 from engine.applier import apply_as_person, fold_unowned
 from engine.config import Config
-from engine.corrections import CHANGEABLE, request_change
+from engine.corrections import CHANGEABLE, missed_one, request_change
 from engine.intake import IntakeError
 from engine.names import People
 from engine.next_steps import (
@@ -202,6 +204,18 @@ def build_correction_router(ws: Workspace, cfg: Config, store: Store, events: Ev
             worker.poke()
         events.changed()
         return ChangeRequested(ok=id, request=request, signal=signal_id)
+
+    @r.post("/missed")
+    def missed(body: MissedIn) -> MissedSent:
+        """ "Missed one" (design 6.32): the person says in a plain sentence what the assistant missed. Records a missed
+        correction for them and hands the words in as their own note, marked as a miss, so the run adds what was
+        missed. The request's own changes have their own Undo."""
+        if not body.text.strip():
+            raise HTTPException(status_code=400, detail="Say what the assistant missed.")
+        request, signal_id = guard(lambda: missed_one(ws, store, cfg, body.text))
+        worker.poke()
+        events.changed()
+        return MissedSent(request=request, signal=signal_id)
 
     @r.post("/lists/{name:path}/merge")
     def list_merge(name: str, body: ListMergeIn) -> Applied:

@@ -211,6 +211,17 @@ class ChangeIn(BaseModel):
     )
 
 
+class MissedIn(BaseModel):
+    text: str = Field(
+        description="What the assistant missed, in a plain sentence in the person's own words; it needs no source."
+    )
+
+
+class MissedSent(BaseModel):
+    request: str = Field(description="The work queued for the assistant to add what was missed.")
+    signal: str = Field(description="The id of the correction recorded for it.")
+
+
 class ChangeRequested(BaseModel):
     ok: str = Field(description="The id of the item the change was asked for.")
     request: str | None = Field(None, description="The work queued for the assistant from the note.")
@@ -3697,12 +3708,27 @@ class QualityMissingWeek(BaseModel):
     groups: list[QualityMissingGroup]
 
 
+class QualityMissedWeek(BaseModel):
+    """ "Missed one" for one person in one week (design 6.32): how often they said the assistant missed something."""
+
+    person: str = Field(description="The id of the person.")
+    person_name: str = Field(description="The person's name, as shown.")
+    week: date = Field(description="The Monday of the week, in the person's time zone.")
+    week_end: date = Field(description="The Sunday of the week.")
+    count: int = Field(description="How many times they said the assistant missed something that week.")
+
+
 class QualityView(BaseModel):
-    """The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week and the weekly
-    missing-op list, over the configured window."""
+    """The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly
+    missing-op list and "Missed one" for each person and week, over the configured window."""
 
     days: int = Field(description="The window the figures cover, in days.")
     min_corrections_per_week: int = Field(description="The fewest corrections a week needs for its rate to show.")
     knowledge_used: list[QualityKnowledgeUsed]
     repeat_corrections: list[QualityRepeatWeek]
     missing: list[QualityMissingWeek]
+    missed: list[QualityMissedWeek] = Field(
+        default_factory=list,
+        description='"Missed one" for each person and week, oldest week first; a person with any in the window has a '
+        "row for every week, so a week with none is zero. It should fall from week to week.",
+    )

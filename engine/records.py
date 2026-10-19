@@ -1738,6 +1738,7 @@ class Signal(Record):
         "edited",
         "not_now",
         "no_reply_needed",
+        "missed",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -1749,7 +1750,8 @@ class Signal(Record):
         "note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed "
         "fields the assistant had set (the note says which, from what to what); not_now, put off the rules review "
         "line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the "
-        "assistant thought was owed is not."
+        "assistant thought was owed is not; missed, said in a sentence what the assistant missed (the note is their "
+        "words)."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")
@@ -1757,6 +1759,9 @@ class Signal(Record):
         None, description="The id of the changeset the correction is about, when there is one."
     )
     note: str | None = Field(None, description="What the person said or changed, if anything.")
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The person who made the correction, when it is counted for them (a missed one)."
+    )
     learned: list[str] = Field(
         default_factory=list,
         description='The knowledge entries the person\'s own answer made (a glossary entry from "Not a project", for '
@@ -1909,7 +1914,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("applies_to.people[]", "person"),
         ("applies_to.except[]", "project"),
     ],
-    "signal": [("run", "run"), ("changeset", "changeset")],
+    "signal": [("run", "run"), ("changeset", "changeset"), ("person", "person")],
     "event": [("project", "project"), ("series", "series"), ("source", "source")],
     "series": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("question", "question"), ("source", "source")],

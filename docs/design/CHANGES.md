@@ -1033,6 +1033,14 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Drafts to others (6.35) | Only openable links were checked | The `bookkeeping` lint (record ids, `language.internal_terms`) and the `long-quote` lint (`checks.tuning.long_quote.max_words`) on questions to someone else and drafted replies. Built: `tests/test_reader_checks.py` |
 
+## 107. Missed one (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Missed one (6.32) | Nothing let the person say in a plain sentence what the assistant missed | `POST /api/missed` takes a sentence, records a `missed` signal for the person (new optional `person` field on the signal) and hands the words in as their own note marked "The person says the assistant missed this", so the run adds the action, promise or reply owed it names with the words as evidence. A "Missed one" button in the header on every screen (in More on a phone) and in the empty states of Today and What changed since yesterday opens a small form with the cursor in its one field; sending says "Thanks: I'll add it." Built: `tests/test_missed_one.py`, `web/src/components/MissedOne.test.tsx` |
+| Learning (6.22) | Each kind of correction taught at once or in a batch | `missed` joins the ones that teach at once, with the person's sentence as their words; no run is named, so it is outside the repeat-correction rate |
+| Measures (6.20, 6.32) | The quality view had three measures | `GET /api/quality` adds `missed`: "Missed one" for each person and week with the week's dates, a week with none as zero. The Quality screen is not built, so no screen shows it yet |
+
 ## 106. A stance for each person: the person's choice, the chase line, a proposal from a correction (2026-10-19)
 
 | Where | Before | Now |

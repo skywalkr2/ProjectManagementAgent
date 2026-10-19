@@ -1445,15 +1445,19 @@ def signal(
     *,
     changeset: str | None = None,
     run: str | None = None,
+    person: str | None = None,
 ) -> str:
     """Record a correction. `changeset` is the changeset it corrects, and `run` the AI run whose work that was; given
-    a changeset, the run is the one that produced it. Both stay empty for a correction of something no run made."""
+    a changeset, the run is the one that produced it. Both stay empty for a correction of something no run made.
+    `person` is who it is counted for, for a kind that is counted for each person."""
     now = now or datetime.now(UTC)
     with store.transaction() as tx:
         if changeset is not None and run is None:
             made = tx.get("changeset", changeset)
             run = made.data.get("run") if made is not None else None
         data = {"kind": kind, "refs": refs, "changeset": changeset, "run": run, "note": note, "at": now.isoformat()}
+        if person is not None:
+            data["person"] = person
         record_named(tx, run, refs)  # a correction that names a rule counts it as applied on the run it corrects
         return learn.record(tx, store.plugins.cfg, data, _PM, now)  # and each one that teaches queues its learning
 

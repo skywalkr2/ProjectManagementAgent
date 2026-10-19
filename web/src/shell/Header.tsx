@@ -1,5 +1,5 @@
 // The header (design 7.1): one row, 56px, from 1280px up. Left to right: the brand (a link to Today), a Demo chip, Ask as a
-// search-style field, the status chip with the assistant's alive line beside it, Hand something in, Help and the person's
+// search-style field, the status chip with the assistant's alive line beside it, Missed one, Hand something in, Help and the person's
 // initials, which open the user menu. Below 1280px the status chip and the alive line move to a second small row under
 // the rest; below 1024px the Ask field becomes an icon; on a phone one row remains, with the logo, the status chip and the
 // user menu, and the assistant's state is in the chip's popover.
@@ -10,6 +10,7 @@ import type { LiveState } from "../lib/live";
 import { setDensity, setTheme, useAppearance, type Density, type Theme } from "../lib/theme";
 import { viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { MISSED_BUTTON, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -85,6 +86,7 @@ export function Header(props: {
   const appearance = useAppearanceGroups();
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
   const askKey = props.shortcuts.ask ?? "/";
+  const missed = useMissedOne();
   return (
     <header className={styles.header}>
       <a className={styles.brand} href={viewHref("today")} aria-label={t("nav.brand_named", { name: rc.workspace_name })} title={rc.workspace_name}>
@@ -119,6 +121,9 @@ export function Header(props: {
       </div>
       {!props.narrow && (
         <div className={styles.end}>
+          <Button variant="ghost" icon="alert" {...{ [MISSED_BUTTON]: "" }} onClick={missed}>
+            {t("missed.open")}
+          </Button>
           <Button variant="primary" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}
           </Button>

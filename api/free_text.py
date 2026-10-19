@@ -55,6 +55,7 @@ ROUTES: dict[str, Declared] = {
     ),
     # Routes that queue the assistant's work with the person's text.
     "POST /api/handin": _to("the person's note and pasted material become an input"),
+    "POST /api/missed": _to("the sentence saying what the assistant missed is handed in as the person's own note"),
     "POST /api/ask": _to("a question to the assistant is queued as an ask"),
     "POST /api/changesets/{cs_id}/send-back": _to("the note on the changes sent back is queued with the new run"),
     "POST /api/questions/{qid}/reply": _to("a pasted reply is handed in with a note saying which question it answers"),

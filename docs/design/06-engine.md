@@ -2653,6 +2653,18 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   6 PM: sign in again?"). A day whose right top line is "nothing needs you, and here is what was read" is a test case.
 - **Missed one** is reachable wherever the person is looking, the evening wrap-up included ("anything I missed today?"),
   and accepts a plain sentence with no source.
+  *Built so far (S1-2):* `POST /api/missed` takes the sentence, records one `missed` signal with the person's id (the
+  signal's `person` field) and the words as its note, and hands the words in as the person's own trusted note
+  (`note:missed_one`, no record, no source to read); the notes packet marks it "The person says the assistant missed
+  this", and the prompt tells the run to add what the words name (an action, a promise with who owes it to whom, a reply
+  owed) with the words as evidence, never only a note or a fact. The control is in the header on every screen (More on a
+  phone) and in the empty states of Today and What changed since yesterday; the form's cursor is in its one field, and
+  sending shows "Thanks: I'll add it." with a link to the changes. `missed` is read by the learning loop at once like a
+  send-back (the note is the person's words); no run is named, since the person's sentence is all that is known, so it
+  is not part of the repeat-correction rate, and a lesson from it should name no kind of work unless the person's words
+  do. The quality view (`GET /api/quality`) lists "Missed one" for each person and week with the week's dates, a week
+  with none as zero. Built: `tests/test_missed_one.py`, `web/src/components/MissedOne.test.tsx`. *Not built:* the Quality
+  screen itself (the API has the measure; no screen shows any measure yet) and the evening wrap-up's entry (phase S2).
 - **Measures** (the gate week, the tester group, the Quality screen): missed out of present; wrong out of proposed; wrong
   endings, a nudge treated as done included (chasing someone else's promise doesn't fulfill it); silent closes out of all
   closes (the figure is built, `closes.measure`; the screen is not); changed dates, cancellations, partial deliveries and

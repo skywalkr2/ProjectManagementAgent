@@ -1809,6 +1809,7 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence. *Built (S1-2):* `tests/test_missed_one.py`, `MissedOne.test.tsx` (the header on every screen, the phone's More sheet, a quiet Today and an empty Since yesterday; a `missed` signal the learning reads at once; the count per person per week in `GET /api/quality`). Left: the Quality screen (with S1-3's instruments), the evening wrap-up (S2), and a golden case for a missed-one note.
 - [x] **A stance per person** (the designer's lessons, 2026-10-19; design 6.34): the stance field from a value list
   with meanings (I manage them, I work alongside them, I report to them, I only watch; `track_only` becomes the last),
   `people.default_stance` (alongside) and `steward.tracks` (dates and decisions) as settings with schema, defaults and
