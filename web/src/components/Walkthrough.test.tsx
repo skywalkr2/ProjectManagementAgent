@@ -543,7 +543,10 @@ describe("each screen", () => {
     expect(within(spend).getByRole("button", { name: "Save" })).toBeDisabled();
     await user.clear(day);
     await user.type(day, "5");
-    await user.click(within(spend).getByRole("button", { name: "Save" }));
+    // Save turns on once the typed value is in the form; a click before that does nothing.
+    const save = within(spend).getByRole("button", { name: "Save" });
+    await waitFor(() => expect(save).toBeEnabled());
+    await user.click(save);
     await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
     expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({
       changes: { "ai.budgets.per_day_usd": 5 },
