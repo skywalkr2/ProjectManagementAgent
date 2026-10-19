@@ -624,12 +624,22 @@ def _held(e: dict[str, Any], outcomes: list[dict[str, Any]]) -> list[dict[str, A
     return found
 
 
+def _awaits_keep(o: dict[str, Any]) -> bool:
+    """Whether a held op waits only for the person to keep an ending read from an input (design 6.33): it is the op a
+    case expects, waiting for its Keep, not one the checks doubted."""
+    holds = [p for p in o.get("problems") or [] if p.get("severity") == "hold"]
+    return o["status"] == "held" and bool(holds) and all(p.get("check") == "ending-confirm" for p in holds)
+
+
 def _matching(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -> list[int]:
-    """The positions of the applied ops that satisfy an expected op."""
+    """The positions of the applied ops, and the endings waiting only for the person's Keep, that satisfy an expected
+    op."""
     return [
         i
         for i, o in enumerate(outcomes)
-        if o["status"] == "applied" and o["op"]["op"] in _kinds(e) and _op_matches({**e, "op": o["op"]["op"]}, o, store)
+        if (o["status"] == "applied" or _awaits_keep(o))
+        and o["op"]["op"] in _kinds(e)
+        and _op_matches({**e, "op": o["op"]["op"]}, o, store)
     ]
 
 

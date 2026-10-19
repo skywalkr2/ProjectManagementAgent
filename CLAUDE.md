@@ -123,9 +123,13 @@ time. These rules hold for the main session and every subagent.
   reviews).
 - **A subagent runs only the tests for what it touched**: never the full Python suite, the full web suite or the browser
   tests. The main session runs the full suites once, just before a push, one full run at a time.
-- **Batch before the full run** (owner, 2026-10-19: the full run takes too long to do per change): commit each reviewed
-  item locally, and run the full suites once per batch of three or four items, then push the batch. Locally the Python
-  suite runs on one version (CI runs every supported one); the browser tests run when the batch touches `web/` or `api/`.
+- **Batch by scope, not by item count** (owner, 2026-10-19: the full run takes too long to do per change; work moved
+  faster when each batch was a piece of scope): commit each reviewed item locally, and run the full suites once per
+  meaningful piece of scope (a phase step, or about half a day of work, typically six to ten commits), then push the
+  batch. Run sooner only before the owner tests. Locally the Python suite runs on one version (CI runs every supported
+  one); the browser tests run when the batch touches `web/` or `api/`.
+- **Targeted runs stay narrow**: while iterating, run only the test files for the code just changed (one or two, not a
+  dozen); the full run catches the rest.
 - **The browser tests run only in that one full run**, never two runs at once. If anything else might be using the
   default ports, set `PW_PORT_OFFSET`.
 - **Never stop processes by a broad pattern** (`pkill -f pytest`, `pkill -f playwright`): it kills other workers' runs.
@@ -135,7 +139,9 @@ time. These rules hold for the main session and every subagent.
 - **Judge a run by its exit code**, not by grepping a summary line (pytest here prints none with `-q -n auto`).
 - **A failure under load is re-run once on its own** before it is called real or a flake; a test that fails only under
   load is made robust, not retried until it passes.
-- **After every push, check CI's result** for that commit, not only the local run; a red CI is work before anything new.
+- **After every push, check CI's result** for that commit, not only the local run. A red CI may stay red (owner,
+  2026-10-19): its fix joins the next batch rather than getting its own run, unless the owner is about to test, when
+  the batch they will run is made green first.
 - **Every push reports the suite times**; the main session checks `uv run pytest --durations=15` and fixes or flags any
   test that got slow.
   - Tests stay fast: no sleeps, no real network, shared fixtures over new workspaces, and the cheapest level that
