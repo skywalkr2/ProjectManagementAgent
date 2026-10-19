@@ -138,6 +138,13 @@ def create_app(
     ensure_lists(store)
     seed_rules(store)
     try:
+        # Names older settings and rules hold for a project or person become their ids, so a rename can't detach them.
+        from engine.references import join_stored_names
+
+        join_stored_names(ws, store)
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't join names to ids: %s", err)
+    try:
         # Corrections recorded before the assistant could learn from them, and rule decisions held for the person,
         # are gathered once into the catch-up list.
         from engine.catch_up import start as start_catch_up

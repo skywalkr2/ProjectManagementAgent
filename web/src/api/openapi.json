@@ -3465,6 +3465,104 @@
         "title": "CiteView",
         "type": "object"
       },
+      "CloseKindCountView": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "rule",
+              "set_aside",
+              "assistant"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "silent": {
+            "description": "Of those, the ones nobody has seen.",
+            "title": "Silent",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Closes of this kind in the period.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "total",
+          "silent"
+        ],
+        "title": "CloseKindCountView",
+        "type": "object"
+      },
+      "CloseMeasureView": {
+        "description": "Silent closes out of all closes in the period, with the counts behind the rate.",
+        "properties": {
+          "approved": {
+            "description": "Closes the assistant or a rule made that the person then saw and approved.",
+            "title": "Approved",
+            "type": "integer"
+          },
+          "by_person": {
+            "description": "Closes the person made themselves.",
+            "title": "By Person",
+            "type": "integer"
+          },
+          "days": {
+            "description": "How many days back the period looks (the quality window).",
+            "title": "Days",
+            "type": "integer"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/CloseKindCountView"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Silent over total; empty when nothing was closed.",
+            "title": "Rate"
+          },
+          "silent": {
+            "title": "Silent",
+            "type": "integer"
+          },
+          "since": {
+            "title": "Since",
+            "type": "string"
+          },
+          "total": {
+            "description": "All closes in the period, the person's own and approved ones included.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "until": {
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "days",
+          "since",
+          "until",
+          "total",
+          "silent",
+          "by_person",
+          "approved",
+          "kinds"
+        ],
+        "title": "CloseMeasureView",
+        "type": "object"
+      },
       "CompletedAction": {
         "description": "Finished work: credited to who did it, with who said it was done (a nudge is never completion).",
         "properties": {
@@ -12990,6 +13088,171 @@
           "callback"
         ],
         "title": "SignInView",
+        "type": "object"
+      },
+      "SilentCloseSeen": {
+        "additionalProperties": false,
+        "properties": {
+          "ref": {
+            "description": "The close's `ref`, from the list.",
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref"
+        ],
+        "title": "SilentCloseSeen",
+        "type": "object"
+      },
+      "SilentCloseView": {
+        "description": "Something closed, dropped, set aside or answered that the person neither made nor saw: what, when, by which rule\nor run, and why.",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changeset"
+          },
+          "how": {
+            "enum": [
+              "closed",
+              "set_aside",
+              "dropped",
+              "answered"
+            ],
+            "title": "How",
+            "type": "string"
+          },
+          "kind": {
+            "description": "rule: a triage rule closed a change before it was read. set_aside: mail set aside as not work by a rule or the assistant's sorting. assistant: an action or question the assistant closed as data.",
+            "enum": [
+              "rule",
+              "set_aside",
+              "assistant"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The record that was closed."
+          },
+          "ref": {
+            "description": "Names the close, for marking it seen.",
+            "title": "Ref",
+            "type": "string"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The rule's name, for a close a rule made.",
+            "title": "Rule"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The assistant's run that made the close, if one did.",
+            "title": "Run"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The mail item, for one set aside.",
+            "title": "Snapshot"
+          },
+          "title": {
+            "description": "What was closed: the change's or mail's title, the action's or question's words.",
+            "title": "Title",
+            "type": "string"
+          },
+          "when": {
+            "title": "When",
+            "type": "string"
+          },
+          "why": {
+            "description": "The rule's reason, the assistant's reason or the words it cited.",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "kind",
+          "how",
+          "title",
+          "when",
+          "why"
+        ],
+        "title": "SilentCloseView",
+        "type": "object"
+      },
+      "SilentClosesView": {
+        "properties": {
+          "closes": {
+            "description": "Those closes, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/SilentCloseView"
+            },
+            "title": "Closes",
+            "type": "array"
+          },
+          "count": {
+            "description": "How many closes nobody has seen, in the period.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "measure": {
+            "$ref": "#/components/schemas/CloseMeasureView"
+          }
+        },
+        "required": [
+          "count",
+          "closes",
+          "measure"
+        ],
+        "title": "SilentClosesView",
         "type": "object"
       },
       "SortingRuleIn": {
@@ -22639,6 +22902,64 @@
           }
         },
         "summary": "Start"
+      }
+    },
+    "/api/silent-closes": {
+      "get": {
+        "description": "The closes nobody has seen (a rule's, the set-aside sorting's, the assistant's own drops and closes) in the\nconfigured quality window, newest first, and the measure: silent closes out of all closes.",
+        "operationId": "silent_closes_api_silent_closes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SilentClosesView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Silent Closes"
+      }
+    },
+    "/api/silent-closes/seen": {
+      "post": {
+        "description": "The person saw a close and it stands. A rule's close is marked as seen; the assistant's is approved by\nlooking over its change. Mail set aside is confirmed in its folder instead.",
+        "operationId": "silent_close_seen_api_silent_closes_seen_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SilentCloseSeen"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Silent Close Seen"
       }
     },
     "/api/sources/{src_id}": {

@@ -35,6 +35,7 @@ from engine.config import Config
 from engine.dispatcher import SAY_WHO_FIRST, signal
 from engine.origin import origins
 from engine.records import Rule, Scope
+from engine.references import join_scope
 from engine.rule_review import due, review, take_back_not_now
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
@@ -208,7 +209,9 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events, worker: Wo
                 person,
                 store.clock(),
                 text=body.text,
-                applies_to=body.applies_to.model_dump(mode="json", by_alias=True)
+                applies_to=join_scope(
+                    store.read(), body.applies_to.model_dump(mode="json", by_alias=True), store.plugins.references()
+                )
                 if body.applies_to is not None
                 else None,
             )

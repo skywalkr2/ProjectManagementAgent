@@ -970,7 +970,8 @@ class KnowledgeSettings(ConfigModel):
         ge=7,
         le=365,
         description="How many days back the quality figures look: how often the assistant's work used what it was "
-        "given, and how many corrections repeated a mistake it had already been taught about.",
+        "given, how many corrections repeated a mistake it had already been taught about, and how many closes nobody "
+        "saw out of all closes.",
     )
     min_corrections_per_week: int = Field(
         10,
@@ -1828,6 +1829,17 @@ class TriageRule(ConfigModel):
     )
     why: str = Field("", description="What the person reads; {reason} is the matcher's own words. Empty: just those.")
     sources: list[str] = Field(default_factory=list, description="The sources it applies to; empty: all of them.")
+    projects: list[str] = Field(
+        default_factory=list,
+        description="Projects the matcher looks for by name (terms-absent, name-matches), held by id: their names now "
+        "count as terms, so a rename never detaches the rule. A name typed here is saved as the project's id; a "
+        "project that is gone gives no terms, and the rule then closes nothing.",
+    )
+    people: list[str] = Field(
+        default_factory=list,
+        description="People the matcher looks for by name (terms-absent, name-matches), held by id like projects: "
+        "their names and other names now count as terms.",
+    )
     set_aside: Literal["personal", "sales", "never"] | None = Field(
         None,
         description="With a match, put mail in the Set aside folder (personal, or sales and promotions) instead of "

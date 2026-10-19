@@ -45,6 +45,29 @@ const closed = (id: string, extra: Partial<S["AutoClosedView"]> = {}): S["AutoCl
   ...extra,
 });
 
+const silent = (ref: string, extra: Partial<S["SilentCloseView"]> = {}): S["SilentCloseView"] => ({
+  ref,
+  kind: "assistant",
+  how: "dropped",
+  title: `Closed ${ref}`,
+  when: "2026-03-04T09:00:00+00:00",
+  why: "no longer needed",
+  ...extra,
+});
+
+const measure = (extra: Partial<S["CloseMeasureView"]> = {}): S["CloseMeasureView"] => ({
+  days: 28,
+  since: "2026-02-04T09:00:00+00:00",
+  until: "2026-03-04T09:00:00+00:00",
+  total: 0,
+  silent: 0,
+  by_person: 0,
+  approved: 0,
+  rate: null,
+  kinds: [],
+  ...extra,
+});
+
 type Item = S["SettingItem"];
 const field = (key: string, type: Item["type"], extra: Partial<Item> = {}): Item => ({
   key,
@@ -101,6 +124,7 @@ function open(
   const calls = fakeApi({
     "GET watch": () => sources,
     "GET auto-closed": () => items,
+    "GET silent-closes": () => ({ count: 0, closes: [], measure: measure() }),
     "GET watch/kinds": () => KINDS,
     "GET settings": () => stored(sources.map((s) => ({ id: s.id, settings: { path: `${s.id}-folder` } }))),
     "GET projects": () => [],
@@ -275,6 +299,52 @@ test("Take a closer look sends the version that was read, and says so", async ()
   await user.click(within(await row("Item r1")).getByRole("button", { name: "Take a closer look at Item r1" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST requests/r1/closer-look")?.body).toEqual({ read_version: 9 }));
   expect(await screen.findByText("Handed in Item r1. Helper is on it.")).toBeInTheDocument();
+});
+
+describe("closes nobody has seen", () => {
+  const two = [
+    silent("changeset:CS-1:0", { title: "Send the proof", why: "the printer said so", run: "RUN-1" }),
+    silent("request:REQ-2", { kind: "rule", how: "closed", title: "Plan", rule: "Spacing", why: "only spacing changed" }),
+    silent("snapshot:SN-3", { kind: "set_aside", how: "set_aside", title: "A newsletter", rule: "Bulk mail", why: "bulk" }),
+  ];
+
+  test("each shows what, by whom, when and why, with the count out of all closes", async () => {
+    open([source("a")], [], {
+      "GET silent-closes": () => ({ count: 3, closes: two, measure: measure({ total: 12, silent: 3, rate: 0.25 }) }),
+    });
+    const assistant = await row("Send the proof");
+    expect(assistant).toHaveTextContent("Dropped");
+    expect(assistant).toHaveTextContent("By Helper");
+    expect(assistant).toHaveTextContent("Because: the printer said so");
+    expect(await row("Plan")).toHaveTextContent("By the rule Spacing");
+    expect(screen.getByTestId("silent-measure")).toHaveTextContent("3 of 12 closes in the last 28 days weren't seen by you.");
+  });
+
+  test("set-aside mail points to its folder instead of offering Looks right", async () => {
+    open([source("a")], [], {
+      "GET silent-closes": () => ({ count: 1, closes: [two[2]], measure: measure({ total: 1, silent: 1, rate: 1 }) }),
+    });
+    const mail = await row("A newsletter");
+    expect(mail).toHaveTextContent("Review it in the Set aside folder above.");
+    expect(within(mail).queryByRole("button")).toBeNull();
+  });
+
+  test("Looks right sends the close's reference and says it was marked", async () => {
+    const { calls } = open([source("a")], [], {
+      "GET silent-closes": () => ({ count: 1, closes: [two[1]], measure: measure({ total: 1, silent: 1, rate: 1 }) }),
+      "POST silent-closes/seen": () => ({ id: "request:REQ-2" }),
+    });
+    const user = userEvent.setup();
+    await user.click(within(await row("Plan")).getByRole("button", { name: "Looks right: Plan" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST silent-closes/seen")?.body).toEqual({ ref: "request:REQ-2" }));
+    expect(await screen.findByText("Marked as seen: Plan.")).toBeInTheDocument();
+  });
+
+  test("with none, it says everything closed was made or seen by the person", async () => {
+    open([source("a")]);
+    expect(await screen.findByText("Everything that was closed, you made or saw.")).toBeInTheDocument();
+    expect(screen.queryByTestId("silent-measure")).toBeNull();
+  });
 });
 
 describe("adding a source", () => {

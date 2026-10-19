@@ -29,6 +29,7 @@ from engine.config import ConfigError, load_config
 from engine.config.loader import plain_label, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
+from engine.references import join_watch_changes
 from engine.secrets import SecretHint
 from engine.storage import StoreError, WriteContext
 from engine.yaml_load import load_yaml
@@ -419,6 +420,11 @@ def save(
     shown = {s.key: s for s in describe(cfg, plugins, config_dir)}
     for key in [*changes, *reset]:
         _check_key(key, shown, cfg, allow, models)
+    try:
+        # Records the watch settings name are held by id; a name typed here is resolved, or refused with its own words.
+        changes = join_watch_changes(store.read(), changes)
+    except StoreError as err:
+        raise SettingsError(str(err)) from None
     texts: dict[str, str] = {}
     before: dict[str, tuple[Any, bool]] = {}
     for key in [*changes, *reset]:

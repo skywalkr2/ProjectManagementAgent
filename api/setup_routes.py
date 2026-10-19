@@ -73,7 +73,7 @@ from api.schemas import (
     WatchSourceChange,
     WatchSourceIn,
 )
-from engine import audit, setup, templates
+from engine import audit, references, setup, templates
 from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
 from engine import sorting_rules as sorting
@@ -466,12 +466,23 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if connector is None:
             raise HTTPException(status_code=404, detail=f"There is no kind of source called {kind} running now.")
         try:
+            # Settings that refer to records hold their ids; a name typed for one is resolved or refused.
+            settings = references.join_settings(connector.settings, settings, store.read())
             return connector.settings.model_validate(settings).model_dump(mode="json", exclude_defaults=True)
+        except StoreError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
         except ValueError as err:
             first = err.errors()[0] if hasattr(err, "errors") else {"loc": (), "msg": str(err)}
             raise HTTPException(
                 status_code=400, detail=f"{'.'.join(map(str, first['loc'])) or 'settings'}: {first['msg']}"
             ) from None
+
+    def checked_project(project: str) -> str:
+        """A project's id from its id or its name; the source follows the id, so a rename never detaches it."""
+        try:
+            return references.resolve(store.read(), "project", project)
+        except StoreError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
 
     def checked_author(author: str) -> str:
         view = store.read()
@@ -536,7 +547,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             "settings": settings,
         }
         if body.project:
-            new["project"] = body.project
+            new["project"] = checked_project(body.project)
         if body.author:
             new["author"] = checked_author(body.author)
         fresh = keep_all(to_keep)

@@ -4,24 +4,31 @@ reading one now."""
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     AutoClosedView,
+    CloseKindCountView,
+    CloseMeasureView,
     Created,
     ReadVersion,
+    RecordRef,
     SetAsideDone,
     SetAsideFolder,
     SetAsideIn,
     SetAsideView,
+    SilentCloseSeen,
+    SilentClosesView,
+    SilentCloseView,
     SourceSecretView,
     UnconfirmIn,
     WatchAuthorOption,
     WatchRunView,
     WatchSourceView,
 )
-from engine import set_aside, setup, watch
+from engine import closes, set_aside, setup, watch
 from engine import settings as settings_screens
 from engine.config import Config, ConfigError, load_config
 from engine.connectors import declared_reads, reads
@@ -159,6 +166,64 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 )
             )
         return out
+
+    @r.get("/silent-closes")
+    def silent_closes() -> SilentClosesView:
+        """The closes nobody has seen (a rule's, the set-aside sorting's, the assistant's own drops and closes) in the
+        configured quality window, newest first, and the measure: silent closes out of all closes."""
+        view = store.read()
+        until = datetime.now(UTC)
+        days = current().dispatch.knowledge.quality_window_days
+        since = until - timedelta(days=days)
+        found = closes.silent(view, since)
+        measure = closes.measure(view, since)
+        return SilentClosesView(
+            count=len(found),
+            closes=[
+                SilentCloseView(
+                    ref=c.ref,
+                    kind=c.kind,
+                    how=c.how,
+                    title=c.title,
+                    when=c.when,
+                    why=c.why,
+                    rule=c.rule,
+                    run=c.run,
+                    request=c.request,
+                    changeset=c.changeset,
+                    snapshot=c.snapshot,
+                    record=RecordRef(kind=c.record[0], id=c.record[1]) if c.record else None,
+                )
+                for c in found
+            ],
+            measure=CloseMeasureView(
+                days=days,
+                since=since.isoformat(),
+                until=until.isoformat(),
+                total=measure.total,
+                silent=measure.silent,
+                by_person=measure.by_person,
+                approved=measure.approved,
+                rate=measure.rate,
+                kinds=[
+                    CloseKindCountView(kind=kind, total=count.total, silent=count.silent)
+                    for kind, count in measure.by_kind.items()
+                ],
+            ),
+        )
+
+    @r.post("/silent-closes/seen")
+    def silent_close_seen(body: SilentCloseSeen) -> Created:
+        """The person saw a close and it stands. A rule's close is marked as seen; the assistant's is approved by
+        looking over its change. Mail set aside is confirmed in its folder instead."""
+        try:
+            closes.mark_seen(store, body.ref)
+        except closes.ReviewElsewhere as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=404, detail=str(err)) from None
+        events.changed()
+        return Created(id=body.ref)
 
     @r.post("/watch/{source_id}/recent")
     def recent(source_id: str) -> WatchSourceView:

@@ -323,6 +323,14 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   needs a go or at what the go covered. Asking on the high figure would ask for most small runs and teach the person to
   press Go without reading. Decided by the main session.
   **Impact:** design 6.16 (CHANGES.md section 91).
+- **Also (2026-10-19): no close goes unseen, and records join by id (S1, designer F3 and F10).** A close is silent
+  unless the person made it or saw it; silent closes are counted against all closes over
+  `dispatch.knowledge.quality_window_days` and listed on the Sources screen with "Looks right". Triage rules, source
+  projects, connector settings that refer to records, and the filters in rule and lesson scopes hold ids: a name is
+  resolved when saved (or refused when it matches nothing or several), stored names are joined once at start, and a
+  record that is gone gives a rule nothing to match, so it closes nothing. Names an outside system gives (an author)
+  stay names. Decided by the main session from the subagent's audit.
+  **Impact:** design 6.32 and 4 (CHANGES.md section 92).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

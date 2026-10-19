@@ -2534,11 +2534,55 @@ people and details, and never acts in their name without their yes on the exact 
 ### Dependability, from the designer's answers (2026-10-19)
 
 The functional designer's answers to F1 to F14 (`docs/project/designer-answers-2026-10-19.md`), drawn from what went wrong
-in running. Not yet built; phase S builds them with named tests.
+in running. Phase S builds them with named tests; an item says "Built" only where a test is cited.
 - **Records join by id, never by a display name.** Anything that names a record to follow (a watch list, a rule, a filter)
-  holds its id, so a rename never detaches it.
+  holds its id, so a rename never detaches it. Built (`engine/references.py`):
+  - A triage rule names the projects and people it looks for by id (`projects`, `people`); the matchers read their
+    current names and other names when they run, so a rename follows, and a record that is gone gives no terms, so the
+    rule closes nothing. Tests: `tests/test_join_by_id.py::test_a_triage_rule_that_names_a_project_by_id_still_matches_after_the_project_is_renamed`,
+    `::test_a_triage_rule_that_names_a_person_by_id_follows_the_name_they_go_by_now`,
+    `::test_a_rule_that_names_a_record_that_is_gone_closes_nothing`.
+  - A name typed where an id belongs is resolved to the id when the setting is saved, and refused in its own words when it
+    matches nothing or more than one record; the screens keep showing the record's current name. It covers a source's
+    project, the triage rules' projects and people (Settings save, the source form), a connector's settings marked
+    `RefTo`, and a rule's or lesson's `filter` on a reference field (a rule from the starting file included). Tests:
+    `tests/test_join_by_id.py::test_saving_a_triage_rule_that_names_a_project_or_person_by_name_stores_their_ids`,
+    `::test_saving_a_rule_that_names_something_the_app_does_not_know_is_refused_and_says_which`,
+    `::test_saving_a_source_with_a_project_name_stores_the_projects_id`,
+    `::test_adding_a_source_through_the_api_with_a_project_name_stores_its_id_and_refuses_an_unknown_one`,
+    `::test_a_connectors_settings_that_refer_to_records_are_stored_as_ids`,
+    `::test_a_rule_filtering_actions_by_project_name_stores_the_id_and_covers_them_after_a_rename`,
+    `::test_a_lesson_filtering_by_a_person_name_stores_the_id`,
+    `::test_a_starting_rule_in_the_rules_file_that_filters_by_name_is_seeded_with_the_id`.
+  - What older files and records hold by name is joined once when the app starts, and a name that matches nothing is left
+    as it was, never guessed at. Test: `tests/test_join_by_id.py::test_names_already_stored_in_the_watch_settings_and_in_rules_become_ids_when_the_app_starts`.
+  - Already by id, and kept so: a rule's `sources` (the source's own id, so a relabel never detaches it; `tests/test_join_by_id.py::test_a_rule_that_names_a_source_keeps_matching_when_the_source_is_relabeled`),
+    a source's `author`, and a rule's or lesson's `projects` and `people`. Still by a name an outside system gives: the
+    accounts the person and the workspace write under (`by-us`, `user.accounts`), which have no id of their own to join by.
 - **No close goes unseen.** Every item the assistant or a rule closes or sets aside without the person seeing it is counted
-  and can be reviewed ("silent closes"), and the count is one of the dependability measures.
+  and can be reviewed ("silent closes"), and the count is one of the dependability measures. Built (`engine/closes.py`):
+  - A close is one of three kinds: a triage rule's close of a watched change, mail a rule or the assistant's sorting set
+    aside, and an action or question the assistant closed, dropped or answered as data (`action.close`, `action.drop`,
+    `question.drop`, `question.done`). It is silent unless the person made it (their own note, screen or person action) or
+    saw and approved it (confirmed the set-aside mail, marked a rule's close as seen, "Looks good" on the changeset,
+    released the op from held). An undone close, or one the person took a closer look at, is no longer a close. Each says
+    what, when, which rule or run, and why.
+  - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on the Sources screen under "Closed
+    without you seeing", below the Set aside folder and the rule closes. The measure, silent closes out of all closes in
+    the quality window with the counts for each kind, is `closes.measure`, for the Quality screen to use later.
+  - Tests: `tests/test_silent_closes.py::test_an_assistant_drop_applied_as_data_is_a_silent_close_and_is_listed_with_what_when_by_and_why`,
+    `::test_the_persons_own_close_is_not_silent_but_is_counted_in_all_closes`,
+    `::test_a_close_the_person_looked_over_and_approved_is_not_silent`,
+    `::test_a_rule_close_is_silent_and_says_which_rule_and_why`,
+    `::test_mail_a_rule_sets_aside_is_silent_until_confirmed_and_what_the_person_sets_aside_never_is`,
+    `::test_the_measure_gives_silent_closes_out_of_all_closes_with_the_denominators_by_kind_and_period`,
+    `::test_the_api_serves_the_count_the_list_and_the_measure_and_marking_one_seen_lowers_the_count`; the screen:
+    `web/src/components/Sources.test.tsx` ("closes nobody has seen").
+  - Looked at and not counted, because the person sees them as part of the work or they close no item: follow-on and
+    learning runs closed when there is nothing to do, a change folded into a newer one (read once, in order), the
+    questions a source's recovery or a sign-in closes, requests an attempt superseded, proposals that expired (counted on
+    their own review line), and stage moves (a move forward, never a close).
+  - Not built: a Today line for silent closes, and the measure on the Quality screen.
 - **An outage is not a failure.** With the computer asleep or no network, work waits and runs when the network is back. A
   run that did no work (cut off, or a runner that only printed a sign-in banner) is not an attempt, is never sent back as
   a mistake, and doesn't count against the request's spending figure.
@@ -2552,9 +2596,10 @@ in running. Not yet built; phase S builds them with named tests.
   and accepts a plain sentence with no source.
 - **Measures** (the gate week, the tester group, the Quality screen): missed out of present; wrong out of proposed; wrong
   endings, a nudge treated as done included (chasing someone else's promise doesn't fulfill it); silent closes out of all
-  closes; changed dates, cancellations, partial deliveries and owner changes handled; review time; sources not read; and
-  "Missed one" per person per week, which should fall from week one to week two. Counts with their denominators; a
-  held-out set; and a replay set where each real miss becomes a case (starting state, the person's action, expected end).
+  closes (the figure is built, `closes.measure`; the screen is not); changed dates, cancellations, partial deliveries and
+  owner changes handled; review time; sources not read; and "Missed one" per person per week, which should fall from week
+  one to week two. Counts with their denominators; a held-out set; and a replay set where each real miss becomes a case
+  (starting state, the person's action, expected end).
 - **Sending (S1b) is accepted only on named tests:** exact content and recipients; an approval goes stale when the draft,
   its recipients or its inputs change, a restart that re-resolved addresses or updated a template included; never twice
   after a timeout, retry or restart; after a closed lid or lost network mid-send, the result is checked with the service

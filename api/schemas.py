@@ -2666,6 +2666,59 @@ class AutoClosedView(BaseModel):
     created_at: str
 
 
+class SilentCloseView(BaseModel):
+    """Something closed, dropped, set aside or answered that the person neither made nor saw: what, when, by which rule
+    or run, and why."""
+
+    ref: str = Field(description="Names the close, for marking it seen.")
+    kind: Literal["rule", "set_aside", "assistant"] = Field(
+        description="rule: a triage rule closed a change before it was read. set_aside: mail set aside as not work by "
+        "a rule or the assistant's sorting. assistant: an action or question the assistant closed as data."
+    )
+    how: Literal["closed", "set_aside", "dropped", "answered"]
+    title: str = Field(description="What was closed: the change's or mail's title, the action's or question's words.")
+    when: str
+    why: str = Field(description="The rule's reason, the assistant's reason or the words it cited.")
+    rule: str | None = Field(None, description="The rule's name, for a close a rule made.")
+    run: str | None = Field(None, description="The assistant's run that made the close, if one did.")
+    request: str | None = None
+    changeset: str | None = None
+    snapshot: str | None = Field(None, description="The mail item, for one set aside.")
+    record: RecordRef | None = Field(None, description="The record that was closed.")
+
+
+class CloseKindCountView(BaseModel):
+    kind: Literal["rule", "set_aside", "assistant"]
+    total: int = Field(description="Closes of this kind in the period.")
+    silent: int = Field(description="Of those, the ones nobody has seen.")
+
+
+class CloseMeasureView(BaseModel):
+    """Silent closes out of all closes in the period, with the counts behind the rate."""
+
+    days: int = Field(description="How many days back the period looks (the quality window).")
+    since: str
+    until: str
+    total: int = Field(description="All closes in the period, the person's own and approved ones included.")
+    silent: int
+    by_person: int = Field(description="Closes the person made themselves.")
+    approved: int = Field(description="Closes the assistant or a rule made that the person then saw and approved.")
+    rate: float | None = Field(None, description="Silent over total; empty when nothing was closed.")
+    kinds: list[CloseKindCountView]
+
+
+class SilentClosesView(BaseModel):
+    count: int = Field(description="How many closes nobody has seen, in the period.")
+    closes: list[SilentCloseView] = Field(description="Those closes, newest first.")
+    measure: CloseMeasureView
+
+
+class SilentCloseSeen(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ref: str = Field(description="The close's `ref`, from the list.")
+
+
 class SetAsideView(BaseModel):
     """A mail item in the Set aside folder: left with the person, never read by the assistant."""
 

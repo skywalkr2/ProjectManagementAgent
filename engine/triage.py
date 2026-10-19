@@ -20,6 +20,8 @@ from collections.abc import Callable
 from email.utils import parseaddr
 from typing import Any
 
+from engine.references import names_for
+
 Matcher = Callable[[dict[str, Any], dict[str, Any]], str | None]
 _NOT_WORDS = re.compile(r"[\W_]+")
 
@@ -46,9 +48,15 @@ def by_us(change: dict[str, Any], params: dict[str, Any]) -> str | None:
     return None
 
 
+def _names(params: dict[str, Any]) -> list[str]:
+    """The current names of the projects and people the rule holds by id (`names`, filled in by `classify`)."""
+    return [str(n).lower() for n in params.get("names", []) if str(n).strip()]
+
+
 def terms_absent(change: dict[str, Any], params: dict[str, Any]) -> str | None:
-    """None of the rule's `terms` appears in what changed (the added and removed lines, or a new item's text)."""
-    terms = [str(t).lower() for t in params.get("terms", []) if str(t).strip()]
+    """None of the rule's `terms`, nor the names of the projects and people it holds by id, appears in what changed
+    (the added and removed lines, or a new item's text). A rule with nothing to look for closes nothing."""
+    terms = [str(t).lower() for t in params.get("terms", []) if str(t).strip()] + _names(params)
     if not terms:
         return None
     changed = "\n".join(change["added"] + change["removed"]) if change["change"] == "changed" else change["now"]
@@ -58,10 +66,14 @@ def terms_absent(change: dict[str, Any], params: dict[str, Any]) -> str | None:
 
 
 def name_matches(change: dict[str, Any], params: dict[str, Any]) -> str | None:
-    """The item's key or title matches one of the rule's `patterns` (like *.tmp or Draft*)."""
+    """The item's key or title matches one of the rule's `patterns` (like *.tmp or Draft*), or holds the name of one of
+    the projects or people the rule holds by id."""
     for pattern in params.get("patterns", []):
         if fnmatch.fnmatch(change["key"], pattern) or fnmatch.fnmatch(change["title"], pattern):
             return f"its name matches {pattern}"
+    for name in _names(params):
+        if name in str(change["key"]).lower() or name in str(change["title"]).lower():
+            return f"its name holds {name}"
     return None
 
 
@@ -158,10 +170,12 @@ def classify(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, st
             continue
         if kept and rule.set_aside:
             continue
+        params = dict(rule.params)
+        if rule.projects or rule.people:
+            view = store.read()
+            params["names"] = [*names_for(view, "project", rule.projects), *names_for(view, "person", rule.people)]
         reason = (
-            store.plugins.run_matcher(rule.kind, match, change, dict(rule.params))
-            if "/" in rule.kind
-            else match(change, dict(rule.params))
+            store.plugins.run_matcher(rule.kind, match, change, params) if "/" in rule.kind else match(change, params)
         )
         if not reason:
             continue

@@ -11,6 +11,7 @@ from datetime import UTC, datetime, time
 from typing import Any
 
 from engine.config.schema import RuleScope, StandingRule
+from engine.references import join_scope
 from engine.storage import StoreError, WriteContext
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="rules.seed")
@@ -61,15 +62,18 @@ def seed_rules(store: Any) -> list[str]:
     if not missing:
         return []
     now = store.clock()
+    declared = store.plugins.references()
     with store.transaction() as tx:
         for rule in missing:
             learned = datetime.combine(rule.added, time.min, tzinfo=UTC).isoformat() if rule.added else now
+            # The reach holds ids: a name in the starting file is resolved, and one nothing matches is kept as written.
+            reach = join_scope(tx, rule.applies_to.model_dump(), declared, soft=True)
             tx.create(
                 "rule",
                 {
                     "name": rule.id,
                     "text": rule.text,
-                    "applies_to": rule.applies_to.model_dump(),
+                    "applies_to": reach,
                     "check": rule.check,
                     "constrains": list(rule.constrains),
                     "origin": "seed",
@@ -94,7 +98,7 @@ def add_rule(tx: Any, store: Any, op: Any, w: WriteContext, st: Any, *, evidence
     kept = st.person  # the person's own words apply at once, even before the workspace knows who they are
     data: dict[str, Any] = {
         "text": " ".join(op.text.split()),
-        "applies_to": op.applies_to.model_dump(mode="json", by_alias=True),
+        "applies_to": join_scope(tx, op.applies_to.model_dump(mode="json", by_alias=True), store.plugins.references()),
         "check": op.check,
         "constrains": list(dict.fromkeys(op.constrains)),
         "origin": st.origin,

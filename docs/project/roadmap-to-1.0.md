@@ -2181,8 +2181,11 @@ S1. **Promises, and how they end:**
 - [x] **A rule's check runs before the change applies** (moved from phase E, 2026-10-19): the applier's trial apply runs
   each active rule's check on what an op would write; a failure returns once, then holds the op (an outward act is
   refused). *Built (S1):* `tests/test_rule_check_before_apply.py`.
-- [ ] **No close goes unseen, and records join by id** (design 6.32): every close by a rule or the assistant that the
-  person didn't see is counted and reviewable; anything that names a record to follow holds its id.
+- [x] **No close goes unseen, and records join by id** (design 6.32): every close by a rule or the assistant that the
+  person didn't see is counted and reviewable; anything that names a record to follow holds its id. *Built (S1):*
+  `tests/test_silent_closes.py`, `tests/test_join_by_id.py`, `Sources.test.tsx`. Left (with the gate week's instruments
+  below): the silent-close measure on the Quality screen and a Today line; Undo on "Looks right"; a triage alias too
+  short to be a word matches inside other words.
 - [ ] **A newly added source is taken in quietly** (designer F6): one summary line and a list to review, every open item
   followed whatever its age.
 - [ ] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence.

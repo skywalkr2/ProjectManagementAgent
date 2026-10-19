@@ -206,6 +206,9 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
     its secret references).
 - `triage`: rules, in order; the first match closes the change before the assistant reads it. Each rule has `name`, `kind`
   (a matcher), `params`, `why` (a template shown to the PM; `{reason}` is the matcher's own words) and `sources` (empty: all).
+  A rule that looks for a project or a person by name holds their ids in `projects` and `people` (6.32): their current
+  names count as terms for `terms-absent` and `name-matches`, a name typed there is saved as the id, and an id that
+  names nothing gives no terms, so the rule closes nothing.
   The core's matchers are `cosmetic` (only spacing, punctuation or capitals changed), `by-us` (changed by one of
   `workspace.our_accounts`), `terms-absent` (none of the rule's terms is in what changed), `name-matches` (the item's key
   or title matches a pattern) and, for mail, `bulk-mail` (the message says it was sent to many), `service-category` (the

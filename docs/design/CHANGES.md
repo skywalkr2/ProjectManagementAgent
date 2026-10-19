@@ -1026,6 +1026,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 92. No close goes unseen, and records join by id (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Closes nobody saw (6.32) | A rule's close, mail set aside by a rule or the sorting, and the assistant's own drops and closes were each findable in a different place (or nowhere, for the assistant's), and none was counted | One list of closes the person neither made nor saw (what, when, which rule or run, why), `GET /api/silent-closes`, shown on Sources under "Closed without you seeing"; "Looks right" marks a rule's or the assistant's close as seen (`POST /api/silent-closes/seen`); set-aside mail is reviewed in its folder. `closes.measure` gives silent closes out of all closes in the quality window, with the counts for each kind, for the Quality screen. Built: `tests/test_silent_closes.py`, `web/src/components/Sources.test.tsx` |
+| A rule or watch list that names a project or person (6.32, 4.x) | A triage rule could only hold names as free terms, so a renamed project made `terms-absent` close every change; a source's project and a rule's or lesson's reference filter were stored as typed | `triage[].projects` and `triage[].people` hold ids and the matchers read the current names; a name typed for a source's project, a triage rule, a connector setting marked `RefTo` or a rule's or lesson's reference filter is resolved to the id when saved, or refused in words; names already stored are joined once at start. A triage matcher now also gets `names` among its parameters. Built: `tests/test_join_by_id.py` |
+| Settings (4.9) | n/a | `watch.triage[].projects` and `.people`, with descriptions; `dispatch.knowledge.quality_window_days` also bounds the closes figure |
+
 ## 91. A request's spending as a range (2026-10-19)
 
 | Where | Before | Now |

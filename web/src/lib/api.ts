@@ -67,6 +67,8 @@ export const api = {
   readSource: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/read`),
   handInRecent: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/recent`),
   autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
+  silentCloses: () => call<S["SilentClosesView"]>("GET", "silent-closes"),
+  closeSeen: (ref: string) => call<S["Created"]>("POST", "silent-closes/seen", { ref } satisfies S["SilentCloseSeen"]),
   closerLook: (req: string, readVersion: number) =>
     call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),
   setAside: () => call<S["SetAsideFolder"]>("GET", "set-aside"),

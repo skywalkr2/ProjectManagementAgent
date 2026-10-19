@@ -15,6 +15,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from engine.records import REGISTRY, KnowledgeRecord, Person, kind_label, ref_fields, values_at
+from engine.references import join_scope
 from engine.storage import StoreError, WriteContext
 
 #: The record kinds that are knowledge, in the order they are listed.
@@ -163,7 +164,10 @@ def apply(tx: Any, op: Any, w: WriteContext, st: Standing) -> list[dict[str, Any
         return [{"kind": current.kind, "id": op.id}]
     if op.op in ("lesson.update", "glossary.update"):
         current = tx.get(OP_KIND[op.op], op.id)
-        tx.update(current.kind, op.id, op.changes(), w, read_version=current.version)
+        changes = op.changes()
+        if "applies_to" in changes:
+            changes["applies_to"] = join_scope(tx, changes["applies_to"])
+        tx.update(current.kind, op.id, changes, w, read_version=current.version)
         return [{"kind": current.kind, "id": op.id}]
     kind = OP_KIND[op.op]
     kept = st.person and st.pm is not None
@@ -176,7 +180,7 @@ def apply(tx: Any, op: Any, w: WriteContext, st: Standing) -> list[dict[str, Any
         "status": "active" if kept else "proposed",
         "kept_by": st.pm if kept else None,
         "kept_at": st.now if kept else None,
-        "applies_to": op.applies_to.model_dump(mode="json", by_alias=True),
+        "applies_to": join_scope(tx, op.applies_to.model_dump(mode="json", by_alias=True)),
         **{name: getattr(op, name) for name in OWN_FIELDS[kind]},
     }
     if not kept:
