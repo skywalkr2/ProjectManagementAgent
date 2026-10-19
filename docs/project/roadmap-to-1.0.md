@@ -17,7 +17,20 @@ a time, and a phase ends when its exit test passes, not when its code is written
 
 Durations are estimates in working sessions. Dates are set when a phase starts and recorded here.
 
-## Where things stand (2026-10-15)
+## Where things stand (2026-10-19)
+
+- **Today (2026-10-19):** every defect the four outside reviews found is fixed with its test (spending on every account,
+  credential saves, Undo, stale forms, downloads, Python 3.14); CI is green again after three failures it had carried
+  since 2026-10-18 evening. Phase B waves 3 and 4 are built (Today follow-ups, P19, the UI designer's answers 27 to 38,
+  Settings saved as made, the wording review, the records screens, P13, P14), and "Which model does what" with
+  suggestions from the measurements (P27). The functional designer's answers F1 to F14 are folded into design 6.32 and
+  phase S's gate. In progress: S1's outage handling and coverage line. Owner action tonight: re-run the learning tests
+  (O3) after setting the model choices.
+- **Left in phase B:** waves 5 and 6 (below), built to phase S's shape after S1; the partial items below say what is left.
+- **Every unchecked item has its place in this order:** B (wave 4 done) → S1 → B waves 5 and 6 → the gate week → the rest
+  of S → I (installers; the first milestone ends here) → C (the writing pack; the owner's real use starts when it is
+  complete) → P → D (sign-off) → L-more (beside real use, after the packs) and E (the rest of version 1, ordered by what
+  protects real data first) → Publish 1.0 once the owner finalizes scope.
 
 - **Done:** phase 0, phase A (2026-10-13), and in phase L: L0 (signed off 2026-10-13), L1, L1b with its "before" run (O2),
   L2, and the first five "Ready for real use" items. Owner actions O1 and O2 are done.
@@ -1820,7 +1833,10 @@ group on 2026-10-20, which the plan's order (B, S, then I) and the integrity ite
    invitations as calendar entries, repeating events expanded, Outlook time zones, attendees) and P18 (several accounts
    of one service at once, each source picking its account; a plugin API change told to the mail add-on's builder).
    P16's leftovers too: an add-on's own secrets and the backup key typed on the screen.
-4. **Wave 6, the rest:** Top priorities, the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane,
+4. **Wave 6, the rest:** (also the designer's F12 and F13, 2026-10-19: a refused form refreshes the untouched fields and
+   lists what changed underneath; kept secrets nothing refers to are removed after 30 days or with their source, never
+   while an Undo points at one; and open promise P26: a to-do tied to the question it waits on, the nudge's
+   answered-and-left-out list, the suggested escalation after a second follow-up) Top priorities, the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane,
    the Quality screen, a project's "what the assistant knows", the work screens as list and detail, blocked actions, Copy
    with formatting, the action and question clean-up, lists not typing everywhere, the cursor in the first field, and
    checklist C1–C46 with screenshots. (The Monday briefing moved to phase S1; the launcher moved to phase I.)
@@ -1832,8 +1848,8 @@ From L3 (design 7.18):
 - [ ] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
   glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
 - [ ] "Overlaps with …" on the Learned line, linking the entry a proposal would merge with.
-- [ ] A held item's button says what it does ("Confirm", "Add"), not "Do it anyway", which reads wrong for a
-  confirmation such as a contact detail (L3b).
+- [x] A held item's button says what it does ("Confirm", "Add"), not "Do it anyway", which reads wrong for a
+  confirmation such as a contact detail (L3b). *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`.
 - [ ] The Quality screen (6.20): the knowledge-used and repeat-correction rates and the weekly missing-op list, from
   `GET /api/quality` (built in L3).
 
@@ -1854,12 +1870,16 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
   not measured as their own states with Measure and its estimate; a one-line summary on each account row. *Built (phase B):* `web/src/lib/ai-compare.test.ts` (pass first, the cheapest passing cell, only one that passes, old counts as unknown), `web/src/components/AiCompare.test.tsx` (the grid, the cell's states in words and an icon, Measure with its estimate, asking above the configured amount, Measure again, a failed measuring, back), `web/src/components/AiAccounts.test.tsx` (the one-line summary and See all), `web/e2e/shell.spec.ts` (accessibility in light and dark, phone width).
 - [ ] **27 After a move**: one group line per move in Decide, one row inside per thing to check; questions to others go to
   Follow-ups and are counted in the group's meta; a group of one is a normal row; a second move replaces the group.
+  *Built (wave 4):* the group line and its rows, `tests/test_move_groups.py`. Left: the per-row answers ("Move it to Oct 22 / Keep Oct 20", "It holds / Needs a change…") and the toast when the last row is settled.
 - [ ] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
   the other answer a visible button.
+  *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. Left: "Drop it and draft the note", which waits for the publisher (S1b).
 - [ ] **29 Where a fact came from**: the source label in the meta line as the "Where it came from" link; "≈ Inferred" in a
   dashed outline with Confirm it; no italics; never in copied or published text.
+  *Built (wave 4) on the fact's record page:* `RecordPageRecords.test.tsx`, `tests/test_record_page.py`. Left: the label on Knowledge and in the inspector.
 - [ ] **30 A series page**: next meeting's open items by person, past meetings collapsed, details; item rows link "for
   Thursday's print sync"; the agenda stays the project management pack's.
+  *Built (wave 4):* `tests/test_series_page.py`, `SeriesPage.test.tsx`. Left: "usually with", which needs a meeting's attendees (P17).
 - [x] **31 Not now in the menu**, with its consequence; the 7.6 rule: a second answer stays a visible button, a
   postponement goes in the menu, held lines may show two buttons, every other row one. *Built (phase B):* `web/src/shell/HeldLines.test.tsx` (one button, Not now in the menu with what it does, the toast and its Undo), `tests/test_rule_review.py::test_undoing_not_now_brings_the_line_back_at_once_and_it_says_when_it_would_return`, and the 7.6 rule is written into the design. *Left for later:* no other "later" exists on Today yet to move into a menu; each new one follows the same pattern.
 - [x] **32 Copy tables**: a Message | Table switch shows the table before copying; "Your update"/"Your answer" last and
@@ -1890,7 +1910,7 @@ From the original designer's lessons of 2026-10-14:
   primary opens the waiting items; a to-do that waits on something says what (the hold's own words) but is not linked to
   the question it depends on, because no record ties an action to a question (a design and ops question for the main
   session).
-- [ ] **Completed is a place, not a deletion** (lesson 6): a project whose status means done shows in a Completed group at
+- [x] **Completed is a place, not a deletion** (lesson 6): *Built (wave 4):* `Projects.test.tsx`, `tests/test_record_page.py`. a project whose status means done shows in a Completed group at
   the bottom of the project list, with its original program kept as a label. "Remove from the list" stays a separate act.
   The same grouping on a published portfolio page is the project management pack's (C2), through the publisher.
 - [ ] **A date move isn't news** (lesson 5): the history shown to readers (a record's activity, a published page) leaves
@@ -1921,10 +1941,15 @@ From the original designer's lessons of 2026-10-14:
 - [ ] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
   Sources shows on a source's row when its mail couldn't be sorted and why (from L0). Waiting to go out is a designed screen with its empty
   state.
-- [ ] **Records:** the Projects table and the People table with detail panes; record pages; forms in drawers. The
+- [x] **Records:** the Projects table and the People table with detail panes; record pages; forms in drawers. *Built (wave 4):*
+  `Projects.test.tsx`, `People.test.tsx`, `RecordPageRecords.test.tsx`. The
   synced folder lives only in Settings.
 - [ ] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
+  *Built (wave 3):* nav, saved as made with Undo, "Changed · Reset", help beside the field, `Settings.test.tsx`, `shell.spec.ts`. Left: the contrast warning in Appearance and the pickers for money and dates, to check and finish in wave 6.
+- [x] **Which model does what** (P27; owner, 2026-10-19): each kind of work's model, a second try on a stronger one,
+  rules that send hard work up first, and suggestions from the measurements, each applied on the person's click.
+  *Built:* `AiRouting.test.tsx`, `tests/test_ai_routing_settings.py`, `tests/test_ai_suggest.py`.
 - [x] **Add an account in Settings, in place** (owner, 2026-10-15; design 7.16): the button opens only the AI account
   form (service, key, models, what it is for) inside Settings, never the setup guide. "What it is for" offers the
   assistant's work or a backup for it, so a backup is set in the same form (checked first, as "Use as backup" is).
@@ -2050,6 +2075,7 @@ From the original designer's lessons of 2026-10-14:
   management pack (C2).
 - [ ] **The obvious next steps on screen** (L3b): "Add a new person" in the who-is-this chooser, "Add a project",
   "It's part of" and "Not a project", and the other one-click offers, in the row's menu or as its primary.
+  *Built:* "Add a person…" in every person picker (P13, `NextSteps.test.tsx`) and "Add a project…" when filing (P14, `Unfiled.test.tsx`). Left: "It's part of" and "Not a project" as one-click offers.
 - [ ] **The app's own kit, offered where it's wanted** (owner, 2026-10-13: "i dont want to see these fake plugins"): the
   add-ons that come with the app (the define-your-own kit and the example) no longer show in setup or on the Add-ons
   screen while off. The kit is offered where a person asks for kinds of items of their own (Ask, the record forms),
@@ -2145,6 +2171,25 @@ S1. **Promises, and how they end:**
 - [ ] **A first success in five minutes:** the walkthrough connects one mailbox and an AI account, looks back over the
   last two weeks of the person's own mail (estimate first), and shows a handful of real open promises with one follow-up
   ready, before any project, area, pack or extra account is asked about.
+- [ ] **An outage is not a failure** (moved from phase E's governor, 2026-10-19; design 6.32): work waits for the network,
+  a run that did no work isn't an attempt and costs nothing against the request, a cut-off run is never "couldn't
+  finish". *In progress.*
+- [ ] **The coverage line on Today** (designer F4, F9): what was read and when, "couldn't read" and "nothing new" in
+  different words, a source failed longer than its usual gap as a line for the person, an honest empty Today.
+  *In progress.*
+- [ ] **A rule's check runs before the change applies** (moved from phase E, 2026-10-19): today a rule's check runs after
+  the change is written and is only counted (`engine/stages.py` `output_check_ran`); it moves into the applier, and a
+  failing check holds the change (an outward act is refused). Needed before S1b.
+- [ ] **No close goes unseen, and records join by id** (design 6.32): every close by a rule or the assistant that the
+  person didn't see is counted and reviewable; anything that names a record to follow holds its id.
+- [ ] **A newly added source is taken in quietly** (designer F6): one summary line and a list to review, every open item
+  followed whatever its age.
+- [ ] **"Missed one"** (designer F5) wherever the person is looking, the evening wrap-up included, accepting a plain sentence.
+- [ ] **A request's spending as a range** (designer F14): the estimate covers the whole request with its retries and the
+  stronger model, stops at the upper figure, outage retries are free, and the finished item shows what was spent.
+- [ ] **The gate week's instruments** (design 6.32 measures): silent closes, missed out of present (against the owner's
+  own list), wrong endings, Missed-one per week, the replay set.
+
 S1b. **Acting for you, after your yes** (owner, 2026-10-17: "if we can have the app actually able to do mail/calendar
 management (not just read only) lets do it"):
 - [ ] **The publisher, brought forward from phase C4:** every outward act is shown as its exact content and target
@@ -2604,7 +2649,8 @@ After the packs, beside real use (owner, 2026-10-12). None of it is needed for t
 
 ## Phase D: owner validation and real use
 
-Real use itself starts at the end of phase L-core; this phase is the sign-off once the packs are in.
+The owner's real use starts once the writing pack is complete (owner, 2026-10-19); this phase is the sign-off once the
+packs are in.
 
 **Exit test:** the owner's own judgment, on dates the owner sets: a week of real notes, mail and pack work saved
 time, nothing went out without approval, a backup succeeded, and the repeat-correction rate fell over the weeks of use.
@@ -2639,10 +2685,10 @@ Order by what protects real data first, then by what the packs ask for:
 - [ ] **"Which team is <name> on?" asked once**, with the scope resolver (moved from L7, decisions 2026-10-16): when the
   resolver needs a team the person on file doesn't have, one question to the person, never repeated for them; the
   answer sets the team with Undo. *Today:* a person with no team counts as outside the tracked area.
-- [ ] **A rule's check that fails on an output** runs before the change applies: one return to the assistant with the
+- [ ] *(Moved to phase S1, 2026-10-19.)* **A rule's check that fails on an output** runs before the change applies: one return to the assistant with the
   rule's guidance, then a hold for the person when the output reaches someone, as lints do (decisions, 2026-10-16).
   *Today:* checks run after the change applies and a failure only counts.
-- [ ] **The governor:** stale-item sweeps, outage handling, `sync.sources` (sources above a level encrypted or left out of the synced folder), the scheduled export with its remote; restore to a point in
+- [ ] **The governor:** (outage handling moved to phase S1, 2026-10-19) stale-item sweeps, outage handling, `sync.sources` (sources above a level encrypted or left out of the synced folder), the scheduled export with its remote; restore to a point in
   time (a single record comes in phase L).
   Outage handling includes a draft cut off at the output limit whose continuation call finds no network: today it is
   held with a note; it should wait for the network like any run.
@@ -2656,12 +2702,15 @@ Order by what protects real data first, then by what the packs ask for:
   in any input proposes the role change as a system op, effective that day (the original designer's lessons, 2026-10-14,
   lesson 1). Its learning pair is in L4.
   Dependencies, baselines and RAID moved to the project management pack (C2).
-- [ ] **The Monday briefing sent to the person** (owner, 2026-10-13), and a morning summary if they want one: to a
+- [ ] **The Monday briefing sent to the person** (owner, 2026-10-13; building it in the app is phase S2, this is sending it), and a morning summary if they want one: to a
   notification target, with content only where the target is allowed for the data level (7.19), counts otherwise.
 - [ ] Native AI adapters and reproducible runs (6.16).
 - [ ] **M0, the desktop installer:** no Python, uv, Node or terminal; it updates itself.
 
 ## Publish 1.0
+
+1.0 is a moving target until the owner finalizes scope (owner, 2026-10-19): every plugin pack is designed before
+plugin API 1.0, so the API holds the base any pack could need. The items below are the release mechanics.
 
 - [ ] Self-check against the private workspace (`cockpit selfcheck --workspace <path>`).
 - [ ] A fresh repository with one starting commit, under Apache-2.0; secret scanning on.
