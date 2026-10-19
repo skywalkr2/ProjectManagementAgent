@@ -279,7 +279,9 @@ test.describe("screen use and the shell", () => {
       // The cursor starts in the screen's first field, where a shortcut key would type; wait for it to land there (the
       // screen focuses its field once its data has loaded), then leave the field.
       await expect
-        .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
+        .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")), {
+          timeout: 15_000, // the screen loads its accounts and models before it focuses; a busy server takes longer
+        })
         .toBe(true);
       await main.getByRole("heading", { level: 2, name: "Your AI account" }).click();
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
