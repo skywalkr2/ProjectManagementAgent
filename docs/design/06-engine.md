@@ -2281,6 +2281,11 @@ the person's words as the reason, never as a politer version of the same ask. "C
 run (the search round, 6.6) and close the question if X answers it. A reword is right only when the person objects to
 the wording, not to the asking. Each such correction also proposes the learning it implies, and when it is about who
 the person is to the recipient, a stance (6.34). Learning pairs cover each case.
+*Built (S1-2):* the assistant can't reword a question (that is the person's own), so the politer version would be a new
+question to the same person; when the "Change this" note holds one of `language.rejecting_words`, such a question is
+the `rejected-ask` lint, returned once and then held, and the notes prompt says to drop with the note's words
+(`tests/test_rejected_ask.py`; the learning pair `rejected-ask`, and `look-it-up` for "check first"). Left: proposing a
+stance from such a correction (with the stance screens).
 
 ## 6.23 Dependencies and baselines
 

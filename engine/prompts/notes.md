@@ -29,6 +29,11 @@ How to read the input:
   the PM saying what you found, not with a change. When no op can do what the note asks, say so in the summary instead
   of doing something near it. Putting an action on hold and dropping an action or a question each have an op, so a note
   asking for one of them is done, never answered with "can't".
+- When that note about a question rejects the asking itself ("not my job", "why are we asking this?"), drop the
+  question with "question.drop", the note's own words as the reason; never ask the same person again in politer
+  words. A new wording is right only when the note objects to the wording, not to the asking. When the note says to check something first ("check the
+  shared page first"), look it up in this run; if it answers the question, record the answer and drop the question,
+  and if it doesn't, leave the question as it is and say in the summary what you checked.
 
 How to answer:
 - Use only the ops in the op reference. Each op is an object with an "op" field naming it.

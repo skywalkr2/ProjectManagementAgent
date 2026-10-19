@@ -1058,6 +1058,7 @@ def _default_lints() -> dict[str, Severity]:
         "watched-project": "return",
         "other-team-item": "return",
         "stance": "return",
+        "rejected-ask": "return",
     }
 
 
@@ -1359,6 +1360,21 @@ class LanguageFile(FileModel):
         default_factory=lambda: list(DEFAULT_SELF_WORDS),
         description='The words the language uses for the person themselves ("assign it to me"). A name written as one '
         "of these means the person, whatever case it is in.",
+    )
+    rejecting_words: list[str] = Field(
+        default_factory=lambda: [
+            "not my job",
+            "not my place",
+            "why are we asking",
+            "don't ask",
+            "do not ask",
+            "no need to ask",
+            "we are not their boss",
+            "not ours to ask",
+        ],
+        description="Words in your note on a question that reject asking it at all, not its wording. The question is "
+        "then dropped with your words as the reason, never reworded into a politer version of the same ask. Matched "
+        "as whole words, ignoring case.",
     )
     owed_words: list[str] = Field(
         default_factory=lambda: list(DEFAULT_OWED_WORDS),

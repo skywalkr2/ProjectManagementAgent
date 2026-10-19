@@ -1,0 +1,64 @@
+id: rejected-ask
+title: A question the person rejects the asking of is dropped, and the same kind of ask isn't made again
+skills: [use-lesson, no-repeat-question]
+first:
+  received: '2026-10-10'
+  project: PRJ-1
+  pasted: |-
+    From: Theo Brandt
+
+    The cover now sets the title in two typefaces instead of one.
+  wrong:
+    summary: Asked Theo why the cover uses two typefaces.
+    ops:
+    - op: question.add
+      to: PER-3
+      title: Why does the cover now use two typefaces?
+      text: The cover changed from one typeface to two.
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The cover sign-off
+      project: PRJ-1
+      evidence:
+        quote: The cover now sets the title in two typefaces instead of one
+  correction:
+    kind: dropped
+    note: Not my job to ask Theo why. He picks the typefaces; I only need to know when the cover is ready.
+    id: '@question'
+  expect_proposal:
+  - op: lesson.add
+    text_has: [typeface|design|how]
+  keep: true
+later:
+  received: '2026-10-17'
+  project: PRJ-1
+  pasted: |-
+    From: Theo Brandt
+
+    The spine now uses a narrower typeface so the title fits on one line.
+  expect:
+  - op: fact
+    text_has: [spine]
+  forbid:
+  - op: question.add
+    to: PER-3
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Design choices are the designer's; don't ask them to explain.
+    topic: asking about design choices
+    ops:
+    - op: lesson.add
+      text: Don't ask the cover designer to explain design choices; record them and ask only about when work is ready.
+      guard: When a designer reports a design choice, record it as a fact; a question to them is only about dates.
+      evidence:
+        quote: He picks the typefaces; I only need to know when the cover is ready
+  later:
+    summary: The spine typeface changed so the title fits on one line.
+    ops:
+    - op: fact
+      text: The spine now uses a narrower typeface so the title fits on one line.
+      project: PRJ-1
+      evidence:
+        quote: The spine now uses a narrower typeface so the title fits on one line

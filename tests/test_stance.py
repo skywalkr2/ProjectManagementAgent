@@ -10,7 +10,10 @@ import pytest
 
 from engine.scope import stance_of
 from engine.storage import WriteContext
-from tests.test_scope_slice import PLAIN, env, from_input, from_note, outsider, pm_of, problems, question  # noqa: F401
+from tests import test_scope_slice
+from tests.test_scope_slice import PLAIN, from_input, from_note, outsider, problems, question
+
+env = test_scope_slice.env  # the scope tests' workspace fixture
 
 _TEST = WriteContext(actor="pm", trust="trusted", op="test.stance")
 

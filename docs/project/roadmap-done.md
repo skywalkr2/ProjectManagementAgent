@@ -1809,6 +1809,9 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **A rejected ask is dropped, not reworded** (the designer's lessons, 2026-10-19; design 6.22): a correction
+  that rejects the asking ends as `question.drop` with the person's reason; "check X first" checks X in that run and
+  closes the question when X answers it. One learning pair for each. *Built (S1-2):* `tests/test_rejected_ask.py`, the pairs `rejected-ask` and `look-it-up` (`tests/test_pairs.py`). Left: a stance proposed from the correction, with the stance screens.
 - [x] **Promises both ways** from everything that comes in, the person's own sent mail and notes included (the sent
   folder is offered as a source when a mailbox is connected): "I'll send it Friday" is the person's to-do; "they'll get
   back to me Tuesday" is a waiting-on with its date. A message's own new text is separated from its quoted history and signature first

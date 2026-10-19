@@ -563,6 +563,19 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     lint(i, found_name, found)
                 for found_name, found in scope.stance_findings(op, view, ctx.people, ctx.cfg.steward):
                     lint(i, found_name, found)
+            if (
+                isinstance(op, QuestionAddOp)
+                and about_record is not None
+                and about_record.kind == "question"
+                and ctx.people.resolve(op.to).person == about_record.data.get("to")
+                and _rejects_asking(ctx)
+            ):
+                lint(
+                    i,
+                    "rejected-ask",
+                    "the note rejects asking this at all, not its wording: drop the question with question.drop and "
+                    "the note's own words as the reason, instead of asking them again in other words",
+                )
         # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
         # severity the workspace sets, or sets for this project's work (never a refusal by default)
         if ctx.actor != "pm":
@@ -1454,6 +1467,13 @@ def _follow_on_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         for i, op in enumerate(cs.ops)
         if (why := follow_on.reach_problem(view, ctx.cfg, request.data, op, ctx.people)) is not None
     ]
+
+
+def _rejects_asking(ctx: Context) -> bool:
+    """Whether the words handed in reject asking a question at all (the workspace's `rejecting_words`), not only how
+    it is worded."""
+    said = f"{ctx.inputs.raw_input} {ctx.inputs.note}"
+    return any(scope.has_word(said, word) for word in ctx.cfg.language.rejecting_words if word.strip())
 
 
 def origin_of(ctx: Context) -> dict[str, Any]:

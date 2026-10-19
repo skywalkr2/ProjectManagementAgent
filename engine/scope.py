@@ -92,7 +92,7 @@ def _owed(op: ActionAddOp, view: Any, people: Any, language: Any) -> bool:
     if any(people.resolve(name).person == people.pm for name in op.promised_to):
         return True
     quote = op.evidence.quote
-    if any(_has_word(quote, word) for word in language.owed_words if word):
+    if any(has_word(quote, word) for word in language.owed_words if word):
         return True
     pm = people.records.get(people.pm, {})
     names = [pm.get("full_name"), pm.get("first_name"), *(pm.get("aliases") or [])]
@@ -114,7 +114,8 @@ def _addressed(quote: str, name: str, request_words: list[str]) -> bool:
     return re.search(pattern, quote, re.IGNORECASE) is not None
 
 
-def _has_word(text: str, word: str) -> bool:
+def has_word(text: str, word: str) -> bool:
+    """Whether a word or phrase is in the text as whole words, ignoring case."""
     return re.search(r"(?<!\w)" + re.escape(word.strip()) + r"(?!\w)", text, re.IGNORECASE) is not None
 
 

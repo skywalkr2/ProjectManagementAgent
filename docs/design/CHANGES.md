@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 102. A rejected ask is dropped (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Corrections (6.22) | A note rejecting a question could come back as the same ask in other words | The `rejected-ask` lint holds a new question to the same person when the note holds one of `language.rejecting_words`; the prompt says to drop with the note's words. Built: `tests/test_rejected_ask.py` |
+
 ## 101. The stance gate (2026-10-19)
 
 | Where | Before | Now |

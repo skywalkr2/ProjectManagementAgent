@@ -15,6 +15,7 @@ self_words: [me, myself, I]
 # Words in an action's quoted words that show the person owes it something when everyone it is for is on another team:
 # a request addressed to them.
 owed_words: [you, your, please send, me]
+rejecting_words: [not my job, not my place, why are we asking, don't ask, do not ask, no need to ask]
 # Words that, right after the person's name or their team's, make the words a request addressed to them.
 request_words: [can, could, will, would, please, need to, needs to, should, must]
 # Lines an item's title is never taken from: greetings, quoted headers, sign-offs.
