@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 151, each in exactly one batch; 203 done items are in `roadmap-done.md`.
+- **Open items:** 150, each in exactly one batch; 204 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -59,7 +59,7 @@ keep each item's full text.
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (6 open items; size: about two and a half days)
+2. **S1-2 What the person owes and misses** (5 open items; size: about two and a half days)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
     - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
@@ -564,13 +564,6 @@ S1. **Promises, and how they end:**
   with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Left: records made from a limited source
   carrying the limit (a fact quoted later), and a packet leaving a limited source out once a task drafts to a named
   recipient.
-- [ ] [S1-2] **What changed since yesterday** (the functional designer's F2, 2026-10-19; added when this plan was cut
-  into batches): the gate's first slice names one plain "what changed since yesterday" line, kept in the first slice even
-  as one line because it is how the person notices a miss, and no item stood for it. Each line says what the assistant
-  did and why, in its own voice, and anything it closed, moved or merged unseen is one step away: the record, its
-  evidence and its Undo (the designer's notes, 2026-10-19; design 6.35). Exit: a journey test reads the line after a
-  day in which promises arrived, closed and moved, and opens an unseen close from it. The morning brief (S2) builds on
-  it later.
 - [ ] [S1-2] **A stance per person** (the designer's lessons, 2026-10-19; design 6.34): the stance field from a value list
   with meanings (I manage them, I work alongside them, I report to them, I only watch; `track_only` becomes the last),
   `people.default_stance` (alongside) and `steward.tracks` (dates and decisions) as settings with schema, defaults and

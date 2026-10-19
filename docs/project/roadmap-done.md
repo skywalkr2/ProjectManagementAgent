@@ -1809,6 +1809,13 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **What changed since yesterday** (the functional designer's F2, 2026-10-19; added when this plan was cut
+  into batches): the gate's first slice names one plain "what changed since yesterday" line, kept in the first slice even
+  as one line because it is how the person notices a miss, and no item stood for it. Each line says what the assistant
+  did and why, in its own voice, and anything it closed, moved or merged unseen is one step away: the record, its
+  evidence and its Undo (the designer's notes, 2026-10-19; design 6.35). Exit: a journey test reads the line after a
+  day in which promises arrived, closed and moved, and opens an unseen close from it. The morning brief (S2) builds on
+  it later. *Built (S1-2):* `tests/test_since_yesterday.py`, `SinceYesterday.test.tsx`, `TodaySince.test.tsx`. Left: the list reads every changeset on each Today refresh (measure it in the gate week); holds, facts and calendar changes aren't listed; the screen isn't in the browser width checks yet.
 - [x] **From three weeks of running** (the designer's S1-1 notes, 2026-10-19; design 6.33): on hold until a
   trigger, taken off hold with a new date in one step; a promise due at a meeting follows the meeting; the chase clock
   for waiting-ons (14 days undated, 7 days before a date); dates read against the message's own day and zone; one
