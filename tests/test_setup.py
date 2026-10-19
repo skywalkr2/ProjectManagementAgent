@@ -209,8 +209,11 @@ def test_an_ai_account_keeps_a_pasted_key_on_this_computer(tmp_path):
     assert key_file.read_text().strip() == "not-a-real-key"
     assert stat.S_IMODE(key_file.stat().st_mode) == 0o600
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
-    twice = c.post(f"{api}/ai/accounts", json={**account, "fingerprint": fingerprint})
+    twice = c.post(f"{api}/ai/accounts", json={**account, "fingerprint": fingerprint, "key": "another-key"})
     assert twice.status_code == 409
+    # The refused second add left the kept key as it was and nothing else behind.
+    assert key_file.read_text().strip() == "not-a-real-key"
+    assert sorted(p.name for p in key_file.parent.iterdir()) == ["my-account"]
     # Undo posts the values from before: the account goes and the tier gets its old account back.
     undo = {"changes": {}, "reset": [], "fingerprint": fingerprint}
     for change in done.json()["changes"]:
@@ -620,7 +623,9 @@ def test_an_account_is_listed_changed_and_removed_with_undo(tmp_path):
         json={"key": "second-key", "models": {"everyday": "b-model"}, "fingerprint": added["fingerprint"]},
     )
     assert changed.status_code == 200, changed.text
-    assert (ws.private_dir / "keys" / "mine").read_text().strip() == "second-key"
+    # The new key is kept under a name of its own, so Undo's earlier reference still finds the first key.
+    assert (ws.private_dir / "keys" / "mine-2").read_text().strip() == "second-key"
+    assert (ws.private_dir / "keys" / "mine").read_text().strip() == "first-key"
     assert load_config(ws.config_dir, env={}).ai.providers["mine"].models == {"everyday": "b-model"}
     removed = c.post(f"{api}/ai/accounts/mine/remove", json={"fingerprint": changed.json()["fingerprint"]})
     assert removed.status_code == 200, removed.text

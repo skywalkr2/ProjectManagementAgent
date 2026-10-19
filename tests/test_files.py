@@ -113,3 +113,36 @@ def test_a_kind_never_widens_the_accepted_types(env):
     with pytest.raises(StoreError, match="can't be added"):
         add_file(store, cfg, b"<svg/>", name="x.svg", media_type="image/svg+xml", file_kind="narrow")
     assert add_file(store, cfg, PNG, name="x.png", media_type="image/png", file_kind="narrow").data["size"] == len(PNG)
+
+
+@pytest.mark.parametrize(
+    "name, fallback",
+    [
+        ("notes.txt", "notes.txt"),
+        ("日本語の名前.txt", ".txt"),
+        ("日本語", "file"),
+        ('a"b\\c;d\x01e\x7ff.txt', "abcdef.txt"),
+        ("café menu.txt", "caf menu.txt"),
+    ],
+)
+def test_download_names_make_a_valid_header_for_any_letters(env, name, fallback):
+    from urllib.parse import quote
+
+    from api.app import create_app
+
+    ws, cfg, store = env
+    store.close()
+    token = "test-token"
+    client = TestClient(create_app(ws, cfg, token, start_worker=False))
+    client.headers["Authorization"] = f"Bearer {token}"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    body = b"plain words"
+    added = client.post(f"{api}/files", params={"name": name}, content=body, headers={"Content-Type": "text/plain"})
+    assert added.status_code == 200, added.text
+    stored = added.json()["name"]
+    download = client.get(f"{api}/files/{added.json()['id']}/content")
+    assert download.status_code == 200
+    assert download.content == body
+    header = download.headers["content-disposition"]
+    assert header == f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(stored, safe='')}"
+    header.encode("ascii")

@@ -3,6 +3,7 @@ computer, and the setting holds only where it is kept. A hosted app refuses it, 
 ledger or an answer."""
 
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -72,7 +73,7 @@ def test_a_pasted_password_is_kept_in_a_private_file_and_only_the_reference_is_w
     assert TYPED not in c.get(f"{api}/settings").text
 
 
-def test_a_changed_password_replaces_the_kept_one_and_a_reference_the_person_names_is_left_as_it_is(tmp_path):
+def test_a_changed_password_is_kept_beside_the_old_one_and_a_reference_the_person_names_is_left_as_it_is(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
@@ -86,8 +87,9 @@ def test_a_changed_password_replaces_the_kept_one_and_a_reference_the_person_nam
         json={"secrets": {"password": again}, "fingerprint": added.json()["fingerprint"]},
     )
     assert changed.status_code == 200, changed.text
-    kept = ws.private_dir / "keys" / secret_name("source", "work-mail", "password")
-    assert kept.read_text().strip() == again
+    first = ws.private_dir / "keys" / secret_name("source", "work-mail", "password")
+    kept = first.with_name(first.name + "-2")
+    assert kept.read_text().strip() == again and first.read_text().strip() == TYPED
     source = next(s for s in sources(ws) if s.id == "work-mail")
     assert source.settings["host"] == "mail.example.com" and source.settings["password"] == f"file:{kept.resolve()}"
     # Giving where it is kept instead changes the reference, and says so on the list.
@@ -182,3 +184,44 @@ def test_keeping_a_secret_names_its_file_safely_and_knows_its_own(tmp_path):
     assert kept_here(ws, reference) and not kept_here(ws, "file:/somewhere/else") and not kept_here(ws, None)
     with pytest.raises(Exception, match="lowercase letters"):
         keep_secret(ws, "../escape", TYPED)
+
+
+def _added_with_password(c, api):
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    added = c.post(
+        f"{api}/watch/sources",
+        json={**new_source(mailbox_kind(c, api)), "secrets": {"password": TYPED}, "fingerprint": fingerprint},
+    )
+    assert added.status_code == 200, added.text
+    return added.json(), fingerprint
+
+
+def test_a_refused_save_leaves_the_kept_password_and_the_settings_as_they_were(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    _, stale = _added_with_password(c, api)
+    before = next(s for s in sources(ws) if s.id == "work-mail").settings["password"]
+    refused = c.post(f"{api}/watch/sources/work-mail", json={"secrets": {"password": "other"}, "fingerprint": stale})
+    assert refused.status_code == 409
+    assert next(s for s in sources(ws) if s.id == "work-mail").settings["password"] == before
+    kept = sorted(p.name for p in (ws.private_dir / "keys").iterdir())
+    assert kept == [secret_name("source", "work-mail", "password")]
+    assert (ws.private_dir / "keys" / kept[0]).read_text().strip() == TYPED
+
+
+def test_undoing_a_password_change_brings_back_the_password_that_worked(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    added, _ = _added_with_password(c, api)
+    before = next(s for s in sources(ws) if s.id == "work-mail").settings["password"]
+    changed = c.post(
+        f"{api}/watch/sources/work-mail", json={"secrets": {"password": "other"}, "fingerprint": added["fingerprint"]}
+    )
+    assert changed.status_code == 200, changed.text
+    undo = {"changes": {}, "reset": [], "fingerprint": changed.json()["fingerprint"]}
+    for change in changed.json()["changes"]:
+        undo["changes"][change["key"]] = change["before"]
+    assert c.post(f"{api}/settings", json=undo).status_code == 200
+    restored = next(s for s in sources(ws) if s.id == "work-mail").settings["password"]
+    assert restored == before
+    assert Path(restored.removeprefix("file:")).read_text().strip() == TYPED

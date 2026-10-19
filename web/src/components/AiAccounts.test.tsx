@@ -427,6 +427,34 @@ test("Change models edits the ids it has, can add one for harder work, and Cance
   expect(await screen.findByText("Changed the models of Trial account.")).toBeInTheDocument();
 });
 
+test("Change models saves with the fingerprint it opened with: a change made since is refused, the typed ids stay, and saving again is the person's own choice", async () => {
+  const user = userEvent.setup();
+  let fingerprint = "fp-1";
+  const calls = api({
+    "GET settings": () => ({ fingerprint, items: [LIMIT] }),
+    "POST ai/accounts/trial": (sent) => ((sent as { fingerprint: string }).fingerprint === fingerprint ? SAVED : new Refuse(409, "The settings changed since you opened them. Look again, then save.")),
+  });
+  open();
+  await screen.findByText("Trial account");
+  await waitFor(() => expect(calls.some((c) => c.route === "GET settings")).toBe(true));
+  const before = calls.filter((c) => c.route === "GET settings").length;
+  await menu(user, "Trial account", "Change models");
+  const everyday = await screen.findByLabelText("Model for everyday work");
+  // Something else changed the settings after the form opened and read them.
+  await waitFor(() => expect(calls.filter((c) => c.route === "GET settings").length).toBeGreaterThan(before));
+  fingerprint = "fp-2";
+  await user.clear(everyday);
+  await user.type(everyday, "model-z");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("This was changed since you opened it. What you typed is still here; check it against what is saved now, then save again.")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "POST ai/accounts/trial").map((c) => (c.body as { fingerprint: string }).fingerprint)).toEqual(["fp-1"]);
+  expect(screen.getByLabelText("Model for everyday work")).toHaveValue("model-z");
+  await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled());
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("Changed the models of Trial account.")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "POST ai/accounts/trial").map((c) => (c.body as { fingerprint: string }).fingerprint)).toEqual(["fp-1", "fp-2"]);
+});
+
 test("a backup that gains a harder model offers to move its harder work there, checked first, in one click", async () => {
   const user = userEvent.setup();
   const calls = api({

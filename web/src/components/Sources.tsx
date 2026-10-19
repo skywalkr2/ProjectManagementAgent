@@ -298,7 +298,7 @@ type Mode = { type: "add"; plugin: string | null } | { type: "change"; source: S
 function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed: boolean; onClose: () => void }) {
   const { t, tn, has } = useWords();
   const afterSave = useAfterSave();
-  const fingerprint = useFreshFingerprint();
+  const fresh = useFreshFingerprint();
   const client = useQueryClient();
   const base = useId();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -325,10 +325,26 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [pasted, setPasted] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  // The settings as they were when the form opened: what the typed values were made from. A save sends this one, so a
+  // change made meanwhile is refused rather than overwritten; it moves on only after the person was told.
+  const [opened, setOpened] = useState<string | null>(null);
 
   useEffect(() => {
     heading.current?.focus();
     heading.current?.scrollIntoView?.({ block: "nearest" });
+  }, []);
+
+  useEffect(() => {
+    let live = true;
+    fresh().then(
+      (fp) => live && setOpened((kept) => kept ?? fp),
+      (err) => live && setProblem(problemText(err, t)),
+    );
+    return () => {
+      live = false;
+    };
+    // Read once, when the form opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // A source's own settings are read from the saved settings; without them only its name, schedule and on/off can change.
@@ -368,14 +384,14 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
 
   const everyOptions = [...new Set([...EVERY_CHOICES, Number(every)])].filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
   const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
-  const ready = kind !== undefined && !busy && bad.length === 0;
+  const ready = kind !== undefined && !busy && bad.length === 0 && opened !== null;
 
   const submit = async () => {
-    if (!ready || !kind) return;
+    if (!ready || !kind || opened === null) return;
     setBusy(true);
     setProblem("");
     try {
-      const fp = await fingerprint();
+      const fp = opened;
       const minutes = Number(every);
       const name = label.trim();
       if (mode.type === "add") {
@@ -403,8 +419,18 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
       }
       props.onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
-      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      if (err instanceof ApiError && err.status === 409) {
+        // Said once, with what was typed kept; the next save is the person's own, on what is saved now.
+        void client.invalidateQueries({ queryKey: ["settings"] });
+        setProblem(t("settings.changed_since_opened"));
+        try {
+          setOpened(await fresh());
+        } catch {
+          // Without a current fingerprint the form can't save, and the next look at the settings finds the cause.
+        }
+      } else {
+        setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      }
       setBusy(false);
     }
   };

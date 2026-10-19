@@ -25,6 +25,7 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 from pydantic import ValidationError
 
+from engine.annotations import local_annotations
 from engine.config.stages import validate_rules, validate_stages
 from engine.ops import OP_MODELS, TIERS
 from engine.plugin_api import (
@@ -1563,7 +1564,7 @@ class PluginHost:
                 from engine.sync import check_layout
 
                 check_layout(model.layout, model, {**REGISTRY, **registrar.records})
-            if "stage" in vars(model).get("__annotations__", {}):
+            if "stage" in local_annotations(model):
                 raise ValueError("the stage field belongs to the core; record types may not redefine it")
         for op in registrar.ops.values():
             for kind, fields in op.writes.items():

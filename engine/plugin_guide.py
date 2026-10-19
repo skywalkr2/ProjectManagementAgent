@@ -11,12 +11,15 @@ import dataclasses
 import inspect
 import re
 import sys
+import types
 import typing
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
+
+from engine.annotations import local_annotations
 
 GUIDE_PATH = Path(__file__).resolve().parents[1] / "docs" / "plugin-guide.md"
 
@@ -25,17 +28,36 @@ GUIDE_PATH = Path(__file__).resolve().parents[1] / "docs" / "plugin-guide.md"
 
 
 def _type(annotation: Any) -> str:
-    """A readable type: `list[str]`, `str | None`, `Literal['a', 'b']`."""
-    if isinstance(annotation, str):
-        text = annotation
-    elif isinstance(annotation, type) and not typing.get_args(annotation):
-        text = annotation.__name__
-    else:
-        text = repr(annotation)
+    """A readable type, the same on every interpreter: `list[str]`, `str | None`, `Literal['a', 'b']`."""
+    return _strip_modules(_render_type(annotation))
+
+
+def _strip_modules(text: str) -> str:
     text = re.sub(r"<class '([\w.]+)'>", r"\1", text)
-    text = re.sub(r"\b(?:typing|collections\.abc|engine(?:\.\w+)*|pydantic(?:\.\w+)*)\.", "", text)
-    text = text.replace("NoneType", "None").replace("Annotated[", "Annotated[")
-    return text
+    return re.sub(r"\b(?:typing|collections\.abc|engine(?:\.\w+)*|pydantic(?:\.\w+)*)\.", "", text)
+
+
+def _render_type(annotation: Any) -> str:
+    """One spelling per type: unions as `X | None`, generics as `name[args]`, classes by bare name."""
+    if isinstance(annotation, str):
+        return annotation
+    if annotation is None or annotation is type(None):
+        return "None"
+    if annotation is Ellipsis:
+        return "..."
+    origin = typing.get_origin(annotation)
+    args = typing.get_args(annotation)
+    if origin is typing.Union or origin is types.UnionType:
+        return " | ".join(_render_type(a) for a in args)
+    if origin is typing.Literal:
+        return "Literal[" + ", ".join(repr(a) for a in args) + "]"
+    if origin is typing.Annotated:
+        return "Annotated[" + ", ".join([_render_type(args[0]), *(repr(a) for a in args[1:])]) + "]"
+    if origin in (list, dict, set, frozenset, tuple, type) and args:
+        return f"{origin.__name__}[" + ", ".join(_render_type(a) for a in args) + "]"
+    if origin is None and isinstance(annotation, type):
+        return annotation.__name__
+    return repr(annotation).replace("NoneType", "None")
 
 
 def _doc(obj: Any) -> str:
@@ -198,7 +220,7 @@ def build() -> str:
                 ["Class variable", "Type", "What it is"],
                 [
                     [f"`{name}`", _type(ann), doc]
-                    for name, ann in api.Record.__annotations__.items()
+                    for name, ann in local_annotations(api.Record).items()
                     if "ClassVar" in str(ann)
                     for doc in [_attribute_docs(api.Record).get(name, "")]
                 ],

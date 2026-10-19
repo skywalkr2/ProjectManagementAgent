@@ -488,8 +488,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 raise HTTPException(status_code=400, detail="Type or paste it, or give where it is kept instead.")
             if _nested(supplied, field):
                 raise HTTPException(status_code=400, detail="Type it or give where it is kept, not both.")
-            name = setup.secret_name("source", source_id, field)
-            _put(merged, field, f"file:{setup.secret_path(ws, name).resolve()}")
+            name = setup.unused_secret_name(ws, setup.secret_name("source", source_id, field))
+            _put(merged, field, setup.secret_reference(ws, name))
             to_keep[name] = value
         return merged, to_keep
 
@@ -709,8 +709,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         host = urlsplit(entry.release.url).hostname if entry.release else None
         if not host:
             raise HTTPException(status_code=409, detail=f"{entry.name} has no release file that needs a token.")
-        name = setup.secret_name("release-token", host)
-        fresh = body.token is not None and not setup.secret_path(ws, name).exists()
+        name = setup.unused_secret_name(ws, setup.secret_name("release-token", host))
+        fresh = body.token is not None
         try:
             reference = setup.keep_secret(ws, name, body.token) if body.token else asked_reference(body.reference or "")
         except StoreError as err:
@@ -950,8 +950,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     switch_estimates: dict[tuple[Any, ...], tuple[float | None, int]] = {}
 
-    def account_plan(name: str, body: AiAccountChange) -> tuple[dict[str, Any], list[str]]:
-        """The settings an account change writes and resets, refusing what can't be done."""
+    def account_plan(name: str, body: AiAccountChange) -> tuple[dict[str, Any], list[str], tuple[str, str] | None]:
+        """The settings an account change writes and resets, refusing what can't be done, and the pasted key still
+        to keep (its name and value): nothing is written here."""
         provider = current().ai.providers.get(name)
         if provider is None:
             raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
@@ -960,11 +961,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.key and not local:
             raise HTTPException(status_code=400, detail=HOSTED_KEY)
         changes: dict[str, Any] = {}
+        pending: tuple[str, str] | None = None
         if body.key:
             try:
-                changes[f"ai.providers.{name}.auth"] = setup.keep_key(ws, name, body.key)
+                kept_as = setup.key_name(ws, name)
             except StoreError as err:
                 raise HTTPException(status_code=400, detail=str(err)) from None
+            changes[f"ai.providers.{name}.auth"] = setup.secret_reference(ws, kept_as)
+            pending = (kept_as, body.key)
         elif body.key_ref:
             changes[f"ai.providers.{name}.auth"] = body.key_ref.strip()
         reset: list[str] = []
@@ -1010,7 +1014,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     changes[f"ai.tiers.{tier}.fallback"] = kept
         if not changes and not reset:
             raise HTTPException(status_code=400, detail="Nothing to change.")
-        return changes, reset
+        return changes, reset, pending
 
     def change_account(name: str, body: AiAccountChange, *, check: bool) -> tuple[SettingsSaved, bool]:
         """Save an account change. When it switches a tier's account or model, the switch is kept, with a check to run
@@ -1018,9 +1022,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         was saved and whether a check was started."""
         from engine.ai import switch_check
 
-        changes, reset = account_plan(name, body)
+        changes, reset, pending = account_plan(name, body)
         before = current()
-        done = save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers."))
+        if pending is not None:
+            setup.keep_secret(ws, *pending)
+        try:
+            done = save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers."))
+        except HTTPException:
+            if pending is not None:
+                setup.secret_path(ws, pending[0]).unlink(missing_ok=True)
+            raise
         after = current()
         found = switch_check.switches(before, after)
         checking = check and after.dispatch.knowledge.check_on_switch
@@ -1044,7 +1055,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         from engine.ai import switch_check
         from engine.config.yaml_edit import set_key
 
-        changes, _reset = account_plan(name, body)
+        changes, _reset, _pending = account_plan(name, body)
         now = current()
         if not now.dispatch.knowledge.check_on_switch:
             return AiSwitchEstimate(offered=False)
@@ -1209,10 +1220,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         kept = None
         if body.key:
             try:
-                kept = setup.keep_key(ws, body.name, body.key)
+                kept = setup.key_name(ws, body.name)
+                provider["auth"] = setup.keep_secret(ws, kept, body.key)
             except StoreError as err:
                 raise HTTPException(status_code=400, detail=str(err)) from None
-            provider["auth"] = kept
         elif body.key_ref:
             provider["auth"] = body.key_ref.strip()
         if body.credential_expires is not None:
@@ -1237,7 +1248,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             result = save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers."))
         except HTTPException:
             if kept is not None:
-                (ws.private_dir / "keys" / body.name).unlink(missing_ok=True)
+                setup.secret_path(ws, kept).unlink(missing_ok=True)
             raise
         return saved(result)
 

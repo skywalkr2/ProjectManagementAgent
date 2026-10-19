@@ -879,6 +879,12 @@ def action_unhold_problem(view: Any, op: ActionUnholdOp) -> str | None:
     return None
 
 
+def _waits_on_nothing(view: Any, question: Any) -> bool:
+    """Whether a "Pick an owner" question's action is gone (undone), so nothing waits for its answer."""
+    resolves = question.data.get("resolves") or {}
+    return resolves.get("kind") == "owner" and view.get("action", resolves.get("action")) is None
+
+
 def question_correction_problem(ctx: Context, view: Any, op: OpModel) -> str | None:
     """Why the person's correction of a question can't apply, or None. The question must exist and still be open or
     sent; one that holds something until it is answered (who a name is, who owns an action) is answered where the item
@@ -890,7 +896,7 @@ def question_correction_problem(ctx: Context, view: Any, op: OpModel) -> str | N
         return f"there is no question {qid}"
     if found.data["status"] not in ("open", "sent"):
         return f"question {qid} is already closed"
-    if found.data.get("resolves"):
+    if found.data.get("resolves") and not (isinstance(op, QuestionDropOp) and _waits_on_nothing(view, found)):
         return f"question {qid} holds something that waits for the answer; answer it where that item waits"
     if isinstance(op, QuestionMoveOp):
         resolved = ctx.people.resolve(op.to)
@@ -2093,6 +2099,8 @@ def pick_owner(store: Store, question_id: str, person: str) -> None:
         if tx.get("person", person) is None:
             raise StoreError(f"there is no person {person}")
         a = tx.get("action", action_id)
+        if a is None:
+            raise StoreError("the action this question asked about was undone, so there is nothing to give an owner")
         tx.update("action", action_id, {"owners": [{"person": person}], "status": "open"}, w, read_version=a.version)
         tx.update("question", question_id, {"status": "answered", "answer": person}, w, read_version=q.version)
         _record_routed(
@@ -2292,16 +2300,24 @@ def _with_answers(store: Store, tx: Tx, entries: list[dict[str, Any]]) -> list[d
     for e in entries:
         if e["kind"] == "question" and not e["op"].startswith(f"{FOLD_OP}#"):
             q = tx.get("question", e["record_id"], include_deleted=True)
-            if q is not None and q.data.get("kind") == "routing":
+            if q is not None and q.data.get("kind") == "routing" and not _unanswered_owner_question(q):
                 continue
         kept.append(e)
-    records = {(e["kind"], e["record_id"]) for e in kept if e["kind"] != "question"}
+    # Only an answer to the op's own question belongs to it: an owner picked for an action this op made. An answer
+    # given for an action that existed before stays, whatever later op is undone.
+    created = {(e["kind"], e["record_id"]) for e in kept if e["kind"] != "question" and e["version"] == 1}
     seen = {e["seq"] for e in kept}
-    for kind, rid in sorted(records):
+    for kind, rid in sorted(created):
         for e in store.read().ledger(kind=kind, record_id=rid):
             if e["op"] in ANSWER_OPS and e["seq"] not in seen:
                 kept.append(e)
     return kept
+
+
+def _unanswered_owner_question(q: Any) -> bool:
+    """Whether a "Pick an owner" question is still waiting: it belongs to the one action it asks about, so undoing
+    the op that made that action takes the question away too."""
+    return (q.data.get("resolves") or {}).get("kind") == "owner" and q.data.get("status") in ("open", "sent")
 
 
 def _breaks_rules(store: Store, tx: Tx, entries: list[dict[str, Any]]) -> str | None:

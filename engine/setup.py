@@ -11,6 +11,7 @@ pasted key is kept in the private folder and referred to from `ai.yaml`, never w
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import re
@@ -437,6 +438,26 @@ def kept_here(ws: Any, reference: str | None) -> bool:
         return Path(where).expanduser().resolve().parent == (ws.private_dir / "keys").resolve()
     except OSError:
         return False
+
+
+def unused_secret_name(ws: Any, name: str) -> str:
+    """The name, or the name with the next free number, that no kept secret has yet. A pasted value is kept under a
+    name of its own, so a refused save never touches the value in use, and Undo's earlier reference still works."""
+    if not secret_path(ws, name).exists():
+        return name
+    return next(f"{name}-{n}" for n in itertools.count(2) if not secret_path(ws, f"{name}-{n}").exists())
+
+
+def secret_reference(ws: Any, name: str) -> str:
+    """The reference a setting holds for the secret kept under this name."""
+    return f"file:{secret_path(ws, name).resolve()}"
+
+
+def key_name(ws: Any, account: str) -> str:
+    """The unused name a pasted AI key for this account is kept under (see `unused_secret_name`)."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", account):
+        raise StoreError("an account's name is lowercase letters, digits and dashes")
+    return unused_secret_name(ws, account)
 
 
 def keep_key(ws: Any, account: str, key: str) -> str:

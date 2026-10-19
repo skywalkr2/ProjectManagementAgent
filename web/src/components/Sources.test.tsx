@@ -465,6 +465,42 @@ describe("a source's menu", () => {
     expect(await screen.findByText("Saved Renamed.")).toBeInTheDocument();
   });
 
+  test("a save made from a form opened before the settings changed sends the fingerprint it opened with, is refused, and keeps what was typed", async () => {
+    const user = userEvent.setup();
+    let fingerprint = "fp-1";
+    const { calls } = open([source("a", { connector: "folder", every_minutes: 60 })], [], {
+      "GET settings": () => ({ ...stored(items("folder")), fingerprint }),
+      "POST watch/sources/a": (sent) =>
+        (sent as { fingerprint: string }).fingerprint === fingerprint
+          ? SAVED([{ id: "a" }], [{ id: "a" }])
+          : new Refuse(409, "The settings changed since you opened them. Look again, then save."),
+    });
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: "Change Source a" });
+    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
+    await waitFor(() => expect(within(form).getByRole("button", { name: "Save changes" })).toBeEnabled());
+    // Another form saved a new schedule after this one opened.
+    fingerprint = "fp-2";
+    await user.clear(within(form).getByLabelText("Name"));
+    await user.type(within(form).getByLabelText("Name"), "Renamed");
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    expect(await within(form).findByRole("alert")).toHaveTextContent(
+      "This was changed since you opened it. What you typed is still here; check it against what is saved now, then save again.",
+    );
+    const sent = calls.filter((c) => c.route === "POST watch/sources/a");
+    expect(sent).toHaveLength(1);
+    expect((sent[0].body as { fingerprint: string }).fingerprint).toBe("fp-1");
+    expect(within(form).getByLabelText("Name")).toHaveValue("Renamed");
+    expect(within(form).getByLabelText("About path")).toHaveValue("inbox");
+    // Nothing was saved behind the person's back, and the form is still open.
+    expect(screen.queryByText("Saved Renamed.")).toBeNull();
+    // Saving again is the person's own choice, made after the message, and then goes through on what is saved now.
+    await waitFor(() => expect(within(form).getByRole("button", { name: "Save changes" })).toBeEnabled());
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("Saved Renamed.")).toBeInTheDocument();
+    expect(calls.filter((c) => c.route === "POST watch/sources/a").map((c) => (c.body as { fingerprint: string }).fingerprint)).toEqual(["fp-1", "fp-2"]);
+  });
+
   test("a source's author is picked from a list of the person, colleagues and teams, and saved with the source", async () => {
     const user = userEvent.setup();
     const authors: S["WatchAuthorOption"][] = [

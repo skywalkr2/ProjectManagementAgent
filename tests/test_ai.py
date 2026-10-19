@@ -358,3 +358,51 @@ def test_a_refused_connection_to_this_computer_is_a_stopped_server_not_a_lost_ne
     with pytest.raises(AiError) as listing:
         local.list_models()
     assert listing.value.kind == kind
+
+
+def _rate_limited_main_and(cfg, store, backup_price):
+    from engine.config.schema import Price
+
+    if backup_price is not None:
+        cfg.ai.prices["backup/small"] = Price(input_per_million=backup_price, output_per_million=backup_price)
+    return router_with(
+        cfg,
+        store,
+        {
+            "main": lambda r: httpx.Response(429, text="slow down"),
+            "backup": lambda r: httpx.Response(200, json=ok_body()),
+        },
+    )
+
+
+def test_a_backup_dearer_than_the_person_allowed_is_never_called(cfg, store):
+    router, seen = _rate_limited_main_and(cfg, store, backup_price=1_000_000.0)
+    with pytest.raises(AiError) as err:
+        router.call(TASK, request_id="REQ-1", spend_limit=0.25)
+    assert err.value.kind == "rate_limited"
+    assert {h for h, _ in seen} == {host(cfg, "main")}
+
+
+def test_a_backup_with_no_known_price_is_never_called_unless_unpriced_runs_are_allowed(cfg, store):
+    router, seen = _rate_limited_main_and(cfg, store, backup_price=None)
+    with pytest.raises(AiError):
+        router.call(TASK, request_id="REQ-1", spend_limit=0.25, unpriced_ok=False)
+    assert {h for h, _ in seen} == {host(cfg, "main")}
+    _, choice, _ = router.call(TASK, request_id="REQ-2", spend_limit=0.25, unpriced_ok=True)
+    assert choice.provider == "backup"
+
+
+def test_a_backup_within_what_the_person_allowed_still_takes_the_work(cfg, store):
+    router, _ = _rate_limited_main_and(cfg, store, backup_price=1.0)
+    _, choice, _ = router.call(TASK, request_id="REQ-1", spend_limit=0.25)
+    assert choice.provider == "backup"
+
+
+def test_when_every_account_in_line_costs_too_much_the_run_stops_at_the_budget(cfg, store):
+    from engine.config.schema import Price
+
+    cfg.ai.prices["main/small"] = Price(input_per_million=1_000_000.0, output_per_million=1_000_000.0)
+    router, seen = _rate_limited_main_and(cfg, store, backup_price=1_000_000.0)
+    with pytest.raises(BudgetReached):
+        router.call(TASK, request_id="REQ-1", spend_limit=0.25)
+    assert seen == []

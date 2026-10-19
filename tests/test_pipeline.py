@@ -132,6 +132,20 @@ def test_a_quote_that_isnt_in_the_input_goes_back_once_then_is_refused(env):
     assert store.read().list("fact") == []
 
 
+def test_a_stronger_tier_with_no_known_price_is_not_escalated_to_without_a_go(env):
+    _, cfg, store = env
+    _priced(cfg, input_per_million=0.01, output_per_million=0.01)
+    provider = cfg.ai.tiers["deep"].use.partition("/")[0]
+    cfg.ai.providers[provider].models["unpriced"] = "unpriced-model"
+    cfg.ai.tiers["deep"].use = f"{provider}/unpriced"
+    cfg.ai.budgets.confirm_unpriced = True
+    bad = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "words nobody wrote"}}]}
+    asked = answers(bad, bad)
+    run(env, "The printer says proof copies will ship on November 5.")
+    assert len(asked) == 2  # the routine tier and its one fix round; the unpriced stronger tier is never asked
+    assert {r.data["tier"] for r in store.read().list("run")} == {"routine"}
+
+
 def test_the_stronger_tier_can_fix_what_the_routine_tier_got_wrong(env):
     _, _, store = env
     bad = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "words nobody wrote"}}]}

@@ -206,6 +206,25 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   **Impact:** the roadmap's phase B starts with the defects (each with a failing test first); phase I gains the
   tester milestone and "The website"; open promises P23 and P24. No design section changes until the defects'
   fixes and the website feed are built.
+- **Also (2026-10-19): the outside reviews' integrity defects, fixed.** Each was reproduced with a failing test first.
+  - **Spending:** every account a run reaches (a backup, a fix round, an escalation) is held to the per-run limit and to
+    the amount needing a go, or to the estimate the person said yes to; an account above it, or unpriced when unpriced
+    runs need a go, is never called (`Router.call(spend_limit=, unpriced_ok=)`). An unpriced stronger tier is no
+    longer escalated to without a go.
+  - **Credentials:** a pasted password, token or key is kept under a name no kept secret has yet, never over the one
+    in use. A refused save removes only the new file; a saved change keeps the old file, so Undo's earlier reference
+    still works. Old files stay in the private keys folder until the person removes the source or account (no
+    automatic clean-up yet). Same cause found and fixed in the AI account change: its cost estimate wrote the key.
+  - **Undo:** undoing the op that made an unowned action takes its unanswered "Pick an owner" question with it; an
+    owner picked earlier stays when only a later op (a hold) is undone; a stale owner question refuses an owner in
+    plain words and can be dropped.
+  - **Forms:** the source form and the AI account forms save with the settings fingerprint from when they opened, so a
+    change made meanwhile is refused and the typed values stay. Left: after that refusal, untouched fields aren't
+    refreshed from what is saved now.
+  - **Downloads** carry an ASCII fallback name plus the full name in UTF-8.
+  - **Python 3.14:** class-local annotations are read the same way on 3.12 to 3.14 (`engine/annotations.py`); the
+    plugin guide renders one spelling of each type; CI runs 3.14.
+  **Impact:** none to scope; open promise P23 keeps the current-truth docs pass and the retry-and-budget audit.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

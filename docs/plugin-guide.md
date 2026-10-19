@@ -1135,7 +1135,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 | `group` | str \| None | `None` | The portfolio grouping the project is listed under, from the project-group list. |
 | `status` | str \| None | `None` | Where the project stands now, from the project-status list. |
 | `phase` | str \| None | `None` | The part of its life the project is in, from the project-phase list. |
-| `target` | datetime.date \| None | `None` | The day the project is meant to be finished. |
+| `target` | date \| None | `None` | The day the project is meant to be finished. |
 | `priority` | str \| None | `None` | How important the project is, from the project-priority list. |
 | `summary` | str \| None | `None` | A short description of what the project is. |
 | `owner` | str \| None | `None` | The id of the person responsible for the project. |
@@ -1165,7 +1165,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `owners` | list[Owner] | `[]` | The people who do it; required unless the action is held. |
 | `owners[].person` | str | required | The id of the person who owns the action. |
 | `owners[].team` | str \| None | `None` | The id of the team the person acts for here, if any. |
-| `due` | datetime.date \| None | `None` | The day it is due. |
+| `due` | date \| None | `None` | The day it is due. |
 | `status` | Literal['held', 'open', 'done', 'dropped'] | `'open'` | held: waiting for an owner to be picked. open: to be done. done: finished. dropped: closed because it is no longer needed; never done, never credited, never chased. |
 | `dropped_reason` | str \| None | `None` | Why it was dropped, in plain words; set when it is dropped. |
 | `notes` | str \| None | `None` | Extra detail about the action. |
@@ -1174,8 +1174,8 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `on_hold` | OnHold \| None | see below | Set while the action waits for something outside the person's control; the person sets and clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due date for when it comes off hold. |
 | `on_hold.waiting_for` | str | required | What it waits for, in plain words. |
 | `on_hold.since` | date | required | The day it was put on hold. |
-| `told` | dict[str, datetime.date] | `{}` | Who has been told about it: a person id mapped to the day they were told. |
-| `followed_up` | dict[str, list[datetime.date]] | `{}` | Who has been chased about it: a person id mapped to the days they were chased, oldest first. A chase is not a notice (`told`) and never closes the action. |
+| `told` | dict[str, date] | `{}` | Who has been told about it: a person id mapped to the day they were told. |
+| `followed_up` | dict[str, list[date]] | `{}` | Who has been chased about it: a person id mapped to the days they were chased, oldest first. A chase is not a notice (`told`) and never closes the action. |
 | `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
 | `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `done_by` | list[str] | `[]` | The ids of the people who did the work, set when the action is closed. |
@@ -1203,7 +1203,7 @@ A question for a person; a decision is a question to the PM. Added by `question.
 | `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `batch` | Literal['now', 'later'] | `'now'` | Whether it is ready to go out now or waits for a later batch. |
 | `status` | Literal['open', 'sent', 'answered', 'dropped'] | `'open'` | open: not yet sent. sent: marked as sent, waiting for an answer. answered: closed with an answer. dropped: closed without one. |
-| `sent_at` | datetime.datetime \| None | `None` | When it was marked as sent. |
+| `sent_at` | datetime \| None | `None` | When it was marked as sent. |
 | `answer` | str \| None | `None` | The answer, once answered. |
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
 | `options` | list[str] | `[]` | Choices offered, for routing and decisions. |
@@ -1253,7 +1253,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `about.kind` | str | required | The record's kind. |
 | `about.id` | str | required | The record's id. |
 | `use` | str \| None | `None` | The account the person picked for this request ("provider/model"), in place of its tier. |
-| `approval` | Optional[Literal['required', 'granted']] | `None` | Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm. |
+| `approval` | Literal['required', 'granted'] \| None | `None` | Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm. |
 | `estimate_usd` | float \| None | `None` | What the run was estimated to cost when it asked for a go. |
 | `note` | str \| None | `None` | The person's own words that came with the request. |
 | `source` | str \| None | `None` | The id of the source the request is about, if any. |
@@ -1262,14 +1262,14 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `waiting` | str \| None | `None` | Why it is waiting and until when, in plain words. |
 | `cause` | StopCause \| None | see below | Why a request waits, when there is more to it than its words: for one waiting on the person, the cause the screen can offer an action for; for one queued, the time it is waiting for. |
 | `cause.kind` | Literal['data_level', 'no_person', 'paused', 'retry', 'offline'] | required | data_level: no AI account may see the request's material, and `accounts` would take it if allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. paused: every account that could take it is waiting for a usage limit to reset (`account`, `until`); the request stays queued and runs again by itself then. retry: a run that gave no usable answer is tried again by itself at `until`. offline: no AI account could be reached for want of a network connection; the request stays queued since `since` and is looked at again at `until`, and no try is counted. |
-| `cause.level` | Optional[Literal['open', 'internal', 'restricted']] | `None` | For data_level: the data level of the material. |
+| `cause.level` | Literal['open', 'internal', 'restricted'] \| None | `None` | For data_level: the data level of the material. |
 | `cause.accounts` | list[str] | `[]` | For data_level: the accounts ("provider/model") that would take the material if allowed its level, in the order the tier tries them. |
 | `cause.account` | str \| None | `None` | For paused: the account whose limit resets first. |
 | `cause.tier` | str \| None | `None` | For paused: the tier whose work waits. |
-| `cause.until` | datetime.datetime \| None | `None` | For paused, retry and offline: when the request runs again by itself. |
-| `cause.since` | datetime.datetime \| None | `None` | For offline: when the request first found no network. |
+| `cause.until` | datetime \| None | `None` | For paused, retry and offline: when the request runs again by itself. |
+| `cause.since` | datetime \| None | `None` | For offline: when the request first found no network. |
 | `follows` | str \| None | `None` | The change (a changeset id) whose event a plugin answered with this work, or whose moved date or replaced fact a follow-on run answers, if any. |
-| `sensitivity` | Optional[Literal['open', 'internal', 'restricted']] | `None` | How sensitive the person said what they handed in is; it only ever raises the level. |
+| `sensitivity` | Literal['open', 'internal', 'restricted'] \| None | `None` | How sensitive the person said what they handed in is; it only ever raises the level. |
 | `part` | dict[str, Any] \| None | `None` | The part of a long text the work is about: {first, last} paragraphs (by number) an anchored draft revises or other work reads, or {after} a draft adds new text after (0: at the start; "end": at the end); with the {base} version number they refer to. |
 | `project` | str \| None | `None` | The project the person said a hand-in is about, if they did. |
 | `auto_closed` | dict[str, str] \| None | `None` | For a watched change a triage rule closed: {rule, reason}. Taking a closer look clears it. |
@@ -1282,7 +1282,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `previous` | str \| None | `None` | The request this one redoes after the PM sent it back. |
 | `superseded_by` | str \| None | `None` | The later request that redid this one and applied, which retired this attempt: it is done, its held items and open proposals are closed, and nothing is run or shown for it again. |
 | `dismissed` | bool | `False` | The PM set this aside without trying again; it no longer counts as needing attention. |
-| `dismissed_from` | Optional[Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed']] | `None` | The state the request was in when it was dismissed, put back by undoing the dismissal. |
+| `dismissed_from` | Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed'] \| None | `None` | The state the request was in when it was dismissed, put back by undoing the dismissal. |
 
 ### `changeset` (CS-n)
 
@@ -1320,9 +1320,9 @@ Something recorded as true, with the words that show it. Added by `fact` and by 
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 | `key` | bool | `False` | True for the facts that matter most, which are always shown first. |
-| `as_of` | datetime.date \| None | `None` | The day the fact was true as of: the day the input it came from was received, unless a later input says otherwise. |
+| `as_of` | date \| None | `None` | The day the fact was true as of: the day the input it came from was received, unless a later input says otherwise. |
 | `supersedes` | str \| None | `None` | The id of the fact this one replaces. The older fact stays on record and is shown as replaced by this one. |
-| `basis` | Optional[Literal['person', 'inferred', 'said']] | `None` | Who the fact rests on. person: the person said it. inferred: the assistant worked it out, so it feeds the record only: it never closes anything, never changes a date, an owner or a routing, and never goes on anything others see. said: someone else said it (`said_by`). Empty for a fact recorded before this was kept. |
+| `basis` | Literal['person', 'inferred', 'said'] \| None | `None` | Who the fact rests on. person: the person said it. inferred: the assistant worked it out, so it feeds the record only: it never closes anything, never changes a date, an owner or a routing, and never goes on anything others see. said: someone else said it (`said_by`). Empty for a fact recorded before this was kept. |
 | `said_by` | str \| None | `None` | The id of the person who said it, when `basis` is said and the input names them. |
 | `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
 | `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
@@ -1359,11 +1359,11 @@ A standing instruction the assistant follows, kept as a record so changing one h
 | `evidence` | Evidence \| None | see below | The words that justify it, when it came from an input. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
-| `learned_at` | datetime.datetime \| None | `None` | When the rule was learned or added. |
+| `learned_at` | datetime \| None | `None` | When the rule was learned or added. |
 | `kept_by` | str \| None | `None` | The id of the person who made it active. |
-| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `kept_at` | datetime \| None | `None` | When it was made active. |
 | `constrains` | list[str] | `[]` | What it is about, so a run's log can tell a rule that applied from one that was only present: op kinds (`question.add`) or op fields (`action.add.owners`). Empty means nothing is checked, so the rule is only ever present. |
-| `reviewed_at` | datetime.datetime \| None | `None` | When the person last chose to keep it in a review; the clock for its next review starts here. |
+| `reviewed_at` | datetime \| None | `None` | When the person last chose to keep it in a review; the clock for its next review starts here. |
 
 ### `event` (EVT-n)
 
@@ -1435,7 +1435,7 @@ What went wrong, why, and the guard that prevents a repeat. Added by `lesson.add
 | `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
 | `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
 | `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
-| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `kept_at` | datetime \| None | `None` | When it was made active. |
 | `applies_to` | Scope | see below | What it applies to. |
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
@@ -1473,7 +1473,7 @@ A term or acronym and what it means here. Added by `glossary.add`, changed by `g
 | `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
 | `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
 | `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
-| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `kept_at` | datetime \| None | `None` | When it was made active. |
 | `applies_to` | Scope | see below | What it applies to. |
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
@@ -1514,7 +1514,7 @@ Who answers a kind of question, or who doesn't. Added by `routing.add`.
 | `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
 | `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
 | `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
-| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `kept_at` | datetime \| None | `None` | When it was made active. |
 | `applies_to` | Scope | see below | What it applies to. |
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
@@ -1555,7 +1555,7 @@ What a recipient or audience wants or avoids in what is written for them. Added 
 | `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
 | `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
 | `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
-| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `kept_at` | datetime \| None | `None` | When it was made active. |
 | `applies_to` | Scope | see below | What it applies to. |
 | `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
 | `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
@@ -1586,7 +1586,7 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 | `cost_usd` | float \| None | `None` | What the call cost in US dollars; none when it can't be told. |
 | `seconds` | float | `0.0` | How long the call took, in seconds. |
 | `outcome` | Literal['ok', 'invalid_output', 'error', 'refused'] | required | ok: an answer came back. invalid_output: the answer wasn't in the expected shape. error: the call failed. refused: the provider said it refused the work under its own policy (its reason is in error_detail). |
-| `independence` | Optional[Literal['other_account', 'same_account']] | `None` | For a check: other_account, run on an account that didn't write the work; same_account, on one that did, as a fresh run the person accepted. None for other work. |
+| `independence` | Literal['other_account', 'same_account'] \| None | `None` | For a check: other_account, run on an account that didn't write the work; same_account, on one that did, as a fresh run the person accepted. None for other work. |
 | `error_kind` | str \| None | `None` | How the call failed, from the runner's own error; none if ok. |
 | `error_detail` | str \| None | `None` | The error's own text, for diagnosing a failure. |
 | `started_at` | datetime | required | When the call started. |
@@ -1773,7 +1773,7 @@ One read of a watched source and what came of it. The watcher writes it; nothing
 | `started_at` | datetime | required | When the read started. |
 | `seconds` | float | `0.0` | How long it took. |
 | `outcome` | Literal['ok', 'baseline', 'failed', 'offline', 'throttled'] | required | ok: read and compared. baseline: a first read that only noted what is there. failed: it couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait. |
-| `retry_at` | datetime.datetime \| None | `None` | For a throttled read: not read again before this time. |
+| `retry_at` | datetime \| None | `None` | For a throttled read: not read again before this time. |
 | `error_kind` | str \| None | `None` | For a failed read: auth, no_access, not_found, outage, or addon (its add-on isn't running). |
 | `error` | str \| None | `None` | What went wrong, in the connector's words. |
 | `new` | int | `0` | Items handed in as new. |
@@ -1823,7 +1823,7 @@ A long text field handed out as a file for the person's own tool (a word process
 | `returned_file` | str \| None | `None` | The id of the last file brought back. |
 | `proposal` | str \| None | `None` | The id of the text version the last file back became. |
 | `handed_at` | datetime | required | When it was handed out. |
-| `returned_at` | datetime.datetime \| None | `None` | When a file last came back. |
+| `returned_at` | datetime \| None | `None` | When a file last came back. |
 
 ### `value_list` (LIST-n)
 
@@ -1849,7 +1849,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `text` | str | required | A verb that does something, e.g. 'Send the final file to the printer'. |
 | `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the PM to say who. |
-| `due` | datetime.date \| None | `None` | The day it is due, if one is stated. |
+| `due` | date \| None | `None` | The day it is due, if one is stated. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
@@ -1964,9 +1964,9 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 | `key` | bool | `False` | True only for a fact that matters most to the project; it is shown first. |
-| `as_of` | datetime.date \| None | `None` | The day the fact was true as of, written YYYY-MM-DD, when the input or the person's note names one (a note often reports something said earlier); left out, it is the day the input was received or the note was typed. |
+| `as_of` | date \| None | `None` | The day the fact was true as of, written YYYY-MM-DD, when the input or the person's note names one (a note often reports something said earlier); left out, it is the day the input was received or the note was typed. |
 | `supersedes` | str \| None | `None` | The id of an existing fact this one replaces (the same thing, newer). The older fact stays on record. |
-| `basis` | Optional[Literal['inferred', 'said']] | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
+| `basis` | Literal['inferred', 'said'] \| None | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
 | `said_by` | str \| None | `None` | With basis said: who said it, by name or id, when the input names someone. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
@@ -2023,7 +2023,7 @@ Change a glossary entry that is proposed or active. A system op: from anyone but
 | `id` | str | required | The id of the glossary entry. |
 | `text` | str \| None | `None` | The new wording. |
 | `meaning` | str \| None | `None` | The new meaning. |
-| `confidence` | Optional[Literal['confirmed', 'assumed', 'unknown']] | `None` | The new confidence. |
+| `confidence` | Literal['confirmed', 'assumed', 'unknown'] \| None | `None` | The new confidence. |
 | `project` | str \| None | `None` | The project it is about. |
 | `id_patterns` | list[str] \| None | `None` | The new patterns for splitting compound ids. |
 | `applies_to` | Scope \| None | see below | What it now applies to, in full. |
@@ -2251,7 +2251,7 @@ Record that the person already sent an open question themselves, the day they di
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the open question. |
-| `on` | datetime.date \| None | `None` | The day it was sent, written YYYY-MM-DD; today when left out. |
+| `on` | date \| None | `None` | The day it was sent, written YYYY-MM-DD; today when left out. |
 
 ### `question.move`
 

@@ -27,11 +27,12 @@ export function planFor(account: Account, tiers: string[]): [string, string][] {
 export function useAccountActs() {
   const client = useQueryClient();
   const afterSave = useAfterSave();
-  /** Saves a change with the settings' current fingerprint, then reads it back with Undo. Throws what the server refused. */
+  /** Saves a change with the settings' current fingerprint (or `opened`, the one a form was made from, so a change made
+   * since is refused rather than overwritten), then reads it back with Undo. Throws what the server refused. */
   const save = useCallback(
-    async (work: (fingerprint: string) => Promise<S["SettingsSaved"]>, message: string | (() => string)) => {
-      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
-      const saved = await work(current.fingerprint);
+    async (work: (fingerprint: string) => Promise<S["SettingsSaved"]>, message: string | (() => string), opened?: string) => {
+      const fingerprint = opened ?? (await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 })).fingerprint;
+      const saved = await work(fingerprint);
       await afterSave(saved, { message: typeof message === "function" ? message() : message });
     },
     [client, afterSave],

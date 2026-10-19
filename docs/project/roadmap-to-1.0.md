@@ -1760,6 +1760,19 @@ offered from the catalog during setup) is designed in phase I without putting it
 fixed date: the 2026-10-20 target is dropped and the tester group follows the gates; (4) the website is fed by this
 plan (phase I, "The website").
 
+**Done (2026-10-19), items 1 to 6 and the three-review defects above:** spending
+(`tests/test_ai.py::test_a_backup_dearer_than_the_person_allowed_is_never_called` and its three siblings,
+`tests/test_pipeline.py::test_a_stronger_tier_with_no_known_price_is_not_escalated_to_without_a_go`); credentials
+(`tests/test_typed_secrets.py::test_a_refused_save_leaves_the_kept_password_and_the_settings_as_they_were`,
+`::test_undoing_a_password_change_brings_back_the_password_that_worked`, the refused second account add in
+`tests/test_setup.py`); Undo (`tests/test_hold_drop_fold.py::test_undoing_an_unowned_action_takes_its_unanswered_owner_question_with_it`,
+`::test_a_stale_owner_question_whose_action_is_gone_refuses_an_owner_plainly_and_can_be_dropped`,
+`::test_undoing_a_later_hold_keeps_the_owner_picked_earlier`); stale forms (`Sources.test.tsx` and `AiAccounts.test.tsx`,
+the fingerprint the form opened with); downloads (`tests/test_files.py::test_download_names_make_a_valid_header_for_any_letters`);
+Python 3.14 (`tests/test_annotations.py`, CI matrix). **Left:** item 7, the current-truth pass; an audit of fix-round
+and search retries against the task, record and day budgets; after a form's conflict, refreshing its untouched fields;
+removing old kept secret files when nothing refers to them.
+
 **Owner decisions waiting (from the reviews):** the product review's plan changes above; numeric dependability
 thresholds set before the acceptance run, measured with denominators and a held-out set, omissions found by an
 independent reading of a consented sample; publisher acceptance tests (stale approvals, duplicates after a retry,

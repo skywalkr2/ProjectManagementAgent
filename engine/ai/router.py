@@ -239,10 +239,14 @@ class Router:
         content: frozenset[str] = frozenset(),
         independent: Independence | None = None,
         offline_known: bool = False,
+        spend_limit: float | None = None,
+        unpriced_ok: bool = True,
     ) -> tuple[AiResult, Choice, str]:
         """Run the task on the first account that can serve it. Returns the result, the choice and the Run id. A
         refusal is returned like an answer (marked refused), never handed to the next account. `offline_known`: the
-        request is already waiting for the network, so a call that again finds none is not recorded as another run."""
+        request is already waiting for the network, so a call that again finds none is not recorded as another run.
+        `spend_limit` and `unpriced_ok`: what the person allowed for this run; an account in line whose estimate is
+        above the limit, or unknown when an unpriced run isn't allowed, is never called."""
         self._check_budget(task.kind)
         last: AiError | None = None
         picked = choices(
@@ -258,7 +262,13 @@ class Router:
         options = self._that_fit(task, list(picked))
         paused: dict[str, datetime] = {}
         offline = 0  # accounts that could not be reached at all
+        over: list[Choice] = []  # accounts in line that would cost more than the person allowed
         for position, choice in enumerate(options):
+            if spend_limit is not None:
+                cost = self._price_of(task, choice)
+                if (cost is None and not unpriced_ok) or (cost is not None and cost > spend_limit):
+                    over.append(choice)
+                    continue
             held = self.pauses.until(choice.provider)
             if held is not None:
                 # A usage limit isn't over: this account isn't called, and the next in line takes the work.
@@ -311,6 +321,8 @@ class Router:
                         use=lent,
                         content=content,
                         offline_known=offline_known,
+                        spend_limit=spend_limit,
+                        unpriced_ok=unpriced_ok,
                     )
                 except NoProvider:
                     pass
@@ -320,8 +332,12 @@ class Router:
             raise AccountPaused(
                 account, until, waiting_text(self.cfg, account, until, self.now()), tier=options[0].tier
             )
+        if last is None and over:
+            raise BudgetReached(
+                "the accounts left to try would cost more than you allowed for this run, or their price isn't known"
+            )
         assert last is not None
-        if offline and offline + len(paused) == len(options):
+        if offline and offline + len(paused) + len(over) == len(options):
             raise NetworkOffline(last.detail)
         raise last
 
@@ -442,6 +458,10 @@ class Router:
             choice = self._first_choice(task, options, data_level, independent)
         except NoProvider:
             return None
+        return self._price_of(task, choice)
+
+    def _price_of(self, task: AiTask, choice: Choice) -> float | None:
+        """What this task would cost in USD on this account, or None when its price isn't known."""
         info = self.model_info(choice)
         if info.input_per_million is None or info.output_per_million is None:
             return None

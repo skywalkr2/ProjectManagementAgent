@@ -256,7 +256,17 @@ function AccountRow(props: {
   const others = props.accounts.filter((a) => a.name !== account.name);
   const mains = others.filter((a) => a.used_for.length > 0);
 
+  // The settings as they were when a form that edits what the row holds (its name, its models) opened: its typed values
+  // were made from them, so its save sends this fingerprint and a change made since is refused, not overwritten.
+  const opened = useRef<Promise<string> | null>(null);
+  const baseline = () => {
+    const read = freshFingerprint();
+    read.catch(() => {});
+    opened.current = read;
+  };
+
   const open = (next: Exclude<Mode, null>) => {
+    baseline();
     setProblem("");
     setKey("");
     setEnds(next === "expires" ? (account.credential_expires ?? "") : "");
@@ -273,21 +283,29 @@ function AccountRow(props: {
     restoreFocus(() => primaryButton.current);
   };
 
-  const fail = (err: unknown) => {
+  const fail = (err: unknown, fromForm = false) => {
     // A changed file means the lists are out of date: load them again, keeping what was typed.
-    if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
+    if (err instanceof ApiError && err.status === 409) {
+      void client.invalidateQueries({ queryKey: ["settings"] });
+      if (fromForm) {
+        // Said once; the next save is the person's own, on what is saved now.
+        baseline();
+        setProblem(t("settings.changed_since_opened"));
+        return;
+      }
+    }
     setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
   };
 
   /** Saves a change and reads it back with Undo; a refusal is said on the row. Returns whether it was saved. */
-  const save = async (work: (fingerprint: string) => Promise<S["SettingsSaved"]>, message: string | (() => string)): Promise<boolean> => {
+  const save = async (work: (fingerprint: string) => Promise<S["SettingsSaved"]>, message: string | (() => string), fromForm = false): Promise<boolean> => {
     setBusy(true);
     setProblem("");
     try {
-      await acts.save(work, message);
+      await acts.save(work, message, fromForm ? await opened.current! : undefined);
       return true;
     } catch (err) {
-      fail(err);
+      fail(err, fromForm);
       return false;
     } finally {
       setBusy(false);
@@ -339,7 +357,7 @@ function AccountRow(props: {
   const rename = async () => {
     const typed = label.trim();
     if (!typed) return;
-    const done = await save((fingerprint) => api.changeAccount(account.name, { fingerprint, label: typed }), t("ai_accounts.renamed", { name: typed }));
+    const done = await save((fingerprint) => api.changeAccount(account.name, { fingerprint, label: typed }), t("ai_accounts.renamed", { name: typed }), true);
     if (done) close();
   };
 
@@ -365,6 +383,7 @@ function AccountRow(props: {
         return answer.saved;
       },
       () => t(checking ? "ai_accounts.switch_checking" : "ai_accounts.models_changed", { name }),
+      true,
     );
     if (!done) return;
     if (offersHarderBackup && moveHarder) {

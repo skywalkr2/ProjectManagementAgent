@@ -11,6 +11,7 @@ import json
 import logging
 from datetime import UTC, date, datetime
 from typing import Any, Literal
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
@@ -196,6 +197,12 @@ from engine.workspace import Workspace
 
 log = logging.getLogger(__name__)
 _PM = WriteContext(actor="pm", trust="trusted", op="ui")
+
+
+def content_disposition(kind: str, name: str) -> str:
+    """A Content-Disposition value: an ASCII-only fallback name plus the full name in UTF-8 (RFC 6266)."""
+    ascii_name = "".join(c for c in name if c.isascii() and (c.isalnum() or c in " ._-")).strip() or "file"
+    return f"{kind}; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name, safe='')}"
 
 
 def _field_type(annotation: Any) -> tuple[str, list[str]]:
@@ -1075,8 +1082,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         record, data = guard(lambda: read_bytes(store, file_id))
         media = record.data["media_type"]
         inline = media in ("image/png", "image/jpeg", "image/gif", "image/webp")
-        safe = "".join(c for c in record.data["name"] if c.isalnum() or c in " ._-").strip() or "file"
-        disposition = f'{"inline" if inline else "attachment"}; filename="{safe}"'
+        disposition = content_disposition("inline" if inline else "attachment", record.data["name"])
         headers = {"Content-Disposition": disposition, "X-Content-Type-Options": "nosniff"}
         return Response(content=data, media_type=media if inline else "application/octet-stream", headers=headers)
 

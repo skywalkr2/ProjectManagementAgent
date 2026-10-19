@@ -531,3 +531,47 @@ def test_the_persons_edit_of_what_the_assistant_set_is_an_edited_correction_that
         "Edit",
     )
     assert len(signals(store, "edited")) == 1
+
+
+def test_undoing_an_unowned_action_takes_its_unanswered_owner_question_with_it(env):
+    ws, cfg, store = env
+    action, qid = unowned_action(store, cfg)
+    cs_id = store.read().get("question", qid).data["resolves"]["changeset"]
+    assert undo(store, cs_id).restored == [0]
+    assert store.read().get("action", action) is None and store.read().get("question", qid) is None
+    assert not [line for line in queue(ws, store, cfg, NOW) if line.question == qid]
+
+
+def test_a_stale_owner_question_whose_action_is_gone_refuses_an_owner_plainly_and_can_be_dropped(env):
+    _, cfg, store = env
+    action, qid = unowned_action(store, cfg)
+    with store.transaction() as tx:
+        tx.delete("action", action, _TEST, read_version=tx.get("action", action).version)
+    with pytest.raises(StoreError, match="undone"):
+        pick_owner(store, qid, other_of(cfg))
+    apply_as_person(store, cfg, [{"op": "question.drop", "id": qid, "reason": "Not needed"}], "Drop")
+    assert data(store, "question", qid)["status"] == "dropped"
+
+
+def test_undoing_a_later_hold_keeps_the_owner_picked_earlier(env):
+    _, cfg, store = env
+    action, qid = unowned_action(store, cfg)
+    pick_owner(store, qid, other_of(cfg))
+    cs_id, applied = from_input(store, cfg, [hold_op(action)])
+    assert applied == ["applied"] and data(store, "action", action)["on_hold"]
+    assert undo(store, cs_id).restored == [0]
+    after = data(store, "action", action)
+    assert (after["status"], [o["person"] for o in after["owners"]], after["on_hold"]) == (
+        "open",
+        [other_of(cfg)],
+        None,
+    )
+
+
+def test_undoing_the_action_after_its_owner_was_picked_still_removes_it_and_keeps_the_answer(env):
+    _, cfg, store = env
+    action, qid = unowned_action(store, cfg)
+    pick_owner(store, qid, other_of(cfg))
+    cs_id = data(store, "question", qid)["resolves"]["changeset"]
+    assert undo(store, cs_id).restored == [0]
+    assert store.read().get("action", action) is None and data(store, "question", qid)["status"] == "answered"

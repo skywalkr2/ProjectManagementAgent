@@ -1245,6 +1245,7 @@
   "settings.saved_default": "{label}: back to the default, {value}",
   "settings.saved_more": "and {n} more",
   "settings.nothing_changed": "Nothing needed changing.",
+  "settings.changed_since_opened": "This was changed since you opened it. What you typed is still here; check it against what is saved now, then save again.",
   "settings.key.workspace.name": "Workspace name",
   "settings.key.workspace.assistant_name": "Assistant's name",
   "settings.key.workspace.user.full_name": "Your full name",

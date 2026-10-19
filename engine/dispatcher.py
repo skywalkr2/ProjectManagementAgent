@@ -270,9 +270,16 @@ def process(
     waited = offline_since is not None  # already waiting for the network: a repeat miss adds no run record
     # What a follow-up call after a search may cost: the per-run limit, and the amount that needs the person's go unless
     # they gave it.
+    # Every account a run may reach (a backup, a fix round, an escalation) is held to this: the per-run limit, and
+    # the amount that needs the person's go, or the estimate they said yes to. An unpriced account runs only when
+    # unpriced runs need no go, or the go they gave was for an unpriced run.
+    granted = req.data.get("approval") == "granted"
     spend_limit = budgets.per_run_usd
-    if req.data.get("approval") != "granted":
+    if not granted:
         spend_limit = min(spend_limit, budgets.confirm_above_usd)
+    elif estimate is not None:
+        spend_limit = min(spend_limit, max(budgets.confirm_above_usd, estimate))
+    unpriced_ok = not budgets.confirm_unpriced or (granted and estimate is None)
     first = _rounds(
         store,
         cfg,
@@ -290,6 +297,7 @@ def process(
         offline_known=waited,
         ws=ws,
         spend_limit=spend_limit,
+        unpriced_ok=unpriced_ok,
     )
     if first.abandoned:
         return None
@@ -301,7 +309,7 @@ def process(
         if first.escalate and stronger
         else None
     )
-    within = second_estimate is None or second_estimate <= min(budgets.per_run_usd, budgets.confirm_above_usd)
+    within = second_estimate <= spend_limit if second_estimate is not None else unpriced_ok
     if first.escalate and stronger and stronger != tier and within and not _closed(store, request_id):
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
         second = _rounds(
@@ -321,6 +329,7 @@ def process(
             offline_known=waited,
             ws=ws,
             spend_limit=spend_limit,
+            unpriced_ok=unpriced_ok,
         )
         if second.abandoned:
             return None
@@ -568,6 +577,8 @@ def _call(
     content: frozenset[str],
     independent: Independence | None,
     offline_known: bool,
+    spend_limit: float | None = None,
+    unpriced_ok: bool = True,
 ) -> object | None:
     """One call, recording its run id on `out`. Returns the result, or None when the call ended the work: `out` then
     holds why."""
@@ -581,6 +592,8 @@ def _call(
             content=content,
             independent=independent,
             offline_known=offline_known,
+            spend_limit=spend_limit,
+            unpriced_ok=unpriced_ok,
         )
     except AccountPaused as err:
         cause = {"kind": "paused", "account": err.account, "until": err.until.isoformat(), "tier": err.tier or None}
@@ -647,6 +660,7 @@ def _rounds(
     offline_known: bool = False,
     ws: Workspace | None = None,
     spend_limit: float | None = None,
+    unpriced_ok: bool = True,
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
     stops at once: no fix round, no other account, no escalation. An answer that asks to search the workspace is
@@ -660,7 +674,21 @@ def _rounds(
         last = attempt == cfg.dispatch.fix_rounds
         if attempt and _closed(store, request_id):
             return _Outcome(run_id=out.run_id, abandoned=True)  # a fix round only runs while its cause stands
-        result = _call(store, router, task, out, request_id, tier, data_level, use, content, independent, offline_known)
+        result = _call(
+            store,
+            router,
+            task,
+            out,
+            request_id,
+            tier,
+            data_level,
+            use,
+            content,
+            independent,
+            offline_known,
+            spend_limit,
+            unpriced_ok,
+        )
         if result is None:
             return _Outcome(
                 changeset=out.changeset,
@@ -700,7 +728,19 @@ def _rounds(
                         "Hand in less, or raise the amount in Settings, AI spending.",
                     )
             result = _call(
-                store, router, task, out, request_id, tier, data_level, use, content, independent, offline_known
+                store,
+                router,
+                task,
+                out,
+                request_id,
+                tier,
+                data_level,
+                use,
+                content,
+                independent,
+                offline_known,
+                spend_limit,
+                unpriced_ok,
             )
             if result is None:
                 return _Outcome(
