@@ -966,7 +966,9 @@ is marked *designed*, with the phase.
   Today's overdue line and the to-do list's Overdue group (it sits last, under On hold), it is never chased, and the
   Follow-ups row says "On hold: what it waits for", with its old due date in the tooltip. The due date is kept for when it
   comes off hold, and the assistant's packets say it is on hold. A hold is not `held` (the status for an action waiting for
-  its first owner). Taking it off hold when an input says the wait is over is *designed, phase L3b, not built*
+  its first owner). **Blocked** (*phase B-6a*) is a hold that names its blocker: `on_hold.on` is a person or an action,
+  the row reads "Blocked, waiting on <the person or the action>", and Top priorities counts the blocked ones; a hold with
+  only words reads "On hold: …". Taking it off hold when an input says the wait is over is *designed, phase L3b, not built*
   (`tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`,
   `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal`,
   `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`,
