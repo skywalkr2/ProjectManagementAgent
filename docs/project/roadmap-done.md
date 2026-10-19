@@ -1809,6 +1809,12 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
+  their voice to edit and copy; "No reply needed" is a choice the assistant learns from. (Drafting follow-ups is now
+  expected of any assistant; Thimbleby's difference is promises kept across every source, with the people around them.)
+  **More endings** (the designer's notes, 2026-10-19; design 6.35): a matched sent message ends it; *Answered another
+  way* (the person's choice, with optional words as evidence); *someone else on the thread answered it* (read from an
+  input, so it waits for Keep and names who answered). *Built (S1-2):* `tests/test_reply_lines.py`, `TodayReplies.test.tsx`, the golden case `reply-owed-answered-by-another-recipient`. Left: threads are joined by subject and people (`steward.reply_thread_days`), not by thread headers, until the mail details carry them; a held reply-owed action loses its asker when released.
 - [x] **Reminders at a time** on any dated thing, with snooze; a Today line and a browser notification while the app is
   open (desktop notifications from the menu bar or tray with phase I). **Missed while asleep:** on waking, reminders
   that came due while the computer slept are shown at once, marked late, never dropped.

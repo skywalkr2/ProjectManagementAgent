@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 153, each in exactly one batch; 201 done items are in `roadmap-done.md`.
+- **Open items:** 152, each in exactly one batch; 202 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -59,7 +59,7 @@ keep each item's full text.
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (7 open items; size: about two and a half days)
+2. **S1-2 What the person owes and misses** (6 open items; size: about two and a half days)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
     - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
@@ -544,12 +544,6 @@ S1. **Promises, and how they end:**
   promise per owner; one promise from several sources with every quote and a shown date disagreement, and a restatement
   with a date outside the window is a move held for Keep with both quotes (the designer's review, 2026-10-19); chasing is news,
   a reported done is credited to its owner; a confirmed second spelling becomes an alias.
-- [ ] [S1-2] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
-  their voice to edit and copy; "No reply needed" is a choice the assistant learns from. (Drafting follow-ups is now
-  expected of any assistant; Thimbleby's difference is promises kept across every source, with the people around them.)
-  **More endings** (the designer's notes, 2026-10-19; design 6.35): a matched sent message ends it; *Answered another
-  way* (the person's choice, with optional words as evidence); *someone else on the thread answered it* (read from an
-  input, so it waits for Keep and names who answered).
 - [ ] [S1-2] **Learning from the sent version** (the designer's notes, 2026-10-19; design 6.35; the style pair, moved here
   from L-more): a sent message is matched one-to-one to its draft (thread, recipients, `drafts.sent_match.similarity`);
   the difference is a style signal ("edited before sending") that proposes a style note through the learning loop; a
