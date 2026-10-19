@@ -544,8 +544,9 @@ describe("each screen", () => {
     await user.clear(day);
     await user.type(day, "5");
     // Save turns on once the typed value is in the form; a click before that does nothing.
+    await waitFor(() => expect(day).toHaveValue("5"), { timeout: 3000 });
     const save = within(spend).getByRole("button", { name: "Save" });
-    await waitFor(() => expect(save).toBeEnabled());
+    await waitFor(() => expect(save).toBeEnabled(), { timeout: 3000 });
     await user.click(save);
     await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
     expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({

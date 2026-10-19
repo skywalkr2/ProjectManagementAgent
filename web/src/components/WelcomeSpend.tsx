@@ -66,7 +66,10 @@ export function WelcomeSpend() {
           disabled={off}
           autoComplete="off"
           aria-describedby={`${id}-hint`}
-          onChange={(e) => setEdits({ ...edits, [item.key]: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            setEdits((before) => ({ ...before, [item.key]: value }));
+          }}
         />
         <p className="hint" id={`${id}-hint`}>
           {t(hintKey, { amount: total(Number(item.default ?? 0)) })}
