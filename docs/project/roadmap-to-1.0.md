@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 152, each in exactly one batch; 196 done items are in `roadmap-done.md`.
+- **Open items:** 157, each in exactly one batch; 196 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -55,18 +55,19 @@ full test run and one push (CLAUDE.md, "Usage and machine load"). Every open ite
 rough (half a day to two days; the batches from phase C on are sized when they are reached). The phase sections below
 keep each item's full text.
 
-1. **S1-1 Promises core (in progress)** (3 open items; size: about a day)
+1. **S1-1 Promises core (in progress)** (4 open items; size: about a day)
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (6 open items; size: about a day and a half)
+2. **S1-2 What the person owes and misses** (9 open items; size: about two and a half days)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
-    - *Exit:* a journey test for each; the stance gate holds a design question drafted to someone the person works alongside; the new learning pairs pass.
+    - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
+    - *Exit:* a journey test for each; the stance gate holds a design question drafted to someone the person works alongside; a draft to someone outside a restricted message's group draws only on the open one; the style pair passes; the new learning pairs pass.
 
-3. **S1-3 Ready for the gate week** (4 open items; size: about a day)
+3. **S1-3 Ready for the gate week** (5 open items; size: about a day and a quarter)
     - *Covers:* *Sign-in sources taken in quietly* (S1, designer's F6: sources a sign-in adds use the quiet intake, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line; a new item in S1); *A first success in five minutes* (S1); *The gate week's instruments* (S1).
-    - *Also covers* (the designer's lessons, 2026-10-19): *Which sign-in an agent runs as* (design 6.16), so the gate week runs on a known account.
+    - *Also covers* (the designer's lessons, 2026-10-19): *Which sign-in an agent runs as* (design 6.16), so the gate week runs on a known account; and (the designer's notes for later batches) *Work the assistant releases on its own keeps the person's hours* (design 6.35).
     - *Exit:* the owner can start the two measured days; journeys J2 and J6 pass with one total, one go and one "Look over what was found" line.
 
 4. **B-5 Sources and accounts** (3 open items, plus the numbered wave 5 entry; size: about one to two days)
@@ -434,9 +435,11 @@ From the original designer's lessons of 2026-10-14:
   the formatted one escapes every piece of text.
 - [ ] [S2] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). *Moved to phase
   S1 (2026-10-17), as the weekly form of the morning brief; the description below stands.* On the first
-  open of the week (the day is a setting), a briefing: what is due this week, what is late or at risk, what is
-  blocked, who the person is waiting on, and decisions still open, built from the records by rules. A short written
-  summary on top is an optional AI task kind with its estimate, off by default. Sending it to the person is phase E.
+  open of the week (the day is a setting), a briefing in this order (the designer's notes, 2026-10-19; design 6.35):
+  a copy-ready message to whoever the person reports to (stance *I report to them*, 6.34; a draft under the draft
+  rules, with its estimate); "this week" through the last working day: promises due by owner with overdue first,
+  questions to send, answers to chase, decisions waiting, built from the records by rules; and three to five goals the
+  person confirms, kept for the week. Nothing already on Today is repeated. Sending it to the person is phase E.
 - [ ] [B-6b] **What the work version's screens show** (owner's screens, 2026-10-13; the screens hold real names, so only
   what they do is written here):
   - [ ] **Follow-ups by person, or by project** (a switch): the person's own items first, including corrections the
@@ -557,6 +560,11 @@ S1. **Promises, and how they end:**
   Automatic mail is recognized by its headers (`engine/automatic_mail.py`, `tests/test_automatic_mail.py`; markers in
   `engine/defaults/automatic_mail.yaml`): an automatic reply, a delivery report or generated or list mail never
   counts as the other person answering, and never resolves a promise.
+- [ ] [S1-1] **From three weeks of running** (the designer's S1-1 notes, 2026-10-19; design 6.33): on hold until a
+  trigger, taken off hold with a new date in one step; a promise due at a meeting follows the meeting; the chase clock
+  for waiting-ons (14 days undated, 7 days before a date); dates read against the message's own day and zone; one
+  promise per owner; one promise from several sources with every quote and a shown date disagreement; chasing is news,
+  a reported done is credited to its owner; a confirmed second spelling becomes an alias.
 - [ ] [S1-1] **How a promise resolves, not only how it is found:** a later message or note can show it done (credited to its
   owner), its date changed, called off, partly delivered (what is left stays open), or answered with something that
   doesn't answer the question (the waiting-on stays open and says why). Each is a proposal with its evidence that the
@@ -568,6 +576,24 @@ S1. **Promises, and how they end:**
 - [ ] [S1-2] **Replies owed:** unanswered messages that ask the person something, oldest first, each with a drafted reply in
   their voice to edit and copy; "No reply needed" is a choice the assistant learns from. (Drafting follow-ups is now
   expected of any assistant; Thimbleby's difference is promises kept across every source, with the people around them.)
+  **More endings** (the designer's notes, 2026-10-19; design 6.35): a matched sent message ends it; *Answered another
+  way* (the person's choice, with optional words as evidence); *someone else on the thread answered it* (read from an
+  input, so it waits for Keep and names who answered).
+- [ ] [S1-2] **Learning from the sent version** (the designer's notes, 2026-10-19; design 6.35; the style pair, moved here
+  from L-more): a sent message is matched one-to-one to its draft (thread, recipients, `drafts.sent_match.similarity`);
+  the difference is a style signal ("edited before sending") that proposes a style note through the learning loop; a
+  copied draft not found sent after `drafts.sent_match.ask_after_days` asks once whether it went out another way. Exit:
+  a learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft,
+  and a journey test of the copied-but-not-sent question.
+- [ ] [S1-2] **What a draft to someone else carries** (the designer's notes, 2026-10-19; design 6.35): lints on every draft
+  to someone other than the person: no bookkeeping (the wording sheet's internal terms), only openable links, one gap
+  per message, quotes of the reader's own words at most `drafts.max_quote_words`, and never singling a person out in a
+  group draft (a discrepancy goes to that person alone). Exit: a test per lint, and a learning pair for singling out.
+- [ ] [S1-2] **A sender's distribution limit travels with the content** (the designer's notes, 2026-10-19; design 6.35):
+  a limit read from a message is recorded on the source as its audience (narrowing applies at once; widening is the
+  person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
+  anyone outside an audience is refused (an invariant), and its packet leaves that source out. Exit: a restricted and
+  an open message in one area; a draft outside the group draws only on the open one.
 - [ ] [S1-2] **Reminders at a time** on any dated thing, with snooze; a Today line and a browser notification while the app is
   open (desktop notifications from the menu bar or tray with phase I). **Missed while asleep:** on waking, reminders
   that came due while the computer slept are shown at once, marked late, never dropped.
@@ -583,8 +609,11 @@ S1. **Promises, and how they end:**
   the apps can reach).
 - [ ] [S1-2] **What changed since yesterday** (the functional designer's F2, 2026-10-19; added when this plan was cut
   into batches): the gate's first slice names one plain "what changed since yesterday" line, kept in the first slice even
-  as one line because it is how the person notices a miss, and no item stood for it. Exit: a journey test reads the line
-  after a day in which promises arrived, closed and moved. The morning brief (S2) builds on it later.
+  as one line because it is how the person notices a miss, and no item stood for it. Each line says what the assistant
+  did and why, in its own voice, and anything it closed, moved or merged unseen is one step away: the record, its
+  evidence and its Undo (the designer's notes, 2026-10-19; design 6.35). Exit: a journey test reads the line after a
+  day in which promises arrived, closed and moved, and opens an unseen close from it. The morning brief (S2) builds on
+  it later.
 - [ ] [S1-2] **A stance per person** (the designer's lessons, 2026-10-19; design 6.34): the stance field from a value list
   with meanings (I manage them, I work alongside them, I report to them, I only watch; `track_only` becomes the last),
   `people.default_stance` (alongside) and `steward.tracks` (dates and decisions) as settings with schema, defaults and
@@ -604,6 +633,10 @@ S1. **Promises, and how they end:**
   the identity each command-line agent runs as from the tool itself (an adapter capability), Settings shows it beside
   the account, and a change of identity, or one that doesn't fit the work's data level, is a Today line; runs that would
   reach a level the new identity isn't allowed wait for the person. Risk R15.
+- [ ] [S1-3] **Work the assistant releases on its own keeps the person's hours** (the designer's notes, 2026-10-19;
+  design 6.35): new Today lines it adds, reminders it set itself, notifications and work held until an event that
+  comes in at night wait for working hours and never land in quiet hours; a time the person chose is kept; what waited
+  arrives as one group. Exit: a test with an input at night and a reminder the person set for early morning.
 - [ ] [S1-3] **The gate week's instruments** (design 6.32 measures): silent closes, missed out of present (against the owner's
   own list), wrong endings, Missed-one per week, the replay set.
 
@@ -1039,8 +1072,8 @@ private repository and builder like the other packs, and works with the project 
 ## Phase L-more: the rest of learning
 
 After the packs, beside real use (owner, 2026-10-12). None of it is needed for the loop to work. Each item has its own test.
-- [ ] [L-more] **The style pair** (moved from L4): once a task kind drafts for an audience, style notes reach its packet, and a
-  learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft.
+- [ ] [L-more] **The style pair** (moved from L4): *moved to S1-2 as "Learning from the sent version" (the designer's notes,
+  2026-10-19); this line stays as a pointer.*
 - [ ] [L-more] **Loading a shared lessons file** (moved from L4, with Take my lessons): the injected-import pair runs through the
   real loader, and an injected entry loads as proposed.
 - [ ] [L-more] **Review earned per kind of change** (owner, 2026-10-13: "over time the AI should learn what can be auto AI

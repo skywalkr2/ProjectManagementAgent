@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 98. Drafts to other people, replies owed, and the week (2026-10-19, designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Sent version (6.35, new) | The style pair waited for L-more | A sent message matched to its draft ends the reply owed and is a style signal; a copied draft not found sent is asked about once |
+| Drafts to others (6.35) | Only the question rules (6.8) | Lints: no bookkeeping, openable links, one gap per message, short quotes, never singling a person out |
+| Replies owed (6.35) | Sent or "No reply needed" | Also *Answered another way*, and answered by someone else on the thread (held for Keep) |
+| Audience (6.35) | A source had no limit | A sender's limit is the source's audience; a draft outside it is refused, and its packet leaves the source out |
+| What changed (6.35) | One line | Each line says what the assistant did; unseen closes are one step away |
+| Hours (6.35) | Quiet hours for notifications | Everything the assistant releases on its own waits for working hours |
+| Monday briefing (6.32, 6.35) | The week's promises, deadlines, clashes, decisions | A copy-ready message up the line first, then the week, then three to five confirmed goals; nothing from Today repeated |
+
 ## 97. Stance, agent identity, dropped asks and adding from a link (2026-10-19, designed)
 
 | Where | Before | Now |
@@ -1035,6 +1047,16 @@ yet follow, that it is *designed*, with its phase.
 | Agent identity (6.16) | The account check proved a tier runs | It also reports which sign-in an agent runs as; a change or a level mismatch is a Today line |
 | Corrections (6.22) | A rejecting correction could become a reworded ask | It drops the question with the person's reason; "check X first" checks X |
 | Adding from a link (6.19) | Not said | The link is read first; an unknown status stays unknown; an unread link is said plainly |
+
+## 96. Promises on screen (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Why a promise exists (6.33, 7.7) | An action showed its text, owners and day; the exact words, whom it was promised to, the words its day came from and how it was known were on the record only | `GET /api/promises/{id}` and the why block on the record's page, on Today's inspector and on the What changed row: the words, who owes it (owner format) and to whom, the day with its words and "Check this date", where it came from, "Said" or "Worked out", then what was heard since, newest first, a delivered part credited to the owners. Each of owner, promised to, day and how it is known is a list or date picker to correct (`POST /api/promises/{id}/correct`, the person's own `record.edit` with Undo; `promised_to` and `basis` now count as edits the assistant learns from). Built: `tests/test_promise_routes.py`, `web/src/components/PromiseWhy.test.tsx` |
+| A held ending (7.6, 7.7) | "Close 'X'?" with Close it and Keep it open | For `action.close`, `drop`, `move` and `part` read from an input: one line "Keep: Ana finished 'Send the floor plan'" with the quoted words and who said it under it; Keep is the button, Not yet and Change are in the menu. Built: `tests/test_promise_lines.py`, `web/src/components/TodayPromises.test.tsx` |
+| A promise with nothing heard (6.33, 7.7) | The person's own overdue to-dos were one counted line; chasing others was the follow-up line for what the person had sent | One `promise` line each, carrying every one of these and no other line: the person's own promises past their day (Done first; New date, Drop in the menu), a promise owed by someone else with its day within `steward.chase_dated_days` (7) or past, or with no day and nothing heard for `steward.chase_undated_days` (14) (Followed up first; New date, Done, Drop). News since its day, an ending waiting for Keep, a hold and a recent chase leave no line. Plain own to-dos stay on the overdue line; the follow-up line keeps questions and what no promise line carries. Built: `tests/test_promise_lines.py`, `web/src/components/TodayPromises.test.tsx` |
+| The sent folder (6.33, 7.15) | A mailbox was one folder | A mailbox's row offers its sent folder as a second source: the server's own list (`GET /api/watch/{source}/folders`), the folder it marks as sent already picked, one button (`POST /api/watch/{source}/sent-folder`); the person is its author; taken in quietly like any new source. Built: `tests/test_sent_folder.py`, `web/src/components/Sources.test.tsx` |
+| Settings (4.0) | n/a | New file `steward.yaml`: `chase_undated_days`, `chase_dated_days`; demo values in both fictional workspaces |
 
 ## 95. The gate week freezes what it measures (2026-10-19)
 

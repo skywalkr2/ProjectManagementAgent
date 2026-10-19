@@ -2535,8 +2535,9 @@ people and details, and never acts in their name without their yes on the exact 
   at-risk line says when it bites, a needs-your-yes line starts with what the person does and opens the exact
   content, an empty section is left out, a quiet day is one line, and no line reports status or progress (samples in
   `docs/project/steward-brief-samples.md`). The evening wrap-up has done today (credited to whoever did it), moved to
-  tomorrow and still waiting on others; the Monday briefing has the week's promises both ways, deadlines, clashes
-  and what needs a decision, under the same line rules (`docs/project/steward-wrapup-samples.md`).
+  tomorrow and still waiting on others; the Monday briefing opens with a copy-ready message to whoever the person
+  reports to, then the week's promises, questions, chases and decisions, and three to five goals the person confirms,
+  under the same line rules (6.35; `docs/project/steward-wrapup-samples.md`).
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
@@ -2710,7 +2711,10 @@ promise and applies at once, shown on it. A held ending kept by the person count
 
 **No news by its date.** A promise past its date with no ending and no news is a line with its choices: for a waiting-on,
 "Chase Ana: the floor plan, due Tuesday" with Followed up (a nudge: it stays open), New date, Done and Drop; for the
-person's own, the same choices without Chase. A nudge never ends it.
+person's own, the same choices without Chase. A nudge never ends it. A waiting-on is not left to go stale: with a date it
+gets its line from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
+`steward.chase_undated_days` (14) with no news since it was made or since its last news ("Chase Ana: the floor plan, no
+date, nothing heard for 14 days"). Never while it is on hold.
 
 **Every promise shows why:** the exact words, who owes it to whom, the date and the words it came from, where it came
 from (a link to the source), and "said" or "inferred". Each of these is one click to correct, and each correction is a
@@ -2727,9 +2731,48 @@ and the twenty learning pairs become harness pairs in a workspace's `pairs/` fol
 
 *Built so far (S1):* the fields, rules-first dates, `action.move`, `action.part` and `action.news`, and endings from an
 input held for the person (the person's own note, edit or sent mail applies at once; keeping a held close credits who
-the input said reported it) (`tests/test_promises.py`). *Not built yet:* the prompts and playbook entries that ask for
-promises both ways, the sent folder offered as a source, the line for a promise past its date with its choices, the
-"why" on every promise with one-click corrections, and the golden cases and harness pairs.
+the input said reported it) (`tests/test_promises.py`). **On screen:** every promise shows why (the words, who owes it to
+whom in the owner format, the day with its words and "Check this date", where it came from, "Said" or "Worked out", the
+news under it, newest first, a delivered part credited to the owners), each of owner, promised to, day and basis one click
+to correct from a list or date picker as the person's own edit with Undo, a signal the assistant learns from
+(`tests/test_promise_routes.py`, `web/src/components/PromiseWhy.test.tsx`); a held ending reads as one line, "Keep:
+Ana finished 'Send the floor plan'", with its words under it, Keep first and Not yet and Change in the menu
+(`tests/test_promise_lines.py`, `web/src/components/TodayPromises.test.tsx`); a promise needing a look is one Today
+line with its choices and on no other line: the person's own past their day, and those owed by someone else from
+`steward.chase_dated_days` (7) before their day or past it, or, with no day, after `steward.chase_undated_days` (14) with
+nothing heard, never while on hold or with news since their day (`tests/test_promise_lines.py`); the sent folder offered
+under a mailbox, the server's marked folder picked, taken in quietly (`tests/test_sent_folder.py`,
+`web/src/components/Sources.test.tsx`). The prompts and playbook entries ask for promises both
+ways, and the golden cases and harness pairs are in demo-b (`tests/test_followups_backup_eval.py`,
+`tests/test_evaluate_harness.py`). *Not built yet:* the sent folder offered by a plugin's sign-in sources.
+
+**From three weeks of running** (the designer's S1-1 notes, 2026-10-19, `docs/project/designer-s1-1-notes-2026-10-19.md`):
+- **On hold until a trigger** is its own state: `action.hold` stores what it waits for, and a held promise is out of due
+  and overdue everywhere. Taking it off hold can carry its new date (`action.unhold` with `due_words`), as one step;
+  read from an input, it waits for the person's Keep like any date change. A promise that holds only once something
+  happens ("once the keys arrive") is added on hold from the start (`action.add` with `waiting_for`).
+- **Owed to the person, whatever the team:** a promise made to the person by someone on another team is one they wait
+  on, so the other-team check (6.18) lets it through (`tests/test_scope_slice.py`).
+- **Due at a meeting:** `action.add` with `due_at_event` and its `event` is due on the entry's day (`due_event`) and moves
+  when the entry moves (`event.set`, or the person's own edit), as a date-only move with no news.
+- **The chase clock:** a promise owed to the person gets a line only after `steward.chase_undated_days` (14) days with no
+  news when it has no date, only within `steward.chase_dated_days` (7) days of its date or once past it when it has one,
+  and never while on hold.
+- **Dates read against the message:** a mail message's source keeps `sent_at`, with the sender's own offset, and the
+  rules read its words against that day and zone, so the same thread read on its day or ten days later gives the same
+  dates.
+- **One promise per owner:** a promise with two owners is refused ("add one action for each person who owes it"); an
+  owner that isn't a known person waits for "Pick an owner".
+- **One promise from several sources:** a new promise with the same one owner, owed to the same people, in nearly the
+  same words (`checks.tuning.near_duplicate_action.similarity`) and a date within
+  `checks.tuning.near_duplicate_action.date_window_days` (3) of an open one is added to it (`also_said`, every quote
+  kept). When the dates disagree, the person's own words win, otherwise the newest, and the other date is a news line on
+  the promise.
+- **Crediting and chasing:** the person's "I pinged her" is news and the promise stays open; "Sam sent it" closes it,
+  credited to Sam and reported by the person.
+- **Two names, one person:** a second spelling of two or more words that the person confirms in "who is this?" becomes an
+  alias on that person; a bare first name never does, since it could later match the wrong person unasked.
+*Built (S1-1):* `tests/test_promises.py`; the chase clock with the promise screens.
 
 ## 6.34 Stance: who each person is to the person (phase S1-2, designed 2026-10-19)
 
@@ -2762,3 +2805,74 @@ assistant may draft or ask them. It is the person's own rule, kept per person, b
   probably the most common correction a steward gets.
 - **Not yet:** the full scope resolver (6.18, phase E) takes the stance as one of its inputs; until then the gate above
   is the whole of it.
+
+## 6.35 Drafts to other people, replies owed, and the week (phases S1-2, S1-3 and S2, designed 2026-10-19)
+
+The designer's notes for S1-2, S1-3 and S2 from their running version
+(`docs/project/designer-future-notes-2026-10-19.md`). Each point lands in the batch the designer named.
+
+**Learning from the sent version (S1-2).** The person's sent message is the best teacher a draft gets, and it is
+already in the configured sent folder.
+- When the sent folder is read, a sent message is matched to the draft it came from: same thread and recipients, and
+  text at least `drafts.sent_match.similarity` alike (a setting). A match is one-to-one; nothing is matched by the
+  model.
+- The difference between the draft and what was sent is recorded as a style signal (6.22, the correction kind
+  "edited before sending"): names replaced with roles, a promise cut, a softer opening. It becomes a proposed style
+  note through the usual learning loop, never a rule on its own. This is the style pair, brought forward from L-more.
+- A matched sent message ends the reply owed it answered, credited to the person, with the sent message as evidence.
+- A draft the person copied that has no matching sent message after `drafts.sent_match.ask_after_days` (a setting,
+  2 by default) becomes one question: "Did this go out another way?", with *Yes, another way*, *Not sent* and *Still
+  to send*. A draft the person never copied asks nothing.
+
+**What a draft to someone else carries (S1-2).** A message drafted for another person carries only what they need.
+These are lints on every draft addressed to someone other than the person (severity in `config/checks.yaml`; one
+return, then held for the person when the draft will reach someone, per 6.22):
+- *no bookkeeping*: no record ids, internal terms, stances, scores or "the assistant noticed"; the wording sheet's
+  list of internal terms is the deterministic part;
+- *only openable links*: a link the reader can't open is left out (the rule questions already follow, 6.8);
+- *one gap per message*: two unrelated asks to one person are two drafts;
+- *no long quotes back*: a quote of the reader's own words is at most `drafts.max_quote_words` (a setting, 25 by
+  default); the rest is a link or a summary;
+- *never single a person out*: a draft to several people never names one of them as the cause of a miss; a
+  discrepancy in one person's work is asked of that person privately, in a draft to them alone. Naming is the model's
+  label, so this one is a lint with a return, not a refusal.
+
+**How a reply owed ends (S1-2).** Besides a sent reply, a reply owed ends when:
+- the person marks it *Answered another way* (a call, a meeting, a chat), optionally with a few words that become the
+  evidence;
+- *someone else on the thread answered it*: a later message on the same thread, from another recipient, that answers
+  the ask. Read from an input, this ending waits for Keep like every other ending (6.33), and the line names who
+  answered.
+"No reply needed" stays a choice the assistant learns from (6.22).
+
+**A sender's distribution limit travels with the content (S1-2).** Some messages say who may see them: a marking
+("internal only", "not for the client"), a named group, or the sender's own words.
+- When a message carries a limit, the source records it as its audience: the named group, or the message's own
+  recipients when no group is named. Recording a limit only narrows, so it applies at once from the input; widening it
+  is the person's alone (a person-only change) and is recorded with who widened it.
+- Every record that takes evidence from a limited source carries the limit (the most restrictive one wins when it has
+  several). A draft is refused (an invariant: deterministic, from the evidence's sources and the draft's recipients)
+  when any recipient is outside the audience of a source it draws on, and the packet for a draft to someone outside
+  an audience leaves that source's content out entirely.
+- Proven with a restricted and an open message in one area: a draft to someone outside the group draws only on the open
+  one, and a draft to the group may draw on both.
+
+**What changed since yesterday says what the assistant did (S1-2).** Each line names the act and its reason in the
+assistant's own voice ("Closed the floor plan promise: the owner said it was sent"), and anything the assistant closed,
+moved or merged without the person seeing it is one step from the line: the record, its evidence and its Undo.
+
+**Work the assistant releases on its own keeps the person's hours (S1-3).** Anything the assistant releases without
+the person's act at that moment (new lines it adds to Today, a reminder it set itself, a notification, work held until
+an event that comes in at night) waits for the person's working hours, and never lands in quiet hours (both are the
+existing settings). A time the person chose (a reminder for 7:00) is kept as chosen. What waited arrives together, as
+one group, when the hours start.
+
+**The Monday briefing (S2).** On the first open of the week (the day is a setting):
+1. **A copy-ready message to whoever the person reports to**: the people whose stance is *I report to them* (6.34).
+   It is a draft under the rules above (unreviewed until the person copies it), covering what was done, what moved and
+   what needs them. With nobody marked, the briefing asks once who it is for.
+2. **This week**, through the last working day: promises due by owner, overdue first; questions to send; answers to
+   chase; decisions waiting. Built from the records by rules.
+3. **Goals:** three to five for the week, proposed from what is due and open, which the person confirms, changes or
+   drops. Confirmed goals are kept for the week and read by the morning brief.
+Nothing already on Today is repeated in the briefing; it links to Today instead.
