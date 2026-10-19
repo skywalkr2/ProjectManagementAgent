@@ -282,7 +282,7 @@ test.describe("screen use and the shell", () => {
         .poll(
           () =>
             page.evaluate(() => {
-              const screen = document.querySelector("main");
+              const screen = document.getElementById("walkthrough-screen-title")?.closest("main");
               return !!screen && !!document.activeElement && screen.contains(document.activeElement);
             }),
           { timeout: 15_000 },

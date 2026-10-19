@@ -595,8 +595,8 @@
           "by": {
             "description": "Whether the person or the assistant (from an input) moved it.",
             "enum": [
-              "pm",
-              "assistant"
+              "assistant",
+              "pm"
             ],
             "title": "By",
             "type": "string"
@@ -11733,11 +11733,11 @@
           },
           "learned_from": {
             "enum": [
-              "seed",
               "person",
               "input",
               "assistant",
               "pack",
+              "seed",
               "import"
             ],
             "title": "Learned From",

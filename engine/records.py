@@ -447,7 +447,7 @@ class Action(Record):
         default_factory=list,
         description="For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33).",
     )
-    basis: Literal["said", "inferred"] | None = Field(
+    basis: Literal["inferred", "said"] | None = Field(
         None, description="For a promise: said outright, or inferred by the assistant; never a confidence score."
     )
     said_by: Annotated[str | None, RefTo("person")] = Field(
@@ -1236,7 +1236,7 @@ class Rule(Record):
         description="A deterministic check that implements the rule; a rule with none is prose, and prose alone never "
         "lets a stage move.",
     )
-    origin: Literal["seed", "person", "input", "assistant", "pack", "import"] = Field(
+    origin: Literal["person", "input", "assistant", "pack", "seed", "import"] = Field(
         description="Where it came from: seed (the starting set), person (the person's own words), input (content), "
         "assistant (its own generalization), pack or import."
     )

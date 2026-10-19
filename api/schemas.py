@@ -1484,7 +1484,7 @@ class AfterMove(BaseModel):
     title: str
     to: str | None = Field(None, description="The day it moved to, YYYY-MM-DD.")
     earlier: bool = False
-    by: Literal["pm", "assistant"] = Field(description="Whether the person or the assistant (from an input) moved it.")
+    by: Literal["assistant", "pm"] = Field(description="Whether the person or the assistant (from an input) moved it.")
     replaced: bool = Field(False, description="A fact that was replaced rather than a date that moved.")
     request: str
     changeset: str | None = Field(None, description="The follow-on run's own change, which Undo takes back.")
@@ -3251,7 +3251,7 @@ class RuleView(KnowledgeUse):
     name: str = Field(description="The rule's own name.")
     text: str = Field(description="The rule in the person's wording.")
     status: Literal["proposed", "active", "discarded", "expired", "retired"]
-    learned_from: Literal["seed", "person", "input", "assistant", "pack", "import"]
+    learned_from: Literal["person", "input", "assistant", "pack", "seed", "import"]
     trust: Literal["trusted", "untrusted"]
     learned_at: datetime | None = None
     kept_by: str | None = Field(None, description="The person who made it active.")

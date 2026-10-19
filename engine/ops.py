@@ -278,7 +278,7 @@ class ActionAddOp(OpModel):
         description="For a promise: the people it was promised to, each by name or id (the person this app is for, "
         "when someone else promised them something). Empty for a plain to-do.",
     )
-    basis: Literal["said", "inferred"] | None = Field(
+    basis: Literal["inferred", "said"] | None = Field(
         None,
         description="For a promise: said, when someone said it outright; inferred, when you read it between the lines.",
     )

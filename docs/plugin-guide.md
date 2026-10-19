@@ -1185,7 +1185,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
 | `promised_to` | list[Annotated[str, RefTo(kind='person')]] | `[]` | For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33). |
-| `basis` | Literal['said', 'inferred'] \| None | `None` | For a promise: said outright, or inferred by the assistant; never a confidence score. |
+| `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said outright, or inferred by the assistant; never a confidence score. |
 | `said_by` | str \| None | `None` | The id of the person who said it, when the input names them. |
 | `due_words` | str \| None | `None` | The exact words its due date was read from. |
 | `due_check` | bool | `False` | The rules' reading of `due_words` is uncertain, so the person checks the date. |
@@ -1362,7 +1362,7 @@ A standing instruction the assistant follows, kept as a record so changing one h
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
 | `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `check` | str \| None | `None` | A deterministic check that implements the rule; a rule with none is prose, and prose alone never lets a stage move. |
-| `origin` | Literal['seed', 'person', 'input', 'assistant', 'pack', 'import'] | required | Where it came from: seed (the starting set), person (the person's own words), input (content), assistant (its own generalization), pack or import. |
+| `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | Where it came from: seed (the starting set), person (the person's own words), input (content), assistant (its own generalization), pack or import. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it was proposed from outside content, until the person keeps it. |
 | `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'active'` | proposed: waiting for the person. active: in use. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: it was active and no longer is. |
 | `discard_reason` | str \| None | `None` | Why it was discarded: what the person said, or that it was close to one they discarded. |
@@ -1872,7 +1872,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `due` | date \| None | `None` | The day it is due, if one is stated. |
 | `due_words` | str \| None | `None` | The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The rules read the date from them, and their date wins over `due`. |
 | `promised_to` | list[str] | `[]` | For a promise: the people it was promised to, each by name or id (the person this app is for, when someone else promised them something). Empty for a plain to-do. |
-| `basis` | Literal['said', 'inferred'] \| None | `None` | For a promise: said, when someone said it outright; inferred, when you read it between the lines. |
+| `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said, when someone said it outright; inferred, when you read it between the lines. |
 | `said_by` | str \| None | `None` | Who said it, by name or id, when the input names them. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
@@ -2028,7 +2028,7 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `key` | bool | `False` | True only for a fact that matters most to the project; it is shown first. |
 | `as_of` | date \| None | `None` | The day the fact was true as of, written YYYY-MM-DD, when the input or the person's note names one (a note often reports something said earlier); left out, it is the day the input was received or the note was typed. |
 | `supersedes` | str \| None | `None` | The id of an existing fact this one replaces (the same thing, newer). The older fact stays on record. |
-| `basis` | Literal['said', 'inferred'] \| None | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
+| `basis` | Literal['inferred', 'said'] \| None | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
 | `said_by` | str \| None | `None` | With basis said: who said it, by name or id, when the input names someone. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
