@@ -1709,7 +1709,10 @@ class QueueLineView(BaseModel):
     each undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent
     message has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked
     over, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET
-    /api/since-yesterday, and opening it is POST /api/since-yesterday/seen); `unfiled` is
+    /api/since-yesterday, and opening it is POST /api/since-yesterday/seen);
+    `away` is one row for the lines that waited for the person's working hours (or
+    for quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);
+    `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1754,6 +1757,7 @@ class QueueLineView(BaseModel):
         "unfiled",
         "moved",
         "since_yesterday",
+        "away",
     ]
     count: int
     text: str | None = Field(None, description="The decision, question, name or held item in one line.")

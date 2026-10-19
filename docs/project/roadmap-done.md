@@ -1809,6 +1809,10 @@ From the original designer's lessons of 2026-10-14:
 ## Phase S: finished items
 
 S1. **Promises, and how they end:**
+- [x] **Work the assistant releases on its own keeps the person's hours** (the designer's notes, 2026-10-19;
+  design 6.35): new Today lines it adds, reminders it set itself, notifications and work held until an event that
+  comes in at night wait for working hours and never land in quiet hours; a time the person chose is kept; what waited
+  arrives as one group. Exit: a test with an input at night and a reminder the person set for early morning. *Built (S1-3):* `tests/test_release_hours.py`, `TodayAway.test.tsx`, `tests/test_reminder_lines.py`. Left: holding work until an event the person named (the rule `release_at` exists; nothing records such a hold yet); plugin and stage lines aren't held.
 - [x] **Sign-in sources taken in quietly** (designer F6, from the intake built 2026-10-19): sources a sign-in adds use
   `first_run: intake`, and journeys J2 and J6 are rewritten for one total, one go and one "Look over what was found" line
   instead of a review line per item. *Today:* sign-in sources still read the last day (`first_run: recent`). *Built (S1-3):* `tests/test_first_promises.py`, `journeys-mail.spec.ts` (J2), `journeys-new-start.spec.ts` (J6).

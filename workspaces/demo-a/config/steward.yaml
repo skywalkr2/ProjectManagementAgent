@@ -8,9 +8,10 @@ sent_match:
   window_days: 5   # a sent message matches a copied one only when it went to the same person within this many days
   similarity: 0.6   # how much of their words a sent message and a copied one share for them to be the same message
   ask_after_days: 2   # a copied message no sent message matches gets a "did it go out?" line after this many days
+hold_outside_hours: false   # on, what the assistant adds on its own waits for working hours and arrives together; off here so the sandbox shows lines at any time of day
 reminders:
-  working_start: "09:00"   # the working day starts; an earlier reminder waits until then
-  working_end: "17:30"   # the working day ends; a later reminder waits for the next working day
+  working_start: "09:00"   # the working day starts; what the assistant adds on its own that came in earlier waits until then
+  working_end: "17:30"   # the working day ends; what the assistant adds on its own that came in later waits for the next working day
   working_first_day: monday   # the first working day of the week
   working_last_day: friday   # the last working day of the week
   quiet_start: "21:00"   # quiet hours start; reminders in them wait and arrive together afterwards

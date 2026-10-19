@@ -115,13 +115,12 @@ def test_a_late_reminder_in_the_evening_is_still_shown_during_quiet_hours(env):
     assert line.late is True
 
 
-def test_a_reminder_outside_working_hours_waits_for_the_next_working_start(env):
+def test_a_reminder_outside_working_hours_is_kept_as_the_person_chose_it(env):
     _, cfg, store = env
     saturday = datetime(2026, 10, 24, 10, 0, tzinfo=UTC)
     make(store, cfg, saturday)
-    assert reminders(env, now=saturday + timedelta(hours=1)) == []
-    monday = datetime(2026, 10, 26, 9, 1, tzinfo=UTC)
-    (line,) = reminders(env, now=monday)
+    assert reminders(env, now=saturday - timedelta(minutes=1)) == []
+    (line,) = reminders(env, now=saturday + timedelta(minutes=1))
     assert line.late is False and datetime.fromisoformat(line.at) == saturday
 
 

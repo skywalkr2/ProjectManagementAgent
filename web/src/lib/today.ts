@@ -31,6 +31,7 @@ const COUNTED: ReadonlySet<QueueLine["kind"]> = new Set([
   "unfiled",
   "moved",
   "since_yesterday",
+  "away",
 ]);
 
 /** Whether a line has something to count: a line that counts things and holds none is left out. */

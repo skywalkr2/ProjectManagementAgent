@@ -72,10 +72,11 @@ def rules(cfg: Any) -> Rules:
 
 
 def _scheduled(due: datetime, r: Rules) -> datetime:
-    """When a reminder set for `due` was to reach the person: `due` itself, or the end of the quiet or non-working time
-    it fell in. The rules are asked as of a moment before it, as they were when the person set it."""
+    """When a reminder set for `due` was to reach the person: `due` itself, as chosen, or the end of the quiet hours it
+    fell in. Working hours never move it: a time the person picked is theirs. The rules are asked as of a moment
+    before it, as they were when the person set it."""
     before = due.astimezone(UTC) - timedelta(seconds=1)
-    plan = next_fire(Reminder((due,)), before, r.tz, r.quiet, r.working)
+    plan = next_fire(Reminder((due,)), before, r.tz, r.quiet, None)
     return plan.fires[0].at if plan.status == "known" and plan.fires else due
 
 

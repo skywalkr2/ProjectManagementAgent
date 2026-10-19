@@ -426,6 +426,13 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   owed by someone the person only watches or reports to. `steward.tracks` is picked from tick boxes. Decided by the main
   session.
   **Impact:** design 6.33, 6.34 (CHANGES.md section 106); roadmap S1-2.
+- **Also (2026-10-19): a reminder the person set keeps its time; work released on its own waits for working hours.**
+  Working hours no longer move a person's own reminder (only quiet hours hold it), as design 6.35 says. Lines the
+  assistant or a rule adds from something that arrived outside working hours or in quiet hours wait for the next working
+  start and arrive under "While you were away"; stops, the person's setup and their own reminders never wait.
+  `steward.hold_outside_hours` (default on) turns it off; the demo workspaces turn it off so tests don't depend on the
+  clock. Decided by the main session.
+  **Impact:** design 6.35, 6.32 (CHANGES.md section 111); roadmap S1-3.
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

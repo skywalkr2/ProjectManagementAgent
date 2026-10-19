@@ -2720,7 +2720,7 @@ This evening, Tomorrow morning, Next week (each with the time it moves to, a cho
 and Pick a time…. A line that appears while the app is open is also one browser notification with its words, once the
 person has allowed them from the button in Settings (the browser is never asked on load). Not built yet: the reminder in
 the person's own calendar or mailed to them (the publisher, S1b), and desktop notifications from the tray (phase I). A
-reminder is marked late by how long ago it came due, since the engine does not yet know when the computer slept.
+reminder is marked late by how long ago it came due, since the engine does not yet know when the computer slept. Working hours never move a reminder the person set; only quiet hours hold it (6.35).
 
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 
@@ -3003,6 +3003,23 @@ the person's act at that moment (new lines it adds to Today, a reminder it set i
 an event that comes in at night) waits for the person's working hours, and never lands in quiet hours (both are the
 existing settings). A time the person chose (a reminder for 7:00) is kept as chosen. What waited arrives together, as
 one group, when the hours start.
+
+*Built so far (S1-3, hours):* a line the assistant or a rule adds on its own is held while the moment its cause came in
+has no release yet: the first moment that is inside working hours and outside quiet hours (`engine/reminders.py`
+`release_at`, from the `steward.reminders` settings). The cause is the input's own received time for a line made from an
+input, else when the line's record was made. Held kinds: decisions, questions, who-is and owner questions, moved
+meetings, held items, runs waiting for a go, refusals, reviews, replies owed, learned proposals, unfiled items and the
+since-yesterday line. Never held: a reminder the person set (kept as chosen; working hours no longer move it, only quiet
+hours hold it), anything made from the person's own note, the person's own setup (first go, catch-up go, intake go,
+what an intake found), lines that report a stop (restart, handover, paused, borrow, offline, failed, account and
+credential checks, an unread source, a missing account, a kind of file not read), and lines that have no moment of
+arrival because a date passes or a count builds over days (overdue, promises, send, nudge, the rules review, the
+catch-up list, a copy not found sent). What waited arrives together: the lines keep their places and one row, `While you
+were away: N things arrived`, sits at the top of the first group any of them is in and goes with that day; the
+browser notifies only for reminders, which are never held, so a held line never notifies. `steward.hold_outside_hours`
+(on by default, live) turns holding off. Not built: work held until an event the person named (nothing holds work
+until an event yet; `release_at` is the rule it will use), and Today lines that running plugins add, which are not held
+(`tests/test_release_hours.py`, `web/src/components/TodayAway.test.tsx`).
 
 **The Monday briefing (S2).** On the first open of the week (the day is a setting):
 1. **A copy-ready message to whoever the person reports to**: the people whose stance is *I report to them* (6.34).

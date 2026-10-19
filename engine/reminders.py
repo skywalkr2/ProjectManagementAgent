@@ -129,6 +129,22 @@ def _permitted(value: datetime, zone: tzinfo, hours: WorkingHours | None, quiet:
     raise ValueError("Quiet hours and working hours leave no delivery time")
 
 
+def release_at(
+    value: datetime, tz: tzinfo, quiet_hours: QuietHours | None, working_hours: WorkingHours | None
+) -> datetime:
+    """The first moment at or after `value` that is inside working hours and outside quiet hours, on the person's
+    clock: `value` itself when it already is. What the assistant releases on its own (a line, a notification, work held
+    until an event) waits for it. Hours that leave no such moment keep `value`."""
+    try:
+        if not isinstance(tz, tzinfo):
+            raise ValueError("Supply a time-zone object, not a zone name")
+        _aware(value)
+        _validate(working_hours, quiet_hours)
+        return _permitted(value, tz, working_hours, quiet_hours)
+    except (ValueError, OverflowError):
+        return value.astimezone(tz) if isinstance(tz, tzinfo) else value
+
+
 def next_fire(
     reminder: Reminder,
     now: datetime,

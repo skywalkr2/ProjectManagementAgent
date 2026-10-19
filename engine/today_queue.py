@@ -17,6 +17,7 @@ from engine import (
     held_ask,
     move_groups,
     promises,
+    release_hours,
     reminder_lines,
     reply_lines,
     sent_version,
@@ -110,7 +111,9 @@ class Line:
     being read: its copy's id in `sent_copy`, who it was for in `person`, what it covered in `questions` and
     `actions`),
     since_yesterday (what the assistant or a rule did that the person hasn't looked over, one line for all of it:
-    `count` entries, counted by act in `outcome`; Look over opens the list), send or nudge.
+    `count` entries, counted by act in `outcome`; Look over opens the list), away (one row for the lines that waited for
+    the person's working hours and arrived together with them: `count` is how many, and `since` the moment the hours
+    began; it is at the top of the first group any of them is in, and goes with the day), send or nudge.
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
     one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
@@ -895,6 +898,10 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
 
+    if cfg.steward.hold_outside_hours:
+        # What the assistant or a rule added on its own waits for the person's hours; what waited arrives under one row.
+        caused = release_hours.causes(lines, reader, requests, by_changeset, sources)
+        lines = release_hours.keep_hours(lines, caused, cfg, now, Line)
     return sorted(lines, key=_rank)
 
 
@@ -1006,6 +1013,7 @@ _KIND_ORDER = {
     "reply": -1,
     "sent_check": 2,
     "since_yesterday": 3,
+    "away": -1.5,
     "account_check": 1,
     "switch_failed": 1,
     "credential": 1,

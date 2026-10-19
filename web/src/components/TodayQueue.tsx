@@ -567,6 +567,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return sentCheckTitle(line, t);
       case "since_yesterday":
         return t("queue.since.title");
+      case "away":
+        return tn("queue.away", line.count);
       default:
         return line.text ?? line.kind;
     }
@@ -866,6 +868,9 @@ function QueueRow(props: {
           primary: { label: t("queue.since.open"), run: () => props.handlers.onOpenView?.("work/since") },
           menu: [],
         };
+      case "away":
+        // A note, not a task: the lines that waited arrive with it, each in its own place, so it has nothing to press.
+        return { pill: t("queue.pill.away"), tone: "neutral", meta: undefined, primary: null, menu: [] };
       default:
         // A kind the screen has no words for yet still shows, so nothing the engine ranks is hidden.
         return { pill: "", tone: "neutral", meta: meta(line.waiting), primary: null, menu: [] };

@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 111. Work the assistant releases on its own keeps the person's hours (2026-10-19)
+
+| Where | Before | Now |
+|---|---|---|
+| Lines added on their own (6.35) | A line the assistant or a rule added showed at once, whatever the hour | One whose cause came in outside working hours, or inside quiet hours, is held until the next moment inside working hours and outside quiet hours; the cause is the input's own received time (else when its record was made). Decisions, questions, held items, runs waiting for a go, refusals, reviews, replies owed, learned proposals, unfiled items and the since-yesterday line are held; reminders, anything from the person's own note, their setup, stops and lines with no moment of arrival are not. Built: `tests/test_release_hours.py` |
+| What waited (6.35, 7.7) | | Arrives together: the lines keep their places and one new `away` line, `While you were away: N things arrived`, sits at the top of the first group any of them is in, with no choices, and goes with that day. Built: `tests/test_release_hours.py`, `web/src/components/TodayAway.test.tsx` |
+| A reminder the person set (6.32, 6.35) | Working hours moved a reminder set outside them to the next working start | It comes at the time chosen; only quiet hours hold it (`tests/test_reminder_lines.py`, `tests/test_release_hours.py`). The settings' descriptions say so |
+| Notifications (6.32) | | Unchanged by rule: the browser notifies only for reminders, which are never held, and a held line is not in the queue, so it never notifies (`web/src/components/TodayAway.test.tsx`) |
+| Settings (4.0) | | `steward.hold_outside_hours` (on by default, live, off in both fictional workspaces so the sandbox shows lines at any hour) |
+
 ## 110. Sign-in sources taken in quietly, and a first success in five minutes (2026-10-19)
 
 | Where | Before | Now |

@@ -2011,14 +2011,16 @@ _CLOCK = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 class RemindersSettings(ConfigModel):
     working_start: str = Field(
         "09:00",
-        description="The time the working day starts. A reminder set for earlier waits until then, and Tomorrow "
-        "morning snoozes to it.",
+        description="The time the working day starts. What the assistant adds on its own that came in earlier waits "
+        "until then, and Tomorrow morning snoozes to it. A reminder you set for an earlier time still comes at "
+        "that time.",
         json_schema_extra={"choices": "times_of_day"},
     )
     working_end: str = Field(
         "17:30",
-        description="The time the working day ends. A reminder set for later waits for the next working day, and Later "
-        "today is left out of the snooze choices once it would fall after it.",
+        description="The time the working day ends. What the assistant adds on its own that came in later waits for "
+        "the next working day, and Later today is left out of the snooze choices once it would fall after it. A "
+        "reminder you set for a later time still comes at that time.",
         json_schema_extra={"choices": "times_of_day"},
     )
     working_first_day: Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] = Field(
@@ -2031,7 +2033,7 @@ class RemindersSettings(ConfigModel):
     quiet_start: str = Field(
         "21:00",
         description="The time quiet hours start. A reminder that falls in quiet hours waits and arrives with the "
-        "others that waited, once they end.",
+        "others that waited, once they end, and so does what the assistant adds on its own.",
         json_schema_extra={"choices": "times_of_day"},
     )
     quiet_end: str = Field(
@@ -2134,6 +2136,13 @@ class StewardFile(FileModel):
     )
     reminders: RemindersSettings = Field(
         default_factory=RemindersSettings, description="When a reminder on a dated thing reaches the person."
+    )
+    hold_outside_hours: bool = Field(
+        True,
+        description="Whether what the assistant or a rule adds to Today on its own waits for your working hours when "
+        "its cause came in outside them or in quiet hours. What waited arrives together under one row, While you were "
+        "away. A reminder you set for a time is kept as chosen, and a stop, your own note and your setup are never "
+        "held. Off shows everything as it arrives.",
     )
     reply_thread_days: int = Field(
         14,
