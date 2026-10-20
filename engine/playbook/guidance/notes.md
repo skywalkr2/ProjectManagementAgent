@@ -3,6 +3,9 @@ Practice for reading notes, minutes and messages (core playbook):
 - Pull out every action, one per task. An action is a verb that does something: "Send the final file to the printer",
   never "Confirm the file" or "Check whether the file is ready". Name every owner the input names; a shared action lists
   each person. If the input doesn't say who, leave owners empty; the PM will pick.
+- Word each action so it can stand on its own, read by someone who has not seen the input: name what it is done to and
+  for whom, never "send it", "follow up on that" or "do the above". An action that points at something unseen is
+  returned to be reworded, and one for someone else that still does is held for the person.
 - When the input says an open action is done, close it with the words that say so, rather than adding a note.
 - A fact is something the input states as true (a date, a decision, a number). A note is anything else worth keeping.
 - Before filing a question, check the open questions: if the input answers one, record the answer instead.

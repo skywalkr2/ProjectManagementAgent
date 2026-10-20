@@ -440,6 +440,11 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   gives only words reads "On hold: …" as before. Neither is due. Top priorities counts the blocked ones. Taking it off hold is the existing
   `action.unhold`. Dependencies between work items stay the project management pack's. Decided by the main session.
   **Impact:** design 6.9 "On hold" (CHANGES.md, B-6a); roadmap B-6a "An action can be blocked"; P26's tie.
+- **Also (2026-10-20): To-dos and questions is a screen under Work.** Every open to-do with its owners, due date,
+  project and where it came from, and every open question with who it waits on and since when, filtered by project,
+  person and state, with edit, reassign, merge, hold and drop on each row (Undo on each). It is the "one place for each"
+  the roadmap asks for; Follow-ups stays the screen for what to send. Decided by the main session.
+  **Impact:** design 7.1's screen table and 6.8 to 6.11 (CHANGES.md section 120); roadmap B-6a "cleaned up end to end".
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.

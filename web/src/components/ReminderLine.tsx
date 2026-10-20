@@ -8,7 +8,7 @@ import { useAct } from "../lib/act";
 import { day, wallTime } from "../lib/dates";
 import { notifyState, showNotification } from "../lib/notify";
 import { useWords } from "../lib/wording";
-import { useNoted } from "./NoteBox";
+import { NoteBox, useNoted } from "./NoteBox";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 
@@ -51,6 +51,8 @@ export function snoozeLabel(choice: Choice, t: T): string {
 export interface ReminderChoices {
   /** Done, for a row's one primary button. */
   done: () => void;
+  /** "Add a note": the box it opens is in `form`, and sends the note with Done. */
+  note: MenuAction;
   /** The titled group of snooze choices, with Pick a time. */
   groups: MenuGroup[];
   /** The form Pick a time opened, shown under the row. */
@@ -64,11 +66,13 @@ export function useReminderChoices(action: string, snoozes: Choice[], onClosed?:
   const act = useAct();
   const noted = useNoted();
   const [picking, setPicking] = useState(false);
-  const done = () =>
-    void act(
-      () => api.actionStatus(action, "done"),
+  const [noting, setNoting] = useState(false);
+  const doneWith = (note?: string) =>
+    act(
+      () => api.actionStatus(action, "done", note),
       (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(action, "open") }),
     );
+  const done = () => void doneWith();
   const snooze = (body: S["ReminderIn"], when: string) =>
     act(
       () => api.remind(action, body),
@@ -82,18 +86,32 @@ export function useReminderChoices(action: string, snoozes: Choice[], onClosed?:
     ...snoozes.map((choice) => ({ id: `snooze-${choice.choice}`, label: snoozeLabel(choice, t), run: () => void snooze({ choice: choice.choice }, choice.choice === "next week" ? dateAndTime(choice.at) : wallTime(choice.at)) })),
     { id: "snooze-pick", label: t("queue.snooze.pick"), run: () => setPicking(true) },
   ];
-  const form = picking ? (
-    <PickTime
-      onSave={(at) => {
-        void act(
-          () => api.remind(action, { at }),
-          (result) => ({ message: t("reminder.snoozed", { when: dateAndTime(at) }), undo: () => api.undo(result.changeset) }),
-        ).then((ok) => ok && close());
-      }}
-      onCancel={close}
-    />
-  ) : null;
-  return { done, groups: [{ id: "snooze", title: t("queue.reminder.snooze"), entries: entries }], form };
+  const form = (
+    <>
+      {picking && (
+        <PickTime
+          onSave={(at) => {
+            void act(
+              () => api.remind(action, { at }),
+              (result) => ({ message: t("reminder.snoozed", { when: dateAndTime(at) }), undo: () => api.undo(result.changeset) }),
+            ).then((ok) => ok && close());
+          }}
+          onCancel={close}
+        />
+      )}
+      {noting && (
+        <NoteBox
+          sends={[{ label: t("queue.reminder.done"), run: doneWith }]}
+          onClose={() => {
+            setNoting(false);
+            onClosed?.();
+          }}
+        />
+      )}
+    </>
+  );
+  const note: MenuAction = { id: "note", label: t("note.add"), run: () => setNoting(true) };
+  return { done, note, groups: [{ id: "snooze", title: t("queue.reminder.snooze"), entries: entries }], form };
 }
 
 /** A box to pick a day and time, with the cursor in it. A time without a zone is on the person's own clock. */
@@ -150,7 +168,7 @@ function ReminderItem(props: { item: S["ReminderItemView"]; snoozes: Choice[] })
       <button type="button" className="btn small primary" aria-label={t("today.todo.done_named", { text: props.item.text })} onClick={choices.done}>
         {t("queue.reminder.done")}
       </button>
-      <RowMenu label={text} actions={[]} groups={choices.groups} />
+      <RowMenu label={text} actions={[choices.note]} groups={choices.groups} />
       {choices.form}
     </li>
   );

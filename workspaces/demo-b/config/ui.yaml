@@ -5,8 +5,8 @@ shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, un
 narrow_below_px: 640   # below this width: the phone layout, with a bottom bar
 toast_seconds: 7
 feedback_to: feedback@example.com   # where the feedback button writes
-today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1}   # what Today's agenda and what came in cover
-followups: {action_due_within_days: 5, undated_after_days: 10, question_after_days: 3, second_nudge_items: 2}   # when a sent item is due a follow-up
+today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1, stale_after_days: 21}   # what Today's agenda and what came in cover
+followups: {action_due_within_days: 5, undated_after_days: 10, question_after_days: 3, second_nudge_items: 2, escalate_after_chases: 2}   # when a sent item is due a follow-up
 walkthrough: {first_promises: 3}   # how many promises the walkthrough's first-result screen shows
 series: {usually_with_share: 0.5, usually_with_min_meetings: 2, usually_with_max: 6}   # who a series is "usually with" on its page
 brand: {color: "#8a3b5c", logo: null}   # the accent color; a logo is an image file in this config folder

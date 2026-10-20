@@ -139,7 +139,7 @@ function RewordForm(props: { q: { id: string; title: string; text: string }; onC
   );
 }
 
-function RerouteForm(props: { q: { id: string }; onClose: () => void }) {
+export function RerouteForm(props: { q: { id: string }; onClose: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });

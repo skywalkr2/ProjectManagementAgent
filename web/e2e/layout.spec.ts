@@ -35,6 +35,7 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
     },
   },
   { name: "Follow-ups", hash: "work/followups", ready: (page) => heading(page, "Follow-ups") },
+  { name: "To-dos and questions", hash: "work/open", ready: (page) => heading(page, "To-dos and questions") },
   { name: "What changed", hash: "work/changed", ready: (page) => heading(page, "What changed") },
   { name: "Outgoing", hash: "work/outgoing", ready: (page) => heading(page, "Drafts to approve") },
   { name: "Stages", hash: "work/stages", ready: (page) => heading(page, "Stages") },

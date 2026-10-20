@@ -2,17 +2,20 @@
 // 1680px and expands under the line below that. The pieces are the ones the Work screens use (a change's card, a
 // person's message to copy, a question's answer form), so a line and its screen can never disagree.
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { api } from "../lib/api";
 import type { QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
+import { RerouteForm } from "./ChangeThis";
 import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
 import { PromiseWhy } from "./PromiseWhy";
+import { ReassignForm } from "./ReassignAction";
 import { TodoRow } from "./TodayRail";
 import { ChangeRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
-const OPENS = new Set<QueueLine["kind"]>(["decision", "question", "who_is", "owner", "held", "moved", "go", "refused", "failed", "review", "send", "nudge", "overdue", "promise"]);
+const OPENS = new Set<QueueLine["kind"]>(["decision", "question", "who_is", "owner", "held", "moved", "go", "refused", "failed", "review", "send", "nudge", "escalate", "overdue", "promise"]);
 
 export function opensItems(line: QueueLine): boolean {
   return OPENS.has(line.kind);
@@ -32,6 +35,8 @@ export function LineDetail(props: { line: QueueLine; sendBack?: boolean; onOpenG
       return <SendDetail line={line} />;
     case "nudge":
       return <NudgeDetail line={line} />;
+    case "escalate":
+      return <EscalateDetail line={line} />;
     case "overdue":
       return <OverdueDetail line={line} />;
     case "promise":
@@ -129,5 +134,35 @@ function OverdueDetail(props: { line: QueueLine }) {
         <TodoRow key={item.action} item={item} project={item.project ? (names.get(item.project) ?? "") : ""} showDue />
       ))}
     </ul>
+  );
+}
+
+/** The suggestion to ask someone else about the one thing a person hasn't answered: a list of people. For a question it
+ * asks them instead; for an action it takes the person off it and gives it to them. Nothing is sent: what goes to the new
+ * person is the next message to copy. */
+function EscalateDetail(props: { line: QueueLine }) {
+  const { t } = useWords();
+  const id = (props.line.questions ?? [])[0];
+  const action = (props.line.actions ?? [])[0];
+  const items = useQuery({ queryKey: ["open-items"], queryFn: api.openItems, enabled: !!action });
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const look = window.setTimeout(() => box.current?.querySelector<HTMLElement>("select")?.focus(), 0);
+    return () => window.clearTimeout(look);
+  });
+  if (id) {
+    return (
+      <div ref={box}>
+        <RerouteForm q={{ id }} onClose={() => undefined} />
+      </div>
+    );
+  }
+  if (action && items.isPending) return <Skeleton />;
+  const found = items.data?.actions.find((a) => a.id === action);
+  if (!found) return <Gone />;
+  return (
+    <div ref={box}>
+      <ReassignForm action={found} from={props.line.person ?? undefined} label={t("question.reroute_label")} />
+    </div>
   );
 }

@@ -399,6 +399,7 @@ test.describe("screen use and the shell", () => {
       "#today": "Today",
       "#work/changed": "What changed",
       "#work/followups": "Follow-ups",
+      "#work/open": "To-dos and questions",
       "#work/outgoing": "Drafts to approve",
       "#work/stages": "Stages",
       "#records/projects": "Projects",

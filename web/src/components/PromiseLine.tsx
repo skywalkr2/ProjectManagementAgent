@@ -8,7 +8,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { useDropAction } from "./DropAction";
-import { useNoted } from "./NoteBox";
+import { NoteBox, useNoted } from "./NoteBox";
 import { NewDate, useCorrectPromise } from "./PromiseWhy";
 import type { MenuAction } from "./RowMenu";
 
@@ -28,6 +28,7 @@ export function usePromiseChoices(line: Line, onClosed?: () => void): PromiseCho
   const act = useAct();
   const noted = useNoted();
   const [dating, setDating] = useState(false);
+  const [noting, setNoting] = useState(false);
   const action = line.kind === "promise" ? ((line.actions ?? [])[0] ?? "") : "";
   const drop = useDropAction({ id: action }, onClosed);
   const correct = useCorrectPromise(action);
@@ -36,17 +37,17 @@ export function usePromiseChoices(line: Line, onClosed?: () => void): PromiseCho
 
   const person = line.person ?? null;
   const first = (line.person_name ?? "").split(/\s+/)[0] ?? "";
-  const done = () =>
+  const done = (note?: string) =>
     act(
-      () => api.actionStatus(action, "done"),
+      () => api.actionStatus(action, "done", note),
       (result) => ({
         message: noted(t("toast.action_done"), result.request),
         undo: () => api.actionStatus(action, "open"),
       }),
     );
-  const followedUp = () =>
+  const followedUp = (note?: string) =>
     act(
-      () => api.followedUp(person ?? "", action),
+      () => api.followedUp(person ?? "", action, note),
       (result) => ({
         message: noted(t("toast.followed_up", { name: first }), result.request),
         undo: () => api.unfollow(person ?? "", action, { on: result.on, previous_told: result.previous_told }),
@@ -58,10 +59,28 @@ export function usePromiseChoices(line: Line, onClosed?: () => void): PromiseCho
   };
   const newDate: MenuAction = { id: "new-date", label: t("queue.promise.new_date"), run: () => setDating(true) };
   const finish: MenuAction = { id: "done", label: t("queue.promise.done"), run: () => void done() };
+  const note: MenuAction = { id: "note", label: t("note.add"), run: () => setNoting(true) };
+  // A note can go with either act a chase offers; the line's own act comes first, so Enter sends that one.
+  const chased = !!person && line.stance !== "report_to";
+  const sends = chased
+    ? [
+        { label: t("followups.followed_up"), run: followedUp },
+        { label: t("queue.promise.done"), run: done },
+      ]
+    : [{ label: t("queue.promise.done"), run: done }];
   const showDate = dating && !!found.data;
   const form =
-    showDate || drop.form ? (
+    showDate || drop.form || noting ? (
     <>
+      {noting && (
+        <NoteBox
+          sends={sends}
+          onClose={() => {
+            setNoting(false);
+            onClosed?.();
+          }}
+        />
+      )}
       {showDate && found.data && (
         <NewDate
           label={t("promise.new_date")}
@@ -76,8 +95,8 @@ export function usePromiseChoices(line: Line, onClosed?: () => void): PromiseCho
     </>
     ) : null;
   // Someone the person reports to is waited on, not chased: no Followed up, a new date first.
-  if (person && line.stance === "report_to") return { primary: { label: t("queue.promise.new_date"), run: () => setDating(true) }, menu: [finish, drop.entry], form };
+  if (person && line.stance === "report_to") return { primary: { label: t("queue.promise.new_date"), run: () => setDating(true) }, menu: [finish, note, drop.entry], form };
   return person
-    ? { primary: { label: t("followups.followed_up"), run: () => void followedUp() }, menu: [newDate, finish, drop.entry], form }
-    : { primary: { label: t("queue.promise.done"), run: () => void done() }, menu: [newDate, drop.entry], form };
+    ? { primary: { label: t("followups.followed_up"), run: () => void followedUp() }, menu: [newDate, finish, note, drop.entry], form }
+    : { primary: { label: t("queue.promise.done"), run: () => void done() }, menu: [newDate, note, drop.entry], form };
 }

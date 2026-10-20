@@ -28,6 +28,7 @@ from api.correction_routes import build_correction_router
 from api.data_form_routes import build_data_form_router
 from api.first_promises_routes import build_first_promises_router
 from api.knowledge_routes import build_knowledge_router
+from api.open_items_routes import build_open_items_router
 from api.pack_routes import build_pack_router
 from api.promise_routes import build_promise_router
 from api.quality_routes import build_quality_router
@@ -298,6 +299,7 @@ def create_app(
     inner.include_router(build_first_promises_router(ws, cfg, store, events, worker))
     inner.include_router(build_ask_router(ws, cfg, store, events, worker))
     inner.include_router(build_correction_router(ws, cfg, store, events, worker))
+    inner.include_router(build_open_items_router(ws, cfg, store, events, worker))
     inner.include_router(build_promise_router(ws, cfg, store, events, worker))
     inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
     inner.include_router(build_since_router(ws, cfg, store, events, worker))

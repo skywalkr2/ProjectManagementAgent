@@ -909,8 +909,14 @@ is marked *designed*, with the phase.
   When the data doesn't match the correction, the answer is a question to the PM with what was found, not a change and never a
   report. *Designed, phase L3.* Today Send back runs the reading task again with the old note and the PM's words added, and
   nothing in the packet states the named item's current state.
-- Aging: "waiting Nd" after Mark sent (built); chase suggestions by the one follow-up rule (6.9, built); one escalation suggestion when `routing.escalation` says so (4.3, 6.24; *designed, phase C2*, with the
-  project management pack: no `routing` setting exists today).
+- Aging: "waiting Nd" after Mark sent (built); chase suggestions by the one follow-up rule (6.9, built); **one suggested
+  escalation, built in the core (B-6a, open promise P26):** after a second follow-up and the wait running its length again
+  with no answer, Today's `escalate` line asks "Ask someone else about …?" with **Pick who**, once per person (the thing with
+  the most follow-ups, then the longest wait), never sent, and left out of that person's follow-up line
+  (`ui.followups.escalate_after_chases`, default 2, zero turns it off). Pick who asks the question of someone else
+  (`question.move`) or gives the action to them (an owner edit). **Built:** `tests/test_nudge_left_out.py`. An escalation to a
+  configured person by working days, `routing.escalation` (4.3, 6.24), is *designed, phase C2*, with the project management
+  pack: no `routing` setting exists today. The nudge's own list also says what it left out because it was answered since (7.5).
 
 **From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7 (see roadmap-done.md)):
 - **A question someone asks the person** is one item: an action owned by the person ("Reply to the shop: when the cover
@@ -1003,9 +1009,30 @@ is marked *designed*, with the phase.
   `tests/test_on_hold_and_follow_ups.py::test_a_sent_question_is_chased_after_the_question_wait_and_not_before`,
   `tests/test_on_hold_and_follow_ups.py::test_the_rule_reads_every_threshold_from_the_settings`).
 - **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
-  other owners stay. Told dates, Followed up and They finished it are per person. *Designed, not yet built, phase B* (edit,
-  close and reassign from the row). Told dates are per person today; the only way to change an owner is to edit the whole list
-  on the record page.
+  other owners stay. Told dates, Followed up and They finished it are per person, so the new person has not been told and
+  the action is to send to them. **Built (B-6a):** "Reassign…" in a to-do's row menu on the to-dos and questions screen (7.5)
+  is the person's own `record.edit` of the owners: a list of people, and on a to-do with several owners a first choice of
+  whose part changes; one change with Undo, and an `edited` signal when the assistant had set the owners. A person already
+  among the owners is not listed twice. `tests/test_open_items.py::test_an_owner_change_from_the_row_is_the_persons_edit_with_undo_and_a_signal`,
+  `web/src/components/OpenItems.test.tsx` (one owner, a shared to-do, the team kept).
+- **One place for every open to-do and question, and merging near-duplicates** (B-6a, 7.5). `engine/open_items.py` lists
+  every open action with its owners, due date, project and parent project, notes, where it came from (`engine/origin.py`),
+  its state (no owner, on hold, overdue, stale or open) and the open action of the same project and owners it most nearly
+  repeats; and every open question with who it waits on, since when and its state. **Merge with …** keeps the one it is
+  offered on and closes the other as one change (`merge_actions`: a `record.edit` of the kept one's notes and earlier due date
+  and an `action.drop` of the other, applied all or nothing), so one Undo takes both back, and the drop records a
+  `dropped` correction. No new op was needed. The words it adds are `language.messages.merged_note` and `merged_reason`.
+  **Stale:** the person's own open to-do with no date, no reminder and no hold that nothing has changed for
+  `ui.today.stale_after_days` (default 21), one Today line in Review. **Built:** `tests/test_open_items.py`.
+- **Actions worded to stand on their own** (B-6a): the playbook's rule for reading notes (`engine/playbook/guidance/notes.md`)
+  and a lint, `action-stands-alone` (`checks.yaml` severity, default `return`), on an `action.add` whose words lean on
+  something the reader can't see: fewer than `checks.tuning.action_stands_alone.min_words` words (default 2), or a word of
+  `language.unanchored_words` ("it", "that", "the above", "as discussed", …) standing where the action's object belongs
+  (right after its first word and any `language.unanchored_lead_words` such as "up on", or last after one) or a phrase of
+  them anywhere. The words quoted from the input count, since they are the action. Like the other wording lints it only warns
+  on an action only the person reads; unlike them, an action with an owner other than the person reaches that owner in the
+  messages that tell them, so there it returns once and is then held. A lint, never an invariant: what counts is a setting.
+  **Built:** `tests/test_action_stands_alone.py`.
 - **Assign:** give a held action (one waiting for "Pick an owner") its first owner, which adds it (built). The held item
   carries a **suggestion** from the workspace's own records, never from AI: the person an active routing entry names (one
   that isn't "doesn't answer this", whose scope covers the action's project and whose topic the action's text holds at
@@ -1027,8 +1054,10 @@ is marked *designed*, with the phase.
 action not yet communicated to an owner shows as "to send" on the action row (not as a separate question row), the person's
 Copy includes it, Mark sent records it as told. Closing the action closes the notice.
 A baseline date lets a new workspace treat existing actions as already communicated (*designed, not yet built, not
-scheduled*: a new workspace with imported actions shows each as to send). Owners marked `track_only` get no notices
-(*designed, not yet built, not scheduled*: the flag is stored and shown, and notices do not read it).
+scheduled*: a new workspace with imported actions shows each as to send). Owners marked `track_only` get no notices (*built*
+with the stance, 6.34: a `track_only` person counts as someone the person only watches, and nothing is drafted or sent to
+them: `tests/test_stance.py::test_the_default_stance_is_a_setting_and_track_only_counts_as_watch`,
+`tests/test_stance.py::test_someone_watched_or_reported_to_is_never_sent_their_actions`).
 
 ## 6.11 Names and identity
 
@@ -1061,7 +1090,8 @@ wherever they are shown.
   workspace already knows. The same context is rebuilt when a held op is released, so a name is read the same way both times.
   Tests: `tests/test_names.py` (the resolving rules with and without context, the context of a hand-in and of a watched
   message) and the golden cases `first-name-in-thread`, `different-initial-held`, `shared-first-name` and `unknown-person`.
-- **Rendering:** owners in `owner_format` ("Product (Jane Doe)"), recipients by full name, greetings by first name. Changing
+- **Rendering:** owners in `owner_format` ("Product (Jane Doe)"; the to-dos and questions screen shows them so too,
+  `tests/test_open_items.py::test_an_owner_shows_with_their_team_as_the_workspace_writes_owners`), recipients by full name, greetings by first name. Changing
   the format changes every output at the next render. The format takes `{full_name}` (required) and `{team}`; an owner with
   no team is shown by the full name alone, and the team is the one on the action's owner entry, else the person's own. It
   applies where the app shows an action's owners (a record's page and the review of a change), not in the packet the
@@ -1206,8 +1236,8 @@ order, each line with a kind:
 |---|---|
 | **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; built, `tests/test_silent_stops.py::test_the_restart_line_comes_before_the_first_go_and_before_decisions`); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`, shaped as a question with two answers when it rests on an inference or drops something that reached someone, `engine/held_ask.py`, 7.6); the questions a follow-on run asked about one move, as one group (`moved`, `engine/move_groups.py`, 7.7; a group of one stays a `decision` or `question` carrying `after_move`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
 | **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); work that has waited for the network longer than `dispatch.offline_line_after_minutes`, one line with the count and since when (`offline`, built, `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line, leaving out any on hold (`overdue`) |
-| **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); what the assistant filed under no project, one line with the count while there is any (`unfiled`, `engine/unfiled.py`, 7.14); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
-| **Send** | messages to send, one line per person (`send`); something sent to a person that is due a follow-up by the rule in 6.9 (`nudge`: questions sent and actions told, 4.11) |
+| **Review** | the person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`, one line (`stale`, 6.9; its action opens To-dos and questions on the stale ones); the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); what the assistant filed under no project, one line with the count while there is any (`unfiled`, `engine/unfiled.py`, 7.14); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
+| **Send** | messages to send, one line per person (`send`); something sent to a person that is due a follow-up by the rule in 6.9 (`nudge`: questions sent and actions told, 4.11); the one thing a person still hasn't answered after `ui.followups.escalate_after_chases` follow-ups, as a suggestion to ask someone else (`escalate`, 6.8; never sent; the same thing is not also in the person's nudge line) |
 
 Within a group, a kind has a fixed place (decisions first, then who-is, owner, held, go, refused, questions), then the line that
 has waited longest, or is due first, comes first; a nudge goes by its longest wait. A review or overdue line that covers exactly

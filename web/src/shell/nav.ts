@@ -51,6 +51,7 @@ export function useNav(): NavModel {
     work: [
       { view: "work/changed", label: t("nav.changed"), icon: "inbox", count: some(counts.changed) },
       { view: "work/followups", label: t("nav.followups"), icon: "send", count: some(counts.followups) },
+      { view: "work/open", label: t("nav.open"), icon: "check" },
       { view: "work/outgoing", label: t("nav.outgoing"), icon: "upload" },
       { view: "work/stages", label: t("nav.stages"), icon: "layers" },
       ...plugin("work", "work"),

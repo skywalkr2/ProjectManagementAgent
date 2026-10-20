@@ -238,6 +238,34 @@
         "title": "ActionItem",
         "type": "object"
       },
+      "ActionMergeIn": {
+        "description": "Merge a near-duplicate into the action this is posted to: it stays open and the other is closed.",
+        "properties": {
+          "other": {
+            "description": "The id of the open action it nearly repeats, which is closed.",
+            "minLength": 1,
+            "title": "Other",
+            "type": "string"
+          },
+          "other_version": {
+            "description": "The version of the action closed, as the person saw it.",
+            "title": "Other Version",
+            "type": "integer"
+          },
+          "read_version": {
+            "description": "The version of the action kept, as the person saw it.",
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "other",
+          "read_version",
+          "other_version"
+        ],
+        "title": "ActionMergeIn",
+        "type": "object"
+      },
       "ActionPreviewItem": {
         "properties": {
           "alt": {
@@ -2487,6 +2515,31 @@
           "fits"
         ],
         "title": "AiWorkKindView",
+        "type": "object"
+      },
+      "AlikeView": {
+        "description": "The open action another nearly repeats, for the row's \"Merge with ...\" choice.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "description": "Its version as read; sent back with the merge.",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "version"
+        ],
+        "title": "AlikeView",
         "type": "object"
       },
       "Answer": {
@@ -7938,6 +7991,40 @@
         "title": "LearnedView",
         "type": "object"
       },
+      "LeftOutView": {
+        "description": "Something that went in the same first message as what a nudge lists and was answered or done since: the nudge\nleaves it out, and the screen says so above the box (\"answered Oct 12, left out\").",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "question",
+              "action"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "on": {
+            "description": "The day it was answered (a question) or done (an action), as an ISO date.",
+            "title": "On",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text",
+          "on"
+        ],
+        "title": "LeftOutView",
+        "type": "object"
+      },
       "Link": {
         "properties": {
           "label": {
@@ -8829,6 +8916,14 @@
             "title": "Action Ids",
             "type": "array"
           },
+          "left_out": {
+            "description": "What the message leaves out because it was settled since it went out.",
+            "items": {
+              "$ref": "#/components/schemas/LeftOutView"
+            },
+            "title": "Left Out",
+            "type": "array"
+          },
           "question_ids": {
             "items": {
               "type": "string"
@@ -9171,6 +9266,207 @@
         "title": "OpenAction",
         "type": "object"
       },
+      "OpenActionView": {
+        "description": "One open action for the screen that lists them all (GET /api/open-items). `state` is exactly one of: no_owner\n(waiting for an owner), on_hold, overdue, stale (the person's own to-do with no date that nothing has changed for\n`stale_days`) or open.",
+        "properties": {
+          "blocker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlockerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "duplicate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlikeView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The open action of the same project and owners it nearly repeats."
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its notes, which the screen shows on hover.",
+            "title": "Notes"
+          },
+          "on_hold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it waits for, while it is on hold.",
+            "title": "On Hold"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it came from, for its link."
+          },
+          "owner_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For one with no owner, the open question asking who owns it (answered with POST /api/questions/{id}/answer).",
+            "title": "Owner Question"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerNameView"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "parent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the project its project is part of, if any.",
+            "title": "Parent Name"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "since": {
+            "default": "",
+            "description": "The day it was made, as an ISO date.",
+            "title": "Since",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "no_owner",
+              "on_hold",
+              "overdue",
+              "stale",
+              "open"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "untouched_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a stale one, the days nothing has changed on it.",
+            "title": "Untouched Days"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "text",
+          "state",
+          "owners"
+        ],
+        "title": "OpenActionView",
+        "type": "object"
+      },
+      "OpenItemsView": {
+        "description": "Every open action and every open question (design 7.5): GET /api/open-items.",
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/OpenActionView"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/OpenQuestionView"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "stale_days": {
+            "description": "Days with no change before a person's own undated to-do is stale; 0 is off.",
+            "title": "Stale Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "actions",
+          "questions",
+          "stale_days"
+        ],
+        "title": "OpenItemsView",
+        "type": "object"
+      },
       "OpenQuestion": {
         "properties": {
           "id": {
@@ -9275,6 +9571,127 @@
           "title"
         ],
         "title": "OpenQuestion",
+        "type": "object"
+      },
+      "OpenQuestionView": {
+        "description": "One open question for the same screen. `state` is exactly one of: yours (waiting for the person), waiting (sent,\nno answer yet), not_sent, or later (held for a meeting or a day, `held_until`).",
+        "properties": {
+          "chases": {
+            "default": 0,
+            "description": "How many follow-ups it has had.",
+            "title": "Chases",
+            "type": "integer"
+          },
+          "held_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held Until"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "question",
+              "decision",
+              "action-notice",
+              "routing",
+              "impact"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "projects": {
+            "description": "The ids of the projects it is about.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "since": {
+            "default": "",
+            "description": "The day it was sent, else the day it was made, as an ISO date.",
+            "title": "Since",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "yours",
+              "waiting",
+              "not_sent",
+              "later"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "to": {
+            "description": "The person it waits on, as an id.",
+            "title": "To",
+            "type": "string"
+          },
+          "to_name": {
+            "title": "To Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "waiting_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For one that was sent, the days since the last word to them.",
+            "title": "Waiting Days"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "title",
+          "text",
+          "kind",
+          "state",
+          "to",
+          "to_name"
+        ],
+        "title": "OpenQuestionView",
         "type": "object"
       },
       "Option": {
@@ -9572,6 +9989,38 @@
           "status"
         ],
         "title": "OverlapView",
+        "type": "object"
+      },
+      "OwnerNameView": {
+        "properties": {
+          "name": {
+            "description": "The owner as the workspace writes one: the full name, with the team when it has one.",
+            "title": "Name",
+            "type": "string"
+          },
+          "person": {
+            "description": "The owner's person id.",
+            "title": "Person",
+            "type": "string"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the team they act for here, if any; kept when another owner changes.",
+            "title": "Team"
+          }
+        },
+        "required": [
+          "person",
+          "name"
+        ],
+        "title": "OwnerNameView",
         "type": "object"
       },
       "OwnerPick": {
@@ -12827,7 +13276,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled).",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,\n`person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick\nwho is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an\naction, each with Undo; nothing is ever sent); `stale` is the person's own open to-dos nobody has touched for\n`ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;\nLook over opens GET /api/open-items narrowed to them); `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled).",
         "properties": {
           "account": {
             "anyOf": [
@@ -13051,6 +13500,8 @@
               "catch_up",
               "send",
               "nudge",
+              "escalate",
+              "stale",
               "unfiled",
               "moved",
               "since_yesterday",
@@ -19134,6 +19585,56 @@
         "summary": "Action Hold Restored"
       }
     },
+    "/api/actions/{action_id}/merge": {
+      "post": {
+        "description": "Keep this action and close the one it nearly repeats, as one change with one Undo. Its notes gain the other's\nwords, it takes the earlier date, and the other is dropped, which is a correction the assistant learns from.",
+        "operationId": "merge_api_actions__action_id__merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionMergeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Merge"
+      }
+    },
     "/api/actions/{action_id}/reply": {
       "post": {
         "description": "Approve the reply the assistant drafted for an action as it is, or replace it with the person's own words;\neither marks it reviewed, with Undo. Rewording a draft records a draft_edited correction naming the change and\nrun that made the action, with the text as the person used it.",
@@ -23081,6 +23582,25 @@
           }
         },
         "summary": "Notes"
+      }
+    },
+    "/api/open-items": {
+      "get": {
+        "description": "Every action still to do, with its owners, due date, project, parent project and where it came from, and\nevery\nquestion still waiting, with who it waits on and since when.",
+        "operationId": "open_items_api_open_items_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenItemsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Open Items"
       }
     },
     "/api/organizations": {

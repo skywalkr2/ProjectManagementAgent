@@ -208,6 +208,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         severity = lints.get(name, "off")
         if severity == "return" and name in WORDING_LINTS and not _reaches_someone_else(cs.ops[i], ctx):
             severity = "warn"  # wording on an item that stays internal only warns; no fix round is spent on it
+        if severity == "return" and name in OWNER_WORDING_LINTS and not _owned_by_someone_else(cs.ops[i], ctx):
+            severity = "warn"  # an action only the person reads is theirs to word; the lint says so without a fix round
         if severity != "off":
             problems.append(Problem(name, severity, i, message))
 
@@ -555,6 +557,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 _for_reader(i, op.reply, ctx, lint)
             if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
+            if not _stands_alone(without_links(op.text), ctx):
+                lint(
+                    i,
+                    "action-stands-alone",
+                    "the action leans on something the reader can't see: say what it is about, by name, so it reads "
+                    'on its own ("Send the proof to the printer", not "Send it")',
+                )
             if op.promised_to and len(op.owners) > 1:
                 refuse(i, "one-owner", "one promise per owner: add one action for each person who owes it")
             if op.due_at_event and not (op.event or op.series):
@@ -1555,6 +1564,8 @@ def _record_changeset(
 
 
 WORDING_LINTS = frozenset({"blocked-wording", "run-on-list"})
+#: Wording lints on an action, which reach whoever owns it: they are told it, in a message worded from its text.
+OWNER_WORDING_LINTS = frozenset({"action-stands-alone"})
 
 
 def _reaches_someone_else(op: OpModel, ctx: Context) -> bool:
@@ -1564,12 +1575,45 @@ def _reaches_someone_else(op: OpModel, ctx: Context) -> bool:
     return False
 
 
+def _owned_by_someone_else(op: OpModel, ctx: Context) -> bool:
+    """Whether an action will be put in front of another person, as one of its owners is someone other than the PM."""
+    return isinstance(op, ActionAddOp) and any(ctx.people.resolve(name).person != ctx.people.pm for name in op.owners)
+
+
+def _stands_alone(text: str, ctx: Context) -> bool:
+    """Whether an action's words (without links; the words quoted from the input count, being the action) can be read
+    with nothing else in front of the reader: it has the fewest words the setting asks for, and no word that points at
+    something unseen stands where its object belongs (right after its first word and any lead words, or last after a
+    lead word) or sits in a phrase that does so anywhere."""
+    words = re.findall(r"[\w'’-]+", text.lower())
+    if len(words) < ctx.cfg.checks.tuning.action_stands_alone.min_words:
+        return False
+    language = ctx.cfg.language
+    pointers = [p.lower().split() for p in language.unanchored_words]
+    single = {p[0] for p in pointers if len(p) == 1}
+    phrases = [p for p in pointers if len(p) > 1]
+    joined = " " + " ".join(words) + " "
+    if any(" " + " ".join(p) + " " in joined for p in phrases):
+        return False
+    leads = {w.lower() for w in language.unanchored_lead_words}
+    # The thing it is done to is the word right after its first word and any lead words ("follow up on that").
+    at = 1
+    while at < len(words) - 1 and words[at] in leads:
+        at += 1
+    if at < len(words) and words[at] in single:
+        return False
+    # Or the last word, when it stands where that word would ("ask the editor about it"); one that ends a clause about
+    # something already named ("unless she withdraws it") is not that.
+    return not (words[-1] in single and (len(words) - 2 == 0 or words[-2] in leads))
+
+
 def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
     """Whether a lint still returned after the fix round holds the op: one that reaches someone else, or one of the
     scope checks or a rule's check, which hold whoever the item reaches."""
     returned = [p for p in mine if p.severity == "return"]
     holds = scope.HELD_LINTS | {RULE_CHECK}
-    return bool(returned) and (_reaches_someone_else(op, ctx) or any(p.check in holds for p in returned))
+    owned = any(p.check in OWNER_WORDING_LINTS for p in returned) and _owned_by_someone_else(op, ctx)
+    return bool(returned) and (_reaches_someone_else(op, ctx) or owned or any(p.check in holds for p in returned))
 
 
 def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
@@ -3028,10 +3072,18 @@ def move_stage(store: Store, op: StageMoveOp, *, actor: Literal["pm", "rule"] = 
 
 
 def apply_as_person(
-    store: Store, cfg: Config, ops: list[dict[str, Any]], summary: str, task: str = "notes", note: str = ""
+    store: Store,
+    cfg: Config,
+    ops: list[dict[str, Any]],
+    summary: str,
+    task: str = "notes",
+    note: str = "",
+    *,
+    all_or_nothing: bool = False,
 ) -> str:
     """Apply ops the person made on screen (an edit, a review's choices) as theirs. Returns the changeset id. `note` is
-    words the person wrote with the change, which an op may quote as its evidence."""
+    words the person wrote with the change, which an op may quote as its evidence. With `all_or_nothing`, one op the
+    applier refuses leaves every op of the change unapplied."""
     from engine.names import People
     from engine.ops import CHANGESET
 
@@ -3051,7 +3103,7 @@ def apply_as_person(
         confirmed_by_pm=True,
         actor="pm",
     )
-    cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"reviewed": True})
+    cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"reviewed": True}, all_or_nothing=all_or_nothing)
     refused = [o for o in store.read().get("changeset", cs_id).data["ops"] if o["status"] == "refused"]
     if refused:
         raise StoreError(refused[0].get("reason") or "that couldn't be done")

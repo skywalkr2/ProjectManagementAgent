@@ -19,6 +19,7 @@ import { useDropAction } from "./DropAction";
 import { HoldNote, useHold } from "./OnHold";
 import { useHoldFor, useSendNow } from "./HoldFor";
 import { NoteBox, useNoted } from "./NoteBox";
+import { NudgeLeftOut } from "./NudgeLeftOut";
 import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
@@ -682,6 +683,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
             </span>
           </li>
         ))}
+        <NudgeLeftOut items={nudge.left_out} />
       </ul>
       <div className="message">
         <label className="hint" htmlFor={`nudge-msg-${s.person}`}>

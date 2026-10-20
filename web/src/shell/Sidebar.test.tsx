@@ -51,6 +51,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Today",
     "What changed",
     "Follow-ups",
+    "To-dos and questions",
     "Drafts to approve",
     "Stages",
     "Goals",

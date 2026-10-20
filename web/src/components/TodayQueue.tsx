@@ -11,6 +11,7 @@ import { useAct } from "../lib/act";
 import { day, wallTime } from "../lib/dates";
 import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
+import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
 import { afterMove, heldAnswers, heldTitle, isEnding, moveTitle } from "../lib/queue-words";
 import { revealOrKeep } from "../lib/reveal";
@@ -546,6 +547,10 @@ export function useLineTitle(): (line: QueueLine) => string {
       }
       case "nudge":
         return t("queue.nudge", { name });
+      case "escalate":
+        return t("queue.escalate", { text: (line.text ?? "").replace(/[?.!\s]+$/, "") });
+      case "stale":
+        return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: line.subject }) : tn("queue.stale", line.count);
       case "promise": {
         const vars = { name, text: line.text ?? "", date: line.due ? day(line.due) : "" };
         // Someone the person reports to is waited on, never chased (design 6.34).
@@ -831,6 +836,30 @@ function QueueRow(props: {
           menu: [],
         };
       }
+      case "escalate": {
+        const days = line.waiting_days ?? 0;
+        return {
+          pill: tn("queue.pill.waiting_days", days),
+          tone: "warn",
+          meta: tn("queue.escalate.meta", line.count, { name: line.person_name ?? "" }),
+          primary: { label: t("queue.escalate.pick") },
+          menu: [],
+        };
+      }
+      case "stale":
+        return {
+          pill: t("queue.pill.stale"),
+          tone: "neutral",
+          meta: tn("queue.stale.meta", line.waiting_days ?? 0),
+          primary: {
+            label: t("queue.stale.open"),
+            run: () => {
+              chooseFilters({ state: "stale" });
+              props.handlers.onOpenView?.("work/open");
+            },
+          },
+          menu: [],
+        };
       case "promise": {
         const days = line.waiting_days ?? 0;
         // A date still ahead and no date at all are the waiting-ons that ask for a nudge early; only a passed date is late.
@@ -850,7 +879,7 @@ function QueueRow(props: {
           tone: line.late ? "danger" : "warn",
           meta: undefined,
           primary: { label: t("queue.reminder.done"), run: reminderRow.done },
-          menu: [],
+          menu: [reminderRow.note],
           groups: reminderRow.groups,
         };
       case "reminder_digest":

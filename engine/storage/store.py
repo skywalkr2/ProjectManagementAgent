@@ -330,11 +330,11 @@ class Tx:
 
     def field_changes(self, kind: str, fields: Iterable[str]) -> dict[str, list[dict[str, Any]]]:
         """The ledger's changes to these fields of every record of a kind, oldest first, keyed by record id. Each is
-        the record's version, the field, and its value before and after."""
+        the record's version, the field, its value before and after, and when it changed (`at`)."""
         names = list(fields)
         marks = ",".join("?" for _ in names)
         rows = self._c.execute(
-            f"SELECT record_id, version, field, before, after FROM ledger WHERE kind=? AND field IN ({marks}) "
+            f"SELECT record_id, version, field, before, after, at FROM ledger WHERE kind=? AND field IN ({marks}) "
             "ORDER BY seq",
             [kind, *names],
         ).fetchall()
@@ -345,9 +345,16 @@ class Tx:
                 "field": row["field"],
                 "before": json.loads(row["before"]) if row["before"] is not None else None,
                 "after": json.loads(row["after"]) if row["after"] is not None else None,
+                "at": str(row["at"]),
             }
             out.setdefault(row["record_id"], []).append(entry)
         return out
+
+    def last_changes(self, kind: str) -> dict[str, str]:
+        """For every record of a kind, the time of the latest ledger entry it got (when it last changed), keyed by
+        record id."""
+        rows = self._c.execute("SELECT record_id, MAX(at) AS at FROM ledger WHERE kind=? GROUP BY record_id", (kind,))
+        return {r["record_id"]: str(r["at"]) for r in rows.fetchall()}
 
     def changed_kinds(self, after: int) -> tuple[int, list[str]]:
         """The ledger's last position, and the record kinds written after position `after` (for live updates)."""

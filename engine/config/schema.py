@@ -1094,6 +1094,7 @@ def _default_lints() -> dict[str, Severity]:
         "rejected-ask": "return",
         "bookkeeping": "return",
         "long-quote": "return",
+        "action-stands-alone": "return",
     }
 
 
@@ -1182,6 +1183,16 @@ class LongQuoteTuning(ConfigModel):
     )
 
 
+class ActionStandsAloneTuning(ConfigModel):
+    min_words: int = Field(
+        2,
+        ge=1,
+        le=20,
+        description="The fewest words an action may have: one with fewer is a bare verb that says nothing about what "
+        "to do it to.",
+    )
+
+
 class LintTuning(ConfigModel):
     """Settings of the core lints that have more than a severity: one entry per lint, named as the lint is in `lints`
     with underscores for hyphens, so each setting has a plain dotted key and environment variable."""
@@ -1207,6 +1218,10 @@ class LintTuning(ConfigModel):
     unverified_quote: UnverifiedQuoteTuning = Field(
         default_factory=UnverifiedQuoteTuning,
         description="Settings of the check that words in quotation marks are in the material cited.",
+    )
+    action_stands_alone: ActionStandsAloneTuning = Field(
+        default_factory=ActionStandsAloneTuning,
+        description="Settings of the check that an action is worded to be read on its own.",
     )
     long_quote: LongQuoteTuning = Field(
         default_factory=LongQuoteTuning,
@@ -1272,6 +1287,16 @@ class MessageSettings(ConfigModel):
         "Also came up: {text} (\u201c{quote}\u201d)",
         description="The line added to an action's notes when another action is added to it instead of being kept "
         "apart: {text} is the other action and {quote} the words it came from.",
+    )
+    merged_note: str = Field(
+        "Merged with: {text}",
+        description="The line added to an action's notes when another action that said the same is merged into it: "
+        "{text} is the other action.",
+    )
+    merged_reason: str = Field(
+        "Merged into \u201c{text}\u201d",
+        description="Why an action that was merged into another is closed as dropped: {text} is the action it went "
+        "into.",
     )
     folded_reason: str = Field(
         "Added to \u201c{text}\u201d instead",
@@ -1453,6 +1478,31 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["confirm", "check whether", "check if", "TBD?"],
         description="Wording not allowed in actions and shared text; actions say what to do.",
     )
+    unanchored_words: list[str] = Field(
+        default_factory=lambda: [
+            "it",
+            "this",
+            "that",
+            "them",
+            "these",
+            "those",
+            "him",
+            "her",
+            "the above",
+            "the same",
+            "as discussed",
+            "as agreed",
+        ],
+        description="Words that point at something the reader can't see, so an action built on them can't be read on "
+        'its own ("send it", "follow up on that"). A single word counts as the thing the action is done to, right '
+        "after its first word and the lead words, or as its last word after a lead word; a phrase counts anywhere. "
+        "Matched as whole words, ignoring case.",
+    )
+    unanchored_lead_words: list[str] = Field(
+        default_factory=lambda: ["up", "on", "to", "with", "about", "for", "back", "out", "off", "over", "at"],
+        description="Words that may come between an action's first word and the thing it is done to, such as the "
+        "'up on' of 'follow up on'.",
+    )
     run_on_separators: list[str] = Field(
         default_factory=lambda: [" / ", "; "],
         description="Separators that mean several items were crammed in one line.",
@@ -1606,6 +1656,13 @@ class TodaySettings(ConfigModel):
     agenda_days_ahead: int = Field(
         1, ge=0, le=14, description="How many days after today the agenda also shows (0: today only)."
     )
+    stale_after_days: int = Field(
+        21,
+        ge=0,
+        le=3650,
+        description="One of the person's own to-dos with no date that nothing has changed for this many days is stale, "
+        "and Today asks whether to keep it. Zero turns the line off.",
+    )
 
 
 class FollowupsSettings(ConfigModel):
@@ -1636,6 +1693,14 @@ class FollowupsSettings(ConfigModel):
         le=20,
         description="A second or later follow-up message to a person names only this many of what is still waiting, "
         "the longest-waiting first, and asks who else to ask or for a date.",
+    )
+    escalate_after_chases: int = Field(
+        2,
+        ge=0,
+        le=20,
+        description="Once something has had this many follow-ups and the wait has run its length again with no answer, "
+        "Today suggests asking someone else about it, with a choice of who. Nothing is sent. Zero turns the suggestion "
+        "off.",
     )
 
 

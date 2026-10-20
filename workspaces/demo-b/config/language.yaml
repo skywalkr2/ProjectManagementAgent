@@ -1,6 +1,9 @@
 version: 1
 blocked_phrases: [confirm, check whether, check if, "TBD?"]
 run_on_separators: [" / ", "; "]
+# Words that point at something the reader can't see, so an action built on them can't be read on its own, and the words that may come before one ("follow up on that").
+unanchored_words: [it, this, that, them, these, those, him, her, the above, the same, as discussed, as agreed]
+unanchored_lead_words: [up, "on", to, with, about, for, back, out, "off", over, at]
 # Phrases that make a draft report to the maintainers a standing rule, to be proposed as a rule instead.
 rule_report_phrases: [from now on, going forward, from here on, in future, should never, should always, "don't ask", do not ask]
 # Words in an input that look like a system name or an acronym, suggested as new glossary terms when unknown.
@@ -50,6 +53,8 @@ messages:
   actions_heading: "Action items with you:"
   folded_note: "Also came up: {text} (\u201c{quote}\u201d)"
   folded_reason: "Added to \u201c{text}\u201d instead"
+  merged_note: "Merged with: {text}"
+  merged_reason: "Merged into \u201c{text}\u201d"
   part_of_meaning: "A name for {project}."
   part_of_reason: "Filed under {project} instead"
   not_a_project_meaning: "Not a project."

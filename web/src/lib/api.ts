@@ -196,6 +196,10 @@ export const api = {
     call<S["ChangeRequested"]>("POST", `items/${id(kind)}/${id(item)}/change`, { note }),
   rewordQuestion: (q: string, body: S["QuestionRewordIn"]) => call<S["Applied"]>("POST", `questions/${id(q)}/reword`, body),
   rerouteQuestion: (q: string, to: string) => call<S["Applied"]>("POST", `questions/${id(q)}/reroute`, { to }),
+  /** Every open to-do and every open question, each with what its row shows. */
+  openItems: () => call<S["OpenItemsView"]>("GET", "open-items"),
+  /** Keep this to-do and close the one it nearly repeats; `read_version` and `other_version` are the versions as read. */
+  mergeActions: (keep: string, body: S["ActionMergeIn"]) => call<S["Applied"]>("POST", `actions/${id(keep)}/merge`, body),
   /** Drop an action that is no longer needed, with Undo. */
   dropAction: (a: string, reason: string) => call<S["Applied"]>("POST", `actions/${id(a)}/drop`, { reason }),
   reviewReply: (a: string, body: S["ActionReplyIn"]) => call<S["Applied"]>("POST", `actions/${id(a)}/reply`, body),

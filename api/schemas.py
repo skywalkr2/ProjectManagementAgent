@@ -214,6 +214,14 @@ class ActionReplyIn(BaseModel):
     )
 
 
+class ActionMergeIn(BaseModel):
+    """Merge a near-duplicate into the action this is posted to: it stays open and the other is closed."""
+
+    other: str = Field(min_length=1, description="The id of the open action it nearly repeats, which is closed.")
+    read_version: int = Field(description="The version of the action kept, as the person saw it.")
+    other_version: int = Field(description="The version of the action closed, as the person saw it.")
+
+
 class FoldIn(BaseModel):
     into: str = Field(min_length=1, description="The id of the open action to add the one waiting for an owner to.")
     read_version: int = Field(description="The version of that action as the person saw it.")
@@ -786,6 +794,16 @@ class FollowupAction(BaseModel):
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
 
 
+class LeftOutView(BaseModel):
+    """Something that went in the same first message as what a nudge lists and was answered or done since: the nudge
+    leaves it out, and the screen says so above the box ("answered Oct 12, left out")."""
+
+    kind: Literal["question", "action"]
+    id: str
+    text: str
+    on: str = Field(description="The day it was answered (a question) or done (an action), as an ISO date.")
+
+
 class NudgeView(BaseModel):
     """A drafted follow-up message for one person (built from a template, no AI run): what has gone unanswered as long
     as the follow-up rule says. `round` is which follow-up it is: 1, or 2 and up once the person was chased before, when
@@ -795,6 +813,9 @@ class NudgeView(BaseModel):
     round: int
     question_ids: list[str]
     action_ids: list[str]
+    left_out: list[LeftOutView] = Field(
+        default_factory=list, description="What the message leaves out because it was settled since it went out."
+    )
 
 
 class FollowupSection(BaseModel):
@@ -1919,7 +1940,12 @@ class QueueLineView(BaseModel):
     /api/since-yesterday, and opening it is POST /api/since-yesterday/seen);
     `away` is one row for the lines that waited for the person's working hours (or
     for quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);
-    `unfiled` is
+    `escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,
+    `person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick
+    who is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an
+    action, each with Undo; nothing is ever sent); `stale` is the person's own open to-dos nobody has touched for
+    `ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;
+    Look over opens GET /api/open-items narrowed to them); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled)."""
 
@@ -1962,6 +1988,8 @@ class QueueLineView(BaseModel):
         "catch_up",
         "send",
         "nudge",
+        "escalate",
+        "stale",
         "unfiled",
         "moved",
         "since_yesterday",
@@ -4263,3 +4291,80 @@ class QualityView(BaseModel):
     endings: QualityEndings
     counts: QualityCounts
     replays: QualityReplays
+
+
+class OwnerNameView(BaseModel):
+    person: str = Field(description="The owner's person id.")
+    name: str = Field(
+        description="The owner as the workspace writes one: the full name, with the team when it has one."
+    )
+    team: str | None = Field(
+        None, description="The id of the team they act for here, if any; kept when another owner changes."
+    )
+
+
+class AlikeView(BaseModel):
+    """The open action another nearly repeats, for the row's "Merge with ..." choice."""
+
+    id: str
+    text: str
+    version: int = Field(description="Its version as read; sent back with the merge.")
+
+
+class OpenActionView(BaseModel):
+    """One open action for the screen that lists them all (GET /api/open-items). `state` is exactly one of: no_owner
+    (waiting for an owner), on_hold, overdue, stale (the person's own to-do with no date that nothing has changed for
+    `stale_days`) or open."""
+
+    id: str
+    version: int
+    text: str
+    state: Literal["no_owner", "on_hold", "overdue", "stale", "open"]
+    owners: list[OwnerNameView]
+    due: date | None = None
+    project: str | None = None
+    project_name: str = ""
+    parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
+    notes: str | None = Field(None, description="Its notes, which the screen shows on hover.")
+    since: str = Field("", description="The day it was made, as an ISO date.")
+    on_hold: str | None = Field(None, description="What it waits for, while it is on hold.")
+    blocker: BlockerView | None = None
+    duplicate: AlikeView | None = Field(
+        None, description="The open action of the same project and owners it nearly repeats."
+    )
+    origin: Origin | None = Field(None, description="Where it came from, for its link.")
+    untouched_days: int | None = Field(None, description="For a stale one, the days nothing has changed on it.")
+    owner_question: str | None = Field(
+        None,
+        description="For one with no owner, the open question asking who owns it (answered with POST "
+        "/api/questions/{id}/answer).",
+    )
+
+
+class OpenQuestionView(BaseModel):
+    """One open question for the same screen. `state` is exactly one of: yours (waiting for the person), waiting (sent,
+    no answer yet), not_sent, or later (held for a meeting or a day, `held_until`)."""
+
+    id: str
+    version: int
+    title: str
+    text: str
+    kind: Literal["question", "decision", "action-notice", "routing", "impact"]
+    state: Literal["yours", "waiting", "not_sent", "later"]
+    to: str = Field(description="The person it waits on, as an id.")
+    to_name: str
+    project_name: str = ""
+    projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
+    since: str = Field("", description="The day it was sent, else the day it was made, as an ISO date.")
+    waiting_days: int | None = Field(None, description="For one that was sent, the days since the last word to them.")
+    chases: int = Field(0, description="How many follow-ups it has had.")
+    held_until: str | None = None
+    origin: Origin | None = None
+
+
+class OpenItemsView(BaseModel):
+    """Every open action and every open question (design 7.5): GET /api/open-items."""
+
+    actions: list[OpenActionView]
+    questions: list[OpenQuestionView]
+    stale_days: int = Field(description="Days with no change before a person's own undated to-do is stale; 0 is off.")

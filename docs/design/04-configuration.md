@@ -270,13 +270,18 @@ Built keys:
 
 - `messages`: `greeting` ("Hi {first_name},"), `actions_heading` ("Action items with you:"), `closing` ("Thanks!") and
   `date_format` (strftime codes, default `%a, %b %d`) for copied messages, and `date_time_format` (default
-  `%a, %b %d, %Y, %H:%M`) for a date and time in the assistant's own text, written in the person's time zone (6.7).
+  `%a, %b %d, %Y, %H:%M`) for a date and time in the assistant's own text, written in the person's time zone (6.7); and
+  `merged_note` and `merged_reason`, the words a merge of two near-duplicate to-dos adds to the kept one's notes and gives as the
+  reason the other is closed (6.9).
 - `self_words`: the words the language uses for the person themselves (default "me", "myself" and "I"); a name written as
   one of them, in any case, resolves to the person (6.11).
 - `self_words`: the words the language uses for the person themselves (default "me", "myself" and "I"); a name written as
   one of them, in any case, resolves to the person (6.11).
 - `blocked_phrases`: wording not allowed in actions and shared text (default "confirm", "check whether", "check if", "TBD?").
 - `run_on_separators`: separators that mean several items were crammed into one line (default " / " and "; ").
+- `unanchored_words` and `unanchored_lead_words`: what the `action-stands-alone` lint reads (6.9): words that point at
+  something the reader can't see ("it", "that", "them", "the above", "as discussed", …) and the words that may come between an
+  action's first word and its object ("up", "on", "about", …).
 - `never_shown`: words that must never appear in anything people see; model names are added to it.
 - `title_skip`: regular expressions, matched at the start of a line, ignoring case, for lines an item's title never comes
   from: greetings, quoted mail headers, sign-offs. A title is taken from the first line left (7.14).
@@ -474,11 +479,15 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
 - `toast_seconds` (7; 0 keeps toasts until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
-- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only).
+- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only), and
+  `stale_after_days` (21; 0 is off): the person's own undated to-do nothing has changed for this long is stale, and Today has one
+  line for them (6.9).
 - `followups`: when something sent to a person is due a follow-up, one rule that Today and Follow-ups both read (6.9).
   `question_after_days` (4): a question with no reply after this many days; `action_due_within_days` (7): a told action
   whose own due date is this near or past (an action on hold is never chased); `undated_after_days` (14): a told action with
-  no due date and no word after this many days. They replace the old `today.nudge_after_days`, which an existing file may still
+  no due date and no word after this many days; `second_nudge_items` (2): how many items a second follow-up names; and
+  `escalate_after_chases` (2; 0 is off): once something has had this many follow-ups and the wait has run its length again,
+  Today suggests asking someone else (6.8). They replace the old `today.nudge_after_days`, which an existing file may still
   carry and is read as `question_after_days`.
 - `walkthrough`: `first_promises` (5): how many promises found in the person's own mail the new-start walkthrough's first-result
   screen shows, soonest day first (7.8).
@@ -651,6 +660,7 @@ projects:                        # severities for one project's work only, over 
   PRJ-3: {run-on-list: off}
 tuning:                          # settings of the core lints that have more than a severity
   near_duplicate_action: {similarity: 0.8}
+  action_stands_alone: {min_words: 2}
 ```
 
 Severities: `refuse`, `return` (back to the AI once; then held for the PM if the item will reach another person, or applied
@@ -668,6 +678,10 @@ overrides are unchanged. **Built:** `near_duplicate_action.similarity`, a number
 that similarity, and a message says which kind it matched. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
 values, and not below), `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too` and `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one` (the range and the default). `near-duplicate-question` (designed, phase L) gets its
 entry beside it, with `similarity` and `days` (default 14).
+
+**Built (B-6a):** `action-stands-alone` (default `return`; on an action only the person reads it only warns, on one with
+another owner it returns once and is then held), with `action_stands_alone.min_words` (default 2, from 1 to 20) and the words
+in `language.unanchored_words` (6.9); `tests/test_action_stands_alone.py`.
 
 **Built (L3):** `several-questions` (default `return`), a question or decision whose text holds `several_questions.minimum`
 (default 2, from 2 to 20) or more items of a numbered list that ask; and `question-without-stake` (default `return`), a

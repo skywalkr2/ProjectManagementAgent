@@ -56,14 +56,27 @@ def follow_up_due(
 
 
 @dataclass
+class LeftOut:
+    """Something that went in the same first message as what a nudge lists and was answered (a question) or done (an
+    action) since, so the nudge leaves it out: its `kind`, `id` and `text`, and `on`, the day it was settled."""
+
+    kind: str
+    id: str
+    text: str
+    on: str
+
+
+@dataclass
 class Nudge:
     """A follow-up message to one person about what has gone unanswered as long as the follow-up rule says: its `text`,
-    which follow-up it is (`round`: 1, or 2 and up once chased before) and the ids of what it lists."""
+    which follow-up it is (`round`: 1, or 2 and up once chased before), the ids of what it lists and what it leaves
+    out because it was settled since."""
 
     text: str
     round: int
     question_ids: list[str]
     action_ids: list[str]
+    left_out: list[LeftOut] = field(default_factory=list)
 
 
 #: Stances (design 6.34) whose people are never told their actions in a drafted message.
@@ -156,6 +169,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                     "project_name": projects.get(d.get("project"), ""),
                     "links": project_links.get(d.get("project"), []),
                     "told": told,
+                    "first_told": _first_told(history.get(a.id, []), owner["person"], told),
                     "told_days": told_days,
                     "followed_up": last_chase,
                     "chases": len(chases),
@@ -177,7 +191,88 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
             s.to_send = sum(q["status"] == "open" for q in s.questions) + sum(a["told"] is None for a in s.actions)
             s.message = compose(s, cfg, people)
             s.nudge = compose_nudge(s, cfg, people, today)
+    settled: list[dict[str, str]] | None = None
+    for s in by_person.values():
+        if s.nudge is not None:
+            settled = _settled_since_sent(store) if settled is None else settled
+            s.nudge.left_out = _left_out(s, settled)
     return sorted(by_person.values(), key=lambda s: (not s.is_pm, s.name.lower()))
+
+
+def _day(stamp: str) -> str:
+    """The day part of a stored time, as an ISO date."""
+    return stamp[:10]
+
+
+def _first_told(history: list[dict[str, Any]], person: str, told: Any) -> str | None:
+    """The day an action first went to `person`: the first day the ledger records for them as told, else the day they
+    were last told (none when they weren't)."""
+    first = next((row for row in history if row["field"] == "told" and person in (row["after"] or {})), None)
+    return str(first["after"][person]) if first else (str(told) if told else None)
+
+
+def _settled_since_sent(store: Store) -> list[dict[str, str]]:
+    """Every question answered and every action done that had gone out to someone: for each, the person, the day it
+    went to them (`sent_on`: a question's own, an action's first told day), its text and the day it was settled."""
+    view = store.read()
+    out: list[dict[str, str]] = []
+    answered = view.field_changes("question", ("status",))
+    for q in view.list("question"):
+        d = q.data
+        if d["status"] != "answered" or not d.get("sent_at"):
+            continue
+        closed = [row for row in answered.get(q.id, []) if row["after"] == "answered"]
+        if closed:
+            out.append(
+                {
+                    "kind": "question",
+                    "id": q.id,
+                    "person": d["to"],
+                    "text": d["title"],
+                    "sent_on": _day(str(d["sent_at"])),
+                    "on": _day(closed[-1]["at"]),
+                }
+            )
+    finished = view.field_changes("action", ("status", "told"))
+    for a in view.list("action"):
+        d = a.data
+        if d["status"] != "done":
+            continue
+        rows = finished.get(a.id, [])
+        closed = [row for row in rows if row["field"] == "status" and row["after"] == "done"]
+        if not closed:
+            continue
+        for person in d.get("told") or {}:
+            first = next(
+                (row for row in rows if row["field"] == "told" and person in (row["after"] or {})),
+                None,
+            )
+            out.append(
+                {
+                    "kind": "action",
+                    "id": a.id,
+                    "person": person,
+                    "text": d["text"],
+                    "sent_on": str(first["after"][person]) if first else str(d["told"][person]),
+                    "on": _day(closed[-1]["at"]),
+                }
+            )
+    return out
+
+
+def _left_out(s: Section, settled: list[dict[str, str]]) -> list[LeftOut]:
+    """What went out to this person in the same message as the nudge's items and has been settled since."""
+    nudge = s.nudge
+    if nudge is None:
+        return []
+    days = {q["sent"] for q in s.questions if q["id"] in nudge.question_ids and q["sent"]}
+    days |= {a["first_told"] for a in s.actions if a["id"] in nudge.action_ids and a.get("first_told")}
+    found = [
+        LeftOut(x["kind"], x["id"], x["text"], x["on"])
+        for x in settled
+        if x["person"] == s.person and x["sent_on"] in days
+    ]
+    return sorted(found, key=lambda x: (x.on, x.id))
 
 
 def changed_since_told(history: list[dict[str, Any]], person: str, current: dict[str, Any]) -> bool:

@@ -20,6 +20,7 @@ import { Ask } from "./components/Ask";
 import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
+import { OpenItems } from "./components/OpenItems";
 import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
 import { Quality } from "./components/Quality";
@@ -198,6 +199,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <SinceYesterday onOpenRecord={openRecord} />;
       case "work/followups":
         return <FollowUps />;
+      case "work/open":
+        return <OpenItems />;
       case "work/outgoing":
         return (
           <section className="panel-section" aria-labelledby="outgoing-title">

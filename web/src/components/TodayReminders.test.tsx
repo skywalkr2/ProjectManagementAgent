@@ -110,6 +110,7 @@ test("the snooze menu lists each choice with the time it moves to and leaves out
   await menuOf(user, await rowOf("Send Oren the estimate · due now"));
   const names = screen.getAllByRole("menuitem").map((m) => m.textContent);
   expect(names).toEqual([
+    "Add a note",
     `In 1 hour · ${wallTime("2026-10-19T15:40:00-04:00")}`,
     `This evening · ${wallTime("2026-10-19T18:00:00-04:00")}`,
     `Tomorrow morning · ${wallTime("2026-10-20T09:00:00-04:00")}`,

@@ -118,6 +118,12 @@ class Line:
     `count` entries, counted by act in `outcome`; Look over opens the list), away (one row for the lines that waited for
     the person's working hours and arrived together with them: `count` is how many, and `since` the moment the hours
     began; it is at the top of the first group any of them is in, and goes with the day), send or nudge.
+    escalate (the one thing a person still hasn't answered after `ui.followups.escalate_after_chases` follow-ups, as a
+    suggestion to ask someone else: its id in `questions` or `actions`, its words in `text`, who hasn't answered in
+    `person`, the follow-ups it has had in `count` and the days since the last word in `waiting_days`), stale (the
+    person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`: `count` of them,
+    their ids in `actions`, the longest untouched in `waiting_days`, and one's own words in `subject` when there is just
+    one).
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
     one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
@@ -768,6 +774,24 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # Review: the person's own to-dos nobody has touched for a while, as one line.
+    from engine.open_items import stale_actions
+
+    stale = [r for r in stale_actions(store, cfg, now) if r.id not in on_a_line]
+    if stale:
+        lines.append(
+            Line(
+                key="stale",
+                group="review",
+                kind="stale",
+                count=len(stale),
+                actions=[r.id for r in stale],
+                waiting_days=stale[0].untouched_days,
+                subject=stale[0].text if len(stale) == 1 else None,
+                since=min(r.since for r in stale),
+            )
+        )
+
     # Review: the assistant's work waiting for a look.
     for req in requests.values():
         d = req.data
@@ -930,6 +954,25 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         # Nothing is chased for someone the person reports to or only watches (design 6.34), so no follow-up is drafted.
         chased = stance_of(reader, cfg.steward, s.person) not in ("report_to", "watch")
         told = [a for a in s.actions if chased and a["chase_due"] and a["id"] not in on_a_line]
+        tired = _tired_of_waiting(cfg, s, waiting, told)
+        if tired is not None:
+            kind, item = tired
+            lines.append(
+                Line(
+                    key=f"escalate:{s.person}:{item['id']}",
+                    group="send",
+                    kind="escalate",
+                    count=item["chases"],
+                    text=item["title"] if kind == "question" else item["text"],
+                    person=s.person,
+                    questions=[item["id"]] if kind == "question" else [],
+                    actions=[item["id"]] if kind == "action" else [],
+                    waiting_days=item["waiting_days"] if kind == "question" else item["told_days"],
+                    since=s.name.lower(),
+                )
+            )
+            waiting = [q for q in waiting if q is not item]
+            told = [a for a in told if a is not item]
         if waiting or told:
             longest = max([q["waiting_days"] or 0 for q in waiting] + [a["told_days"] or 0 for a in told])
             lines.append(
@@ -951,6 +994,26 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         caused = release_hours.causes(lines, reader, requests, by_changeset, sources)
         lines = release_hours.keep_hours(lines, caused, cfg, now, Line)
     return sorted(lines, key=_rank)
+
+
+def _tired_of_waiting(
+    cfg: Any, s: Any, waiting: list[dict[str, Any]], told: list[dict[str, Any]]
+) -> tuple[str, Any] | None:
+    """The one thing a person has had the most follow-ups about, when it has had `ui.followups.escalate_after_chases` of
+    them and is due another, so Today suggests asking someone else. The most follow-ups first, then the longest wait,
+    then the first id. None when the setting is zero or nothing has had that many."""
+    after = cfg.ui.followups.escalate_after_chases
+    if not after:
+        return None
+    found = [
+        *(("question", q, q["chases"], q["waiting_days"] or 0) for q in waiting),
+        *(("action", a, a["chases"], a["told_days"] or 0) for a in told),
+    ]
+    found = [f for f in found if f[2] >= after]
+    if not found:
+        return None
+    kind, item, _chases, _days = min(found, key=lambda f: (-f[2], -f[3], f[1]["id"]))
+    return kind, item
 
 
 def _borrow_questions(ws: Any, store: Any, cfg: Any, now: datetime, requests: dict[str, Any]) -> list[Line]:
@@ -1074,9 +1137,11 @@ _KIND_ORDER = {
     "learned": 2,
     "catch_up": 3,
     "unfiled": 4,
+    "stale": 5,
     "moved": 6,
     "send": 0,
     "nudge": 1,
+    "escalate": 2,
 }
 
 

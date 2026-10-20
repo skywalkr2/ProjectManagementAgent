@@ -74,6 +74,7 @@ from api.schemas import (
     ItemTitle,
     JobView,
     KindView,
+    LeftOutView,
     ListRenameIn,
     ListSuggestionView,
     ListValueIn,
@@ -2198,6 +2199,16 @@ def _op_view(
     )
 
 
+def _nudge_view(n: Any) -> NudgeView:
+    return NudgeView(
+        text=n.text,
+        round=n.round,
+        question_ids=n.question_ids,
+        action_ids=n.action_ids,
+        left_out=[LeftOutView(**vars(x)) for x in n.left_out],
+    )
+
+
 def _section(s: Any, people: People, action_origin: dict[str, Any], question_origin: dict[str, Any]) -> FollowupSection:
     def question_views(rows: list[dict[str, Any]]) -> list[FollowupQuestion]:
         return [_followup_question(q, people, question_origin) for q in rows]
@@ -2231,7 +2242,7 @@ def _section(s: Any, people: People, action_origin: dict[str, Any], question_ori
         actions=actions,
         message=s.message,
         to_send=s.to_send,
-        nudge=NudgeView(**vars(s.nudge)) if s.nudge is not None else None,
+        nudge=_nudge_view(s.nudge) if s.nudge is not None else None,
     )
 
 
