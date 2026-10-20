@@ -13,6 +13,9 @@ const servers = [
 ];
 // The layout check has a server of its own, because it holds long made-up text that the other scenarios must not see.
 const layout = { port: 8786 + offset };
+// So does the check of the yes to an AI account reading work mail and notes: its server has a second stand-in account whose
+// person said Not now, which the other scenarios must not see on Today.
+const access = { port: 8787 + offset };
 
 // The journeys start the app as a person does (a new workspace, then the serve command) beside a process that plays the
 // outside services; each pair works in one state folder that the start-up script clears. Two pairs: one for the
@@ -85,6 +88,7 @@ export default defineConfig({
       ];
     }),
     { name: "layout", testMatch: /layout\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },
+    { name: "access", testMatch: /work-access\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${access.port}/` } },
     {
       name: "journeys",
       testMatch: /journeys\.spec\.ts/,
@@ -115,6 +119,13 @@ export default defineConfig({
       command: `uv run python -m tests.e2e_server --port ${layout.port} --base-path / --layout-stress`,
       cwd: "..",
       url: `http://127.0.0.1:${layout.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: `uv run python -m tests.e2e_server --port ${access.port} --base-path / --standin-account`,
+      cwd: "..",
+      url: `http://127.0.0.1:${access.port}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
     },

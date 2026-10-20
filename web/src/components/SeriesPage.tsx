@@ -111,6 +111,12 @@ function ItemRow(props: { item: S["SeriesItem"]; note?: string }) {
 function NextMeeting(props: { page: Page }) {
   const { t, tn } = useWords();
   const next = props.page.next;
+  // An item already listed under Agenda is listed there only: Next leaves it out and says how many it lists.
+  const onAgenda = new Set((props.page.agenda ?? []).map((a) => `${a.kind}:${a.id}`));
+  const groups = (next?.groups ?? [])
+    .map((g) => ({ ...g, items: g.items.filter((i) => !onAgenda.has(`${i.kind}:${i.id}`)) }))
+    .filter((g) => g.items.length > 0);
+  const listed = groups.reduce((n, g) => n + g.items.length, 0);
   if (!next) {
     return (
       <section aria-labelledby="series-next" className="record-section">
@@ -124,10 +130,10 @@ function NextMeeting(props: { page: Page }) {
   return (
     <section aria-labelledby="series-next" className="record-section">
       <div className="heading">
-        <h3 id="series-next">{next.open > 0 ? t("series.next_open", { day: day(next.on), n: next.open }) : t("series.next", { day: day(next.on) })}</h3>
+        <h3 id="series-next">{listed > 0 ? t("series.next_open", { day: day(next.on), n: listed }) : t("series.next", { day: day(next.on) })}</h3>
       </div>
       {next.open === 0 && <p className="hint">{t("series.nothing_open")}</p>}
-      {next.groups.map((group) => (
+      {groups.map((group) => (
         <div key={group.person ?? "unknown"} className="record-section">
           <h4 className="what">{group.is_pm ? t("series.you") : (group.name ?? t("series.someone"))}</h4>
           <ul className="queue">

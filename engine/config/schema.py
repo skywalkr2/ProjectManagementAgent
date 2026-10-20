@@ -616,6 +616,11 @@ class ProviderSettings(ConfigModel):
     allowed_data: list[DataLevel] = Field(
         default_factory=lambda: ["open"], description="The most sensitive material this account may see."
     )
+    work_data: Literal["", "not_now"] = Field(
+        "",
+        description="What the person answered when asked whether this account may read their work mail and notes: "
+        "not_now keeps asking on Today until they allow it; empty means they were not asked here, or allowed it.",
+    )
     content_levels: list[str] | None = Field(
         None,
         description="The content levels this account takes (those defined for AI); unset means it takes every level.",

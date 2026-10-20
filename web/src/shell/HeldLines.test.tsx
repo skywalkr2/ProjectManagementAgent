@@ -233,7 +233,7 @@ test("a check that doesn't pass says why and leaves the line", async () => {
 test("rules to look over are a line that starts with the look and opens the review", async () => {
   const user = userEvent.setup();
   const { onOpenRules } = show([line("rule_review", { key: "rule_review", group: "review", count: 3, days: 30, rules: ["RULE-1"] })]);
-  const row = await screen.findByRole("region", { name: "Rules to look over" });
+  const row = await screen.findByRole("region", { name: "Rules" });
   expect(row).toHaveTextContent("Review 3 rules unused in the last 30 days");
   await user.click(within(row).getByRole("button", { name: "Look over" }));
   expect(onOpenRules).toHaveBeenCalledTimes(1);
@@ -242,10 +242,10 @@ test("rules to look over are a line that starts with the look and opens the revi
 test("the rules review has one button, Look over, and Not now is in its menu with what it does under it", async () => {
   const user = userEvent.setup();
   const { onOpenKnowledge } = show([line("rule_review", { key: "rule_review", group: "review", count: 2, days: 30, rules: ["RULE-1"], until: "2026-10-22T09:00:00+00:00" })]);
-  const row = await screen.findByRole("region", { name: "Rules to look over" });
-  expect(within(row).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual(["Look over", "More actions for Rules to look over"]);
+  const row = await screen.findByRole("region", { name: "Rules" });
+  expect(within(row).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual(["Look over", "More actions for Rules"]);
   expect(within(row).queryByRole("button", { name: "Not now" })).toBeNull();
-  await user.click(within(row).getByRole("button", { name: "More actions for Rules to look over" }));
+  await user.click(within(row).getByRole("button", { name: "More actions for Rules" }));
   const items = await screen.findAllByRole("menuitem");
   expect(items.map((i) => i.querySelector("[slot=label]")?.textContent)).toEqual(["Not now", "Open Knowledge"]);
   // The consequence is said before the click.
@@ -268,16 +268,16 @@ test("Not now puts the review off for its week, the toast says until when, and U
       return { ok: "SIG-7" };
     },
   });
-  const row = await screen.findByRole("region", { name: "Rules to look over" });
-  await user.click(within(row).getByRole("button", { name: "More actions for Rules to look over" }));
+  const row = await screen.findByRole("region", { name: "Rules" });
+  await user.click(within(row).getByRole("button", { name: "More actions for Rules" }));
   await user.click(await screen.findByRole("menuitem", { name: /Not now/ }));
   await waitFor(() => expect(calls.filter((c) => c.route === "POST knowledge/rules/review/not-now")).toHaveLength(1));
   expect(await screen.findByText(/Off Today until .*22/)).toBeInTheDocument();
-  await waitFor(() => expect(screen.queryByRole("region", { name: "Rules to look over" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Rules" })).toBeNull());
   expect(onOpenRules).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST knowledge/rules/review/not-now/SIG-7/undo")).toBe(true));
-  expect(await screen.findByRole("region", { name: "Rules to look over" })).toBeInTheDocument();
+  expect(await screen.findByRole("region", { name: "Rules" })).toBeInTheDocument();
 });
 
 test("work with no AI account is a line that starts with the step that fixes it", async () => {
@@ -293,7 +293,7 @@ test("work with no AI account is a line that starts with the step that fixes it"
 
 test("one rule is singular, and rules only moved out of the always-sent part have their own words", async () => {
   show([line("rule_review", { key: "one", group: "review", count: 1, days: 14 }), line("rule_review", { key: "moved", group: "review", count: 0, moved: 2 })]);
-  const rows = await screen.findAllByRole("region", { name: "Rules to look over" });
+  const rows = await screen.findAllByRole("region", { name: "Rules" });
   expect(rows[0]).toHaveTextContent("Review 1 rule unused in the last 14 days");
   expect(rows[1]).toHaveTextContent("Review rules now sent only when relevant");
 });
@@ -623,4 +623,49 @@ test("a source that couldn't be read for too long is a line that starts with wha
 test("a source line for a kind of failure with no verb of its own still starts with one", async () => {
   show([unreadSource({ problem_kind: "outage" })]);
   expect(await screen.findByRole("region", { name: "Source not read" })).toHaveTextContent(/Check Work mail: not read since/);
+});
+
+const workAccess = (over: Partial<S["QueueLineView"]> = {}) => line("work_access", { key: "work_access:second", group: "decide", account: "second", ...over });
+
+test("an account the person said Not now about is a line that starts with Let, names it and has one button, Allow", async () => {
+  show([workAccess()]);
+  const row = await screen.findByRole("region", { name: "Access" });
+  expect(row).toHaveTextContent("Let second read your work mail and notes");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Allow"]);
+  expect(within(row).getByRole("button", { name: "Allow second to read your work mail and notes" })).toBeInTheDocument();
+});
+
+test("Allow gives the yes with the current settings, says so, the line goes and Undo puts the answer back", async () => {
+  const user = userEvent.setup();
+  let lines = [workAccess()];
+  const changes = [
+    { key: "ai.providers.second.allowed_data", before: ["open"], after: ["open", "internal"], was_default: false, is_default: false },
+    { key: "ai.providers.second.work_data", before: "not_now", after: "", was_default: false, is_default: true },
+  ];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST ai/accounts/second/allow-work": () => {
+      lines = [];
+      return { changes, fingerprint: "fp-2", needs_restart: false };
+    },
+    "POST settings": () => {
+      lines = [workAccess()];
+      return { changes: [], fingerprint: "fp-3", needs_restart: false };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Access" });
+  await user.click(within(row).getByRole("button", { name: "Allow second to read your work mail and notes" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/second/allow-work")?.body).toEqual({ fingerprint: "fp-1" }));
+  expect(await screen.findByText("second can now read your work mail and notes.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Access" })).toBeNull());
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({
+      changes: { "ai.providers.second.allowed_data": ["open"], "ai.providers.second.work_data": "not_now" },
+      reset: [],
+      fingerprint: "fp-2",
+    }),
+  );
+  expect(await screen.findByRole("region", { name: "Access" })).toBeInTheDocument();
 });

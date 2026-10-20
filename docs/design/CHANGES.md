@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 137. The UI/UX designer's review of B-7, second wave: F25's two conditions and R6 to R11 (2026-10-20; batch B-8)
+
+| Where | Before | Now |
+|---|---|---|
+| The yes to an account reading work mail and notes (6.16, 7.7; F25's conditions) | The step asked it after the key check and Continue waited for an answer, but Not now left no trace: nothing on Today said the account could not read the person's work yet | Not now is kept with the account (`ai.providers.<name>.work_data`), and Today says "Let <account> read your work mail and notes" with Allow (`work_access`), until the account may see the internal level. Allow is one settings change with Undo (`POST /api/ai/accounts/{name}/allow-work`) and records no signal, since it changes what the account may read, not the assistant's work. The browser tests' server can start with such an account. Built: `tests/test_work_access.py`, `web/src/components/WelcomeAi.test.tsx`, `web/src/shell/HeldLines.test.tsx`; `web/e2e/work-access.spec.ts` written, not run |
+| The Done step (7.8; R6) | Each step was a card about 130px tall for one line, and the templates sat in a narrow column | A compact list (the step, how it stands, Set up), and the templates and first note at the pane's full width. Built: `web/src/components/Walkthrough.test.tsx`; a browser measurement in `web/e2e/acceptance.spec.ts` written, not run |
+| A side panel (7.14; R7) | Labels and values sat side by side, so short pairs wrapped; an item on the agenda was listed again under Next | Each label sits above its value; an item listed under Agenda is listed there only, and Next counts what it lists. Built: `web/src/components/SeriesPage.test.tsx`, `web/src/theme/targets.test.ts` |
+| The rules line (7.7; R8) | A regular-weight title and the pill "Rules to look over" | Every held line's title is semibold; the pill is "Rules". Built: `web/src/shell/HeldLines.test.tsx` |
+| Checkboxes and radios (7.11; R9, C52) | An 18px element whose label was padded to the hit area, so a check that measured the label passed | The element is 24px with the 18px box drawn inside it; the browser check measures the element. Built: `web/src/theme/targets.test.ts`; `web/e2e/a11y.spec.ts` changed, not run |
+| What changed's titles (7.14; R10) | "From: Jun Park" (the first line of what came in) | The title Today gives the same item ("Email from Jun Park · proof copies", "Your note · launch reading"), from one words function. Built: `web/src/components/WhatChanged.test.tsx`; `web/e2e/shell.spec.ts` written, not run |
+| Top priorities (7.7; R11) | "Ines Duarte: follow up on 1 waiting 10 days, 1 overdue, 1 due soon" as one link, three lines long | "Ines Duarte · 1 overdue · 1 waiting 10 days": the link is the name only. Built: `web/src/components/TopPriorities.test.tsx` |
+
 ## 136. One free app, one paid upgrade, and users who steer it (2026-10-20)
 
 - **Licensed packs (3.11):** one entitlement (Thimbleby Plus) instead of a price per pack, checked offline from a signed

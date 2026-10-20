@@ -75,7 +75,7 @@ test("the lines are listed in the order the server ranks them, each with a chip,
     "Check the cover",
     "Which printer?",
     "Autumn bookTidy the schedule",
-    "Robin Sample: send 1 question, follow up on 3 waiting up to 5 days",
+    "Robin Sample · 3 waiting up to 5 days · send 1 question",
   ]);
   expect(within(found[0]).getByText("Overdue Mon, Oct 12")).toBeInTheDocument();
   expect(within(found[0]).getByText("Passed 3 days ago, not marked done")).toBeInTheDocument();
@@ -131,7 +131,7 @@ test("with no line in the queue an entry links to its record", async () => {
   const panel = await screen.findByRole("region", { name: "Top priorities" });
   expect(await within(panel).findByRole("link", { name: "Send the proofs" })).toHaveAttribute("href", expect.stringContaining("#records/action/ACT-1"));
   expect(within(panel).getByRole("link", { name: "Which printer?" })).toHaveAttribute("href", expect.stringContaining("#records/question/Q-1"));
-  expect(within(panel).getByRole("link", { name: /^Robin Sample: / })).toHaveAttribute("href", expect.stringContaining("#records/person/PER-5"));
+  expect(within(panel).getByRole("link", { name: "Robin Sample" })).toHaveAttribute("href", expect.stringContaining("#records/person/PER-5"));
 });
 
 function queueLine(over: Partial<S["QueueLineView"]> & Pick<S["QueueLineView"], "key" | "kind">): S["QueueLineView"] {
@@ -157,7 +157,7 @@ test("an entry that has a line in the queue links to it, and choosing it asks To
   await waitFor(() => expect(within(panel).getByRole("link", { name: "Send the proofs" })).toHaveAttribute("href", expect.not.stringContaining("#records")));
   await user.click(within(panel).getByRole("link", { name: "Send the proofs" }));
   await user.click(within(panel).getByRole("link", { name: "Which printer?" }));
-  await user.click(within(panel).getByRole("link", { name: /^Robin Sample: / }));
+  await user.click(within(panel).getByRole("link", { name: "Robin Sample" }));
   window.removeEventListener("reveal-row", listen);
   expect(seen).toEqual([
     { type: "line", id: "overdue" },
@@ -209,4 +209,23 @@ test("a list that can't load says so and tries again", async () => {
   expect(await screen.findByText("Top priorities couldn't be loaded.")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByText("Send the proofs")).toBeInTheDocument();
+});
+
+test("a person's row reads name · 1 overdue · 1 waiting 10 days, and its link is the name only", async () => {
+  const casey = line({
+    key: "person:PER-9",
+    rank: "overdue",
+    kind: "person",
+    person: "PER-9",
+    person_name: "Casey Moor",
+    text: "Casey Moor",
+    overdue: 1,
+    chase: 1,
+    waiting_days: 10,
+    things: [{ kind: "action", id: "ACT-9", text: "Send the proofs", why: "overdue" }],
+  });
+  open(priorities({ lines: [casey] }));
+  const link = await screen.findByRole("link", { name: "Casey Moor" });
+  expect(link.closest(".tb-title")?.textContent).toBe("Casey Moor · 1 overdue · 1 waiting 10 days");
+  expect(link.textContent).toBe("Casey Moor");
 });

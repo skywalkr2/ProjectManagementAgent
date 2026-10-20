@@ -2031,7 +2031,9 @@ class QueueLineView(BaseModel):
     account (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in
     `subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set
     for the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels
-    of the waiting work, `count` the requests); `no_account` is work with no AI account
+    of the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered "Not now"
+    about reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the
+    line goes once the account may see the internal level); `no_account` is work with no AI account
     at all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that
     isn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;
     `source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its
@@ -2099,6 +2101,7 @@ class QueueLineView(BaseModel):
         "account_check",
         "switch_failed",
         "identity",
+        "work_access",
         "credential",
         "no_account",
         "backup",
@@ -3353,6 +3356,11 @@ class AiAccountAdd(BaseModel):
     )
     models: dict[str, str] = Field(description="Short names for the account's models, to their ids.")
     allowed_data: list[Literal["open", "internal", "restricted"]] = Field(default_factory=lambda: ["open"])
+    work_data: Literal["", "not_now"] | None = Field(
+        None,
+        description="not_now when the person was asked whether this account may read their work mail and notes and "
+        "chose Not now: Today then offers Allow until they do. Left out when they allowed it or were not asked.",
+    )
     agent: dict[str, Any] | None = Field(None, description="For a command-line agent: its `agent` settings.")
     use_for: list[str] = Field(
         default_factory=list, description='Tiers this account\'s first model should do ("routine", "deep").'

@@ -1063,4 +1063,15 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     for (const text of titles) expect(text).not.toMatch(ID);
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
+
+  test("What changed titles follow Today's title rule, never From: and a person", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page, "#work/changed");
+    await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
+    const titles = await page.locator('[data-row] strong[id^="t-"]').allTextContents();
+    expect(titles.length).toBeGreaterThan(0);
+    for (const text of titles) expect(text).not.toMatch(/^From:/);
+    // The demo's mail-borne changes read as Today's lines do.
+    expect(titles.some((text) => /^Email from .+ · /.test(text))).toBe(true);
+  });
 });

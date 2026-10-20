@@ -1,5 +1,5 @@
 // Target sizes (design 7.11, WCAG 2.5.8; finding 3.8, check C52): an icon-only button is at least 32px square (24px is the floor),
-// an inline text button is at least 24px tall, and a checkbox or radio has a hit area of at least 24px, by padding its label.
+// an inline text button is at least 24px tall, and a checkbox or radio is itself at least 24px each way, with its 18px box drawn inside.
 // Styles are not computed under jsdom, so these read the stylesheets; the browser check in e2e/a11y.spec.ts measures the result.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -33,9 +33,18 @@ test("every button is at least 24px each way, and so is an inline text button", 
   expect(rule(css, ".link-button")).toMatch(/min-height:\s*var\(--target-min\)/);
 });
 
-test("a checkbox or radio has a hit area of at least 24px: its label is padded to that, and the box itself reaches out to it", () => {
+test("a checkbox or radio is a 24px control itself, with an 18px box drawn inside it", () => {
   const css = read("styles.css");
-  const label = css.split("\n").find((line) => line.includes('label:has(> input[type="checkbox"])')) ?? "";
-  expect(label).toMatch(/min-height:\s*var\(--target-min\)/);
-  expect(css).toMatch(/input\[type="checkbox"\]::before,\s*input\[type="radio"\]::before\s*\{[^}]*inset:\s*calc\(-1 \* var\(--space-1\)\)/);
+  const control = css.split("\n").find((line) => /^input\[type="checkbox"\], input\[type="radio"\] \{[^}]*appearance: none/.test(line)) ?? "";
+  expect(control).toMatch(/width:\s*var\(--target-min\)/);
+  expect(control).toMatch(/height:\s*var\(--target-min\)/);
+  expect(control).toMatch(/min-height:\s*var\(--target-min\)/);
+  // The visible box is the pseudo-element, inset from the control by what leaves 18px.
+  expect(css).toMatch(/input\[type="checkbox"\]::before,\s*input\[type="radio"\]::before\s*\{[^}]*inset:\s*var\(--check-inset\)/);
+  expect(read("theme/tokens.css")).toMatch(/--check-inset:\s*3px/);
+});
+
+test("a side panel puts each label above its value, so no pair wraps beside the other at a panel's width", () => {
+  const css = read("styles.css");
+  expect(rule(css, ".record-side .detail")).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
 });

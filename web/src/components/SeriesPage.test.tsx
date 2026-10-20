@@ -116,3 +116,17 @@ test("the details name who the series is usually with, one row each with how man
   show(view());
   expect(within(await screen.findByRole("complementary", { name: "Details" })).queryByText("Usually with")).toBeNull();
 });
+
+test("an item listed under Agenda is not listed again under Next, and Next counts what it lists", async () => {
+  show(view({ agenda: [{ kind: "question", id: "Q-1", text: "Which trim size?", added_by_name: "Casey Moor", added_at: "2026-10-19T10:00:00Z" }] }));
+  const next = (await screen.findByRole("heading", { name: `Next: ${day("2026-10-22")} · 2 open` })).closest("section")!;
+  expect(within(next).queryByRole("link", { name: "Which trim size?" })).toBeNull();
+  expect(within(next).getByRole("link", { name: "Check the cover proof" })).toBeInTheDocument();
+  expect(screen.getAllByRole("link", { name: "Which trim size?" })).toHaveLength(1);
+});
+
+test("a person whose only items are on the agenda has no empty group under Next", async () => {
+  show(view({ agenda: [{ kind: "action", id: "ACT-1", text: "Send the interior file", added_by_name: null, added_at: "2026-10-19T10:00:00Z" }] }));
+  const next = (await screen.findByRole("heading", { name: `Next: ${day("2026-10-22")} · 2 open` })).closest("section")!;
+  expect(within(next).getAllByRole("heading", { level: 4 }).map((h) => h.textContent)).toEqual(["You"]);
+});

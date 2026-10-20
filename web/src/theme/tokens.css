@@ -74,6 +74,7 @@
      laptop 1024-1439 · desktop 1440-1919 · wide 1920-2559 · ultra >= 2560 */
   --tap-min: 44px;             /* touch target on coarse pointers */
   --target-min: 24px;          /* the floor for any control (WCAG 2.5.8): nothing is smaller */
+  --check-inset: 3px;          /* the gap from the 24px element to that box: (--target-min - 18px) / 2 */
   --target-icon: 32px;         /* an icon-only button is at least this square */
 
   /* ---------- 2. Semantic roles (light) ---------- */

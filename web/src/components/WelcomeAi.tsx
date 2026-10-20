@@ -450,6 +450,8 @@ export function WelcomeAi(props: {
       allowed_data: levels,
       fingerprint: settings.data.fingerprint,
     };
+    // Not now is kept with the account, so Today offers the yes again until the person gives it.
+    if (guide && workData === "not_now") body.work_data = "not_now";
     const asWork = drawer ? chosenFor === "work" : useForWork;
     // With no model named there is no short name to point at, so the account's own first model does the work.
     if (asWork) {

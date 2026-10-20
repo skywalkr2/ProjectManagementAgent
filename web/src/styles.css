@@ -139,18 +139,19 @@ textarea.msg { min-height: 220px; }
 textarea.drop { border-style: dashed; border-width: 1.5px; min-height: 160px; }
 textarea.big { min-height: 220px; max-width: var(--measure); }
 input:disabled, textarea:disabled, select:disabled { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
-/* A checkbox or radio is drawn 18px; its label is padded to a 24px hit area and the box reaches out to that too. */
-label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: var(--target-min); padding-block: var(--space-1); }
-input[type="checkbox"], input[type="radio"] { position: relative; }
-input[type="checkbox"]::before, input[type="radio"]::before { content: ""; position: absolute; inset: calc(-1 * var(--space-1)); }
-input[type="checkbox"], input[type="radio"] { appearance: none; width: 18px; min-height: 18px; height: 18px; padding: 0; flex: none; border: 1.5px solid var(--border-strong); background: var(--surface); display: inline-grid; place-content: center; cursor: pointer; }
-input[type="checkbox"] { border-radius: var(--radius-sm); }
-input[type="radio"] { border-radius: var(--radius-full); }
+/* A checkbox or radio is a 24px control, so its hit area is the element itself (not just its label); the box drawn in it stays
+   18px, as a pseudo-element, and the check mark or dot sits at its centre. */
+label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: var(--target-min); }
+input[type="checkbox"], input[type="radio"] { appearance: none; position: relative; width: var(--target-min); min-width: var(--target-min); height: var(--target-min); min-height: var(--target-min); padding: 0; flex: none; border: 0; background: transparent; display: inline-grid; place-content: center; cursor: pointer; border-radius: var(--radius-sm); }
+input[type="checkbox"]::before, input[type="radio"]::before { content: ""; position: absolute; inset: var(--check-inset); box-sizing: border-box; border: 1.5px solid var(--border-strong); background: var(--surface); }
+input[type="checkbox"]::before { border-radius: var(--radius-sm); }
+input[type="radio"]::before { border-radius: var(--radius-full); }
 input[type="checkbox"]::after { content: ""; width: 5px; height: 9px; border: solid var(--text-on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); visibility: hidden; }
-input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"]:checked::before { background: var(--accent); border-color: var(--accent); }
 input[type="checkbox"]:checked::after { visibility: visible; }
-input[type="radio"]:checked { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 45%, var(--surface) 50%); }
-input[type="checkbox"]:disabled, input[type="radio"]:disabled { background: var(--surface-sunk); border-color: var(--border); cursor: not-allowed; }
+input[type="radio"]:checked::before { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 45%, var(--surface) 50%); }
+input[type="checkbox"]:disabled, input[type="radio"]:disabled { background: transparent; border-color: transparent; cursor: not-allowed; }
+input[type="checkbox"]:disabled::before, input[type="radio"]:disabled::before { background: var(--surface-sunk); border-color: var(--border); }
 input[type="checkbox"]:disabled:checked::after { border-color: var(--text-subtle); }
 .row-end { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; gap: var(--space-3); }
@@ -454,7 +455,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .reply-draft .reply-text { margin: 0; white-space: pre-wrap; font-size: var(--text-sm); }
 .notify-permission { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
 /* A to-do's tick sits before its words, so the words get the row's width; on a touch screen its target is a full tap. */
-.tb-tick { flex: none; display: grid; place-items: center; margin-top: var(--space-1); cursor: pointer; }
+.tb-tick { flex: none; display: grid; place-items: center; cursor: pointer; }
 @media (pointer: coarse) { .tb-tick { min-width: var(--tap-min); min-height: var(--tap-min); margin-top: 0; } }
 .tb-row.noting { flex-wrap: wrap; }
 .tb-row .note-box { flex: 1 1 100%; }
@@ -500,6 +501,8 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .record-main, .record-activity, .record-section { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
 .record-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); }
 .record-side h3 { margin: 0; }
+/* A side panel is narrow: each label sits above its value, so no pair wraps beside the other. */
+.record-side .detail { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
 .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); overflow-wrap: anywhere; font-size: var(--text-sm); line-height: var(--lh-sm); }
 .timeline .when { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .unfiled { display: grid; gap: var(--space-3); min-width: 0; }

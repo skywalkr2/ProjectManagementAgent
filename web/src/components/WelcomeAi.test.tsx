@@ -514,6 +514,7 @@ test("Allow lets the account read open and internal material; Not now leaves it 
   await user.click(save());
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).allowed_data).toEqual(["open", "internal"]);
+  expect(body(calls).work_data ?? "").toBe("");
 
   const again = api();
   document.body.innerHTML = "";
@@ -522,6 +523,8 @@ test("Allow lets the account read open and internal material; Not now leaves it 
   await user.click(save());
   await waitFor(() => expect(body(again)).toBeDefined());
   expect(body(again).allowed_data).toEqual(["open"]);
+  // Not now is kept with the account, so Today can offer the yes again.
+  expect(body(again).work_data).toBe("not_now");
 });
 
 test("the three levels stay under Advanced, with Open the only one ticked until the person says more", async () => {
@@ -788,6 +791,7 @@ test("a server found on this computer is offered first, checked at once with no 
     base_url: "http://localhost:1234/v1",
     models: { everyday: "small-1" },
     allowed_data: ["open"],
+    work_data: "not_now",
     use: { routine: "everyday", deep: "everyday" },
     fingerprint: "fp-1",
   });
@@ -862,6 +866,7 @@ test("a program started by a command asks for it and how it is fed, checks it wi
     endpoint: "runner",
     models: { everyday: "std" },
     allowed_data: ["open"],
+    work_data: "not_now",
     agent: { command: ["runner", "--locked", "--model", "{model}"], packet_via: "file", output_via: "outbox" },
     use: { routine: "everyday", deep: "everyday" },
     fingerprint: "fp-1",
@@ -924,6 +929,7 @@ test("an app left to choose its own model is added with no models and works thro
     endpoint: "app-a",
     models: {},
     allowed_data: ["open"],
+    work_data: "not_now",
     use_for: ["routine", "deep"],
     fingerprint: "fp-1",
   });

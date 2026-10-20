@@ -114,3 +114,12 @@ export function afterMove(line: S["QueueLineView"], t: T): string {
     ? t("queue.moved.because_replaced", { title: after.title })
     : t("queue.moved.because", { title: after.title, date: after.to ? day(after.to) : "" });
 }
+
+/** An item's title by the title rule ("Email from <person> · <topic>"), the same words on Today and in What changed;
+ * nothing when the item has none. */
+export function titleWords(title: S["ItemTitle"] | null | undefined, t: T): string {
+  if (!title) return "";
+  const who = title.person_name ?? title.sender ?? t("queue.title.someone");
+  const head = t(`queue.title.${title.kind}`, { who });
+  return title.topic ? t("queue.title.with_topic", { head, topic: title.topic }) : head;
+}

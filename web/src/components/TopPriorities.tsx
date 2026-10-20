@@ -1,6 +1,6 @@
 // Top priorities (design 7.7): a short ranked list across every project, in the rail, as context and never as the place to
-// act. One row for each of the person's own things, one row for everyone else however much they hold ("Robin Sample: send 1
-// question, follow up on 3 waiting up to 5 days", the items in its tooltip). The server ranks it by rules; this draws it.
+// act. One row for each of the person's own things, one row for everyone else however much they hold ("Robin Sample · 1
+// overdue · 3 waiting up to 5 days", the items in its tooltip; the link is the name only). The server ranks it by rules; this draws it.
 // A row has no buttons and no menu: its words are a link, to its line in the queue (which opens it) or, when the queue
 // has none, to its record.
 import { useQuery } from "@tanstack/react-query";
@@ -20,24 +20,20 @@ type Line = S["PriorityLineView"];
 type T = ReturnType<typeof useWords>["t"];
 type Tn = ReturnType<typeof useWords>["tn"];
 
-/** What a person's row says in one line: "Robin Sample: send 1 question, follow up on 3 waiting up to 5 days". */
-export function personWords(line: Line, t: T, tn: Tn): string {
+/** What a person's row says after their name, one fact at a time: "1 overdue · 3 waiting up to 5 days · send 1 question". */
+export function personParts(line: Line, tn: Tn): string {
   const sent = (line.things ?? []).filter((x) => x.why === "send");
   const questions = sent.filter((x) => x.kind === "question").length;
   const actions = sent.filter((x) => x.kind === "action").length;
-  const parts = [
+  return [
+    line.overdue > 0 ? tn("today.priorities.part.overdue", line.overdue) : "",
+    line.chase > 0 ? tn("today.priorities.part.chase", line.chase, { days: line.waiting_days ?? 0 }) : "",
+    line.due_soon > 0 ? tn("today.priorities.part.due_soon", line.due_soon) : "",
     questions > 0 ? tn("today.priorities.part.send_questions", questions) : "",
     actions > 0 ? tn("today.priorities.part.tell", actions) : "",
-    line.chase > 0 ? tn("today.priorities.part.chase", line.chase, { days: line.waiting_days ?? 0 }) : "",
-    line.overdue > 0 ? tn("today.priorities.part.overdue", line.overdue) : "",
-    line.due_soon > 0 ? tn("today.priorities.part.due_soon", line.due_soon) : "",
-  ].filter(Boolean);
-  return t("today.priorities.person", { name: line.text, what: parts.join(", ") });
-}
-
-/** The row's title: the thing's own words, or a person's summary. */
-function titleOf(line: Line, t: T, tn: Tn): string {
-  return line.kind === "person" ? personWords(line, t, tn) : line.text;
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** The chip before a row: the date, red and worded as overdue when it has passed, or what the row waits for. */
@@ -155,7 +151,9 @@ function PriorityRow(props: { line: Line; mixed: boolean; queue: QueueLine[] | u
   const target = queueLineOf(line, props.queue);
   const record = line.kind === "action" && line.action ? recordView("action", line.action) : line.kind === "question" && line.question ? recordView("question", line.question) : line.person ? recordView("person", line.person) : null;
   const c = chip(line, t, tn);
-  const title = titleOf(line, t, tn);
+  // A person's row links their name only; what is open with them follows it as plain words.
+  const title = line.text;
+  const rest = line.kind === "person" ? personParts(line, tn) : "";
   const items = line.kind === "person" ? (line.things ?? []).map((x) => x.text) : [];
   const project = props.mixed && line.project_name ? <span className={styles.tag}>{line.project_name}</span> : null;
   const words = target ? (
@@ -181,6 +179,7 @@ function PriorityRow(props: { line: Line; mixed: boolean; queue: QueueLine[] | u
         <div className="tb-title" title={items.length > 0 ? items.join("\n") : undefined}>
           {project}
           {words}
+          {rest && ` · ${rest}`}
         </div>
         <div className="tb-meta">{metaOf(line, t, tn)}</div>
         {items.length > 1 && (

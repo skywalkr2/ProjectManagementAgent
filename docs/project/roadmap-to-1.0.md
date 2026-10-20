@@ -647,10 +647,26 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     button");
   - F25's conditions: the yes is asked in the AI step right after the key check passes, and Continue can't skip it
     silently; when it was skipped, Today says "Let <account> read your work mail and notes" with Allow; the browser
-    tests' fixture has a stand-in account so the yes can be captured;
+    tests' fixture has a stand-in account so the yes can be captured. **Built (wave 2):** `tests/test_work_access.py` (the
+    line for an account the person said Not now about, none for one never asked or one that may read internal material,
+    Allow with its read-back and Undo, a higher level kept, the guide records Not now), `web/src/components/WelcomeAi.test.tsx`
+    ("Allow lets the account read open and internal material; Not now leaves it at open material only", with `work_data`),
+    `web/src/shell/HeldLines.test.tsx` (the line and "Allow gives the yes … and Undo puts the answer back"). The step
+    already asked the yes after the check and kept Continue disabled until it was answered
+    (`web/src/components/WelcomeAi.test.tsx`: "the question names the account and its sign-in…"). *Left:* the browser check
+    `web/e2e/work-access.spec.ts` and the server's `--standin-account` are written, not run;
   - R6–R11: the Done step's empty cards; the series page's side panel (labels above values, an item not listed in both
     Agenda and Next); the rules line's weight and pill; 24px hit areas for checkboxes; no "From: <person>" titles in What
-    changed; shorter Top priorities wording;
+    changed; shorter Top priorities wording. **Built (wave 2):** R6 `web/src/components/Walkthrough.test.tsx` ("each step
+    is one compact row…"); R7 `web/src/components/SeriesPage.test.tsx` ("an item listed under Agenda is not listed again
+    under Next…", "a person whose only items are on the agenda…") and `web/src/theme/targets.test.ts` ("a side panel puts
+    each label above its value…"); R8 `web/src/shell/HeldLines.test.tsx` (the pill "Rules"; the weight is a stylesheet rule,
+    not measured); R9 `web/src/theme/targets.test.ts` ("a checkbox or radio is a 24px control itself…"); R10
+    `web/src/components/WhatChanged.test.tsx` ("a change from an email is titled by Today's rule…"); R11
+    `web/src/components/TopPriorities.test.tsx` ("a person's row reads name · 1 overdue · 1 waiting 10 days…"). *Left:* the
+    browser checks added for R6, R9 (a11y.spec.ts measures the element now) and R10 are written, not run; no layout was
+    measured in a browser for R6, R7 and R9 (none is available here), so the CSS follows the review's numbers and the
+    stylesheet tests;
   - CI's python-later job (the tests with the clock 40 days ahead) finishes: on `46cc3ea` it ran past 30 minutes with
     every other job green and was cancelled, as the same run hung locally at 94% with three workers and passed with two.
     The job now has a time limit and prints the stack of any test past five minutes; the hanging test is found and fixed,

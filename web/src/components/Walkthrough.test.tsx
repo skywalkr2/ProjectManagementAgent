@@ -1058,6 +1058,17 @@ describe("Done", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "People" })).toBeInTheDocument();
   });
 
+  test("each step is one compact row: the step, how it stands, then Set up, and a done step has no button", async () => {
+    fakeApi(routes({}, steps({ workspace: { done: true }, ai: { skipped: true } }), { step: "done" }));
+    open();
+    const recap = await screen.findByRole("list", { name: "What was set up" });
+    const row = (id: string) => recap.querySelector(`[data-step="${id}"]`) as HTMLElement;
+    // Three cells, in that order, so one line each (the layout gives them columns, not a card).
+    expect([...row("ai").children].map((c) => c.textContent?.replace(/^[✓–○]\s*/, "").trim())).toEqual(["Your AI account", "Skipped", "Set up"]);
+    expect([...row("workspace").children].map((c) => c.textContent?.replace(/^[✓–○]\s*/, "").trim())).toEqual(["You", "Done", ""]);
+    expect(within(row("workspace")).queryByRole("button")).toBeNull();
+  });
+
   test("it shows the optional extras and they do not count: the last button is there with them undone", async () => {
     fakeApi(
       routes({ "GET templates": () => [{ id: "tpl-a", name: "Book project", description: "Chapters and drafts.", set_up: false, adds: [] }] }, steps({}), {

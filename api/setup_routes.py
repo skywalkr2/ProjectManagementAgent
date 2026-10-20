@@ -1481,6 +1481,26 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         worker.poke()
         return DataLevelAllowed(request=request_id, account=name, level=level, saved=done)
 
+    @r.post("/ai/accounts/{name}/allow-work")
+    def ai_account_allow_work(name: str, body: FingerprintIn) -> SettingsSaved:
+        """The person's yes to an account reading their work mail and notes: it may see the internal level (and
+        keeps any level above it), and Today stops asking. One settings change, so Undo puts the answer back."""
+        from engine.ai.router import LEVELS
+
+        provider = current().ai.providers.get(name)
+        if provider is None:
+            raise HTTPException(status_code=404, detail="There is no such account.")
+        have = set(provider.allowed_data)
+        allowed = [lv for lv in LEVELS if lv in have or LEVELS.index(lv) <= LEVELS.index("internal")]
+        changes: dict[str, Any] = {}
+        reset: list[str] = []
+        if allowed != sorted(have, key=LEVELS.index):
+            changes[f"ai.providers.{name}.allowed_data"] = allowed
+        if provider.work_data:
+            reset.append(f"ai.providers.{name}.work_data")
+        done = save(changes, reset, body.fingerprint, allow=("ai.providers.",))
+        return saved(done)
+
     @r.post("/ai/accounts/{name}/remove")
     def ai_account_remove(name: str, body: AiAccountRemove) -> SettingsSaved:
         """Remove an account, with Undo. The work it did goes to the backup named in `take_over` (the backup's own entry
@@ -1534,6 +1554,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             "models": models,
             "allowed_data": list(body.allowed_data),
         }
+        if body.work_data:
+            provider["work_data"] = body.work_data
         if body.label and body.label.strip():
             provider["label"] = body.label.strip()
         if body.base_url:

@@ -15,7 +15,7 @@ import { useRowKeys } from "../lib/keys";
 import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
 import { useHeldAnswers } from "../lib/held-answers";
-import { afterMove, heldMeta, heldTitle, moveTitle } from "../lib/queue-words";
+import { afterMove, heldMeta, heldTitle, moveTitle, titleWords } from "../lib/queue-words";
 import { revealOrKeep } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
@@ -478,12 +478,7 @@ type ItemTitle = S["ItemTitle"];
 
 function useTitleWords(): (title: ItemTitle | null | undefined) => string {
   const { t } = useWords();
-  return (title) => {
-    if (!title) return "";
-    const who = title.person_name ?? title.sender ?? t("queue.title.someone");
-    const head = t(`queue.title.${title.kind}`, { who });
-    return title.topic ? t("queue.title.with_topic", { head, topic: title.topic }) : head;
-  };
+  return (title) => titleWords(title, t);
 }
 
 /** What the line for the changes since yesterday counted, in plain words: "3 closed, 2 moved, 4 new". */

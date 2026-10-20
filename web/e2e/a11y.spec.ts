@@ -128,7 +128,8 @@ for (const scheme of ["light", "dark"] as const) {
 }
 
 // Target sizes (WCAG 2.5.8; check C52): no visible interactive element is smaller than 24 by 24 CSS pixels. A checkbox or
-// radio counts by its label, which is padded to be its hit area; a link inside a sentence is exempt, as the standard says.
+// radio is measured as the element itself (its 18px box is drawn inside a 24px control), never by its label; a link inside a
+// sentence is exempt, as the standard says.
 /** The visible interactive elements of the page smaller than 24px either way, each named for the report. */
 async function smallTargets(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -143,8 +144,7 @@ async function smallTargets(page: Page): Promise<string[]> {
       if (style.clip !== "auto" && style.position === "absolute" && own.width <= 1) continue;
       // A link running in a sentence is an inline target.
       if (el.tagName === "A" && style.display === "inline") continue;
-      const isBox = el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio");
-      const rect = isBox ? ((el.labels?.[0] ?? el).getBoundingClientRect()) : own;
+      const rect = own;
       if (rect.width < 24 - 0.5 || rect.height < 24 - 0.5) {
         const name = el.getAttribute("aria-label") ?? el.textContent?.trim().slice(0, 30) ?? "";
         found.push(`${el.tagName.toLowerCase()} "${name}" ${Math.round(rect.width)}x${Math.round(rect.height)}`);

@@ -1499,6 +1499,16 @@ as when it can be found (the signed-in user of an agent), and says in plain word
 only open material until the person says so** (decision F25): the step asks once, per account, "Allow <account>, signed in
 as <identity>, to read your work mail and notes?" with nothing chosen; Allow lets it read open and internal material, Not now
 leaves it at open, and the three levels stay under Advanced. A drawer in Settings starts a new account at open material too.
+**The yes is never skipped silently** (the UI/UX re-review of B-7, conditions on F25; B-8): it is asked in the step itself, right after
+the key check passes, and Continue stays disabled with its reason ("Choose Allow or Not now above.") until it is answered. Not now is
+kept with the account (`ai.providers.<name>.work_data: not_now`, sent by the step as `work_data`), and an account in that state with
+no level above open has a Today line, **"Let <account> read your work mail and notes"**, with one button, Allow (`work_access`
+in the queue; 7.7). Allow is `POST /api/ai/accounts/{name}/allow-work`: one settings change that adds the internal level (keeping any
+higher one) and clears the answer, with the read-back and Undo every settings change has. Allow changes what the account may read, not
+the assistant's work, so it records no signal; the line goes the moment the account may see the internal level, however that
+came about. The browser tests' server can start with such an account (`tests/e2e_server.py --standin-account`, the `access` project) so
+the line and the yes can be captured. **Built:** `tests/test_work_access.py`, `web/src/components/WelcomeAi.test.tsx` (the question, its
+two answers, `work_data` sent with Not now only), `web/src/shell/HeldLines.test.tsx` (the line, Allow with Undo), `web/e2e/work-access.spec.ts` (written, not run).
 *Built so far:* `tests/test_first_run_ai.py` (the catalog's recommendation and links, the open-only default, the messages by
 kind of account, every tier with its exact settings, the identity), `web/src/components/WelcomeAi.test.tsx`. Until a kind of work has a result the compare page says "Nothing measured yet" with
 "Measure (about $x)", and an account's row says "Not measured yet" with a Measure button, instead of "Good at 0 of 14"

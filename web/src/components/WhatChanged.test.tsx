@@ -708,3 +708,21 @@ test("a change made from what the person typed is titled Your note, with their w
   expect(within(row).getByText("Mark 'Settle the endpaper color' closed; the Print sync will cover it.")).toBeInTheDocument();
   expect(within(row).getByText("Your note", { selector: ".what" })).toBeInTheDocument();
 });
+
+test("a change from an email is titled by Today's rule, never by the first line of what came in", async () => {
+  const item = change("REQ-7", {
+    source_title: "From: Casey Moor",
+    title: { kind: "email", person: "PER-2", person_name: "Casey Moor", sender: null, topic: "proof copies" },
+  });
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Email from Casey Moor · proof copies")).toBeInTheDocument();
+  expect(screen.queryByText("From: Casey Moor")).toBeNull();
+});
+
+test("a change from a note with a topic is titled Your note and the topic, as on Today", async () => {
+  const item = change("REQ-8", { source: null, source_title: null, note: "Put on the agenda", title: { kind: "note", person: null, person_name: null, sender: null, topic: "Put on the agenda" } });
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Your note · Put on the agenda")).toBeInTheDocument();
+});

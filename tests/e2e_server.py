@@ -19,6 +19,7 @@ import tempfile
 from pathlib import Path
 
 import uvicorn
+import yaml
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
@@ -32,6 +33,8 @@ from tests.conftest import DEMO_B, fixture_records
 from tests.roundtrip import round_trip
 
 TOKEN = "e2e-token"
+#: The id of the extra stand-in account `--standin-account` adds; the browser test reads its label from the screen.
+STANDIN_ACCOUNT = "standin"
 LAYOUT_FIXTURE = Path(__file__).parents[1] / "web" / "e2e" / "fixtures" / "layout-strings.json"
 
 # The browser tests run with the wording check on, so a message that names a file, a key or a command fails there too.
@@ -111,6 +114,12 @@ def main() -> None:
         action="store_true",
         help="hold long unbroken made-up text in titles, a Today row, a failing source and a note",
     )
+    parser.add_argument(
+        "--standin-account",
+        action="store_true",
+        help="add a second stand-in AI account whose person said Not now about reading work mail and notes, so Today "
+        "has the line that offers Allow",
+    )
     args = parser.parse_args()
     stress = layout_strings() if args.layout_stress else {}
 
@@ -135,6 +144,18 @@ def main() -> None:
     if stress:
         flags["storage.backups.automatic"] = False
         flags["watch.sources"] = LAYOUT_SOURCES
+    if args.standin_account:
+        # In the settings file, not a flag, so Allow's save is what the app reads afterwards.
+        path = ws.config_dir / "ai.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data["providers"][STANDIN_ACCOUNT] = {
+            "adapter": "stub",
+            "label": "Second stand-in",
+            "models": {"default": "scripted"},
+            "allowed_data": ["open"],
+            "work_data": "not_now",
+        }
+        path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     cfg = ws.config(env={}, flags=flags)
     cases = load_cases(DEMO_B)
     project = fixture_records(DEMO_B, "project")[0]["id"]

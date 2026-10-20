@@ -173,7 +173,7 @@ test("Top priorities has no buttons: each entry is a link, to its queue line whe
       ]),
   });
   const panel = await screen.findByRole("region", { name: "Top priorities" });
-  const toQueue = await within(panel).findByRole("link", { name: /Robin Sample: 2 overdue/ });
+  const toQueue = await within(panel).findByRole("link", { name: "Robin Sample" });
   const toRecord = within(panel).getByRole("link", { name: "Tidy the schedule" });
   expect(toRecord).toHaveAttribute("href", expect.stringContaining("#records/action/ACT-9"));
   expect(within(panel).queryAllByRole("button")).toEqual([]);

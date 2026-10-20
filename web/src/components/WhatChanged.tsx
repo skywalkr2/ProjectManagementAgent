@@ -8,7 +8,7 @@ import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { useFieldLabel } from "../lib/records";
 import { useHeldAnswers } from "../lib/held-answers";
-import { heldTold } from "../lib/queue-words";
+import { heldTold, titleWords } from "../lib/queue-words";
 import { useIsNarrow } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { recordView, viewHref } from "../lib/views";
@@ -267,7 +267,9 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
   const ref = useRef<HTMLLIElement>(null);
   // Once the assistant has done something with what the person typed, the words are shown as their note, under the row, and
   // never as its title. Until then (waiting, or stopped) they are all that says what the row is.
-  const title = item.source_title || (cs ? "" : firstLine(item.note)) || t("changes.untitled");
+  // The item is titled by the same rule as on Today ("Email from <person> · <topic>"), never by the first line of what
+  // came in ("From: <person>"); a stored title is only the way back when the rule has nothing to say.
+  const title = titleWords(item.title, t) || item.source_title || (cs ? "" : firstLine(item.note)) || t("changes.untitled");
   const live = cs ? cs.ops.filter((o) => o.status === "applied" || o.status === "held") : [];
   useEffect(() => {
     if (!props.reveal) return;

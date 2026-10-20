@@ -332,6 +332,13 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Cancel" }).click();
     await screens.getByRole("button", { name: /^Done/ }).click();
     await expect(page.getByRole("region", { name: "Optional extras" })).toBeVisible();
+    // The recap is a compact list (a row is one line, not a card) and the extras take the pane's full width.
+    const recap = page.getByRole("list", { name: "What was set up" });
+    const rowHeights = await recap.locator("li").evaluateAll((rows) => rows.map((r) => r.getBoundingClientRect().height));
+    expect(Math.max(...rowHeights)).toBeLessThanOrEqual(64);
+    const listWidth = (await recap.boundingBox())!.width;
+    const extrasWidth = (await page.getByRole("region", { name: "Optional extras" }).boundingBox())!.width;
+    expect(extrasWidth).toBeGreaterThanOrEqual(listWidth - 2);
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Finish later" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();

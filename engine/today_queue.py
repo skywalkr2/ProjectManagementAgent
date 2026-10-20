@@ -82,6 +82,8 @@ class Line:
     oldest began), overdue, account_check (an AI account in a fallback chain that can't stand in yet: its `account`, the
     `tier` whose chain it is in, its `model`, and `check_failed` when its last check failed rather than it never having
     been checked),
+    work_access (an account the person answered "Not now" about reading their work mail and notes: its `account`;
+    Allow is POST /api/ai/accounts/{account}/allow-work),
     identity (an agent account whose sign-in changed or doesn't fit the work waiting on it: its `account`; with `state`
     changed, the sign-in found now in `text` and the recorded one in `subject`, to keep or sign in again; with `state`
     level, the sign-in in `text` (none when unknown), the levels of the waiting work in `names` and how many requests
@@ -553,6 +555,16 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 since=str(entry.get("at") or ""),
             )
         )
+
+    # Decide: an account the person said "Not now" about reading their work mail and notes, until they allow it (the
+    # line goes the moment the account may see the internal level, however that came about).
+    for name, provider in sorted(cfg.ai.providers.items()):
+        if (
+            provider.work_data == "not_now"
+            and "internal" not in provider.allowed_data
+            and "restricted" not in provider.allowed_data
+        ):
+            lines.append(Line(key=f"work_access:{name}", group="decide", kind="work_access", account=name))
 
     # Decide: an agent account whose sign-in changed, until the person keeps it or signs in again; and an agent whose
     # sign-in isn't set for the level of work waiting on it.
@@ -1175,6 +1187,7 @@ _KIND_ORDER = {
     "account_check": 1,
     "switch_failed": 1,
     "identity": 0,
+    "work_access": 1,
     "credential": 1,
     "no_account": 0,
     "backup": 1,

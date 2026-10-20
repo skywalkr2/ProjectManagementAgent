@@ -340,17 +340,19 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
                 <span aria-hidden="true">{state === "done" ? "✓ " : state === "skipped" ? "– " : "○ "}</span>
                 {label}
               </span>
-              <span className="sub">{t(`walkthrough.done.${state}`)}</span>
-              {state !== "done" && (
-                <button
-                  type="button"
-                  className="btn"
-                  aria-label={t("walkthrough.done.set_up_named", { label })}
-                  onClick={() => props.go(screen)}
-                >
-                  {t("walkthrough.done.set_up")}
-                </button>
-              )}
+              <span className={styles.state}>{t(`walkthrough.done.${state}`)}</span>
+              <span className={styles.act}>
+                {state !== "done" && (
+                  <button
+                    type="button"
+                    className="btn"
+                    aria-label={t("walkthrough.done.set_up_named", { label })}
+                    onClick={() => props.go(screen)}
+                  >
+                    {t("walkthrough.done.set_up")}
+                  </button>
+                )}
+              </span>
             </li>
           );
         })}

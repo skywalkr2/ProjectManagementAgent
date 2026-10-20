@@ -15,7 +15,7 @@ import { whenWords } from "../lib/coverage";
 import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
-import { useFreshFingerprint } from "../lib/settings-save";
+import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useStartSignIn } from "../lib/sign-in-start";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -27,7 +27,7 @@ import styles from "./HeldLines.module.css";
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "identity", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -61,6 +61,8 @@ export function HeldLine(props: {
       return <SwitchFailedLine line={line} />;
     case "identity":
       return <IdentityLine line={line} onOpenAiAccounts={props.onOpenAiAccounts} />;
+    case "work_access":
+      return <WorkAccessLine line={line} />;
     case "extractor":
       return <ExtractorLine line={line} />;
     case "source_unread":
@@ -415,6 +417,38 @@ function IdentityLine(props: { line: Line; onOpenAiAccounts: () => void }) {
         </Button>
         <Button size="sm" variant="secondary" loading={busy} disabled={busy} aria-label={t("queue.identity.keep_named", { account, identity })} onClick={() => void keep()}>
           {t("queue.identity.keep")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** An account the person said Not now about reading their work mail and notes: one line with Allow, which gives the yes as one
+ * settings change with Undo. Allow changes what the account may read, not the assistant's output, so it has no signal. */
+function WorkAccessLine(props: { line: Line }) {
+  const { t } = useWords();
+  const act = useAct();
+  const afterSave = useAfterSave();
+  const fingerprint = useFreshFingerprint();
+  const [busy, setBusy] = useState(false);
+  const nameOf = useAccountNames();
+  const account = nameOf(props.line.account ?? "");
+  const allow = async () => {
+    setBusy(true);
+    const saved = await act(async () => api.allowWork(props.line.account ?? "", await fingerprint()));
+    if (saved) await afterSave(saved, { message: t("queue.work_access.toast", { account }) });
+    setBusy(false);
+  };
+  return (
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.work_access.label")} data-queue-line="work_access">
+      <Pill tone="neutral">{t("queue.work_access.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.work_access", { account })}</p>
+        <p className={styles.sub}>{t("queue.work_access.sub")}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" data-key="primary" loading={busy} disabled={busy} aria-label={t("queue.work_access.allow_named", { account })} onClick={() => void allow()}>
+          {t("queue.work_access.allow")}
         </Button>
       </div>
     </section>

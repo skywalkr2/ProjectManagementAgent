@@ -461,6 +461,9 @@ export const api = {
   /** Keeps a switch whose check didn't pass. */
   keepSwitch: (tier: string) => call<S["Ok"]>("POST", `ai/switch/${id(tier)}/keep`),
   /** Keeps the sign-in an agent account now runs as, in place of the one recorded. */
+  /** The person's yes to an account reading their work mail and notes; the answer carries what changed, for Undo. */
+  allowWork: (name: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/allow-work`, { fingerprint } satisfies S["FingerprintIn"]),
   keepIdentity: (name: string) => call<S["Ok"]>("POST", `ai/accounts/${id(name)}/identity/keep`),
   /** Removes an account; `takeOver` names the backup that does its work in its place. */
   removeAccount: (name: string, fingerprint: string, takeOver?: string) =>
