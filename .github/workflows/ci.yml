@@ -6,6 +6,9 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  # Nightly, so a test that only passes near the day it was written fails here first (runs from the default branch).
+  schedule:
+    - cron: "17 4 * * *"
 
 concurrency:
   group: checks-${{ github.ref }}
@@ -31,6 +34,23 @@ jobs:
         run: uv run pytest
       - name: Self-check
         run: uv run python -m engine.selfcheck
+
+  # The Python suite with the clock 40 days ahead: a test that mixes a fixed date with the real clock fails here, before
+  # the day it would fail for everyone. It runs beside the other jobs, so it adds no time to a push. faketime also fakes
+  # the file times a test sets and reads back, which NO_FAKE_STAT turns off.
+  python-later:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+      - run: sudo apt-get install -y faketime
+      - run: uv sync
+      - name: Tests, 40 days on
+        env:
+          NO_FAKE_STAT: "1"
+        run: faketime -f '+40d' uv run pytest
 
   web:
     runs-on: ubuntu-latest
