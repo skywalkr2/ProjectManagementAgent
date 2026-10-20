@@ -904,23 +904,42 @@ test.describe.serial("acceptance scenario", () => {
   test("a tablet puts the rail under the queue in two columns, and a phone stacks everything with no sideways scrolling", async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 900 });
     await signIn(page);
-    const at = async (id: string) => (await page.locator(`[data-col="${id}"]`).boundingBox())!;
-    const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
-    const [priorities, week, agenda, todo] = [await at("priorities"), await at("week"), await at("agenda"), await at("todo")];
-    for (const panel of [priorities, week, agenda, todo]) expect(panel.y).toBeGreaterThanOrEqual(queue.y + queue.height - 1);
-    // Two columns, in reading order: Top priorities and This week side by side, then the agenda and the to-dos under them.
-    expect(week.x).toBeGreaterThan(priorities.x);
-    expect(week.y).toBe(priorities.y);
-    expect(agenda.x).toBe(priorities.x);
-    expect(todo.x).toBeGreaterThan(agenda.x);
-    expect(todo.y).toBe(agenda.y);
+    // The queue and each panel load on their own, and each load moves what is below it, so the boxes are read in one step (all
+    // from the same layout) and judged by what they say: the check waits for the layout to have settled into the one asked for.
+    const queue = page.getByRole("region", { name: "Needs you" });
+    const columns = () =>
+      queue.evaluate((q, ids) => {
+        const box = (el: Element | null) => {
+          const b = el?.getBoundingClientRect();
+          return b ? { x: b.x, y: b.y, width: b.width, height: b.height } : null;
+        };
+        return { queue: box(q), ...Object.fromEntries(ids.map((id) => [id, box(document.querySelector(`[data-col="${id}"]`))])) };
+      }, ["priorities", "week", "agenda", "todo", "arrived"]);
+    type Box = { x: number; y: number; width: number; height: number };
+    type Rule = [string, (b: Record<string, Box>) => boolean];
+    /** What is wrong with the layout, in words, or "" when it is as it should be. */
+    const wrongWith = (found: Record<string, Box | null>, rules: Rule[]) => {
+      if (Object.values(found).some((box) => !box)) return `a box is missing: ${JSON.stringify(found)}`;
+      const boxes = found as Record<string, Box>;
+      const broken = rules.filter(([, holds]) => !holds(boxes)).map(([what]) => what);
+      return broken.length > 0 ? `${broken.join("; ")} ${JSON.stringify(boxes)}` : "";
+    };
+    const tablet: Rule[] = [
+      ["every panel is under the queue", (b) => ["priorities", "week", "agenda", "todo"].every((id) => b[id].y >= b.queue.y + b.queue.height - 1)],
+      // Two columns, in reading order: Top priorities and This week side by side, then the agenda and the to-dos under them.
+      ["This week is beside Top priorities", (b) => b.week.x > b.priorities.x && b.week.y === b.priorities.y],
+      ["the agenda is under Top priorities", (b) => b.agenda.x === b.priorities.x],
+      ["the to-dos are beside the agenda", (b) => b.todo.x > b.agenda.x && b.todo.y === b.agenda.y],
+    ];
+    await expect.poll(async () => wrongWith(await columns(), tablet), { timeout: 20_000 }).toBe("");
     await checkAccessibility(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator("html")).toHaveAttribute("data-narrow", "");
-    const [a, b, c] = [await at("agenda"), await at("todo"), await at("arrived")];
-    expect(b.y).toBeGreaterThan(a.y + a.height - 1);
-    expect(c.y).toBeGreaterThan(b.y + b.height - 1);
-    expect(b.x).toBe(a.x);
+    const phone: Rule[] = [
+      ["the to-dos are under the agenda", (b) => b.todo.y > b.agenda.y + b.agenda.height - 1 && b.todo.x === b.agenda.x],
+      ["Came in is under the to-dos", (b) => b.arrived.y > b.todo.y + b.todo.height - 1],
+    ];
+    await expect.poll(async () => wrongWith(await columns(), phone), { timeout: 20_000 }).toBe("");
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await checkAccessibility(page);
   });

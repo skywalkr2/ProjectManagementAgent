@@ -14,6 +14,9 @@ async function signIn(page: Page, hash = "") {
   }
 }
 
+/** A save, an Undo and the reload after them are several requests; a computer that is busy takes longer than a screen's own wait. */
+const SAVED = { timeout: 20_000 };
+
 async function shoot(page: Page, name: string) {
   const folder = process.env.E2E_SHOTS;
   if (folder) await page.screenshot({ path: `${folder}/${name}.png`, fullPage: false });
@@ -773,17 +776,19 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     await seconds.fill("17");
     await seconds.press("Enter");
     const toasts = page.getByRole("region", { name: "Notifications" });
-    await expect(toasts).toContainText("Seconds a message stays on screen: 17");
+    await expect(toasts).toContainText("Seconds a message stays on screen: 17", SAVED);
     const row = page.locator(".setting", { has: seconds });
     await expect(row.getByText("Changed", { exact: true })).toBeVisible();
     await toasts.getByRole("button", { name: "Undo" }).first().click();
+    // An Undo is done when it says so: it saves, then reloads what every screen shows, which a busy computer takes longer over.
+    await expect(toasts).toContainText("Undone.", SAVED);
     await expect(seconds).toHaveValue(before);
     // Reset puts it back to its default at once, and says so.
     await seconds.fill("19");
     await seconds.press("Enter");
-    await expect(toasts).toContainText("Seconds a message stays on screen: 19");
+    await expect(toasts).toContainText("Seconds a message stays on screen: 19", SAVED);
     await row.getByRole("button", { name: /^Reset/ }).click();
-    await expect(row.getByText("Changed", { exact: true })).toHaveCount(0);
+    await expect(row.getByText("Changed", { exact: true })).toHaveCount(0, SAVED);
     await expectNoViolations(page);
   });
 
@@ -838,9 +843,11 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       const options = await first.locator("option").evaluateAll((all) => all.map((o) => (o as HTMLOptionElement).value));
       const other = options.find((o) => o !== before)!;
       await first.selectOption(other);
-      await expect(page.getByRole("button", { name: "Undo" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Undo" }).first()).toBeVisible(SAVED);
       await expect(first).toHaveValue(other);
       await page.getByRole("button", { name: "Undo" }).first().click();
+      // The Undo is done when it says so (it saves, then reloads what the screens show); the list then shows what it had.
+      await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Undone.", SAVED);
       await expect(first).toHaveValue(before);
     });
   }

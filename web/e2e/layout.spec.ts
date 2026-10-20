@@ -11,6 +11,9 @@ const strings: Record<string, string> = Object.fromEntries(
   ),
 );
 
+/** What a screen's data takes to arrive on a busy computer: each screen is read once it shows what it loads, never sooner. */
+const LOADED = { timeout: 20_000 };
+
 /** 1512 x 982 is the owner's laptop; the others are two phones, a tablet and three desktops. */
 const SIZES = [
   { width: 360, height: 740 },
@@ -28,17 +31,17 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
     name: "Today",
     hash: "today",
     ready: async (page) => {
-      await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
-      await expect(page.locator('[data-queue-line="review"]').first()).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible(LOADED);
+      await expect(page.locator('[data-queue-line="review"]').first()).toBeVisible(LOADED);
       // On the phone the rail's panels are folded to one line; the one holding the failed read says so, and is opened to measure it.
       const folded = page.getByRole("button", { name: /Came in/, expanded: false });
       if ((await folded.count()) > 0) {
-        await expect(folded).toContainText("couldn't be read");
+        await expect(folded).toContainText("couldn't be read", LOADED);
         await folded.click();
-        await expect(page.getByRole("button", { name: /Came in/ })).toHaveAttribute("aria-expanded", "true");
+        await expect(page.getByRole("button", { name: /Came in/ })).toHaveAttribute("aria-expanded", "true", LOADED);
       }
-      await expect(page.locator("[data-source-problems]").first()).toBeVisible();
-      await expect(page.locator("[data-source-problems]").first()).toContainText(strings["mail-01"].slice(0, 12));
+      await expect(page.locator("[data-source-problems]").first()).toBeVisible(LOADED);
+      await expect(page.locator("[data-source-problems]").first()).toContainText(strings["mail-01"].slice(0, 12), LOADED);
     },
   },
   { name: "Follow-ups", hash: "work/followups", ready: (page) => heading(page, "Follow-ups") },
@@ -68,8 +71,8 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
     ready: async (page) => {
       await section(page, "AI accounts");
       // Under the accounts: which model does what, with its lists and the routing rules.
-      await expect(page.getByRole("heading", { level: 3, name: "Which model does what" })).toBeVisible();
-      await expect(page.getByRole("group", { name: "Rule 1" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 3, name: "Which model does what" })).toBeVisible(LOADED);
+      await expect(page.getByRole("group", { name: "Rule 1" })).toBeVisible(LOADED);
     },
   },
   { name: "Settings: Backups and sync", hash: "settings/backups", ready: (page) => section(page, "Backups and sync") },
@@ -79,9 +82,9 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   { name: "Settings: Advanced", hash: "settings/advanced", ready: (page) => section(page, "Advanced") },
 ];
 
-const section = (page: Page, name: string) => expect(page.getByRole("heading", { level: 2, name: new RegExp(`^${name}`) })).toBeVisible();
-const heading = (page: Page, name: string) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible();
-const text = (page: Page, words: string) => expect(page.getByText(words.slice(0, 12)).first()).toBeAttached();
+const section = (page: Page, name: string) => expect(page.getByRole("heading", { level: 2, name: new RegExp(`^${name}`) })).toBeVisible(LOADED);
+const heading = (page: Page, name: string) => expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible(LOADED);
+const text = (page: Page, words: string) => expect(page.getByText(words.slice(0, 12)).first()).toBeAttached(LOADED);
 
 /** How wide the page and its body are against the window, and what sticks out past it without making the page scroll
  * (content a parent clips is as bad: it is cut off). Fixed layers and anything inside a box that scrolls itself are the
@@ -130,6 +133,8 @@ test.describe("no screen is wider than the window", () => {
   });
 
   test("every main screen, and the details pane, at every width", async ({ page }) => {
+    // Seven widths of twenty-two screens, each waited for until it has loaded: a busy computer needs more than a minute.
+    test.setTimeout(240_000);
     const wide: string[] = [];
     for (const size of SIZES) {
       await page.setViewportSize(size);
@@ -156,10 +161,10 @@ test.describe("no screen is wider than the window", () => {
         window.location.hash = "today";
       });
       const review = page.locator('[data-queue-line="review"]').first();
-      await expect(review).toBeVisible();
+      await expect(review).toBeVisible(LOADED);
       await review.getByRole("button", { name: /^More actions for/ }).click();
       await page.getByRole("menuitem", { name: "Look closer" }).click();
-      await expect(page.getByText(strings["web-02"].slice(0, 12)).first()).toBeVisible();
+      await expect(page.getByText(strings["web-02"].slice(0, 12)).first()).toBeVisible(LOADED);
       const found = await overflow(page);
       if (tooWide(found)) wide.push(`Details at ${size.width}: ${JSON.stringify(found)}`);
     }

@@ -46,6 +46,9 @@
   .ask { display: none; }
   .askIcon { display: inline-flex; }
   .spacer { flex: 1 1 0; }
+  /* The chip may not shrink, so the gaps do, as on a phone: the longest status word and a wide font still leave every
+     control inside the window. */
+  .header { gap: var(--space-2); }
   /* With no Ask field to give up width, the name does. */
   .brand { flex: 0 1 auto; }
 }
