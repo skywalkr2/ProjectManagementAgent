@@ -269,6 +269,7 @@ def _start_without_serving(monkeypatch, tmp_path):
     (tmp_path / "home").mkdir()
     monkeypatch.delenv("COCKPIT_WORKSPACE", raising=False)
     monkeypatch.setattr(cli, "cmd_serve", serve)
+    monkeypatch.setattr(cli, "system_temp_roots", lambda: (tmp_path / "tmp",))
     return served
 
 
@@ -292,6 +293,22 @@ def test_cockpit_on_its_own_reopens_the_workspace_started_last(tmp_path, monkeyp
     assert main([]) == 0
     assert served == [other]
     assert not (tmp_path / "home" / "Cockpit").exists()
+
+
+def test_a_workspace_in_a_temporary_folder_is_never_the_one_cockpit_reopens(tmp_path, monkeypatch):
+    from engine.workspace import init_workspace
+
+    served = _start_without_serving(monkeypatch, tmp_path)
+    import engine.cli as cli
+
+    throwaway = init_workspace(tmp_path / "tmp" / "journeys" / "workspace", git=False).root
+    cli.remember_workspace(throwaway)
+    assert not (tmp_path / "home" / cli.LAST_FILE).exists()
+    # One remembered before this rule (a test run's) is passed over as well.
+    (tmp_path / "home" / cli.LAST_FILE).parent.mkdir(parents=True)
+    (tmp_path / "home" / cli.LAST_FILE).write_text(str(throwaway) + "\n")
+    assert main([]) == 0
+    assert served == [tmp_path / "home" / "Cockpit"]
 
 
 def test_cockpit_on_its_own_never_makes_a_workspace_in_a_folder_with_other_files(tmp_path, monkeypatch, capsys):

@@ -549,16 +549,20 @@ LAST_FILE = Path(".pm-cockpit") / "last-workspace"
 
 
 def last_workspace() -> Path | None:
-    """The workspace started last on this computer, when it still exists."""
+    """The workspace started last on this computer, when it still exists and isn't in a temporary folder."""
     try:
         path = Path((Path.home() / LAST_FILE).read_text(encoding="utf-8").strip())
     except OSError:
         return None
-    return path if (path / "config").is_dir() else None
+    return path if (path / "config").is_dir() and not temp_folder_notice(path) else None
 
 
 def remember_workspace(root: Path) -> None:
-    """Remember the workspace just started, for the next `cockpit` on its own. Failing to write it changes nothing."""
+    """Remember the workspace just started, for the next `cockpit` on its own. One in a temporary folder (a test's, or
+    one made to try something) is never remembered, so it never becomes the workspace `cockpit` reopens. Failing to
+    write it changes nothing."""
+    if temp_folder_notice(root):
+        return
     try:
         file = Path.home() / LAST_FILE
         file.parent.mkdir(parents=True, exist_ok=True)
