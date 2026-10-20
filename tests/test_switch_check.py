@@ -177,6 +177,17 @@ def test_the_estimate_prices_a_few_real_packets_and_scales_with_the_runs(tmp_pat
     assert unpriced is None, "a choice with no known price is estimated as none, never as free"
 
 
+def test_an_estimate_whose_practice_workspace_cant_be_made_is_unknown_not_a_crash(tmp_path, monkeypatch):
+    from engine.storage import StoreError
+
+    def refuse(*args, **kwargs):
+        raise StoreError("enable the record plugins before importing: example/reminder")
+
+    monkeypatch.setattr(ev, "init_workspace", refuse)
+    price, cases = estimate_cases(DEMO_B, account="stub/default", runs=1, env={})
+    assert price is None and cases >= len(load_cases(DEMO_B))
+
+
 # ---- the person's path ---------------------------------------------------------------------------
 
 

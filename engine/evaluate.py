@@ -1027,7 +1027,10 @@ def estimate_cases(
     prices: list[float | None] = []
     for case in core[::step][:ESTIMATE_SAMPLE]:
         with tempfile.TemporaryDirectory() as tmp:
-            ws = init_workspace(Path(tmp) / "ws", template=template, git=False)
+            try:
+                ws = init_workspace(Path(tmp) / "ws", template=template, git=False)
+            except StoreError:
+                continue  # the practice workspace can't be made here (an add-on it needs isn't loaded): not priced
             if ai_config is not None:
                 shutil.copyfile(ai_config, ws.config_dir / "ai.yaml")
             flags: dict[str, Any] = {
