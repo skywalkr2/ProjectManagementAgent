@@ -43,7 +43,7 @@ def plan(pm, entry, **more):
         "op": "question.add",
         "kind": "decision",
         "to": pm,
-        "title": f"Does the plan for {entry} still hold?",
+        "title": "Does the plan for the moved entry still hold?",
         "text": "Tied to it.",
         "project": PROJECT["id"],
         "matters_for": entry,

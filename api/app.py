@@ -157,6 +157,13 @@ def create_app(
     except Exception as err:  # never stops the app from starting
         log.warning("Couldn't re-source history lines that name the assistant: %s", err)
     try:
+        # Labels and titles written when an id stood where a title belongs are re-worded from the record, once.
+        from engine.outward import sweep_ids
+
+        sweep_ids(store, cfg)
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't re-word titles that hold an id: %s", err)
+    try:
         # Names older settings and rules hold for a project or person become their ids, so a rename can't detach them.
         from engine.references import join_stored_names
 

@@ -160,6 +160,7 @@ function ProposalRow(props: { p: Proposal }) {
       pill={<Pill>{t(`learned.from.${p.came_from}`)}</Pill>}
       title={p.text}
       meta={meta}
+      oneLine
       primary={
         <Button size="sm" variant="primary" onClick={() => void state.keep()}>
           {t("learned.keep")}

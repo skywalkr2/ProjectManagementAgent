@@ -691,6 +691,15 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
   `::test_closing_someones_action_from_an_unattributed_input_writes_a_row_sourced_by_the_input`. *Not built:* a plugin's own
   record types cannot yet say which of their fields others read (the check covers the core's ops and fields); that needs a
   generic extension point.
+- **A title is never an id** (the UI/UX re-review of B-7, R1, check C54; `engine/id_words.py`): an op that writes a title (a
+  to-do's words, a question's, a calendar entry's, a series' or a project's name, a report's title; the same fields through
+  `record.set`) holding the id of a record that exists is refused with the reason in plain words (`id-in-title`; never a lint,
+  never configurable). An id is how the product refers to a record, not a word for a person: name the record by its own
+  title. The person's own typing on their own screen is not checked. The labels the ops give the person (6.7, 7.14) are made in
+  one place, `_label`, which names each record by its title in quotes and, with no title, by its kind in words ("the to-do");
+  a plugin's op may do the same. `outward.sweep_ids` re-makes each stored label that holds an id as labels are made now; it
+  runs when the app starts. A label is the app's own words; record titles are never swept, since a title may be the
+  person's own words and the invariant keeps the assistant from writing an id into one. **Built:** `tests/test_titles_without_ids.py`.
 - **Evidence matches:** an op that needs evidence has it, and its quoted words appear in the cited source's saved text
   (whitespace and quote marks normalized). A quote that isn't there is refused: the cheapest defence against a model that is
   confident and wrong, and against an injected instruction pointing at text that doesn't exist. (A real but wrong target, like
@@ -3132,8 +3141,9 @@ or called off, or two named, with the check and the apply agreeing) and `web/src
 meeting's page, the series' page and Today's row).
 
 **Never a silent close.** An ending (close, drop, move, part) that comes from an input or the assistant's own initiative
-is held for the person: one line, "Keep: Ana sent the floor plan", with the words it came from, and Keep, Change or Not
-yet. One from the person's own note or a button applies at once with Undo. `action.news` changes nothing about the
+is held for the person: one line that asks, "Close 'Send the floor plan'?" ("Drop '…'?", "Move '…' to Oct 22?", "Mark part of
+'…' as delivered?"), with the words it came from and who said them, and two buttons that name the result ("Close it" and
+"Keep it open"; 7.6), with Change in the menu. One from the person's own note or a button applies at once with Undo. `action.news` changes nothing about the
 promise and applies at once, shown on it. A held ending kept by the person counts as seen (6.32's silent closes).
 
 **No news by its date.** A promise past its date with no ending and no news is on a line with its choices. For the person's
@@ -3180,9 +3190,9 @@ the input said reported it) (`tests/test_promises.py`). **On screen:** every pro
 whom in the owner format, the day with its words and "Check this date", where it came from, "Said" or "Worked out", the
 news under it, newest first, a delivered part credited to the owners), each of owner, promised to, day and basis one click
 to correct from a list or date picker as the person's own edit with Undo, a signal the assistant learns from
-(`tests/test_promise_routes.py`, `web/src/components/PromiseWhy.test.tsx`); a held ending reads as one line, "Keep:
-Ana finished 'Send the floor plan'", with its words under it, Keep first and Not yet and Change in the menu
-(`tests/test_promise_lines.py`, `web/src/components/TodayPromises.test.tsx`); a promise needing a look is one Today
+(`tests/test_promise_routes.py`, `web/src/components/PromiseWhy.test.tsx`); a held ending reads as one line that asks,
+"Close 'Send the floor plan'?", with its words and who said them under it and the two buttons that name the result, Change
+in the menu (`tests/test_promise_lines.py`, `web/src/components/TodayPromises.test.tsx`); a promise needing a look is one Today
 line with its choices and on no other line: the person's own past their day, and those owed by someone else from
 `steward.chase_dated_days` (7) before their day or past it, or, with no day, after `steward.chase_undated_days` (14) with
 nothing heard, never while on hold or with news since their day (`tests/test_promise_lines.py`); the sent folder offered

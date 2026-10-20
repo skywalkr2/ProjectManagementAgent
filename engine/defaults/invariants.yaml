@@ -50,6 +50,21 @@ invariants:
       anything another person reads. A history line's source is the evidence: the page, mail or person and the day
       (for example "the sync notes, Oct 14"), or the person for their own note. When several inputs led to a call,
       cite those inputs or the person who approved it.
+  id-in-title:
+    ops:
+      - action.add
+      - question.add
+      - question.update
+      - event.add
+      - series.add
+      - project.add
+      - report.draft
+      - record.set
+    line: A title never holds the id of a record; name the record by its own title instead.
+    seed: >-
+      An id such as the one a record is filed under is never a word for a person to read. When a title, a to-do's words
+      or a question has to refer to another record, name it by its own title in quotes, or say what kind of thing it is.
+      A title that holds the id of a record that exists is refused.
   one-owner:
     ops:
       - action.add

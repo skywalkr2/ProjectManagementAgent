@@ -215,3 +215,15 @@ test("a plugin's panel on the work tab is a sidebar entry that opens its panel",
   await user.click(await screen.findByRole("link", { name: "Goals" }, { timeout: 4000 }));
   expect(await screen.findByRole("heading", { level: 1, name: "Goals" })).toBeInTheDocument();
 });
+
+test("a new name for the workspace shows in the header at once, with no reload", async () => {
+  let name = "Workspace";
+  fakeApi({ ...today, "GET runtime-config": () => rc({ workspace_name: name }) });
+  const { client } = renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("link", { name: "Go to Today · Workspace" })).toBeInTheDocument();
+  // Saving the name asks every screen to read again, as every save does.
+  name = "My projects";
+  await act(() => client.invalidateQueries());
+  expect(await screen.findByRole("link", { name: "Go to Today · My projects" })).toBeInTheDocument();
+  expect(within(screen.getByRole("banner")).getByText("My projects")).toBeInTheDocument();
+});

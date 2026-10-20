@@ -78,7 +78,7 @@ test.describe.serial("journeys", () => {
 
     // Mail and calendar: no add-on is listed here, so the core's own forms are offered. I skip it.
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
-    await expect(main.getByRole("button", { name: "Another mail or calendar" })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Connect one" })).toBeVisible();
     await visit(page);
     await main.getByRole("button", { name: "I'll do this later" }).click();
 

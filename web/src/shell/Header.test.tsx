@@ -11,12 +11,13 @@ function below1440() {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: /max-width:\s*1439px/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
 }
 
-function show(over: { demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide", () => void>> } = {}) {
+function show(over: { changes?: unknown[]; demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide", () => void>> } = {}) {
   fakeApi({
     "GET settings": () => ({ fingerprint: "fp", items: over.links === undefined ? [] : [linksItem(over.links)] }),
     "GET status": () => statusFixture(),
     "GET me": () => ({ full_name: "Casey Example", person: null }),
     "GET runtime-config": () => ({ instance: null }),
+    "GET changes": () => over.changes ?? [{ id: "REQ-1" }],
   });
   const rc = rcFixture({ demo: over.demo ?? false, logo: over.logo ?? false, workspace_name: "Example Workspace" });
   const noop = () => undefined;
@@ -237,7 +238,18 @@ test("with no links the person's menu is only the appearance choices", async () 
 
 test("Missed one is a button with its words, not a bare warning icon", async () => {
   show();
-  const button = screen.getByRole("button", { name: "Missed one" });
+  const button = await screen.findByRole("button", { name: "Missed one" });
   expect(button).toHaveTextContent("Missed one");
   expect(button.querySelector("svg")).toBeNull();
+});
+
+test("a new workspace offers no Missed one until something has been read or handed in", async () => {
+  show({ changes: [] });
+  await screen.findByRole("button", { name: "Hand something in" });
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Missed one" })).toBeNull());
+});
+
+test("Missed one shows once the assistant has been given anything it could have missed", async () => {
+  show({ changes: [{ id: "REQ-1" }] });
+  expect(await screen.findByRole("button", { name: "Missed one" })).toBeInTheDocument();
 });

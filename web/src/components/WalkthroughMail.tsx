@@ -2,7 +2,8 @@
 // is in. One not yet installed is installed and turned on with one button; one installed but off is turned on; then the
 // one restart ("Restart to connect"), never made on its own; then Sign in. Once signed in the screen says what is read now
 // and that the last day's mail waits for the first Go. The core's own mail folder and calendar address are offered as
-// "Another mail or calendar".
+// "Another mail or calendar". With no service listed and nothing read yet, the step is one sentence, one button and the way
+// out the walkthrough already has (skip it).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -137,10 +138,11 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
   const waiting = services.some((s) => s.state === "restart");
   const canRestart = !!status.data?.can_restart;
   const read = (sources.data ?? []).filter((s) => s.enabled && (s.reads ?? []).length > 0);
+  // Nothing to sign in to and nothing read: the step says so once, with one button for what can be connected now.
+  const nothingYet = services.length === 0 && read.length === 0;
 
   return (
     <div className="mail-step">
-      {packs.isError && <p className="problem-note">{t("walkthrough.mail.load_failed")}</p>}
       {services.length > 0 ? (
         <>
           <p className="what" id="mail-services">
@@ -158,7 +160,16 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
           </ul>
         </>
       ) : (
-        <p className="hint">{t("walkthrough.mail.none")}</p>
+        <div className="field" data-mail-none="">
+          <p className={packs.isError ? "problem-note" : "hint"} id="mail-none">
+            {t(packs.isError ? "walkthrough.mail.load_failed" : "walkthrough.mail.none")}
+          </p>
+          <div className="row-end">
+            <button type="button" className="btn" aria-describedby="mail-none" onClick={() => props.onChooseSource(null)}>
+              {t("walkthrough.mail.connect_one")}
+            </button>
+          </div>
+        </div>
       )}
       {waiting && (
         <div className="restart-step" role="status">
@@ -187,20 +198,26 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
           )}
         </div>
       )}
-      <div className="field">
-        <p className="hint" id="mail-other">
-          {t("walkthrough.mail.other_hint")}
-        </p>
-        <div className="row-end">
-          <button type="button" className="btn" aria-describedby="mail-other" onClick={() => props.onChooseSource(null)}>
-            {t("walkthrough.mail.other")}
-          </button>
+      {services.length > 0 && (
+        <div className="field">
+          <p className="hint" id="mail-other">
+            {t("walkthrough.mail.other_hint")}
+          </p>
+          <div className="row-end">
+            <button type="button" className="btn" aria-describedby="mail-other" onClick={() => props.onChooseSource(null)}>
+              {t("walkthrough.mail.other")}
+            </button>
+          </div>
         </div>
-      </div>
-      <p className="hint" data-set-aside="">
-        {t("walkthrough.mail.set_aside")}
-      </p>
-      <SortingSwitch />
+      )}
+      {!nothingYet && (
+        <>
+          <p className="hint" data-set-aside="">
+            {t("walkthrough.mail.set_aside")}
+          </p>
+          <SortingSwitch />
+        </>
+      )}
       {read.length > 0 && (
         <div className="field" data-reading="">
           <span className="what" id="mail-read">

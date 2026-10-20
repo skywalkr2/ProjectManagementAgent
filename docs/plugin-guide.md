@@ -283,7 +283,7 @@ An op that doesn't match its model (a missing, unknown or wrongly typed field) m
 
 #### `op.describe()`
 
-A one-line plain label for this op in review lists; plugin ops may override it. A plugin op may instead define `describe(self, view)` to read records for the label (a read view of core and its own records). The label is made against the records as they stand before the changeset applies.
+A one-line plain label for this op in review lists; plugin ops may override it. A plugin op may instead define `describe(self, view)` to read records for the label (a read view of core and its own records). The label is made against the records as they stand before the changeset applies. A label names a record by its title in quotes, never by its id.
 
 Tiers: `data`, `outbound`, `system`; plugin ops are `data` or `system`.
 

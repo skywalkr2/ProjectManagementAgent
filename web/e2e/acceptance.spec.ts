@@ -321,7 +321,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     await screens.getByRole("button", { name: /^Mail and calendar/ }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Another mail or calendar" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect one" })).toBeVisible();
     await checkAccessibility(page);
     await screens.getByRole("button", { name: /^Backups/ }).click();
     // A folder is already chosen, so "Choose another folder…" is a choice to make first; the folder list opens from its field.

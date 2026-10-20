@@ -21,7 +21,7 @@ function line(kind: Line["kind"], over: Partial<Line> = {}): Line {
 }
 
 const held = (ask: S["HeldAsk"], over: Partial<Line> = {}) =>
-  line("held", { key: "held:CS-1:0", changeset: "CS-1", op: 0, text: "Close action", waiting: "This rests on something worked out, not something anyone said: close it?", held: ask, ...over });
+  line("held", { key: "held:CS-1:0", changeset: "CS-1", op: 0, text: "Close 'Send two spine options'", waiting: "This rests on something worked out, not something anyone said.", held: ask, ...over });
 
 const question = (id: string, title: string): S["FollowupQuestion"] => ({
   id,
@@ -77,12 +77,14 @@ const rowOf = async (title: string) => (await screen.findByRole("group", { name:
 
 // ---- held for a look ------------------------------------------------------------------------------------------------
 
-test("a held close is the action as a question, the reason and the words it rests on first, and two answers that say what they do", async () => {
-  show([held({ ask: "close", item: "Send two spine options", quote: "both spines are in the shared folder", told: [] })]);
+test("a held close is the action as a question, the words it rests on and who said them under it, and two answers that say what they do", async () => {
+  show([held({ ask: "close", item: "Send two spine options", quote: "both spines are in the shared folder", reporter: "Robin Sample", told: [] })]);
   const row = await rowOf("Close 'Send two spine options'?");
   expect(within(row).getByText("Waiting for you")).toBeInTheDocument();
-  expect(row).toHaveTextContent("This rests on something worked out, not something anyone said: close it?");
-  expect(row).toHaveTextContent("“both spines are in the shared folder”");
+  expect(row).toHaveTextContent("“both spines are in the shared folder” · Said by Robin Sample");
+  // The reason it waits is in the inspector, not on the line, and the title never says "close it?" as a second question.
+  expect(row).not.toHaveTextContent("This rests on something worked out");
+  expect(row).not.toHaveTextContent("close it?");
   expect(within(row).getByRole("button", { name: "Close it" })).toBeInTheDocument();
   expect(within(row).getByRole("button", { name: "Keep it open" })).toBeInTheDocument();
   // Never the generic words that make the person read the title again.
@@ -129,11 +131,27 @@ test.each([
   expect(within(row).getByRole("button", { name: other })).toBeInTheDocument();
 });
 
-test("a drop of something that reached someone says so in bold, with who and when", async () => {
+test("a drop of something that reached someone keeps who was told off the line: it leads the inspector", async () => {
   show([held({ ask: "drop", item: "Send the interior file", told: ["Robin Sample", "Casey Moor"], told_on: "2026-10-10" })]);
   const row = await rowOf("Drop 'Send the interior file'?");
-  const strong = row.querySelector("strong");
-  expect(strong).toHaveTextContent(`Robin Sample, Casey Moor were told on ${day("2026-10-10")}`);
+  expect(row.querySelector("strong")).toBeNull();
+  expect(row).not.toHaveTextContent("were told");
+});
+
+test.each([
+  [{ ask: "close", item: "Send two spine options", record: "ACT-1", owners: ["Robin Sample"] } as S["HeldAsk"], "Close 'Send two spine options'?", "Close it", "Keep it open"],
+  [{ ask: "drop", item: "Confirm the seating plan", record: "ACT-1", owners: ["Robin Sample"], told: [] } as S["HeldAsk"], "Drop 'Confirm the seating plan'?", "Drop it", "Keep it"],
+  [{ ask: "move", item: "Send the proof", record: "ACT-1", due_words: "next Tuesday", from_value: "2026-10-20" } as S["HeldAsk"], "Move 'Send the proof' to next Tuesday?", "Move it", "Keep " + day("2026-10-20")],
+  [{ ask: "move", item: "Send the proof", record: "ACT-1", value: "2026-11-03" } as S["HeldAsk"], "Move 'Send the proof' to " + day("2026-11-03") + "?", "Move it", "Keep the date"],
+  [{ ask: "part", item: "Send the proof", record: "ACT-1", delivered: "the draft", left: "the final" } as S["HeldAsk"], "Mark part of 'Send the proof' as delivered?", "Mark it part delivered", "Keep it open"],
+])("an ending read from an input (%#) is asked the same way: a question, and the two buttons that name the result", async (ask, title, primary, other) => {
+  show([held(ask)]);
+  const row = await rowOf(title);
+  expect(within(row).getByRole("button", { name: primary })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: other })).toBeInTheDocument();
+  // None of the older words for the same decision.
+  expect(within(row).queryByRole("button", { name: /^(Keep|Not yet|Do it anyway)$/ })).toBeNull();
+  expect(row).not.toHaveTextContent(/^Keep:/);
 });
 
 test("a held item the engine doesn't shape as a question is still shown by its label, as before", async () => {
@@ -337,4 +355,31 @@ test("an answer that isn't the last says what it did and not that the move is se
   await user.click(within(row).getByRole("button", { name: `Keep ${day("2026-10-20")}` }));
   expect(await screen.findByText(`Kept ${day("2026-10-20")}.`)).toBeInTheDocument();
   expect(screen.queryByText(/is settled/)).toBeNull();
+});
+
+// ---- no id where a title belongs (check C54) --------------------------------------------------------------------------
+
+test("no line of Today shows an id of the app's own: a held line, a review line and their meta say the item by its title", async () => {
+  const ending = { record: "ACT-1", owners: ["Robin Sample"], reporter: "Robin Sample", quote: "the spine options are in the shared folder" };
+  show([
+    held({ ask: "close", item: "Send two spine options", ...ending }),
+    held({ ask: "drop", item: "Confirm the seating plan", told: ["Casey Moor"], told_on: "2026-10-10", ...ending }, { key: "held:CS-1:1", op: 1 }),
+    held({ ask: "move", item: "Send the proof", due_words: "next Tuesday", ...ending }, { key: "held:CS-1:2", op: 2 }),
+    line("review", { key: "review:REQ-2", subject: "Drop 'Settle the endpaper color'", changeset: "CS-2" }),
+  ]);
+  await rowOf("Close 'Send two spine options'?");
+  await rowOf("Drop 'Settle the endpaper color'");
+  const text = document.body.textContent ?? "";
+  expect(text.match(/\b[A-Z]{2,5}-\d+\b/)?.[0] ?? null, "an id of the app's own").toBeNull();
+});
+
+test("a line that came from outside carries the Outside tag in the pill column, not in its meta, and its meta is one line", async () => {
+  show([held({ ask: "close", item: "Send two spine options", quote: "both spines are in the shared folder", told: [] }, { untrusted: true })]);
+  const row = await rowOf("Close 'Send two spine options'?");
+  const outside = within(row).getByText("Outside");
+  const pillColumn = within(row).getByText("Waiting for you").closest("div") as HTMLElement;
+  expect(pillColumn).toContainElement(outside);
+  const meta = row.querySelector("p[class*='meta']") as HTMLElement;
+  expect(meta).not.toContainElement(outside);
+  expect(meta.className).toMatch(/oneLine/);
 });

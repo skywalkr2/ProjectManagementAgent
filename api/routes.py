@@ -162,7 +162,7 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
-from engine import catch_up, learned, source_intake
+from engine import catch_up, endings, held_ask, learned, source_intake
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -1495,8 +1495,6 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def answer_ending(cs_id: str, index: int, body: EndingAnswer) -> Ok:
         """Answer "Done by <owner>, or no longer needed?" for an ending whose words only said it was closed: done
         credits the owners, no longer needed credits nobody. Either applies at once, with Undo."""
-        from engine import endings
-
         need("changeset", cs_id)
         guard(lambda: endings.answer(store, cfg, cs_id, index, body.ending))
         changed()
@@ -2258,11 +2256,21 @@ def _op_view(
     if op["op"] == "person.stance":
         meta["stance"] = op["stance"]
     evidence = op.get("evidence")
+    asked = None
+    if o["status"] == "held" and not o.get("question"):
+        asked = held_ask.describe(
+            store.read(),
+            people,
+            op,
+            reporter=o.get("reporter"),
+            choice=any(p.get("check") == endings.CHOICE_CHECK for p in o.get("problems") or []),
+        )
     return OpView(
         index=o["index"],
         op=op["op"],
         status=o["status"],
-        reason=o.get("reason"),
+        reason=held_ask.reason_of(o) if asked else o.get("reason"),
+        held=asked,
         group=o["group"],
         title=title,
         meta=meta,

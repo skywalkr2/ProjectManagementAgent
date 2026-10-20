@@ -36,8 +36,8 @@ def _told(view: Any, people: Any, record: Any) -> tuple[list[str], str | None]:
 def _ending(people: Any, found: Any, op: dict[str, Any], reporter: str | None) -> dict[str, Any]:
     """What an ending read from an input says happened, for the line that asks the person to keep it: the `record` it is
     about, who owns it (`owners`, as the workspace writes an owner) and who the input says reported it, and for a move
-    its new day (`value`) or the words of it (`due_words`), for a part what was delivered and what is left, and for a
-    drop the reason."""
+    its new day (`value`) or the words of it (`due_words`) and the day it has now (`from_value`), for a part what was
+    delivered and what is left, and for a drop the reason."""
     owners = [people.owner(o) for o in found.data.get("owners") or []]
     shown: dict[str, Any] = {
         "record": found.id,
@@ -45,7 +45,11 @@ def _ending(people: Any, found: Any, op: dict[str, Any], reporter: str | None) -
         "reporter": people.name(reporter) if reporter else None,
     }
     if op["op"] == "action.move":
-        shown |= {"value": str(op["due"]) if op.get("due") else None, "due_words": op.get("due_words")}
+        shown |= {
+            "value": str(op["due"]) if op.get("due") else None,
+            "from_value": str(found.data["due"]) if found.data.get("due") else None,
+            "due_words": op.get("due_words"),
+        }
         shown["earlier"] = (found.data.get("evidence") or {}).get("quote")
     elif op["op"] == "action.part":
         shown |= {"delivered": op.get("delivered"), "left": op.get("left")}
@@ -132,3 +136,13 @@ def describe(
         shown = {"ask": DROP, "item": _text(found), "told": told, "told_on": on, "quote": quote}
         return shown | _ending(people, found, op, reporter) if kind == "action" else shown
     return None
+
+
+def reason_of(outcome: dict[str, Any]) -> str | None:
+    """Why a held op waits, in the words of today's checks: a hold made before the wording changed shows the same
+    reason as one made now. Another kind of hold keeps the reason it was given."""
+    from engine.applier import ENDING_WAITS, INFERENCE_WAITS, REACHED_WAITS
+
+    words = {"inference-confirm": INFERENCE_WAITS, "ending-confirm": ENDING_WAITS, "reached-confirm": REACHED_WAITS}
+    found = [words[p["check"]] for p in outcome.get("problems") or [] if p.get("check") in words]
+    return "; ".join(dict.fromkeys(found)) if found else outcome.get("reason")

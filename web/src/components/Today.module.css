@@ -33,7 +33,7 @@
 .full:empty { display: none; }
 
 /* The queue */
-.queue { min-width: 0; }
+.queue { min-width: 0; --row-py: var(--space-2); } /* the queue's lines are denser than other lists: six fit in the first screen at 1280x720 */
 .group { min-width: 0; }
 .groupHead {
   margin: 0; padding: var(--space-1) var(--row-px); font-size: var(--text-xs); line-height: var(--lh-xs);

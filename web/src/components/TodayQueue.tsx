@@ -14,7 +14,8 @@ import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
-import { afterMove, endingWho, heldAnswers, heldTitle, isEnding, moveTitle } from "../lib/queue-words";
+import { useHeldAnswers } from "../lib/held-answers";
+import { afterMove, heldMeta, heldTitle, moveTitle } from "../lib/queue-words";
 import { revealOrKeep } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
@@ -653,21 +654,14 @@ function QueueRow(props: {
   const promiseRow = usePromiseChoices(line, () => ref.current?.focus());
   const replyRow = useReplyChoices(line, () => ref.current?.focus());
   const sentRow = useSentCheckChoices(line);
+  const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null);
   const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
 
   const what = titleWords(line.title);
   const title = lineTitle(line);
-  // What came from outside is tagged "Outside" at the end of the line's words; its full phrase is the tag's name.
-  const meta = (...parts: Array<string | null | undefined | false>): ReactNode => {
-    const words = parts.filter(Boolean).join(" · ");
-    if (!line.untrusted) return words;
-    return (
-      <>
-        {words && `${words} · `}
-        <OutsideTag />
-      </>
-    );
-  };
+  // The line's words, on one line (it is cut with an ellipsis, and the inspector has the rest). What came from outside is
+  // tagged "Outside" in the pill column instead (below); its full phrase is the tag's name.
+  const meta = (...parts: Array<string | null | undefined | false>): ReactNode => parts.filter(Boolean).join(" · ");
   const d: Described = (() => {
     switch (line.kind) {
       case "decision":
@@ -680,89 +674,22 @@ function QueueRow(props: {
         return { pill: t("queue.pill.waiting"), tone: "warn", meta: meta(line.due && t("op.meta.due", { date: day(line.due) })), primary: { label: t("queue.act.pick_owner") }, menu: [] };
       case "held": {
         const ask = line.held;
-        if (!ask || line.changeset == null || line.op == null) {
+        if (!ask || !heldWords) {
           return { pill: t("queue.pill.waiting"), tone: "warn", meta: meta(line.text, line.waiting, what), primary: { label: t("queue.act.decide") }, menu: [] };
         }
-        const cs = line.changeset;
-        const index = line.op;
-        const words = heldAnswers(ask, t);
-        const told = ask.told ?? [];
-        const release = () =>
-          void act(
-            () => api.release(cs, index),
-            () => ({ message: t("queue.held.done", { what: ask.item }), undo: () => api.undo(cs, [index]) }),
-          );
-        const decline = () =>
-          void act(
-            () => api.declineOp(cs, index),
-            () => ({ message: t("queue.held.kept", { what: ask.item }), undo: () => api.undeclineOp(cs, index) }),
-          );
-        if (isEnding(ask)) {
-          // An ending an input says happened reads as one line: Keep is the primary; Not yet and Change are in the menu.
-          // When its words only said "closed", the primary is Done by its owner and No longer needed is in the menu.
-          const record = ask.record ?? "";
-          const choice = ask.ask === "ending";
-          const answer = (ending: "done" | "called_off") =>
-            void act(
-              () => api.endingAnswer(cs, index, ending),
-              () => ({
-                message: t(ending === "done" ? "queue.held.ending_done" : "queue.held.ending_off", { what: ask.item, who: endingWho(ask, t) }),
-                undo: () => api.undo(cs, [index]),
-              }),
-            );
-          return {
-            pill: t("queue.pill.waiting"),
-            tone: "warn",
-            meta: (
-              <>
-                {meta(ask.quote ? t("queue.held.quote", { quote: ask.quote }) : "", ask.earlier ? t("queue.held.e.earlier", { quote: ask.earlier }) : "", ask.reporter ? t("queue.held.e.said_by", { name: ask.reporter }) : "", what)}
-                {ask.ask === "drop" && told.length > 0 && (
-                  <>
-                    {" · "}
-                    <strong>{ask.told_on ? t("queue.held.told_on", { names: told.join(", "), date: day(ask.told_on) }) : t("queue.held.told", { names: told.join(", ") })}</strong>
-                  </>
-                )}
-              </>
-            ),
-            primary: { label: words.primary, run: choice ? () => answer("done") : release },
-            menu: [
-              ...(choice ? [{ id: "called-off", label: t("queue.held.e.ending_off"), run: () => answer("called_off") }] : []),
-              { id: "not-yet", label: words.other, run: decline },
-              ...(props.handlers.onOpenRecord ? [{ id: "change", label: t("queue.held.e.change"), run: () => props.handlers.onOpenRecord?.("action", record) }] : []),
-            ],
-          };
-        }
+        // The item as a question with two answers that name the result, the same two in the inspector. The line keeps the
+        // words it rests on and who said them; the rest (who was told, why it waits, where it came from) is in the inspector.
+        const record = ask.record ?? "";
         return {
           pill: t("queue.pill.waiting"),
           tone: "warn",
-          meta: (
-            <>
-              {meta(line.waiting, ask.quote ? t("queue.held.quote", { quote: ask.quote }) : "", what)}
-              {ask.ask === "drop" && told.length > 0 && (
-                <>
-                  {" · "}
-                  <strong>{ask.told_on ? t("queue.held.told_on", { names: told.join(", "), date: day(ask.told_on) }) : t("queue.held.told", { names: told.join(", ") })}</strong>
-                </>
-              )}
-            </>
-          ),
-          primary: {
-            label: words.primary,
-            run: () =>
-              void act(
-                () => api.release(cs, index),
-                () => ({ message: t("queue.held.done", { what: ask.item }), undo: () => api.undo(cs, [index]) }),
-              ),
-          },
-          other: {
-            label: words.other,
-            run: () =>
-              void act(
-                () => api.declineOp(cs, index),
-                () => ({ message: t("queue.held.kept", { what: ask.item }), undo: () => api.undeclineOp(cs, index) }),
-              ),
-          },
-          menu: [],
+          meta: heldMeta(ask, t),
+          primary: heldWords.primary,
+          other: heldWords.other,
+          menu: [
+            ...heldWords.menu,
+            ...(record && props.handlers.onOpenRecord ? [{ id: "change", label: t("queue.held.e.change"), run: () => props.handlers.onOpenRecord?.("action", record) }] : []),
+          ],
         };
       }
       case "unfiled":
@@ -1033,6 +960,7 @@ function QueueRow(props: {
       aria-label={title}
       role="group"
       pill={d.pill ? <Pill tone={d.tone}>{d.pill}</Pill> : undefined}
+      tag={line.untrusted ? <OutsideTag /> : undefined}
       title={
         <span id={`${detailId}-title`}>
           {project}
@@ -1040,6 +968,7 @@ function QueueRow(props: {
         </span>
       }
       meta={d.meta || undefined}
+      oneLine
       primary={primary}
       menu={d.menu.length > 0 || (d.groups?.length ?? 0) > 0 ? <RowMenu label={title} actions={d.menu} groups={d.groups} /> : undefined}
       onClick={onClick}

@@ -13,6 +13,7 @@ from typing import Annotated, Any, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
 
+from engine.id_words import KNOWLEDGE_KINDS, named, named_one_of, named_text_of
 from engine.records import RefTo, Scope, canonical_time, entry_problem
 
 Tier = Literal["data", "outbound", "system"]
@@ -34,7 +35,8 @@ class OpModel(BaseModel):
     def describe(self) -> str | None:
         """A one-line plain label for this op in review lists; plugin ops may override it. A plugin op may instead
         define `describe(self, view)` to read records for the label (a read view of core and its own records). The
-        label is made against the records as they stand before the changeset applies."""
+        label is made against the records as they stand before the changeset applies. A label names a record by its
+        title in quotes, never by its id."""
         return None
 
 
@@ -189,9 +191,9 @@ class EventSetOp(OpModel):
             raise ValueError("give the new start, the new end or both")
         return self
 
-    def describe(self) -> str | None:
+    def describe(self, view: Any = None) -> str | None:
         parts = [f"starts {self.start}" if self.start else None, f"ends {self.end}" if self.end else None]
-        return f"Entry {self.id} " + " and ".join(p for p in parts if p)
+        return f"Change the time of {named(view, 'event', self.id)}: " + " and ".join(p for p in parts if p)
 
 
 class SeriesAddOp(OpModel):
@@ -222,8 +224,11 @@ class SeriesLinkOp(OpModel):
     )
     evidence: EvidenceIn = Field(description="The exact words from the input that say so.")
 
-    def describe(self) -> str | None:
-        return f"Entry {self.event} " + (f"is part of {self.series}" if self.series else "leaves its series")
+    def describe(self, view: Any = None) -> str | None:
+        entry = named(view, "event", self.event)
+        return (
+            f"Put {entry} in {named(view, 'series', self.series)}" if self.series else f"Take {entry} out of its series"
+        )
 
 
 class AgendaAddOp(OpModel):
@@ -255,9 +260,12 @@ class AgendaAddOp(OpModel):
             raise ValueError("name one action, question or note to put on it")
         return self
 
-    def describe(self) -> str | None:
-        item = self.action or self.question or self.note
-        return f"{item} is on the agenda of {self.event or self.series}"
+    def describe(self, view: Any = None) -> str | None:
+        kind, item = next(
+            (k, v) for k, v in (("action", self.action), ("question", self.question), ("note", self.note)) if v
+        )
+        meeting = named(view, "event", self.event) if self.event else named(view, "series", self.series)
+        return f"Put {named(view, kind, item)} on the agenda of {meeting}"
 
 
 class RecordSetOp(OpModel):
@@ -360,10 +368,9 @@ class ActionReplyOp(OpModel):
         None, min_length=1, description="The person's own wording of the reply; left out, the draft is approved."
     )
 
-    def describe(self) -> str | None:
-        return (
-            f"Approve the reply of action {self.id}" if self.text is None else f"Reword the reply of action {self.id}"
-        )
+    def describe(self, view: Any = None) -> str | None:
+        what = named(view, "action", self.id)
+        return f"Approve the reply of {what}" if self.text is None else f"Reword the reply of {what}"
 
 
 class ActionCloseOp(OpModel):
@@ -394,8 +401,8 @@ class ActionHoldOp(OpModel):
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
 
-    def describe(self) -> str | None:
-        return f"Put action {self.id} on hold"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Put {named(view, 'action', self.id)} on hold"
 
 
 class ActionUnholdOp(OpModel):
@@ -413,8 +420,8 @@ class ActionUnholdOp(OpModel):
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
 
-    def describe(self) -> str | None:
-        return f"Take action {self.id} off hold"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Take {named(view, 'action', self.id)} off hold"
 
 
 class ActionDropOp(OpModel):
@@ -444,8 +451,8 @@ class ActionDropOp(OpModel):
             raise ValueError("name one meeting: a calendar entry or a series")
         return self
 
-    def describe(self) -> str | None:
-        return f"Drop action {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Drop {named(view, 'action', self.id)}"
 
 
 class ActionMoveOp(OpModel):
@@ -468,8 +475,8 @@ class ActionMoveOp(OpModel):
             raise ValueError("give the new date's words or the date")
         return self
 
-    def describe(self) -> str | None:
-        return f"Move the date of action {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Move the date of {named(view, 'action', self.id)}"
 
 
 class ActionPartOp(OpModel):
@@ -485,8 +492,8 @@ class ActionPartOp(OpModel):
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
 
-    def describe(self) -> str | None:
-        return f"Mark part of action {self.id} delivered"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Mark part of {named(view, 'action', self.id)} delivered"
 
 
 class ActionNewsOp(OpModel):
@@ -498,8 +505,8 @@ class ActionNewsOp(OpModel):
     text: str = Field(min_length=1, max_length=300, description="What was heard, in plain words.")
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
 
-    def describe(self) -> str | None:
-        return f"Add news to action {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Add news to {named(view, 'action', self.id)}"
 
 
 class QuestionAddOp(OpModel):
@@ -551,8 +558,8 @@ class QuestionUpdateOp(OpModel):
             raise ValueError("name what to change")
         return self
 
-    def describe(self) -> str | None:
-        return f"Reword question {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Reword {named(view, 'question', self.id)}"
 
 
 class QuestionMoveOp(OpModel):
@@ -563,8 +570,8 @@ class QuestionMoveOp(OpModel):
     id: str = Field(description="The id of the question.")
     to: str = Field(min_length=1, description="The person it goes to now, by name or id.")
 
-    def describe(self) -> str | None:
-        return f"Ask someone else instead: question {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Ask someone else instead: {named(view, 'question', self.id)}"
 
 
 class QuestionDropOp(OpModel):
@@ -578,8 +585,8 @@ class QuestionDropOp(OpModel):
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
 
-    def describe(self) -> str | None:
-        return f"Drop question {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Drop {named(view, 'question', self.id)}"
 
 
 class QuestionMarkSentOp(OpModel):
@@ -590,8 +597,8 @@ class QuestionMarkSentOp(OpModel):
     id: str = Field(description="The id of the open question.")
     on: date | None = Field(None, description="The day it was sent, written YYYY-MM-DD; today when left out.")
 
-    def describe(self) -> str | None:
-        return f"Mark question {self.id} as sent"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Mark {named(view, 'question', self.id)} as sent"
 
 
 class QuestionDoneOp(OpModel):
@@ -639,8 +646,8 @@ class PersonContactOp(OpModel):
             raise ValueError("name the detail")
         return text
 
-    def describe(self) -> str | None:
-        return f"Add a {self.kind} for {self.person}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Add a {self.kind} for {named(view, 'person', self.person)}"
 
 
 class PersonStanceOp(OpModel):
@@ -661,8 +668,8 @@ class PersonStanceOp(OpModel):
         None, description="The exact words from the request that give it; required unless the person makes it."
     )
 
-    def describe(self) -> str | None:
-        return f"Change who {self.id} is to you"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Change who {named(view, 'person', self.id)} is to you"
 
 
 class RecordRef(BaseModel):
@@ -780,8 +787,8 @@ class RecordEditOp(OpModel):
     fields: dict[str, Any] = Field(description="The new values, by field name.")
     read_version: int = Field(ge=1, description="The record's version the edit was made from.")
 
-    def describe(self) -> str | None:
-        return f"Change {', '.join(sorted(self.fields))} of {self.record.kind} {self.record.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Change {', '.join(sorted(self.fields))} of {named(view, self.record.kind, self.record.id)}"
 
 
 class TextEditOp(OpModel):
@@ -793,8 +800,8 @@ class TextEditOp(OpModel):
     field: str = Field(description="The long text field.")
     text: str = Field(description="The whole new text.")
 
-    def describe(self) -> str | None:
-        return f"Change the text of {self.record.kind} {self.record.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Change the text of {named(view, self.record.kind, self.record.id)}"
 
 
 class TextProposeOp(OpModel):
@@ -811,8 +818,8 @@ class TextProposeOp(OpModel):
         default_factory=list, description="What couldn't be mapped back into the text, shown beside the proposal."
     )
 
-    def describe(self) -> str | None:
-        return f"Propose new text for {self.record.kind} {self.record.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Propose new text for {named(view, self.record.kind, self.record.id)}"
 
 
 class TextAcceptOp(OpModel):
@@ -826,8 +833,8 @@ class TextAcceptOp(OpModel):
         default_factory=dict, description="Per change id (c1, c2, ...): accept or reject."
     )
 
-    def describe(self) -> str | None:
-        return f"Accept text version {self.version}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Accept the new text of {named_text_of(view, self.version)}"
 
 
 class TextDiscardOp(OpModel):
@@ -837,8 +844,8 @@ class TextDiscardOp(OpModel):
     version: str = Field(description="The id of the pending text version.")
     read_version: int = Field(ge=1, description="The version of that record that was reviewed.")
 
-    def describe(self) -> str | None:
-        return f"Set aside text version {self.version}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Set aside the new text of {named_text_of(view, self.version)}"
 
 
 class TextDraftOp(OpModel):
@@ -859,8 +866,8 @@ class TextDraftOp(OpModel):
         default_factory=list, description="Questions for the person the draft ended with, shown beside it."
     )
 
-    def describe(self) -> str | None:
-        return f"Draft new text for {self.record.kind} {self.record.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Draft new text for {named(view, self.record.kind, self.record.id)}"
 
 
 class AnswerOp(OpModel):
@@ -942,8 +949,8 @@ class MailRestoreOp(OpModel):
     op: Literal["mail.restore"] = "mail.restore"
     snapshot: str = Field(description="The id of the set-aside mail item.")
 
-    def describe(self) -> str | None:
-        return f"Bring back {self.snapshot} from the Set aside folder"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Bring back {named(view, 'snapshot', self.snapshot)} from the Set aside folder"
 
 
 class SourceLimitOp(OpModel):
@@ -957,8 +964,8 @@ class SourceLimitOp(OpModel):
     group: str = Field(min_length=1, max_length=120, description="The group, in the message's own words.")
     evidence: EvidenceIn = Field(description="The exact words from the message that name the group.")
 
-    def describe(self) -> str | None:
-        return f"Limit message {self.id} to {self.group}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Limit {named(view, 'source', self.id)} to {self.group}"
 
 
 class SourceWidenOp(OpModel):
@@ -976,8 +983,9 @@ class SourceWidenOp(OpModel):
             raise ValueError("name the people to add, or set open to remove the limit, not both and not neither")
         return self
 
-    def describe(self) -> str | None:
-        return f"Remove the limit on message {self.id}" if self.open else f"Widen the limit on message {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        what = named(view, "source", self.id)
+        return f"Remove the limit on {what}" if self.open else f"Widen the limit on {what}"
 
 
 class ListRetireOp(OpModel):
@@ -1024,8 +1032,8 @@ class RuleRetireOp(OpModel):
     op: Literal["rule.retire"] = "rule.retire"
     id: str = Field(description="The id of the rule, such as RULE-3.")
 
-    def describe(self) -> str | None:
-        return f"Retire the rule {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Retire {named(view, 'rule', self.id)}"
 
 
 class ReportDraftOp(OpModel):
@@ -1082,8 +1090,8 @@ class LessonUpdateOp(OpModel):
         """The fields to change, by name, with their new values."""
         return _named_changes(self)
 
-    def describe(self) -> str | None:
-        return f"Change lesson {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Change {named(view, 'lesson', self.id)}"
 
 
 class GlossaryAddOp(OpModel):
@@ -1131,8 +1139,8 @@ class GlossaryUpdateOp(OpModel):
         """The fields to change, by name, with their new values."""
         return _named_changes(self)
 
-    def describe(self) -> str | None:
-        return f"Change glossary entry {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Change {named(view, 'glossary_entry', self.id)}"
 
 
 class RoutingAddOp(OpModel):
@@ -1177,8 +1185,8 @@ class KnowledgeRetireOp(OpModel):
     op: Literal["knowledge.retire"] = "knowledge.retire"
     id: str = Field(description="The id of the entry, such as a lesson's.")
 
-    def describe(self) -> str | None:
-        return f"Retire {self.id}"
+    def describe(self, view: Any = None) -> str | None:
+        return f"Retire {named_one_of(view, KNOWLEDGE_KINDS, self.id)}"
 
 
 Op = Annotated[

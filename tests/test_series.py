@@ -112,7 +112,7 @@ def test_series_ops_are_data_ops_that_need_evidence_and_have_a_describe_label():
     link = OP_MODELS["series.link"].model_validate(
         {"op": "series.link", "event": "EVT-1", "series": "SER-1", "evidence": {"quote": QUOTE}}
     )
-    assert "SER-1" in link.describe()
+    assert "SER-1" not in link.describe() and "EVT-1" not in link.describe()  # a label never names a record by its id
 
 
 def test_series_add_makes_the_series_links_its_entries_and_undo_unlinks_them(env):

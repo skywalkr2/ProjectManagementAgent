@@ -107,7 +107,7 @@ def test_agenda_add_is_a_system_op_that_needs_evidence_unless_the_person_makes_i
     assert TIERS["agenda.add"] == "system" and "agenda.add" not in PERSON_ONLY_OPS
     assert "agenda.add" in NEEDS_EVIDENCE and "agenda.add" in EVIDENCE_UNLESS_PERSON
     op = OP_MODELS["agenda.add"].model_validate({"op": "agenda.add", "event": "EVT-1", "action": "ACT-1"})
-    assert "ACT-1" in op.describe() and "EVT-1" in op.describe()
+    assert "ACT-1" not in op.describe() and "EVT-1" not in op.describe()  # named by title where a view is given
 
 
 def test_an_agenda_item_names_one_meeting_and_one_record():

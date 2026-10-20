@@ -9,39 +9,26 @@ type Tn = (key: string, n: number, vars?: Record<string, string | number>) => st
 
 const first = (name: string | null | undefined) => (name ?? "").trim().split(/\s+/)[0] ?? "";
 
-/** An ending of an action read from an input: the line says what the input says happened, and the person keeps it, asks
- * for it later, or changes the action. Questions and every other hold keep their own words. */
-export function isEnding(held: S["HeldAsk"]): boolean {
-  return !!held.record && (held.ask === "close" || held.ask === "drop" || held.ask === "move" || held.ask === "part" || held.ask === "ending");
-}
-
 /** The owners of an ending in the words of a line: their names in the owner format, or "someone" when none is named. */
 export function endingWho(held: S["HeldAsk"], t: T): string {
   const owners = held.owners ?? [];
   return owners.length > 0 ? owners.join(", ") : t("queue.held.e.someone");
 }
 
-function endingTitle(held: S["HeldAsk"], t: T): string {
-  const item = held.item;
-  const who = endingWho(held, t);
-  switch (held.ask) {
-    case "ending":
-      return t("queue.held.e.ending", { who, item });
-    case "drop":
-      return t("queue.held.e.drop", { item });
-    case "move":
-      return t("queue.held.e.move", { item, when: held.due_words || (held.value ? day(held.value) : t("queue.held.e.new_date")) });
-    case "part":
-      return t("queue.held.e.part", { who, delivered: held.delivered ?? "", left: held.left ?? "" });
-    default:
-      return t("queue.held.e.close", { who, item });
-  }
+/** The day a move is to: the day when it is known, else the words the input used for it ("next Tuesday"), without the word
+ * that joined them to the sentence ("by October 30" reads as "October 30" after "to"). */
+function moveWhen(held: S["HeldAsk"], t: T): string {
+  if (held.value) return day(held.value);
+  const words = (held.due_words ?? "").replace(/^(by|on|before|until|for|at)\s+/i, "").trim();
+  return words || t("queue.held.e.new_date");
 }
 
+/** A held line's title: the item as a question, named in quotes (design 7.6). */
 export function heldTitle(held: S["HeldAsk"], t: T): string {
   const item = held.item;
-  if (isEnding(held)) return endingTitle(held, t);
   switch (held.ask) {
+    case "ending":
+      return t("queue.held.e.ending", { who: endingWho(held, t), item });
     case "close":
       return t("queue.held.q.close", { item });
     case "date":
@@ -52,17 +39,21 @@ export function heldTitle(held: S["HeldAsk"], t: T): string {
       return t("queue.held.q.routing", { item, name: held.to_name ?? "" });
     case "drop":
       return t("queue.held.q.drop", { item });
+    case "move":
+      return t("queue.held.q.move", { item, when: moveWhen(held, t) });
+    case "part":
+      return t("queue.held.q.part", { item });
     default:
       return item;
   }
 }
 
+/** The two answers to a held line, each naming its result: the first applies the held change, the other leaves things as
+ * they were. The line and the inspector use the same words. */
 export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other: string } {
-  if (held.ask === "ending" && isEnding(held)) return { primary: t("queue.held.e.ending_done", { who: endingWho(held, t) }), other: t("queue.held.e.not_yet") };
-  if (isEnding(held)) return { primary: t("queue.held.e.keep"), other: t("queue.held.e.not_yet") };
   switch (held.ask) {
-    case "close":
-      return { primary: t("queue.held.a.close"), other: t("queue.held.k.close") };
+    case "ending":
+      return { primary: t("queue.held.e.ending_done", { who: endingWho(held, t) }), other: t("queue.held.e.not_yet") };
     case "date":
       return {
         primary: t("queue.held.a.date", { date: held.value ? day(held.value) : "" }),
@@ -80,9 +71,27 @@ export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other:
       };
     case "drop":
       return { primary: t("queue.held.a.drop"), other: t("queue.held.k.drop") };
+    case "move":
+      return { primary: t("queue.held.a.move"), other: held.from_value ? t("queue.held.k.date", { date: day(held.from_value) }) : t("queue.held.k.move") };
+    case "part":
+      return { primary: t("queue.held.a.part"), other: t("queue.held.k.part") };
     default:
-      return { primary: t("queue.held.e.keep"), other: t("queue.held.e.not_yet") };
+      return { primary: t("queue.held.a.close"), other: t("queue.held.k.close") };
   }
+}
+
+/** What the line says under its question: the words it rests on, and who said them. Nothing else; the rest is in the
+ * inspector (design 7.6). */
+export function heldMeta(held: S["HeldAsk"], t: T): string {
+  return [held.quote ? t("queue.held.quote", { quote: held.quote }) : "", held.reporter ? t("queue.held.e.said_by", { name: held.reporter }) : ""].filter(Boolean).join(" · ");
+}
+
+/** Who a drop would leave out of the loop, in bold on the line's inspector where it leads: the names, then "were told on
+ * Sat, Oct 10". Empty when nobody was told. */
+export function heldTold(held: S["HeldAsk"], t: T): string {
+  const told = held.told ?? [];
+  if (held.ask !== "drop" || told.length === 0) return "";
+  return held.told_on ? t("queue.held.told_on", { names: told.join(", "), date: day(held.told_on) }) : t("queue.held.told", { names: told.join(", ") });
 }
 
 /** "Print sync moved to Thu, Oct 22 · 2 things to check": the move's own name and the day it moved to, "moved earlier" when

@@ -96,6 +96,7 @@ function ReviewRow(props: {
       pill={<Pill>{t("knowledge.kind.rule")}</Pill>}
       title={text}
       meta={[rule.present > 0 ? tn("rules_review.counts", rule.present) : "", props.reach].filter(Boolean).join(" · ")}
+      oneLine
       primary={
         <Button variant="primary" size="sm" data-key="primary" aria-label={t("knowledge.keep_named", { text })} onClick={() => void done(acts.keepRule(rule))}>
           {t("knowledge.keep")}

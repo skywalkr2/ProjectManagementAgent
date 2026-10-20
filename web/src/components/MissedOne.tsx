@@ -2,6 +2,7 @@
 // reachable from the header on every screen, the phone's More sheet, and Today's and the changes list's empty states.
 // The cursor starts in the field, Enter sends, Escape closes. After sending, a toast thanks them and points at the work
 // it made; the request's own changes have their own Undo, so there is none here.
+import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Heading } from "react-aria-components";
 import { api } from "../lib/api";
@@ -11,6 +12,13 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { useAddOwnRequest } from "./HandIn";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
+
+/** Whether there is anything the assistant could have missed yet: something has been handed in or read, so a change exists.
+ * On a new workspace, before any input has been read, the header offers no "Missed one". */
+export function useAnythingToMiss(): boolean {
+  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
+  return (changes.data?.length ?? 0) > 0;
+}
 
 /** Marks every control that opens the form, so focus can go back to one when it closes. */
 export const MISSED_BUTTON = "data-missed-button";

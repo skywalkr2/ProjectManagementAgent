@@ -11,19 +11,20 @@
 .selected, .selected:hover { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .selected:focus-visible { box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 2px var(--focus-ring); }
 
-.pill { grid-column: 1; align-self: center; justify-self: start; min-width: 0; }
+.pill { grid-column: 1; align-self: center; justify-self: start; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
 .main { grid-column: 2; min-width: 0; }
 .title {
   margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); overflow-wrap: anywhere;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
 .meta { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.oneLine { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .actions { grid-column: 3; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; }
 .extra { grid-column: 2 / -1; margin-top: var(--space-2); min-width: 0; }
 
 /* Phone: the pill sits above the title, and the actions stay at the right edge. */
 :global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); }
-:global([data-narrow]) .pill { grid-column: 1 / -1; }
+:global([data-narrow]) .pill { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; }
 :global([data-narrow]) .main { grid-column: 1; }
 :global([data-narrow]) .actions { grid-column: 2; }
 :global([data-narrow]) .extra { grid-column: 1 / -1; }

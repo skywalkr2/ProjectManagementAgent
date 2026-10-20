@@ -6,7 +6,7 @@ Names and ids come from the fixtures.
 
 from __future__ import annotations
 
-from engine.applier import ENDING_WAITS, Context, Inputs, apply_changeset, release
+from engine.applier import ENDING_WAITS, INFERENCE_WAITS, Context, Inputs, apply_changeset, release
 from engine.names import People
 from engine.ops import CHANGESET
 from engine.tasks import TASKS
@@ -107,7 +107,7 @@ def test_a_close_that_rests_only_on_an_inference_is_held_with_a_plain_reason_and
     for kind, record in (("action", ACTION), ("question", QUESTION)):
         cs_id, statuses = from_outside(store, cfg, [fact(basis="inferred"), done(kind)])
         assert statuses == ["applied", "held"]
-        assert reasons(store, cs_id)[1] == "This rests on something worked out, not something anyone said: close it?"
+        assert reasons(store, cs_id)[1] == INFERENCE_WAITS
         assert store.read().get(kind, record).data["status"] not in ("done", "answered")
         release(store, cfg, cs_id, 1)
         assert store.read().get(kind, record).data["status"] in ("done", "answered")

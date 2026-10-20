@@ -11,7 +11,9 @@ guards use them:
 - `outgoing_problem` and `check_outgoing`: what goes out (a message to copy, a draft for someone else) is refused
   while it still holds a name, and the reason says where;
 - `sweep`: lines written before the guard, or before a rename, are re-sourced from the ledger's evidence with their
-  dates kept, as one change of the core's own with Undo.
+  dates kept, as one change of the core's own with Undo;
+- `sweep_ids`: op labels written before a screen could name a record by its title are re-made from the record; record
+  titles, which may be the person's own words, are never touched.
 
 The person's own screens may still say the assistant did something; nothing here touches the ledger's own rows.
 """
@@ -24,6 +26,7 @@ from dataclasses import asdict
 from datetime import date
 from typing import Any
 
+from engine import id_words
 from engine.config.schema import LanguageFile, MessageSettings, WorkspaceFile
 from engine.names import People
 from engine.storage import StoreError, WriteContext
@@ -346,3 +349,51 @@ def sweep(store: Any, cfg: Any) -> str | None:
         )
     store.plugins.publish("changeset.applied", {"id": cs_id}, follows=cs_id)
     return cs_id
+
+
+#: The engine's own part in re-wording what a person reads (it is no one's note and no assistant's work).
+_REWORD = WriteContext("engine", "trusted", "outward.reword")
+
+
+def _relabel(outcome: Mapping[str, Any], view: Any, store: Any, by_prefix: Mapping[str, str]) -> str:
+    """An op's label as it is made now (by title), from the op the changeset kept; where the op can't be read again,
+    the old label with each id replaced by the record's name."""
+    from engine.applier import _label
+
+    label = str(outcome["label"])
+    model = store.plugins.ops.get((outcome.get("op") or {}).get("op", ""))
+    try:
+        fresh = _label(model.model_validate(outcome["op"]), view, store) if model is not None else None
+    except Exception:
+        fresh = None
+    if fresh and not id_words.ids_in(fresh, view, by_prefix):
+        return fresh
+    return id_words.reword(label, view, by_prefix)
+
+
+def sweep_ids(store: Any, cfg: Any) -> int:
+    """Re-make each stored op label that holds the id of a record as labels are made now, naming the record by its
+    title. A label is the app's own words, so this changes nothing anyone wrote: record titles are never touched, since
+    a title the person typed is theirs, and the invariant keeps the assistant from writing an id into one. Returns how
+    many changes had a label re-made; 0 when none holds an id."""
+    view = store.read()
+    by_prefix = id_words.prefixes(store.plugins.records)
+    label_fixes: list[tuple[Any, list[dict[str, Any]]]] = []
+    for changeset in view.list("changeset"):
+        ops = [dict(o) for o in changeset.data.get("ops") or []]
+        changed = False
+        for outcome in ops:
+            label = outcome.get("label")
+            if label and id_words.ids_in(label, view, by_prefix):
+                fresh = _relabel(outcome, view, store, by_prefix)
+                if fresh != label:
+                    outcome["label"] = fresh
+                    changed = True
+        if changed:
+            label_fixes.append((changeset, ops))
+    if not label_fixes:
+        return 0
+    with store.transaction() as tx:
+        for changeset, ops in label_fixes:
+            tx.update("changeset", changeset.id, {"ops": ops}, _REWORD, read_version=changeset.version)
+    return len(label_fixes)

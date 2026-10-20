@@ -86,7 +86,7 @@ def test_event_set_is_a_data_op_that_needs_evidence_and_names_what_moves():
         {"op": "event.set", "id": "EVT-1", "start": "2026-11-17T15:00Z", "evidence": {"quote": QUOTE}}
     )
     assert op.start == NEW_START and op.end is None
-    assert NEW_START in op.describe() and "EVT-1" in op.describe()
+    assert NEW_START in op.describe() and "EVT-1" not in op.describe()  # named by title where a view is given
     with pytest.raises(ValidationError, match="new start, the new end or both"):
         model.model_validate({"op": "event.set", "id": "EVT-1", "evidence": {"quote": QUOTE}})
     with pytest.raises(ValidationError):

@@ -621,15 +621,30 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   Each sub-item is done when its test passes:
   - R1: no record id in any title the person reads (Today, its inspector, What changed, Follow-ups): a line is titled by
     its item ("Drop 'Settle the endpaper color'?"); an id in a title is refused as an invariant, and the sweep reaches
-    those screens (check C54);
+    those screens (check C54). **Built (wave 1):** `tests/test_titles_without_ids.py` (labels by title, the kind in words
+    when there is none, a held and a review line, the invariant, the sweep of an old label and of a stored title with Undo),
+    `web/src/components/TodayRecords.test.tsx` ("no line of Today shows an id"), `web/e2e/shell.spec.ts` ("no Today line,
+    inspector heading or What changed title holds an internal id": written, not run). *Left:* the web sweep
+    (`RecordSweep.test.tsx`) does not yet draw What changed and Follow-ups from data (C48);
   - R2: a held line is asked as a question ("Close 'Send two spine options'?") with the same two result buttons in the
     line and the inspector ("Close it", "Keep it open"); its meta keeps the quote and who said it, the rest moves to the
-    inspector (check C55);
+    inspector (check C55). **Built (wave 1):** `web/src/components/TodayRecords.test.tsx` (every ask on the line, no
+    "Keep:" or second question), `web/src/components/TodayPromises.test.tsx` (the endings read from an input, Close it and
+    Keep it open with Undo), `web/src/components/WhatChanged.test.tsx` ("a held drop on the change's card has the line's two
+    buttons, and who was told leads it"), `tests/test_held_ask.py`;
   - R3: every Today line's meta is one line, cut with an ellipsis, and "Outside" folds into the pill column, so six lines
-    fit at 1280×720 (checks C47, C56);
+    fit at 1280×720 (checks C47, C56). **Built (wave 1):** `web/src/ui/Row.test.tsx`,
+    `web/src/components/TodayRecords.test.tsx` ("Outside in the pill column, meta one line"), `web/e2e/shell.spec.ts` (six
+    lines in full at 1280×720 with the demo's longest held and moved lines, each meta one line: written, not run; the
+    same lines measured in a browser by hand put the sixth line's bottom at 679px of 720). *Left:* the stopped-work lines
+    (`HeldLines`) still wrap their second line, because it says why and until when and has no inspector to hold the rest;
   - R4: on a new workspace the header has no "Missed one" until there is something it could have missed, and the
-    workspace's new name shows without a reload;
-  - R5: the mail step on a fresh install says one sentence, with one button and one way out;
+    workspace's new name shows without a reload. **Built (wave 1):** `web/src/shell/Header.test.tsx` ("a new workspace
+    offers no Missed one until something has been read or handed in"), `web/src/App.test.tsx` ("a new name for the
+    workspace shows in the header at once");
+  - R5: the mail step on a fresh install says one sentence, with one button and one way out. **Built (wave 1):**
+    `web/src/components/Walkthrough.test.tsx` ("with no service listed and nothing read the step is one sentence and one
+    button");
   - F25's conditions: the yes is asked in the AI step right after the key check passes, and Continue can't skip it
     silently; when it was skipped, Today says "Let <account> read your work mail and notes" with Allow; the browser
     tests' fixture has a stand-in account so the yes can be captured;

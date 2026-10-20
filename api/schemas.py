@@ -542,6 +542,12 @@ class OpView(BaseModel):
     evidence: Evidence | None = None
     record: RecordRef | None = None
     ask: Ask | None = None
+    held: HeldAsk | None = Field(
+        None,
+        description="For a held item that rests on an inference, ends or moves a promise, or would drop something that "
+        "reached someone: the question the person is asked, shaped as Today's line asks it, so the change's card "
+        "offers the same two answers in the same words.",
+    )
 
 
 class AppliedEntryView(BaseModel):

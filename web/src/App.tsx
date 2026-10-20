@@ -51,10 +51,12 @@ import shell from "./shell/Shell.module.css";
 
 export function App(props: { rc: S["RuntimeConfig"] }) {
   const live = useLive();
+  // What the app is called is read again after any saved change, so a new name shows in the header at once, with no reload.
+  const fresh = useQuery({ queryKey: ["runtime-config"], queryFn: api.runtimeConfig, initialData: props.rc, staleTime: Infinity });
   return (
     <RestartProvider hellos={live.hellos}>
       <MissedOneProvider>
-        <Shell rc={props.rc} live={live} />
+        <Shell rc={fresh.data} live={live} />
       </MissedOneProvider>
     </RestartProvider>
   );

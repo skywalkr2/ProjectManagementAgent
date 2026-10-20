@@ -119,3 +119,31 @@ def test_taking_that_back_makes_it_wait_again_and_the_correction_is_not_learned_
     assert any(line.kind == "held" for line in queue(ws, store, cfg, NOW))
     with pytest.raises(StoreError):
         undecline_held(store, cs_id, index)
+
+
+def test_the_changes_card_carries_the_same_question_and_the_reason_in_todays_words(env):
+    """The card of a change (the inspector) asks a held drop as Today's line does, and says why it waits in the words
+    checks use now, even for a hold stored before they changed."""
+    from api.routes import _op_view
+    from engine.applier import REACHED_WAITS
+
+    ws, cfg, store = env
+    cs_id, index, action = held_drop(env)
+    outcome = dict(store.read().get("changeset", cs_id).data["ops"][index])
+    outcome["reason"] = "Someone has already been sent this: look at it before dropping it?"  # an older wording
+    shown = _op_view(outcome, store, People(store, cfg), {})
+    line = next(line for line in queue(ws, store, cfg, NOW) if line.kind == "held")
+    assert shown.held is not None and shown.held.model_dump(exclude_none=True) == {
+        k: v for k, v in line.held.items() if v is not None
+    }
+    assert shown.reason == REACHED_WAITS and "?" not in shown.reason
+
+
+def test_a_held_move_says_the_date_it_has_now(env):
+    _, cfg, store = env
+    people = People(store, cfg)
+    mine = OPEN[0]
+    op = {"op": "action.move", "id": mine["id"], "due": "2026-12-01", "evidence": {"quote": "the move"}}
+    asked = held_ask.describe(store.read(), people, op)
+    assert asked["ask"] == "move" and asked["value"] == "2026-12-01"
+    assert asked["from_value"] == (str(mine["due"]) if mine.get("due") else None)

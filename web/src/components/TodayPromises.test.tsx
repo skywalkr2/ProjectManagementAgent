@@ -213,25 +213,28 @@ test("Drop asks why and drops it, and Look closer shows why the promise exists",
 
 // ---- a held ending ------------------------------------------------------------------------------------------------
 
-test("a held close reads as one line: Keep, what the input says happened, and its words under it", async () => {
+test("a held close is a question about the item: its words and who said them under it, and two buttons that name the result", async () => {
   show([ending({})]);
-  const row = await rowOf("Keep: Robin Sample finished 'Send the floor plan'");
-  expect(row).toHaveTextContent("“the floor plan went out this morning”");
-  expect(row).toHaveTextContent("Said by Ana Person");
-  expect(within(row).getByRole("button", { name: "Keep" })).toBeInTheDocument();
-  // The other two answers are in its menu, not beside it.
-  expect(within(row).queryByRole("button", { name: "Not yet" })).toBeNull();
+  const row = await rowOf("Close 'Send the floor plan'?");
+  expect(row).toHaveTextContent("“the floor plan went out this morning” · Said by Ana Person");
+  expect(within(row).getByRole("button", { name: "Close it" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "Keep it open" })).toBeInTheDocument();
+  // The older words for the same decision are gone, and so is everything that is not the words and who said them.
+  expect(within(row).queryByRole("button", { name: /^(Keep|Not yet)$/ })).toBeNull();
+  expect(row).not.toHaveTextContent("Robin Sample");
 });
 
 test.each([
-  [{ ask: "drop", reason: "no longer needed" } as Partial<S["HeldAsk"]>, "Keep: 'Send the floor plan' is called off"],
-  [{ ask: "move", due_words: "next Tuesday" } as Partial<S["HeldAsk"]>, "Keep: 'Send the floor plan' is now due next Tuesday"],
-  [{ ask: "move", due_words: null, value: "2026-11-03" } as Partial<S["HeldAsk"]>, `Keep: 'Send the floor plan' is now due ${day("2026-11-03")}`],
-  [{ ask: "part", delivered: "the draft", left: "Send the final plan" } as Partial<S["HeldAsk"]>, "Keep: Robin Sample delivered the draft, and what is left is 'Send the final plan'"],
-])("a held ending %# reads as one Keep line", async (held, title) => {
+  [{ ask: "drop", reason: "no longer needed" } as Partial<S["HeldAsk"]>, "Drop 'Send the floor plan'?", "Drop it", "Keep it"],
+  [{ ask: "move", due_words: "next Tuesday" } as Partial<S["HeldAsk"]>, "Move 'Send the floor plan' to next Tuesday?", "Move it", "Keep the date"],
+  [{ ask: "move", due_words: null, value: "2026-11-03" } as Partial<S["HeldAsk"]>, `Move 'Send the floor plan' to ${day("2026-11-03")}?`, "Move it", "Keep the date"],
+  [{ ask: "move", due_words: "by October 30" } as Partial<S["HeldAsk"]>, "Move 'Send the floor plan' to October 30?", "Move it", "Keep the date"],
+  [{ ask: "part", delivered: "the draft", left: "Send the final plan" } as Partial<S["HeldAsk"]>, "Mark part of 'Send the floor plan' as delivered?", "Mark it part delivered", "Keep it open"],
+])("a held ending %# is asked as a question with the same two kinds of button", async (held, title, primary, other) => {
   show([ending(held)]);
   const row = await rowOf(title);
-  expect(within(row).getByRole("button", { name: "Keep" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: primary })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: other })).toBeInTheDocument();
 });
 
 // ---- a close whose words only say "closed" ------------------------------------------------------------------------
@@ -268,30 +271,33 @@ test("No longer needed answers the choice as called off, from the menu, with Und
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [0] }));
 });
 
-test("a promise said again with a new date reads as a move with both quotes under it", async () => {
+test("a promise said again with a new date keeps only the new words on the line; the earlier ones are for the inspector", async () => {
   show([ending({ ask: "move", due_words: "by October 30", quote: "I will send the floor plan by October 30.", earlier: "I will send the floor plan by Tuesday." })]);
-  const row = await rowOf("Keep: 'Send the floor plan' is now due by October 30");
+  const row = await rowOf("Move 'Send the floor plan' to October 30?");
   expect(row).toHaveTextContent("“I will send the floor plan by October 30.”");
-  expect(row).toHaveTextContent("Said before: “I will send the floor plan by Tuesday.”");
+  expect(row).not.toHaveTextContent("Said before");
 });
 
-test("Keep releases the ending and says what happened, with Undo", async () => {
+test("Close it releases the ending and says what happened, with Undo", async () => {
   const user = userEvent.setup();
   const { calls } = show([ending({})], { "POST changesets/CS-1/ops/0/release": () => ({ ok: "CS-1" }), "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
-  await user.click(within(await rowOf("Keep: Robin Sample finished 'Send the floor plan'")).getByRole("button", { name: "Keep" }));
+  await user.click(within(await rowOf("Close 'Send the floor plan'?")).getByRole("button", { name: "Close it" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/0/release")).toBe(true));
+  expect(await screen.findByText("Done: 'Send the floor plan'")).toBeInTheDocument();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [0] }));
 });
 
-test("Not yet declines it and Change opens the action, both from the menu", async () => {
+test("Keep it open declines it with Undo, and Change opens the action from the menu", async () => {
   const user = userEvent.setup();
   const { calls, onOpenRecord } = show([ending({})], { "POST changesets/CS-1/ops/0/decline": () => ({ ok: "CS-1" }), "POST changesets/CS-1/ops/0/undecline": () => ({ ok: "CS-1" }) });
-  const row = await rowOf("Keep: Robin Sample finished 'Send the floor plan'");
-  await menuOf(user, row);
-  await user.click(screen.getByRole("menuitem", { name: "Not yet" }));
+  const row = await rowOf("Close 'Send the floor plan'?");
+  await user.click(within(row).getByRole("button", { name: "Keep it open" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/0/decline")).toBe(true));
   expect(calls.some((c) => c.route.includes("/release"))).toBe(false);
+  expect(await screen.findByText("Kept as it was: 'Send the floor plan'")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/ops/0/undecline")).toBe(true));
   await menuOf(user, row);
   await user.click(screen.getByRole("menuitem", { name: "Change" }));
   expect(onOpenRecord).toHaveBeenCalledWith("action", "ACT-1");

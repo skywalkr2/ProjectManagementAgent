@@ -17,7 +17,7 @@ from typing import Any, Literal
 from pydantic import ValidationError
 
 from engine import agenda as agenda_module
-from engine import audience, draft_checks, endings, knowledge, learn, outward, proposals, reply_lines, scope
+from engine import audience, draft_checks, endings, id_words, knowledge, learn, outward, proposals, reply_lines, scope
 from engine import search as workspace_search
 from engine import series as series_module
 from engine.blocked import blocker_problem
@@ -195,6 +195,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     similarity = ctx.cfg.checks.tuning.near_duplicate_action.similarity
     first_week = _FirstWeek(ctx, view)
     assistant_names = outward.assistant_names(view, ctx.cfg.workspace.assistant_name)
+    id_prefixes = id_words.prefixes(plugins.records)
     origin = origin_of(ctx)
     about = origin.get("about") or {}
     about_record = view.get(about["kind"], about["id"]) if about.get("kind") and about.get("id") else None
@@ -228,6 +229,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         # What others read never names the assistant, whoever wrote it but the person on their own screen.
         if ctx.actor != "pm" and (why := outward.op_problem(op, assistant_names)) is not None:
             refuse(i, "names-assistant", why)
+            continue
+        # A title is never a record's id: an id is how the product refers to a record, not a word for a person.
+        if ctx.actor != "pm" and (why := id_words.id_problem(op, view, id_prefixes)) is not None:
+            refuse(i, "id-in-title", why)
             continue
         if isinstance(op, (TextEditOp, TextProposeOp, TextDraftOp)):
             why = _text_target(ctx.store, view, op.record.kind, op.record.id, op.field)
@@ -710,9 +715,9 @@ def _waits_for_a_look(view: Any, ctx: Context, kind: str, record_id: str) -> boo
     return found is not None and reached_someone(found)
 
 
-CLOSE_ON_INFERENCE_WAITS = "This rests on something worked out, not something anyone said: close it?"
-CHANGE_ON_INFERENCE_WAITS = "This rests on something worked out, not something anyone said: make the change?"
-ROUTING_ON_INFERENCE_WAITS = "This rests on something worked out, not something anyone said: keep this routing?"
+#: Why a close, a change of a date or an owner, or a routing waits when it rests only on an inference. It says why; the
+#: line's title is the question and its two buttons are the answers (design 7.6).
+INFERENCE_WAITS = "This rests on something worked out, not something anyone said."
 
 #: The fields whose change is a date or an owner: a change to one that rests only on an inference waits for the person.
 DATE_OR_OWNER_FIELDS = frozenset({"due", "target", "owner", "owners"})
@@ -759,13 +764,9 @@ def _inference_holds(cs: ChangesetIn, ctx: Context, view: Any) -> list[Problem]:
         return []
     held: list[Problem] = []
     for i, op in enumerate(cs.ops):
-        if isinstance(op, (ActionCloseOp, QuestionDoneOp)):
-            waits = CLOSE_ON_INFERENCE_WAITS
-        elif isinstance(op, RecordSetOp) and op.field in DATE_OR_OWNER_FIELDS:
-            waits = CHANGE_ON_INFERENCE_WAITS
-        elif isinstance(op, RoutingAddOp):
-            waits = ROUTING_ON_INFERENCE_WAITS
-        else:
+        closes = isinstance(op, (ActionCloseOp, QuestionDoneOp))
+        changes = isinstance(op, RecordSetOp) and op.field in DATE_OR_OWNER_FIELDS
+        if not (closes or changes or isinstance(op, RoutingAddOp)):
             continue
         evidence = _evidence(op)
         if evidence is None:
@@ -773,7 +774,7 @@ def _inference_holds(cs: ChangesetIn, ctx: Context, view: Any) -> list[Problem]:
         quote = _quote_key(evidence.quote)
         shared = [basis for words, basis in facts if words in quote or quote in words]
         if shared and all(basis == "inferred" for basis in shared):
-            held.append(Problem("inference-confirm", "hold", i, waits))
+            held.append(Problem("inference-confirm", "hold", i, INFERENCE_WAITS))
     return held
 
 
@@ -1000,7 +1001,7 @@ def _shares_words(a: str, b: str) -> bool:
 
 #: The ops that end an action or change its date: read from what came in, each waits for the person to keep it.
 ENDING_OPS = (ActionCloseOp, ActionDropOp, ActionMoveOp, ActionPartOp, ActionUnholdOp)
-ENDING_WAITS = "Something that came in says this ended or moved: keep it, or change it."
+ENDING_WAITS = "Something that came in says this ended or moved."
 
 
 def _persons_own(view: Any, ctx: Context) -> bool:
@@ -1335,7 +1336,9 @@ class OpOutcome:
 
 
 def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | None:
-    """An op's own one-line label. A plugin op's `describe` may take a read view, to name the records it changes."""
+    """An op's own one-line label, the one place every screen's label for an op is made (design 7.14): it names each
+    record by its title in quotes, or by its kind in words when it has no title, never by its id. A plugin op's
+    `describe` may take a read view, to name the records it changes."""
     import inspect
 
     if isinstance(op, PersonStanceOp) and view is not None:
@@ -1355,15 +1358,21 @@ def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | N
             return " ".join(f"Add {op.kind} for {found.data['full_name']}: {op.value}".split())[:200]
     try:
         takes_view = len(inspect.signature(op.describe).parameters) >= 1
-        if takes_view and view is not None and store is not None and "/" in op.op:
-            from engine.plugin_api import ReadView
+        if "/" in op.op:  # a plugin's op reads records through its own view of them
+            if takes_view and view is not None and store is not None:
+                from engine.plugin_api import ReadView
 
-            text = op.describe(store.plugins._with_files(ReadView(view, op.op.split("/", 1)[0])))
-        else:
-            text = op.describe() if not takes_view else None
+                text = op.describe(store.plugins._with_files(ReadView(view, op.op.split("/", 1)[0])))
+            else:
+                text = op.describe() if not takes_view else None
+        else:  # a core op names its records by title through the view, and without one by their kind in words
+            text = op.describe(view) if takes_view else op.describe()
     except Exception:
         return None
-    return " ".join(text.split())[:200] if isinstance(text, str) and text.strip() else None
+    if not isinstance(text, str) or not text.strip():
+        return None
+    words = " ".join(text.split())[:200]
+    return words[:1].upper() + words[1:]
 
 
 def is_confirm(kind: str, current: dict[str, Any], fields: dict[str, Any]) -> bool:

@@ -641,3 +641,70 @@ describe("review mode on a phone", () => {
     expect(screen.queryByRole("button", { name: "Review one at a time" })).toBeNull();
   });
 });
+
+// ---- a held change the line on Today asks as a question ---------------------------------------------------------------
+
+function heldDrop(): S["ChangeItem"] {
+  const item = change("REQ-5");
+  item.changeset!.ops = [
+    {
+      index: 0,
+      op: "action.drop",
+      status: "held",
+      reason: "Someone has already been sent this: look at it before dropping it.",
+      group: "op0",
+      title: "Confirm the seating plan",
+      meta: { owners: ["Robin Sample"], action_status: "open" },
+      evidence: { quote: "the seating plan is no longer needed" },
+      record: { kind: "action", id: "ACT-5" },
+      ask: null,
+      held: { ask: "drop", item: "Confirm the seating plan", record: "ACT-5", owners: ["Robin Sample"], told: ["Casey Moor", "Robin Sample"], told_on: "2026-10-10", quote: "the seating plan is no longer needed" },
+    },
+  ];
+  return item;
+}
+
+test("a held drop on the change's card has the line's two buttons, and who was told leads it", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [heldDrop()],
+    "POST changesets/CS-REQ-5/ops/0/release": () => ({ ok: "CS-REQ-5" }),
+    "POST changesets/CS-REQ-5/ops/0/decline": () => ({ ok: "CS-REQ-5" }),
+    "POST changesets/CS-REQ-5/ops/0/undecline": () => ({ ok: "CS-REQ-5" }),
+  });
+  renderApp(<WhatChanged />);
+  const op = (await screen.findByText("Confirm the seating plan")).closest("li") as HTMLElement;
+  // The same two answers as the line, in the same words; never "Do it anyway".
+  expect(within(op).getByRole("button", { name: "Drop it" })).toBeInTheDocument();
+  expect(within(op).getByRole("button", { name: "Keep it" })).toBeInTheDocument();
+  expect(within(op).queryByRole("button", { name: "Do it anyway" })).toBeNull();
+  // Who was told is the reason it is held, so it comes first.
+  const told = within(op).getByText(`Casey Moor, Robin Sample were told on ${day("2026-10-10")}`);
+  expect(told.tagName).toBe("STRONG");
+  expect(op.firstElementChild!.firstElementChild).toContainElement(told);
+  await user.click(within(op).getByRole("button", { name: "Keep it" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-5/ops/0/decline")).toBe(true));
+  expect(calls.some((c) => c.route.includes("/release"))).toBe(false);
+  await user.click(within(op).getByRole("button", { name: "Drop it" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-REQ-5/ops/0/release")).toBe(true));
+});
+
+test("a held change the engine doesn't ask as a question keeps its one button and its reason", async () => {
+  const item = heldDrop();
+  item.changeset!.ops[0].held = null;
+  item.changeset!.ops[0].reason = "A way to reach someone waits for your confirmation.";
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  const op = (await screen.findByText("Confirm the seating plan")).closest("li") as HTMLElement;
+  expect(within(op).getByRole("button", { name: "Do it anyway" })).toBeInTheDocument();
+  expect(within(op).getByText("A way to reach someone waits for your confirmation.")).toBeInTheDocument();
+});
+
+test("a change made from what the person typed is titled Your note, with their words under it", async () => {
+  const item = change("REQ-6", { source: null, source_title: null, note: "Mark 'Settle the endpaper color' closed; the Print sync will cover it." });
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  const row = await screen.findByRole("listitem", { name: "Your note" });
+  expect(within(row).getByText("Mark 'Settle the endpaper color' closed; the Print sync will cover it.")).toBeInTheDocument();
+  expect(within(row).getByText("Your note", { selector: ".what" })).toBeInTheDocument();
+});

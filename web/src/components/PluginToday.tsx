@@ -89,6 +89,7 @@ function TodayRow(props: { line: S["TodayLineView"]; run: Run; open: Open }) {
         </span>
       }
       meta={wait || undefined}
+      oneLine
       primary={
         isCore ? (
           <CoreAction action={line.action!} about={about!} describedBy={titleId} open={props.open} />

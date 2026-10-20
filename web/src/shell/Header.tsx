@@ -12,7 +12,7 @@ import { setDensity, setTheme, useAppearance, type Density, type Theme } from ".
 import { viewHref } from "../lib/views";
 import { useMediaQuery } from "../lib/media";
 import { useWords } from "../lib/wording";
-import { MISSED_BUTTON, useMissedOne } from "../components/MissedOne";
+import { MISSED_BUTTON, useAnythingToMiss, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -97,6 +97,7 @@ export function Header(props: {
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
   const askKey = props.shortcuts.ask ?? "/";
   const missed = useMissedOne();
+  const anythingMissed = useAnythingToMiss();
   // Below 1440px the assistant's state is in the status chip's popover, as on a phone.
   const tight = useMediaQuery("(max-width: 1439px)");
   const inChip = props.narrow || tight;
@@ -134,9 +135,11 @@ export function Header(props: {
       </div>
       {!props.narrow && (
         <div className={styles.end}>
-          <Button variant="ghost" {...{ [MISSED_BUTTON]: "" }} onClick={missed}>
-            {t("missed.open")}
-          </Button>
+          {anythingMissed && (
+            <Button variant="ghost" {...{ [MISSED_BUTTON]: "" }} onClick={missed}>
+              {t("missed.open")}
+            </Button>
+          )}
           <Button variant="primary" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}
           </Button>

@@ -2,13 +2,14 @@
 // screen reader and in its tooltip. Where the content itself is shown (the inspector, the source block) the full phrase
 // stays on the screen instead.
 import { useWords } from "../lib/wording";
+import styles from "./OutsideTag.module.css";
 import { Pill } from "./Pill";
 
 export function OutsideTag() {
   const { t } = useWords();
   const full = t("source.outside");
   return (
-    <span title={full} data-outside="">
+    <span className={styles.tag} title={full} data-outside="">
       <Pill tone="neutral" describedAs={full}>
         {t("source.outside_short")}
       </Pill>

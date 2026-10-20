@@ -62,6 +62,7 @@ function GoRow(props: { request: StageRequest; item: StageView | null }) {
         </span>
       }
       meta={estimate || undefined}
+      oneLine
       primary={
         <Button size="sm" variant="primary" data-key="primary" disabled={busy} onClick={run}>
           {t("stages.go")}

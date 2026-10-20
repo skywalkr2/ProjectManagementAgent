@@ -58,3 +58,17 @@ test("a row can be a plain block outside a list", () => {
   expect(screen.queryByRole("listitem")).toBeNull();
   expect(screen.getByText("Alone").closest("[data-row]")?.tagName).toBe("DIV");
 });
+
+test("a row with nothing under it adds no space for it", () => {
+  render(
+    <ul>
+      <Row title="One">{false}</Row>
+      <Row title="Two">
+        <p>Detail</p>
+      </Row>
+    </ul>,
+  );
+  const [empty, full] = screen.getAllByRole("listitem");
+  expect(empty.querySelector("[class*='extra']")).toBeNull();
+  expect(full.querySelector("[class*='extra']")).not.toBeNull();
+});

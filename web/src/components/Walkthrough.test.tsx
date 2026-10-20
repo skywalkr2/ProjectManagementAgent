@@ -826,6 +826,7 @@ describe("Mail and calendar", () => {
       }) as S["SettingItem"];
     const calls = fakeApi({
       ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({ enabled: true, feeds: [], available: [available("mail-addon")], installed: [] }),
       "GET settings": () => ({ fingerprint: "fp-1", items: [...SETTINGS, item(sorting)] }),
       "POST settings": (body) => {
         const changes = (body as { changes: Record<string, string> }).changes;
@@ -990,11 +991,21 @@ describe("Mail and calendar", () => {
     expect(onChooseSource).toHaveBeenCalledWith(null);
   });
 
-  test("with no service listed the step still offers the core's mail folder and calendar address", async () => {
+  test("with no service listed and nothing read the step is one sentence and one button, and the way out is the step's own skip", async () => {
+    const user = userEvent.setup();
     fakeApi(routes({}, CORE.map((c) => step(c)), { step: "mail" }));
-    open();
-    expect(await screen.findByText(/No services listed/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Another mail or calendar" })).toBeInTheDocument();
+    const { onChooseSource } = open();
+    expect(
+      await screen.findByText("Mail and calendar sign-in comes with an add-on that isn't installed yet. You can connect a mail folder or a calendar link now, or skip this and hand things in by pasting."),
+    ).toBeInTheDocument();
+    // The old second sentence, and the mail-sorting choices that mean nothing before any mail is read, are not there.
+    expect(screen.queryByText(/No services listed/)).toBeNull();
+    expect(screen.queryByText(/Connect another service/)).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Set aside newsletters and personal mail automatically" })).toBeNull();
+    const buttons = within(document.querySelector<HTMLElement>("[data-mail-none]")!).getAllByRole("button");
+    expect(buttons.map((b) => b.textContent)).toEqual(["Connect one"]);
+    await user.click(buttons[0]);
+    expect(onChooseSource).toHaveBeenCalledWith(null);
   });
 
   test("a service the app can't install from here points to the Add-ons screen", async () => {

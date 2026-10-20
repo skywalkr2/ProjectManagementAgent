@@ -1,0 +1,2 @@
+/* The tag sits under a row's pill: its own box is exactly the pill's height, so two marks in a column stay compact. */
+.tag { display: inline-flex; }

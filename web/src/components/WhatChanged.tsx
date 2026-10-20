@@ -7,6 +7,8 @@ import { dayAndTime, day } from "../lib/dates";
 import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { useFieldLabel } from "../lib/records";
+import { useHeldAnswers } from "../lib/held-answers";
+import { heldTold } from "../lib/queue-words";
 import { useIsNarrow } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { recordView, viewHref } from "../lib/views";
@@ -263,7 +265,9 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
   const [sendingBack, setSendingBack] = useState(!!props.sendBack);
   const [choosing, setChoosing] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
-  const title = item.source_title || firstLine(item.note) || t("changes.untitled");
+  // Once the assistant has done something with what the person typed, the words are shown as their note, under the row, and
+  // never as its title. Until then (waiting, or stopped) they are all that says what the row is.
+  const title = item.source_title || (cs ? "" : firstLine(item.note)) || t("changes.untitled");
   const live = cs ? cs.ops.filter((o) => o.status === "applied" || o.status === "held") : [];
   useEffect(() => {
     if (!props.reveal) return;
@@ -425,6 +429,10 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
   );
 }
 
+function firstLine(text: string | null): string {
+  return (text ?? "").split("\n").find((l) => l.trim())?.trim() ?? "";
+}
+
 /** The drafts and files a change made, one link each, shown without opening the change's details. A draft opens on the
  * record it is for, where it waits for review; a file opens in the files list. */
 function MadeLinks(props: { made: S["MadeView"][] }) {
@@ -441,10 +449,6 @@ function MadeLinks(props: { made: S["MadeView"][] }) {
       ))}
     </ul>
   );
-}
-
-function firstLine(text: string | null): string {
-  return (text ?? "").split("\n").find((l) => l.trim())?.trim() ?? "";
 }
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -539,6 +543,9 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
       () => api.undo(cs.id, [op.index]),
       (report) => ({ message: undoMessage(report, t, tn) }),
     );
+  // A held change the line on Today asks as a question has the same two answers here, in the same words.
+  const heldWords = useHeldAnswers(cs.id, op.index, op.status === "held" && !ask ? op.held : null);
+  const told = op.held ? heldTold(op.held, t) : "";
 
   // Each item the assistant made can be changed on its own, without sending the others back.
   const changeKind = op.record && CHANGEABLE.includes(op.record.kind as ChangeKind) ? (op.record.kind as ChangeKind) : null;
@@ -549,13 +556,19 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
   if (op.evidence && props.source)
     menu.push({ id: "source", label: t(showSource ? "op.hide_source" : "op.show_source"), run: () => setShowSource((v) => !v) });
 
-  useRowKeys(ref, { primary: op.status === "held" && !ask ? () => void release() : undefined });
+  if (heldWords) for (const extra of heldWords.menu) menu.push(extra);
+  useRowKeys(ref, { primary: op.status === "held" && !ask ? (heldWords ? heldWords.primary.run : () => void release()) : undefined });
 
   const labelOf = useFieldLabel();
   const meta = metaLine(op, t, labelOf);
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
+        {heldWords && told && (
+          <div className="reason">
+            <strong>{told}</strong>
+          </div>
+        )}
         <div className="what">
           {opLabel(op, t)}
           {pill && <span className={`pill ${pill}`}>{t(`op.status.${pillKey}`)}</span>}
@@ -565,10 +578,24 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
         {op.reason && op.status !== "applied" && <div className="reason">{op.reason}</div>}
       </div>
       <div className="acts">
-        {op.status === "held" && !ask && (
-          <button type="button" className="btn primary" onClick={() => void release()}>
-            {t("op.do_anyway")}
-          </button>
+        {heldWords ? (
+          <>
+            {heldWords.other && (
+              <button type="button" className="btn" onClick={heldWords.other.run}>
+                {heldWords.other.label}
+              </button>
+            )}
+            <button type="button" className="btn primary" onClick={heldWords.primary.run}>
+              {heldWords.primary.label}
+            </button>
+          </>
+        ) : (
+          op.status === "held" &&
+          !ask && (
+            <button type="button" className="btn primary" onClick={() => void release()}>
+              {t("op.do_anyway")}
+            </button>
+          )
         )}
         <RowMenu label={op.title} actions={menu} />
       </div>

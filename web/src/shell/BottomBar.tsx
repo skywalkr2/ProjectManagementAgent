@@ -5,7 +5,7 @@ import { Dialog, Heading, Link, Modal, ModalOverlay } from "react-aria-component
 import { setDensity, setTheme, useAppearance, type Density, type Theme } from "../lib/theme";
 import { viewHref, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { MISSED_BUTTON, useMissedOne } from "../components/MissedOne";
+import { MISSED_BUTTON, useAnythingToMiss, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
@@ -58,6 +58,7 @@ export function BottomBar(props: {
   const { t } = useWords();
   const nav = useNav();
   const missed = useMissedOne();
+  const anythingMissed = useAnythingToMiss();
   const { theme, density } = useAppearance();
   const [sheet, setSheet] = useState<"work" | "more" | null>(null);
   const close = () => setSheet(null);
@@ -103,10 +104,12 @@ export function BottomBar(props: {
           <Links entries={[...nav.records, ...nav.bottom]} current={props.current} onPick={close} />
           <p className={styles.section}>{t("header.help")}</p>
           <div className={styles.list}>
-            <button type="button" className={styles.link} {...{ [MISSED_BUTTON]: "" }} onClick={later(missed)}>
-              <Icon name="alert" />
-              {t("missed.open")}
-            </button>
+            {anythingMissed && (
+              <button type="button" className={styles.link} {...{ [MISSED_BUTTON]: "" }} onClick={later(missed)}>
+                <Icon name="alert" />
+                {t("missed.open")}
+              </button>
+            )}
             <button type="button" className={styles.link} onClick={later(props.onHelp)}>
               <Icon name="help" />
               {t("help.open")}

@@ -298,7 +298,7 @@ Built keys:
 - `language.messages.source_by_person`, `source_input`, `source_recorded` and `source_date_format`: how a history row's source is
   worded for readers (6.7): the one known person and the day, an input's title and day, or "recorded <day>"; `withheld_where`
   and `withheld_name` say why a message to someone else is not offered while it names the assistant; `resourced_summary`
-  and `resourced_label` word the change the sweep makes. Each has a description, a default and demo values in both fictional
+  and `resourced_label` word the change the sweep makes (6.7). Each has a description, a default and demo values in both fictional
 - `meeting_words`: the words that say something moved into a meeting ("we'll cover it", "in the planning sessions", "take it up"). A
   call-off whose words hold one and name a meeting the workspace knows (a calendar entry still ahead, else a series) names that
   meeting on the drop, which puts the action on its agenda, linked (6.33). Whole words, ignoring case; demo values in both fictional
