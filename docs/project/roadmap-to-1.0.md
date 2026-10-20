@@ -84,7 +84,7 @@ keep each item's full text.
     - *Exit:* phase B's exit test: the owner reviews every screen on a laptop and a phone; checklist items C1 to C46 are marked Done or explained, with screenshots; the journey tests run against the new screens.
 
 7. **UI gate: the UI/UX designer's re-review** (1 open item; size: waits on the reviewer)
-    - *Covers:* *The UI/UX designer's re-review* (phase B, last group): once B-6b is pushed, the main session messages the session titled "UI/UX design review" with the commit to review and the list of UI changes since its last review (`docs/design/CHANGES.md`); it builds and reviews the screens itself.
+    - *Covers:* *The UI/UX designer's re-review* (phase B, last group): once B-6b is pushed, the main session messages the session titled "UI/UX design review" with the commit to review and the list of UI changes since its last review (`docs/design/CHANGES.md`); it builds and reviews the screens itself. The ping carries what the reviewer asked for (2026-10-20): the branch and commit, the main session's own Done / Partial / Not done table for C1–C46 (each row citing its test, audited against the code by a subagent first), its bug list re-checked, and every place the build chose differently from the review, with why.
     - *Exit:* its feedback is received and recorded in one file in `docs/project/`.
 
 8. **B-7 UI/UX feedback** (1 open item; size: set when the feedback arrives)
