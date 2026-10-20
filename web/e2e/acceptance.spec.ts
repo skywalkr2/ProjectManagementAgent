@@ -853,11 +853,11 @@ test.describe.serial("acceptance scenario", () => {
     await signIn(page);
     const at = async (id: string) => (await page.locator(`[data-col="${id}"]`).boundingBox())!;
     const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
-    const [agenda, todo] = [await at("agenda"), await at("todo")];
-    expect(agenda.y).toBeGreaterThanOrEqual(queue.y + queue.height - 1);
-    expect(todo.y).toBeGreaterThanOrEqual(queue.y + queue.height - 1);
-    // Two columns: the agenda and the to-dos are side by side.
-    expect(todo.x).toBeGreaterThan(agenda.x);
+    const [priorities, agenda, todo] = [await at("priorities"), await at("agenda"), await at("todo")];
+    for (const panel of [priorities, agenda, todo]) expect(panel.y).toBeGreaterThanOrEqual(queue.y + queue.height - 1);
+    // Two columns: Top priorities and the agenda side by side, the to-dos under the first.
+    expect(agenda.x).toBeGreaterThan(priorities.x);
+    expect(todo.x).toBe(priorities.x);
     await checkAccessibility(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator("html")).toHaveAttribute("data-narrow", "");

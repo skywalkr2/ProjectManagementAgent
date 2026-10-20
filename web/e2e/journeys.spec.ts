@@ -45,8 +45,8 @@ test.describe.serial("journeys", () => {
     await main.getByLabel("Your full name").fill(info.people[0]);
     await main.getByRole("button", { name: "Save" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
+    // Saving the first screen goes on to the next one (one primary per screen: "Save and continue").
     await visit(page);
-    await main.getByRole("button", { name: "Next" }).click();
 
     // Your AI account: a service of my own that speaks the common chat format, at the address the fake service
     // answers on. The screen also says what it may spend.
@@ -147,7 +147,7 @@ test.describe.serial("journeys", () => {
     await expect(review.first().or(showNew).first()).toBeVisible({ timeout: 20_000 });
     if (await showNew.count()) await showNew.click();
     await expect(review).toHaveCount(1);
-    await expect(review).toContainText(/Look over 3 things Assistant did/);
+    await expect(review).toContainText(/Look over 3 things your assistant did/);
     expect((await requests()).work).toBe(1);
     await visit(page);
 

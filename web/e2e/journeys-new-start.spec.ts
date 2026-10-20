@@ -62,15 +62,14 @@ test.describe.serial("journey: new start", () => {
     await main.getByLabel("Your full name").fill(info.people[0]);
     await main.getByRole("button", { name: "Save" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
-    // The save said so in a toast, which never covers the screen's own buttons: Back and Next can be pressed right away.
-    const notices = page.getByRole("region", { name: "Notifications" });
-    await expect(notices.getByText(/^Saved\./)).toBeVisible();
-    await main.getByRole("button", { name: "Next" }).click({ trial: true });
+    // The save went on to the next screen, so its mark in the step list says it (a toast from one screen goes when the
+    // next opens); that screen's own buttons can be pressed right away.
+    await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    await main.getByRole("button", { name: "Back" }).click({ trial: true });
     await visit(page);
-    await main.getByRole("button", { name: "Next" }).click();
     // A toast from one screen is gone when the next one opens.
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
-    await expect(notices.getByText(/^Saved\./)).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Notifications" }).getByText(/^Saved\./)).toHaveCount(0);
 
     // 3. Your AI account: the fake service, with Internal ticked, since my mail is internal material.
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();

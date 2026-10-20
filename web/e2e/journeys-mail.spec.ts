@@ -51,7 +51,6 @@ test.describe.serial("journey: mail", () => {
     await main.getByLabel("Your full name").fill(info.people[0]);
     await main.getByRole("button", { name: "Save" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
-    await main.getByRole("button", { name: "Next" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
     await main.getByText("More options").click();
     await main.getByLabel(/^Another service that speaks/).check();
