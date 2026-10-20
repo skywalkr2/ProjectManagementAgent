@@ -305,6 +305,8 @@ def _item(
     dates: list[EventOccurrence] = []
     if repeating:
         dates = _expand(event, begins, ends, changes, reading, window, cancelled)
+        if not dates:
+            return None  # a series with no date left in the window (one that ended years ago) is not read
     else:
         left = _instant(begins, default)
         right = _instant(ends if ends is not None else begins, default)

@@ -148,6 +148,38 @@ def test_the_window_repeats_are_expanded_over_is_a_setting(tmp_path):
     assert len(starts(next(iter(long.values())))) == 5  # the rule's own count ends it
 
 
+def test_a_series_whose_repeats_ended_years_ago_is_not_read_and_one_still_running_is(tmp_path):
+    calendar = "\r\n".join(
+        [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//Example//Calendar//EN",
+            "BEGIN:VEVENT",
+            "UID:ended@example.com",
+            "DTSTART:20130105T090000Z",
+            "RRULE:FREQ=MONTHLY;UNTIL=20170902T090000Z",
+            "SUMMARY:Submit the monthly expense form",
+            "END:VEVENT",
+            "BEGIN:VEVENT",
+            "UID:yearly@example.com",
+            "DTSTART:20150601T090000Z",
+            "RRULE:FREQ=YEARLY;INTERVAL=3",
+            "SUMMARY:Renew the certificate",
+            "END:VEVENT",
+            "BEGIN:VEVENT",
+            "UID:weekly@example.com",
+            "DTSTART:20120104T090000Z",
+            "RRULE:FREQ=WEEKLY",
+            "SUMMARY:Put the bins out",
+            "END:VEVENT",
+            "END:VCALENDAR",
+            "",
+        ]
+    )
+    items = read(tmp_path, calendar)
+    assert sorted(i.title for i in items.values()) == ["Put the bins out"]
+
+
 def test_an_unsupported_rule_part_shows_the_first_date_with_a_note(tmp_path):
     (item,) = read(tmp_path, "unsupported-rule.ics").values()
     assert item.title == "Tide table review" and item.event.start == "2030-03-06T09:00:00+00:00"

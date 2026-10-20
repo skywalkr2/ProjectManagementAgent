@@ -50,8 +50,10 @@ def test_the_calendar_address_is_a_secret_and_read_through_the_web_client(tmp_pa
         "TRANSPORT",
         httpx.MockTransport(lambda r: httpx.Response(200, text=ICS) if str(r.url) == url else httpx.Response(404)),
     )
-    poll = read_calendar(CalendarSettings(address="env:CAL_ADDRESS", days_ahead=30), {}, ConnectorContext(tmp_path))
-    assert poll.complete is False and "Weekly sync" in [i.title for i in poll.items]  # a repeating event is always on
+    poll = read_calendar(
+        CalendarSettings(address="env:CAL_ADDRESS", days_ahead=30), {}, ConnectorContext(tmp_path, now=NOW)
+    )
+    assert poll.complete is False and "Weekly sync" in [i.title for i in poll.items]  # its dates fall in the window
     monkeypatch.delenv("CAL_ADDRESS")
     with pytest.raises(ConnectorError) as missing:
         read_calendar(CalendarSettings(address="env:CAL_ADDRESS"), {}, ConnectorContext(tmp_path))
