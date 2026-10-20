@@ -599,6 +599,28 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     *Built:* the fixes, each with its test (see "Found by the owner's first real use", B-6b). *Left:* the owner's re-run
     of the failed cases, which is this sub-item's acceptance, and its result.
 
+- [ ] [B-8] **Build the UI/UX designer's review of batch B-7** (received 2026-10-20 at `46cc3ea`,
+  `reviews/ui-ux-2026-10/rereview-46cc3ea/README.md`; the owner's standing answer, 2026-10-20: "give them what they
+  want"). B-7's six deliberate differences were accepted; F25's yes is accepted on two conditions, which are built here.
+  Each sub-item is done when its test passes:
+  - R1: no record id in any title the person reads (Today, its inspector, What changed, Follow-ups): a line is titled by
+    its item ("Drop 'Settle the endpaper color'?"); an id in a title is refused as an invariant, and the sweep reaches
+    those screens (check C54);
+  - R2: a held line is asked as a question ("Close 'Send two spine options'?") with the same two result buttons in the
+    line and the inspector ("Close it", "Keep it open"); its meta keeps the quote and who said it, the rest moves to the
+    inspector (check C55);
+  - R3: every Today line's meta is one line, cut with an ellipsis, and "Outside" folds into the pill column, so six lines
+    fit at 1280×720 (checks C47, C56);
+  - R4: on a new workspace the header has no "Missed one" until there is something it could have missed, and the
+    workspace's new name shows without a reload;
+  - R5: the mail step on a fresh install says one sentence, with one button and one way out;
+  - F25's conditions: the yes is asked in the AI step right after the key check passes, and Continue can't skip it
+    silently; when it was skipped, Today says "Let <account> read your work mail and notes" with Allow; the browser
+    tests' fixture has a stand-in account so the yes can be captured;
+  - R6–R11: the Done step's empty cards; the series page's side panel (labels above values, an item not listed in both
+    Agenda and Next); the rules line's weight and pill; 24px hit areas for checkboxes; no "From: <person>" titles in What
+    changed; shorter Top priorities wording.
+
 ## Phase S: the daily steward (after phase B, before phase I)
 
 The owner's ask (2026-10-17): "this core needs to be full featured" as a daily assistant for anyone, not only project
