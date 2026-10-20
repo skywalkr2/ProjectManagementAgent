@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: Thimbleby core first, Thimbleby+ after, and only maybe
+
+- **Decided (owner):** "Basically core Thimbleby vs paid Thimbleby+. Good thing is we can actually get to Thimbleby core
+  faster and push and update the website while we continue to work on a 'maybe' Thimbleby+ after that." The paid 1.0
+  plan (`docs/project/business-model.md` on `claude/paid-1-0-plan`) is folded into the roadmap in that order.
+- **What it means for the order of work:** the free core release, with its website update, comes first and is not held
+  for anything the paid upgrade needs; the paid upgrade's items (the licence, gated downloads and the rest P25 lists)
+  follow as a later, conditional phase. Nothing in the core is built to depend on the paid upgrade.
+- **Impact:** the roadmap's order after B-7 (the fold of P25 sets the phases); the website's content brief (I-2) for
+  the core release.
+
 ## 2026-10-20: Outward material never names the assistant
 
 - **Decided (owner, from running, 2026-10-20):** the person found "Reported by <assistant>, 10/20" as a history row's
