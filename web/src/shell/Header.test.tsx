@@ -6,8 +6,14 @@ import { initAppearance } from "../lib/theme";
 import { fakeApi, rcFixture, renderApp, statusFixture } from "../test-utils";
 import { Header } from "./Header";
 
-function show(over: { demo?: boolean; logo?: boolean; narrow?: boolean; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide", () => void>> } = {}) {
+/** Windows narrower than 1440px but not a phone: the media query the header watches matches. */
+function below1440() {
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: /max-width:\s*1439px/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
+}
+
+function show(over: { demo?: boolean; logo?: boolean; narrow?: boolean; links?: unknown; handlers?: Partial<Record<"onHandIn" | "onAsk" | "onHelp" | "onFeedback" | "onOpenGuide", () => void>> } = {}) {
   fakeApi({
+    "GET settings": () => ({ fingerprint: "fp", items: over.links === undefined ? [] : [linksItem(over.links)] }),
     "GET status": () => statusFixture(),
     "GET me": () => ({ full_name: "Casey Example", person: null }),
     "GET runtime-config": () => ({ instance: null }),
@@ -32,7 +38,23 @@ function show(over: { demo?: boolean; logo?: boolean; narrow?: boolean; handlers
   );
 }
 
+const linksItem = (value: unknown) => ({
+  key: "ui.links",
+  file: "ui",
+  group: "ui",
+  description: "Links to your own pages.",
+  type: "other",
+  options: [],
+  value,
+  default: [],
+  source: "file",
+  locked: false,
+  basic: false,
+  editable: true,
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-density");
   window.localStorage.clear();
@@ -175,4 +197,47 @@ test("from a wider screen the assistant's line is beside the chip and the popove
   await user.click(await screen.findByRole("button", { name: /^App status: / }));
   const dialog = await screen.findByRole("dialog", { name: "Status" });
   expect(dialog.querySelector('[data-state="alive"]')).toBeNull();
+});
+
+test("below 1440px the assistant's state moves into the status chip's popover, as on the phone, and the line beside the chip is gone", async () => {
+  const user = userEvent.setup();
+  below1440();
+  show();
+  const chip = await screen.findByRole("button", { name: /^App status: / });
+  expect(screen.queryByRole("button", { name: /^Assistant/ })).toBeNull();
+  await user.click(chip);
+  const dialog = await screen.findByRole("dialog", { name: "Status" });
+  const alive = dialog.querySelector('[data-state="alive"]') as HTMLElement;
+  expect(alive).not.toBeNull();
+  expect(alive).toHaveTextContent("no tasks yet");
+});
+
+test("the header has no Your pages button: the links are the first group of the person's menu, each opening in a new tab", async () => {
+  const user = userEvent.setup();
+  const address = "https" + "://boards.example.org/plan";
+  show({ links: [{ name: "Planning board", address }, { name: "Odd one", address: "not an address" }] });
+  expect(screen.queryByRole("button", { name: "Your pages" })).toBeNull();
+  await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
+  const link = await screen.findByRole("menuitem", { name: "Planning board" });
+  expect(link).toHaveAttribute("href", address);
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(screen.queryByRole("menuitem", { name: "Odd one" })).toBeNull();
+  // The links come first, under their own title, then the appearance choices.
+  const groups = screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"));
+  expect(groups.slice(0, 2)).toEqual(["Your pages", "Theme"]);
+});
+
+test("with no links the person's menu is only the appearance choices", async () => {
+  const user = userEvent.setup();
+  show({ links: [] });
+  await user.click(await screen.findByRole("button", { name: /^Change appearance, / }));
+  expect(screen.queryByRole("group", { name: "Your pages" })).toBeNull();
+  expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
+});
+
+test("Missed one is a button with its words, not a bare warning icon", async () => {
+  show();
+  const button = screen.getByRole("button", { name: "Missed one" });
+  expect(button).toHaveTextContent("Missed one");
+  expect(button.querySelector("svg")).toBeNull();
 });

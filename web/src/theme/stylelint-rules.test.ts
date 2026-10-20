@@ -53,3 +53,43 @@ test("a disabled state is never shown by opacity", async () => {
   expect(await problems(".a:not(:disabled) { opacity: 0.5; }")).toEqual([]);
   expect(await problems(".a:hover { opacity: 0.5; }")).toEqual([]);
 });
+
+test("a font weight is one of the weight tokens, never a number or a word, and never with a fallback number", async () => {
+  expect(await problems(".a { font-weight: var(--weight-regular); }")).toEqual([]);
+  expect(await problems(".a { font-weight: var(--weight-medium); }")).toEqual([]);
+  expect(await problems(".a { font-weight: var(--weight-semibold); }")).toEqual([]);
+  expect(await problems(".a { font-weight: inherit; }")).toEqual([]);
+  expect(await problems(".a { font-weight: 700; }")).toEqual(["cockpit/weight-tokens"]);
+  expect(await problems(".a { font-weight: 600; }")).toEqual(["cockpit/weight-tokens"]);
+  expect(await problems(".a { font-weight: bold; }")).toEqual(["cockpit/weight-tokens"]);
+  expect(await problems(".a { font-weight: bolder; }")).toEqual(["cockpit/weight-tokens"]);
+  expect(await problems(".a { font-weight: normal; }")).toEqual(["cockpit/weight-tokens"]);
+  expect(await problems(".a { font-weight: var(--weight-regular, 400); }")).toEqual(["cockpit/weight-tokens"]);
+  expect(await problems(".a { font-weight: var(--bold); }")).toEqual(["cockpit/weight-tokens"]);
+});
+
+test("the font shorthand can't carry a weight number or word either", async () => {
+  expect(await problems(".a { font: inherit; }")).toEqual([]);
+  expect(await problems(".a { font: var(--weight-semibold) var(--text-sm)/var(--lh-sm) var(--font-ui); }")).toEqual([]);
+  expect(await problems(".a { font: 700 var(--text-sm) var(--font-ui); }")).toEqual(["cockpit/weight-tokens"]);
+  expect(await problems(".a { font: bold var(--text-sm) var(--font-ui); }")).toEqual(["cockpit/weight-tokens"]);
+});
+
+test("the weight rule holds for the whole stylesheet set: no weight outside the tokens anywhere in src", async () => {
+  const { globSync, readFileSync } = await import("node:fs");
+  const files = globSync("src/**/*.css", { cwd: root }).filter((f: string) => f !== "src/theme/tokens.css");
+  const found: string[] = [];
+  for (const file of files) {
+    const bad = (await problems(readFileSync(join(root, file), "utf8"), file)).filter((r) => r === "cockpit/weight-tokens");
+    if (bad.length) found.push(file);
+  }
+  expect(found).toEqual([]);
+});
+
+test("the elements a browser makes bold by itself (700) take the semibold token in the base styles", async () => {
+  const { readFileSync } = await import("node:fs");
+  const base = readFileSync(join(root, "src/styles.css"), "utf8");
+  const rule = base.match(/(^|\n)([^{}\n]*\bstrong\b[^{}\n]*)\{([^}]*)\}/);
+  expect(rule?.[3]).toContain("font-weight: var(--weight-semibold)");
+  for (const element of ["b", "th", "h6", "optgroup"]) expect(rule?.[2]).toMatch(new RegExp(`(^|[ ,])${element}([ ,]|$)`));
+});

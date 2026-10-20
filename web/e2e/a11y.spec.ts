@@ -126,3 +126,43 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 }
+
+// Target sizes (WCAG 2.5.8; check C52): no visible interactive element is smaller than 24 by 24 CSS pixels. A checkbox or
+// radio counts by its label, which is padded to be its hit area; a link inside a sentence is exempt, as the standard says.
+/** The visible interactive elements of the page smaller than 24px either way, each named for the report. */
+async function smallTargets(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const selector = "a[href], button, input:not([type='hidden']), select, textarea, summary, [role='button'], [role='menuitem'], [role='menuitemcheckbox'], [role='menuitemradio'], [role='tab'], [role='switch']";
+    const found: string[] = [];
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>(selector))) {
+      const style = getComputedStyle(el);
+      if (style.visibility === "hidden" || style.display === "none" || el.closest("[hidden], [inert]")) continue;
+      const own = el.getBoundingClientRect();
+      // Out of the window (the skip link), clipped to nothing (screen-reader-only text) or not drawn.
+      if (own.width === 0 || own.height === 0 || own.right <= 0 || own.bottom <= 0 || el.classList.contains("sr")) continue;
+      if (style.clip !== "auto" && style.position === "absolute" && own.width <= 1) continue;
+      // A link running in a sentence is an inline target.
+      if (el.tagName === "A" && style.display === "inline") continue;
+      const isBox = el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio");
+      const rect = isBox ? ((el.labels?.[0] ?? el).getBoundingClientRect()) : own;
+      if (rect.width < 24 - 0.5 || rect.height < 24 - 0.5) {
+        const name = el.getAttribute("aria-label") ?? el.textContent?.trim().slice(0, 30) ?? "";
+        found.push(`${el.tagName.toLowerCase()} "${name}" ${Math.round(rect.width)}x${Math.round(rect.height)}`);
+      }
+    }
+    return found;
+  });
+}
+
+test.describe("target sizes", () => {
+  for (const screen of [{ name: "Today", hash: "today" }, ...SCREENS]) {
+    test(`${screen.name} has no visible interactive element under 24×24 at 1024, 1440 and 390px`, async ({ page }) => {
+      await signIn(page);
+      for (const width of [390, 1024, 1440]) {
+        await page.setViewportSize({ width, height: HEIGHT });
+        await open(page, screen.hash);
+        expect(await smallTargets(page), `at ${width}px`).toEqual([]);
+      }
+    });
+  }
+});

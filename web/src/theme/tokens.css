@@ -56,7 +56,6 @@
   /* Layout: the app fills the window at every width. Panes are added as width grows; nothing is centered in a
      fixed column with empty margins. Only running prose is limited, by --measure, inside its pane. */
   --header-row-h: 56px;        /* the header's main row */
-  --header-status-h: 32px;     /* its second row, for the status chip and the assistant's line, below 1280px */
   --header-h: var(--header-row-h);
   --sidebar-w: 232px;          /* left navigation, expanded (>= 1280px) */
   --sidebar-w-collapsed: 64px; /* icons only (below 1280px, or collapsed by the person) */
@@ -74,6 +73,8 @@
   /* Breakpoints (media queries use the literals): phone < 640 (set by the workspace) · tablet 640-1023 ·
      laptop 1024-1439 · desktop 1440-1919 · wide 1920-2559 · ultra >= 2560 */
   --tap-min: 44px;             /* touch target on coarse pointers */
+  --target-min: 24px;          /* the floor for any control (WCAG 2.5.8): nothing is smaller */
+  --target-icon: 32px;         /* an icon-only button is at least this square */
 
   /* ---------- 2. Semantic roles (light) ---------- */
   --canvas: var(--gray-50);          /* page background */
@@ -176,7 +177,6 @@
   --input-h: 34px;
 }
 @media (max-width: 1023px) { :root { --gutter: var(--space-4); } }
-@media (max-width: 1279px) { :root:not([data-narrow]) { --header-h: calc(var(--header-row-h) + var(--header-status-h)); } }
 :root[data-narrow] { --header-row-h: 48px; --header-h: 48px; --page-pad: var(--space-4); --gutter: var(--space-4); }
 
 /* ---------- Global rules ---------- */

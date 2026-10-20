@@ -9,6 +9,8 @@ html[data-toasts] { scroll-padding-bottom: calc(var(--toast-h, 0px) + var(--spac
 html[data-toasts][data-narrow] { scroll-padding-bottom: calc(var(--toast-h, 0px) + var(--bottombar-h) + var(--space-6)); }
 body { font-family: var(--font-ui); font-size: var(--text-md); line-height: var(--lh-md); }
 button, input, textarea, select { font: inherit; color: inherit; }
+/* No control is smaller than the target floor (WCAG 2.5.8). */
+button { min-width: var(--target-min); min-height: var(--target-min); }
 /* A row shows its ring only for keyboard focus (a click or the code moving focus shows none). The ring sits inside the
    row's padding, or outside a row that has no side padding, never over its text. */
 [data-row]:focus { outline: none; }
@@ -19,6 +21,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .skip:focus { left: var(--space-4); }
 p { margin: 0; }
 h1, h2, h3, h4, h5 { margin: 0; font-weight: var(--weight-semibold); }
+/* The browser's own bold is 700, which is no token: every element it makes bold gets the semibold token instead. */
+h6, strong, b, th, optgroup { font-weight: var(--weight-semibold); }
 h1 { font-size: var(--text-xl); line-height: var(--lh-xl); }
 h2 { font-size: var(--text-lg); line-height: var(--lh-lg); }
 h3, h4, h5 { font-size: var(--text-md); line-height: var(--lh-md); }
@@ -123,6 +127,8 @@ a { color: var(--accent-text); }
 
 /* Forms: control borders are the strong border; disabled is a sunken fill, never opacity */
 .sendback, .answer-form, .message, .ask-chooser { grid-column: 1 / -1; display: grid; gap: var(--space-2); }
+/* The note to send back is a line of prose, never wider than the measure. */
+.sendback textarea { max-width: var(--measure); }
 .field { display: grid; gap: var(--space-1); margin-bottom: var(--space-3); }
 .field label { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
 textarea, select, input { width: 100%; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); padding: var(--space-2) var(--space-3); min-height: var(--input-h); font-size: var(--text-md); line-height: var(--lh-md); }
@@ -133,6 +139,10 @@ textarea.msg { min-height: 220px; }
 textarea.drop { border-style: dashed; border-width: 1.5px; min-height: 160px; }
 textarea.big { min-height: 220px; max-width: var(--measure); }
 input:disabled, textarea:disabled, select:disabled { background: var(--surface-sunk); border-color: var(--border); color: var(--text-subtle); cursor: not-allowed; }
+/* A checkbox or radio is drawn 18px; its label is padded to a 24px hit area and the box reaches out to that too. */
+label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: var(--target-min); padding-block: var(--space-1); }
+input[type="checkbox"], input[type="radio"] { position: relative; }
+input[type="checkbox"]::before, input[type="radio"]::before { content: ""; position: absolute; inset: calc(-1 * var(--space-1)); }
 input[type="checkbox"], input[type="radio"] { appearance: none; width: 18px; min-height: 18px; height: 18px; padding: 0; flex: none; border: 1.5px solid var(--border-strong); background: var(--surface); display: inline-grid; place-content: center; cursor: pointer; }
 input[type="checkbox"] { border-radius: var(--radius-sm); }
 input[type="radio"] { border-radius: var(--radius-full); }
@@ -209,7 +219,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .preview figcaption { font-size: var(--text-xs); color: var(--text-muted); }
 
 /* Plugin panels, record pages, text review and working copies */
-.link-button { border: 0; background: none; padding: 0; color: var(--accent-text); font: inherit; font-weight: var(--weight-semibold); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.link-button { display: inline-flex; align-items: center; min-height: var(--target-min); border: 0; background: none; padding: 0; color: var(--accent-text); font: inherit; font-weight: var(--weight-semibold); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
 .document { display: grid; gap: var(--space-3); min-width: 0; }
 .document > * { margin: 0; }

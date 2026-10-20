@@ -4,6 +4,8 @@
 //   inherit, initial, unset or a percentage. Inside calc(), min(), max() and clamp() the same holds, and a bare multiplier is fine.
 // cockpit/no-opacity-when-disabled: a rule that styles a disabled state never uses opacity; a disabled control gets the
 //   sunken fill, the subtle text color and a border instead.
+// cockpit/weight-tokens: a font weight is one of the weight tokens (var(--weight-regular), -medium or -semibold, with no
+//   fallback number), or inherit, initial, unset or revert. No number, no bold or normal, in font-weight or in the font shorthand.
 import stylelint from "stylelint";
 import valueParser from "postcss-value-parser";
 
@@ -48,6 +50,39 @@ const opacityMessages = utils.ruleMessages(noOpacity, {
   rejected: "A disabled state is shown by the sunken fill, subtle text and a border, never by opacity",
 });
 
+const weightTokens = "cockpit/weight-tokens";
+const weightMessages = utils.ruleMessages(weightTokens, {
+  rejected: (value) => `Use a weight token (var(--weight-regular), var(--weight-medium) or var(--weight-semibold)), not "${value}"`,
+});
+const WEIGHT_TOKEN = /^--weight-(regular|medium|semibold)$/;
+const WEIGHT_KEYWORDS = new Set(["inherit", "initial", "unset", "revert"]);
+
+/** The first weight in a value that is not a token, or null. In the font shorthand only a number or a bold word counts. */
+function weightOffender(nodes, shorthand) {
+  for (const node of nodes) {
+    if (node.type === "function" && node.value.toLowerCase() === "var") {
+      const names = node.nodes.filter((n) => n.type === "word");
+      const hasFallback = node.nodes.some((n) => n.type === "div");
+      const name = names[0]?.value ?? "";
+      if (WEIGHT_TOKEN.test(name) && !hasFallback) continue;
+      if (shorthand && !/weight|bold/i.test(name)) continue;
+      return `var(${name}${hasFallback ? ", …" : ""})`;
+    }
+    if (node.type !== "word") {
+      if (node.type === "function" && !shorthand) return `${node.value}(…)`;
+      continue;
+    }
+    const text = node.value.toLowerCase();
+    if (WEIGHT_KEYWORDS.has(text)) continue;
+    if (shorthand) {
+      if (/^(bold|bolder|lighter|[1-9]00)$/.test(text)) return node.value;
+      continue;
+    }
+    return node.value;
+  }
+  return null;
+}
+
 const DISABLED = /:disabled|\[disabled|\[aria-disabled|\[data-disabled/;
 
 export default [
@@ -57,6 +92,13 @@ export default [
       if (!TOKEN_PROPERTIES.test(decl.prop)) return;
       const bad = offender(valueParser(decl.value).nodes, false);
       if (bad) utils.report({ ruleName: tokenValues, result, node: decl, message: tokenMessages.rejected(decl.prop, bad) });
+    });
+  }),
+  createPlugin(weightTokens, (enabled) => (root, result) => {
+    if (!utils.validateOptions(result, weightTokens, { actual: enabled })) return;
+    root.walkDecls(/^(font-weight|font)$/i, (decl) => {
+      const bad = weightOffender(valueParser(decl.value).nodes, decl.prop.toLowerCase() === "font");
+      if (bad) utils.report({ ruleName: weightTokens, result, node: decl, message: weightMessages.rejected(bad) });
     });
   }),
   createPlugin(noOpacity, (enabled) => (root, result) => {

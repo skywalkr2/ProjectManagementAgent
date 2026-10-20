@@ -1,4 +1,5 @@
-// Organizations (design 5.1): the companies and bodies people work for, one row each with how many people work there. Adding
+// Organizations (design 5.1, 7.13): the companies and bodies people work for, a table with one row each, how many people work there
+// and the other names it goes by. Adding
 // and renaming happen in a drawer; removing acts at once with Undo, and an organization people still work for can't be removed.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -8,12 +9,13 @@ import { useFirstField } from "../lib/focus";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
+import { RecordsTable, type TableColumn } from "../ui/RecordsTable";
 import { Skeleton } from "../ui/Skeleton";
 import { Field } from "./PersonForm";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 export function Organizations() {
-  const { t, tn } = useWords();
+  const { t } = useWords();
   const act = useAct();
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
   const [adding, setAdding] = useState(false);
@@ -33,6 +35,10 @@ export function Organizations() {
         ),
     },
   ];
+  const columns: TableColumn<S["OrganizationView"]>[] = [
+    { id: "people", header: t("orgs.col.people"), rank: 1, numeric: true, cell: (o) => (o.people > 0 ? o.people : "") },
+    { id: "aliases", header: t("orgs.col.aliases"), rank: 2, cell: (o) => o.aliases.join(", ") },
+  ];
   return (
     <section className="panel-section" aria-labelledby="organizations-title">
       <div className="heading">
@@ -46,26 +52,15 @@ export function Organizations() {
       ) : rows.length === 0 ? (
         <p className="empty">{t("setup.no_organizations")}</p>
       ) : (
-        <ul className="queue">
-          {rows.map((o) => {
-            const sub = [o.people > 0 ? tn("setup.org_people", o.people) : "", o.aliases.length ? t("setup.also_called", { names: o.aliases.join(", ") }) : ""]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <li className="line" key={o.id}>
-                <div className="row">
-                  <div className="text">
-                    <strong>{o.name}</strong>
-                    <span className="sub">{sub}</span>
-                  </div>
-                  <div className="acts">
-                    <RowMenu label={o.name} actions={menu(o)} />
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <RecordsTable
+          label={t("setup.organizations")}
+          name={{ header: t("orgs.col.name"), cell: (o) => o.name }}
+          columns={columns}
+          groups={[{ id: "all", title: t("setup.organizations"), rows }]}
+          rowKey={(o) => o.id}
+          actionsHeader={t("people.col.actions")}
+          actions={(o) => <RowMenu label={o.name} actions={menu(o)} />}
+        />
       )}
       {adding && <OrganizationDrawer onClose={() => setAdding(false)} />}
       {renaming && <OrganizationDrawer org={renaming} onClose={() => setRenaming(null)} />}

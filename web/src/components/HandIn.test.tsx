@@ -86,8 +86,8 @@ test("nothing can be handed in with an empty box", async () => {
 test("the choice can be made from the keyboard", async () => {
   const { user, calls } = await setup();
   await user.type(screen.getByLabelText("Paste or type it here"), "my own words");
-  await user.tab(); // the choice
-  await user.keyboard("{ArrowDown}");
+  await user.tab(); // the choice (a segmented control: arrows move along it, Space chooses)
+  await user.keyboard("{ArrowRight} ");
   expect(screen.getByRole("radio", { name: "Mine" })).toBeChecked();
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "my own words", pasted: "" }));

@@ -1,8 +1,10 @@
-/* A list with its detail pane beside it from 1024px (design 7.13); below that the detail is a drawer. */
-.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gutter); min-width: 0; align-items: start; }
+/* A list with its detail pane beside it from 1024px (design 7.13); below that the detail is a drawer. When the list would be
+   too narrow beside the pane, the pane overlays the list's right edge instead. */
+.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gutter); min-width: 0; align-items: start; position: relative; }
 .open { grid-template-columns: minmax(0, 1fr) var(--detail-w); }
 .main { min-width: 0; display: grid; gap: var(--space-3); }
 .pane { min-width: 0; position: sticky; top: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.overlay .pane { position: absolute; top: 0; right: 0; z-index: 5; width: var(--detail-w); max-width: 100%; box-shadow: var(--elev-3); }
 .head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-12); padding: 0 var(--space-2) 0 var(--space-4); border-bottom: 1px solid var(--border); }
 .title { margin: 0; flex: 1; min-width: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .body { padding: var(--space-4); min-width: 0; display: grid; gap: var(--space-3); }

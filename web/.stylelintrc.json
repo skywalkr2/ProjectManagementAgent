@@ -8,7 +8,8 @@
       "text-transform": ["uppercase"]
     },
     "cockpit/token-values": true,
-    "cockpit/no-opacity-when-disabled": true
+    "cockpit/no-opacity-when-disabled": true,
+    "cockpit/weight-tokens": true
   },
   "overrides": [
     {
@@ -17,7 +18,8 @@
         "color-no-hex": null,
         "color-named": null,
         "function-disallowed-list": null,
-        "cockpit/token-values": null
+        "cockpit/token-values": null,
+        "cockpit/weight-tokens": null
       }
     }
   ]

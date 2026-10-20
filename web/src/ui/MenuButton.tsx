@@ -27,6 +27,8 @@ export interface MenuGroup {
   entries: MenuEntry[];
   /** The one chosen entry's id, for a group that picks a value (theme, density); it shows a check. */
   selected?: string;
+  /** The ids of the entries that are switched on, for a group of independent choices (the columns of a table); each shows a check. */
+  checked?: string[];
 }
 
 export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; placement?: "bottom end" | "bottom start" | "top end" | "top start" }) {
@@ -44,8 +46,8 @@ export function MenuButton(props: { trigger: ReactNode; groups: MenuGroup[]; pla
               <MenuSection
                 className={styles.group}
                 aria-label={group.title ?? group.id}
-                selectionMode={group.selected !== undefined ? "single" : "none"}
-                selectedKeys={group.selected !== undefined ? [group.selected] : undefined}
+                selectionMode={group.checked !== undefined ? "multiple" : group.selected !== undefined ? "single" : "none"}
+                selectedKeys={group.checked !== undefined ? group.checked : group.selected !== undefined ? [group.selected] : undefined}
               >
                 {group.title && <Header className={styles.header}>{group.title}</Header>}
                 {group.entries.map((entry) => (

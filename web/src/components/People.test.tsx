@@ -83,7 +83,7 @@ test("a row opens its detail with what is known, never zero, and a link to the p
   api([person("P-1", "Ana Person", { role: "Editor", org: firstOrg.id, org_name: firstOrg.name, aliases: ["Anita"], open_items: 1, how_to_reach: { phone: "555-0100" } })]);
   renderApp(<People />);
   const tr = await row("Ana Person");
-  await user.click(within(tr).getByRole("button", { name: "Details: Ana Person" }));
+  await user.click(within(tr).getByText("Editor"));
   const detail = await screen.findByRole("dialog", { name: "Ana Person" });
   expect(within(detail).getByText("Editor")).toBeInTheDocument();
   expect(within(detail).getByText("Anita")).toBeInTheDocument();
@@ -201,11 +201,12 @@ test("the organizations section has one row each with how many people work there
   api([]);
   renderApp(<People />);
   const section = await screen.findByRole("region", { name: "Organizations" });
-  const rows = await within(section).findAllByRole("listitem");
+  const rows = (await within(section).findAllByRole("row")).slice(1);
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("Org one");
-  expect(rows[0]).toHaveTextContent("2 people");
-  expect(rows[1]).not.toHaveTextContent(/people/);
+  expect(rows[0]).toHaveTextContent("2");
+  expect(rows[1]).toHaveTextContent("Org two");
+  expect(rows[1]).not.toHaveTextContent(/\d/);
   expect(section).not.toHaveTextContent("ORG-1");
 });
 
@@ -228,7 +229,7 @@ test("an organization is renamed in a drawer, and undo renames it back", async (
   const user = userEvent.setup();
   const calls = api([], { "POST organizations/ORG-2": () => ({ ok: "ORG-2" }) });
   renderApp(<People />);
-  const item = (await screen.findByText("Org two")).closest("li")!;
+  const item = (await screen.findByText("Org two")).closest("tr")!;
   await user.click(within(item).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Rename" }));
   const dialog = await screen.findByRole("dialog", { name: "Rename organization" });
@@ -248,7 +249,7 @@ test("an organization people still work for can't be removed, and the menu says 
   const user = userEvent.setup();
   const calls = api([]);
   renderApp(<People />);
-  const item = (await screen.findByText("Org one")).closest("li")!;
+  const item = (await screen.findByText("Org one")).closest("tr")!;
   await user.click(within(item).getByRole("button", { name: /More actions for/ }));
   const remove = await screen.findByRole("menuitem", { name: "Remove" });
   expect(remove).toHaveAttribute("aria-disabled", "true");
@@ -265,7 +266,7 @@ test("removing an organization acts at once, undo restores it, and a refusal's o
     "POST organizations/ORG-2/restore": () => ({ ok: "ORG-2" }),
   });
   renderApp(<People />);
-  const item = (await screen.findByText("Org two")).closest("li")!;
+  const item = (await screen.findByText("Org two")).closest("tr")!;
   await user.click(within(item).getByRole("button", { name: /More actions for/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST organizations/ORG-2/remove")).toBe(true));

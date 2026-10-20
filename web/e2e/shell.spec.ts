@@ -382,24 +382,24 @@ test.describe("screen use and the shell", () => {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page);
       const header = page.getByRole("banner");
-      // From 1280px everything sits on one row of 56px. Below that the status chip and the assistant's line take a second
-      // small row under the rest, so the first row keeps its room and nothing squeezes.
-      const wide = width >= 1280;
-      expect((await header.boundingBox())!.height).toBe(wide ? 56 : 88);
+      // Everything sits on one row of 56px at every width. The assistant's line is beside the status chip from 1440px; below
+      // that its state is in the chip's popover.
+      const beside = width >= 1440;
+      expect((await header.boundingBox())!.height).toBe(56);
       const statusRow = header.getByRole("button", { name: /^App status: / });
       const assistant = header.getByRole("button", { name: /^Assistant/ });
+      await expect(assistant).toHaveCount(beside ? 1 : 0);
       const rowOf = async (selector: Locator) => {
         const box = (await selector.boundingBox())!;
         return Math.round(box.y + box.height / 2);
       };
-      expect(Math.abs((await rowOf(statusRow)) - (await rowOf(assistant)))).toBeLessThan(6);
-      const tops = await header.locator("a, button").evaluateAll((els, includeStatus) =>
+      if (beside) expect(Math.abs((await rowOf(statusRow)) - (await rowOf(assistant)))).toBeLessThan(6);
+      const tops = await header.locator("a, button").evaluateAll((els) =>
         els
-          .filter((e) => (e as HTMLElement).getClientRects().length > 0 && (includeStatus || !/^(App status: |Assistant)/.test(e.getAttribute("aria-label") ?? e.textContent ?? "")))
+          .filter((e) => (e as HTMLElement).getClientRects().length > 0)
           .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)),
-      wide);
+      );
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(12);
-      if (!wide) expect(await rowOf(statusRow)).toBeGreaterThan(56);
       const menu = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
       expect(menu.x + menu.width).toBeLessThanOrEqual(width);
       // The plugin panels are in the sidebar, under Work and Records, and scroll there if they don't fit.
@@ -416,71 +416,71 @@ test.describe("screen use and the shell", () => {
       await spacing("0.25em");
       expect(await narrowest()).toBeGreaterThanOrEqual(24);
       // The assistant's line gives up its words first and keeps its icon, which says how it is.
-      const [line, icon] = await assistant.evaluate((e) => [e.getBoundingClientRect(), e.querySelector("svg")!.getBoundingClientRect()].map((r) => [r.left, r.right]));
-      expect(icon[1] - icon[0]).toBeGreaterThanOrEqual(16);
-      expect(icon[0]).toBeGreaterThanOrEqual(line[0]);
-      expect(icon[1]).toBeLessThanOrEqual(line[1]);
+      if (beside) {
+        const [line, icon] = await assistant.evaluate((e) => [e.getBoundingClientRect(), e.querySelector("svg")!.getBoundingClientRect()].map((r) => [r.left, r.right]));
+        expect(icon[1] - icon[0]).toBeGreaterThanOrEqual(16);
+        expect(icon[0]).toBeGreaterThanOrEqual(line[0]);
+        expect(icon[1]).toBeLessThanOrEqual(line[1]);
+      }
       await spacing("");
     }
   });
 
-  // Between 1024 and 1279px the header has two rows (design 7.1): the title, Ask and the buttons on top, the status chip and the
-  // assistant's alive line small below, so the first row keeps its room; at about 1,000px Ask is an icon. Nothing is
-  // clipped by the window, and the alive line says its words in full and opens what is behind it.
-  for (const width of [800, 1000, 1100, 1200]) {
-    test(`at ${width}px the header is two rows, with every control inside the window and the alive line readable`, async ({ page }) => {
+  // Below 1440px the header is one row (design 7.1): the title, Ask, the status chip and the buttons, with the assistant's state in
+  // the chip's popover and "Your pages" in the person's menu; at about 1,000px Ask is an icon. Nothing is clipped by the
+  // window, the workspace's name keeps its room before Ask gives any up, and Missed one has its words.
+  for (const width of [800, 1000, 1100, 1200, 1300]) {
+    test(`at ${width}px the header is one row, with every control inside the window and the assistant's state in the status chip`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await signIn(page);
       const header = page.getByRole("banner");
       const box = (await header.boundingBox())!;
-      expect(box.height).toBe(88);
-      const first = [
+      expect(box.height).toBe(56);
+      const controls = [
         header.getByRole("link", { name: /^Go to Today/ }),
         header.getByRole("button", { name: "Ask" }).first(),
+        header.getByRole("button", { name: /^App status: / }),
         header.getByRole("button", { name: "Missed one" }),
         header.getByRole("button", { name: "Hand something in" }),
         header.getByRole("button", { name: "Help" }),
         header.getByRole("button", { name: /^Change appearance, / }),
       ];
-      for (const control of first) {
+      for (const control of controls) {
         await expect(control).toBeVisible();
         const b = (await control.boundingBox())!;
-        // On the first row, and inside the window on both sides.
+        // On the one row, and inside the window on both sides.
         expect(b.y + b.height).toBeLessThanOrEqual(box.y + 56 + 1);
         expect(b.x).toBeGreaterThanOrEqual(0);
         expect(b.x + b.width).toBeLessThanOrEqual(width);
       }
-      const chip = (await header.getByRole("button", { name: /^App status: / }).boundingBox())!;
-      const alive = header.getByRole("button", { name: /^Assistant/ });
-      const line = (await alive.boundingBox())!;
-      for (const b of [chip, line]) {
-        expect(b.y).toBeGreaterThanOrEqual(box.y + 56 - 1);
-        expect(b.y + b.height).toBeLessThanOrEqual(box.y + 88 + 1);
-        expect(b.x + b.width).toBeLessThanOrEqual(width);
+      // No assistant line, no "Your pages" and no bare icon for Missed one.
+      await expect(header.getByRole("button", { name: /^Assistant/ })).toHaveCount(0);
+      await expect(header.getByRole("button", { name: "Your pages" })).toHaveCount(0);
+      await expect(header.getByRole("button", { name: "Missed one" })).toHaveText("Missed one");
+      // Where Ask is a field the workspace's name is whole: it gives way only after Ask has.
+      if (width >= 1024) {
+        const clipped = await header.getByRole("link", { name: /^Go to Today/ }).evaluate((el) => Array.from(el.querySelectorAll("span")).filter((s) => s.scrollWidth > s.clientWidth + 1).length);
+        expect(clipped).toBe(0);
       }
-      // Its words fit: none is cut off with an ellipsis.
-      const clipped = await alive.evaluate((el) => Array.from(el.querySelectorAll("span")).filter((s) => s.scrollWidth > s.clientWidth + 1).length);
-      expect(clipped).toBe(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-      expect((await page.getByRole("main").boundingBox())!.y).toBeGreaterThanOrEqual(box.y + 88 - 1);
-      // With fonts wider than ours (letter spacing stands in for them) the first row still never wraps: the title gives way,
-      // so the status row stays inside the header and covers nothing under it.
-      await header.evaluate((h) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = "0.15em"; }));
-      for (const control of first) expect(((await control.boundingBox())!).y).toBeLessThan(box.y + 56);
-      for (const b of [await header.getByRole("button", { name: /^App status: / }).boundingBox(), await alive.boundingBox()])
-        expect(b!.y + b!.height).toBeLessThanOrEqual(box.y + 88 + 1);
-      expect(((await header.getByRole("link", { name: /^Go to Today/ }).boundingBox())!).width).toBeGreaterThanOrEqual(24);
-      await header.evaluate((h) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = ""; }));
-      // What is behind the line: today's runs, what waits and the order the accounts are tried in.
-      await alive.click();
-      const popover = page.getByRole("dialog", { name: "Assistant" });
+      expect((await page.getByRole("main").boundingBox())!.y).toBeGreaterThanOrEqual(box.y + 56 - 1);
+      // With fonts wider than ours (letter spacing stands in for them) the row still never wraps and the title gives way.
+      if (width >= 1024) {
+        await header.evaluate((h) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = "0.15em"; }));
+        for (const control of controls) expect(((await control.boundingBox())!).y).toBeLessThan(box.y + 56);
+        expect(((await header.getByRole("link", { name: /^Go to Today/ }).boundingBox())!).width).toBeGreaterThanOrEqual(24);
+        await header.evaluate((h) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = ""; }));
+      }
+      // What is behind the chip: the assistant's state, with today's runs, what waits and the order the accounts are tried in.
+      const chip = header.getByRole("button", { name: /^App status: / });
+      await chip.click();
+      const popover = page.getByRole("dialog", { name: "Status" });
       await expect(popover).toBeVisible();
-      await expect(popover.getByText("AI tasks today")).toBeVisible();
-      await expect(popover.getByText("Waiting for the assistant")).toBeVisible();
+      await expect(popover.locator('[data-state="alive"]')).toBeVisible();
       await expectNoViolations(page);
       await page.keyboard.press("Escape");
       await expect(popover).toHaveCount(0);
-      await expect(alive).toBeFocused();
+      await expect(chip).toBeFocused();
     });
   }
 

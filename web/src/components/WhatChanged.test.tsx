@@ -110,10 +110,12 @@ test("send back needs a note", async () => {
   renderApp(<WhatChanged />);
   await user.click(await screen.findByRole("button", { name: /More actions for Email from the printer/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Send back with a note" }));
-  const go = screen.getByRole("button", { name: "Send back" });
-  expect(go).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Send back" })).toBeDisabled();
+  expect(screen.getByText("Write what to do differently first.")).toBeInTheDocument();
   await user.type(screen.getByRole("textbox"), "That date is the courier's, not the printer's");
-  await user.click(go);
+  // The reason goes with the button's being off.
+  expect(screen.queryByText("Write what to do differently first.")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Send back" }));
   await waitFor(() => expect(calls.find((c) => c.route.endsWith("send-back"))?.body).toEqual({ note: "That date is the courier's, not the printer's" }));
 });
 
@@ -405,12 +407,15 @@ test("a request waiting for the person to be named offers Say who you are, which
 test("a change asked for before this screen opened is opened once its list has loaded", async () => {
   const done = change("REQ-2", { state: "done" });
   done.changeset!.summary = "Added the action about the proofs.";
-  fakeApi({ "GET changes": () => [change("REQ-1", { state: "done" }), done] });
+  const third = change("REQ-3", { state: "done" });
+  third.changeset!.summary = "Another summary, not asked for.";
+  fakeApi({ "GET changes": () => [change("REQ-1", { state: "done" }), done, third] });
   // The person chose "Where it came from" on another screen, which then opened this one.
   expect(revealOrKeep("changeset", "CS-REQ-2")).toBe(false);
   renderApp(<WhatChanged />);
   expect(await screen.findByText("Added the action about the proofs.")).toBeInTheDocument();
-  expect(screen.queryByText("One fact.")).toBeNull();
+  // Only the first item and the one asked for are open.
+  expect(screen.queryByText("Another summary, not asked for.")).toBeNull();
 });
 
 test("each item in a review card has its own Change this, which sends back that item and no other", async () => {
@@ -469,9 +474,9 @@ test("a Today line for a new source's intake narrows the list to what that intak
   const user = userEvent.setup();
   fakeApi({
     "GET changes": () => [
-      change("REQ-1", { intake: "m" }),
-      change("REQ-2", { intake: "other", changeset: { ...change("REQ-2").changeset!, ops: [{ ...change("REQ-2").changeset!.ops[0], title: "Another source's thing" }] } }),
-      change("REQ-3", { changeset: { ...change("REQ-3").changeset!, ops: [{ ...change("REQ-3").changeset!.ops[0], title: "A pasted note's thing" }] } }),
+      change("REQ-1", { intake: "m", source_title: "What the inbox found" }),
+      change("REQ-2", { intake: "other", source_title: "Another source's thing" }),
+      change("REQ-3", { source_title: "A pasted note's thing" }),
     ],
     "GET watch": () => [{ id: "m", label: "Inbox", connector: "kind-a", connector_label: "A kind", enabled: true, every_minutes: 15, items: 0, last: null, read_at: null, failures: 0, problem: null }],
   });
@@ -479,7 +484,7 @@ test("a Today line for a new source's intake narrows the list to what that intak
   expect(await screen.findByText("Another source's thing")).toBeInTheDocument();
   revealOrKeep("intake", "m");
   await waitFor(() => expect(screen.queryByText("Another source's thing")).toBeNull());
-  expect(screen.getByText("Proof copies ship Nov 5")).toBeInTheDocument();
+  expect(screen.getByText("What the inbox found")).toBeInTheDocument();
   expect(screen.queryByText("A pasted note's thing")).toBeNull();
   expect(await screen.findByText("Found in Inbox")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Show everything" }));
@@ -509,7 +514,8 @@ test("rows that arrive while the list shows nothing appear at once, never as N n
   expect(await screen.findByText(/Nothing needs/i)).toBeInTheDocument();
   rows = [change("REQ-1"), change("REQ-2"), change("REQ-3")];
   await client.invalidateQueries();
-  expect(await screen.findAllByText("Proof copies ship Nov 5")).toHaveLength(3);
+  // Three rows at once (the first open, the others one line each), never "3 new" over nothing.
+  expect(await screen.findAllByText("Email from the printer")).toHaveLength(3);
   expect(screen.queryByRole("button", { name: /Show \d+ new items?/ })).toBeNull();
 });
 

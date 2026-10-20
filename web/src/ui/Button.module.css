@@ -11,8 +11,8 @@
 .btn:hover { background: var(--surface-sunk); }
 .btn:active { transform: translateY(1px); }
 .sm { height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); }
-.icon-only { width: var(--btn-h); padding: 0; }
-.icon-only.sm { width: var(--btn-h-sm); }
+.icon-only { width: var(--btn-h); min-width: var(--target-icon); min-height: var(--target-icon); padding: 0; flex: none; }
+.icon-only.sm { width: var(--btn-h-sm); min-width: var(--target-icon); }
 
 .primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
 .primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }

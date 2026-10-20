@@ -1,10 +1,13 @@
 /* A records table (design 7.13, 7.14): columns that fit the window, never a sideways scroll. Less important columns drop out
    as the window narrows (rank 2 under 1280px, rank 3 under 1024px), and on a phone each row stacks as a list row with its
-   cells under the name. */
+   cells under the name. No word is broken: headers stay on one line, a cell wraps only at its spaces, and what is still too
+   long ends in an ellipsis. */
 .wrap { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.table th, .table td { text-align: left; vertical-align: middle; padding: var(--space-2) var(--space-3); overflow-wrap: anywhere; font-size: var(--text-sm); line-height: var(--lh-sm); }
-.table thead th { background: var(--surface-sunk); color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--border); }
+.tools { display: flex; justify-content: flex-end; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--border); background: var(--surface-sunk); }
+.table th, .table td { text-align: left; vertical-align: middle; padding: var(--space-2) var(--space-3); overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; word-break: normal; hyphens: none; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.table td:not(.name) { white-space: nowrap; }
+.table thead th { white-space: nowrap; background: var(--surface-sunk); color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--border); }
 .row { border-bottom: 1px solid var(--border); background: var(--surface); }
 .row:last-child { border-bottom: 0; }
 .row:hover { background: var(--surface-hover); }
@@ -17,7 +20,7 @@ th:first-child, .name { width: 30%; }
 .name { font-weight: var(--weight-semibold); font-size: var(--text-md); line-height: var(--lh-md); }
 .name a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
 .name a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.acts { width: 1%; white-space: nowrap; }
+.table .acts { width: calc(var(--space-12) + var(--space-2)); white-space: nowrap; overflow: visible; }
 .actsInner { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
 .num { font-variant-numeric: tabular-nums; }
 
@@ -35,3 +38,4 @@ th:first-child, .name { width: 30%; }
 :global([data-narrow]) .acts, :global([data-narrow]) .name { width: auto; }
 :global([data-narrow]) .actsInner { justify-content: flex-start; }
 :global([data-narrow]) .row td:empty { display: none; }
+:global([data-narrow]) .table td:not(.name) { white-space: normal; }

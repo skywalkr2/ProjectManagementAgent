@@ -88,7 +88,7 @@
 }
 .foldToggle::before { content: "▸"; color: var(--text-subtle); }
 .foldToggle[aria-expanded="true"]::before { content: "▾"; }
-.foldSummary { color: var(--text-muted); font-weight: var(--weight-regular, 400); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.foldSummary { color: var(--text-muted); font-weight: var(--weight-regular); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .foldAction { display: flex; justify-content: flex-end; padding: 0 var(--row-px) var(--space-2); }
 .weekBody { display: grid; gap: var(--space-3); padding: var(--space-2) var(--row-px) var(--space-3); min-width: 0; }
 .weekBody p { margin: 0; }

@@ -1,7 +1,8 @@
 // Projects (design 7.13, 7.14): the portfolio as a table, grouped by the configured grouping, with what the assistant filed
 // under no project gathered above it and the finished ones under Completed at the end (kept, with their group, never
-// removed). A row opens its detail pane beside the table (a drawer on a narrower window); the name opens the project's page.
-// Adding and editing happen in a drawer.
+// removed). A row, Enter on it or its name opens the detail pane beside the table (over it when the priority columns would
+// not fit, a drawer on a narrower window); the name's link is the project's page for a new tab. Adding and editing happen in a
+// drawer.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
@@ -55,6 +56,9 @@ export function groupProjects(projects: Project[], labels: { none: string; open:
   return groups;
 }
 
+/** The width the priority columns (name, status, target, owner, open to-dos and the menu) need beside the pane. */
+const PROJECTS_FIT = 640;
+
 export function Projects() {
   const { t, tn } = useWords();
   const act = useAct();
@@ -84,13 +88,13 @@ export function Projects() {
   // Projects at a glance: the stage, the target day and when it was last updated come first. A health column is for a pack
   // that provides one; the core has none.
   const columns: TableColumn<Project>[] = [
-    { id: "status", header: t("setup.status"), rank: 1, cell: (p) => (p.status ? <Pill tone={p.status_tone ?? "neutral"}>{p.status}</Pill> : "") },
+    { id: "status", header: t("setup.status"), rank: 1, core: true, cell: (p) => (p.status ? <Pill tone={p.status_tone ?? "neutral"}>{p.status}</Pill> : "") },
     { id: "stage", header: t("projects.col.stage"), rank: 1, cell: (p) => p.phase ?? "" },
-    { id: "target", header: t("projects.col.target"), rank: 1, cell: (p) => (p.target ? day(p.target) : "") },
+    { id: "target", header: t("projects.col.target"), rank: 1, core: true, cell: (p) => (p.target ? day(p.target) : "") },
     { id: "updated", header: t("projects.col.updated"), rank: 2, cell: (p) => ago(p.last_change) },
     { id: "group", header: t("projects.col.group"), rank: 2, cell: (p) => p.group ?? "" },
-    { id: "owner", header: t("setup.owner"), rank: 2, cell: (p) => p.owner_name ?? "" },
-    { id: "actions", header: t("projects.col.actions"), rank: 1, numeric: true, cell: (p) => (p.open_actions > 0 ? p.open_actions : "") },
+    { id: "owner", header: t("setup.owner"), rank: 2, core: true, cell: (p) => p.owner_name ?? "" },
+    { id: "actions", header: t("projects.col.actions"), rank: 1, core: true, numeric: true, cell: (p) => (p.open_actions > 0 ? p.open_actions : "") },
     { id: "questions", header: t("projects.col.questions"), rank: 3, numeric: true, cell: (p) => (p.open_questions > 0 ? p.open_questions : "") },
   ];
   // How deep a project sits inside the ones listed with it, for the indent.
@@ -111,6 +115,7 @@ export function Projects() {
       <ListDetail
         title={selected?.name ?? ""}
         onClose={() => setChosen(null)}
+        fit={PROJECTS_FIT}
         detail={selected ? <ProjectDetail project={selected} parent={selected.parent ? byId.get(selected.parent) : undefined} total={total} onEdit={() => setEditing(selected)} /> : null}
       >
         {projects.isPending ? (
@@ -123,9 +128,11 @@ export function Projects() {
               label={t("setup.projects")}
               name={{
                 header: t("projects.col.name"),
-                cell: (p) => (
+                cell: (p, open) => (
                   <span className={styles.inside} data-depth={depth(p)} style={{ "--depth": depth(p) } as React.CSSProperties}>
-                    <a href={viewHref(recordView("project", p.id))}>{p.name}</a>
+                    <a href={viewHref(recordView("project", p.id))} onClick={open}>
+                      {p.name}
+                    </a>
                     {p.completed && p.group && <div className="hint">{t("projects.was_in", { group: p.group })}</div>}
                     {p.parent && byId.get(p.parent) && <div className="hint">{t("setup.inside_of", { name: byId.get(p.parent)!.name })}</div>}
                   </span>
@@ -137,14 +144,7 @@ export function Projects() {
               selected={chosen}
               onSelect={(p) => setChosen(p.id)}
               actionsHeader={t("people.col.actions")}
-              actions={(p) => (
-                <>
-                  <Button size="sm" variant="primary" data-key="primary" aria-label={t("panel.action_for", { action: t("records.details"), what: p.name })} onClick={() => setChosen(p.id)}>
-                    {t("records.details")}
-                  </Button>
-                  <RowMenu label={p.name} actions={menu(p)} />
-                </>
-              )}
+              actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
             />
             <p className="hint">{tn("projects.count", all.length)}</p>
           </>

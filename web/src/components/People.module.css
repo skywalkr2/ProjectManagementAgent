@@ -1,0 +1,5 @@
+/* The organization filter is as wide as its longest choice, not the whole row. */
+.orgFilter { width: fit-content; max-width: 100%; }
+.orgFilter select { width: auto; max-width: 100%; }
+/* An address too long for its column ends in an ellipsis; the whole address is its title. */
+.clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

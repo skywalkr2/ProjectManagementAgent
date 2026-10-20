@@ -4,12 +4,14 @@
 // picker); a correction is the person's own edit, with Undo, and a signal the assistant learns from. Never a score.
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
+import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
 import { OriginLink } from "./Origin";
+import styles from "./PromiseWhy.module.css";
 
 type View = S["PromiseView"];
 type Field = "owner" | "to" | "due" | "basis";
@@ -29,8 +31,9 @@ export function useCorrectPromise(action: string) {
 }
 
 /** The promise's why block. `quiet` leaves a plain to-do alone; `omitQuote` and `omitOrigin` are for a place that already
- * shows the words, or the link to where they came from. */
-export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?: boolean; omitOrigin?: boolean }) {
+ * shows the words, or the link to where they came from. `line` is for a list of many: one meta line ("Ana Person · due Fri,
+ * Oct 16 · promised to no one") whose parts are each a button that opens a small popover to change it. */
+export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?: boolean; omitOrigin?: boolean; line?: boolean }) {
   const { t } = useWords();
   const found = useQuery({ queryKey: ["promise", props.action], queryFn: () => api.promise(props.action) });
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -42,6 +45,16 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
   const done = async (body: Omit<S["PromiseCorrection"], "read_version">) => {
     if ((await correct(body, view.version)) !== undefined) setEditing(null);
   };
+  const names = people.data ?? [];
+  if (props.line) {
+    return (
+      <section className={styles.line} aria-label={t("promise.why")} data-promise-why={view.action}>
+        <PromiseMeta view={view} people={names} editing={editing} setEditing={setEditing} done={done} />
+        {!props.omitOrigin && <OriginLink origin={view.origin} />}
+        <PromiseNews news={view.news} />
+      </section>
+    );
+  }
   const row = (field: Field, label: string, value: ReactNode, editor: ReactNode) => (
     <div className="detail" data-promise={field}>
       <dt>{label}</dt>
@@ -59,7 +72,6 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
       </dd>
     </div>
   );
-  const names = people.data ?? [];
   return (
     <section className="promise-why" aria-label={t("promise.why")} data-promise-why={view.action}>
       <dl className="details-list">
@@ -133,6 +145,91 @@ export function PromiseWhy(props: { action: string; quiet?: boolean; omitQuote?:
       </dl>
       <PromiseNews news={view.news} />
     </section>
+  );
+}
+
+/** One part of the meta line: a button over a popover with its list or date picker. The popover's field has the cursor,
+ * Escape closes it, and the part that opened it gets the cursor back. */
+function MetaPart(props: { label: string; text: string; flag?: string | null; open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode }) {
+  const { t } = useWords();
+  return (
+    <span className={styles.part}>
+      <DialogTrigger isOpen={props.open} onOpenChange={props.onOpenChange}>
+        <AriaButton className={styles.button} aria-label={t("promise.part_named", { value: props.flag ? `${props.text} ${props.flag}` : props.text, what: props.label })}>
+          {props.text}
+          {props.flag && <strong className={styles.flag}> {props.flag}</strong>}
+        </AriaButton>
+        <Popover placement="bottom start" className={styles.popover}>
+          <Dialog aria-label={props.label} className={styles.dialog}>
+            {props.children}
+          </Dialog>
+        </Popover>
+      </DialogTrigger>
+    </span>
+  );
+}
+
+/** The meta line: owner, the day, who it was promised to and how it is known, each a button over a popover. */
+function PromiseMeta(props: {
+  view: View;
+  people: S["PersonView"][];
+  editing: Field | null;
+  setEditing: (field: Field | null) => void;
+  done: (body: Omit<S["PromiseCorrection"], "read_version">) => Promise<void>;
+}) {
+  const { t } = useWords();
+  const { view, editing, setEditing, done } = props;
+  const toggle = (field: Field) => (open: boolean) => setEditing(open ? field : editing === field ? null : editing);
+  const close = () => setEditing(null);
+  const owner = view.owners.length > 0 ? view.owners.map((o) => o.name).join(", ") : t("promise.line.no_owner");
+  const parts: ReactNode[] = [
+    <MetaPart key="owner" label={t("promise.owner")} text={owner} open={editing === "owner"} onOpenChange={toggle("owner")}>
+      <PickPerson label={t("promise.owner")} value={view.owners[0]?.id ?? ""} people={props.people} onPick={(person) => void done({ owner: person })} onCancel={close} />
+    </MetaPart>,
+    <MetaPart
+      key="due"
+      label={t("promise.due")}
+      text={view.due ? t("promise.line.due", { date: day(view.due) }) : t("promise.line.no_date")}
+      flag={view.due_check ? t("promise.check_date") : null}
+      open={editing === "due"}
+      onOpenChange={toggle("due")}
+    >
+      <NewDate label={t("promise.due")} value={view.due ?? ""} onSave={(due) => void done({ due })} onCancel={close} />
+    </MetaPart>,
+    <MetaPart
+      key="to"
+      label={t("promise.to")}
+      text={view.promised_to.length > 0 ? t("promise.line.to", { names: view.promised_to.map((p) => p.name).join(", ") }) : t("promise.line.to_none")}
+      open={editing === "to"}
+      onOpenChange={toggle("to")}
+    >
+      <PickPerson
+        label={t("promise.to")}
+        value={view.promised_to[0]?.id ?? ""}
+        people={props.people}
+        none={t("promise.no_one")}
+        onPick={(person) => void done({ promised_to: person ? [person] : [] })}
+        onCancel={close}
+      />
+    </MetaPart>,
+  ];
+  if (view.basis) {
+    parts.push(
+      <MetaPart
+        key="basis"
+        label={t("promise.basis")}
+        text={view.basis === "said" && view.said_by ? t("promise.line.said_by", { name: view.said_by }) : t(`promise.line.${view.basis}`)}
+        open={editing === "basis"}
+        onOpenChange={toggle("basis")}
+      >
+        <PickBasis value={view.basis} onPick={(basis) => void done({ basis })} onCancel={close} />
+      </MetaPart>,
+    );
+  }
+  return (
+    <p className={styles.meta} data-promise-line="">
+      {parts.flatMap((p, i) => (i === 0 ? [p] : [<span key={`dot-${i}`} aria-hidden="true">{" · "}</span>, p]))}
+    </p>
   );
 }
 

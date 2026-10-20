@@ -178,7 +178,7 @@ test("a row opens its detail with the facts, its notes and a link to its page; E
   );
   renderApp(<Projects />);
   const tr = await row("Book one");
-  await user.click(within(tr).getByRole("button", { name: "Details: Book one" }));
+  await user.click(within(tr).getByText("Ana Person"));
   const detail = await screen.findByRole("dialog", { name: "Book one" });
   expect(within(detail).getByText("Where it stands.")).toBeInTheDocument();
   expect(within(detail).getByText("The series")).toBeInTheDocument();

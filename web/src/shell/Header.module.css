@@ -1,7 +1,7 @@
-/* One row, 56px (48px on a phone), from 1280px up: the status chip and the assistant's alive line sit between Ask and the
-   buttons. Below 1280px they take a second small row of their own, so the first row keeps its room (the row heights add up
-   to --header-h). The Ask field becomes an icon below 1024px, and on a phone one row remains with the logo, the status
-   chip and the user menu (the assistant's state is in the chip's popover). */
+/* One row, 56px (48px on a phone), at every width. The status chip, and from 1440px the assistant's alive line, sit between
+   Ask and the buttons; below 1440px the assistant's state is in the chip's popover. The workspace's name keeps its room: the
+   Ask field gives up width first. The Ask field becomes an icon below 1024px, and on a phone one row remains with the logo,
+   the status chip and the user menu. */
 .header {
   grid-column: 1 / -1; position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; flex-wrap: nowrap; gap: var(--space-3);
@@ -20,7 +20,7 @@
 .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip { flex: none; }
 .ask {
-  display: flex; align-items: center; gap: var(--space-2); flex: 1 1 auto; min-width: 160px; max-width: 640px; height: var(--btn-h);
+  display: flex; align-items: center; gap: var(--space-2); flex: 1 1 auto; min-width: 96px; max-width: 640px; height: var(--btn-h);
   padding: 0 var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
   background: var(--surface); color: var(--text-subtle); cursor: pointer; text-align: left;
   font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm);
@@ -41,15 +41,9 @@
   .ask { display: none; }
   .askIcon { display: inline-flex; }
   .spacer { flex: 1 1 0; }
+  /* With no Ask field to give up width, the name does. */
+  .brand { flex: 0 1 auto; }
 }
 :global([data-narrow]) .header { gap: var(--space-2); padding: 0 var(--space-3); }
 :global([data-narrow]) .brand { font-size: var(--text-md); line-height: var(--lh-md); flex: 0 1 auto; }
 
-@media (max-width: 1279px) {
-  :global(:root:not([data-narrow])) .header { flex-wrap: wrap; align-content: flex-start; gap: 0 var(--space-3); }
-  /* The first row never wraps: the title's flex base is nothing, so the row's buttons always fit beside it; it then grows
-     to its own width when there is room and gives way (ending in an ellipsis, down to the mark) when there isn't. */
-  :global(:root:not([data-narrow])) .brand { min-height: var(--header-row-h); flex: 1 1 0; max-width: max-content; }
-  :global(:root:not([data-narrow])) .name { max-width: calc(240px - 28px - var(--space-2)); }
-  :global(:root:not([data-narrow])) .status { order: 9; flex: 1 0 100%; height: var(--header-status-h); padding-bottom: var(--space-1); }
-}

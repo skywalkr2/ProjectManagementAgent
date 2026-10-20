@@ -107,7 +107,7 @@ async function handIn(page: Page, c: Case) {
     await box.fill(c.pasted);
     if (c.note) await page.getByLabel(/Anything to do with it/).fill(c.note);
   } else {
-    await page.locator("label.radio", { hasText: "Mine" }).click();
+    await page.getByRole("radio", { name: "Mine" }).click();
     await box.fill(c.note ?? "");
   }
   await page.getByRole("button", { name: "Hand in", exact: true }).click();
@@ -499,7 +499,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(unfiled.locator("xpath=ancestor::section[1]").getByRole("button", { name: "File under…" }).first()).toBeVisible();
     // The one filed under its project is in that project's details.
     const project = page.getByRole("row", { name: new RegExp(first.name) });
-    await project.getByRole("button", { name: `Details: ${first.name}` }).click();
+    await project.locator("td").nth(1).click();
     await expect(page.getByText("Kept this note for later.").first()).toBeVisible();
     await checkAccessibility(page);
   });
@@ -967,7 +967,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(row).toContainText(name);
     await expect(row).not.toContainText(/ORG-/);
     const orgs = page.getByRole("region", { name: "Organizations" });
-    await expect(orgs.locator("li.line", { hasText: name })).toContainText("1 person");
+    // The organizations are a table: the person count is a number in the People column.
+    await expect(orgs.getByRole("row", { name: new RegExp(name) }).getByRole("cell", { name: "1", exact: true })).toBeVisible();
     await checkAccessibility(page);
   });
 

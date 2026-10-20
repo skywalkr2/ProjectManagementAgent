@@ -1,14 +1,16 @@
-// The header (design 7.1): one row, 56px, from 1280px up. Left to right: the brand (a link to Today), a Demo chip, Ask as a
-// search-style field, the status chip with the assistant's alive line beside it, Missed one, Hand something in, Help and the person's
-// initials, which open the user menu. Below 1280px the status chip and the alive line move to a second small row under
-// the rest; below 1024px the Ask field becomes an icon; on a phone one row remains, with the logo, the status chip and the
-// user menu, and the assistant's state is in the chip's popover.
+// The header (design 7.1): one row, 56px, at every width. Left to right: the brand (a link to Today), a Demo chip, Ask as a
+// search-style field, the status chip (with the assistant's alive line beside it from 1440px up), Missed one with its words,
+// Hand something in, Help and the person's initials, which open the user menu: the person's own pages, then theme and density.
+// Below 1440px the assistant's state is in the status chip's popover instead of beside it; below 1024px the Ask field becomes
+// an icon; on a phone one row remains, with the logo, the status chip and the user menu. The workspace's name keeps its room
+// before the Ask field gives any up.
 import { useQuery } from "@tanstack/react-query";
 import { Button as AriaButton } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import type { LiveState } from "../lib/live";
 import { setDensity, setTheme, useAppearance, type Density, type Theme } from "../lib/theme";
 import { viewHref } from "../lib/views";
+import { useMediaQuery } from "../lib/media";
 import { useWords } from "../lib/wording";
 import { MISSED_BUTTON, useMissedOne } from "../components/MissedOne";
 import { afterClose } from "../ui/afterClose";
@@ -18,7 +20,7 @@ import { IconButton } from "../ui/IconButton";
 import { MenuButton, type MenuGroup } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
 import { AssistantLine } from "./AssistantLine";
-import { HeaderLinks } from "./HeaderLinks";
+import { usePagesGroup } from "./HeaderLinks";
 import { StatusMenu } from "./StatusMenu";
 import { initials } from "./status";
 import styles from "./Header.module.css";
@@ -65,6 +67,13 @@ export function useHelpGroups(handlers: { onHelp: () => void; onOpenGuide: () =>
 }
 
 /** The person's name for the avatar: their own, when the workspace knows it, else the workspace's. */
+/** The person's menu: their own pages first when they have any, then this device's appearance. */
+export function useUserMenuGroups(): MenuGroup[] {
+  const pages = usePagesGroup();
+  const appearance = useAppearanceGroups();
+  return pages ? [pages, ...appearance] : appearance;
+}
+
 export function usePersonName(workspace: string): string {
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   return me.data?.full_name?.trim() || workspace;
@@ -84,10 +93,13 @@ export function Header(props: {
   const { t } = useWords();
   const { rc } = props;
   const person = usePersonName(rc.workspace_name);
-  const appearance = useAppearanceGroups();
+  const userMenu = useUserMenuGroups();
   const helpGroups = useHelpGroups({ onHelp: props.onHelp, onOpenGuide: () => props.onOpenGuide(), onFeedback: props.onFeedback }, rc.version);
   const askKey = props.shortcuts.ask ?? "/";
   const missed = useMissedOne();
+  // Below 1440px the assistant's state is in the status chip's popover, as on a phone.
+  const tight = useMediaQuery("(max-width: 1439px)");
+  const inChip = props.narrow || tight;
   return (
     <header className={styles.header}>
       <a className={styles.brand} href={viewHref("today")} aria-label={t("nav.brand_named", { name: rc.workspace_name })} title={rc.workspace_name}>
@@ -117,13 +129,14 @@ export function Header(props: {
       )}
       <span className={styles.spacer} />
       <div className={styles.status}>
-        <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} narrow={props.narrow} />
-        {!props.narrow && <AssistantLine onOpenGuide={props.onOpenGuide} />}
+        <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} narrow={inChip} />
+        {!inChip && <AssistantLine onOpenGuide={props.onOpenGuide} />}
       </div>
       {!props.narrow && (
         <div className={styles.end}>
-          <HeaderLinks />
-          <IconButton icon="alert" label={t("missed.open")} {...{ [MISSED_BUTTON]: "" }} onPress={missed} />
+          <Button variant="ghost" {...{ [MISSED_BUTTON]: "" }} onClick={missed}>
+            {t("missed.open")}
+          </Button>
           <Button variant="primary" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}
           </Button>
@@ -131,7 +144,7 @@ export function Header(props: {
         </div>
       )}
       <MenuButton
-        groups={appearance}
+        groups={userMenu}
         trigger={
           <AriaButton className={styles.avatar} aria-label={t("user.open", { name: person })}>
             {initials(person)}

@@ -5,13 +5,13 @@
 // it was opened from stays in view; closing it with words in the box asks first.
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Label, Radio, RadioGroup, Text } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { projectChoices } from "../lib/project-choices";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
+import { SegmentedControl } from "../ui/SegmentedControl";
 
 const OwnContext = createContext<{ ids: Set<string>; add: (id: string) => void }>({
   ids: new Set(),
@@ -141,26 +141,19 @@ export function HandIn(props: { onClose: () => void }) {
             </p>
           )}
         </div>
-        <RadioGroup
-          className="field choice"
-          value={whose}
-          onChange={(v) => setWhose(v as Whose)}
-          isRequired
-          orientation="vertical"
-        >
-          <Label>{t("handin.whose")}</Label>
-          <Radio value="others" className="radio">
-            <span className="radio-dot" aria-hidden="true" />
-            <span>{t("handin.whose.others")}</span>
-          </Radio>
-          <Radio value="mine" className="radio">
-            <span className="radio-dot" aria-hidden="true" />
-            <span>{t("handin.whose.mine")}</span>
-          </Radio>
-          <Text slot="description" className="hint">
-            {t(whose === "mine" ? "handin.whose_hint.mine" : "handin.whose_hint.others")}
-          </Text>
-        </RadioGroup>
+        <div className="field choice">
+          <span aria-hidden="true">{t("handin.whose")}</span>
+          <SegmentedControl
+            label={t("handin.whose")}
+            options={[
+              { value: "others", label: t("handin.whose.others") },
+              { value: "mine", label: t("handin.whose.mine") },
+            ]}
+            value={whose}
+            onChange={setWhose}
+          />
+          <p className="hint">{t(whose === "mine" ? "handin.whose_hint.mine" : "handin.whose_hint.others")}</p>
+        </div>
         {whose === "others" && (
           <div className="field">
             <label htmlFor="handin-todo">{t("handin.todo")}</label>

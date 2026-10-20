@@ -14,6 +14,7 @@ import { useEstimate, useSpent } from "../lib/money";
 import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { Button } from "../ui/Button";
 import { AskChooser } from "./AskChooser";
 import { ProjectProposalRow } from "./NextSteps";
 import { Because } from "./Because";
@@ -195,10 +196,12 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
           )}
           {firstLine && <FirstGoRow first={first} />}
           {filter === "attention" && <StageTodayRows today={stageToday} />}
-          {rows.map((item) => (
+          {rows.map((item, index) => (
             <ChangeRow
               key={item.id}
               item={item}
+              fold
+              open={index === 0}
               reveal={revealed?.id === item.id ? revealed.n : 0}
               onOpenGuide={props.onOpenGuide}
             />
@@ -240,8 +243,9 @@ export function waitsForGo(c: S["ChangeItem"]): boolean {
 }
 
 /** One change's row: what the assistant did, nested, with the buttons for it. `open` shows it expanded from the start (the
- * Today inspector), and `sendBack` starts with the note to send it back with. */
-export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?: (step: string) => void; open?: boolean; sendBack?: boolean }) {
+ * Today inspector), and `sendBack` starts with the note to send it back with. `fold` is for a list of many: a row starts
+ * closed unless `open` says otherwise, or it holds a question for the person. */
+export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?: (step: string) => void; open?: boolean; sendBack?: boolean; fold?: boolean }) {
   const { t, tn, has } = useWords();
   const act = useAct();
   const afterSave = useAfterSave();
@@ -253,7 +257,9 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
   const cs = item.changeset;
   // Every row that holds a question for the person starts open, whatever state its request is in, so none sits closed.
   const asks = !!cs?.ops.some((o) => o.ask?.status === "open");
-  const [open, setOpen] = useState(!!props.open || !!props.sendBack || asks || item.state === "review" || (item.state === "needs_you" && !gated));
+  const [open, setOpen] = useState(
+    !!props.open || !!props.sendBack || asks || (!props.fold && (item.state === "review" || (item.state === "needs_you" && !gated))),
+  );
   const [sendingBack, setSendingBack] = useState(!!props.sendBack);
   const [choosing, setChoosing] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
@@ -578,7 +584,7 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
       {showSource && op.evidence && props.source && <SourcePanel id={props.source} quote={op.evidence.quote} />}
       {op.record?.kind === "action" && PROMISE_OPS.has(op.op) && op.status !== "undone" && (
         <div className="full">
-          <PromiseWhy action={op.record.id} quiet omitQuote />
+          <PromiseWhy action={op.record.id} quiet omitQuote line />
         </div>
       )}
       {changeKind && change.form}
@@ -665,9 +671,9 @@ function SendBackForm(props: { cs: string; onDone: () => void }) {
         <button type="button" className="btn quiet" onClick={props.onDone}>
           {t("action.cancel")}
         </button>
-        <button type="submit" className="btn primary" disabled={!note.trim()}>
+        <Button variant="primary" type="submit" disabled={!note.trim()} reason={t("changes.send_back_needs_note")}>
           {t("changes.send_back_go")}
-        </button>
+        </Button>
       </div>
     </form>
   );

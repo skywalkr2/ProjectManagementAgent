@@ -1,5 +1,6 @@
-// People (design 7.13, 7.14): everyone the workspace works with, as a table. A row opens its detail pane beside the table
-// (a drawer on a narrower window); the name opens the person's page. Adding and editing happen in a drawer, so the table
+// People (design 7.13, 7.14): everyone the workspace works with, as a table. A row, Enter on it or its name opens the detail
+// pane beside the table (over it when the priority columns would not fit, a drawer on a narrower window); the name's link is
+// the person's page for a new tab. Adding and editing happen in a drawer, so the table
 // stays in view and the new row appears beside the form. Organizations are kept here too, since a person works for one.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -15,12 +16,16 @@ import { Pill } from "../ui/Pill";
 import { RecordsTable, type TableColumn } from "../ui/RecordsTable";
 import { Skeleton } from "../ui/Skeleton";
 import { Organizations } from "./Organizations";
+import styles from "./People.module.css";
 import { PersonDrawer } from "./PersonForm";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 /** The organization filter's choices besides one on file: everyone, and people with none. */
 const ALL = "";
 const NONE = "\u0001none";
+
+/** The width the priority columns (name, role, organization, open items and the menu) need beside the pane. */
+const PEOPLE_FIT = 600;
 
 export function People() {
   const { t, tn } = useWords();
@@ -73,14 +78,18 @@ export function People() {
   );
   const reach = (p: S["PersonView"]) => Object.entries(p.how_to_reach ?? {}).map(([kind, value]) => `${kind}: ${value}`);
   const columns: TableColumn<S["PersonView"]>[] = [
-    { id: "role", header: t("people.col.role"), rank: 1, cell: (p) => p.role ?? "" },
-    { id: "org", header: t("people.col.org"), rank: 2, cell: (p) => p.org_name ?? "" },
-    { id: "reach", header: t("people.col.reach"), rank: 3, cell: (p) => reach(p).map((line) => <div key={line}>{line}</div>) },
-    { id: "open", header: t("people.col.open"), rank: 1, numeric: true, cell: (p) => (p.open_items > 0 ? p.open_items : "") },
+    { id: "role", header: t("people.col.role"), rank: 1, core: true, cell: (p) => p.role ?? "" },
+    { id: "org", header: t("people.col.org"), rank: 2, core: true, cell: (p) => p.org_name ?? "" },
+    { id: "reach", header: t("people.col.reach"), rank: 3, cell: (p) => reach(p).map((line) => (
+        <div key={line} title={line} className={styles.clip}>
+          {line}
+        </div>
+      )) },
+    { id: "open", header: t("people.col.open"), rank: 1, core: true, numeric: true, cell: (p) => (p.open_items > 0 ? p.open_items : "") },
     { id: "last", header: t("people.col.last"), rank: 2, cell: (p) => (p.last_contact ? day(p.last_contact) : "") },
   ];
   const filter = (
-    <div className="field">
+    <div className={["field", styles.orgFilter].join(" ")} data-size="content">
       <label htmlFor="people-org">{t("people.filter_org")}</label>
       <select id="people-org" value={org} onChange={(e) => setOrg(e.target.value)}>
         <option value={ALL}>{t("people.all_orgs")}</option>
@@ -105,6 +114,7 @@ export function People() {
       <ListDetail
         title={selected?.name ?? ""}
         onClose={() => setChosen(null)}
+        fit={PEOPLE_FIT}
         detail={selected ? <PersonDetail person={selected} tags={tags(selected)} reach={reach(selected)} onEdit={() => setEditing(selected)} menu={menu(selected)} /> : null}
       >
         {people.isPending ? (
@@ -121,9 +131,12 @@ export function People() {
                 label={t("setup.people")}
                 name={{
                   header: t("people.col.name"),
-                  cell: (p) => (
+                  cell: (p, open) => (
                     <>
-                      <a href={viewHref(recordView("person", p.id))}>{p.name}</a> {tags(p)}
+                      <a href={viewHref(recordView("person", p.id))} onClick={open}>
+                        {p.name}
+                      </a>{" "}
+                      {tags(p)}
                       {p.aliases.length > 0 && <div className="hint">{t("setup.also_called", { names: p.aliases.join(", ") })}</div>}
                     </>
                   ),
@@ -134,14 +147,7 @@ export function People() {
                 selected={chosen}
                 onSelect={(p) => setChosen(p.id)}
                 actionsHeader={t("people.col.actions")}
-                actions={(p) => (
-                  <>
-                    <Button size="sm" variant="primary" data-key="primary" aria-label={t("panel.action_for", { action: t("records.details"), what: p.name })} onClick={() => setChosen(p.id)}>
-                      {t("records.details")}
-                    </Button>
-                    <RowMenu label={p.name} actions={menu(p)} />
-                  </>
-                )}
+                actions={(p) => <RowMenu label={p.name} actions={menu(p)} />}
               />
             )}
             <p className="hint">{tn("people.count", all.length)}</p>

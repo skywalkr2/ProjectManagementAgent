@@ -1,9 +1,16 @@
 // A table of records (design 7.13, 7.14): one row each, grouped when it helps, with the name as the link to the record's
-// page and one primary action and a menu at the end. A row opens its detail pane, by a click or by its primary action.
-// Columns drop out as the window narrows (their `rank`: 1 always, 2 from 1280px, 3 from 1024px) and stack on a phone, so
-// the table is never wider than the window.
-import { useRef, type ReactNode } from "react";
+// page and the row's menu at the end. A row opens its detail pane by a click, by Enter on the row or by its name; there is
+// no button of its own for that. Columns drop out as the window narrows (their `rank`: 1 always, 2 from 1280px, 3 from
+// 1024px) and stack on a phone, so the table is never wider than the window. While a pane stands beside the table only the
+// columns marked `core` stay; the column picker shows or hides any column. No word is ever broken: a value too long for its
+// column ends in an ellipsis, with the whole value as its title.
+import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useRowKeys } from "../lib/keys";
+import { useIsNarrow } from "../lib/media";
+import { useWords } from "../lib/wording";
+import { IconButton } from "./IconButton";
+import { MenuButton } from "./MenuButton";
+import { usePane } from "./paneContext";
 import styles from "./RecordsTable.module.css";
 
 export interface TableColumn<T> {
@@ -13,6 +20,8 @@ export interface TableColumn<T> {
   /** 1: always shown. 2: hidden under 1280px. 3: hidden under 1024px (tablet and phone: in the detail pane). */
   rank?: 1 | 2 | 3;
   numeric?: boolean;
+  /** Stays while a detail pane stands beside the table. When no column is marked, every column stays. */
+  core?: boolean;
 }
 
 export interface TableGroup<T> {
@@ -23,27 +32,54 @@ export interface TableGroup<T> {
 
 export function RecordsTable<T>(props: {
   label: string;
-  /** The first column: the record's name, usually a link to its page. */
-  name: { header: string; cell: (row: T) => ReactNode };
+  /** The first column: the record's name, usually a link to its page. `open` is the link's click handler: a plain click opens
+   * the row's pane, a modified one (a new tab) is left to the browser. */
+  name: { header: string; cell: (row: T, open: (event: MouseEvent) => void) => ReactNode };
   columns: TableColumn<T>[];
   groups: TableGroup<T>[];
   rowKey: (row: T) => string;
   selected?: string | null;
   onSelect?: (row: T) => void;
-  /** The row's one primary action and its menu, at the end. */
+  /** The row's menu, at the end (a row has no primary button when a click on it opens its pane). */
   actions?: (row: T) => ReactNode;
   actionsHeader?: string;
 }) {
-  const span = props.columns.length + 1 + (props.actions ? 1 : 0);
-  const rank = (c: TableColumn<T>) => (c.rank === 2 ? styles.rank2 : c.rank === 3 ? styles.rank3 : "");
+  const { t } = useWords();
+  const narrow = useIsNarrow();
+  const { squeezed } = usePane();
+  // What the person chose in the column picker beats what the pane leaves room for.
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const hasCore = props.columns.some((c) => c.core);
+  const standard = (c: TableColumn<T>) => !squeezed || !hasCore || !!c.core;
+  const shown = (c: TableColumn<T>) => picked[c.id] ?? standard(c);
+  const visible = props.columns.filter((c) => narrow || shown(c));
+  const span = visible.length + 1 + (props.actions ? 1 : 0);
+  // A column the person asked for stays whatever the window width; the others drop out by rank.
+  const rank = (c: TableColumn<T>) => (picked[c.id] ? "" : c.rank === 2 ? styles.rank2 : c.rank === 3 ? styles.rank3 : "");
+  const optional = hasCore && !narrow;
   return (
     <div className={styles.wrap}>
+      {optional && (
+        <div className={styles.tools}>
+          <MenuButton
+            trigger={<IconButton icon="grid" size="sm" label={t("table.choose_columns")} />}
+            groups={[
+              {
+                id: "columns",
+                title: t("table.columns"),
+                checked: props.columns.filter(shown).map((c) => c.id),
+                entries: props.columns.map((c) => ({ id: c.id, label: c.header, run: () => setPicked((was) => ({ ...was, [c.id]: !shown(c) })) })),
+              },
+            ]}
+          />
+        </div>
+      )}
       <table className={styles.table}>
         <caption className="sr">{props.label}</caption>
         <thead>
           <tr>
             <th scope="col">{props.name.header}</th>
-            {props.columns.map((c) => (
+            {visible.map((c) => (
               <th key={c.id} scope="col" className={rank(c)}>
                 {c.header}
               </th>
@@ -65,7 +101,7 @@ export function RecordsTable<T>(props: {
               </tr>
             )}
             {group.rows.map((row) => (
-              <TableRow key={props.rowKey(row)} row={row} table={props} rank={rank} />
+              <TableRow key={props.rowKey(row)} row={row} table={props} columns={visible} rank={rank} />
             ))}
           </tbody>
         ))}
@@ -74,12 +110,19 @@ export function RecordsTable<T>(props: {
   );
 }
 
-function TableRow<T>(props: { row: T; table: Parameters<typeof RecordsTable<T>>[0]; rank: (c: TableColumn<T>) => string }) {
+function TableRow<T>(props: { row: T; table: Parameters<typeof RecordsTable<T>>[0]; columns: TableColumn<T>[]; rank: (c: TableColumn<T>) => string }) {
   const { row, table, rank } = props;
   const ref = useRef<HTMLTableRowElement>(null);
   const key = table.rowKey(row);
   // Enter on the row chooses it, as it does in every list.
-  useRowKeys(ref, { toggle: table.onSelect ? () => table.onSelect!(row) : undefined });
+  const choose = table.onSelect ? () => table.onSelect!(row) : undefined;
+  useRowKeys(ref, { toggle: choose, primary: choose });
+  // The name link: a plain click opens the pane; a click for a new tab or window is the browser's.
+  const open = (event: MouseEvent) => {
+    if (!table.onSelect || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    table.onSelect(row);
+  };
   return (
     <tr
       ref={ref}
@@ -93,12 +136,15 @@ function TableRow<T>(props: { row: T; table: Parameters<typeof RecordsTable<T>>[
         table.onSelect(row);
       }}
     >
-      <td className={styles.name}>{table.name.cell(row)}</td>
-      {table.columns.map((c) => (
-        <td key={c.id} data-label={c.header} className={[rank(c), c.numeric ? styles.num : ""].filter(Boolean).join(" ")}>
-          {c.cell(row)}
-        </td>
-      ))}
+      <td className={styles.name}>{table.name.cell(row, open)}</td>
+      {props.columns.map((c) => {
+        const content = c.cell(row);
+        return (
+          <td key={c.id} data-label={c.header} title={typeof content === "string" && content ? content : undefined} className={[rank(c), c.numeric ? styles.num : ""].filter(Boolean).join(" ")}>
+            {content}
+          </td>
+        );
+      })}
       {table.actions && (
         <td className={styles.acts}>
           <div className={styles.actsInner}>{table.actions(row)}</div>
