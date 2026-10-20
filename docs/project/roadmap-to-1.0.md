@@ -451,6 +451,10 @@ From the original designer's lessons of 2026-10-14:
   - the two follow-up settings (`steward.chase_*_days` and `ui.followups.*_days`) become one, with the impact noted;
   - the toast-at-390px and the Today-cursor browser tests are made robust under load (each failed once under load and
     passed alone).
+  - **date words the rules can't read** (the owner's learning run, 2026-10-20: 6 of 11 misses): `engine/due_phrases.py`
+    reads "the 25th", "by the 30th", "due Oct 22" and their kin, and words it still can't read keep the model's own
+    date marked to check instead of dropping it; the case `quoted-thread-action-exists` expects the move held for Keep
+    that the designer's correction set (2026-10-19), not a direct date change;
   - `cockpit evaluate` waits for the network as the app's own runs do (a lost network uses up no try and fails no case),
     and the pair harness's practice copies never hold the main account as an unchecked backup (fixed:
     `tests/test_catch_up_learning.py::test_the_main_account_listed_again_as_its_own_backup_is_never_held_as_an_unchecked_backup`).
