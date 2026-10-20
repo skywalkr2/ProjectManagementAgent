@@ -227,7 +227,7 @@ test.describe.serial("journeys", () => {
       expect(sent.ok).toBe(true);
     };
     // I hand in someone else's words; the result is a line on Today, and its card is read on What changed.
-    const handIn = async (text: string, firstLine: string) => {
+    const handIn = async (text: string) => {
       await page.getByRole("link", { name: /^Today/ }).first().click();
       const lines = page.locator('[data-queue-line="review"], [data-queue-line="who_is"]');
       // A new line, not a higher count: a line whose work was all undone leaves Today at the same time.
@@ -239,7 +239,8 @@ test.describe.serial("journeys", () => {
         .poll(async () => (await lines.allInnerTexts()).some((line) => !before.includes(line)), { timeout: 30_000 })
         .toBe(true);
       await page.getByRole("link", { name: /^What changed/ }).first().click();
-      const row = page.locator("li.line", { hasText: firstLine });
+      // What changed is newest first and titles a change as Today does, so the change just handed in is the top row.
+      const row = page.getByRole("main").locator("li.line").first();
       await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 30_000 });
       const expander = row.locator(".expander").first();
       if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
@@ -262,7 +263,7 @@ test.describe.serial("journeys", () => {
     let row = page.locator("li.line");
     const addNewcomer = async (name: string, keep: boolean) => {
       const sentence = `${name} will confirm the catering menu by 2026-11-20.`;
-      row = await handIn(sentence, sentence);
+      row = await handIn(sentence);
       await expect(row.getByRole("combobox", { name: `Who is “${name}”?` })).toBeVisible();
       // The last choice in the list opens the form in a drawer over the screen; nobody leaves it to add someone.
       await row.getByRole("combobox", { name: `Who is “${name}”?` }).selectOption({ label: "Add a person…" });
@@ -292,7 +293,7 @@ test.describe.serial("journeys", () => {
     await script("my direct line is", [
       { op: "person.contact", person: added.id, kind: "phone", value: reach, evidence: { quote: `my direct line is ${reach}` } },
     ]);
-    row = await handIn(direct, direct);
+    row = await handIn(direct);
     const reached = async () => JSON.stringify((await json<{ details: object }>(`api/record-pages/${added.id}?kind=person`)).details);
     expect(await reached()).not.toContain(reach);
     await row.getByRole("button", { name: "Do it anyway" }).click();
@@ -310,7 +311,7 @@ test.describe.serial("journeys", () => {
       { op: "project.add", name: retreat, evidence: { quote: `the ${retreat} need plans` } },
       { op: "project.add", name: festival, evidence: { quote: `The ${festival}` } },
     ]);
-    row = await handIn(plans, plans);
+    row = await handIn(plans);
     const projectNamed = async (name: string) => (await json<{ id: string; name: string }[]>("api/projects")).find((p) => p.name === name);
     const filed = async () => ({
       note: (await json<{ text: string; project_name: string | null }[]>("api/notes")).find((n) => n.text === "The plans are due soon.")?.project_name || null,
@@ -336,7 +337,7 @@ test.describe.serial("journeys", () => {
       { op: "note", text: "The party plans are due Friday." },
       { op: "project.add", name: party, evidence: { quote: `Plans for the ${party}` } },
     ]);
-    row = await handIn(meeting, meeting);
+    row = await handIn(meeting);
     const partyNote = async () =>
       (await json<{ text: string; project_name: string | null }[]>("api/notes")).find((n) => n.text === "The party plans are due Friday.")?.project_name || null;
     for (const keep of [false, true]) {
@@ -359,7 +360,7 @@ test.describe.serial("journeys", () => {
       { op: "note", text: "Looking forward to it." },
       { op: "project.add", name: tour, evidence: { quote: `looking forward to the ${tour}` } },
     ]);
-    row = await handIn(trip, trip);
+    row = await handIn(trip);
     const tourProposal = row.locator("li.child", { hasText: `Add a project “${tour}”?` });
     for (const keep of [false, true]) {
       await tourProposal.getByRole("button", { name: `More actions for ${tour}` }).click();
@@ -373,7 +374,7 @@ test.describe.serial("journeys", () => {
 
     // 6. Drop, on an action that is no longer needed: it asks why, leaves the list at once, and Undo puts it back.
     const agenda = "I will print the agenda.";
-    row = await handIn(agenda, agenda);
+    row = await handIn(agenda);
     // The to-do is in the rail of Today, beside the queue.
     await page.getByRole("link", { name: /^Today/ }).first().click();
     const todo = page.locator("li", { has: page.getByRole("checkbox", { name: "Mark done: Print the agenda." }) });
@@ -391,7 +392,7 @@ test.describe.serial("journeys", () => {
     // gives it back as a question about who owns it.
     const again = "Somebody should print the agenda.";
     await script("Somebody should print", [{ op: "action.add", text: "Print the agenda.", owners: [], evidence: { quote: again } }]);
-    row = await handIn(again, again);
+    row = await handIn(again);
     await expect(row.getByText("Who owns this?")).toBeVisible();
     await row.getByRole("button", { name: "Add to “Print the agenda.”" }).click();
     await expect(toasts).toContainText("Added to Print the agenda.");

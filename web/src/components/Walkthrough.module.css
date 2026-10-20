@@ -54,8 +54,9 @@
 :global(html[data-toasts]) .foot { scroll-margin-bottom: var(--toast-room); }
 :global(html[data-toasts][data-narrow]) { --toast-room: calc(var(--toasts) * 5rem + var(--space-4) + var(--bottombar-h)); }
 .grow { flex: 1 1 auto; }
-/* What was set up: one compact row per step (the step, how it stands, Set up), hairlines between, the whole width. */
-.recap { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+/* What was set up: one compact row per step (the step, how it stands, Set up), hairlines between, the whole width (set
+   outright: with overflow hidden, the pane's grid would otherwise shrink it to nothing). */
+.recap { width: 100%; list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
 .recap li {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(6rem, auto) minmax(5rem, auto); align-items: center; gap: var(--space-3);
   min-height: var(--btn-h); padding: var(--space-1) var(--space-3); border-bottom: 1px solid var(--border);
