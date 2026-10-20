@@ -549,10 +549,10 @@ test.describe.serial("acceptance scenario", () => {
       const area = document.createElement("div");
       area.id = "paste-document";
       area.contentEditable = "true";
-      area.style.cssText = "position:fixed;left:0;top:0;width:300px;height:100px;background:#fff";
+      area.style.cssText = "position:fixed;left:0;top:0;width:300px;height:100px;background:#fff;z-index:2147483647";
       document.body.appendChild(area);
     });
-    await page.locator("#paste-document").click();
+    await page.locator("#paste-document").focus();
     await page.keyboard.press("ControlOrMeta+V");
     const document_ = await page.locator("#paste-document").evaluate((el) => ({ html: el.innerHTML, images: el.querySelectorAll("img, script").length, paragraphs: el.querySelectorAll("p").length, text: el.textContent ?? "" }));
     expect(document_.images).toBe(0);
@@ -564,10 +564,10 @@ test.describe.serial("acceptance scenario", () => {
     await page.evaluate(() => {
       const chat = document.createElement("textarea");
       chat.id = "paste-chat";
-      chat.style.cssText = "position:fixed;left:0;top:120px;width:300px;height:100px";
+      chat.style.cssText = "position:fixed;left:0;top:120px;width:300px;height:100px;z-index:2147483647";
       document.body.appendChild(chat);
     });
-    await page.locator("#paste-chat").click();
+    await page.locator("#paste-chat").focus();
     await page.keyboard.press("ControlOrMeta+V");
     expect(await page.locator("#paste-chat").inputValue()).toBe(`${target!.message}\n\n${hostile}`);
   });
@@ -601,8 +601,9 @@ test.describe.serial("acceptance scenario", () => {
       await card.getByRole("button", { name: `Copy ${s.to_send}` }).click();
       await expect(card.getByRole("textbox").first()).toBeVisible();
       await card.getByRole("button", { name: `Copy ${s.to_send}` }).click();
+      // Copy writes the formatted and the plain message together, which finishes a moment after the click.
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(s.message);
       const copied = await page.evaluate(() => navigator.clipboard.readText());
-      expect(copied).toBe(s.message);
       expect(s.to_send).toBe(questions.length + actions.length);
       expect(copied).toContain(s.name.split(" ")[0]);
       for (const q of questions) {
@@ -634,7 +635,7 @@ test.describe.serial("acceptance scenario", () => {
     await card.getByRole("button", { name: `Copy ${target.to_send}` }).click();
     await expect(card.getByRole("textbox").first()).toBeVisible();
     await card.getByRole("button", { name: `Copy ${target.to_send}` }).click();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(target.message);
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(target.message);
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
     await card.getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toBeVisible();
@@ -1040,6 +1041,8 @@ test.describe.serial("acceptance scenario", () => {
     // Today only suggests moving on for an item already in a stage: the one after the first.
     const following = item.stages[item.stages.findIndex((s) => s.id === item.next!.id) + 1];
     await go(page, "Stages");
+    // Stages opens as a board; these rows are on its list, one switch away (the choice is remembered).
+    await page.getByRole("radio", { name: "List", exact: true }).or(page.getByRole("button", { name: "List", exact: true })).first().click();
     await expect(page.locator("li.line", { hasText: item.title }).first()).toBeVisible();
     await checkAccessibility(page);
     const row = page.locator("li.line", { hasText: item.title }).first();
@@ -1095,6 +1098,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(today).not.toContainText(task.id);
     await checkAccessibility(page);
     await go(page, "Stages");
+    // Stages opens as a board; these rows are on its list, one switch away (the choice is remembered).
+    await page.getByRole("radio", { name: "List", exact: true }).or(page.getByRole("button", { name: "List", exact: true })).first().click();
     const here = page.locator("li.line", { hasText: item.title }).first();
     await expect(here.getByRole("list", { name: "Waiting for you to start it" })).toContainText("is waiting for you to start it");
     await checkAccessibility(page);

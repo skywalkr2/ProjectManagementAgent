@@ -192,7 +192,9 @@ test("Drop asks why and drops it, and Look closer shows why the promise exists",
   expect(await screen.findByText("I will send the floor plan by Tuesday.")).toBeInTheDocument();
   await menuOf(user, row);
   await user.click(screen.getByRole("menuitem", { name: "Drop" }));
-  await user.type(await screen.findByRole("textbox"), "No longer needed");
+  // The box the Drop opened, not the one-line meeting form under the agenda.
+  const why = (await screen.findAllByRole("textbox")).find((box) => !box.closest('[aria-label="Add a meeting"]'))!;
+  await user.type(why, "No longer needed");
   await user.click(screen.getByRole("button", { name: "Drop it" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/drop")?.body).toEqual({ reason: "No longer needed" }));
 });

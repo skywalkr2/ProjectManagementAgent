@@ -338,7 +338,8 @@ test("a card's menu has Look closer and Send back, which opens the note to send 
   show([review]);
   await user.click(await screen.findByRole("button", { name: /More actions for Look over 3 to-dos/ }));
   await user.click(await screen.findByRole("menuitem", { name: "Send back with a note" }));
-  expect(await screen.findByRole("textbox")).toBeInTheDocument();
+  // The note to send it back with, beside the one-line meeting form under the agenda.
+  expect((await screen.findAllByRole("textbox")).some((box) => !box.closest('[aria-label="Add a meeting"]'))).toBe(true);
   expect(screen.getByRole("button", { name: "Send back" })).toBeDisabled();
 });
 
