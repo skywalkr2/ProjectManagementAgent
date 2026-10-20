@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: "Mark this closed" isn't "done": an ending needs delivery words to be done
+
+- **Decided (owner, from running, 2026-10-20):** the person ended two actions owed by colleagues with notes like "we will
+  mark this closed also; we're getting the details from <colleague> in our discussions" and "the planning sessions will
+  cover any open needs". The assistant read "closed" as done, and the record said "completed by <colleague>" for work
+  nobody did, on a history others read. The intent was the opposite: no longer needed.
+- **Rules (design 6.33, endings):**
+  - **Done needs delivery in the words** ("sent", "finished", "it's in the deck", "they did it"). Words about learning it
+    elsewhere, moving it to a meeting, or it no longer mattering ("moot", "covered by", "we'll get it in the
+    discussion", "drop it") are **called off** (`action.drop`), with the person's words as the reason: nobody is
+    credited, and nothing goes on a history others read.
+  - **"Close" or "closed" with no delivery words is neither:** one line on the item asks "Done by <owner>, or no longer
+    needed?", a choice, not a guess, even from the person's own note.
+  - **Moved into a meeting:** called off as an action and put on that meeting's agenda, linked, so it isn't lost (the
+    series rule of 2026-10-15).
+  - **The owner was already told** (a sent notice or question): calling it off drafts a one-line "no longer needed,
+    thanks" for the person to send (answer 18's rule for anything already sent).
+- **Kind of change:** a core rule about how endings are read (the engine checks the words; the model doesn't choose done
+  alone), with the delivery and call-off words as language settings and the practice in the core playbook. It is also
+  F3's "wrong ending" measure.
+- **Fixtures:** learning pairs: "we'll cover it in the planning sessions" ends as called off with no credit; "mark it
+  closed" with no delivery words asks; "she sent it" is done, credited to her.
+
 ## 2026-10-20: The functional designer's answers to F15 to F25
 
 - **Decided (functional designer, relayed by the owner):** yes to the defaults of F15, F17, F18, F20, F21, F23 and F24

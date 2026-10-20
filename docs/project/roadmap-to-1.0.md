@@ -533,6 +533,11 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     one naming a known person or promise linked by rule (F20); "once …" on hold from the start and "before <a known
     meeting>" due at it (F21); a non-answer restarts the chase clock once, and a second brings the line back (F22, with
     its test); a new AI account reads nothing of work until the person allows it, with its sign-in identity shown (F25).
+  - **"Mark this closed" isn't "done"** (owner, from running, 2026-10-20; `docs/decisions.md`): an ending is done only
+    with delivery words; words of learning it elsewhere, moving it to a meeting or it no longer mattering call it off
+    with no credit; "close" alone asks "Done by <owner>, or no longer needed?"; moved into a meeting goes on that
+    meeting's agenda, linked; called off after the owner was told drafts "no longer needed, thanks"; the three learning
+    pairs pass.
   - **The reviewer's further feedback** (owner, 2026-10-20: "provide the UI/UX agent the next batch when you can because
     it already has more feedback"): asked for on 2026-10-20 and folded into this batch when it arrives; when B-7 is
     pushed and green, the reviewer gets the commit, the status for C1–C53 and every place the build chose differently.
