@@ -1018,7 +1018,8 @@ describe("Done", () => {
 
 // The look (design 7.8): the list marks only what is done or skipped and where the person is; one primary button, with
 // Skip as a quiet button; and the screen's own form, as wide as what it holds.
-describe("the look", () => {
+// These walk several screens with typing, about four seconds each alone, so a busy machine gets more time for them.
+describe("the look", { timeout: 20_000 }, () => {
   const primaries = (root: HTMLElement) => Array.from(root.querySelectorAll("button")).filter((b) => /primary/.test(b.className) && !b.disabled);
 
   test("the list has no \"Not done yet\" on a row, marks done and skipped ones, and says which screen is open", async () => {

@@ -94,8 +94,9 @@ export function StagesBoard(props: { kind: string; views: StageView[]; waiting: 
             >
               <h3 id={headId} className={styles.head}>
                 <span>{column.label}</span>
-                <span className={styles.count} aria-label={t("stages.board.count", { count: here.length })}>
-                  {here.length || ""}
+                <span className={styles.count}>
+                  <span aria-hidden="true">{here.length || ""}</span>
+                  <span className="sr">{t("stages.board.count", { count: here.length })}</span>
                 </span>
               </h3>
               {here.length === 0 ? (
