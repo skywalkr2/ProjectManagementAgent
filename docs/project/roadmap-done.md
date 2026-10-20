@@ -1858,6 +1858,70 @@ From the original designer's lessons of 2026-10-14:
   status page uses it (C2, C4).
   *Built (B-6a):* `engine/history.py`, the record page's activity and `view.changes` (plugin API 0.3.83)
   (`tests/test_date_moves_are_not_news.py`).
+- [x] **An unknown status stays unknown** (the designer's lessons, 2026-10-19; design 6.19): `project.add` refuses a
+  status with no words behind it, as `record.set` does; an add from a link says "not read" when nothing set up can open
+  the link. Reading the link's system of record is C4's fact lookups.
+  *Built (B-6a):* `tests/test_forms_b6a.py`, `web/src/components/NextSteps.test.tsx`.
+- [x] **The cursor starts where you type** (owner, 2026-10-12; design 7.0): every screen, step, form and dialog opens
+  with the cursor in its first main field. The walkthrough does already (`Walkthrough.test.tsx`); the redesign applies
+  it everywhere, with a browser check per screen.
+  *Built (B-6a):* every dialog and drawer (`web/src/lib/cursor.test.tsx`, `web/src/components/ModalPanel.test.tsx`,
+  `web/src/ui/Drawer.test.tsx`) and a browser check per main screen (`web/e2e/shell.spec.ts`).
+- [x] **Lists, not typing** (owner, 2026-10-12: "nearly everything should have dropdowns"): every field on every screen
+  whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
+  time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
+  walkthrough). Settings name their lists with `choices`. *Also done:* the language (owner, 2026-10-16: "the language
+  setting should be a dropdown"): Settings and a project's own language are lists of language tags shown by name, and a
+  value set outside a named list is added to it, so no list shows a wrong value
+  (`tests/test_setup.py::test_the_language_setting_is_a_list_of_language_tags_that_names_its_list`,
+  `tests/test_setup.py::test_a_choice_list_includes_the_current_value_when_it_is_not_one_of_the_list`,
+  `web/src/lib/languages.test.ts`, `web/src/components/Settings.test.tsx` (a setting that picks a language),
+  `web/src/components/Setup.test.tsx` (the project form's Language list: empty is "Same as …", picking saves the tag)).
+  *Built (B-6a):* date formats, the person's own record, a role's tier, the owner format and accepted file types as
+  lists, one test each (`web/src/components/Settings.test.tsx`, `web/src/lib/date-formats.test.ts`); the fields left as
+  text are free by nature (names, messages, addresses, word lists, amounts), listed in CHANGES.md section 119.
+- [x] **The obvious next steps on screen** (L3b): "Add a new person" in the who-is-this chooser, "Add a project",
+  "It's part of" and "Not a project", and the other one-click offers, in the row's menu or as its primary.
+  *Built:* "Add a person…" in every person picker (P13, `NextSteps.test.tsx`) and "Add a project…" when filing (P14, `Unfiled.test.tsx`). Left: "It's part of" and "Not a project" as one-click offers.
+  *Built (B-6a):* "It's part of <project>" as one-click offers on a held project (`web/src/components/NextSteps.test.tsx`).
+- [x] **The app's own kit, offered where it's wanted** (owner, 2026-10-13: "i dont want to see these fake plugins"): the
+  add-ons that come with the app (the define-your-own kit and the example) no longer show in setup or on the Add-ons
+  screen while off. The kit is offered where a person asks for kinds of items of their own (Ask, the record forms),
+  not as an add-on to turn on.
+  *Built (B-6a):* hidden while off (`tests/test_walkthrough.py`); "Keep track of something of your own" under Ask's box
+  (`web/src/components/Ask.test.tsx`). The record forms have no place for it yet.
+- [x] **Found by the phase A journeys** (decisions, 2026-10-12, "What the first journeys found"): a new AI account's
+  suggested name is the service's name, not its catalog id; a custom address needs no key when the service takes
+  none; Follow-ups' Copy shows the message it will copy before copying, as 7.5 says (today it copies at once).
+  *Built (B-6a):* the service's name as the suggested name, no key for a service that takes none, Copy showing the
+  message first (`web/src/components/WelcomeAi.test.tsx`, `web/src/components/FollowUps.test.tsx`,
+  `web/e2e/acceptance.spec.ts` scenario 4).
+- [x] **27 After a move**: one group line per move in Decide, one row inside per thing to check; questions to others go to
+  Follow-ups and are counted in the group's meta; a group of one is a normal row; a second move replaces the group.
+  *Built (wave 4):* the group line and its rows, `tests/test_move_groups.py`. Left: the per-row answers ("Move it to Oct 22 / Keep Oct 20", "It holds / Needs a change…") and the toast when the last row is settled.
+  *Built (B-6b):* each row's answers and the settled toast (`tests/test_move_groups.py`,
+  `web/src/components/TodayRecords.test.tsx`).
+- [x] **When something is due a follow-up** (built for real use at the end of L-core; B gives the layout and Top priorities' lines; the original designer's review, 2026-10-13: counting from when a notice
+  was sent made an action due in a month come up three days later). One rule, used by Top priorities, Today's lines
+  and the Follow-ups pills ("red past the follow-up time"), so all three agree: a notice of an action for someone is
+  chased only when its action is due within 7 days or overdue, never while it is on hold, and an undated one after 14
+  days with no word; a plain question is chased after 4 days. Each number is a setting. Check what the code does today
+  first (`engine/followups.py`, the nudge threshold) and test the rule at the engine.
+  *Built (B-6b):* one rule for Top priorities, Today's lines and the pills (`tests/test_top_priorities.py`).
+- [x] **An action can be blocked** (from comparing the design with an outside list of core features): "Blocked, waiting
+  on <a person, an action or a thing>", shown on the row and counted in Top priorities. The assistant proposes
+  unblocking when an input says the blocker is gone (L3b). Dependencies between work items stay in the project
+  management pack (C2).
+  *Built (B-6a):* a hold names a person, an action or a question; the row says what it waits on; the count for Top
+  priorities (`tests/test_blocked_actions.py`, `web/src/components/OnHold.test.tsx`). *Left:* the count shown on Top
+  priorities, which B-6b builds.
+  *Built (B-6b):* the blocked count under Top priorities (`web/src/components/TopPriorities.test.tsx`).
+- [x] **An unnamed assistant reads as one:** with the default name, lines say "Assistant is on it". The `.unnamed`
+  wording variant (built for the AI screen's heading) is used for the other `{assistant}` lines.
+  *Built (B-6b):* every `{assistant}` line has its `.unnamed` variant (`web/src/wording/wording.test.ts`,
+  `web/src/components/Today.test.tsx`).
+- [x] **This week at every width** (7.7): a collapsed Today section, and the inspector's view when nothing is selected.
+  *Built (B-6b):* `tests/test_this_week.py`, `web/src/components/Today.test.tsx`.
 
 ## Phase S: finished items
 

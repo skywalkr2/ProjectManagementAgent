@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 132, each in exactly one batch; 223 done items are in `roadmap-done.md`.
+- **Open items:** 121, each in exactly one batch; 234 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -74,12 +74,12 @@ keep each item's full text.
     - *Covers:* *Wave 5* with P17 (.ics calendars, full featured) and P18 (several accounts of one service); the items that belong with it: *Passwords, keys and private addresses typed on the screen* (P16), *Add-ons install from the screen* (P15), *Mailbox and calendar passwords and addresses entered on screen* (all in phase B, built to S's shape).
     - *Exit:* the tests each item names pass; the owner adds an .ics link and file and a second account of one service, and types a password and a key on screen, with no file edit.
 
-5. **B-6a The rest of B: records, Settings and forms** (9 open items, plus the numbered wave 6 entry; size: about one to two days)
+5. **B-6a The rest of B: records, Settings and forms** (3 open items, plus the numbered wave 6 entry; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): the designer's F12 and F13 and P26 (in the wave 6 entry), *Lists, not typing*, *The cursor starts where you type*, *Value-list values carry meaning*, *Follow-ups' Later*, *An action can be blocked*, *The obvious next steps on screen*; and the open items that fit this area: *A project's "what the assistant knows"*, *"Overlaps with …"*, *The Quality screen*, *Where a fact came from* (29), *A series page* (30), *A date move isn't news*, *Settings*, *Learning on screen*, *Action items and open questions, cleaned up*, *The app's own kit*, *Found by the phase A journeys*.
     - *Also covers* (the designer's lessons, 2026-10-19): *An unknown status stays unknown, and an add from a link says when nothing could read it* (design 6.19).
     - *Exit:* the tests each item names pass, and the browser test of every main screen at several widths shows no sideways scroll; the owner works through their own open items on a laptop and a phone.
 
-6. **B-6b The rest of B: Today and the shell** (19 open items; size: about one to two days)
+6. **B-6b The rest of B: Today and the shell** (14 open items; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): *The Today rows as the mockup review set them*, *This week at every width*, *Notifications for "needs you" only*, *The walkthrough's look*, *An unnamed assistant reads as one*, *The header shows the assistant is alive*, *Words and accessibility throughout*; and the open items that fit this area: *After a move* (27), *Held for a look* (28), *Work*, *Setup guide*, *The rest* (Stages board, phone review mode, hand-in drawer, Ask as a side pane), *Review after the first Go*, *When something is due a follow-up*, *Top priorities, always current*, *Copy puts the formatted message and its plain text on the clipboard together*, *What the work version's screens show*.
     - *Exit:* phase B's exit test: the owner reviews every screen on a laptop and a phone; checklist items C1 to C46 are marked Done or explained, with screenshots; the journey tests run against the new screens.
 
@@ -301,15 +301,9 @@ signing for the installers (phase I).
 `reviews/ui-ux-2026-10/` are marked Done or explained, with screenshots in `reviews/ui-ux-2026-10/after/`.
 
 From L3 (design 7.18):
-- [ ] [B-6a] **An unknown status stays unknown** (the designer's lessons, 2026-10-19; design 6.19): `project.add` refuses a
-  status with no words behind it, as `record.set` does; an add from a link says "not read" when nothing set up can open
-  the link. Reading the link's system of record is C4's fact lookups.
 
 From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux-2026-10/answers-25-32.md`, mockups in
 `reviews/ui-ux-2026-10/mockup-round-25-32/`; each answer has its layout, exact wording, edge cases and the test for done):
-- [ ] [B-6b] **27 After a move**: one group line per move in Decide, one row inside per thing to check; questions to others go to
-  Follow-ups and are counted in the group's meta; a group of one is a normal row; a second move replaces the group.
-  *Built (wave 4):* the group line and its rows, `tests/test_move_groups.py`. Left: the per-row answers ("Move it to Oct 22 / Keep Oct 20", "It holds / Needs a change…") and the toast when the last row is settled.
 - [ ] [B-6b] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
   the other answer a visible button.
   *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. Left: "Drop it and draft the note", which waits for the publisher (S1b).
@@ -344,6 +338,8 @@ From the original designer's lessons of 2026-10-14:
 - [ ] [B-6a] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
   *Built (wave 3):* nav, saved as made with Undo, "Changed · Reset", help beside the field, `Settings.test.tsx`, `shell.spec.ts`. Left: the contrast warning in Appearance and the pickers for money and dates, to check and finish in wave 6.
+  *Built (B-6a):* the contrast warning in Appearance and the date-format list (`web/src/lib/theme.test.ts`,
+  `web/src/components/Settings.test.tsx`). *Left:* a money list needs a currency setting, which doesn't exist yet.
 - [ ] [B-6b] **Setup guide** as steps | step.
 - [ ] [B-6b] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
@@ -355,21 +351,10 @@ From the original designer's lessons of 2026-10-14:
 - [ ] [B-6b] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
   empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
   Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.
-- [ ] [B-6a] **The cursor starts where you type** (owner, 2026-10-12; design 7.0): every screen, step, form and dialog opens
-  with the cursor in its first main field. The walkthrough does already (`Walkthrough.test.tsx`); the redesign applies
-  it everywhere, with a browser check per screen.
+  *Built (B-6b):* the first results as one list, every open question open (`web/src/components/WhatChanged.test.tsx`).
+  *Left:* the removed add-on's row and note going together.
 - [ ] [I-1] **A launcher for people who never open a terminal** (owner, 2026-10-13): moved to phase I, where the macOS and
   Windows installers give the app icon and Start menu entry.
-- [ ] [B-6a] **Lists, not typing** (owner, 2026-10-12: "nearly everything should have dropdowns"): every field on every screen
-  whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
-  time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
-  walkthrough). Settings name their lists with `choices`. *Also done:* the language (owner, 2026-10-16: "the language
-  setting should be a dropdown"): Settings and a project's own language are lists of language tags shown by name, and a
-  value set outside a named list is added to it, so no list shows a wrong value
-  (`tests/test_setup.py::test_the_language_setting_is_a_list_of_language_tags_that_names_its_list`,
-  `tests/test_setup.py::test_a_choice_list_includes_the_current_value_when_it_is_not_one_of_the_list`,
-  `web/src/lib/languages.test.ts`, `web/src/components/Settings.test.tsx` (a setting that picks a language),
-  `web/src/components/Setup.test.tsx` (the project form's Language list: empty is "Same as …", picking saves the tag)).
 - [ ] [B-5] **Add-ons install from the screen** (P15; owner, 2026-10-16: "they still require manual command line installs
   instead of through the screen. the screen lists zero available plugins"). *Built:* with no catalog listed Add-ons
   offers an address field (the cursor in it) that saves into `workspace.plugins.catalog.feeds` and reads it at once; the
@@ -399,12 +384,6 @@ From the original designer's lessons of 2026-10-14:
   (`tests/test_open_items.py`, `tests/test_action_stands_alone.py`, `web/src/components/OpenItems.test.tsx`,
   `web/src/components/NoteBoxEverywhere.test.tsx`). *Left:* notes on hover and the parent project tag on Follow-ups and
   Today rows, Reassign on Waiting-on-them rows, and the owner's exit check on a laptop and a phone.
-- [ ] [B-6b] **When something is due a follow-up** (built for real use at the end of L-core; B gives the layout and Top priorities' lines; the original designer's review, 2026-10-13: counting from when a notice
-  was sent made an action due in a month come up three days later). One rule, used by Top priorities, Today's lines
-  and the Follow-ups pills ("red past the follow-up time"), so all three agree: a notice of an action for someone is
-  chased only when its action is due within 7 days or overdue, never while it is on hold, and an undated one after 14
-  days with no word; a plain question is chased after 4 days. Each number is a setting. Check what the code does today
-  first (`engine/followups.py`, the nudge threshold) and test the rule at the engine.
 - [ ] [B-6b] **Top priorities, always current** (owner, 2026-10-13: the version used at work has "a constantly updated top
   priority items" list). A short ranked list on Today across every project, rebuilt as records change and ranked by
   rules (due and overdue, at risk, blocked, waiting on the person, the project's priority), never by an AI call. Shaped
@@ -414,6 +393,8 @@ From the original designer's lessons of 2026-10-14:
   where five said it all), "Review and publish 3 drafts", who suggested it and why on the second line ("The assistant suggests · no answer
   yet"), and the row's actions (Mark done, Reassign, Hand to the assistant). Dated entries whose day has passed and
   that aren't marked done are lines ("passed, not marked done"), and the next two weeks' entries are listed after.
+  *Built (B-6b):* the ranked list, one line per person, passed dated to-dos and the next days (`tests/test_top_priorities.py`,
+  `web/src/components/TopPriorities.test.tsx`). *Left:* Hand to the assistant on its rows, and the "who suggested it" line.
 - [ ] [B-6b] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work
   version opens a generated page with a copy button; decided on review, design 7.5): the preview on screen is what is
   pasted, mail and documents get the formatting, chat gets clean plain text, and the menu has Copy as plain text. Every
@@ -444,20 +425,6 @@ From the original designer's lessons of 2026-10-14:
   - [ ] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
   - [ ] **Never raw data on screen:** the work version shows a raw data structure in a milestone's title. Our wording
     check covers server text; add a check that no title or line holds braces or quoted keys.
-- [ ] [B-6b] **An action can be blocked** (from comparing the design with an outside list of core features): "Blocked, waiting
-  on <a person, an action or a thing>", shown on the row and counted in Top priorities. The assistant proposes
-  unblocking when an input says the blocker is gone (L3b). Dependencies between work items stay in the project
-  management pack (C2).
-  *Built (B-6a):* a hold names a person, an action or a question; the row says what it waits on; the count for Top
-  priorities (`tests/test_blocked_actions.py`, `web/src/components/OnHold.test.tsx`). *Left:* the count shown on Top
-  priorities, which B-6b builds.
-- [ ] [B-6a] **The obvious next steps on screen** (L3b): "Add a new person" in the who-is-this chooser, "Add a project",
-  "It's part of" and "Not a project", and the other one-click offers, in the row's menu or as its primary.
-  *Built:* "Add a person…" in every person picker (P13, `NextSteps.test.tsx`) and "Add a project…" when filing (P14, `Unfiled.test.tsx`). Left: "It's part of" and "Not a project" as one-click offers.
-- [ ] [B-6a] **The app's own kit, offered where it's wanted** (owner, 2026-10-13: "i dont want to see these fake plugins"): the
-  add-ons that come with the app (the define-your-own kit and the example) no longer show in setup or on the Add-ons
-  screen while off. The kit is offered where a person asks for kinds of items of their own (Ask, the record forms),
-  not as an add-on to turn on.
 - [ ] [B-6b] **The walkthrough's look** (owner, 2026-10-12: "this looks rough"):
   - fields sized to what they hold, not the full page width;
   - one clear primary button per screen ("Save and continue"), with Skip as a quiet link;
@@ -467,17 +434,11 @@ From the original designer's lessons of 2026-10-14:
   - the page using its width.
 
   It goes through the redesign's components and screenshots like every other screen.
-- [ ] [B-6b] **An unnamed assistant reads as one:** with the default name, lines say "Assistant is on it". The `.unnamed`
-  wording variant (built for the AI screen's heading) is used for the other `{assistant}` lines.
-- [ ] [B-6a] **Found by the phase A journeys** (decisions, 2026-10-12, "What the first journeys found"): a new AI account's
-  suggested name is the service's name, not its catalog id; a custom address needs no key when the service takes
-  none; Follow-ups' Copy shows the message it will copy before copying, as 7.5 says (today it copies at once).
 - [ ] [B-6a] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
   send.
   *Built (B-6a):* held for a meeting, a series or a day, out of To send until then, "Send now" in its menu
   (`tests/test_followups_later.py`, `web/src/components/FollowUps.test.tsx`). *Left:* holding a question for the weekly
   note.
-- [ ] [B-6b] **This week at every width** (7.7): a collapsed Today section, and the inspector's view when nothing is selected.
 - [ ] [B-6b] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
   (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.
