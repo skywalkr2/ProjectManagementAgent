@@ -282,6 +282,10 @@ Built keys:
 - `unanchored_words` and `unanchored_lead_words`: what the `action-stands-alone` lint reads (6.9): words that point at
   something the reader can't see ("it", "that", "them", "the above", "as discussed", …) and the words that may come between an
   action's first word and its object ("up", "on", "about", …).
+- `due_lead_words`, `due_ordinal_suffixes` and `due_condition_words`: what the date reader (6.33) uses. The lead words that
+  begin a due and say only that a date follows ("by", "on", "due", "due by", "no later than"), the endings of a day of the
+  month ("st", "nd", "rd", "th"), and the words that make a due a condition so it has no date ("once", "after", "before",
+  "when", "until", "as soon as", "soon"). Whole words, ignoring case; demo values in both fictional workspaces.
 - `never_shown`: words that must never appear in anything people see; model names are added to it.
 - `title_skip`: regular expressions, matched at the start of a line, ignoring case, for lines an item's title never comes
   from: greetings, quoted mail headers, sign-offs. A title is taken from the first line left (7.14).

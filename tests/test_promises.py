@@ -129,6 +129,106 @@ def test_doubtful_words_are_checked_and_vague_words_give_no_date(env, words, due
     assert (made["due"], made["due_check"]) == (due, check)
 
 
+def _promise_with(words, *, due=None, said="They will get back to us."):
+    op = {
+        "op": "action.add",
+        "text": "Get back to us",
+        "owners": [someone()["id"]],
+        "due_words": words,
+        "evidence": {"quote": said},
+    }
+    if due is not None:
+        op["due"] = due
+    answer(op)
+    return said
+
+
+@pytest.mark.parametrize(
+    ("words", "due"),
+    [
+        ("by the 25th", "2026-10-25"),
+        ("due the 25th", "2026-10-25"),
+        ("on the 3rd", "2026-11-03"),
+        ("due Oct 22", "2026-10-22"),
+        ("on Oct 22", "2026-10-22"),
+        ("due on Friday", "2026-10-16"),
+    ],
+)
+def test_a_leading_on_or_due_and_an_ordinal_are_read_by_the_rules_and_win_over_the_models_date(env, words, due):
+    _, _, store = env
+    said = _promise_with(words, due="2026-12-01")
+    (outcome,), _ = run(env, pasted=said)
+    made = made_action(store, outcome)
+    assert made["due"] == due and made["due_words"] == words
+
+
+def test_words_the_rules_cannot_read_keep_the_models_own_date_marked_to_check(env):
+    _, _, store = env
+    said = _promise_with("by mid-month", due="2026-10-15")
+    (outcome,), _ = run(env, pasted=said)
+    made = made_action(store, outcome)
+    assert (made["due"], made["due_words"], made["due_check"]) == ("2026-10-15", "by mid-month", True)
+
+
+def test_words_the_rules_cannot_read_and_no_model_date_give_no_date(env):
+    _, _, store = env
+    said = _promise_with("by mid-month")
+    (outcome,), _ = run(env, pasted=said)
+    made = made_action(store, outcome)
+    assert (made["due"], made["due_words"], made["due_check"]) == (None, "by mid-month", False)
+
+
+@pytest.mark.parametrize(
+    "words",
+    [
+        "once the keys arrive",
+        "Once I receive the keys",
+        "after the workshop",
+        "when the measurements arrive",
+        "until you publish it",
+        "as soon as I've spoken to the surveyor",
+        "within two working days of receiving the files",
+        "sometime soon",
+    ],
+)
+def test_a_condition_keeps_its_words_and_has_no_date_even_when_the_model_gave_one(env, words):
+    _, _, store = env
+    said = _promise_with(words, due="2026-10-20")
+    (outcome,), _ = run(env, pasted=said)
+    made = made_action(store, outcome)
+    assert (made["due"], made["due_words"], made["due_check"]) == (None, words, False)
+
+
+def test_a_condition_moves_an_open_promise_to_no_date_with_its_words_once_the_person_keeps_it(env):
+    _, cfg, store = env
+    target = open_action(store)
+    with store.transaction() as tx:
+        tx.update("action", target, {"due": "2026-10-12"}, _SETUP, read_version=tx.get("action", target).version)
+    said = "I will send the floor plan once the keys arrive."
+    answer(
+        {
+            "op": "action.move",
+            "id": target,
+            "due_words": "once the keys arrive",
+            "due": "2026-10-20",
+            "evidence": {"quote": said},
+        }
+    )
+    (outcome,), cs_id = run(env, pasted=said)
+    assert outcome["status"] == "held" and action(store, target)["due"] == "2026-10-12"
+    release(store, cfg, cs_id, 0)
+    kept = action(store, target)
+    assert (kept["due"], kept["due_words"], kept["due_check"]) == (None, "once the keys arrive", False)
+
+
+def test_the_reading_follows_the_language_settings_words(env):
+    _, cfg, store = env
+    said = _promise_with("due the 25th")
+    cfg.language.due_lead_words = ["by"]
+    (outcome,), _ = run(env, pasted=said)
+    assert made_action(store, outcome)["due"] is None
+
+
 @pytest.mark.parametrize(
     "ending",
     [

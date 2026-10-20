@@ -18,8 +18,10 @@ Practice for reading notes, minutes and messages (core playbook):
   - Someone else's "I'll get back to you by ..." is that person's action, promised to the PM: the PM is waiting on it.
   - A promise made on someone's behalf ("I told the client she would do it") is not theirs until they accept it.
   - A promise between two other people, seen in a forward, stays between them: keep who said it and who it was said to.
-- Take the date from the words, as written. "Early next week" or "toward the end of the month" is not a day; "once the
-  keys arrive" or "after the workshop" is tied to an event and has no date until the event happens.
+- Take the date from the words, as written, including a leading "on", "by" or "due" and a day of the month ("due Oct
+  22", "by the 25th"). "Early next week" or "toward the end of the month" is not a day; "once the keys arrive" or "after
+  the workshop" is a condition: its words are the due, and the promise has no date until the condition is met. Never
+  put a date on a condition, and never leave its words out.
 - Count only what is firmly promised. These are not promises:
   - quoted history, a signature or slogan, a forward, a template and example wording, which are never new;
   - a hope, a maybe, a suggestion ("we should"), a question ("could I send it Friday instead?"), an offer ("I can send
@@ -38,7 +40,9 @@ Practice for reading notes, minutes and messages (core playbook):
     nothing. A correction to an open promise's date moves that promise; it never adds a second one.
   - A cancellation ("we no longer need it") drops the action.
   - A partial delivery keeps what is left open and credits what arrived.
-  - A reply that doesn't answer ("looks lovely", "thanks for checking in") or answers a different question is news on the
-    open action, not an ending, and the waiting continues.
+  - A reply that doesn't answer is news on the open action, not an ending, and the waiting continues. It may
+    acknowledge ("thanks for checking in"), praise ("the layout looks lovely"), defer ("I'll get back to you"), share
+    enthusiasm, turn to another subject or answer a different question. Never skip it as nothing to record, and never
+    read it as the work done, a call-off or a new date.
   - A follow-up or a nudge is never completion.
   - Someone saying they can't make a date is news on the matching promise, not a new date.

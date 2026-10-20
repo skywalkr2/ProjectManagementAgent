@@ -47,6 +47,7 @@ import os
 import re
 import shutil
 import tempfile
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime
@@ -57,7 +58,7 @@ from engine.ai.adapters import make_adapter
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.config import Config
-from engine.dispatcher import process
+from engine.dispatcher import process_through_outage
 from engine.followups import they_finished
 from engine.intake import hand_in, note_as_input
 from engine.names import People
@@ -302,12 +303,15 @@ def evaluate(
     adapter_factory: AdapterFactory = make_adapter,
     packs_of: Path | None = None,
     most_private: str | None = None,
+    pause: Callable[[float], None] = time.sleep,
 ) -> Report:
     """Run every case (or `only` these) `runs` times. With `stub`, the stand-in AI gives each case's ideal answer, which
     checks the cases and the pipeline rather than a model. `ai_config` replaces the fixture's AI setup with another
     workspace's `ai.yaml`, so the PM's own accounts run against the fictional cases. The cases of the plugins enabled
     in `packs_of` (default: the template) run after the core's. With `most_private`, a case whose `data_level` is more
-    private than that is left out (the account may not see its material); the report still names every case."""
+    private than that is left out (the account may not see its material); the report still names every case. A run that
+    finds no network waits for it as the app's own work does (`pause` is how it waits), uses up no try and fails no
+    case."""
     env = os.environ if env is None else env
     results: list[RunResult] = []
     versions: dict[str, str | None] = {}
@@ -338,6 +342,8 @@ def evaluate(
                 env=env,
                 ai_config=ai_config,
                 on_wait=waited,
+                on_outage=(lambda line, step=step: notice(f"{step}: {line}")) if notice else None,
+                pause=pause,
                 versions=versions,
                 adapter_factory=adapter_factory,
             )
@@ -377,6 +383,8 @@ def _run_case(
     env: Mapping[str, str],
     ai_config: Path | None = None,
     on_wait: Callable[[float], None] | None = None,
+    on_outage: Callable[[str], None] | None = None,
+    pause: Callable[[float], None] = time.sleep,
     versions: dict[str, str | None] | None = None,
     adapter_factory: AdapterFactory = make_adapter,
 ) -> RunResult:
@@ -411,7 +419,16 @@ def _run_case(
             people_before = len(store.read().list("person"))
             now = received_of(case)
             request_id = _hand_in_case(ws, store, cfg, case, now)
-            cs_id = process(ws, store, cfg, Router(cfg, store, env=env, on_wait=on_wait), request_id, now=now)
+            cs_id = process_through_outage(
+                ws,
+                store,
+                cfg,
+                Router(cfg, store, env=env, on_wait=on_wait),
+                request_id,
+                now=now,
+                notice=on_outage,
+                pause=pause,
+            )
             runs = [r.data for r in store.read().list("run")]
             accounts = sorted({f"{r['provider']}/{r['model']}" for r in runs})
             models = configured_models(cfg, runs)

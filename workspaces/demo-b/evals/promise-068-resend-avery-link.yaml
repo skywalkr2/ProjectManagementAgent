@@ -13,7 +13,6 @@ expect:
   owners: [PER-105]
   promised_to: [PER-1]
   due_words: now
-  due: null
 stub_answer:
   summary: 'Liora Marsh promises: resend Avery the link.'
   ops:

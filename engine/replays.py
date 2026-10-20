@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -247,8 +248,10 @@ def evaluate_replays(
     progress: Callable[[RunResult, int, int], None] | None = None,
     notice: Callable[[str], None] | None = None,
     adapter_factory: AdapterFactory = make_adapter,
+    pause: Callable[[float], None] = time.sleep,
 ) -> Report:
-    """Run every replay (or `only` these) `runs` times. With `stub`, a learning run answers from `ideal`."""
+    """Run every replay (or `only` these) `runs` times. With `stub`, a learning run answers from `ideal`. A stage that
+    finds no network waits for it as the app's own work does (`pause` is how)."""
     env = os.environ if env is None else env
     versions: dict[str, str | None] = {}
     everything = load_replays(template)
@@ -277,6 +280,8 @@ def evaluate_replays(
                     env=env,
                     ai_config=ai_config,
                     on_wait=waited,
+                    on_outage=(lambda line, step=step: notice(f"{step}: {line}")) if notice else None,
+                    pause=pause,
                     adapter_factory=adapter_factory,
                 )
             )

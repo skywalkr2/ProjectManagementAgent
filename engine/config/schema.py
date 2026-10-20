@@ -13,6 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from engine.due_phrases import DEFAULT_CONDITION_WORDS, DEFAULT_LEAD_WORDS, DEFAULT_ORDINAL_SUFFIXES
 from engine.secrets import SecretHint
 
 
@@ -1612,6 +1613,24 @@ class LanguageFile(FileModel):
         description="Phrases that say the person already sent something. When an input says so and names no one it "
         "went to, a question or action that names a recipient for it is returned: the assistant asks the person "
         "who it went to instead of guessing.",
+    )
+    due_lead_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_LEAD_WORDS),
+        description="Words that may begin the words a due date is read from and say only that a date follows "
+        '("by", "on", "due", "due by", "no later than"). The date reader steps past them, so "due Oct 22" and '
+        '"on the 3rd" read as the date alone. Case is ignored.',
+    )
+    due_ordinal_suffixes: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_ORDINAL_SUFFIXES),
+        description='The endings that make a number the day of a month ("st", "nd", "rd" and "th" of "the 25th"). '
+        'With none, "the 25th" is not read as a date. Case is ignored.',
+    )
+    due_condition_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_CONDITION_WORDS),
+        description='Words that make a promise\'s due a condition or leave it open ("once the keys arrive", "after the '
+        'workshop", "soon"). Due words with one of them, as whole words, that the date reader can\'t read as a date '
+        "keep their words and have no date, whatever date the assistant gave. Other due words the reader can't read "
+        "keep the assistant's own date, marked for you to check. Case is ignored.",
     )
     limit_markings: list[str] = Field(
         default_factory=lambda: [

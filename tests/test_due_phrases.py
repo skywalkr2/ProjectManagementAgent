@@ -393,3 +393,144 @@ def test_a_yearless_date_far_ahead_is_not_certain():
     assert result.start == date(2027, 10, 30)
     assert result.exact is False
     assert resolve("Nov 20", RECEIVED, ZONE).exact is True
+
+
+# ---- a leading "on" or "due", ordinals and their kin ---------------------------------------------------------------
+# RECEIVED is a Wednesday in a month of 30 days, so "the 31st" is the next month's.
+
+
+@pytest.mark.parametrize(
+    ("phrase", "day", "exact"),
+    [
+        ("on Nov 20", date(2026, 11, 20), True),
+        ("due Nov 20", date(2026, 11, 20), True),
+        ("due on Nov 20", date(2026, 11, 20), True),
+        ("due by Nov 20", date(2026, 11, 20), True),
+        ("on or before Nov 20", date(2026, 11, 20), True),
+        ("no later than Nov 20", date(2026, 11, 20), True),
+        ("due Nov 20th", date(2026, 11, 20), True),
+        ("on Friday", date(2026, 11, 6), True),
+        ("due Friday", date(2026, 11, 6), True),
+        ("due by Friday", date(2026, 11, 6), True),
+        ("due tomorrow", date(2026, 11, 5), True),
+        ("on the 25th", date(2026, 11, 25), True),
+        ("due the 25th", date(2026, 11, 25), True),
+        ("due on the 25th", date(2026, 11, 25), True),
+        ("by the 30th", date(2026, 11, 30), True),
+        ("the 25th", date(2026, 11, 25), True),
+        ("25th", date(2026, 11, 25), True),
+        ("by the 25th at noon", date(2026, 11, 25), True),
+        ("the 4th", date(2026, 11, 4), True),
+        ("on the 22nd", date(2026, 11, 22), True),
+        ("by the 1st", date(2026, 12, 1), False),
+        ("on the 3rd", date(2026, 12, 3), False),
+        ("by the 31st", date(2026, 12, 31), False),
+        ("the 25th of November", date(2026, 11, 25), True),
+        ("by the 25th of Nov", date(2026, 11, 25), True),
+        ("November 25th", date(2026, 11, 25), True),
+        ("Nov 25th, 2027", date(2027, 11, 25), True),
+        ("25th November", date(2026, 11, 25), True),
+        ("Thursday the 5th", date(2026, 11, 5), True),
+        ("due Thursday Nov 5", date(2026, 11, 5), True),
+    ],
+)
+def test_a_leading_on_or_due_and_ordinals_are_read(phrase, day, exact):
+    result = resolve(phrase, RECEIVED, ZONE)
+    assert (result.start, result.end, result.exact) == (day, day, exact)
+    assert result.note
+
+
+def test_an_ordinal_day_already_past_is_read_forward_and_marked_inexact():
+    result = resolve("the 3rd", RECEIVED, ZONE)
+    assert result.start == date(2026, 12, 3) and not result.exact
+    assert "forward" in result.note.lower()
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "due",
+        "on",
+        "by",
+        "due on",
+        "the 32nd",
+        "the 0th",
+        "the 25",
+        "the 25th and the 30th",
+        "due the 25th if approved",
+        "once on the 25th",
+        "Friday the 25th",  # the 25th of November 2026 is a Wednesday
+        "on the 31st of November",
+        "the 25th of Smarch",
+    ],
+)
+def test_words_the_reader_still_cannot_read_give_no_date(phrase):
+    result = resolve(phrase, RECEIVED, ZONE)
+    assert result.start is result.end is result.time is None and not result.exact
+
+
+def test_the_lead_words_and_ordinal_endings_are_settings_of_the_language():
+    assert resolve("on Nov 20", RECEIVED, ZONE, lead_words=("by",)).start is None
+    assert resolve("on Nov 20", RECEIVED, ZONE, lead_words=("on",)).start == date(2026, 11, 20)
+    assert resolve("due Nov 20", RECEIVED, ZONE, lead_words=("due",)).start == date(2026, 11, 20)
+    assert resolve("the 25th", RECEIVED, ZONE, ordinal_suffixes=("th",)).start == date(2026, 11, 25)
+    assert resolve("the 22nd", RECEIVED, ZONE, ordinal_suffixes=("th",)).start is None
+    assert resolve("the 25e", RECEIVED, ZONE, ordinal_suffixes=("e",)).start == date(2026, 11, 25)
+
+
+def test_the_defaults_name_the_words_the_language_settings_start_from():
+    from engine import due_phrases
+
+    assert {"on", "due", "by", "due on", "due by"} <= set(due_phrases.DEFAULT_LEAD_WORDS)
+    assert set(due_phrases.DEFAULT_ORDINAL_SUFFIXES) == {"st", "nd", "rd", "th"}
+    assert {"once", "after", "when", "until", "as soon as"} <= set(due_phrases.DEFAULT_CONDITION_WORDS)
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "once the keys arrive",
+        "Once I receive the keys",
+        "after the workshop",
+        "when the measurements arrive",
+        "until you publish it",
+        "as soon as I've spoken to the surveyor",
+        "within two working days of receiving the files",
+        "Friday, once the keys arrive",
+        "if the board agrees",
+        "sometime soon",
+        "soon",
+        "whenever I can",
+    ],
+)
+def test_a_condition_or_an_open_ended_time_is_not_a_date(phrase):
+    from engine.due_phrases import DEFAULT_CONDITION_WORDS, is_condition
+
+    assert is_condition(phrase, DEFAULT_CONDITION_WORDS)
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "by Tuesday",
+        "on the 25th",
+        "due Nov 20",
+        "by mid-month",
+        "the afternoon",
+        "Friday",
+        "by the end of the week",
+        "",
+    ],
+)
+def test_a_date_or_unread_date_words_are_not_a_condition(phrase):
+    from engine.due_phrases import DEFAULT_CONDITION_WORDS, is_condition
+
+    assert not is_condition(phrase, DEFAULT_CONDITION_WORDS)
+
+
+def test_condition_words_are_whole_words_and_come_from_the_setting():
+    from engine.due_phrases import is_condition
+
+    assert not is_condition("by Whenham", ("when",)) and not is_condition("afternoon", ("after",))
+    assert is_condition("AFTER the workshop", ("after",))
+    assert not is_condition("after the workshop", ())

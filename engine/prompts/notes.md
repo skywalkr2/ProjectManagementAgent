@@ -63,7 +63,8 @@ How to answer:
   "moved to", "will send it tomorrow"), change that action's "due" with "record.set" (kind "action", field "due"),
   quoting the words; never add a second action, a fact or a calendar entry for it. A vague time ("next week", "soon",
   "later this month") is not a new day: leave the due date as it is.
-  When that action is a promise (someone owes it to someone), use "action.move" instead, as described below.
+  When that action is a promise (its line in the list says "promised to"), use "action.move" instead, as described
+  below.
 - A promise is something someone owes someone ("I'll send it Friday", "she'll get back to me Tuesday"). Record it with
   "action.add", filling in who owes it and to whom:
   - "owners": the one person who owes it. Two people who each owe it are two actions; a team or "we" with no person
@@ -72,12 +73,19 @@ How to answer:
     the PM promised something, give the person the PM wrote to.
   - "basis": "said" when the words state the promise outright, "inferred" when you read it between the lines, with
     "said_by" when the input names who said it.
-  - "due_words": the exact words the date comes from ("by Friday", "early next week", "once the keys arrive"), copied
-    from the input. The rules read the date from them, so give "due" only when the input has no words for it, and
-    never turn a vague time into a date. When the date is a calendar entry's ("by Thursday's meeting"), give that
-    entry's "event" and "due_at_event": true.
+  - "due_words": the exact words the date comes from ("by Friday", "due Oct 22", "on the 3rd", "by the 25th", "early
+    next week"), copied from the input with any leading "by", "on" or "due". The rules read the date from them, so
+    give "due" only when the input has no words for it, and never turn a vague time into a date. Words the rules
+    can't read as a date keep your "due" for the PM to check, so give one only when the input states that day. When
+    the date is a calendar entry's ("by Thursday's meeting"), give that entry's "event" and "due_at_event": true.
+  - A condition is the due. When the promise holds only once something happens ("once the keys arrive", "after the
+    workshop", "when the measurements arrive", "as soon as I've spoken to the surveyor", "within two working days of
+    receiving the files", "until you publish it"), copy those words into "due_words" and give no "due": the promise
+    keeps the words and has no date until it happens. Never turn a condition into a date, and never leave its words
+    out because "waiting_for" has them too.
   - "waiting_for": for a promise that holds only once something happens ("once the keys arrive", "if the board
-    agrees"), the condition in plain words; the action starts on hold until it is met.
+    agrees"), the condition in plain words; the action starts on hold until it is met. It is in addition to the
+    condition's words in "due_words", never instead of them.
   A promise is read from the new text of a message. Quoted history, a signature, a forwarded message and example or
   template wording never make a new promise.
 - A promise ends, moves or is answered with an op on the open action in the list, each with the words that say so as
@@ -88,7 +96,12 @@ How to answer:
   - "action.part": only part was delivered. Say what was "delivered" and what is "left" (starting with a verb); the
     rest stays open.
   - "action.news": the input says something about it that doesn't end or move it (a reply that doesn't answer, an
-    update, a condition now met). Say what was heard.
+    update, a condition now met). Say what was heard. A reply that doesn't answer is news, never "nothing to record":
+    when a message comes where an open promise was made (the same thread, or from the person who owes it or is owed
+    it) and all it does about the promise's subject is acknowledge it, thank, praise, defer ("I'll get back to you"),
+    ask to wait or turn to another subject, and it doesn't deliver, move, part-deliver, drop or close it, record one
+    "action.news" on that open action, quoting those words. Add no fact, no second action and no ending for it, and
+    close no question with it.
   Each of these except "action.news" waits for the PM to keep it when it comes from an input, so propose it whenever
   the words support it.
 - An input changes only the items its words name. Another open action about the same thing keeps its date and its state

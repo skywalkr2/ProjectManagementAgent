@@ -1628,6 +1628,13 @@ since an answer shows the limit has lifted
 waits for the network the header's status says "Waiting for the network" (after a lost live connection, before a
 restart or a backup), and its popover gives the count and since when (`network_wait` of the status;
 `web/src/shell/StatusMenu.test.tsx`, `web/src/shell/status.test.ts`, `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`).
+**`cockpit evaluate` waits the same way** (`process_through_outage` in the dispatcher, which `evaluate`, `--pairs` and
+`--replays` all use): a case, pair stage or replay stage that finds no network leaves its request in the wait above, with
+no try used, so it fails nothing and is not counted as not run; the run prints "waiting for the network (no try is
+used); looking again in 60s", pauses until the request's own check time and runs it again, and prints "the network is
+back; going on". It never gives up by itself; the person stops it. *Built so far (batch B-7):* `tests/test_evaluate_network.py`
+(a provider that goes offline and returns, for the dispatcher call, a case, a pair and a replay, with the pause injected,
+no sleep).
 **A run that did no work is not an attempt.** Besides `offline`, the error kind `no_work` is a run that ran and did
 nothing: a command-line agent that failed with nothing on its error stream (only a banner or a sign-in prompt on its
 output), whose error stream matches the account's `errors.no_work` patterns or whose exit code the account maps to
@@ -2921,6 +2928,22 @@ the person, the person is waiting on it.
 Anything vague stays "no date". A date tied to a known calendar entry is due at it (`due_at_event`, below); one tied
 to an event with no entry ("once the keys arrive") stays "no date", with the event's words kept. A due date with no
 words behind it is kept as given only when the person wrote it.
+*The reader and what it can't read (batch B-7).* The reader steps past a leading lead word (`language.due_lead_words`:
+"by", "on", "due", "due by", "no later than") and reads an ordinal day ("the 25th", "by the 30th", "on the 3rd"; the
+endings are `language.due_ordinal_suffixes`) as the next day of the month with that number, marked to check when it is
+read forward into another month; "Oct 22nd" and "the 25th of November" read too. Words it can't read as a date, by
+whether they are a **condition**: a condition (words with one of `language.due_condition_words`, as whole words: "once",
+"after", "before", "when", "until", "as soon as", "of receiving", "soon") keeps its words in `due_words` and has **no
+date**, whatever date the model gave (a condition is never turned into a date); any other unread words **keep the
+model's own date, marked to check** (`due_check`), where they used to drop it. The prompt says the same: a condition's
+own words go in `due_words` with no `due` ("once the keys arrive"), and `waiting_for` is in addition to them, never
+instead. The open-actions list in the packet says "promised to" for a promise, so the assistant can tell which open
+action takes `action.move`. *Built so far:* `tests/test_due_phrases.py` (a test per form, the words as settings, the
+conditions), `tests/test_promises.py::test_a_leading_on_or_due_and_an_ordinal_are_read_by_the_rules_and_win_over_the_models_date`,
+`::test_words_the_rules_cannot_read_keep_the_models_own_date_marked_to_check`,
+`::test_a_condition_keeps_its_words_and_has_no_date_even_when_the_model_gave_one`,
+`::test_the_reading_follows_the_language_settings_words`, and `tests/test_learning_run_b7.py` (every case that expects a
+condition, and the cases that expect no date for words that are neither).
 
 **How a promise ends, each an op with its evidence:**
 - done: `action.close` (credited to its owners, with who reported it, as today);
@@ -2928,7 +2951,12 @@ words behind it is kept as given only when the person wrote it.
 - called off: `action.drop` with the reason;
 - partly delivered: `action.part`: what was delivered goes into its news, credited, and the text becomes what is left,
   which stays open;
-- answered without an answer: `action.news`: the waiting-on stays open and says why.
+- answered without an answer: `action.news`: the waiting-on stays open and says why. A reply that doesn't answer is news,
+  never "nothing to record": a message where the promise was made (its thread, or from whoever owes or is owed it) that only
+  acknowledges, thanks, praises, defers, asks to wait or turns to another subject, and doesn't deliver, move, part-deliver,
+  drop or close it, is one `action.news` on the open action, with no fact, no second action and no ending. The prompt
+  gives the mechanics and the core playbook the practice. *Built so far (batch B-7):* the eight golden `no-answer`
+  cases, each checked to fail on a close and on an empty answer: `tests/test_learning_run_b7.py::test_a_reply_that_does_not_answer_is_news_never_an_ending_and_never_nothing`.
 
 **Never a silent close.** An ending (close, drop, move, part) that comes from an input or the assistant's own initiative
 is held for the person: one line, "Keep: Ana sent the floor plan", with the words it came from, and Keep, Change or Not

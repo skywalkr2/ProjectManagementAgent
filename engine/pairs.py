@@ -68,6 +68,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -82,7 +83,7 @@ from engine.ai.router import Router
 from engine.applier import apply_as_person, decline_held, pick_owner, release
 from engine.config import Config
 from engine.corrections import answered_assistant
-from engine.dispatcher import process, send_back, signal, undo_changeset
+from engine.dispatcher import process_through_outage, send_back, signal, undo_changeset
 from engine.evaluate import (
     ENTRY_EXTRA_WEIGHT,
     AdapterFactory,
@@ -338,8 +339,11 @@ class _Play:
         env: Mapping[str, str],
         ai_config: Path | None,
         on_wait: Callable[[float], None] | None,
+        on_outage: Callable[[str], None] | None = None,
+        pause: Callable[[float], None] = time.sleep,
     ) -> None:
         self.name, self.stub, self.env, self.on_wait = name, stub, env, on_wait
+        self.on_outage, self.pause = on_outage, pause
         self.ws: Workspace = init_workspace(tmp / "ws", template=template, git=False)
         if ai_config is not None:
             shutil.copyfile(ai_config, self.ws.config_dir / "ai.yaml")
@@ -441,7 +445,9 @@ class _Play:
             set_responder(None)
         try:
             router = Router(cfg, self.store, env=self.env, on_wait=self.on_wait)
-            done = process(self.ws, self.store, cfg, router, request, now=self.now)
+            done = process_through_outage(
+                self.ws, self.store, cfg, router, request, now=self.now, notice=self.on_outage, pause=self.pause
+            )
         finally:
             set_responder(None)
         if done is not None:
@@ -1124,10 +1130,12 @@ def evaluate_pairs(
     notice: Callable[[str], None] | None = None,
     adapter_factory: AdapterFactory = make_adapter,
     most_private: str | None = None,
+    pause: Callable[[float], None] = time.sleep,
 ) -> Report:
     """Run every pair and scenario (or `only` these) `runs` times. With `stub`, each stage answers from the pair's
     `ideal`, which checks the pairs and the plumbing rather than a model. With `most_private`, one whose `data_level`
-    is more private than that is left out; the report still names every pair."""
+    is more private than that is left out; the report still names every pair. A stage that finds no network waits for it
+    as the app's own work does (`pause` is how), using up no try and failing no pair."""
     env = os.environ if env is None else env
     versions: dict[str, str | None] = {}
     items = everything = [
@@ -1166,6 +1174,8 @@ def evaluate_pairs(
                 env=env,
                 ai_config=ai_config,
                 on_wait=waited,
+                on_outage=(lambda line, step=step: notice(f"{step}: {line}")) if notice else None,
+                pause=pause,
                 adapter_factory=adapter_factory,
             )
         )

@@ -13,7 +13,6 @@ expect:
   owners: [PER-1]
   promised_to: [PER-106]
   due_words: by five
-  due: null
 stub_answer:
   summary: 'Avery promises: send Ansel the spreadsheet.'
   ops:

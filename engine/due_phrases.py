@@ -4,15 +4,34 @@ Date ranges are inclusive. Weeks run Monday through Sunday. A bare weekday is
 strictly future; past this-week dates are read forward and marked inexact.
 Early next week means its first three configured working days. Part-of-day
 phrases identify a date but leave the time unset. Explicit times are local wall
-times. Unknown phrases stay unresolved.
+times. A leading lead word ("on", "due", "due by") is read past, and an ordinal day ("the 25th") is the next day of the
+month with that number. Unknown phrases stay unresolved. The words of the language (lead words, ordinal endings, the
+words that make a due a condition) are arguments, with English defaults here that the language settings override.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
 from zoneinfo import ZoneInfo
+
+DEFAULT_LEAD_WORDS = ("by", "on", "due", "due on", "due by", "on or before", "no later than", "not later than")
+DEFAULT_ORDINAL_SUFFIXES = ("st", "nd", "rd", "th")
+DEFAULT_CONDITION_WORDS = (
+    *("once", "after", "before", "when", "whenever", "until", "till", "if", "unless", "upon", "as soon as"),
+    *("of receiving", "of receipt", "sometime", "soon", "eventually"),
+)
+
+
+def is_condition(phrase: str, markers: Sequence[str]) -> bool:
+    """Whether the words tie a due to something that happens, or leave it open ("once the keys arrive", "after the
+    workshop", "soon"): a marker, as whole words and ignoring case, appears in them. Such a due has no date."""
+    value = " ".join(phrase.lower().split())
+    return any(
+        re.search(rf"(?<![\w'])(?:{re.escape(marker.lower())})(?![\w'])", value) for marker in markers if marker.strip()
+    )
 
 
 @dataclass(frozen=True)
@@ -32,6 +51,8 @@ def resolve(
     *,
     locale: str = "en_US",
     end_of_day: time = time(17),
+    lead_words: Sequence[str] = DEFAULT_LEAD_WORDS,
+    ordinal_suffixes: Sequence[str] = DEFAULT_ORDINAL_SUFFIXES,
 ) -> Due:
     """Resolve against the received instant converted to tz, never the clock.
 
@@ -79,6 +100,16 @@ def resolve(
         value,
     )
 
+    # A lead word or two ("on", "due", "due by") says only that a date follows.
+    leads = sorted({" ".join(w.lower().split()) for w in lead_words if w.strip()}, key=len, reverse=True)
+    for _ in range(2):
+        lead = next((w for w in leads if value.startswith(w + " ")), None)
+        if lead is None:
+            break
+        value = value[len(lead) :].lstrip()
+    suffixes = "|".join(re.escape(s.lower()) for s in ordinal_suffixes if s.strip())
+    ordinal = rf"(\d{{1,2}})(?:{suffixes})" if suffixes else None
+
     def unknown(note: str) -> Due:
         return Due(None, None, None, False, note)
 
@@ -104,20 +135,56 @@ def resolve(
             if not 1 <= int(hour) <= 12 or int(minute or 0) > 59:
                 return unknown("Invalid clock time; no time was guessed.")
             at = time(int(hour) % 12 + 12 * int(period == "p"), int(minute or 0))
-        resolved = resolve(day_text or "today", received, zone, workweek, locale=locale, end_of_day=end_of_day)
+        resolved = resolve(
+            day_text or "today",
+            received,
+            zone,
+            workweek,
+            locale=locale,
+            end_of_day=end_of_day,
+            lead_words=lead_words,
+            ordinal_suffixes=ordinal_suffixes,
+        )
         if resolved.start is None or resolved.start != resolved.end:
             return unknown("The clock time needs a single understood date; no date was guessed.")
         return Due(resolved.start, resolved.end, at, resolved.exact, resolved.note + " Explicit local clock time.")
     if match := re.fullmatch(r"(?:end of day|close of business) (.+)", base):
-        return resolve(match[1] + " end of day", received, zone, workweek, locale=locale, end_of_day=end_of_day)
+        return resolve(
+            match[1] + " end of day",
+            received,
+            zone,
+            workweek,
+            locale=locale,
+            end_of_day=end_of_day,
+            lead_words=lead_words,
+            ordinal_suffixes=ordinal_suffixes,
+        )
     if match := re.fullmatch(r"(.+) (morning|evening)", base):
-        resolved = resolve(match[1], received, zone, workweek, locale=locale, end_of_day=end_of_day)
+        resolved = resolve(
+            match[1],
+            received,
+            zone,
+            workweek,
+            locale=locale,
+            end_of_day=end_of_day,
+            lead_words=lead_words,
+            ordinal_suffixes=ordinal_suffixes,
+        )
         if resolved.start is None or resolved.start != resolved.end or resolved.time is not None:
             return unknown("Part of day needs a single understood date; no date was guessed.")
         return Due(resolved.start, resolved.end, None, False, resolved.note + " Part of day has no exact clock time.")
     value = base
     if match := re.fullmatch(r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday),? (.+)", value):
-        dated = resolve(match[2], received, zone, workweek, locale=locale, end_of_day=end_of_day)
+        dated = resolve(
+            match[2],
+            received,
+            zone,
+            workweek,
+            locale=locale,
+            end_of_day=end_of_day,
+            lead_words=lead_words,
+            ordinal_suffixes=ordinal_suffixes,
+        )
         weekday_names = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
         if dated.start is not None and dated.start == dated.end:
             if weekday_names[dated.start.weekday()] == match[1]:
@@ -132,6 +199,26 @@ def resolve(
         return single(day, "Part of day stated; no exact clock time was supplied.", exact=False)
     if value in {"by end of day", "end of day", "by the end of the day", "close of business", "by close of business"}:
         return single(today, "Uses the configured local end-of-day time; does not roll to another day.", end_of_day)
+
+    if ordinal and (match := re.fullmatch(rf"(?:the )?{ordinal}", value)):
+        number = int(match[1])
+        if not 1 <= number <= 31:
+            return unknown("Not a day of the month; no date was guessed.")
+        for step in range(14):
+            month_index = today.month - 1 + step
+            try:
+                candidate = date(today.year + month_index // 12, month_index % 12 + 1, number)
+            except ValueError:
+                continue  # that month has no such day
+            if candidate >= today:
+                if candidate.month == today.month:
+                    return single(candidate, "The day of the month named, in the received month.")
+                return single(
+                    candidate,
+                    "Read forward to the next month with that day of the month; it may mean a day already past.",
+                    exact=False,
+                )
+        return unknown("No representable occurrence exists.")
 
     names = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6}
     if match := re.fullmatch(r"(?:(this|next) )?([a-z]+)", value):
@@ -227,9 +314,12 @@ def resolve(
         }
         months.update({name[:3]: number for name, number in list(months.items())})
         months["sept"] = 9
-        if match := re.fullmatch(r"([a-z]+)\.? (\d{1,2})(?:,? (\d{4}))?", explicit):
+        optional_ending = f"(?:{suffixes})?"
+        if match := re.fullmatch(rf"([a-z]+)\.? (\d{{1,2}}){optional_ending}(?:,? (\d{{4}}))?", explicit):
             month_name, day, year = match.groups()
-        elif match := re.fullmatch(r"(\d{1,2}) ([a-z]+)\.?(?:,? (\d{4}))?", explicit):
+        elif match := re.fullmatch(
+            rf"(?:the )?(\d{{1,2}}){optional_ending}(?: of)? ([a-z]+)\.?(?:,? (\d{{4}}))?", explicit
+        ):
             day, month_name, year = match.groups()
         else:
             return unknown("No supported definite date; vague or event-relative phrases require clarification.")

@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 126. The owner's learning run: date words, conditions, replies that don't answer, and `cockpit evaluate` waiting for the network (2026-10-20)
+
+| Where | Before | Now |
+|---|---|---|
+| The date reader (6.33) | "due Oct 22", "on the 3rd", "by the 25th" and "the 25th of November" were unread; unread words dropped the model's own date | A leading lead word is read past and an ordinal day is the next day of the month with that number (marked to check when read forward into another month); the lead words, the ordinal endings and the condition words are `language.due_lead_words`, `due_ordinal_suffixes` and `due_condition_words`. Built: `tests/test_due_phrases.py`, `tests/test_promises.py` |
+| Words the reader can't read (6.33) | No date, always | A condition ("once the keys arrive", "after the workshop", "before the review") keeps its words in `due_words` and has no date whatever the model gave; any other unread words keep the model's own date, marked to check. The prompt says a condition's words are the due and `waiting_for` is in addition. Built: `tests/test_promises.py::test_a_condition_keeps_its_words_and_has_no_date_even_when_the_model_gave_one`, `tests/test_learning_run_b7.py` |
+| A reply that doesn't answer (6.33) | The prompt listed `action.news` among the endings | The prompt and the core playbook name the forms (acknowledges, thanks, praises, defers, asks to wait, turns to another subject) and say it is news on the open action, never "nothing to record" and never an ending; the open-actions list says "promised to" so a promise's date change is an `action.move`. Built: `tests/test_learning_run_b7.py` |
+| Golden cases (6.16) | `quoted-thread-action-exists` expected a direct date change; four cases expected `due: null` for "by lunch", "now" and "by five" | The first has the open action as a promise and expects the move held for the person's Keep, a direct date change forbidden (the designer's correction of 2026-10-19); the four no longer fix a date, which is the model's own and checked, or none. Built: `tests/test_learning_run_b7.py` |
+| `cockpit evaluate` and a lost network (6.16, 8.6) | A case that found no network failed with the wait's words | The cases, `--pairs` and `--replays` wait as the app's own work does (`process_through_outage`): no try used, no case failed, a line says it is waiting, and the run goes on when the network is back. Built: `tests/test_evaluate_network.py` |
+| Settings (4.6) | | `language.due_lead_words`, `language.due_ordinal_suffixes` and `language.due_condition_words`, each with a description and a default, and demo values in both workspaces |
+
 ## 124. The shell: notices, the stages board, the hand-in drawer, Ask as a pane, the phone's review mode and the walkthrough's look (2026-10-20)
 
 | Where | Before | Now |

@@ -756,7 +756,9 @@ def _open_actions(store: Store, people: People) -> str:
         owed = f"; reply owed to {people.name(d['asker'])}" if d.get("reply_owed") and d.get("asker") else ""
         owed = owed or ("; a reply owed" if d.get("reply_owed") else "")
         project = f"[{d['project']}] " if d.get("project") else ""
-        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{due}{hold}{owed}{_belongs_to(d)})")
+        promised = ", ".join(people.name(person) for person in d.get("promised_to") or [])
+        promised = f"; promised to {promised}" if promised else ""
+        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{promised}{due}{hold}{owed}{_belongs_to(d)})")
     return "\n".join(lines) or "(none)"
 
 

@@ -13,7 +13,6 @@ expect:
   owners: [PER-1]
   promised_to: [PER-111]
   due_words: now
-  due: null
 stub_answer:
   summary: 'Avery promises: send Varo the missing attachment.'
   ops:

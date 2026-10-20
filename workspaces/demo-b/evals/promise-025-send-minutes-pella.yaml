@@ -13,7 +13,6 @@ expect:
   owners: [PER-1]
   promised_to: [PER-110]
   due_words: by lunch
-  due: null
 stub_answer:
   summary: 'Avery promises: send the minutes to Pella.'
   ops:

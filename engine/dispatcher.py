@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -1249,6 +1251,38 @@ def wait_for_network(
         **({} if attempts is None else {"attempts": attempts}),
     )
     return None
+
+
+def process_through_outage(
+    ws: Workspace,
+    store: Store,
+    cfg: Config,
+    router: Router,
+    request_id: str,
+    *,
+    now: datetime | None = None,
+    notice: Callable[[str], None] | None = None,
+    pause: Callable[[float], None] = time.sleep,
+) -> str | None:
+    """`process` for a caller that runs one request at a time and waits for it (the evaluation): a run that finds no
+    network leaves the request in the wait `wait_for_network` records, with no try used, so this says it is waiting,
+    pauses until the request's own check time, and runs it again, until the network is back or the request ends some
+    other way. Returns what `process` does."""
+    waited = False
+    while True:
+        when = now or datetime.now(UTC)
+        done = process(ws, store, cfg, router, request_id, now=when)
+        found = store.read().get("request", request_id)
+        if done is not None or found is None or not is_waiting_for_network(found.data):
+            if waited and notice is not None and done is not None:
+                notice("the network is back; going on")
+            return done
+        until = datetime.fromisoformat(found.data["cause"]["until"])
+        seconds = max((until - when).total_seconds(), 1.0)
+        if notice is not None:
+            notice(f"waiting for the network (no try is used); looking again in {seconds:.0f}s")
+        waited = True
+        pause(seconds)
 
 
 def wait_after_no_work(

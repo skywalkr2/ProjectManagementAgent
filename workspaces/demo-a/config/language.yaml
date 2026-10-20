@@ -26,6 +26,10 @@ request_words: [can, could, will, would, please, need to, needs to, should, must
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
 # Notes under this many words with no link are bare confirmations and stay with the change.
 bare_confirmation_words: 4
+# Words that begin a due date's words without being part of it ("due Oct 22", "on the 3rd"), the endings of a day of the month ("the 25th"), and the words that tie a due to something that happens, so it has no date ("once the keys arrive").
+due_lead_words: [by, "on", due, due on, due by, on or before, no later than, not later than]
+due_ordinal_suffixes: [st, nd, rd, th]
+due_condition_words: [once, after, before, when, whenever, until, till, if, unless, upon, as soon as, of receiving, of receipt, sometime, soon, eventually]
 # Phrases that say the person already sent something (see the unnamed-recipient check).
 already_sent_phrases: [I sent, I've sent, I have sent, I just sent, I emailed, I've emailed, I forwarded, I've forwarded, we sent, we've sent]
 # Phrases with which a sender limits who may see a message (see the audience check).

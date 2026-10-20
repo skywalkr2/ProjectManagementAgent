@@ -2313,10 +2313,12 @@ def _apply_op(
 
 def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: date | None) -> tuple[date | None, bool]:
     """An action's due date and whether the person should check it. Words are read by the rules
-    (`engine/due_phrases.py`) against when the input was received, and their reading wins over a date the model gave;
-    words the rules can't read give no date. Without words, the given date stands. A workspace whose language the
-    rules don't read keeps the given date."""
-    from engine.due_phrases import resolve
+    (`engine/due_phrases.py`, with the language settings' own words) against when the input was received, and their
+    reading wins over a date the model gave. Words that tie the due to something that happens ("once the keys arrive")
+    have no date, whatever date the model gave. Other words the rules can't read keep the model's own date, marked for
+    the person to check. Without words, the given date stands. A workspace whose language the rules don't read keeps
+    the given date."""
+    from engine.due_phrases import is_condition, resolve
 
     language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
     if not (words or "").strip() or not language.lower().startswith("en"):
@@ -2329,10 +2331,20 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
         # A message's "tomorrow" is the day after it was sent, where its sender was.
         received = datetime.fromisoformat(str(sent))
         where = received.tzinfo or where
-    found = resolve(words, received, where, locale=locale)
+    settings = ctx.cfg.language
+    found = resolve(
+        words,
+        received,
+        where,
+        locale=locale,
+        lead_words=settings.due_lead_words,
+        ordinal_suffixes=settings.due_ordinal_suffixes,
+    )
     day = found.end or found.start
     if day is None:
-        return None, False
+        if given is None or is_condition(words, settings.due_condition_words):
+            return None, False
+        return given, True
     # One day read with doubt ("next Friday", a year-less date far ahead) is checked; a range is due at its end.
     return day, not found.exact and found.start == found.end
 
