@@ -3,7 +3,8 @@ every part of its check, and only a tier with no account that answered can't run
 
 from __future__ import annotations
 
-from engine.ai.smoke import SmokeResult, tier_summary
+from engine.ai.smoke import SmokeResult, _problem, tier_summary
+from engine.ai.task import AiError
 
 
 def line(tier: str, ref: str, main: bool, ok: bool, part: str = "call") -> SmokeResult:
@@ -42,3 +43,14 @@ def test_a_backup_that_failed_any_part_does_not_stand_in():
 
 def test_every_main_account_answering_says_so():
     assert tier_summary([line("routine", "main/default", True, True)]) == (["All tiers answered."], True)
+
+
+def test_a_service_that_cant_be_reached_says_what_to_do_and_never_shows_this_computers_error_text():
+    line = _problem(AiError("provider_down", "[Errno 61] Connection refused"))
+    assert line == "It couldn't be reached. Check the address, or start it if it runs on this computer."
+    assert "Errno" not in _problem(AiError("offline", "[Errno 8] nodename nor servname provided"))
+
+
+def test_an_accounts_own_words_for_a_refusal_are_still_shown():
+    line = _problem(AiError("auth", '{"error": {"message": "Invalid API key provided."}}'))
+    assert line == "It isn't signed in, or the key was refused (Invalid API key provided)."

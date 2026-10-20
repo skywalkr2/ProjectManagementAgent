@@ -161,12 +161,24 @@ def tier_summary(results: list[SmokeResult]) -> tuple[list[str], bool]:
     return (lines or ["All tiers answered."]), every
 
 
+#: Failures of the connection itself: their detail is this computer's own error text, not the account's words, so it is
+#: never shown; the line says what to do instead.
+TRANSPORT_KINDS = frozenset({"provider_down", "offline", "timeout"})
+
+#: What to do about a connection failure when the account's settings give nothing more particular.
+TRANSPORT_HINTS = {
+    "provider_down": "Check the address, or start it if it runs on this computer",
+    "offline": "Check this computer's network connection",
+}
+
+
 def _problem(err: AiError) -> str:
     """A failed test call in plain words: what it means, the account's own words for it, and what to do."""
-    reason = provider_reason(err.detail)
+    reason = "" if err.kind in TRANSPORT_KINDS else provider_reason(err.detail)
     plain = PROBLEMS.get(err.kind, "It stopped with an error")
     detail = f"{plain} ({reason})" if reason else plain
-    return f"{detail}. {err.hint}" if err.hint else f"{detail}."
+    hint = err.hint or TRANSPORT_HINTS.get(err.kind)
+    return f"{detail}. {hint.rstrip('.')}." if hint else f"{detail}."
 
 
 def _lockdown(
