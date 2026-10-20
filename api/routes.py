@@ -361,6 +361,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         if kind not in shown_kinds():
             raise HTTPException(status_code=404, detail="not found")
         model = store.plugins.records[kind]
+        fixed = set(getattr(model, "fixed_fields", ())) & {"agenda"}
         texts, refs = long_text_fields(model), dict(ref_fields(model))
         bound = {field: name for field, name, _ in list_fields(model)}
         offered = {r.data["name"]: r.data["values"] for r in store.read().list("value_list")}
@@ -385,7 +386,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     options=options,
                     value_list=bound.get(name),
                     required=info.is_required(),
-                    editable=name not in ("id", "stage") and name not in texts,
+                    editable=name not in ("id", "stage") and name not in texts and name not in fixed,
                 )
             )
         return KindView(kind=kind, fields=fields)

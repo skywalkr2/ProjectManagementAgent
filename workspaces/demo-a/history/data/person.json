@@ -1,0 +1,81 @@
+[
+  {
+    "_version": 1,
+    "aliases": [
+      "Rafa"
+    ],
+    "full_name": "Rafael Quist",
+    "id": "PER-1",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Program manager",
+    "status": "active",
+    "team": "TEAM-3",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "aliases": [
+      "Odile"
+    ],
+    "full_name": "Odile Fenwick",
+    "id": "PER-2",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Chief architect",
+    "status": "active",
+    "team": "TEAM-3",
+    "track_only": false,
+    "why_they_matter": "Owns the portfolio; reads the status pages."
+  },
+  {
+    "_version": 1,
+    "aliases": [
+      "Toby"
+    ],
+    "full_name": "Tobias Wren",
+    "id": "PER-3",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Delivery lead",
+    "status": "active",
+    "team": "TEAM-1",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "full_name": "Ines Albescu",
+    "id": "PER-4",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Product owner",
+    "status": "active",
+    "team": "TEAM-2",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "aliases": [
+      "Kofi"
+    ],
+    "full_name": "Kofi Mensah-Hale",
+    "id": "PER-5",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Engineering manager",
+    "status": "active",
+    "team": "TEAM-1",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "full_name": "Lena Voss-Duarte",
+    "id": "PER-6",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Program manager, carrier experience",
+    "status": "active",
+    "team": "TEAM-4",
+    "track_only": true
+  }
+]

@@ -48,6 +48,7 @@ _OUTCOME = {
     "event.set": "recorded",
     "series.add": "recorded",
     "series.link": "recorded",
+    "agenda.add": "recorded",
     "record.set": "recorded",
     "record.log": "recorded",
     "person.add": "people",

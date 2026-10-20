@@ -73,6 +73,7 @@ invariants:
       - event.set
       - series.add
       - series.link
+      - agenda.add
       - record.set
       - record.log
       - action.add
@@ -138,6 +139,7 @@ invariants:
       - event.set
       - series.add
       - series.link
+      - agenda.add
       - action.add
       - action.close
       - action.hold

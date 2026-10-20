@@ -959,6 +959,14 @@
       "AgendaItemView": {
         "description": "An event from a watched calendar, or an entry in the app's own calendar, on today or the next configured days.",
         "properties": {
+          "agenda": {
+            "description": "What is to be taken up at this meeting: its own agenda items and, for the next meeting of a series, the series' agenda after them.",
+            "items": {
+              "$ref": "#/components/schemas/AgendaLine"
+            },
+            "title": "Agenda",
+            "type": "array"
+          },
           "all_day": {
             "title": "All Day",
             "type": "boolean"
@@ -1089,6 +1097,69 @@
           "days"
         ],
         "title": "AgendaItemView",
+        "type": "object"
+      },
+      "AgendaLine": {
+        "description": "One thing on a meeting's agenda: the action, question or note it came from, in the words it is there under.",
+        "properties": {
+          "added_at": {
+            "description": "When it was put on the agenda.",
+            "format": "date-time",
+            "title": "Added At",
+            "type": "string"
+          },
+          "added_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the person who put it there; none when the assistant did.",
+            "title": "Added By"
+          },
+          "added_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their name.",
+            "title": "Added By Name"
+          },
+          "id": {
+            "description": "The id of the record it came from, to link to its page.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "The kind of record it came from.",
+            "enum": [
+              "action",
+              "question",
+              "note"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "description": "The words it is on the agenda under.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text",
+          "added_at"
+        ],
+        "title": "AgendaLine",
         "type": "object"
       },
       "AiAccountAdd": {
@@ -15389,6 +15460,14 @@
             "title": "Activity",
             "type": "array"
           },
+          "agenda": {
+            "description": "For a calendar entry: what is to be taken up at it, its own items and, when it is the next meeting of a series, the series' after them.",
+            "items": {
+              "$ref": "#/components/schemas/AgendaLine"
+            },
+            "title": "Agenda",
+            "type": "array"
+          },
           "completed_actions": {
             "description": "Finished actions credited to this person (who did the work) or in this project, newest first.",
             "items": {
@@ -16579,6 +16658,14 @@
       "SeriesPageView": {
         "description": "A series' page (design 7.14): the next meeting's open items by person, then the meetings that passed.",
         "properties": {
+          "agenda": {
+            "description": "What is to be taken up at its meetings: the series' own agenda items, then those of its next meeting.",
+            "items": {
+              "$ref": "#/components/schemas/AgendaLine"
+            },
+            "title": "Agenda",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "string"

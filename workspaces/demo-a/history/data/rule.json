@@ -1,0 +1,59 @@
+[
+  {
+    "_version": 1,
+    "applies_to": {
+      "except": [],
+      "filter": {},
+      "people": [],
+      "projects": [],
+      "records": [],
+      "scope": "workspace",
+      "task_kinds": []
+    },
+    "id": "RULE-1",
+    "learned_at": "2026-08-20T09:00:20Z",
+    "name": "ask-who-decides",
+    "origin": "person",
+    "status": "active",
+    "text": "Ask who decides before asking anyone to sign off.",
+    "trust": "trusted"
+  },
+  {
+    "_version": 1,
+    "applies_to": {
+      "except": [],
+      "filter": {},
+      "people": [],
+      "projects": [],
+      "records": [],
+      "scope": "workspace",
+      "task_kinds": []
+    },
+    "id": "RULE-2",
+    "learned_at": "2026-08-20T09:01:20Z",
+    "name": "ask-for-a-day",
+    "origin": "person",
+    "status": "active",
+    "text": "Give a day, not a week, when asking for a date.",
+    "trust": "trusted"
+  },
+  {
+    "_version": 1,
+    "applies_to": {
+      "except": [],
+      "filter": {},
+      "people": [],
+      "projects": [],
+      "records": [],
+      "scope": "workspace",
+      "task_kinds": []
+    },
+    "id": "RULE-3",
+    "learned_at": "2026-08-20T09:02:20Z",
+    "name": "one-line-questions",
+    "origin": "person",
+    "status": "active",
+    "text": "Keep a question to one line when it goes to another team.",
+    "trust": "trusted"
+  }
+]

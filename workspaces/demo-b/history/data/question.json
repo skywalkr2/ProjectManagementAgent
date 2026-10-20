@@ -1,0 +1,103 @@
+[
+  {
+    "_version": 1,
+    "batch": "now",
+    "id": "Q-1",
+    "kind": "question",
+    "links": [
+      {
+        "label": "Book page",
+        "url": "https://books.example.org/salt-orchard"
+      }
+    ],
+    "projects": [
+      "PRJ-1"
+    ],
+    "status": "open",
+    "text": "",
+    "title": "The Salt Orchard: is the acknowledgments page final, or are more names coming?",
+    "to": "PER-2"
+  },
+  {
+    "_version": 1,
+    "batch": "now",
+    "id": "Q-2",
+    "kind": "decision",
+    "projects": [
+      "PRJ-1"
+    ],
+    "status": "open",
+    "text": "Soft-touch adds about three working days to finishing.",
+    "title": "Cover finish for the hardcover: matte or soft-touch?",
+    "to": "PER-1"
+  },
+  {
+    "_version": 1,
+    "batch": "now",
+    "event": "EVT-2",
+    "id": "Q-3",
+    "kind": "question",
+    "projects": [
+      "PRJ-1"
+    ],
+    "series": "SER-1",
+    "status": "open",
+    "text": "",
+    "title": "Which paper stock does the hardcover use?",
+    "to": "PER-6"
+  },
+  {
+    "_version": 1,
+    "batch": "now",
+    "id": "Q-4",
+    "kind": "decision",
+    "links": [
+      {
+        "label": "Book page",
+        "url": "https://books.example.org/salt-orchard"
+      }
+    ],
+    "matters_for": "ACT-11",
+    "projects": [
+      "PRJ-1"
+    ],
+    "status": "open",
+    "text": "Cover review moved to a day later than the one this was due.",
+    "title": "Should the due day of 'Approve the cover proof' move with the cover review?",
+    "to": "PER-1"
+  },
+  {
+    "_version": 1,
+    "batch": "now",
+    "id": "Q-5",
+    "kind": "decision",
+    "matters_for": "EVT-4",
+    "projects": [
+      "PRJ-1"
+    ],
+    "status": "open",
+    "text": "Something else is tied to it.",
+    "title": "Does the plan for the cover review still hold?",
+    "to": "PER-1"
+  },
+  {
+    "_version": 1,
+    "batch": "now",
+    "id": "Q-6",
+    "kind": "question",
+    "links": [
+      {
+        "label": "Book page",
+        "url": "https://books.example.org/salt-orchard"
+      }
+    ],
+    "matters_for": "ACT-12",
+    "projects": [
+      "PRJ-1"
+    ],
+    "status": "open",
+    "text": "Cover review moved a day.",
+    "title": "The cover review moved a day: is the spine review still on time?",
+    "to": "PER-3"
+  }
+]

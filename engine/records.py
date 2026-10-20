@@ -1519,6 +1519,33 @@ class EntryPerson(BaseModel):
     )
 
 
+class AgendaItem(BaseModel):
+    """One thing on a meeting's agenda: the action, question or note it came from (exactly one is named), who put it
+    there, when, and the words it is there under. Put there by `agenda.add`; the linked record is not changed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    action: Annotated[str | None, RefTo("action")] = Field(None, description="The id of the action it came from.")
+    question: Annotated[str | None, RefTo("question")] = Field(None, description="The id of the question it came from.")
+    note: Annotated[str | None, RefTo("note")] = Field(None, description="The id of the note it came from.")
+    added_by: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The id of the person who put it there; none when the assistant did, from what came in."
+    )
+    added_at: datetime = Field(description="When it was put on the agenda.")
+    text: str = Field(min_length=1, description="The words it is on the agenda under, in a line.")
+
+    @model_validator(mode="after")
+    def _one_record(self) -> AgendaItem:
+        if sum(x is not None for x in (self.action, self.question, self.note)) != 1:
+            raise ValueError("an agenda item comes from one action, question or note")
+        return self
+
+    @model_serializer(mode="wrap")
+    def _leave_out_what_it_did_not_come_from(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        return {k: v for k, v in data.items() if v is not None}
+
+
 class CalendarEntry(Record):
     """Something dated in the app's own calendar: a day or a moment, or a range of days or moments. Added by
     `event.add` from what came in, and by plugins and the person later; never written to a calendar service."""
@@ -1527,6 +1554,7 @@ class CalendarEntry(Record):
     prefix: ClassVar[str] = "EVT"
     record_label: ClassVar[str] = "calendar entry"
     layout: ClassVar[str | None] = "calendar/{id}"
+    fixed_fields: ClassVar[tuple[str, ...]] = ("agenda",)
 
     title: str = Field(min_length=1, description="What the entry is, in a few words.")
     start: str = Field(
@@ -1567,6 +1595,11 @@ class CalendarEntry(Record):
     people: list[Annotated[str, RefTo("person")]] = Field(
         default_factory=list, description="The known people its title names, linked by rule when it is plain."
     )
+    agenda: list[AgendaItem] = Field(
+        default_factory=list,
+        description="What is to be taken up at it, each item linked to the action, question or note it came from; "
+        "added by `agenda.add`.",
+    )
     evidence: Evidence | None = Field(None, description="The words that justify it.")
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
@@ -1590,6 +1623,7 @@ class Series(Record):
     prefix: ClassVar[str] = "SER"
     record_label: ClassVar[str] = "series of calendar entries"
     layout: ClassVar[str | None] = "calendar/{id}"
+    fixed_fields: ClassVar[tuple[str, ...]] = ("agenda",)
 
     title: str = Field(min_length=1, description="What the series is, in a few words.")
     project: str | None = Field(None, description="The id of the project it is about, if any.")
@@ -1597,6 +1631,11 @@ class Series(Record):
         None, description="How often it repeats, in the person's words (every Tuesday); never used to work out dates."
     )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
+    agenda: list[AgendaItem] = Field(
+        default_factory=list,
+        description="What is to be taken up at its meetings, each item linked to the action, question or note it came "
+        "from; added by `agenda.add`, which names the series when the words are about the meeting in general.",
+    )
     evidence: Evidence | None = Field(None, description="The words that justify it.")
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
@@ -2100,6 +2139,14 @@ KNOWLEDGE_REFERENCES: list[tuple[str, str]] = [
     ("applies_to.except[]", "project"),
 ]
 
+#: The references of a meeting's agenda items, on a calendar entry and on a series.
+AGENDA_REFERENCES = [
+    ("agenda[].action", "action"),
+    ("agenda[].question", "question"),
+    ("agenda[].note", "note"),
+    ("agenda[].added_by", "person"),
+]
+
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "look": [("person", "person")],
@@ -2167,8 +2214,10 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("source", "source"),
         ("organizer.person", "person"),
         ("attendees[].person", "person"),
+        ("people[]", "person"),
+        *AGENDA_REFERENCES,
     ],
-    "series": [("project", "project"), ("source", "source")],
+    "series": [("project", "project"), ("source", "source"), *AGENDA_REFERENCES],
     "note": [("project", "project"), ("question", "question"), ("source", "source")],
     "lesson": [*KNOWLEDGE_REFERENCES, ("signal", "signal")],
     "glossary_entry": [*KNOWLEDGE_REFERENCES, ("project", "project")],

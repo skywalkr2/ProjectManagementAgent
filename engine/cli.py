@@ -279,7 +279,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
                 store.close()
             shutil.rmtree(folder)
     if not folder.exists() or not any(folder.iterdir()):
-        init_workspace(folder, template=demo(args.which))
+        init_workspace(folder, template=demo(args.which), history=True)
         print(f"Made a demo workspace at {folder}. Everything in it is made up.")
     for plugin in args.plugin:
         print(f"Trying the plugin {add_plugin(Workspace(folder), plugin)} in the demo.")

@@ -132,15 +132,17 @@ def _copy_prepared_workspaces() -> None:
             if path.is_file()
         )
 
-    def init_workspace(path, *, template=None, git=True, you=None, name=None, assistant=None):
+    def init_workspace(path, *, template=None, git=True, you=None, name=None, assistant=None, history=False):
         if template is None or you or name or assistant:
-            return original(path, template=template, git=git, you=you, name=name, assistant=assistant)
+            return original(path, template=template, git=git, you=you, name=name, assistant=assistant, history=history)
         root = Path(path).expanduser().resolve()
         if root.exists() and any(root.iterdir()):
-            return original(path, template=template, git=git)
-        key = (Path(template).resolve(), git, template_files(Path(template)))
+            return original(path, template=template, git=git, history=history)
+        key = (Path(template).resolve(), git, history, template_files(Path(template)))
         if key not in prepared:
-            prepared[key] = original(Path(scratch.name) / f"ws{len(prepared)}", template=template, git=git).root
+            prepared[key] = original(
+                Path(scratch.name) / f"ws{len(prepared)}", template=template, git=git, history=history
+            ).root
         root.mkdir(parents=True, exist_ok=True)
         shutil.copytree(prepared[key], root, dirs_exist_ok=True, symlinks=True, ignore=shutil.ignore_patterns("*.lock"))
         return module.Workspace(root)

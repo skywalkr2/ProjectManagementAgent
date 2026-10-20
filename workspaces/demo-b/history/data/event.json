@@ -1,0 +1,117 @@
+[
+  {
+    "_version": 1,
+    "attendees": [
+      {
+        "address": null,
+        "name": "Theo Brandt",
+        "person": "PER-3",
+        "response": "accepted"
+      },
+      {
+        "address": null,
+        "name": "Ines Duarte",
+        "person": "PER-5",
+        "response": "accepted"
+      }
+    ],
+    "cancelled": false,
+    "id": "EVT-1",
+    "invitation": false,
+    "organizer": {
+      "address": null,
+      "name": "Avery Lane",
+      "person": "PER-1",
+      "response": "accepted"
+    },
+    "plain": false,
+    "project": "PRJ-1",
+    "series": "SER-1",
+    "start": "2026-10-15T10:00:00-04:00",
+    "title": "Print sync",
+    "trust": "trusted"
+  },
+  {
+    "_version": 2,
+    "agenda": [
+      {
+        "action": "ACT-10",
+        "added_at": "2026-10-19T11:04:40Z",
+        "added_by": "PER-1",
+        "text": "Settle the endpaper color"
+      }
+    ],
+    "attendees": [
+      {
+        "address": null,
+        "name": "Theo Brandt",
+        "person": "PER-3",
+        "response": "accepted"
+      },
+      {
+        "address": null,
+        "name": "Ines Duarte",
+        "person": "PER-5",
+        "response": "accepted"
+      }
+    ],
+    "cancelled": false,
+    "id": "EVT-2",
+    "invitation": false,
+    "organizer": {
+      "address": null,
+      "name": "Avery Lane",
+      "person": "PER-1",
+      "response": "accepted"
+    },
+    "plain": false,
+    "project": "PRJ-1",
+    "series": "SER-1",
+    "start": "2026-10-22T10:00:00-04:00",
+    "title": "Print sync",
+    "trust": "trusted"
+  },
+  {
+    "_version": 1,
+    "attendees": [
+      {
+        "address": null,
+        "name": "Theo Brandt",
+        "person": "PER-3",
+        "response": "accepted"
+      },
+      {
+        "address": null,
+        "name": "Ines Duarte",
+        "person": "PER-5",
+        "response": "accepted"
+      }
+    ],
+    "cancelled": false,
+    "id": "EVT-3",
+    "invitation": false,
+    "organizer": {
+      "address": null,
+      "name": "Avery Lane",
+      "person": "PER-1",
+      "response": "accepted"
+    },
+    "plain": false,
+    "project": "PRJ-1",
+    "series": "SER-1",
+    "start": "2026-10-29T10:00:00-04:00",
+    "title": "Print sync",
+    "trust": "trusted"
+  },
+  {
+    "_version": 2,
+    "cancelled": false,
+    "id": "EVT-4",
+    "invitation": false,
+    "plain": false,
+    "project": "PRJ-1",
+    "start": "2026-10-22T15:00:00-04:00",
+    "title": "Cover review",
+    "trust": "trusted"
+  }
+]

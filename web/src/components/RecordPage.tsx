@@ -18,6 +18,7 @@ import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
 import { PersonDrawer } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
+import { AgendaSection } from "./AgendaList";
 import { Attendees } from "./Attendees";
 import { ProjectKnows } from "./ProjectKnows";
 import { PromiseWhy } from "./PromiseWhy";
@@ -127,6 +128,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         <div className="record-grid">
           <div className="record-main">
           {kind === "action" && <PromiseWhy action={id} quiet omitOrigin />}
+          {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
           {kind === "event" && <Attendees fields={data.fields} names={names} />}
           {page.data && <RecordActivity page={page.data} />}
           {kind === "project" && <ProjectKnows id={id} />}
@@ -192,7 +194,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 }
 
 /** The fields of a calendar entry the page shows in its own way (its people and its answer), or not at all (its key). */
-const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response"]);
+const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response", "agenda"]);
 
 /** The kinds of record a change can be asked for. */
 const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);

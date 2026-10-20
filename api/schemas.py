@@ -1301,6 +1301,11 @@ class SeriesPageView(BaseModel):
     next: SeriesNext | None = Field(None, description="The next meeting; null when none is scheduled.")
     past: list[SeriesPast] = Field(description="Meetings that passed, newest first.")
     open_without_next: int = Field(0, description="Open items waiting when no later meeting exists.")
+    agenda: list[AgendaLine] = Field(
+        default_factory=list,
+        description="What is to be taken up at its meetings: the series' own agenda items, then those of its next "
+        "meeting.",
+    )
 
 
 class KnowsInput(BaseModel):
@@ -1392,6 +1397,11 @@ class RecordPageView(BaseModel):
         description="Finished actions credited to this person (who did the work) or in this project, newest first.",
     )
     fact_source: FactSource | None = Field(None, description="For a fact: who it rests on and where it came from.")
+    agenda: list[AgendaLine] = Field(
+        default_factory=list,
+        description="For a calendar entry: what is to be taken up at it, its own items and, when it is the next "
+        "meeting of a series, the series' after them.",
+    )
     activity: list[ActivityEntry]
 
 
@@ -1765,6 +1775,19 @@ class HandoverChoice(BaseModel):
     which: Literal["here", "folder"] = Field(description="Keep this computer's copy or the synced folder's.")
 
 
+class AgendaLine(BaseModel):
+    """One thing on a meeting's agenda: the action, question or note it came from, in the words it is there under."""
+
+    kind: Literal["action", "question", "note"] = Field(description="The kind of record it came from.")
+    id: str = Field(description="The id of the record it came from, to link to its page.")
+    text: str = Field(description="The words it is on the agenda under.")
+    added_by: str | None = Field(
+        None, description="The id of the person who put it there; none when the assistant did."
+    )
+    added_by_name: str | None = Field(None, description="Their name.")
+    added_at: datetime = Field(description="When it was put on the agenda.")
+
+
 class AgendaItemView(BaseModel):
     """An event from a watched calendar, or an entry in the app's own calendar, on today or the next configured days."""
 
@@ -1800,6 +1823,11 @@ class AgendaItemView(BaseModel):
         description="For a plain entry (nobody else invited, no description) whose title starts with a task verb and "
         "that has no to-do yet: the to-do it is offered as, in its own words. Posting to `/api/events/{entry}/todo` "
         "makes it.",
+    )
+    agenda: list[AgendaLine] = Field(
+        default_factory=list,
+        description="What is to be taken up at this meeting: its own agenda items and, for the next meeting of a "
+        "series, the series' agenda after them.",
     )
 
 

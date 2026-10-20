@@ -226,6 +226,40 @@ class SeriesLinkOp(OpModel):
         return f"Entry {self.event} " + (f"is part of {self.series}" if self.series else "leaves its series")
 
 
+class AgendaAddOp(OpModel):
+    """Put an action, a question or a note on a meeting's agenda, linked to it, when the input says it is to be taken up
+    at that meeting ("we'll cover it at the print sync"): the calendar entry (`event`) or the series of a repeating
+    meeting (`series`), whichever the words name. The item is not changed, closed or moved; it is listed on the meeting.
+    Never add one that is already on it. Evidence is required."""
+
+    op: Literal["agenda.add"] = "agenda.add"
+    event: Annotated[str | None, RefTo("event")] = Field(None, description="The id of the calendar entry.")
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series, for a repeating meeting named in general."
+    )
+    action: Annotated[str | None, RefTo("action")] = Field(None, description="The id of the action to put on it.")
+    question: Annotated[str | None, RefTo("question")] = Field(None, description="The id of the question to put on it.")
+    note: Annotated[str | None, RefTo("note")] = Field(None, description="The id of the note to put on it.")
+    text: str | None = Field(
+        None, description="The words it is on the agenda under; left out, the item's own words are used."
+    )
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that say it is for the meeting."
+    )
+
+    @model_validator(mode="after")
+    def _one_meeting_one_item(self) -> AgendaAddOp:
+        if (self.event is None) == (self.series is None):
+            raise ValueError("name one meeting: a calendar entry or a series")
+        if sum(x is not None for x in (self.action, self.question, self.note)) != 1:
+            raise ValueError("name one action, question or note to put on it")
+        return self
+
+    def describe(self) -> str | None:
+        item = self.action or self.question or self.note
+        return f"{item} is on the agenda of {self.event or self.series}"
+
+
 class RecordSetOp(OpModel):
     """Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent
     (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id);
@@ -386,7 +420,9 @@ class ActionUnholdOp(OpModel):
 class ActionDropOp(OpModel):
     """Drop an action that is no longer needed, with the reason. It stays on record as dropped: never done, never
     credited to its owners, never chased, and gone from to-do lists. Refused if the action doesn't exist or is already
-    done or dropped; evidence is required (the input's words, or the person's note)."""
+    done or dropped; evidence is required (the input's words, or the person's note). When the words say it moved into
+    a meeting ("we'll cover it at the print sync"), name that meeting in `event` or `series`: the action is put on its
+    agenda, linked, so it isn't lost."""
 
     op: Literal["action.drop"] = "action.drop"
     id: str = Field(description="The id of the action that is no longer needed.")
@@ -394,6 +430,19 @@ class ActionDropOp(OpModel):
     evidence: EvidenceIn | None = Field(
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
+    event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The id of the calendar entry it moved into, when the words say it did."
+    )
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None,
+        description="The id of the series of a repeating meeting it moved into, when the words name it in general.",
+    )
+
+    @model_validator(mode="after")
+    def _one_meeting(self) -> ActionDropOp:
+        if self.event is not None and self.series is not None:
+            raise ValueError("name one meeting: a calendar entry or a series")
+        return self
 
     def describe(self) -> str | None:
         return f"Drop action {self.id}"
@@ -1139,6 +1188,7 @@ Op = Annotated[
     | EventSetOp
     | SeriesAddOp
     | SeriesLinkOp
+    | AgendaAddOp
     | RecordSetOp
     | RecordLogOp
     | ActionAddOp
@@ -1199,6 +1249,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "event.set": EventSetOp,
     "series.add": SeriesAddOp,
     "series.link": SeriesLinkOp,
+    "agenda.add": AgendaAddOp,
     "record.set": RecordSetOp,
     "record.log": RecordLogOp,
     "action.add": ActionAddOp,
@@ -1292,6 +1343,7 @@ TIERS: dict[str, Tier] = (
         "rule.add": "system",
         "rule.retire": "system",
         "person.stance": "system",
+        "agenda.add": "system",
     }
     | {name: "system" for name in KNOWLEDGE_OPS}
 )
@@ -1303,6 +1355,7 @@ NEEDS_EVIDENCE = {
     "event.set",
     "series.add",
     "series.link",
+    "agenda.add",
     "action.add",
     "action.close",
     "action.hold",
@@ -1321,6 +1374,7 @@ NEEDS_EVIDENCE = {
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.
 EVIDENCE_UNLESS_PERSON = {
+    "agenda.add",
     "action.close",
     "action.hold",
     "action.unhold",

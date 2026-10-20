@@ -1,0 +1,342 @@
+[
+  {
+    "_version": 1,
+    "applied_dropped": 0,
+    "created_at": "2026-10-19T10:02:40+00:00",
+    "id": "CS-1",
+    "ops": [
+      {
+        "group": "op0",
+        "index": 0,
+        "label": "Put 'Which paper stock does the hardcover use?' on the agenda of Print sync",
+        "op": {
+          "op": "agenda.add",
+          "question": "Q-3",
+          "series": "SER-1"
+        },
+        "problems": [],
+        "question": null,
+        "reason": null,
+        "records": [
+          {
+            "id": "SER-1",
+            "kind": "series"
+          }
+        ],
+        "reporter": null,
+        "status": "applied"
+      }
+    ],
+    "request": "REQ-1",
+    "reviewed": true,
+    "status": "applied",
+    "summary": "Put on the agenda",
+    "topic": "",
+    "trust": "trusted"
+  },
+  {
+    "_version": 1,
+    "applied_dropped": 0,
+    "created_at": "2026-10-19T11:00:40Z",
+    "id": "CS-2",
+    "ops": [
+      {
+        "group": "op0",
+        "index": 0,
+        "label": "Drop action ACT-10",
+        "op": {
+          "event": "EVT-2",
+          "evidence": {
+            "quote": "Mark 'Settle the endpaper color' closed; the Print sync will cover it"
+          },
+          "id": "ACT-10",
+          "op": "action.drop",
+          "reason": "Mark 'Settle the endpaper color' closed; the Print sync will cover it"
+        },
+        "problems": [],
+        "question": null,
+        "reason": null,
+        "records": [
+          {
+            "id": "ACT-10",
+            "kind": "action"
+          },
+          {
+            "id": "EVT-2",
+            "kind": "event"
+          }
+        ],
+        "reporter": null,
+        "status": "applied"
+      }
+    ],
+    "request": "REQ-2",
+    "reviewed": false,
+    "run": "RUN-1",
+    "status": "applied",
+    "summary": "Closed; the meeting will cover it.",
+    "topic": "Called off",
+    "trust": "trusted"
+  },
+  {
+    "_version": 1,
+    "applied_dropped": 0,
+    "created_at": "2026-10-19T13:02:00+00:00",
+    "id": "CS-3",
+    "ops": [
+      {
+        "group": "op0",
+        "index": 0,
+        "label": "Change start of event EVT-4",
+        "op": {
+          "fields": {
+            "start": "2026-10-22T15:00:00-04:00"
+          },
+          "op": "record.edit",
+          "read_version": 1,
+          "record": {
+            "id": "EVT-4",
+            "kind": "event"
+          }
+        },
+        "problems": [],
+        "question": null,
+        "reason": null,
+        "records": [
+          {
+            "id": "EVT-4",
+            "kind": "event"
+          }
+        ],
+        "reporter": null,
+        "status": "applied"
+      }
+    ],
+    "request": "REQ-3",
+    "reviewed": true,
+    "status": "applied",
+    "summary": "Changed on screen",
+    "topic": "",
+    "trust": "trusted"
+  },
+  {
+    "_version": 1,
+    "applied_dropped": 0,
+    "created_at": "2026-10-19T13:03:20Z",
+    "id": "CS-4",
+    "ops": [
+      {
+        "group": "op0",
+        "index": 0,
+        "label": null,
+        "op": {
+          "asks_about": "other",
+          "kind": "decision",
+          "links": [
+            {
+              "label": "Book page",
+              "url": "https://books.example.org/salt-orchard"
+            }
+          ],
+          "matters_for": "ACT-11",
+          "op": "question.add",
+          "project": "PRJ-1",
+          "text": "Cover review moved to a day later than the one this was due.",
+          "title": "Should the due day of 'Approve the cover proof' move with the cover review?",
+          "to": "PER-1"
+        },
+        "problems": [],
+        "question": null,
+        "reason": null,
+        "records": [
+          {
+            "id": "Q-4",
+            "kind": "question"
+          }
+        ],
+        "reporter": null,
+        "status": "applied"
+      },
+      {
+        "group": "op1",
+        "index": 1,
+        "label": null,
+        "op": {
+          "asks_about": "other",
+          "kind": "decision",
+          "links": [],
+          "matters_for": "EVT-4",
+          "op": "question.add",
+          "project": "PRJ-1",
+          "text": "Something else is tied to it.",
+          "title": "Does the plan for the cover review still hold?",
+          "to": "PER-1"
+        },
+        "problems": [],
+        "question": null,
+        "reason": null,
+        "records": [
+          {
+            "id": "Q-5",
+            "kind": "question"
+          }
+        ],
+        "reporter": null,
+        "status": "applied"
+      },
+      {
+        "group": "op2",
+        "index": 2,
+        "label": null,
+        "op": {
+          "asks_about": "other",
+          "kind": "question",
+          "links": [
+            {
+              "label": "Book page",
+              "url": "https://books.example.org/salt-orchard"
+            }
+          ],
+          "matters_for": "ACT-12",
+          "op": "question.add",
+          "project": "PRJ-1",
+          "text": "Cover review moved a day.",
+          "title": "The cover review moved a day: is the spine review still on time?",
+          "to": "PER-3"
+        },
+        "problems": [],
+        "question": null,
+        "reason": null,
+        "records": [
+          {
+            "id": "Q-6",
+            "kind": "question"
+          }
+        ],
+        "reporter": null,
+        "status": "applied"
+      }
+    ],
+    "request": "REQ-4",
+    "reviewed": false,
+    "run": "RUN-2",
+    "status": "applied",
+    "summary": "Asked what the move may have left out of line.",
+    "topic": "",
+    "trust": "untrusted"
+  },
+  {
+    "_version": 1,
+    "applied_dropped": 0,
+    "created_at": "2026-10-19T14:02:20Z",
+    "id": "CS-5",
+    "ops": [
+      {
+        "group": "op0",
+        "index": 0,
+        "label": null,
+        "op": {
+          "basis": "inferred",
+          "evidence": {
+            "quote": "the spine options are in the shared folder"
+          },
+          "key": false,
+          "op": "fact",
+          "project": "PRJ-1",
+          "reaches_children": false,
+          "text": "The spine options are in the shared folder."
+        },
+        "problems": [],
+        "question": null,
+        "reason": null,
+        "records": [
+          {
+            "id": "FACT-1",
+            "kind": "fact"
+          }
+        ],
+        "reporter": null,
+        "status": "applied"
+      },
+      {
+        "group": "op1",
+        "index": 1,
+        "label": null,
+        "op": {
+          "evidence": {
+            "quote": "the spine options are in the shared folder"
+          },
+          "id": "ACT-13",
+          "op": "action.close"
+        },
+        "problems": [
+          {
+            "check": "inference-confirm",
+            "guidance": null,
+            "message": "This rests on something worked out, not something anyone said: close it?",
+            "op": 1,
+            "passage": null,
+            "rule": null,
+            "severity": "hold"
+          }
+        ],
+        "question": null,
+        "reason": "This rests on something worked out, not something anyone said: close it?",
+        "records": [],
+        "reporter": "PER-3",
+        "status": "held"
+      }
+    ],
+    "request": "REQ-5",
+    "reviewed": false,
+    "run": "RUN-3",
+    "status": "held",
+    "summary": "The shared folder holds the item.",
+    "topic": "Send two spine options",
+    "trust": "untrusted"
+  },
+  {
+    "_version": 1,
+    "applied_dropped": 0,
+    "created_at": "2026-10-19T15:02:20Z",
+    "id": "CS-6",
+    "ops": [
+      {
+        "group": "op0",
+        "index": 0,
+        "label": "Drop action ACT-14",
+        "op": {
+          "evidence": {
+            "quote": "the seating plan is no longer needed"
+          },
+          "id": "ACT-14",
+          "op": "action.drop",
+          "reason": "The launch reading is cancelled."
+        },
+        "problems": [
+          {
+            "check": "reached-confirm",
+            "guidance": null,
+            "message": "Someone has already been sent this: look at it before dropping it.",
+            "op": 0,
+            "passage": null,
+            "rule": null,
+            "severity": "hold"
+          }
+        ],
+        "question": null,
+        "reason": "Someone has already been sent this: look at it before dropping it.",
+        "records": [],
+        "reporter": "PER-7",
+        "status": "held"
+      }
+    ],
+    "request": "REQ-6",
+    "reviewed": false,
+    "run": "RUN-4",
+    "status": "held",
+    "summary": "No longer needed.",
+    "topic": "Confirm the seating plan for the launch reading",
+    "trust": "untrusted"
+  }
+]

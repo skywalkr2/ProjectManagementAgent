@@ -782,8 +782,28 @@ refuses an entry that isn't an instance of the series named with it and needs th
 the entries that haven't ended, with their ids, beside the open actions and questions, and says on each item what it
 belongs to (`::test_the_packet_lists_the_series_and_the_entries_to_come_and_what_each_item_belongs_to`); the notes prompt says
 when to name one (`::test_the_notes_prompt_says_when_to_tie_an_item_to_an_entry_or_a_series`). A date-only move writes no history entry of its own;
-marking a meeting done starts no run (its notes come in as their own input). The meeting's agenda and its items belong to
+marking a meeting done starts no run (its notes come in as their own input). A meeting's agenda items are core records (below, **A meeting's agenda**); building and sending an agenda belongs to
 the project management pack (6.24), which builds on these links. From the functional designer's answers (functional designer's answers, 2026-10-15; roadmap L7 (see roadmap-done.md)):
+- **A meeting's agenda** (**built**): a calendar entry and a series each carry `agenda`, a list of items. An item links the
+  action, question or note it came from (`action`, `question` or `note`, one of them, by id), and holds who put it there
+  (`added_by`, a person id, none when the assistant did from what came in), when (`added_at`) and the words it is listed
+  under (`text`, the record's own words unless given). The core op `agenda.add` (system tier: from an input it waits for the
+  person's confirmation and their keep puts it there as theirs; from the person's own note or a screen it applies at once;
+  evidence required unless the person makes it) names the meeting by `event` (a calendar entry) or `series` (the series of a
+  repeating meeting named in general) and one record; it refuses a meeting or record that doesn't exist, a record that is
+  already done, dropped or answered, and one already on that agenda, and it changes nothing but the agenda, so Undo takes the
+  item off. The agenda is not editable by hand (`record.edit` refuses it). It shows on the meeting's page (an "Agenda"
+  section, its own items and, when it is its series' next meeting, the series' after them), on the series' page (the series'
+  items and then those of its next meeting) and under the meeting's row in Today's agenda
+  (`tests/test_agenda.py::test_a_meetings_page_and_its_todays_row_list_its_items_and_the_series_page_lists_the_series_and_its_next_meeting`,
+  `web/src/components/AgendaList.test.tsx`). Called off into a meeting: see the endings in 6.33.
+  **Built:** `tests/test_agenda.py::test_agenda_add_is_a_system_op_that_needs_evidence_unless_the_person_makes_it`,
+  `::test_an_agenda_item_names_one_meeting_and_one_record`,
+  `::test_the_persons_note_puts_an_action_on_a_meetings_agenda_linked_and_undo_takes_it_off`,
+  `::test_a_question_and_a_note_go_on_the_agenda_in_the_order_they_were_put_there_under_the_words_given`,
+  `::test_from_an_input_it_waits_for_the_person_and_their_keep_puts_it_there_as_theirs`,
+  `::test_what_the_agenda_refers_to_must_exist_be_open_and_not_already_there`,
+  `::test_the_agenda_of_a_meeting_is_only_changed_by_the_op`.
 - **A series** (**built**): an entry can be one instance of a series ("then every three days"). A series is its own record
   (`series`: title, project and `repeats`, how often in the person's words, which no date is worked out from); each instance
   is a calendar entry that names it (`event.series`), added by `event.add`, `series.add` or `series.link`, with Undo. An
@@ -3075,10 +3095,23 @@ engine, not the model, reads the exact words an ending quotes (`engine/endings.p
   `language.messages.called_off_notice` ("No longer needed, thanks: <the action>"), as a question of kind `action-notice` in
   To send for the person to copy and send; nothing goes out by itself, Undo takes the draft away with the drop, and nothing
   is drafted to the person or to someone they only watch or report to.
-- *Not built: moved into a meeting.* Calling it off as an action and putting it on that meeting's agenda, linked to the
-  action, needs a record that holds a meeting's agenda items; the core has none (`Today`'s agenda is a view, and a
-  question's `held_for` holds a question, not an action). This is waiting for a design choice (a new record, or a field on
-  the calendar entry or the series); until then the action is called off and the words say where it went.
+- **Moved into a meeting** (**built**): a call-off whose words hold one of `language.meeting_words` ("will cover", "in the
+  planning sessions", "take it up") and name a meeting the workspace knows puts the action on that meeting's agenda,
+  linked to it, in the same drop. The meeting is a calendar entry still ahead whose whole title the words hold (a title that
+  is part of a longer matching one is the same meeting named less fully; the soonest of several with one title; one called
+  off or already passed is never named), else a series whose title they hold; none or several means none, and the
+  action is only called off, its words saying where it went. The engine names it on the drop (`action.drop`'s `event` or
+  `series`), read from the words the same way for a close the engine turned into a drop and for a drop the assistant
+  proposed, so a check and the apply that follows agree (the day is the day the input was received). Applying the drop,
+  at once from the person's own note or on their keep from an input, adds the item (`agenda.add`'s item, by the person
+  when the person's own words or keep, else by the assistant), and Undo of the drop takes both back. Built:
+  `tests/test_agenda.py::test_called_off_into_a_meeting_it_is_dropped_and_put_on_that_meetings_agenda_and_undo_takes_both_back`,
+  `::test_a_drop_the_assistant_proposed_with_such_words_is_put_on_the_agenda_too_and_waits_with_it_from_an_input`,
+  `::test_a_series_the_words_name_gets_the_item_when_no_entry_is_ahead_and_the_next_meeting_gets_it_when_one_is`,
+  `::test_words_that_move_it_to_no_known_meeting_only_call_it_off`,
+  `::test_a_meeting_that_passed_or_was_called_off_or_is_named_twice_is_not_the_one_meant`,
+  `::test_the_same_changeset_gives_the_same_ops_for_the_check_and_the_apply`,
+  `::test_the_meeting_words_have_a_description_a_default_and_demo_values_in_both_workspaces`.
 - The notes prompt says a closing note proposes `action.drop` unless the words say it was delivered, and the core
   playbook carries the practice ("done needs delivery; closed isn't done"). The endings' learning pairs are
   `promise-pair-23-covered-elsewhere`, `-24-closed-asks` and `-25-she-sent-it`.
@@ -3088,6 +3121,12 @@ words drop with no credit and nothing in the completed history, a bare "closed" 
 too, each answer applies with Undo and records its signal, a told owner gets the drafted line, the settings),
 `web/src/components/TodayPromises.test.tsx` (the choice's line and its two answers), and the three pairs through
 `tests/test_pairs.py`.
+
+*Built so far (B-7, a meeting holds agenda items):* `tests/test_agenda.py` (the op, its tier and evidence, the one meeting
+and one record it names, Undo, a held item from an input and its keep, what it refuses, the agenda not editable by hand, the
+meeting's page, the series' page and Today's row reading it, and a call-off into a known meeting, a series, none, one passed
+or called off, or two named, with the check and the apply agreeing) and `web/src/components/AgendaList.test.tsx` (the
+meeting's page, the series' page and Today's row).
 
 **Never a silent close.** An ending (close, drop, move, part) that comes from an input or the assistant's own initiative
 is held for the person: one line, "Keep: Ana sent the floor plan", with the words it came from, and Keep, Change or Not

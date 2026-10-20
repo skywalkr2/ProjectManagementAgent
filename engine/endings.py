@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, date, datetime
 from typing import Any, Literal
 
 from engine.ops import ActionCloseOp, ActionDropOp
@@ -36,6 +36,13 @@ DEFAULT_CALLED_OFF_WORDS = (
     *("drop this", "call it off", "called off", "cancel", "canceled", "cancelled", "never mind", "forget it"),
     *("we'll get it in", "we will get it in", "in our discussions", "in the discussions", "in our discussion"),
     *("in the planning sessions", "in our planning", "superseded", "obsolete", "unnecessary"),
+)
+#: The words that say it moved into a meeting: a call-off with one of these that names a meeting the workspace knows
+#: puts the action on that meeting's agenda.
+DEFAULT_MEETING_WORDS = (
+    *("will cover", "we'll cover", "we will cover", "will be covered", "covered in", "covered at", "take it up"),
+    *("in our discussions", "in the discussions", "in our discussion", "in the planning sessions", "in our planning"),
+    *("we'll get it in", "we will get it in", "raise it", "bring it up", "discuss it", "move it to", "moved to"),
 )
 #: The words that only say it is closed: with neither of the other two, they are neither done nor called off.
 DEFAULT_CLOSED_WORDS = ("close", "closed", "closing", "close out", "closed out")
@@ -111,16 +118,51 @@ def asks(op: Any, ctx: Any) -> bool:
     return found is None and isinstance(op, ActionCloseOp) and _credits_someone_else(op, ctx)
 
 
+def _today(ctx: Any) -> date:
+    """The person's day when the input was received (its source's time, else its request's, else now), so a check and
+    the apply that follows name the same meetings."""
+    from engine.today import zone
+
+    view = ctx.store.read()
+    request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    source = view.get("source", ctx.inputs.source) if ctx.inputs.source else None
+    for stored, key in ((source, "received_at"), (request, "created_at")):
+        value = stored.data.get(key) if stored is not None else None
+        if value:
+            stamp = datetime.fromisoformat(str(value))
+            return (stamp if stamp.tzinfo else stamp.replace(tzinfo=UTC)).astimezone(zone(ctx.cfg)).date()
+    return datetime.now(zone(ctx.cfg)).date()
+
+
+def moved_into(quote: str, ctx: Any) -> dict[str, str] | None:
+    """The meeting a call-off's words move an action into, as the `event` or `series` field of the drop, or None: the
+    words must hold one of the meeting words and name a meeting the workspace knows (a calendar entry still ahead,
+    else a series), exactly one."""
+    from engine.agenda import named_meeting
+
+    if not _has(quote, ctx.cfg.language.meeting_words):
+        return None
+    found = named_meeting(ctx.store.read(), quote, _today(ctx))
+    return {"series" if found[0] == "series" else "event": found[1]} if found is not None else None
+
+
 def read_endings(cs: Any, ctx: Any) -> Any:
-    """A done whose words only call it off becomes a drop with those words as the reason. The same changeset always
-    gives the same result, so a check and the apply that follows see the same ops."""
+    """A done whose words only call it off becomes a drop with those words as the reason; a call-off whose words move
+    it into a meeting the workspace knows names that meeting, so the action goes on its agenda. The same changeset
+    always gives the same result, so a check and the apply that follows see the same ops."""
     if not _read_here(ctx):
         return cs
     ops = list(cs.ops)
     for i, op in enumerate(ops):
         quote = _quote(op)
-        if isinstance(op, ActionCloseOp) and quote and reading(quote, ctx.cfg.language) == "called_off":
-            ops[i] = ActionDropOp(id=op.id, reason=_reason(quote), evidence=op.evidence, group=op.group)
+        if not quote or reading(quote, ctx.cfg.language) != "called_off":
+            continue
+        if isinstance(op, ActionCloseOp):
+            op = ops[i] = ActionDropOp(id=op.id, reason=_reason(quote), evidence=op.evidence, group=op.group)
+        if isinstance(op, ActionDropOp) and op.event is None and op.series is None:
+            meeting = moved_into(quote, ctx)
+            if meeting is not None:
+                ops[i] = op.model_copy(update=meeting)
     return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
 
 

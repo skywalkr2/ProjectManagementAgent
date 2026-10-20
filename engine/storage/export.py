@@ -4,8 +4,8 @@ The export writes every record, the id sequences and the ledger as deterministic
 folder, so it diffs cleanly in git. Import loads an export into an empty database. Exporting, importing and exporting
 again gives byte-identical files: that round trip is what makes git history a working recovery path.
 
-A folder of records with no ledger (the fictional fixtures) can be imported too: each record gets one ledger entry per
-field, as if it had been created by an import.
+A folder of records with no ledger (a hand-written starting set) can be imported too: each record gets one ledger
+entry per field, as if it had been created by an import.
 
 Long text is written beside the records as plain files, `texts/<hash>.txt`, one per distinct text a version holds, and
 loaded back into the workspace's text store on import.

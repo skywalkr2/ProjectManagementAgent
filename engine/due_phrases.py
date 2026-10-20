@@ -13,9 +13,10 @@ with English defaults here that the language settings override.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
+from typing import Any
 from zoneinfo import ZoneInfo
 
 DEFAULT_LEAD_WORDS = ("by", "on", "due", "due on", "due by", "on or before", "no later than", "not later than")
@@ -58,6 +59,24 @@ def names_title(phrase: str, title: str) -> bool:
     wanted = re.findall(r"[\w']+", title.casefold())
     words = re.findall(r"[\w']+", phrase.casefold())
     return bool(wanted) and any(words[i : i + len(wanted)] == wanted for i in range(len(words) - len(wanted) + 1))
+
+
+def named_entry(entries: Iterable[Any], phrase: str, today: str) -> Any | None:
+    """The one calendar entry still ahead that the phrase names, or None when it names none or several. An entry is
+    named when its title's words appear in the phrase whole and in order; a title that is part of a longer matching one
+    is the same meeting named less fully; of several entries with the same title the soonest is the one meant. Entries
+    called off, or that started before `today` (an ISO day), are not named."""
+    titles: dict[str, list[Any]] = {}
+    for entry in entries:
+        data = entry.data
+        if data.get("cancelled") or str(data.get("start") or "")[:10] < today:
+            continue
+        if names_title(phrase, str(data["title"])):
+            titles.setdefault(str(data["title"]).casefold(), []).append(entry)
+    kept = [t for t in titles if not any(t != o and names_title(o, t) for o in titles)]
+    if len(kept) != 1:
+        return None
+    return min(titles[kept[0]], key=lambda e: (str(e.data["start"]), e.id))
 
 
 def is_condition(phrase: str, markers: Sequence[str]) -> bool:

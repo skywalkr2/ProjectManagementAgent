@@ -9,6 +9,7 @@ import { addDays, day, localDate, time, wallTime, weekday, whenText as when } fr
 import { useSetAside } from "../lib/set-aside";
 import { anyReading, failedReads, latestRead, readProblem } from "../lib/sources";
 import { useWords } from "../lib/wording";
+import { AgendaItems } from "./AgendaList";
 import { useChangeThis } from "./ChangeThis";
 import { LearnedLines } from "./Learned";
 import { useDropAction } from "./DropAction";
@@ -340,6 +341,7 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
           )}
         </div>
         {meta && <div className="tb-meta">{meta}</div>}
+        <AgendaItems items={event.agenda ?? []} />
       </div>
       {event.own && <RowMenu label={event.title} actions={[change.entry]} />}
       {!event.own && addTodo && <RowMenu label={event.title} actions={[addTodo]} />}

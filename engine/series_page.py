@@ -8,6 +8,7 @@ from datetime import date
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from engine import agenda as agenda_module
 from engine.config.schema import SeriesSettings
 from engine.names import render_owner
 from engine.series import SETTLED, instances, next_instance, span
@@ -134,6 +135,10 @@ def page(
     return {
         "id": series_id,
         "title": data["title"],
+        "agenda": [
+            *agenda_module.lines(view, "series", series_id),
+            *(agenda_module.lines(view, "event", upcoming.id) if upcoming is not None else []),
+        ],
         "repeats": data.get("repeats"),
         "project": data.get("project"),
         "project_name": project.data["name"] if project is not None else None,

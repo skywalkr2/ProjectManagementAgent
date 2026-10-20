@@ -1,0 +1,17 @@
+[
+  {
+    "_version": 1,
+    "id": "ORG-1",
+    "name": "Lantern House"
+  },
+  {
+    "_version": 1,
+    "id": "ORG-2",
+    "name": "Harrowgate Print Works"
+  },
+  {
+    "_version": 1,
+    "id": "ORG-3",
+    "name": "Corner Lamp Books"
+  }
+]

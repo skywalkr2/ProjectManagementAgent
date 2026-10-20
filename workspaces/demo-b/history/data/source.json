@@ -1,0 +1,28 @@
+[
+  {
+    "_version": 2,
+    "author": "PER-3",
+    "content_hash": "222c3ec1f9ae974dd84962c6dd74af0584e85503a39e6bd6376ab426eb716f9d",
+    "excerpts": "allowed",
+    "id": "SRC-1",
+    "kind": "pasted",
+    "received_at": "2026-10-19T14:00:40Z",
+    "reported": false,
+    "sensitivity": "internal",
+    "title": "From: Theo Brandt",
+    "trust": "untrusted"
+  },
+  {
+    "_version": 2,
+    "author": "PER-7",
+    "content_hash": "20417b2cd7d9fa17447fdd8ffc38a149afd0dc278e378554fc31f9e0acf3ae84",
+    "excerpts": "allowed",
+    "id": "SRC-2",
+    "kind": "pasted",
+    "received_at": "2026-10-19T15:00:40Z",
+    "reported": false,
+    "sensitivity": "internal",
+    "title": "From: Maya Lindqvist",
+    "trust": "untrusted"
+  }
+]

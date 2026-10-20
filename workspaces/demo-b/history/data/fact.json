@@ -1,0 +1,18 @@
+[
+  {
+    "_version": 1,
+    "as_of": "2026-10-19",
+    "basis": "inferred",
+    "evidence": {
+      "quote": "the spine options are in the shared folder",
+      "source": "SRC-1"
+    },
+    "id": "FACT-1",
+    "key": false,
+    "project": "PRJ-1",
+    "reaches_children": false,
+    "source": "SRC-1",
+    "text": "The spine options are in the shared folder.",
+    "trust": "untrusted"
+  }
+]

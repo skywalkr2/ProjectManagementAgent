@@ -12,6 +12,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from engine import agenda as agenda_module
 from engine import entry_rules
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.connectors import moment
@@ -36,6 +37,7 @@ class AgendaItem:
     series: str | None = None  # the series an own entry is one meeting of
     open_items: int = 0  # for such a meeting: how many open actions and questions sit on it
     todo_offer: str | None = None  # a plain entry whose title reads as a task: the to-do it is offered as, in its words
+    agenda: list[dict[str, Any]] = field(default_factory=list)  # what is to be taken up at it (engine/agenda.py)
 
 
 @dataclass
@@ -107,6 +109,7 @@ def agenda(store: Any, cfg: Any, now: datetime, through: date | None = None) -> 
                     todo_offer=entry_rules.task_offer(entry.data, cfg)
                     if entry is not None and entry.id not in with_todo
                     else None,
+                    agenda=agenda_module.for_entry(view, entry, days[0], here) if entry is not None else [],
                 )
             )
     found.sort(key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
@@ -177,6 +180,7 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaIte
                 own=True,
                 series=data.get("series"),
                 open_items=_open_on(view, entry, days[0], here) if data.get("series") else 0,
+                agenda=agenda_module.for_entry(view, entry, days[0], here),
             )
         )
     return sorted(found, key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))

@@ -1,0 +1,267 @@
+[
+  {
+    "_version": 1,
+    "due": "2026-10-16",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-1",
+    "owners": [
+      {
+        "person": "PER-4",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Send the final interior file to the printer"
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-14",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-2",
+    "owners": [
+      {
+        "person": "PER-2",
+        "team": null
+      },
+      {
+        "person": "PER-5",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Agree on the back-cover copy"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-3",
+    "owners": [
+      {
+        "person": "PER-5",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "done",
+    "text": "Choose the advance-copy reviewer list"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-4",
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "held",
+    "text": "Book a photographer for the launch reading"
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-14",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-5",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Approve the back-cover copy"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-6",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Reply to the bookshop about the launch date"
+  },
+  {
+    "_version": 1,
+    "done_by": [
+      "PER-4"
+    ],
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-1",
+    "id": "ACT-7",
+    "owners": [
+      {
+        "person": "PER-4",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "reported_by": "PER-1",
+    "series": "SER-1",
+    "status": "done",
+    "text": "Book the proof slot"
+  },
+  {
+    "_version": 2,
+    "due": "2026-10-21",
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-2",
+    "id": "ACT-8",
+    "owners": [
+      {
+        "person": "PER-3",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "series": "SER-1",
+    "status": "open",
+    "text": "Send the cover files to the printer"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-2",
+    "id": "ACT-9",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "series": "SER-1",
+    "status": "open",
+    "text": "Confirm the proof date with the printer"
+  },
+  {
+    "_version": 2,
+    "dropped_reason": "Mark 'Settle the endpaper color' closed; the Print sync will cover it",
+    "due": "2026-10-23",
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-2",
+    "id": "ACT-10",
+    "owners": [
+      {
+        "person": "PER-3",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "series": "SER-1",
+    "status": "dropped",
+    "text": "Settle the endpaper color"
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-21",
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-4",
+    "id": "ACT-11",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Approve the cover proof"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-4",
+    "id": "ACT-12",
+    "owners": [
+      {
+        "person": "PER-3",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Review the spine options",
+    "told": {
+      "PER-3": "2026-10-14"
+    }
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-19",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-13",
+    "owners": [
+      {
+        "person": "PER-3",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Send two spine options"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-14",
+    "owners": [
+      {
+        "person": "PER-5",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Confirm the seating plan for the launch reading",
+    "told": {
+      "PER-2": "2026-10-10",
+      "PER-5": "2026-10-10"
+    }
+  }
+]

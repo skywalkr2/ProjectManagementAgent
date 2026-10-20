@@ -1,0 +1,268 @@
+[
+  {
+    "_version": 1,
+    "due": "2026-10-20",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-1",
+    "owners": [
+      {
+        "person": "PER-3",
+        "team": "TEAM-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Publish the cut-over runbook"
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-16",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-2",
+    "owners": [
+      {
+        "person": "PER-4",
+        "team": "TEAM-2"
+      }
+    ],
+    "project": "PRJ-2",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Share the reconciliation test results"
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-14",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-3",
+    "owners": [
+      {
+        "person": "PER-2",
+        "team": "TEAM-3"
+      },
+      {
+        "person": "PER-5",
+        "team": "TEAM-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Review the load-test plan"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-4",
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "held",
+    "text": "Book the cut-over war room"
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-14",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-5",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Review the cut-over checklist before the dry run"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-6",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Book the room for the go/no-go meeting"
+  },
+  {
+    "_version": 1,
+    "done_by": [
+      "PER-3"
+    ],
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-1",
+    "id": "ACT-7",
+    "owners": [
+      {
+        "person": "PER-3",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "reported_by": "PER-1",
+    "series": "SER-1",
+    "status": "done",
+    "text": "Book the dry-run window"
+  },
+  {
+    "_version": 2,
+    "due": "2026-10-21",
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-2",
+    "id": "ACT-8",
+    "owners": [
+      {
+        "person": "PER-5",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "series": "SER-1",
+    "status": "open",
+    "text": "Publish the load-test results"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-2",
+    "id": "ACT-9",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "series": "SER-1",
+    "status": "open",
+    "text": "Confirm the dry-run date with the routing team"
+  },
+  {
+    "_version": 2,
+    "dropped_reason": "Mark 'Agree who owns the rollback' closed; the Cut-over sync will cover it",
+    "due": "2026-10-23",
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-2",
+    "id": "ACT-10",
+    "owners": [
+      {
+        "person": "PER-5",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "series": "SER-1",
+    "status": "dropped",
+    "text": "Agree who owns the rollback"
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-22",
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-4",
+    "id": "ACT-11",
+    "owners": [
+      {
+        "person": "PER-1",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Approve the go/no-go checklist"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "event": "EVT-4",
+    "id": "ACT-12",
+    "owners": [
+      {
+        "person": "PER-5",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Share the load-test summary",
+    "told": {
+      "PER-5": "2026-10-14"
+    }
+  },
+  {
+    "_version": 1,
+    "due": "2026-10-19",
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-13",
+    "owners": [
+      {
+        "person": "PER-5",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Send the capacity numbers"
+  },
+  {
+    "_version": 1,
+    "due_by_person": false,
+    "due_check": false,
+    "id": "ACT-14",
+    "owners": [
+      {
+        "person": "PER-4",
+        "team": null
+      }
+    ],
+    "project": "PRJ-1",
+    "reply_owed": false,
+    "reply_reviewed": false,
+    "status": "open",
+    "text": "Confirm the briefing room for the carriers",
+    "told": {
+      "PER-4": "2026-10-10",
+      "PER-6": "2026-10-10"
+    }
+  }
+]

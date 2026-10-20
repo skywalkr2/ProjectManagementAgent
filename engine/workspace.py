@@ -20,6 +20,9 @@ from engine.storage import Store
 from engine.storage.export import commit_export, export_data, import_data
 
 ENV_WORKSPACE = "COCKPIT_WORKSPACE"
+#: The folder of a template that holds its history: a full export (`data/`, ledger included) and the texts of the
+#: inputs in it (`sources/`).
+HISTORY = "history"
 WORKSPACE_GITIGNORE = "cockpit.db\ncockpit.db-*\n.cockpit/\nsources/\ntexts/\n"
 
 
@@ -85,8 +88,10 @@ def init_workspace(
     you: str | None = None,
     name: str | None = None,
     assistant: str | None = None,
+    history: bool = False,
 ) -> Workspace:
-    """Create a workspace folder and its database. With a template, copy its config and data and load the data;
+    """Create a workspace folder and its database. With a template, copy its config and data and load the data (with
+    `history`, and a template that has one, its history instead of its starting records alone, for a demo);
     otherwise write default config files. Without a template, `you` (the PM's full name) becomes the first person and
     the workspace's user, and `name` and `assistant` set the display names. The new workspace is committed to its own
     git repository."""
@@ -102,6 +107,13 @@ def init_workspace(
             src = template / folder
             if src.is_dir():
                 shutil.copytree(src, root / folder)
+    if template is not None and history and (template / HISTORY).is_dir():
+        # The template's own history (a full export made by the app, and the texts of the inputs in it) is what a demo
+        # opens on, in place of the starting records alone.
+        shutil.rmtree(root / "data", ignore_errors=True)
+        for folder in ("data", "sources"):
+            if (template / HISTORY / folder).is_dir():
+                shutil.copytree(template / HISTORY / folder, root / folder)
     ws.config_dir.mkdir(exist_ok=True)
     for file_name in FILES:
         target = ws.config_dir / f"{file_name}.yaml"

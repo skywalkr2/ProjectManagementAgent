@@ -24,12 +24,14 @@ from engine.selfcheck.scans import (
 from engine.selfcheck.skills import check_skills_named
 from engine.storage import Store, StoreError
 from engine.storage.export import export_data, import_data
+from engine.workspace import HISTORY
 
 FIXTURES = (REPO / "workspaces" / "demo-a", REPO / "workspaces" / "demo-b")
 
 
-def check_workspace_fixture(ws_root: Path, *, plugins: bool = True) -> list[Finding]:
-    """A fictional workspace's config validates, its data imports, its references resolve and it round-trips."""
+def check_workspace_fixture(ws_root: Path, *, plugins: bool = True, history: bool = False) -> list[Finding]:
+    """A fictional workspace's config validates, its data imports, its references resolve and it round-trips. With
+    `history`, the data is the history the demo opens on (a full export with its ledger)."""
     name = ws_root.name
     findings: list[Finding] = []
     try:
@@ -43,7 +45,7 @@ def check_workspace_fixture(ws_root: Path, *, plugins: bool = True) -> list[Find
         tmp_path = Path(tmp)
         shutil.copytree(ws_root / "config", tmp_path / "config")
         data = tmp_path / "data"
-        shutil.copytree(ws_root / "data", data)
+        shutil.copytree(ws_root / HISTORY / "data" if history else ws_root / "data", data)
         if not plugins:
             for path in data.iterdir():
                 if path.is_dir():
@@ -163,6 +165,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
         ("case skills", check_skills_named),
     ]
     checks += [(f"workspace {ws.name}", lambda ws=ws: check_workspace_fixture(ws)) for ws in FIXTURES]
+    checks += [(f"demo history {ws.name}", lambda ws=ws: check_workspace_fixture(ws, history=True)) for ws in FIXTURES]
     checks += [(f"core alone {ws.name}", lambda ws=ws: check_workspace_fixture(ws, plugins=False)) for ws in FIXTURES]
     checks.append(("fresh workspace", check_fresh_workspace))
     checks.append(("bundled manifests", check_manifests))

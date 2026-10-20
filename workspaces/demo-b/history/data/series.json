@@ -1,0 +1,18 @@
+[
+  {
+    "_version": 2,
+    "agenda": [
+      {
+        "added_at": "2026-10-19T10:02:00Z",
+        "added_by": "PER-1",
+        "question": "Q-3",
+        "text": "Which paper stock does the hardcover use?"
+      }
+    ],
+    "id": "SER-1",
+    "project": "PRJ-1",
+    "repeats": "every Thursday",
+    "title": "Print sync",
+    "trust": "trusted"
+  }
+]

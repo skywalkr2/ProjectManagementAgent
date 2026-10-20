@@ -21,7 +21,12 @@ from engine.due_phrases import (
     DEFAULT_ORDINAL_SUFFIXES,
     DEFAULT_TASK_VERBS,
 )
-from engine.endings import DEFAULT_CALLED_OFF_WORDS, DEFAULT_CLOSED_WORDS, DEFAULT_DELIVERY_WORDS
+from engine.endings import (
+    DEFAULT_CALLED_OFF_WORDS,
+    DEFAULT_CLOSED_WORDS,
+    DEFAULT_DELIVERY_WORDS,
+    DEFAULT_MEETING_WORDS,
+)
 from engine.secrets import SecretHint
 
 
@@ -1787,6 +1792,13 @@ class LanguageFile(FileModel):
         '("moot", "covered by", "no longer needed", "we\'ll get it in", "will cover"). An ending whose words hold one '
         "of these and none of the delivery words is called off instead of done: nobody is credited, and your words "
         "are the reason. Case is ignored.",
+    )
+    meeting_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_MEETING_WORDS),
+        description="The words that say something moved into a meeting ('we'll cover it', 'in the planning sessions', "
+        "'take it up at'). An ending that is called off, whose words hold one of these and name a meeting the "
+        "workspace knows (a calendar entry still ahead, or a series), also puts the action on that meeting's agenda, "
+        "linked to it. Case is ignored.",
     )
     closed_words: list[str] = Field(
         default_factory=lambda: list(DEFAULT_CLOSED_WORDS),

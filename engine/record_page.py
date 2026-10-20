@@ -8,6 +8,7 @@ from datetime import date, datetime
 from typing import Any, Literal, get_args, get_origin
 from zoneinfo import ZoneInfo
 
+from engine import agenda as agenda_module
 from engine.history import changes_for_person
 from engine.names import render_owner
 from engine.origin import origins
@@ -17,7 +18,7 @@ from engine.texts import long_text_fields
 ACTIVITY_MAX = 60
 COMPLETED_MAX = 50
 _NAME_FIELDS = ("full_name", "name", "title", "text")
-_HIDDEN = {"id", "stage", "ext", "aliases"}
+_HIDDEN = {"id", "stage", "ext", "aliases", "agenda"}
 
 
 def display_name(data: dict[str, Any]) -> str:
@@ -143,8 +144,19 @@ def page(
         ],
         "completed_actions": _completed(view, kind, record_id, name_of),
         "fact_source": fact_source(view, record) if kind == "fact" else None,
+        "agenda": _agenda(view, record, today, here),
         "activity": _activity(view, kind, record_id, actions, questions, name_of, pm, second_move_days),
     }
+
+
+def _agenda(view: Any, record: Any, today: date | None, here: ZoneInfo | None) -> list[dict[str, Any]]:
+    """What is to be taken up at a calendar entry or a series: its agenda items (a calendar entry that is its series'
+    next meeting has the series' after its own)."""
+    if record.kind == "event" and today is not None and here is not None:
+        return agenda_module.for_entry(view, record, today, here)
+    if record.kind in ("event", "series"):
+        return agenda_module.lines(view, record.kind, record.id)
+    return []
 
 
 def _ids_named(view: Any, store: Any, value: Any, name_of: Any) -> list[dict[str, str]]:

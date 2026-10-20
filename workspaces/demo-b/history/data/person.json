@@ -1,0 +1,89 @@
+[
+  {
+    "_version": 1,
+    "full_name": "Avery Lane",
+    "id": "PER-1",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Publisher",
+    "status": "active",
+    "team": "TEAM-1",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "aliases": [
+      "Maya"
+    ],
+    "full_name": "Maya Okafor",
+    "how_to_reach": {
+      "email": "maya.okafor@example.org"
+    },
+    "id": "PER-2",
+    "name_verified": false,
+    "org": "ORG-1",
+    "role": "Editor",
+    "status": "active",
+    "team": "TEAM-1",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "aliases": [
+      "Theo"
+    ],
+    "full_name": "Theo Brandt",
+    "id": "PER-3",
+    "name_verified": false,
+    "role": "Cover designer",
+    "status": "active",
+    "team": "TEAM-2",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "full_name": "Sam Rivera",
+    "id": "PER-4",
+    "name_verified": false,
+    "role": "Typesetter",
+    "status": "active",
+    "team": "TEAM-2",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "aliases": [
+      "Ines"
+    ],
+    "full_name": "Ines Duarte",
+    "id": "PER-5",
+    "name_verified": false,
+    "role": "Publicist",
+    "status": "active",
+    "team": "TEAM-1",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "full_name": "Jun Park",
+    "id": "PER-6",
+    "name_verified": false,
+    "org": "ORG-2",
+    "role": "Printer account contact",
+    "status": "active",
+    "track_only": false
+  },
+  {
+    "_version": 1,
+    "aliases": [
+      "Maya"
+    ],
+    "full_name": "Maya Lindqvist",
+    "id": "PER-7",
+    "name_verified": false,
+    "org": "ORG-3",
+    "role": "Bookshop events coordinator",
+    "status": "active",
+    "track_only": false
+  }
+]

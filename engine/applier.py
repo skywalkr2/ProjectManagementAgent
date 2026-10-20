@@ -16,6 +16,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
+from engine import agenda as agenda_module
 from engine import audience, draft_checks, endings, knowledge, learn, outward, proposals, reply_lines, scope
 from engine import search as workspace_search
 from engine import series as series_module
@@ -43,6 +44,7 @@ from engine.ops import (
     ActionPartOp,
     ActionReplyOp,
     ActionUnholdOp,
+    AgendaAddOp,
     AnswerOp,
     ChangesetIn,
     EventAddOp,
@@ -365,6 +367,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", "a calendar entry is named twice in events")
         if isinstance(op, SeriesLinkOp) and (why := series_module.link_problem(view, op.event, op.series)):
             refuse(i, "targets", why)
+        if isinstance(op, AgendaAddOp) and (why := agenda_module.problem(view, op)):
+            refuse(i, "targets", why)
         if isinstance(op, ActionCloseOp):
             target = view.get("action", op.id)
             if target is None:
@@ -397,6 +401,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
             if isinstance(op, ActionDropOp) and not why and _waits_for_a_look(view, ctx, "action", op.id):
                 problems.append(Problem("reached-confirm", "hold", i, REACHED_WAITS))
+            if isinstance(op, ActionDropOp) and not why and (op.event or op.series):
+                why = agenda_module.problem(view, AgendaAddOp(event=op.event, series=op.series, action=op.id))
+                if why:
+                    refuse(i, "targets", why)
         if isinstance(op, ActionUnholdOp):
             why = action_unhold_problem(view, op)
             if why:
@@ -1334,6 +1342,13 @@ def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | N
         found = view.get("person", op.id)
         if found is not None:
             return f"Change who {found.data['full_name']} is to you: {STANCE_PLAIN[op.stance]}"
+    if isinstance(op, AgendaAddOp) and view is not None:
+        meeting = view.get(*agenda_module.meeting_of(op))
+        item = view.get(*agenda_module.item_of(op))
+        if meeting is not None and item is not None:
+            return " ".join(f"Put '{agenda_module.words_of(item)}' on the agenda of {meeting.data['title']}".split())[
+                :200
+            ]
     if isinstance(op, PersonContactOp) and view is not None:
         found = view.get("person", op.person)
         if found is not None:
@@ -2155,6 +2170,9 @@ def _apply_op(
         cur = tx.get("event", op.event)
         tx.update("event", op.event, {"series": op.series}, w, read_version=cur.version)
         made("event", op.event)
+    elif isinstance(op, AgendaAddOp):
+        by = ctx.people.pm if _persons_own(tx, ctx) else None
+        made(*agenda_module.add(tx, op, w, by=by, at=ctx.store.clock()))
     elif isinstance(op, RecordSetOp):
         cur = tx.get(op.kind, op.id)
         value = op.value
@@ -2277,6 +2295,11 @@ def _apply_op(
         reason = " ".join(op.reason.split())
         tx.update("action", op.id, {"status": "dropped", "dropped_reason": reason}, w, read_version=cur.version)
         made("action", op.id)
+        if op.event or op.series:
+            # Called off because it moved into a meeting: it goes on that meeting's agenda, linked, so it isn't lost.
+            moved = AgendaAddOp(event=op.event, series=op.series, action=op.id)
+            by = ctx.people.pm if _persons_own(tx, ctx) else None
+            made(*agenda_module.add(tx, moved, w, by=by, at=ctx.store.clock()))
         for draft in endings.called_off_notices(tx, ctx, cur):
             # Whoever was already told gets one line, drafted for the person to send; nothing goes out by itself.
             made("question", tx.create("question", draft, w).id)
@@ -2422,7 +2445,7 @@ def _condition(tx: Tx, ctx: Context, source: str | None, words: str, today: date
     that wait for something to happen ("once the keys arrive"), `event` with the entry's id for "before <an entry
     still ahead>" when the words name exactly one, `open` for the rest of the condition words (and for a "before" that
     names no known entry, or several), and none for words that aren't a condition."""
-    from engine.due_phrases import after_marker, is_condition, names_title
+    from engine.due_phrases import after_marker, is_condition, named_entry
 
     settings = ctx.cfg.language
     language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
@@ -2432,18 +2455,9 @@ def _condition(tx: Tx, ctx: Context, source: str | None, words: str, today: date
         return "hold", None
     named = after_marker(words, settings.due_before_words)
     if named:
-        titles: dict[str, list[Any]] = {}
-        for entry in tx.list("event"):
-            data = entry.data
-            if data.get("cancelled") or str(data.get("start") or "")[:10] < today.isoformat():
-                continue
-            if names_title(named, str(data["title"])):
-                titles.setdefault(str(data["title"]).casefold(), []).append(entry)
-        # A title that is part of a longer matching one is the same meeting named less fully.
-        kept = [t for t in titles if not any(t != o and names_title(o, t) for o in titles)]
-        if len(kept) == 1:
-            soonest = min(titles[kept[0]], key=lambda e: (str(e.data["start"]), e.id))
-            return "event", soonest.id
+        found = named_entry(tx.list("event"), named, today.isoformat())
+        if found is not None:
+            return "event", found.id
     return "open", None
 
 

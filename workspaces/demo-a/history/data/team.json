@@ -1,0 +1,36 @@
+[
+  {
+    "_version": 1,
+    "id": "TEAM-1",
+    "members": [
+      "PER-3",
+      "PER-5"
+    ],
+    "name": "Routing Platform"
+  },
+  {
+    "_version": 1,
+    "id": "TEAM-2",
+    "members": [
+      "PER-4"
+    ],
+    "name": "Invoice Systems"
+  },
+  {
+    "_version": 1,
+    "id": "TEAM-3",
+    "members": [
+      "PER-1",
+      "PER-2"
+    ],
+    "name": "Architecture Office"
+  },
+  {
+    "_version": 1,
+    "id": "TEAM-4",
+    "members": [
+      "PER-6"
+    ],
+    "name": "Carrier Experience"
+  }
+]

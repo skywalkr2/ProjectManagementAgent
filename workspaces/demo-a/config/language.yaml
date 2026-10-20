@@ -43,6 +43,8 @@ task_verbs: [pay, send, call, email, text, book, buy, order, renew, submit, file
 delivery_words: [sent, finished, delivered, it's in, its in, did it, done, completed, handed in, turned in, submitted, shipped, attached, uploaded, published, emailed, mailed, posted, paid, booked, signed, returned, taken care of, took care of, came through, they did, she did, he did, went out, gone out, is out, handed over, shared, forwarded, got it, received, arrived]
 called_off_words: [moot, covered by, covered in, will cover, we'll cover, we will cover, will be covered, no longer needed, no longer need, not needed, isn't needed, no need, don't need, drop it, drop this, call it off, called off, cancel, canceled, cancelled, never mind, forget it, we'll get it in, we will get it in, in our discussions, in the discussions, in our discussion, in the planning sessions, in our planning, superseded, obsolete, unnecessary]
 closed_words: [close, closed, closing, close out, closed out]
+# The words that say something moved into a meeting: a call-off that holds one and names a meeting the workspace knows puts the action on its agenda.
+meeting_words: [will cover, we'll cover, we will cover, will be covered, covered in, covered at, take it up, in our discussions, in the discussions, in our discussion, in the planning sessions, in our planning, we'll get it in, we will get it in, raise it, bring it up, discuss it, move it to, moved to]
 # Phrases that say the person already sent something (see the unnamed-recipient check).
 already_sent_phrases: [I sent, I've sent, I have sent, I just sent, I emailed, I've emailed, I forwarded, I've forwarded, we sent, we've sent]
 # Phrases with which a sender limits who may see a message (see the audience check).

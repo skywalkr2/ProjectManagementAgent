@@ -10,6 +10,23 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.86 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.
+
+- **A meeting's agenda:** core records `CalendarEntry.agenda` and `Series.agenda`, each a list of `AgendaItem`s (the
+  `action`, `question` or `note` it came from, linked by id; `added_by`, the person who put it there, none when the
+  assistant did; `added_at`; and the `text` it is listed under). Nothing in a plugin's own records changes. A plugin
+  reads them through `view.get` like any core record.
+- **Core op `agenda.add`** (system tier, with Undo; needs evidence unless the person makes it) puts an action, a
+  question or a note on the agenda of a calendar entry (`event`) or a series (`series`), linked to it; the item itself
+  is not changed. A person action may propose it.
+- **Core op `action.drop`** takes an optional `event` or `series`: an action called off because it moved into a
+  meeting is put on that meeting's agenda by the same drop, and Undo takes both back.
+- **`Change.source`** in `view.changes`: who or what a change came from, as readers may see it (the person, or the input
+  and its day). A change's `actor` there is `pm` or `input`, never the assistant: outward material never names the
+  assistant, and a plugin's published page shows `source`.
+
 ## What 0.3.85 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.

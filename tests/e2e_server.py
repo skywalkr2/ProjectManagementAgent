@@ -115,7 +115,7 @@ def main() -> None:
     stress = layout_strings() if args.layout_stress else {}
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
-    ws = init_workspace(tmp / "ws", template=DEMO_B, git=False)
+    ws = init_workspace(tmp / "ws", template=DEMO_B, git=False, history=True)
     (tmp / "offsite").mkdir(exist_ok=True)
     flags = {
         "server.base_path": args.base_path,

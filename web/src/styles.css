@@ -431,6 +431,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-what { flex: 1 1 auto; min-width: 0; }
 .tb-title { font-weight: var(--weight-semibold); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .tb-meta { color: var(--text-muted); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.tb-agenda { margin: var(--space-1) 0 0; padding-left: var(--space-4); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .tb-when { flex: none; color: var(--text-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tb-row > .tb-when:first-child { flex-basis: 8.75rem; }
 .tb-row .pill { margin: 0 var(--space-2) 0 0; }

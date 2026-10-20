@@ -7,6 +7,7 @@ import { api, type S } from "../lib/api";
 import { day, monthDay } from "../lib/dates";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { AgendaSection } from "./AgendaList";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
@@ -43,6 +44,7 @@ export function SeriesPage(props: { id: string; onBack: () => void }) {
           </div>
           <div className="record-grid">
             <div className="record-main">
+              <AgendaSection items={data.agenda ?? []} id="series-agenda" />
               <NextMeeting page={data} />
               <Past page={data} />
             </div>
