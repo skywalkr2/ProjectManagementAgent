@@ -5,6 +5,8 @@ Names and ids come from the fixtures; the AI is the stub."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -50,7 +52,10 @@ def env(tmp_path):
 
 @pytest.fixture
 def api(tmp_path):
-    ws, cfg, store = make(tmp_path, [mail("a", 2), mail("b", 5), mail("old", 30)], confirm=0.0, price=1000.0)
+    # The routes read the mailbox at the real time, so the mail's dates follow the real clock.
+    today = datetime.now(UTC)
+    items = [mail("a", 2, now=today), mail("b", 5, now=today), mail("old", 30, now=today)]
+    ws, cfg, store = make(tmp_path, items, confirm=0.0, price=1000.0)
     store.close()
     application = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui", start_worker=False)
     with TestClient(application, headers={"Authorization": f"Bearer {TOKEN}"}) as client:
@@ -259,14 +264,15 @@ def test_the_route_lists_the_promises_and_the_follow_up_when_the_work_is_done(ap
     for r in requests_of(store, intake="m"):
         with_changeset(store, r.id, [("action.add", "applied")])
     they = other(cfg)
-    owed = promise(store, they, "Send the floor plan", "2026-11-02", evidence={"quote": "I'll send the floor plan"})
+    due = (datetime.now(UTC) + timedelta(days=14)).date().isoformat()
+    owed = promise(store, they, "Send the floor plan", due, evidence={"quote": "I'll send the floor plan"})
     ready = client.get("/api/setup/first-promises").json()
     assert ready["stage"] == "ready" and ready["more"] == 0
     (one,) = ready["promises"]
     assert (one["action"], one["text"], one["due"], one["mine"], one["quote"]) == (
         owed,
         "Send the floor plan",
-        "2026-11-02",
+        due,
         False,
         "I'll send the floor plan",
     )

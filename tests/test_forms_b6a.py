@@ -8,11 +8,17 @@ from tests.test_setup import client, make
 def test_the_settings_say_when_the_files_last_changed_so_a_refused_save_can_say_when(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
+    import os
+    import time
+
+    # A new workspace's files carry the modified times of the folder it was made from, so give them one known time.
+    written = time.time() - 300
+    for path in ws.config_dir.rglob("*.yaml"):
+        os.utime(path, (written, written))
     first = c.get(f"{api}/settings").json()
     stamp = datetime.fromisoformat(first["changed_at"])
-    assert stamp.tzinfo is not None and abs((datetime.now(UTC) - stamp).total_seconds()) < 3600
-    import os
-
+    assert stamp.tzinfo is not None and abs(stamp.timestamp() - written) < 1
+    assert abs((datetime.now(UTC) - stamp).total_seconds() - 300) < 60
     for path in ws.config_dir.glob("workspace.yaml"):
         os.utime(path, (stamp.timestamp() + 600, stamp.timestamp() + 600))
     later = datetime.fromisoformat(c.get(f"{api}/settings").json()["changed_at"])

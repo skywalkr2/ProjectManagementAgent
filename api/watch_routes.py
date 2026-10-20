@@ -4,7 +4,7 @@ reading one now."""
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException
 
@@ -241,7 +241,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         """The closes nobody has seen (a rule's, the set-aside sorting's, the assistant's own drops and closes) in the
         configured quality window, newest first, and the measure: silent closes out of all closes."""
         view = store.read()
-        until = datetime.now(UTC)
+        until = worker.now()
         days = current().dispatch.knowledge.quality_window_days
         since = until - timedelta(days=days)
         found = closes.silent(view, since)
