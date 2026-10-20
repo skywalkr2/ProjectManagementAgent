@@ -11,6 +11,24 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
+## Queued: F26 to F29, the Gmail-later proposal (2026-10-20; the owner asks them when ready)
+
+The proposal is `docs/project/business-model-delta-gmail-later.md`: Thimbleby+ launches with one-click Outlook and every
+pack, and Gmail's one-click sign-in waits for a trigger. Its questions 1 to 4, with the technical reviewer's read, are
+in that page; until they are answered, phase T doesn't take the proposal and nothing in the free core changes.
+
+**F26. The trigger** for Gmail's one-click sign-in (the page's question 1). *Default if "yes":* whichever of its three
+signals comes first.
+
+**F27. A weekly "Sign in again" for testers** (question 2). *Default:* acceptable, since a refused renewal is already a
+question on Today (`tests/test_mailbox_refusal.py`); the proposal's test adds the weekly case.
+
+**F28. Where the free Gmail walkthrough lives** (question 3). *Default:* in the add-on, since the core names no service.
+
+**F29. The tester registration (M7) for the free core's testers too** (question 4). *Default:* yes, with one of phase
+I's three testers using the free path's own-registration steps, so the Gmail walkthrough is tried by someone
+non-technical; and a second registration for phase I if Google's cap counts everyone ever added.
+
 ## Answered: F15 to F25 (asked 2026-10-19 and 20, answered 2026-10-20)
 
 Answered by the functional designer on 2026-10-20; the answers are in `docs/decisions.md` ("The functional designer's
