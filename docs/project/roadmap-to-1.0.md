@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 133, each in exactly one batch; 221 done items are in `roadmap-done.md`.
+- **Open items:** 131, each in exactly one batch; 223 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -74,12 +74,12 @@ keep each item's full text.
     - *Covers:* *Wave 5* with P17 (.ics calendars, full featured) and P18 (several accounts of one service); the items that belong with it: *Passwords, keys and private addresses typed on the screen* (P16), *Add-ons install from the screen* (P15), *Mailbox and calendar passwords and addresses entered on screen* (all in phase B, built to S's shape).
     - *Exit:* the tests each item names pass; the owner adds an .ics link and file and a second account of one service, and types a password and a key on screen, with no file edit.
 
-5. **B-6a The rest of B: records, Settings and forms** (12 open items, plus the numbered wave 6 entry; size: about one to two days)
+5. **B-6a The rest of B: records, Settings and forms** (9 open items, plus the numbered wave 6 entry; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): the designer's F12 and F13 and P26 (in the wave 6 entry), *Lists, not typing*, *The cursor starts where you type*, *Value-list values carry meaning*, *Follow-ups' Later*, *An action can be blocked*, *The obvious next steps on screen*; and the open items that fit this area: *A project's "what the assistant knows"*, *"Overlaps with …"*, *The Quality screen*, *Where a fact came from* (29), *A series page* (30), *A date move isn't news*, *Settings*, *Learning on screen*, *Action items and open questions, cleaned up*, *The app's own kit*, *Found by the phase A journeys*.
     - *Also covers* (the designer's lessons, 2026-10-19): *An unknown status stays unknown, and an add from a link says when nothing could read it* (design 6.19).
     - *Exit:* the tests each item names pass, and the browser test of every main screen at several widths shows no sideways scroll; the owner works through their own open items on a laptop and a phone.
 
-6. **B-6b The rest of B: Today and the shell** (17 open items; size: about one to two days)
+6. **B-6b The rest of B: Today and the shell** (18 open items; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): *The Today rows as the mockup review set them*, *This week at every width*, *Notifications for "needs you" only*, *The walkthrough's look*, *An unnamed assistant reads as one*, *The header shows the assistant is alive*, *Words and accessibility throughout*; and the open items that fit this area: *After a move* (27), *Held for a look* (28), *Work*, *Setup guide*, *The rest* (Stages board, phone review mode, hand-in drawer, Ask as a side pane), *Review after the first Go*, *When something is due a follow-up*, *Top priorities, always current*, *Copy puts the formatted message and its plain text on the clipboard together*, *What the work version's screens show*.
     - *Exit:* phase B's exit test: the owner reviews every screen on a laptop and a phone; checklist items C1 to C46 are marked Done or explained, with screenshots; the journey tests run against the new screens.
 
@@ -337,10 +337,6 @@ From the original designer's lessons of 2026-10-14:
   primary opens the waiting items; a to-do that waits on something says what (the hold's own words) but is not linked to
   the question it depends on, because no record ties an action to a question (a design and ops question for the main
   session).
-- [ ] [B-6a] **A date move isn't news** (lesson 5): the history shown to readers (a record's activity, a published page) leaves
-  out changes that only move a date on an existing item (same text, new date); new, closed and blocked items, status,
-  scope, risks and decisions stay. The ledger keeps everything. The core provides this reader filter; a pack's published
-  status page uses it (C2, C4).
 
 - [ ] [B-6b] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
   Sources shows on a source's row when its mail couldn't be sorted and why (from L0). Waiting to go out is a designed screen with its empty
@@ -443,10 +439,13 @@ From the original designer's lessons of 2026-10-14:
   - [ ] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
   - [ ] **Never raw data on screen:** the work version shows a raw data structure in a milestone's title. Our wording
     check covers server text; add a check that no title or line holds braces or quoted keys.
-- [ ] [B-6a] **An action can be blocked** (from comparing the design with an outside list of core features): "Blocked, waiting
+- [ ] [B-6b] **An action can be blocked** (from comparing the design with an outside list of core features): "Blocked, waiting
   on <a person, an action or a thing>", shown on the row and counted in Top priorities. The assistant proposes
   unblocking when an input says the blocker is gone (L3b). Dependencies between work items stay in the project
   management pack (C2).
+  *Built (B-6a):* a hold names a person, an action or a question; the row says what it waits on; the count for Top
+  priorities (`tests/test_blocked_actions.py`, `web/src/components/OnHold.test.tsx`). *Left:* the count shown on Top
+  priorities, which B-6b builds.
 - [ ] [B-6a] **The obvious next steps on screen** (L3b): "Add a new person" in the who-is-this chooser, "Add a project",
   "It's part of" and "Not a project", and the other one-click offers, in the row's menu or as its primary.
   *Built:* "Add a person…" in every person picker (P13, `NextSteps.test.tsx`) and "Add a project…" when filing (P14, `Unfiled.test.tsx`). Left: "It's part of" and "Not a project" as one-click offers.
@@ -470,8 +469,9 @@ From the original designer's lessons of 2026-10-14:
   none; Follow-ups' Copy shows the message it will copy before copying, as 7.5 says (today it copies at once).
 - [ ] [B-6a] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
   send.
-- [ ] [B-6a] **Value-list values carry meaning** (design 5.4): a tone for each value, and a meaning for status values, so a value the
-  person adds still ranks and colors correctly.
+  *Built (B-6a):* held for a meeting, a series or a day, out of To send until then, "Send now" in its menu
+  (`tests/test_followups_later.py`, `web/src/components/FollowUps.test.tsx`). *Left:* holding a question for the weekly
+  note.
 - [ ] [B-6b] **This week at every width** (7.7): a collapsed Today section, and the inspector's view when nothing is selected.
 - [ ] [B-6b] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook

@@ -1848,6 +1848,16 @@ From the original designer's lessons of 2026-10-14:
   each row's use (`web/src/components/Knowledge.test.tsx`, `tests/test_knowledge_screen.py::test_the_knowledge_list_carries_how_much_each_entry_was_used`).
   Left: the per-project section.
   *Built (B-6a):* the per-project section (`tests/test_project_knows.py`).
+- [x] **Value-list values carry meaning** (design 5.4): a tone for each value, and a meaning for status values, so a value the
+  person adds still ranks and colors correctly.
+  *Built (B-6a):* `tests/test_list_meanings.py`, `web/src/components/ValueLists.test.tsx`. Changing the tone or meaning
+  of a value already on a list has no op yet.
+- [x] **A date move isn't news** (lesson 5): the history shown to readers (a record's activity, a published page) leaves
+  out changes that only move a date on an existing item (same text, new date); new, closed and blocked items, status,
+  scope, risks and decisions stay. The ledger keeps everything. The core provides this reader filter; a pack's published
+  status page uses it (C2, C4).
+  *Built (B-6a):* `engine/history.py`, the record page's activity and `view.changes` (plugin API 0.3.83)
+  (`tests/test_date_moves_are_not_news.py`).
 
 ## Phase S: finished items
 
