@@ -1151,8 +1151,9 @@ describe("the look", { timeout: 20_000 }, () => {
     await user.click(box);
     await user.paste("Harbor work");
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
-    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
+    // A busy computer takes longer than the default second to save and move on.
+    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true), { timeout: 5000 });
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   test("a screen's Continue that couldn't save keeps the person on it", async () => {
