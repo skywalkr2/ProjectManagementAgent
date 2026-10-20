@@ -280,6 +280,12 @@ group on 2026-10-20, which the plan's order (B, S, then I) and the integrity ite
    *P17 built (B-5):* a link or a file on this computer, repeats expanded, invitations, Outlook zones, attendees, a
    changed or cancelled date on its own entry, a promise due at it following and listed in Since yesterday
    (`tests/test_ics_full.py`). Left of P17: an invitation attached to a mail, and a hosted app's upload instead of a file.
+   *P18 built (B-5):* tokens kept per account, the old single file migrated, each source reading as its account (a
+   list on its form), signing one account out pausing only its sources, sources a new account starts reading as it,
+   `context.account` (plugin API 0.3.82) (`tests/test_sign_in_accounts.py`, `web/src/components/SignIns.test.tsx`,
+   `web/src/components/Sources.test.tsx`). Left of P18: the note to the mail add-on's builder (drafted at the end of
+   `plugin-answers-34-48.md`, sent with the weekly plugin round), a renewal warning for an account other than the
+   first, and the "not reading" line and setup step per account. *P16's leftovers built:* see the checked P16 item.
 4. [B-6a, B-6b] **Wave 6, the rest:** (also the designer's F12 and F13, 2026-10-19: a refused form refreshes the untouched fields and
    lists what changed underneath; kept secrets nothing refers to are removed after 30 days or with their source, never
    while an Undo points at one; and open promise P26: a to-do tied to the question it waits on, the nudge's
