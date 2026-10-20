@@ -538,6 +538,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     with no credit; "close" alone asks "Done by <owner>, or no longer needed?"; moved into a meeting goes on that
     meeting's agenda, linked; called off after the owner was told drafts "no longer needed, thanks"; the three learning
     pairs pass.
+  - **Outward material never names the assistant** (owner, from running, 2026-10-20; `docs/decisions.md`): the
+    invariant, the history row's source from the evidence, the three guards (op check, render, send or publish), the
+    blocked names from `assistant_name` and its earlier names, the sweep of existing rows, and the three tests.
   - **The reviewer's further feedback** (owner, 2026-10-20: "provide the UI/UX agent the next batch when you can because
     it already has more feedback"): asked for on 2026-10-20 and folded into this batch when it arrives; when B-7 is
     pushed and green, the reviewer gets the commit, the status for C1–C53 and every place the build chose differently.

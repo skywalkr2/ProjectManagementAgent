@@ -4,6 +4,33 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: Outward material never names the assistant
+
+- **Decided (owner, from running, 2026-10-20):** the person found "Reported by <assistant>, 10/20" as a history row's
+  source on a page colleagues read; twelve such rows were found on six shared pages ("<assistant>, 10/8", "<assistant>
+  PM judgment, 10/6", "draft tags by <assistant>"). The cause: closing someone else's action from an input wrote the
+  assistant in as reporter, and that deployment's rules put the assistant's name on shared pages.
+- **Rules (an invariant, design 6.7 and 6.12):**
+  - The assistant is never a source, a reporter or an author on anything others read: shared pages, history rows,
+    updates, minutes, messages, exports. It's fine on the person's own screens.
+  - A history row's source is the evidence: the page, mail or person, and the date ("<page>, 10/19", "<sender>, 10/14",
+    or the person for their own note). When the sender isn't one known person, the input is cited ("the 10/14 sync
+    notes").
+  - A call from several inputs (a status set to at risk) cites those inputs or the person who approved it, never
+    "<assistant>'s judgment".
+  - Guarded three times: the op check refuses an op bound for what others read that names the assistant, with the
+    reason; the render for readers leaves it out; the step that sends or publishes refuses content still holding it
+    (today Copy, drafts for others, exports and what a plugin's page reads through the plugin API; the publisher when
+    it is built).
+  - The blocked names follow the setting `assistant_name` and every name the person used before (kept from the
+    settings history).
+  - A sweep re-sources existing rows that name the assistant from the ledger's evidence, keeping their dates: when the
+    guard first lands and after every rename.
+- **Kind of change:** a core invariant (never configurable, never lowered), with the names from the person's setting.
+- **Tests:** closing someone's action from an unattributed input writes a history row whose source is the input; an op
+  for what others read naming the assistant is refused; renaming the assistant blocks the new and the old name on
+  what others read.
+
 ## 2026-10-20: A meeting holds agenda items, linked to what they came from
 
 - **Decided (main session):** a calendar entry and a series carry `agenda`, a list of items, each linking the record it
