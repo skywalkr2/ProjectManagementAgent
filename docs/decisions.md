@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: A meeting holds agenda items, linked to what they came from
+
+- **Decided (main session):** a calendar entry and a series carry `agenda`, a list of items, each linking the record it
+  came from (an action, a question or a note), with who added it, when and the words; a new core op `agenda.add` (and
+  its Undo) adds one, and the meeting's page and its Today agenda row show them. An action called off because it moved
+  into a meeting is put on that meeting's agenda, linked, so it isn't lost (the lesson "'Mark this closed' isn't
+  'done'", and the series rule of 2026-10-15). A question held for a meeting (`question.held_for`) stays as it is.
+- **Why:** the core had no place for a meeting's agenda items, so a call-off into a meeting could only keep the words.
+- **Impact:** design 5.x (the calendar entry and series records), 6.33 (endings) and the meeting and series pages;
+  plugin API (a core record field and op), announced in the guide when built.
+
 ## 2026-10-20: "Mark this closed" isn't "done": an ending needs delivery words to be done
 
 - **Decided (owner, from running, 2026-10-20):** the person ended two actions owed by colleagues with notes like "we will
