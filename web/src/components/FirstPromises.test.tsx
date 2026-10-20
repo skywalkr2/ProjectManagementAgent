@@ -218,12 +218,12 @@ describe("in the walkthrough", () => {
     shell("mail");
     const nav = await screen.findByRole("navigation", { name: "Setup steps" });
     expect(within(nav).getAllByRole("button").map((b) => b.getAttribute("data-screen"))).toEqual(["you", "ai", "mail", "promises", "backup", "people", "done"]);
-    await user.click(await screen.findByRole("button", { name: "Next" }));
+    await user.click(await screen.findByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your promises" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { level: 3, name: "Look back over the last 14 days of your own mail" })).toBeInTheDocument();
     // The offer is on screen with its estimate before anything about projects, areas, packs or more accounts.
     expect(screen.queryByText(/Optional extras/)).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Backups" })).toBeInTheDocument();
   });
 

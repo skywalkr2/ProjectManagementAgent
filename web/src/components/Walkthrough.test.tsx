@@ -170,6 +170,24 @@ function routes(over: Record<string, (body: unknown) => unknown> = {}, steps = C
   };
 }
 
+/** One service the AI screen offers, made up; the address is built so none is written out whole. */
+const SERVICE: S["EndpointView"] = {
+  id: "service-a",
+  name: "Service A",
+  adapter: "adapter-one",
+  base_url: `${"https" + "://"}api.service-a.example.com/v1`,
+  key_url: "",
+  needs_key: true,
+  local: false,
+  note: "Pay as you go.",
+  allowed_data: ["open"],
+  program: "",
+  model_examples: [],
+  model_optional: false,
+  recommended: true,
+};
+const WITH_SERVICE = { "GET ai/endpoints": () => [SERVICE] };
+
 const handlers = () => ({
   onOpenPeople: vi.fn(),
   onOpenAddons: vi.fn(),
@@ -207,7 +225,7 @@ describe("opening", () => {
     });
     renderApp(<App rc={rcFixture()} />);
     expect(await screen.findByRole("heading", { level: 1, name: "Set up your workspace" })).toBeInTheDocument();
-    expect(screen.getByText("About 10 minutes. Checking an AI account costs a little, shown on its button; nothing else is spent until you press Start at the end.")).toBeInTheDocument();
+    expect(screen.getByText("About 10–20 minutes. You can stop and come back.")).toBeInTheDocument();
     expect(await screenTitle()).toHaveTextContent("You");
     expect(await screen.findByLabelText("Your full name")).toBeInTheDocument();
     // The cursor starts where the person types, not on a label or the step list.
@@ -460,14 +478,14 @@ describe("toasts", () => {
   };
   const region = () => screen.getByRole("region", { name: "Notifications" });
 
-  test("what a screen said in a toast is gone when the walkthrough moves to another screen, by Next, Back or the list", async () => {
+  test("what a screen said in a toast is gone when the walkthrough moves to another screen, by Continue, Back or the list", async () => {
     const user = userEvent.setup();
     fakeApi(routes({}, CORE.map((id) => step(id, id === "workspace" ? { done: true } : {})), { step: "you" }));
     openWith();
     await screenTitle();
     await user.click(screen.getByRole("button", { name: "say something" }));
     expect(within(region()).getByText("Saved. Workspace name: Offsite team")).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "Next" }));
+    await user.click(await screen.findByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
     expect(within(region()).queryByText(/Saved\./)).toBeNull();
 
@@ -522,57 +540,94 @@ describe("each screen", () => {
     expect(screen.getByText(/Saving adds you to People/)).toBeInTheDocument();
   });
 
-  test("Your AI account: the account form, and what it may spend with its starting values, saved through the settings", async () => {
+  test("Your AI account: spending is one sentence with its starting amounts, and Continue saves a change to them", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(
       routes(
-        { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
-        CORE.map((id) => step(id)),
+        { ...WITH_SERVICE, "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
+        CORE.map((id) => step(id, id === "ai" ? { done: true } : {})),
         { step: "ai" },
       ),
     );
     open();
     expect(await screenTitle()).toHaveTextContent("Your AI account");
-    const spend = await screen.findByRole("form", { name: "What it may spend" });
-    const confirm = within(spend).getByLabelText("Ask before an AI task costs more than (USD)");
-    const day = within(spend).getByLabelText("Most to spend in a day (USD)");
+    const line = await screen.findByText(/It asks you before anything over/);
+    expect(line).toHaveTextContent("It asks you before anything over $0.10, and stops for the day at $2.");
+    await user.click(within(line).getByRole("button", { name: "Change" }));
+    const confirm = screen.getByLabelText("Ask me before anything over");
+    const day = screen.getByLabelText("Stop for the day at");
     expect(confirm).toHaveValue("0.1");
     expect(day).toHaveValue("2");
-    expect(within(spend).getByText(/Starts at \$0\.10/)).toBeInTheDocument();
-    expect(within(spend).getByText(/Starts at \$2\.00/)).toBeInTheDocument();
-    expect(within(spend).getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByText(/Starts at \$0\.10/)).toBeInTheDocument();
+    expect(screen.getByText(/Starts at \$2/)).toBeInTheDocument();
+    // There is no Save of its own: the screen's Continue is the one button.
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     await user.clear(day);
     await user.type(day, "5");
-    // Save turns on once the typed value is in the form; a click before that does nothing.
     await waitFor(() => expect(day).toHaveValue("5"), { timeout: 3000 });
-    const save = within(spend).getByRole("button", { name: "Save" });
-    await waitFor(() => expect(save).toBeEnabled(), { timeout: 3000 });
-    await user.click(save);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
     expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({
       changes: { "ai.budgets.per_day_usd": 5 },
       reset: [],
       fingerprint: "fp-1",
     });
+    expect(await screen.findByRole("heading", { level: 2, name: "Mail and calendar" })).toBeInTheDocument();
   });
 
-  test("What it may spend refuses a value that is not a number", async () => {
+  test("a spending amount that is not a number stops Continue, and says why", async () => {
     const user = userEvent.setup();
-    const calls = fakeApi(routes({}, CORE.map((id) => step(id)), { step: "ai" }));
+    const calls = fakeApi(routes(WITH_SERVICE, CORE.map((id) => step(id, id === "ai" ? { done: true } : {})), { step: "ai" }));
     open();
-    const day = await screen.findByLabelText("Most to spend in a day (USD)");
+    await user.click(await screen.findByRole("button", { name: "Change" }));
+    const day = screen.getByLabelText("Stop for the day at");
     await user.clear(day);
     await user.type(day, "lots");
-    expect(await screen.findByText("Use a number, such as 0.10.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect((await screen.findAllByText("Use a number, such as 0.10.")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     expect(calls.some((c) => c.route === "POST settings")).toBe(false);
   });
 
-  test("Backups: the folder form", async () => {
+  test("Your AI account: Continue says what is missing until a service is chosen, and I'll do this later skips it", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(routes({ ...WITH_SERVICE, "POST setup/ai/skip": () => ({ ok: "ai" }) }, CORE.map((id) => step(id)), { step: "ai" }));
+    open();
+    await screen.findByRole("radio", { name: /Service A/ });
+    const go = screen.getByRole("button", { name: "Continue" });
+    expect(go).toBeDisabled();
+    expect(screen.getByText("Choose an AI service to go on.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "I'll do this later" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/ai/skip")).toBe(true));
+  });
+
+  test("Backups: with no drive found the folder form, and the one button says Back up now and continue", async () => {
     fakeApi(routes({}, CORE.map((id) => step(id)), { step: "backup" }));
     open();
     expect(await screenTitle()).toHaveTextContent("Backups");
     expect(await screen.findByLabelText("Folder")).toBeInTheDocument();
+    const go = screen.getByRole("button", { name: "Back up now and continue" });
+    expect(go).toBeDisabled();
+    expect(screen.getByText("Choose a folder to go on.")).toBeInTheDocument();
+  });
+
+  test("Backups: Back up now and continue saves the drive found and moves on", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(
+      routes(
+        {
+          "GET setup/backup-folders": () => ({ folders: [{ name: "Drive One", recommended: true }], shown: "Backups › Example App" }),
+          "POST setup/backup-folder/cloud": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+        },
+        CORE.map((id) => step(id)),
+        { step: "backup" },
+      ),
+    );
+    open();
+    const first = await screen.findByRole("radio", { name: /Drive One/ });
+    expect(first).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Back up now and continue" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup-folder/cloud")).toBe(true));
+    expect(await screen.findByRole("heading", { level: 2, name: "People" })).toBeInTheDocument();
   });
 
   test("People: optional, with the plain reason that skipping is fine, and a button to add them", async () => {
@@ -590,7 +645,7 @@ describe("each screen", () => {
     const calls = fakeApi(routes({ "POST setup/people/skip": () => ({ ok: "people" }) }, CORE.map((id) => step(id)), { step: "people" }));
     open();
     await screenTitle();
-    await user.click(screen.getByRole("button", { name: "Skip for now" }));
+    await user.click(screen.getByRole("button", { name: "I'll do this later" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Done" })).toBeInTheDocument();
     expect(calls.some((c) => c.route === "POST setup/people/skip")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Back" }));
@@ -601,11 +656,11 @@ describe("each screen", () => {
     expect(kept).toEqual(expect.arrayContaining(["done", "people", "ai"]));
   });
 
-  test("a screen that is done offers Next, not Skip", async () => {
+  test("a screen that is done offers Continue, not I'll do this later", async () => {
     fakeApi(routes({}, CORE.map((id) => step(id, id === "workspace" ? { done: true } : {}))));
     open();
-    expect(await screen.findByRole("button", { name: "Next" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Skip for now" })).toBeNull();
+    expect(await screen.findByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "I'll do this later" })).toBeNull();
   });
 });
 
@@ -783,7 +838,7 @@ describe("Mail and calendar", () => {
       },
     });
     open();
-    const box = await screen.findByRole("checkbox", { name: "Let the assistant sort what the rules can't" });
+    const box = await screen.findByRole("checkbox", { name: "Set aside newsletters and personal mail automatically" });
     await waitFor(() => expect(box).toBeChecked());
     expect(screen.getByText(/not the message body/)).toBeInTheDocument();
     await user.click(box);
@@ -1001,7 +1056,7 @@ describe("Done", () => {
     open();
     const extras = await screen.findByRole("region", { name: "Optional extras" });
     expect(await within(extras).findByText("Book project")).toBeInTheDocument();
-    expect(within(extras).getByRole("heading", { name: "Pick a starting template" })).toBeInTheDocument();
+    expect(within(extras).getByRole("heading", { name: "What kind of work is this?" })).toBeInTheDocument();
     expect(within(extras).getByRole("heading", { name: "Hand in a first note" })).toBeInTheDocument();
     // The counted steps are not among the extras.
     expect(within(extras).queryByRole("heading", { name: "Choose a backup folder" })).toBeNull();
@@ -1037,44 +1092,48 @@ describe("the look", { timeout: 20_000 }, () => {
     expect(within(list).getAllByText("You are here")).toHaveLength(1);
   });
 
-  test("a screen not done yet has one primary button, and Skip is the quiet one beside it", async () => {
+  test("a screen not done yet has Continue as its one primary button, and I'll do this later is the secondary one beside it", async () => {
     fakeApi(routes({}, CORE.map((id) => step(id)), { step: "people" }));
     open();
     await screenTitle();
     const main = screen.getByRole("main");
-    expect(primaries(main).map((b) => b.textContent)).toEqual(["Add people"]);
-    expect(within(main).getByRole("button", { name: "Skip for now" })).toBeEnabled();
+    expect(primaries(main).map((b) => b.textContent)).toEqual(["Continue"]);
+    expect(within(main).getByRole("button", { name: "I'll do this later" })).toBeEnabled();
+    expect(within(main).getByRole("button", { name: "Add people" })).toBeEnabled();
   });
 
-  test("a screen that is done has one primary button, Next", async () => {
+  test("a screen that is done has the same primary button, Continue, and no I'll do this later", async () => {
     fakeApi(routes({}, CORE.map((id) => step(id, id === "people" ? { done: true } : {})), { step: "people" }));
     open();
     await screenTitle();
     const main = screen.getByRole("main");
-    expect(primaries(main).map((b) => b.textContent)).toEqual(["Next"]);
+    expect(primaries(main).map((b) => b.textContent)).toEqual(["Continue"]);
+    expect(within(main).queryByRole("button", { name: "I'll do this later" })).toBeNull();
   });
 
-  test("You: the one primary button is Save and continue, which saves the form and opens the next screen", async () => {
+  test("You: Continue says what is missing, then saves the form and opens the next screen", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(routes({ "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) }));
     open();
     const name = await screen.findByLabelText("Workspace name");
     const main = screen.getByRole("main");
-    expect(primaries(main)).toHaveLength(0);
+    // Until something is entered Continue is off, and says why under itself.
+    expect(within(main).getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(within(main).getByText("Enter your full name to go on.")).toBeInTheDocument();
     await user.clear(name);
     await user.click(name);
     await user.paste("Harbor work");
-    await waitFor(() => expect(primaries(main).map((b) => b.textContent)).toEqual(["Save and continue"]), { timeout: 5000 });
-    expect(within(main).queryByRole("button", { name: "Next" })).toBeNull();
-    await user.click(within(main).getByRole("button", { name: "Save and continue" }));
+    await waitFor(() => expect(within(main).getByRole("button", { name: "Continue" })).toBeEnabled(), { timeout: 5000 });
+    expect(within(main).queryByRole("button", { name: "Save and continue" })).toBeNull();
+    await user.click(within(main).getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
     expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "workspace.name": "Harbor work" } });
   });
 
-  test("a screen that was already done saves with a plain Save and stays where it is", async () => {
+  test("a screen that was already done also saves with Continue, and moves on", async () => {
     const user = userEvent.setup();
     let name = "Workspace";
-    fakeApi(
+    const calls = fakeApi(
       routes(
         {
           "GET settings": () => ({ fingerprint: "fp-1", items: SETTINGS.map((i) => (i.key === "workspace.name" ? { ...i, value: name } : i)) }),
@@ -1091,11 +1150,27 @@ describe("the look", { timeout: 20_000 }, () => {
     await user.clear(box);
     await user.click(box);
     await user.paste("Harbor work");
-    // Saving reloads the settings, which can draw the form again with a new button: each check finds it afresh.
-    const save = () => screen.getByRole("button", { name: "Save" });
-    await waitFor(() => expect(save()).toBeEnabled(), { timeout: 5000 });
-    await user.click(save());
-    await waitFor(() => expect(save()).toBeDisabled(), { timeout: 5000 });
-    expect(screen.getByRole("heading", { level: 2, name: "You" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
+  });
+
+  test("a screen's Continue that couldn't save keeps the person on it", async () => {
+    const user = userEvent.setup();
+    fakeApi(
+      routes(
+        {
+          "GET setup/backup-folders": () => ({ folders: [{ name: "Drive One", recommended: true }], shown: "Backups › Example App" }),
+          "POST setup/backup-folder/cloud": () => new Refuse(400, "That drive isn't on this computer. Choose another folder."),
+        },
+        CORE.map((id) => step(id)),
+        { step: "backup" },
+      ),
+    );
+    open();
+    await screen.findByRole("radio", { name: /Drive One/ });
+    await user.click(screen.getByRole("button", { name: "Back up now and continue" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("That drive isn't on this computer.");
+    expect(screen.getByRole("heading", { level: 2, name: "Backups" })).toBeInTheDocument();
   });
 });

@@ -62,7 +62,9 @@ export function AiCompare(props: { onBack: () => void }) {
       staleTime: 60_000,
     })),
   });
-  const accountNames = [...new Set(grid.columns.map((c) => c.account))];
+  const accountNames = ordered.map((a) => a.name);
+  // Whether any kind of work has a result yet; until one has, the page says nothing is measured rather than showing a grid of blanks.
+  const anyResult = grid.columns.some((c) => c.skills.some((s) => ["pass", "below", "old"].includes(cellState(s))));
   const accountCost = useQueries({
     queries: accountNames.map((name) => ({
       queryKey: ["ai-measure-estimate", name, "all"],
@@ -185,8 +187,14 @@ export function AiCompare(props: { onBack: () => void }) {
         <h1 id="ai-compare-title">{t("ai_compare.title")}</h1>
         {accountNames.length > 0 && (
           <div className={styles.actions}>
-            <Button onClick={() => void measureAll(false)}>
-              {total == null ? t("ai_compare.measure_all") : t("ai_compare.measure_all_cost", { amount: money(total) })}
+            <Button variant={anyResult ? "secondary" : "primary"} onClick={() => void measureAll(false)}>
+              {anyResult
+                ? total == null
+                  ? t("ai_compare.measure_all")
+                  : t("ai_compare.measure_all_cost", { amount: money(total) })
+                : total == null
+                  ? t("ai_compare.measure")
+                  : t("ai_compare.measure_cost", { amount: money(total) })}
             </Button>
           </div>
         )}
@@ -225,8 +233,12 @@ export function AiCompare(props: { onBack: () => void }) {
         <LoadFailed message={t("ai_compare.load_failed")} onRetry={() => void skills.refetch()} />
       ) : !skills.data || !accounts.data ? (
         <Skeleton />
-      ) : grid.columns.length === 0 || grid.rows.length === 0 ? (
+      ) : accountNames.length === 0 ? (
         <p className={styles.empty}>{t("ai_compare.empty")}</p>
+      ) : !anyResult ? (
+        <p className={styles.empty} data-nothing-measured="">
+          {t("ai_compare.nothing_measured")}
+        </p>
       ) : (
         <div className={styles.scroll} role="region" aria-label={t("ai_compare.title")} tabIndex={0}>
           <table className={styles.grid}>

@@ -23,8 +23,10 @@ const BY_GROUP: Array<[front: string, section: Fixed]> = [
 const within = (group: string, front: string) => group === front || group.startsWith(`${front}.`);
 
 /** The section a setting is shown in: an add-on's settings are in its own section. */
-export function sectionOfItem(item: Pick<Item, "group" | "plugin">): SettingsSection {
+export function sectionOfItem(item: Pick<Item, "group" | "plugin" | "advanced">): SettingsSection {
   if (item.plugin) return `addon/${item.plugin}`;
+  // A technical setting is under Advanced, whatever its group, so no other section shows it.
+  if (item.advanced) return "advanced";
   const found = BY_GROUP.filter(([front]) => within(item.group, front)).sort((a, b) => b[0].length - a[0].length)[0];
   return found ? found[1] : "advanced";
 }
@@ -32,7 +34,17 @@ export function sectionOfItem(item: Pick<Item, "group" | "plugin">): SettingsSec
 /** Settings that a part of their section edits in its own way, so they aren't also listed as rows: the tier each kind of
  * work uses, what a tier tries once more on, the routing rules (Which model does what), the backup key, the keys an
  * add-on needs (password boxes of their own), the notices' address and the list of the person's own pages. */
-const OWN_PART = ["ai.tasks", "ai.tiers", "ai.routing", "storage.backups.encrypt", "workspace.plugins.secrets", "ui.notifications.webhook", "ui.links"];
+const OWN_PART = [
+  "ai.tasks",
+  "ai.tiers",
+  "ai.routing",
+  "storage.backups.encrypt",
+  "workspace.plugins.secrets",
+  "ui.notifications.webhook",
+  "ui.links",
+  // The cloud drives the backup step looks for are a list of records, changed in the file; the step shows what it found.
+  "storage.backups.cloud_folders",
+];
 
 /** Whether a setting is listed as a row of its own. */
 export const isListed = (item: Pick<Item, "key">): boolean => !OWN_PART.includes(item.key);

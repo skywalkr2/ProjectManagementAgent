@@ -48,7 +48,7 @@ class UserSettings(ConfigModel):
     )
     timezone: str = Field(
         "UTC",
-        description="The PM's time zone, as an IANA name such as Europe/Lisbon.",
+        description="The time zone your own dates and times are read and shown in: pick the city nearest you.",
         json_schema_extra={"choices": "time_zones"},
     )
     accounts: list[str] = Field(
@@ -127,6 +127,7 @@ class CatalogSettings(ConfigModel):
             "Read tokens for hosts that keep private packs' release files, by host name, as references "
             "(env:NAME or file:/path, never the token itself); sent only to that host when installing."
         ),
+        json_schema_extra={"advanced": True},
     )
 
     @field_validator("release_tokens")
@@ -164,6 +165,7 @@ class PluginSettings(ConfigModel):
             "Each plugin's secrets, by plugin then secret name, as references (env:NAME or file:/path), "
             "never the secret itself."
         ),
+        json_schema_extra={"advanced": True},
     )
     failures_before_off: int = Field(
         3,
@@ -189,9 +191,8 @@ class WorkspaceFile(FileModel):
     language: str = Field(
         "en-US",
         pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
-        description="How the assistant spells and writes: the variety of English its drafts follow (spelling, "
-        "punctuation, dates), as a language tag (en-US, en-GB). The app's screens stay in English. A project may "
-        "set its own.",
+        description="Which kind of English the assistant writes in for you: its spelling, punctuation and dates. The "
+        "app's own screens stay in English. A project may set its own.",
         json_schema_extra={"choices": "languages"},
     )
     project: ProjectSettings = Field(default_factory=ProjectSettings, description="How a project's own record is kept.")
@@ -238,13 +239,24 @@ class ServerFile(FileModel):
     mode: Literal["local", "hosted"] = Field(
         "local",
         description="local: only this computer can reach the app. hosted: runs behind sign-in and deploy checks.",
+        json_schema_extra={"advanced": True},
     )
-    host: str = Field("127.0.0.1", description="Address to listen on.")
-    port: int = Field(8765, ge=1, le=65535, description="Port to listen on.")
-    base_path: str = Field("/", description="Path the app is served under, e.g. /admin. Every route and link uses it.")
-    public_url: str | None = Field(None, description="The address people use to reach the app. Required when hosted.")
+    host: str = Field("127.0.0.1", description="Address to listen on.", json_schema_extra={"advanced": True})
+    port: int = Field(8765, ge=1, le=65535, description="Port to listen on.", json_schema_extra={"advanced": True})
+    base_path: str = Field(
+        "/",
+        description="Path the app is served under, e.g. /admin. Every route and link uses it.",
+        json_schema_extra={"advanced": True},
+    )
+    public_url: str | None = Field(
+        None,
+        description="The address people use to reach the app. Required when hosted.",
+        json_schema_extra={"advanced": True},
+    )
     open_browser: bool = Field(
-        False, description="Open the app in this computer's browser when it starts (local mode only)."
+        False,
+        description="Open the app in this computer's browser when it starts (local mode only).",
+        json_schema_extra={"advanced": True},
     )
 
     @field_validator("base_path")
@@ -281,12 +293,44 @@ class BackupTarget(ConfigModel):
     label: str = Field("", description='What to call this target on screen, e.g. "cloud folder".')
 
 
+class CloudFolder(ConfigModel):
+    name: str = Field("", description="What the cloud drive is called on screen.")
+    macos: list[str] = Field(
+        default_factory=list,
+        description="Where its folder is on a Mac, as places inside the home folder; a * matches any characters in a "
+        "name. The first place that exists is used.",
+    )
+    windows: list[str] = Field(
+        default_factory=list, description="Where its folder is on Windows, in the same form as for a Mac."
+    )
+    linux: list[str] = Field(
+        default_factory=list, description="Where its folder is on Linux, in the same form as for a Mac."
+    )
+
+
+def shipped_cloud_folders() -> list[CloudFolder]:
+    """The cloud drives the app looks for unless the workspace lists its own (the app's shipped list)."""
+    from engine.cloud_folders import shipped
+
+    return shipped()
+
+
 class BackupSettings(ConfigModel):
     automatic: bool = Field(
         True,
         description="Make backups on schedule while the app runs, with nothing to click; off means only on request.",
     )
     targets: list[BackupTarget] = Field(default_factory=list, description="Where full backups go. Use at least one.")
+    cloud_folders: list[CloudFolder] = Field(
+        default_factory=shipped_cloud_folders,
+        description="The cloud drives the setup guide looks for on this computer and offers for backups, in the order "
+        "they are offered. The first one found is recommended.",
+    )
+    cloud_path: list[str] = Field(
+        default_factory=lambda: ["Backups", "PM Cockpit"],
+        description="The folders, one inside the next, that the guide makes inside a cloud drive for backups. They are "
+        "shown to the person by name, joined with arrows.",
+    )
     every_hours: int = Field(
         24, ge=1, description="How often a full backup is made.", json_schema_extra={"enabled_by": "automatic"}
     )
@@ -298,6 +342,7 @@ class BackupSettings(ConfigModel):
             "key itself. Empty: backups aren't encrypted. A lost key means a backup that can't be read: keep the key "
             "somewhere other than the backup folder, and restoring asks for it."
         ),
+        json_schema_extra={"advanced": True},
     )
     retry_minutes: int = Field(
         60,
@@ -649,36 +694,39 @@ class Roles(ConfigModel):
 
 class TaskBudget(ConfigModel):
     per_day_usd: float | None = Field(
-        None, ge=0, description="Stop new runs of this kind for the day above this total."
+        None, ge=0, description="Stop starting new work of this kind for the day above this total."
     )
     per_month_usd: float | None = Field(
-        None, ge=0, description="Stop new runs of this kind for the month above this total."
+        None, ge=0, description="Stop starting new work of this kind for the month above this total."
     )
 
 
 class Budgets(ConfigModel):
-    per_run_usd: float = Field(0.25, ge=0, description="Never start a single run estimated above this cost.")
+    per_run_usd: float = Field(
+        0.25, ge=0, description="Never start one piece of work estimated to cost more than this."
+    )
     confirm_unpriced: bool = Field(
         False,
-        description="Ask for a go before a run whose cost can't be estimated (an account with no prices, such as a "
+        description="Ask me before starting work whose cost can't be estimated (an account with no prices, such as a "
         "subscription), too.",
+        json_schema_extra={"advanced": True},
     )
     first_go: bool = Field(
         True,
-        description="Until you give your first go in a workspace, AI runs wait. Today shows one line with how many "
-        "items are waiting and about what they cost, and one Go starts them all. After that, the amount to ask "
-        "above applies.",
+        description="Until you start the assistant for the first time in a workspace, its work waits. Today shows one "
+        "line with how many items are waiting and about what they cost, and one Go starts them all. After that, the "
+        "amount to ask above applies.",
     )
     confirm_above_usd: float = Field(
         0.10,
         ge=0,
-        description="Ask for a go before a run estimated above this cost; below it, runs start on their own.",
+        description="Ask me before starting work estimated to cost more than this; below it, work starts on its own.",
     )
     per_task: dict[str, TaskBudget] = Field(
         default_factory=dict, description="Limits for one kind of work, on top of the overall ones."
     )
-    per_day_usd: float = Field(2.0, ge=0, description="Stop new runs for the day above this total.")
-    per_month_usd: float = Field(30.0, ge=0, description="Stop new runs for the month above this total.")
+    per_day_usd: float = Field(2.0, ge=0, description="Stop starting new work for the day above this total.")
+    per_month_usd: float = Field(30.0, ge=0, description="Stop starting new work for the month above this total.")
     warn_at: float = Field(0.8, gt=0, le=1, description="Warn when this share of a budget is used.")
 
 
@@ -1976,13 +2024,13 @@ class NotificationsSettings(ConfigModel):
         description=SecretHint(
             "A secret reference (env:NAME or file:/path) to your own address for notices, never the address itself."
         ),
-        json_schema_extra={"enabled_by": "enabled"},
+        json_schema_extra={"enabled_by": "enabled", "advanced": True},
     )
     webhook_format: Literal["json", "plain"] = Field(
         "json",
         description="What the address expects. json: a small JSON message with the text in it, which chat apps take. "
         "plain: the text alone as the body, which push-notification topics take.",
-        json_schema_extra={"enabled_by": "webhook"},
+        json_schema_extra={"enabled_by": "webhook", "advanced": True},
     )
     quiet_hours: NotificationQuietHours = Field(
         default_factory=NotificationQuietHours, description="When notices wait instead of going out."

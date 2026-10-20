@@ -328,7 +328,8 @@ test.describe("screen use and the shell", () => {
       await layoutSettled(page);
       const overlap = async () => {
         const toast = (await notices.getByText("Nothing to undo.").boundingBox())!;
-        for (const name of [/^Back$/, /^(Skip for now|Next)$/]) {
+        for (const name of [/^Back$/, /^I'll do this later$/, /^Continue$/]) {
+          if ((await main.getByRole("button", { name }).count()) === 0) continue;
           const button = (await main.getByRole("button", { name }).boundingBox())!;
           const apart = button.y + button.height <= toast.y || button.y >= toast.y + toast.height;
           const aside = button.x + button.width <= toast.x || button.x >= toast.x + toast.width;
@@ -339,7 +340,7 @@ test.describe("screen use and the shell", () => {
       await expect.poll(overlap).toBeNull();
       await shoot(page, `walkthrough-toast-${width}`);
       await main.getByRole("button", { name: "Back" }).click({ trial: true });
-      await main.getByRole("button", { name: /^(Skip for now|Next)$/ }).click({ trial: true });
+      await main.getByRole("button", { name: /^Continue$/ }).click({ trial: true });
       await main.getByRole("button", { name: "Back" }).click();
       await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
       await expect(notices.getByText("Nothing to undo.")).toHaveCount(0);
@@ -843,7 +844,7 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
       await expect(table).toContainText("✓ Cheapest that passes");
       await expect(table).toContainText("Below 80%");
       await expect(table).toContainText("(old)");
-      await expect(table.getByRole("button", { name: "Test Main account · everyday" })).toContainText("Test performance (about $0.12)");
+      await expect(table.getByRole("button", { name: "Measure Main account · everyday" })).toContainText("Measure (about $0.12)");
       if (scheme === "light") await shoot(page, "grid-1440");
       await expectNoViolations(page);
       await page.setViewportSize({ width: 390, height: 844 });

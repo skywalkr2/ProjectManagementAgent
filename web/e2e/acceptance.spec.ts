@@ -312,9 +312,9 @@ test.describe.serial("acceptance scenario", () => {
     const screens = page.getByRole("navigation", { name: "Setup steps" });
     await screens.getByRole("button", { name: /^Your AI account/ }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
-    await expect(page.getByRole("form", { name: "What it may spend" })).toBeVisible();
+    await expect(page.getByText(/It asks you before anything over/)).toBeVisible();
     await page.getByRole("radio").first().check();
-    await expect(page.getByRole("heading", { name: "Get an access key" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Connect / })).toBeVisible();
     await expect(page.getByLabel("Access key", { exact: true })).toBeVisible();
     await page.getByText("Advanced", { exact: true }).click();
     await expect(page.getByLabel("Account name")).toBeVisible();

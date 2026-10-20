@@ -1,5 +1,7 @@
-// The backup step of the setup guide (design 7.8): a folder outside the workspace, checked before it is saved. On the
-// person's own computer the folder can be picked from a list.
+// The backup step of the setup guide (design 7.8): the cloud drives found on the computer, by name, with the first
+// recommended; "Back up now and continue" makes the folder inside the drive, saves it and makes the first backup. Another
+// folder (a USB drive, a network folder) is a path behind "Choose another folder", checked before it is saved. On the
+// person's own computer that folder can be picked from a list.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -9,6 +11,11 @@ import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { FolderPicker } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
+import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
+import { Button } from "../ui/Button";
+
+/** The choice that is not one of the drives found: a folder of the person's own. */
+const OTHER = "\u0001other";
 
 function size(mb: number, t: (key: string, vars?: Record<string, string | number>) => string): string {
   return mb >= 1024 ? t("welcome.backup.gb", { n: (mb / 1024).toFixed(1) }) : t("welcome.backup.mb", { n: Math.round(mb) });
@@ -27,6 +34,10 @@ export function WelcomeBackup(props: { local: boolean }) {
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const chooser = useRef<HTMLButtonElement>(null);
+  const hasSlot = useHasContinueSlot();
+  const drives = useQuery({ queryKey: ["cloud-folders"], queryFn: api.cloudFolders, enabled: props.local, retry: false });
+  const found = drives.data?.folders ?? [];
+  const [choice, setChoice] = useState<string | null>(null);
 
   const targets = settings.data?.items.find((i) => i.key === "storage.backups.targets")?.value;
   const existing = Array.isArray(targets)
@@ -50,23 +61,41 @@ export function WelcomeBackup(props: { local: boolean }) {
     }
   };
 
-  const save = async () => {
-    if (!settings.data) return;
+  // Folders already chosen are kept unless the person chooses another way; with none, the first drive found is chosen.
+  const looking = props.local && drives.isPending;
+  const picked = choice ?? (existing.length > 0 || looking ? null : (found[0]?.name ?? OTHER));
+  const ownFolder = picked === OTHER;
+
+  /** Makes the choice real: the drive's folder is made and saved, or the typed folder is. True when it went through. */
+  const save = async (): Promise<boolean> => {
+    if (!settings.data || picked === null) return true;
     setBusy(true);
     setProblem("");
     try {
-      const saved = await api.saveBackupFolder({ path: path.trim(), label: label.trim(), fingerprint: settings.data.fingerprint });
-      setPath("");
-      setLabel("");
-      setChecked(null);
-      await afterSave(saved, { message: t("welcome.backup.saved", { path: path.trim() }) });
+      if (ownFolder) {
+        const saved = await api.saveBackupFolder({ path: path.trim(), label: label.trim(), fingerprint: settings.data.fingerprint });
+        setPath("");
+        setLabel("");
+        setChecked(null);
+        await afterSave(saved, { message: t("welcome.backup.saved", { path: path.trim() }) });
+      } else {
+        const saved = await api.backupToCloudFolder({ name: picked, fingerprint: settings.data.fingerprint });
+        await afterSave(saved, { message: t("welcome.backup.saved_drive", { name: picked }) });
+      }
+      setChoice(null);
+      await client.invalidateQueries({ queryKey: ["status"] });
+      return true;
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      return false;
     } finally {
       setBusy(false);
     }
   };
+
+  const missing = looking ? t("welcome.backup.looking") : ownFolder && !path.trim() ? t("welcome.backup.why_path") : !settings.data ? t("loading") : "";
+  useContinue(hasSlot ? { run: save, label: t("welcome.backup.go"), disabled: !!missing, why: missing } : null);
 
   return (
     <div className="guide-body">
@@ -96,61 +125,90 @@ export function WelcomeBackup(props: { local: boolean }) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void save();
         }}
       >
-        <div className="field">
-          <label htmlFor="backup-path">{t("welcome.backup.path")}</label>
-          <div className="inline-field">
-            <input
-              id="backup-path"
-              type="text"
-              value={path}
-              autoComplete="off"
-              aria-describedby="backup-path-hint"
-              onChange={(e) => {
-                setPath(e.target.value);
-                setChecked(null);
-              }}
-            />
-            <button type="button" className="btn" disabled={!path.trim()} onClick={() => void check(path.trim())}>
-              {t("welcome.backup.check")}
-            </button>
-            {props.local && (
-              <button type="button" className="btn" ref={chooser} onClick={() => setPicking(true)}>
-                {t("welcome.backup.choose")}
-              </button>
-            )}
-          </div>
-          <p className="hint" id="backup-path-hint">
-            {t("welcome.backup.path_hint")}
-          </p>
-        </div>
-        <div className="field">
-          <label htmlFor="backup-label">{t("welcome.backup.label")}</label>
-          <input id="backup-label" type="text" value={label} autoComplete="off" onChange={(e) => setLabel(e.target.value)} />
-        </div>
-        <div role="status">
-          {checked && (
-            <p className={checked.ok ? "hint" : "problem-note"}>
-              {checked.ok
-                ? checked.free_mb === null || checked.free_mb === undefined
-                  ? t("welcome.backup.ok")
-                  : t("welcome.backup.ok_free", { size: size(checked.free_mb, t) })
-                : t("welcome.backup.not_ok", { problem: checked.problem ?? "" })}
-            </p>
-          )}
-        </div>
+        {found.length > 0 || existing.length > 0 ? (
+          <fieldset className="details">
+            <legend>{t("welcome.backup.where")}</legend>
+            {found.map((drive) => (
+              <label key={drive.name} className="radio kind-choice kind-card">
+                <input type="radio" name="backup-where" checked={picked === drive.name} onChange={() => setChoice(drive.name)} />
+                <span>
+                  <strong>{drive.name}</strong>
+                  <span className="hint block">{drives.data?.shown}</span>
+                  {drive.recommended && <span className="pill tag-recommended">{t("welcome.ai.recommended")}</span>}
+                </span>
+              </label>
+            ))}
+            <label className="radio kind-choice kind-card">
+              <input type="radio" name="backup-where" checked={ownFolder} onChange={() => setChoice(OTHER)} />
+              <span>
+                <strong>{t("welcome.backup.other")}</strong>
+                <span className="hint block">{t("welcome.backup.other_note")}</span>
+              </span>
+            </label>
+          </fieldset>
+        ) : (
+          props.local && !looking && <p className="hint">{t("welcome.backup.none_found")}</p>
+        )}
+        {ownFolder && (
+          <>
+            <div className="field">
+              <label htmlFor="backup-path">{t("welcome.backup.path")}</label>
+              <div className="inline-field">
+                <input
+                  id="backup-path"
+                  type="text"
+                  value={path}
+                  autoComplete="off"
+                  aria-describedby="backup-path-hint"
+                  onChange={(e) => {
+                    setPath(e.target.value);
+                    setChecked(null);
+                  }}
+                />
+                <button type="button" className="btn" disabled={!path.trim()} onClick={() => void check(path.trim())}>
+                  {t("welcome.backup.check")}
+                </button>
+                {props.local && (
+                  <button type="button" className="btn" ref={chooser} onClick={() => setPicking(true)}>
+                    {t("welcome.backup.choose")}
+                  </button>
+                )}
+              </div>
+              <p className="hint" id="backup-path-hint">
+                {t("welcome.backup.path_hint")}
+              </p>
+            </div>
+            <div className="field">
+              <label htmlFor="backup-label">{t("welcome.backup.label")}</label>
+              <input id="backup-label" type="text" value={label} autoComplete="off" onChange={(e) => setLabel(e.target.value)} />
+            </div>
+            <div role="status">
+              {checked && (
+                <p className={checked.ok ? "hint" : "problem-note"}>
+                  {checked.ok
+                    ? checked.free_mb === null || checked.free_mb === undefined
+                      ? t("welcome.backup.ok")
+                      : t("welcome.backup.ok_free", { size: size(checked.free_mb, t) })
+                    : t("welcome.backup.not_ok", { problem: checked.problem ?? "" })}
+                </p>
+              )}
+            </div>
+          </>
+        )}
         {problem && (
           <p className="problem-note" role="alert">
             {problem}
           </p>
         )}
-        <div className="row-end">
-          <button type="submit" className="btn primary" disabled={busy || !path.trim() || !settings.data}>
-            {t("welcome.backup.save")}
-          </button>
-        </div>
+        {!hasSlot && (
+          <div className="row-end">
+            <Button variant="primary" loading={busy} disabled={!!missing || picked === null} reason={missing || undefined} onClick={() => void save()}>
+              {t("welcome.backup.go_here")}
+            </Button>
+          </div>
+        )}
       </form>
       {picking && (
         <FolderPicker

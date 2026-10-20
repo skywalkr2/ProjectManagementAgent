@@ -7,12 +7,14 @@ The result is kept with a fingerprint of `ai.yaml`, so the server can say when t
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlsplit
 
 from engine.ai import learning_check
 from engine.ai.adapters import make_adapter
@@ -43,6 +45,7 @@ class SmokeResult:
     part: str = "call"  # call (one kind of work's parameters), lockdown, learning or identity
     params: list[Any] = field(default_factory=list)  # for a call: the kind of work, temperature and most output
     identity: dict[str, str] | None = None  # for identity: {account, how_read}, or {unknown: the reason}
+    error_kind: str = ""  # when the call failed: the kind the call itself gave (never read from the account's words)
 
 
 def _params_for_tier(cfg: Config, tier: str) -> list[tuple[str, float, int]]:
@@ -81,6 +84,7 @@ def smoke_test(
                 start = time.monotonic()
                 key_source = None
                 answered = no_network = False
+                failed_kind = ""
                 try:
                     secret = resolve_secret(settings.auth, env)
                     reply = adapter_factory(settings.adapter, settings, secret).run(task, model_id)
@@ -89,7 +93,7 @@ def smoke_test(
                 except SecretError as err:
                     ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
                 except AiError as err:
-                    ok, detail = False, _problem(err)
+                    ok, detail, failed_kind = False, _problem(err, where_of(settings)), err.kind
                     no_network = err.kind == "offline"
                     if err.kind in ("auth", "no_key"):
                         key_source = describe_secret(settings.auth)
@@ -111,6 +115,7 @@ def smoke_test(
                         ref,
                         "call",
                         [kind, temperature, max_output],
+                        error_kind=failed_kind,
                     )
                 )
             if ref not in locked:
@@ -165,19 +170,48 @@ def tier_summary(results: list[SmokeResult]) -> tuple[list[str], bool]:
 #: never shown; the line says what to do instead.
 TRANSPORT_KINDS = frozenset({"provider_down", "offline", "timeout"})
 
-#: What to do about a connection failure when the account's settings give nothing more particular.
+#: What to do about a connection failure, by where the account lives: a service on this computer or the local network,
+#: a hosted service (its address is the app's own, so there is nothing to check but the internet), or a program the app
+#: starts. `local` is the wording used when nothing is known about the account.
 TRANSPORT_HINTS = {
-    "provider_down": "Check the address, or start it if it runs on this computer",
-    "offline": "Check this computer's network connection",
+    "local": {
+        "provider_down": "Check the address, or start it if it runs on this computer",
+        "offline": "Check this computer's network connection",
+    },
+    "hosted": {
+        "provider_down": "Check your internet connection, and try again in a few minutes if it keeps failing",
+        "offline": "Check your internet connection",
+    },
+    "program": {
+        "provider_down": "Check this computer's network connection",
+        "offline": "Check this computer's network connection",
+    },
 }
 
 
-def _problem(err: AiError) -> str:
-    """A failed test call in plain words: what it means, the account's own words for it, and what to do."""
+def where_of(settings: Any) -> str:
+    """Where an account lives, from its settings alone: "program" (no address: a command-line agent), "local" (an
+    address on this computer or its own network) or "hosted" (any other address)."""
+    address = getattr(settings, "base_url", None)
+    if not address:
+        return "program"
+    host = (urlsplit(address).hostname or "").lower()
+    if host == "localhost" or host.endswith(".localhost") or host.endswith(".local"):
+        return "local"
+    try:
+        found = ipaddress.ip_address(host)
+    except ValueError:
+        return "hosted"
+    return "local" if found.is_loopback or found.is_private or found.is_link_local else "hosted"
+
+
+def _problem(err: AiError, where: str = "local") -> str:
+    """A failed test call in plain words: what it means, the account's own words for it, and what to do. `where` is
+    where the account lives (`where_of`), so a hosted service never gets the advice for a local one."""
     reason = "" if err.kind in TRANSPORT_KINDS else provider_reason(err.detail)
     plain = PROBLEMS.get(err.kind, "It stopped with an error")
     detail = f"{plain} ({reason})" if reason else plain
-    hint = err.hint or TRANSPORT_HINTS.get(err.kind)
+    hint = err.hint or TRANSPORT_HINTS.get(where, TRANSPORT_HINTS["local"]).get(err.kind)
     return f"{detail}. {hint.rstrip('.')}." if hint else f"{detail}."
 
 
@@ -272,6 +306,7 @@ def _learning(
     label = f"{ref} (learning round-trip)"
     start = time.monotonic()
     answered = no_network = False
+    failed_kind = ""
     try:
         reply = adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, env)).run(
             learning_check.task(cfg), model_id
@@ -282,7 +317,7 @@ def _learning(
     except SecretError as err:
         ok, detail = False, f"key not found: {err}"
     except AiError as err:
-        ok, detail = False, _problem(err)
+        ok, detail, failed_kind = False, _problem(err, where_of(settings)), err.kind
         no_network = err.kind == "offline"
     except ValueError as err:
         ok, detail = False, str(err)
@@ -298,6 +333,7 @@ def _learning(
         offline=no_network,
         ref=ref,
         part="learning",
+        error_kind=failed_kind,
     )
 
 

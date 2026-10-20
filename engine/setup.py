@@ -55,6 +55,7 @@ class Step:
     sign_in: str | None = None  # a step the core adds per sign-in: the sign-in's name
     group: str = "done"  # the walkthrough screen it belongs to (one of WALKTHROUGH_STEPS)
     counted: bool = False  # whether it counts toward finishing the walkthrough
+    applies: bool = True  # whether there is anything for the person to do here; a step that doesn't apply isn't offered
 
 
 @dataclass
@@ -139,7 +140,8 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
         "backup": bool(cfg.storage.backups.targets),
         "people": len(people) >= 2,
         "first_note": any(r.data.get("origin") == "pm" for r in view.list("request")),
-        "addons": not set(addons_off(ws, cfg)) - set(state.get("addons_decided", [])),
+        # Done only once the person chose about the add-ons they installed: with nothing installed it isn't offered.
+        "addons": bool(state.get("addons_decided")) and not set(addons_off(ws, cfg)) - set(state["addons_decided"]),
     }
     found = [
         Step(
@@ -148,6 +150,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             step in skipped and not done[step],
             group=CORE_GROUPS.get(step, "done"),
             counted=step in CORE_GROUPS,
+            applies=step != "addons" or done[step] or bool(addons_off(ws, cfg)),
         )
         for step in CORE_STEPS
     ]
@@ -340,16 +343,27 @@ def list_folders(raw: str | None, files: str | None = None) -> FolderList:
 
 def known_endpoints() -> list[dict[str, Any]]:
     """The kinds of AI account the Add account screen offers, from the product's catalog: id, name, adapter,
-    base_url, key_url, needs_key, local, allowed_data, settings (a new account's starting provider settings) and a
-    note. Entries missing an id, a name or an adapter are left out."""
+    base_url, key_url, signup_url, credit_url, needs_key, local, recommended, alternative, allowed_data, settings (a new
+    account's starting provider settings) and a note. Entries missing an id, a name or an adapter are left out. At most
+    one entry is the recommended one and at most one the alternative: the first marked, so the guide never offers
+    two."""
     try:
         data = load_yaml(CATALOG.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError):
         return []
     found = []
+    marked = {"recommended": False, "alternative": False}
     for e in data.get("endpoints", []):
         if not (isinstance(e, dict) and e.get("id") and e.get("name") and e.get("adapter")):
             continue
+        # Only a hosted service that takes a key can be offered up front: its steps are an account, credit and a key.
+        offered = bool(e.get("needs_key")) and bool(e.get("base_url")) and not e.get("local")
+        picks = {"recommended": offered and bool(e.get("recommended")) and not marked["recommended"]}
+        picks["alternative"] = (
+            offered and bool(e.get("alternative")) and not marked["alternative"] and not picks["recommended"]
+        )
+        for flag, taken in picks.items():
+            marked[flag] = marked[flag] or taken
         levels = [str(x) for x in e.get("allowed_data") or ["open"] if str(x) in ("open", "internal", "restricted")]
         found.append(
             {
@@ -358,8 +372,12 @@ def known_endpoints() -> list[dict[str, Any]]:
                 "adapter": str(e["adapter"]),
                 "base_url": str(e.get("base_url") or ""),
                 "key_url": str(e.get("key_url") or ""),
+                "signup_url": str(e.get("signup_url") or ""),
+                "credit_url": str(e.get("credit_url") or ""),
                 "needs_key": bool(e.get("needs_key", False)),
                 "local": bool(e.get("local", False)),
+                "recommended": picks["recommended"],
+                "alternative": picks["alternative"],
                 "allowed_data": levels or ["open"],
                 "settings": dict(e.get("settings") or {}),
                 "program": str(e.get("program") or ""),
@@ -388,6 +406,24 @@ LIST_PROBLEMS = {
 }
 
 
+#: Where the words differ for a hosted service (a key and an address that are the app's own): there is nothing to start
+#: and no address to check, so the advice is the internet connection and, for no credit, the billing page.
+HOSTED_LIST_PROBLEMS = {
+    "quota": "The account has no credit left. Add credit on the service's billing page, then paste the key again.",
+    "provider_down": "The service couldn't be reached. Check your internet connection, then try again.",
+    "timeout": "The service didn't answer in time. Check your internet connection, then try again.",
+    "offline": "There is no internet connection. Check it, then try again.",
+}
+
+
+def list_problem(entry: dict[str, Any], kind: str) -> str:
+    """What the screen says about a failure to list a service's models, in words that fit the kind of account."""
+    hosted = entry["needs_key"] and bool(entry["base_url"]) and not entry["local"]
+    if hosted and kind in HOSTED_LIST_PROBLEMS:
+        return HOSTED_LIST_PROBLEMS[kind]
+    return LIST_PROBLEMS.get(kind, "The service answered with an error. Check the address and the key.")
+
+
 def list_models(entry: dict[str, Any], base_url: str, key: str | None) -> tuple[list[tuple[str, Any]], str | None]:
     """Ask a service for its models with a key that isn't saved yet: the models (id and what the service says about
     each, sorted by id) or a problem in plain words. Nothing is kept."""
@@ -406,7 +442,7 @@ def list_models(entry: dict[str, Any], base_url: str, key: str | None) -> tuple[
             return [], None  # this kind of account doesn't list models: the person names one
         models = adapter.list_models()
     except AiError as err:
-        return [], LIST_PROBLEMS.get(err.kind, "The service answered with an error. Check the address and the key.")
+        return [], list_problem(entry, err.kind)
     return sorted(models.items()), None
 
 

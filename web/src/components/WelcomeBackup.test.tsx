@@ -31,6 +31,14 @@ function api(extra: Record<string, (body: unknown) => unknown> = {}) {
 
 const open = (local = true) => renderApp(<WelcomeBackup local={local} />);
 
+type User = ReturnType<typeof userEvent.setup>;
+/** The folder box: with a folder already chosen it is behind "Choose another folder…". */
+async function folderBox(user: User) {
+  const other = (await screen.findByRole("radio", { name: /Choose another folder/ })) as HTMLInputElement;
+  if (!other.checked) await user.click(other);
+  return screen.findByLabelText("Folder");
+}
+
 test("Check says in words whether the folder will do, and how much room it has", async () => {
   const user = userEvent.setup();
   api({
@@ -38,7 +46,7 @@ test("Check says in words whether the folder will do, and how much room it has",
     [`GET setup/folder-check?path=${enc("/mnt/bad")}`]: () => ({ path: "/mnt/bad", ok: false, problem: "It is inside the workspace.", free_mb: null }),
   });
   open();
-  await user.type(await screen.findByLabelText("Folder"), "/mnt/good");
+  await user.type(await folderBox(user), "/mnt/good");
   await user.click(screen.getByRole("button", { name: "Check" }));
   expect(await screen.findByText("That folder works. 12.0 GB free.")).toBeInTheDocument();
   await user.clear(screen.getByLabelText("Folder"));
@@ -58,9 +66,9 @@ test("Save sends the path, the name and the fingerprint, and says where backups 
   const user = userEvent.setup();
   const calls = api({ "POST setup/backup-folder": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) });
   open();
-  await user.type(await screen.findByLabelText("Folder"), "/mnt/new");
+  await user.type(await folderBox(user), "/mnt/new");
   await user.type(screen.getByLabelText("Name for this folder (optional)"), "Cloud drive");
-  await user.click(screen.getByRole("button", { name: "Use this folder for backups" }));
+  await user.click(screen.getByRole("button", { name: "Back up now" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup-folder")).toBe(true));
   expect(calls.find((c) => c.route === "POST setup/backup-folder")!.body).toEqual({
     path: "/mnt/new",
@@ -68,23 +76,25 @@ test("Save sends the path, the name and the fingerprint, and says where backups 
     fingerprint: "fp-1",
   });
   expect(await screen.findByText("Backups will go to /mnt/new.")).toBeInTheDocument();
-  expect(screen.getByLabelText("Folder")).toHaveValue("");
+  // The folder is saved and the raw box goes away again.
+  await waitFor(() => expect(screen.queryByLabelText("Folder")).toBeNull());
 });
 
 test("a refused folder shows the server's words and keeps what was typed", async () => {
   const user = userEvent.setup();
   api({ "POST setup/backup-folder": () => new Refuse(409, "Backups already go to that folder.") });
   open();
-  await user.type(await screen.findByLabelText("Folder"), "/mnt/first");
-  await user.click(screen.getByRole("button", { name: "Use this folder for backups" }));
+  await user.type(await folderBox(user), "/mnt/first");
+  await user.click(screen.getByRole("button", { name: "Back up now" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Backups already go to that folder.");
   expect(screen.getByLabelText("Folder")).toHaveValue("/mnt/first");
 });
 
 test("an app that is not on this computer has no folder list to choose from", async () => {
+  const user = userEvent.setup();
   api();
   open(false);
-  await screen.findByLabelText("Folder");
+  await folderBox(user);
   expect(screen.queryByRole("button", { name: "Choose…" })).toBeNull();
 });
 
@@ -98,6 +108,7 @@ test("choosing a folder: open folders, go up, use the one shown, and it is check
     [`GET setup/folder-check?path=${enc("/home/me/Drive/Backups")}`]: () => ({ path: "/home/me/Drive/Backups", ok: true, problem: null, free_mb: 500 }),
   });
   open();
+  await folderBox(user);
   const choose = await screen.findByRole("button", { name: "Choose…" });
   await user.click(choose);
   const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
@@ -128,7 +139,7 @@ test("a folder that did not check out is not where the list starts", async () =>
     "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [] }),
   });
   open();
-  await user.type(await screen.findByLabelText("Folder"), "/nowhere");
+  await user.type(await folderBox(user), "/nowhere");
   await user.click(screen.getByRole("button", { name: "Choose…" }));
   // A folder that isn't a good one is not where the list starts.
   expect(await screen.findByText("You are in /home/me")).toBeInTheDocument();
@@ -143,7 +154,7 @@ test("when a folder can't be listed the reason shows, and Start from the beginni
     "GET setup/folders": () => ({ path: "/home/me", parent: null, folders: [] }),
   });
   open();
-  await user.type(await screen.findByLabelText("Folder"), "/gone");
+  await user.type(await folderBox(user), "/gone");
   await user.click(screen.getByRole("button", { name: "Check" }));
   await screen.findByText(/That folder works/);
   await user.click(screen.getByRole("button", { name: "Choose…" }));
@@ -188,5 +199,73 @@ describe("the first backup", () => {
     open();
     await screen.findByLabelText("Folder");
     expect(document.querySelector("[data-first-backup]")).toBeNull();
+  });
+});
+
+describe("the cloud drives found on this computer", () => {
+  const NONE = { "GET settings": () => ({ fingerprint: "fp-1", items: [] }) };
+  const drives = (...names: string[]) => ({
+    "GET setup/backup-folders": () => ({ folders: names.map((name, n) => ({ name, recommended: n === 0 })), shown: "Backups › Example App" }),
+  });
+
+  test("they are offered by name with the path as plain names, the first recommended, and nothing raw", async () => {
+    api({ ...NONE, ...drives("Drive One", "Drive Two") });
+    open();
+    const first = await screen.findByRole("radio", { name: /Drive One/ });
+    expect(first).toBeChecked();
+    expect(first.closest("label")).toHaveTextContent("Backups › Example App");
+    expect(first.closest("label")).toHaveTextContent("Recommended");
+    const second = screen.getByRole("radio", { name: /Drive Two/ });
+    expect(second).not.toBeChecked();
+    expect(second.closest("label")).not.toHaveTextContent("Recommended");
+    expect(screen.getByRole("radio", { name: /Choose another folder/ }).closest("label")).toHaveTextContent("a USB drive or a network folder");
+    // The raw folder box and its buttons wait behind "Choose another folder".
+    expect(screen.queryByLabelText("Folder")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Choose…" })).toBeNull();
+  });
+
+  test("Back up now makes the drive's folder, saves it and says where backups will go", async () => {
+    const user = userEvent.setup();
+    const calls = api({
+      ...NONE,
+      ...drives("Drive One", "Drive Two"),
+      "POST setup/backup-folder/cloud": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+    });
+    open();
+    await user.click(await screen.findByRole("radio", { name: /Drive Two/ }));
+    await user.click(screen.getByRole("button", { name: "Back up now" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup-folder/cloud")).toBe(true));
+    expect(calls.find((c) => c.route === "POST setup/backup-folder/cloud")!.body).toEqual({ name: "Drive Two", fingerprint: "fp-1" });
+    expect(calls.some((c) => c.route === "POST setup/backup-folder")).toBe(false);
+    expect(await screen.findByText("Backups will go to Drive Two.")).toBeInTheDocument();
+  });
+
+  test("another folder shows the raw box and sends the path, never the drive route", async () => {
+    const user = userEvent.setup();
+    const calls = api({ ...NONE, ...drives("Drive One"), "POST setup/backup-folder": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) });
+    open();
+    await user.click(await screen.findByRole("radio", { name: /Choose another folder/ }));
+    expect(screen.getByRole("button", { name: "Back up now" })).toBeDisabled();
+    expect(screen.getByText("Choose a folder to go on.")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Folder"), "/mnt/usb");
+    await user.click(screen.getByRole("button", { name: "Back up now" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup-folder")).toBe(true));
+    expect(calls.some((c) => c.route === "POST setup/backup-folder/cloud")).toBe(false);
+  });
+
+  test("with none found it says so and asks for a folder", async () => {
+    api({ ...NONE, ...drives() });
+    open();
+    expect(await screen.findByText(/We didn't find a cloud drive folder on this computer/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Folder")).toBeInTheDocument();
+  });
+
+  test("a refused drive shows the server's words", async () => {
+    const user = userEvent.setup();
+    api({ ...NONE, ...drives("Drive One"), "POST setup/backup-folder/cloud": () => new Refuse(400, "That drive isn't on this computer. Choose another folder.") });
+    open();
+    await screen.findByRole("radio", { name: /Drive One/ });
+    await user.click(screen.getByRole("button", { name: "Back up now" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("That drive isn't on this computer.");
   });
 });

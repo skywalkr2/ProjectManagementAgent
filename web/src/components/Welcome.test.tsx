@@ -130,7 +130,7 @@ test("a plugin's step id keeps its slash in the address, and Undo on the toast p
 test("the template step's skip is called Start empty, and a done step has no skip", async () => {
   api([step("workspace", { done: true }), step("template")]);
   open();
-  expect(await screen.findByRole("button", { name: "Start empty: Pick a starting template" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Start empty: What kind of work is this?" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Skip: Name the workspace/ })).toBeNull();
 });
 
@@ -189,7 +189,13 @@ test("the time zone is picked from a list when the setting offers one", async ()
   open();
   const zone = await screen.findByRole("combobox", { name: "Your time zone" });
   expect(zone).toHaveValue("America/Chicago");
-  expect(screen.getByRole("option", { name: "America/New York" })).toBeInTheDocument();
+  // Zones are cities with their general names, never the ids the settings hold.
+  const labels = within(zone).getAllByRole("option").map((o) => o.textContent);
+  expect(labels).toContain("New York (Eastern time)");
+  expect(labels).toContain("Chicago (Central time)");
+  expect(labels.join(" ")).not.toMatch(/America\/|Europe\//);
+  await user.type(screen.getByRole("searchbox", { name: "Find a city" }), "par");
+  expect(within(zone).getAllByRole("option").map((o) => o.textContent)).toEqual(["Chicago (Central time)", "Paris (Central European time)"]);
   await user.selectOptions(zone, "Europe/Paris");
   await user.type(screen.getByLabelText("Your full name"), "Sam Tester");
   await user.click(screen.getByRole("button", { name: "Save" }));
@@ -409,27 +415,32 @@ describe("a sign-in step that is done", () => {
   });
 });
 
-test("each template lists what it adds as short lists, and one already set up says so instead of offering Apply", async () => {
+test("each template is a name with one line on what it changes, and one already set up says so instead of offering Use", async () => {
   api([step("template")]);
   open();
   const book = (await screen.findByText("Book project")).closest("li") as HTMLElement;
-  const chapters = within(book).getByText("Chapters").closest("li") as HTMLElement;
-  expect(within(chapters).getAllByRole("listitem").map((l) => l.textContent)).toEqual(["Details: Title, Length", "Steps: Outline → Draft → Final"]);
-  // A kind with no fields or steps is just named.
-  const notes = within(book).getByText("Notes").closest("li") as HTMLElement;
-  expect(within(notes).queryAllByRole("listitem")).toHaveLength(0);
+  expect(within(book).getByText("Chapters and drafts.")).toBeInTheDocument();
+  // No lists of fields and steps, and nothing about restarts: the app asks for one itself when it is needed.
+  expect(within(book).queryByText(/Details:|Steps:|What it adds/)).toBeNull();
   expect(within(book).getByRole("button", { name: "Use Book project" })).toBeInTheDocument();
   const trip = screen.getByText("Trip").closest("li") as HTMLElement;
   expect(trip).toHaveTextContent("Already set up");
   expect(within(trip).queryByRole("button")).toBeNull();
-  expect(within(trip).getByText("Details: Where")).toBeInTheDocument();
-  expect(within(trip).queryByText(/^Steps:/)).toBeNull();
+  expect(document.body.textContent ?? "").not.toMatch(/restart/i);
 });
 
-test("the step says plainly that applying turns on item types and may need a restart, which is asked first", async () => {
+test("the template step asks what kind of work this is, in plain words", async () => {
   api([step("template")]);
   open();
-  expect(await screen.findByText(/A restart may be needed; you'll be asked first\./)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "What kind of work is this?" })).toBeInTheDocument();
+  expect(screen.getByText(/Pick a starting point, or start empty\./)).toBeInTheDocument();
+});
+
+test("an add-ons step with no add-on installed to turn on is not offered, so it never reads as done", async () => {
+  api([step("addons", { applies: false }), step("workspace", { done: true })]);
+  open();
+  await screen.findByRole("heading", { name: "Name the workspace and say who you are" });
+  expect(screen.queryByRole("heading", { name: "Turn on your add-ons" })).toBeNull();
 });
 
 const installed = (name: string, enabled: boolean): S["InstalledPackView"] =>

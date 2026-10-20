@@ -138,8 +138,8 @@ test("an old measurement says so and counts as unknown; one never measured offer
   expect(old).toHaveTextContent("Result unknown");
   expect(old).not.toHaveTextContent("Cheapest");
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  expect(none).toHaveTextContent("— Not tested");
-  expect(await within(none).findByRole("button", { name: "Test Main account · everyday" })).toHaveTextContent("Test performance (about $0.12)");
+  expect(none).toHaveTextContent("— Not measured yet");
+  expect(await within(none).findByRole("button", { name: "Measure Main account · everyday" })).toHaveTextContent("Measure (about $0.12)");
 });
 
 test("Measure starts the measuring of that model with the person's go only when it was asked for, and the grid says it is measuring", async () => {
@@ -154,7 +154,7 @@ test("Measure starts the measuring of that model with the person's go only when 
   });
   renderApp(<AiCompare onBack={() => undefined} />);
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  await user.click(await within(none).findByRole("button", { name: "Test Main account · everyday" }));
+  await user.click(await within(none).findByRole("button", { name: "Measure Main account · everyday" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/skills/main/measure")?.body).toEqual({ model: "everyday", confirmed: false }));
   expect(await screen.findByText("Testing. Results appear as each test finishes.")).toBeInTheDocument();
   expect(await within(await cellOf("Write an update in your voice", "Main account · everyday")).findByText("Testing…")).toBeInTheDocument();
@@ -168,7 +168,7 @@ test("a measuring above the amount the person set asks first, with the cost, and
   });
   renderApp(<AiCompare onBack={() => undefined} />);
   const none = await cellOf("Write an update in your voice", "Main account · everyday");
-  await user.click(await within(none).findByRole("button", { name: "Test Main account · everyday" }));
+  await user.click(await within(none).findByRole("button", { name: "Measure Main account · everyday" }));
   expect(calls.some((c) => c.route === "POST ai/skills/main/measure")).toBe(false);
   expect(within(await cellOf("Write an update in your voice", "Main account · everyday")).getByRole("alert")).toHaveTextContent("This would cost about $0.50, more than the $0.10 you set for asking first.");
   await user.click(screen.getByRole("button", { name: "Test anyway" }));
@@ -235,6 +235,38 @@ test("a cell that was never measured says so and never counts zero tasks", async
   api();
   renderApp(<AiCompare onBack={() => undefined} />);
   const c = await cellOf("Write an update in your voice", "Main account · everyday");
-  expect(c).toHaveTextContent("Not tested");
+  expect(c).toHaveTextContent("Not measured yet");
   expect(c).not.toHaveTextContent(/\b0 tasks?\b/);
+});
+
+const UNMEASURED: S["AiSkillsView"] = {
+  min_score: 0.8,
+  stale_days: 60,
+  accounts: [
+    { name: "main", models: [model("everyday", [cell("notes", "Pull actions from meeting notes"), cell("route", "Route a question to who decides")])] },
+    { name: "second", models: [model("everyday", [cell("notes", "Pull actions from meeting notes"), cell("route", "Route a question to who decides")])] },
+  ],
+};
+
+test("with accounts but nothing measured the page says so and offers Measure with the app's own estimate, not a grid of blanks", async () => {
+  const user = userEvent.setup();
+  const calls = api({}, UNMEASURED);
+  renderApp(<AiCompare onBack={() => undefined} />);
+  expect(await screen.findByText(/Nothing measured yet\./)).toBeInTheDocument();
+  expect(screen.queryByText("There is nothing to compare yet. Add an account first.")).toBeNull();
+  expect(screen.queryByRole("table")).toBeNull();
+  const measure = await screen.findByRole("button", { name: "Measure (about $0.48)" });
+  expect(measure).toBeEnabled();
+  await user.click(measure);
+  // About $0.48 is more than the amount the person asked to be asked above, so it asks first.
+  expect(await screen.findByText(/This would cost about \$0\.48, more than the \$0\.10 you set for asking first\./)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Test anyway" }));
+  await waitFor(() => expect(calls.filter((c) => c.route.startsWith("POST ai/skills/") && c.route.endsWith("/measure"))).toHaveLength(2));
+});
+
+test("with no account at all the page asks for one first", async () => {
+  api({ "GET ai/accounts": () => [] }, UNMEASURED);
+  renderApp(<AiCompare onBack={() => undefined} />);
+  expect(await screen.findByText("There is nothing to compare yet. Add an account first.")).toBeInTheDocument();
+  expect(screen.queryByText(/Nothing measured yet/)).toBeNull();
 });

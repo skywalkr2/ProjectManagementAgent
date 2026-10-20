@@ -143,8 +143,8 @@ def test_finishing_does_not_need_the_optional_extras(tmp_path):
     for step in ("workspace", "ai", "mail", "backup", "people"):
         c.post(f"/api/setup/{step}/skip")
     view = _view(c)
-    # The extras stay undone (add-ons is done here only because nothing the person installed is off).
-    extras = [s for s in view["steps"] if s["group"] == "done" and s["id"] != "addons"]
+    # The extras stay undone, the add-ons one too: with nothing installed it isn't offered, and never reads as done.
+    extras = [s for s in view["steps"] if s["group"] == "done"]
     assert view["finished"] and extras and not any(s["done"] or s["skipped"] for s in extras)
 
 

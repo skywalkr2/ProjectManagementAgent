@@ -28,36 +28,12 @@ export function TemplateList() {
   return (
     <ul className="queue">
       {templates.data.map((tpl) => {
-        const adds = tpl.adds ?? [];
-        const addsId = `template-${tpl.id.replace(/[^A-Za-z0-9_-]/g, "-")}-adds`;
         return (
           <li key={tpl.id} className="line">
             <div className="row pair">
               <div className="text">
                 <strong>{tpl.name}</strong>
                 {tpl.description && <span className="sub">{tpl.description}</span>}
-                {adds.length > 0 && (
-                  <div className="template-adds">
-                    <span className="what" id={addsId}>
-                      {t("welcome.template.adds")}
-                    </span>
-                    <ul className="plain-list" aria-labelledby={addsId}>
-                      {adds.map((add) => (
-                        <li key={add.name}>
-                          <strong>{add.name}</strong>
-                          {(add.fields.length > 0 || add.stages.length > 0) && (
-                            <ul className="plain-list">
-                              {add.fields.length > 0 && <li>{t("welcome.template.fields", { list: add.fields.join(", ") })}</li>}
-                              {add.stages.length > 0 && (
-                                <li>{t("welcome.template.steps", { list: add.stages.join(t("welcome.template.step_join")) })}</li>
-                              )}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
               <div className="acts">
                 {tpl.set_up ? (

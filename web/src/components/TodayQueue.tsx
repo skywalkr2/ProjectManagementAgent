@@ -26,7 +26,7 @@ import { Pill, type PillTone } from "../ui/Pill";
 import { OutsideTag } from "../ui/OutsideTag";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
-import { NothingNeedsYou } from "./Coverage";
+import { TodayEmpty } from "./TodayEmpty";
 import { usePromiseChoices } from "./PromiseLine";
 import { ReminderItems, digestTitle, reminderTitle, useReminderChoices, useReminderNotices } from "./ReminderLine";
 import { ReplyDraft, replyTitle, useReplyChoices } from "./ReplyLine";
@@ -36,7 +36,6 @@ import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
-import { MissedOneLine } from "./MissedOne";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
@@ -51,6 +50,8 @@ export interface QueueHandlers {
   onOpenSources?: () => void;
   onOpenRecord?: (kind: string, id: string) => void;
   onOpenGuide?: (step: string) => void;
+  /** Opens the form that hands something to the assistant. */
+  onHandIn?: () => void;
   /** Go to a screen: the Projects list where unfiled work is filed. */
   onOpenView?: (view: View) => void;
 }
@@ -345,10 +346,11 @@ export function TodayQueue(props: {
               )}
               {plugins.review}
               {count === 0 && (
-                <>
-                  <NothingNeedsYou className={styles.empty} />
-                  <MissedOneLine className={styles.empty} />
-                </>
+                <TodayEmpty
+                  className={styles.empty}
+                  onContinueSetup={props.handlers.onOpenGuide ? () => props.handlers.onOpenGuide?.("ai") : undefined}
+                  onHandIn={props.handlers.onHandIn}
+                />
               )}
             </>
           )}

@@ -917,12 +917,14 @@ def test_an_account_says_whether_its_key_is_there_and_can_be_tested_before_it_do
 
 
 @pytest.mark.skipif(os.environ.get("COCKPIT_TEST_CORE_ONLY") == "1", reason="the bundled add-ons are off in this run")
-def test_the_add_ons_step_is_done_until_an_installed_add_on_is_off(tmp_path):
+def test_the_add_ons_step_is_never_done_for_add_ons_nobody_decided_about(tmp_path):
     from engine import setup
 
     ws, cfg, store = make(tmp_path)
     try:
-        assert {s.id: s for s in setup.steps(ws, cfg, store)}["addons"].done
+        # Nothing installed, nothing decided: there is nothing to turn on, so the step isn't offered and isn't done.
+        step = {s.id: s for s in setup.steps(ws, cfg, store)}["addons"]
+        assert not step.done and not step.applies
         folder = ws.root / "plugins" / "spare"
         folder.mkdir(parents=True)
         (folder / "plugin.yaml").write_text(
@@ -938,7 +940,8 @@ def test_the_add_ons_step_is_done_until_an_installed_add_on_is_off(tmp_path):
             )
         )
         assert setup.addons_off(ws, cfg) == ["spare"]
-        assert not {s.id: s for s in setup.steps(ws, cfg, store)}["addons"].done
+        step = {s.id: s for s in setup.steps(ws, cfg, store)}["addons"]
+        assert not step.done and step.applies
     finally:
         store.close()
 
@@ -1090,7 +1093,7 @@ def test_an_add_on_turned_on_shows_as_on_and_one_left_off_stops_the_step_asking(
     c, api = client(ws, cfg, store)
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
     steps = {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}
-    assert not steps["addons"]["done"]
+    assert not steps["addons"]["done"] and steps["addons"]["applies"]
     assert c.post(f"{api}/packs/spare/off", json={"fingerprint": fingerprint}).status_code == 200  # leave it off
     assert "spare" in setup._state(ws)["addons_decided"]
     assert c.post(f"{api}/setup/addons/leave-off").status_code == 200  # and any other add-on left off

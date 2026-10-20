@@ -404,6 +404,22 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .check-row .problem-note { flex: 1 1 100%; margin: 0; }
 .level-list { flex-direction: column; }
 .level-hint { margin: 0 0 var(--space-2) var(--space-8); }
+/* The AI step for a first-timer: the recommended tag, the numbered steps, the check's line and the spending sentence. */
+.tag-recommended { margin: 0 0 var(--space-1); background: var(--ok-soft); color: var(--ok); }
+.else-list { display: grid; gap: var(--space-3); margin-top: var(--space-3); padding-left: var(--space-3); border-left: 2px solid var(--border); }
+.numbered-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.numbered-step { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; }
+.step-number { display: inline-flex; align-items: center; justify-content: center; min-width: var(--space-6); min-height: var(--space-6); border-radius: var(--radius-full); background: var(--surface-sunk); font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+.step-text { display: grid; gap: var(--space-1); min-width: 0; }
+.step-action { justify-self: end; }
+.numbered-step .step-text .field { margin-top: var(--space-2); }
+[data-narrow] .numbered-step { grid-template-columns: auto minmax(0, 1fr); }
+.check-ok { margin: 0; color: var(--ok); font-weight: var(--weight-semibold); }
+.verdict:empty { display: none; }
+.allow-question .kind-choice { margin-bottom: var(--space-2); }
+.spend { padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-sunk); }
+.spend-line { margin: 0; }
+.money-field { display: inline-flex; align-items: center; gap: var(--space-1); }
 
 /* Rows of the rail's panels (design 7.7): the agenda, the person's own list and the mail that came in. */
 .tb-count { display: inline-block; min-width: var(--space-5); padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); text-align: center; }

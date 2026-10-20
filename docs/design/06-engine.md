@@ -1428,6 +1428,23 @@ in, and the person never types a command); paste the key, which is kept on this 
 aggregator too; it also says that notes, mail and meetings are internal, so the assistant can work on them only once
 Internal is ticked, and a run stopped because no account may see its material offers "Let <account> see internal
 material" as its action, the person's own one-click raise, phase A); run the evaluation (below) before a model is approved for a tier.
+*The first-run step* (7.8; B-7, first-run review F2, N3, N4): the catalog marks one hosted service **recommended** and
+one the **alternative**, and gives each its pages for making an account, adding credit and making a key; the rest sit
+under "Something else". **The check runs when the key is pasted** (`POST /api/ai/account-check`, `engine/ai/key_check.py`):
+the new account is put into a copy of the settings with every tier pointed at it and `smoke_test` runs on that copy, so every
+kind of work is tried with the exact settings and an agent also gets its lock-down and sign-in checks, before anything is
+saved; the pasted key is handed to the adapter and kept nowhere. The result is one reason from the failure's own kind (key
+refused, no credit, can't be reached, asked to wait, not signed in), worded for the kind of account: a hosted service is told
+to check its internet connection, never to "start it if it runs on this computer" (`where_of` tells an address on this
+computer or network from a hosted one; `TRANSPORT_HINTS`, `LIST_PROBLEMS`). It also says which sign-in the account runs
+as when it can be found (the signed-in user of an agent), and says in plain words when it can't (a key). **A new account reads
+only open material until the person says so** (decision F25): the step asks once, per account, "Allow <account>, signed in
+as <identity>, to read your work mail and notes?" with nothing chosen; Allow lets it read open and internal material, Not now
+leaves it at open, and the three levels stay under Advanced. A drawer in Settings starts a new account at open material too.
+*Built so far:* `tests/test_first_run_ai.py` (the catalog's recommendation and links, the open-only default, the messages by
+kind of account, every tier with its exact settings, the identity), `web/src/components/WelcomeAi.test.tsx`. Until a kind of work has a result the compare page says "Nothing measured yet" with
+"Measure (about $x)", and an account's row says "Not measured yet" with a Measure button, instead of "Good at 0 of 14"
+(`web/src/components/AiCompare.test.tsx`, `web/src/components/AiAccounts.test.tsx`).
 *Found by the first journeys (B-6a):* a new account's suggested name is the service's name ("<service> account", numbered when
 taken), never its catalog id, which stays the short name in the settings until the person names the account themselves; and a
 custom address (the catalog's "another service" kind) needs no key, since the service may take none: a key is asked for only

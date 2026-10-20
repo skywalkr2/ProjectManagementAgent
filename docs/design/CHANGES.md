@@ -1053,6 +1053,23 @@ yet follow, that it is *designed*, with its phase.
 | Plugin API (3.9) | 0.3.84 | 0.3.85: `EventDetails.described`; core records `CalendarEntry.plain` and `people`, `ActionNews.non_answer`, `Copy.kind` `work` |
 | Settings (4.6) | | `steward.second_move_days`, `language.due_hold_words`, `language.due_before_words` and `language.task_verbs`, each with a description, a default and demo values in both fictional workspaces |
 
+## 129. First run for a person with no IT background: the AI account, the backups, Today's empty state and the words (2026-10-20; the first-run review, F2, F4 to F8, N3 to N7, and the re-review's 3.10 and 3.11, batch B-7)
+
+| Change | Where |
+|---|---|
+| **The AI step offers one recommended service, one alternative and "Something else".** Which is which is data in the catalog of account kinds (`recommended`, `alternative`, with `signup_url`, `credit_url` and `key_url`), never code. The chosen service has four numbered steps, each with a button to its page; the credit step says about what to add from the app's own daily limit. | 6.16, 7.8 |
+| **The key is checked when it is pasted, before anything is saved.** `POST /api/ai/account-check` runs the same smoke test on a copy of the settings with every tier pointed at the new account, so every kind of work is tried with its exact settings (and an agent's lock-down and sign-in checks); the answer is one reason worded for the kind of account (a hosted service is never told to "start it"), and the sign-in it runs as when that can be found. There is no Check button. | 6.16, 7.8 |
+| **A new account reads open material only until the person says more (F25).** The step asks once per account, "Allow <account>, signed in as <identity>, to read your work mail and notes?", with nothing chosen; Allow gives open and internal, Not now leaves open; the three levels are under Advanced. The drawer in Settings also starts at open. | 6.16, 7.8 |
+| **One Continue on every walkthrough screen, "I'll do this later" beside it, and a disabled Continue says what is missing.** The model's picker and name are under Advanced; spending is one sentence with a Change. | 7.8 |
+| **Backups offer the cloud drives found on the computer, by name,** the first marked Recommended, shown as "Backups › PM Cockpit"; "Back up now and continue" makes the folder, saves it and makes the first backup. The drives looked for are config (`storage.backups.cloud_folders`, `cloud_path`). | 4.15, 7.8 |
+| **Today's empty state depends on setup:** connect an AI service, then hand something in; "Nothing needs you" and "Missed one" only once the assistant has worked. | 7.7 |
+| **The Done step is a compact list; the template step asks "What kind of work is this?"** with one line each and no restart talk; the add-ons step is offered only when an add-on is installed and off, and is never Done unasked. | 7.8 |
+| **Words:** a time zone by city with a search; "English spelling: American / British / …"; spending's wording; the unknown-cost setting, the notices' webhook and technical connector fields under Advanced (a schema marker `advanced`); plain Advanced topic names; "About 10 to 20 minutes". The compare page and an account row say "Nothing measured yet" and "Not measured yet" with a Measure button. | 7.9, 7.16 |
+| **The wording check reaches the setup path's labels from schemas, connectors and add-on manifests** (N5). | 7.9 |
+
+*Built:* `tests/test_first_run_ai.py`, `tests/test_cloud_folders.py`, `tests/test_setup_path_words.py`, `tests/test_setup.py`, and the
+Vitest files named in 7.7 to 7.9.
+
 ## 128. Tables beside the pane, What changed's meta line, one header row, target sizes and weights (2026-10-20; the UI/UX re-review, 3.3, 3.6, 3.7, 3.8, 3.9, 3.13, batch B-7)
 
 | Where | Before | Now |

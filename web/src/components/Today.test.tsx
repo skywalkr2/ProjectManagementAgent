@@ -122,22 +122,25 @@ function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean; unnamed
     "GET today/week": () => emptyWeek,
     "GET watch": () => [],
     "GET projects": () => [],
-    "GET status": () => statusFixture(),
+    // An assistant that has already worked on something: an empty Today then says nothing needs the person.
+    "GET status": () => statusFixture({}, { assistant: { last_run_at: "2026-10-20T08:00:00Z" } }),
     "GET runtime-config": () => ({ instance: null }),
     ...extra,
   });
   const onView = vi.fn();
+  const onOpenGuide = vi.fn();
+  const onHandIn = vi.fn();
   const { client } = renderApp(
     <RestartProvider hellos={1}>
       <Keys />
-      <Today workspace="Workspace" onView={onView} onAddSource={vi.fn()} onOpenGuide={vi.fn()} onOpenRecord={vi.fn()} shortcuts={{ next: "j", previous: "k" }} />
+      <Today workspace="Workspace" onView={onView} onAddSource={vi.fn()} onOpenGuide={onOpenGuide} onHandIn={onHandIn} onOpenRecord={vi.fn()} shortcuts={{ next: "j", previous: "k" }} />
     </RestartProvider>,
     {},
     { unnamed: over.unnamed },
   );
   /** What the live stream does when something changed elsewhere: the screen asks again. */
   const refresh = () => act(() => client.invalidateQueries());
-  return { calls, onView, refresh };
+  return { calls, onView, refresh, onOpenGuide, onHandIn };
 }
 
 afterEach(() => {
@@ -175,6 +178,32 @@ test("an empty queue says so in one line", async () => {
   show([]);
   expect(await screen.findByText("Nothing needs you right now.")).toBeInTheDocument();
   expect(screen.getByText(/Nothing needs you$/)).toBeInTheDocument();
+});
+
+test("with no AI service an empty Today says to connect one, and its button goes on with setup", async () => {
+  const user = userEvent.setup();
+  const { onOpenGuide } = show([], { "GET status": () => statusFixture({}, { ai: { state: "not_set_up", detail: null } }) });
+  expect(await screen.findByText(/Connect an AI service to get started\./)).toBeInTheDocument();
+  expect(screen.queryByText("Nothing needs you right now.")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Missed one" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Continue setup" }));
+  expect(onOpenGuide).toHaveBeenCalledWith("ai");
+});
+
+test("with a service connected and nothing worked on yet, an empty Today says what to hand in", async () => {
+  const user = userEvent.setup();
+  const { onHandIn } = show([], { "GET status": () => statusFixture() });
+  expect(await screen.findByText(/Paste an email or meeting notes to see what your assistant does\./)).toBeInTheDocument();
+  expect(screen.queryByText("Nothing needs you right now.")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Missed one" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Hand something in" }));
+  expect(onHandIn).toHaveBeenCalled();
+});
+
+test("Missed one appears only once the assistant has worked on something", async () => {
+  show([]);
+  expect(await screen.findByText("Nothing needs you right now.")).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Missed one" }).length).toBeGreaterThan(0);
 });
 
 const watched = (id: string, over: Partial<S["WatchSourceView"]> = {}): S["WatchSourceView"] => ({

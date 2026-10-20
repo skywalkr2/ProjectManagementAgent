@@ -5,6 +5,11 @@
 #   adapter            the adapter that talks to it
 #   base_url           the base address of its endpoint ("" when the person enters it)
 #   key_url            where the person makes a key ("" when it needs none)
+#   signup_url         where the person makes an account with the service ("" when the setup steps don't offer a link)
+#   credit_url         where the person adds credit to it ("" when the setup steps don't offer a link)
+#   recommended        the one service the setup guide offers first, with a "Recommended" tag (at most one entry)
+#   alternative        the one other service the guide offers beside it (at most one entry)
+#                      Every other entry is offered under "Something else".
 #   needs_key          whether a key is asked for
 #   local              a server on this computer: nothing leaves it, and the screen can look for it
 #   allowed_data       the data levels a new account of this kind is offered by default (the person can change them)
@@ -24,6 +29,9 @@ endpoints:
     adapter: openai-compatible
     base_url: https://api.openai.com/v1
     key_url: https://platform.openai.com/api-keys
+    signup_url: https://platform.openai.com/signup
+    credit_url: https://platform.openai.com/settings/organization/billing/overview
+    alternative: true
     needs_key: true
     note: Pay as you go on your own OpenAI account.
   - id: anthropic
@@ -31,6 +39,9 @@ endpoints:
     adapter: openai-compatible
     base_url: https://api.anthropic.com/v1
     key_url: https://console.anthropic.com/settings/keys
+    signup_url: https://console.anthropic.com/login
+    credit_url: https://console.anthropic.com/settings/billing
+    recommended: true
     needs_key: true
     settings:
       json_mode: false

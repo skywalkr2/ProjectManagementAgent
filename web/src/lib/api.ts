@@ -435,8 +435,11 @@ export const api = {
     return call<S["FolderListView"]>("GET", `setup/folders${asked.length > 0 ? `?${asked.join("&")}` : ""}`);
   },
   saveBackupFolder: (body: S["BackupFolderAdd"]) => call<S["SettingsSaved"]>("POST", "setup/backup-folder", body),
+  cloudFolders: () => call<S["CloudFoldersView"]>("GET", "setup/backup-folders"),
+  backupToCloudFolder: (body: S["CloudFolderChoice"]) => call<S["SettingsSaved"]>("POST", "setup/backup-folder/cloud", body),
   endpoints: () => call<S["EndpointView"][]>("GET", "ai/endpoints"),
   aiModels: (body: S["AiModelsAsk"]) => call<S["AiModelsView"]>("POST", "ai/models", body),
+  checkAccount: (body: S["AiAccountCheck"]) => call<S["AiAccountChecked"]>("POST", "ai/account-check", body),
   aiLocal: () => call<S["LocalServerView"][]>("GET", "ai/local"),
   addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
   aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),

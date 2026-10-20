@@ -695,6 +695,41 @@ test("each row ends with one line of what it can do and See all opens the grid",
   expect(onCompare).toHaveBeenCalledTimes(1);
 });
 
+const NONE_YET: S["AiSkillsView"] = {
+  min_score: 0.8,
+  stale_days: 60,
+  accounts: [{ name: "main", models: [{ model: "everyday", skills: [skill("dates", "Dates"), skill("owners", "Owners")] }] }],
+};
+
+test("an account with no result yet says Not measured yet with a Measure button, never Good at 0 of 2", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "GET ai/skills": () => NONE_YET,
+    "POST ai/skills/main/estimate": () => ({ models: ["everyday"], level: "internal", cases: 4, skipped: 0, runs: 3, usd: 0.04, confirm_above_usd: 0.1, needs_go: false }),
+    "POST ai/skills/main/measure": () => ({ started: ["everyday"], already: [], estimate: { models: ["everyday"], level: "internal", cases: 4, skipped: 0, runs: 3, usd: 0.04, confirm_above_usd: 0.1, needs_go: false } }),
+  });
+  renderApp(<AiAccounts local onCompare={vi.fn()} />);
+  const main = await row("Main account");
+  await waitFor(() => expect(main).toHaveTextContent("Not measured yet"));
+  expect(main).not.toHaveTextContent("Good at");
+  expect(main).not.toHaveTextContent("not measured ·");
+  await user.click(within(main).getByRole("button", { name: "Measure Main account" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/skills/main/measure")).toBe(true));
+});
+
+test("Measure on a row goes to the compare page to ask first when the cost is over the amount the person set", async () => {
+  const user = userEvent.setup();
+  const onCompare = vi.fn();
+  const calls = api({
+    "GET ai/skills": () => NONE_YET,
+    "POST ai/skills/main/estimate": () => ({ models: ["everyday"], level: "internal", cases: 4, skipped: 0, runs: 3, usd: 0.9, confirm_above_usd: 0.1, needs_go: true }),
+  });
+  renderApp(<AiAccounts local onCompare={onCompare} />);
+  await user.click(await within(await row("Main account")).findByRole("button", { name: "Measure Main account" }));
+  await waitFor(() => expect(onCompare).toHaveBeenCalledTimes(1));
+  expect(calls.some((c) => c.route === "POST ai/skills/main/measure")).toBe(false);
+});
+
 test("an account the measurements don't know, and a list that didn't load, show no line of what it can do", async () => {
   api({ "GET ai/skills": () => ({ ...SKILLS, accounts: [] }) });
   const view = open();

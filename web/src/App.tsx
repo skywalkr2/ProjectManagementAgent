@@ -193,6 +193,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             onAddSource={() => openAddSource()}
             onOpenRecord={openRecord}
             onOpenGuide={openGuide}
+            onHandIn={() => setHandIn(true)}
             shortcuts={rc.shortcuts}
             onAddAccount={() => {
               setAddAccount(Date.now());

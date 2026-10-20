@@ -1359,6 +1359,147 @@
         "title": "AiAccountChange",
         "type": "object"
       },
+      "AiAccountCheck": {
+        "additionalProperties": false,
+        "description": "Check a new account before it is saved: with the key the person just pasted, every kind of work is tried with the\nexact settings it will use. Nothing is kept.",
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a command-line agent: its `agent` settings.",
+            "title": "Agent"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its address, for a kind whose address the person enters.",
+            "title": "Base Url"
+          },
+          "endpoint": {
+            "description": "The kind of account, from GET /api/ai/endpoints.",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A pasted key; used for this request only and never kept.",
+            "title": "Key"
+          },
+          "key_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Or where the key is: env:NAME or file:/path.",
+            "title": "Key Ref"
+          },
+          "models": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Short names for the account's models, to their ids.",
+            "title": "Models",
+            "type": "object"
+          },
+          "use": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The model each tier would use, by its short name; a tier left out uses the first.",
+            "title": "Use",
+            "type": "object"
+          }
+        },
+        "required": [
+          "endpoint",
+          "models"
+        ],
+        "title": "AiAccountCheck",
+        "type": "object"
+      },
+      "AiAccountChecked": {
+        "description": "How a new account's check went, in words that fit the kind of account.",
+        "properties": {
+          "identity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sign-in the account runs as, when the check found it.",
+            "title": "Identity"
+          },
+          "identity_unknown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why that can't be told, in plain words, when the account works but it can't.",
+            "title": "Identity Unknown"
+          },
+          "message": {
+            "description": "What to do about it, in plain words; empty when it works.",
+            "title": "Message",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "reason": {
+            "enum": [
+              "works",
+              "key_missing",
+              "key_refused",
+              "no_credit",
+              "unreachable",
+              "wait",
+              "not_signed_in",
+              "failed"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "reason",
+          "message"
+        ],
+        "title": "AiAccountChecked",
+        "type": "object"
+      },
       "AiAccountRemove": {
         "additionalProperties": false,
         "description": "Remove an account, saying which backup takes over the work it did.",
@@ -4230,6 +4371,69 @@
         "title": "CloseMeasureView",
         "type": "object"
       },
+      "CloudFolderChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "name": {
+            "description": "A drive from GET /api/setup/backup-folders.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "fingerprint"
+        ],
+        "title": "CloudFolderChoice",
+        "type": "object"
+      },
+      "CloudFolderView": {
+        "properties": {
+          "name": {
+            "description": "The cloud drive's name, as the person knows it.",
+            "title": "Name",
+            "type": "string"
+          },
+          "recommended": {
+            "description": "The first one found, which the guide recommends.",
+            "title": "Recommended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "recommended"
+        ],
+        "title": "CloudFolderView",
+        "type": "object"
+      },
+      "CloudFoldersView": {
+        "description": "The cloud drives found on this computer, by name; never where they are.",
+        "properties": {
+          "folders": {
+            "items": {
+              "$ref": "#/components/schemas/CloudFolderView"
+            },
+            "title": "Folders",
+            "type": "array"
+          },
+          "shown": {
+            "description": "The folder made inside a drive, as plain names joined with arrows (\"Backups \u203a App\").",
+            "title": "Shown",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folders",
+          "shown"
+        ],
+        "title": "CloudFoldersView",
+        "type": "object"
+      },
       "ComingView": {
         "description": "A dated to-do due in the next days that isn't on a Top priorities line.",
         "properties": {
@@ -5184,10 +5388,34 @@
             "title": "Allowed Data",
             "type": "array"
           },
+          "alternative": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True for the one other service the guide offers beside it.",
+            "title": "Alternative"
+          },
           "base_url": {
             "description": "Its address; empty when the person enters it.",
             "title": "Base Url",
             "type": "string"
+          },
+          "credit_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the person adds credit to the account, if anywhere.",
+            "title": "Credit Url"
           },
           "id": {
             "title": "Id",
@@ -5252,11 +5480,35 @@
             "title": "Program",
             "type": "string"
           },
+          "recommended": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True for the one service the setup guide offers first, with a Recommended tag.",
+            "title": "Recommended"
+          },
           "settings": {
             "additionalProperties": true,
             "description": "Provider settings a new account of this kind starts with.",
             "title": "Settings",
             "type": "object"
+          },
+          "signup_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the person makes an account with the service, if anywhere.",
+            "title": "Signup Url"
           }
         },
         "required": [
@@ -16719,6 +16971,18 @@
       "SettingItem": {
         "description": "One config key, for the Settings forms.",
         "properties": {
+          "advanced": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True when it is technical: a form lists it only behind Advanced, and Settings lists it under Advanced, so the setup path never shows it.",
+            "title": "Advanced"
+          },
           "basic": {
             "description": "Shown first; the rest sit behind More settings.",
             "title": "Basic",
@@ -17044,6 +17308,18 @@
             ],
             "description": "A plugin step's person action, if it has one.",
             "title": "Action"
+          },
+          "applies": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "False when there is nothing for the person to do here, so the step isn't offered.",
+            "title": "Applies"
           },
           "counted": {
             "default": false,
@@ -21278,6 +21554,45 @@
           }
         },
         "summary": "Addon Secret"
+      }
+    },
+    "/api/ai/account-check": {
+      "post": {
+        "description": "Check a new account before it is saved, the moment its key is pasted: every kind of work is tried with the\nexact settings it will use, and the answer says in words that fit the kind of account what to do when it fails.\nNothing is kept: the key is used for this request only.",
+        "operationId": "ai_account_check_api_ai_account_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAccountCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAccountChecked"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Account Check"
       }
     },
     "/api/ai/accounts": {
@@ -28705,6 +29020,64 @@
           }
         },
         "summary": "Backup Folder"
+      }
+    },
+    "/api/setup/backup-folder/cloud": {
+      "post": {
+        "description": "Back up to a cloud drive found on this computer: its backup folder is made, saved as a target, and the first\nbackup is made before the answer, so the reminder to back up is gone when the person goes on.",
+        "operationId": "backup_to_cloud_folder_api_setup_backup_folder_cloud_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloudFolderChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backup To Cloud Folder"
+      }
+    },
+    "/api/setup/backup-folders": {
+      "get": {
+        "description": "The cloud drives found on this computer, by name, for the backup step: the first is recommended. None when\nthe app isn't on the person's own computer, which has no drive folders to look at.",
+        "operationId": "cloud_backup_folders_api_setup_backup_folders_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudFoldersView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cloud Backup Folders"
       }
     },
     "/api/setup/first-promises": {

@@ -182,3 +182,52 @@ test("no entry of the sheet shows raw data: no braces around a quoted key and no
   const raw = Object.entries(words).filter(([, text]) => holdsRawData(text));
   expect(raw.map(([key]) => key)).toEqual([]);
 });
+
+// The setup path (the first-run review's N5): what a person with no IT background reads while setting the app up. No time
+// zone id, language tag, secret reference, IMAP, port, TLS, token, CLI or command; what has to stay technical lives under
+// Advanced, in keys that say so (`.advanced.`). The server's test (tests/test_setup_path_words.py) reaches the labels and
+// descriptions that come from config schemas, connectors and add-on manifests; this one reaches the wording sheet.
+const SETUP_PREFIXES = [
+  "walkthrough.",
+  "welcome.",
+  "setup_step.",
+  "start.",
+  "settings.key.",
+  "settings.group.",
+  "settings.section.",
+  "settings.option.",
+  "sign_in.",
+  "secret.",
+  "folders.",
+  "notices.",
+  "timezone.",
+  "queue.empty",
+  "money.",
+];
+const SETUP_TERMS: [string, RegExp][] = [
+  ["a time zone id", /\b(?:Africa|America|Antarctica|Arctic|Asia|Atlantic|Australia|Europe|Indian|Pacific)\/[A-Za-z_]+/],
+  ["a language tag", /\b[a-z]{2,3}-[A-Z]{2}\b/],
+  ["a secret reference", /\b(?:env|keychain):|\bfile:\/|\bfile:~/],
+  ["IMAP", /\bIMAP\b/i],
+  ["a port", /\bports?\b/i],
+  ["TLS", /\bTLS\b/],
+  ["a token", /\btokens?\b/i],
+  ["the command line", /\bCLI\b|\bcommands?\b/i],
+];
+const setupProblems = (text: string): string[] => SETUP_TERMS.filter(([, pattern]) => pattern.test(text)).map(([name]) => name);
+
+test("the setup-path check finds a technical word and lets look-alikes through", () => {
+  for (const text of ["such as Europe/Paris", "as en-US", "env:NAME", "its IMAP host", "the port", "over TLS", "about 4,000 tokens", "the CLI", "its command"]) {
+    expect(setupProblems(text).length, text).toBeGreaterThan(0);
+  }
+  for (const text of ["Yes/No and/or", "A report on transport", "Pick the city nearest you.", "American or British spelling", "Commanding views"]) {
+    expect(setupProblems(text), text).toEqual([]);
+  }
+});
+
+test("no entry on the setup path names a time zone id, a language tag, a secret reference, IMAP, a port, TLS, a token, the CLI or a command", () => {
+  const leaks = Object.entries(words)
+    .filter(([key]) => SETUP_PREFIXES.some((p) => key.startsWith(p)) && !key.split(".").includes("advanced"))
+    .flatMap(([key, text]) => setupProblems(text).map((p) => `${key}: ${p}`));
+  expect(leaks).toEqual([]);
+});

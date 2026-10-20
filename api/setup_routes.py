@@ -16,6 +16,8 @@ from api.pack_routes import entry_in
 from api.schemas import (
     AiAccountAdd,
     AiAccountChange,
+    AiAccountCheck,
+    AiAccountChecked,
     AiAccountRemove,
     AiAccountSkills,
     AiAccountView,
@@ -42,6 +44,9 @@ from api.schemas import (
     AiWorkKindView,
     BackupFolderAdd,
     CatalogAddress,
+    CloudFolderChoice,
+    CloudFoldersView,
+    CloudFolderView,
     ConfirmDone,
     ConfirmIn,
     DataLevelAllowed,
@@ -90,6 +95,8 @@ log = logging.getLogger(__name__)
 
 #: What a hosted app says to a pasted key: keys stay in the app's own environment, given by their reference.
 HOSTED_FILE = "A hosted app can't read a file on your computer. Give the calendar's link instead."
+#: The longest a request waits for the first backup it started, so a slow drive never holds the screen.
+FIRST_BACKUP_WAIT_SECONDS = 20
 HOSTED_KEY = "On a hosted app, a key can't be pasted: keep it in the app's environment and give where it is instead."
 
 #: Why a measuring failed, in words.
@@ -414,6 +421,47 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             return FolderListView(**vars(setup.list_folders(path, files)))
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
+
+    @r.get("/setup/backup-folders")
+    def cloud_backup_folders() -> CloudFoldersView:
+        """The cloud drives found on this computer, by name, for the backup step: the first is recommended. None when
+        the app isn't on the person's own computer, which has no drive folders to look at."""
+        from engine import cloud_folders
+
+        backups = current().storage.backups
+        drives = cloud_folders.found(backups.cloud_folders, Path.home()) if local else []
+        return CloudFoldersView(
+            folders=[CloudFolderView(name=d.name, recommended=n == 0) for n, d in enumerate(drives)],
+            shown=cloud_folders.shown(backups.cloud_path),
+        )
+
+    @r.post("/setup/backup-folder/cloud")
+    def backup_to_cloud_folder(body: CloudFolderChoice) -> SettingsSaved:
+        """Back up to a cloud drive found on this computer: its backup folder is made, saved as a target, and the first
+        backup is made before the answer, so the reminder to back up is gone when the person goes on."""
+        from engine import cloud_folders
+
+        backups = current().storage.backups
+        drive = next((d for d in cloud_folders.found(backups.cloud_folders, Path.home()) if d.name == body.name), None)
+        if not local or drive is None:
+            raise HTTPException(status_code=400, detail="That drive isn't on this computer. Choose another folder.")
+        try:
+            made = cloud_folders.make_backup_folder(drive.root, backups.cloud_path)
+        except OSError as err:
+            raise HTTPException(
+                status_code=400, detail=f"A folder couldn't be made there: {err.strerror or err}"
+            ) from None
+        check = setup.check_backup_folder(ws, str(made))
+        if not check.ok:
+            raise HTTPException(status_code=400, detail=check.problem)
+        targets = [t.model_dump() for t in backups.targets]
+        if not any(os.path.realpath(os.path.expanduser(t["path"])) == check.path for t in targets):
+            targets.append({"path": check.path, "label": drive.name})
+        result = saved(save({"storage.backups.targets": targets}, [], body.fingerprint, allow=("storage.backups.",)))
+        thread = worker.first_backup_soon()
+        if thread is not None:
+            thread.join(timeout=FIRST_BACKUP_WAIT_SECONDS)
+        return result
 
     @r.post("/setup/backup-folder")
     def backup_folder(body: BackupFolderAdd) -> SettingsSaved:
@@ -1561,6 +1609,54 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 for name, info in models
             ],
             problem=problem,
+        )
+
+    @r.post("/ai/account-check")
+    def ai_account_check(body: AiAccountCheck) -> AiAccountChecked:
+        """Check a new account before it is saved, the moment its key is pasted: every kind of work is tried with the
+        exact settings it will use, and the answer says in words that fit the kind of account what to do when it fails.
+        Nothing is kept: the key is used for this request only."""
+        from engine.ai import key_check
+        from engine.config.schema import ProviderSettings
+        from engine.secrets import SecretError, resolve_secret
+
+        kind = setup.endpoint(body.endpoint)
+        if kind is None:
+            raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.endpoint}.")
+        if body.key and body.key_ref:
+            raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
+        if body.key and not local:
+            raise HTTPException(status_code=400, detail=HOSTED_KEY)
+        base_url = kind["base_url"] or (body.base_url or "").strip()
+        if not kind["base_url"] and not kind["program"] and not base_url and body.agent is None:
+            return AiAccountChecked(ok=False, reason="failed", message="Enter the service's address first.")
+        try:
+            key = body.key.strip() if body.key else (resolve_secret(body.key_ref) if body.key_ref else None)
+        except SecretError as err:
+            return AiAccountChecked(ok=False, reason="key_missing", message=str(err))
+        if kind["needs_key"] and not key:
+            return AiAccountChecked(ok=False, reason="key_missing", message="Paste your key to go on.")
+        settings: dict[str, Any] = {**kind["settings"], "adapter": kind["adapter"], "models": dict(body.models)}
+        if base_url:
+            settings["base_url"] = base_url
+        if body.agent is not None:
+            settings["agent"] = body.agent
+        try:
+            provider = ProviderSettings.model_validate(settings)
+        except ValueError as err:
+            raise HTTPException(status_code=400, detail=f"That account can't be checked: {err}") from None
+        try:
+            now = load_config(ws.config_dir)
+        except ConfigError as err:
+            log.warning("The settings couldn't be loaded: %s", err)
+            raise HTTPException(status_code=400, detail=err.plain) from None
+        found = key_check.check_account(now, os.environ, provider, key, use=body.use, store=store)
+        return AiAccountChecked(
+            ok=found.ok,
+            reason=found.reason,
+            message=found.message,
+            identity=found.identity,
+            identity_unknown=found.identity_unknown,
         )
 
     @r.get("/ai/local")

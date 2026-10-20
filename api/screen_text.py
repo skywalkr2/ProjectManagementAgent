@@ -48,6 +48,24 @@ _OTHER_COMMANDS = re.compile(
 _RAW_DATA = re.compile(r"[{\[]\s*[\"'{\[]|\{\s*[A-Za-z_][\w-]*\s*:\s+\S|\"[\w][\w .-]{0,40}\"\s*:")
 
 
+#: What a person with no IT background must not meet while setting the app up (the setup path): an IANA time zone id, a
+#: language tag, a secret reference, and the words of mail servers, networks, tokens and the command line. What has to
+#: stay technical is marked `advanced` and sits behind Advanced, where this check doesn't look.
+_SETUP_TERMS = (
+    (
+        "a time zone id",
+        re.compile(r"\b(?:Africa|America|Antarctica|Arctic|Asia|Atlantic|Australia|Europe|Indian|Pacific)/[A-Za-z_]+"),
+    ),
+    ("a language tag", re.compile(r"\b[a-z]{2,3}-[A-Z]{2}\b")),
+    ("a secret reference", _SECRET_REF),
+    ("IMAP", re.compile(r"\bIMAP\b", re.IGNORECASE)),
+    ("a port", re.compile(r"\bports?\b", re.IGNORECASE)),
+    ("TLS", re.compile(r"\bTLS\b")),
+    ("a token", re.compile(r"\btokens?\b", re.IGNORECASE)),
+    ("the command line", re.compile(r"\bCLI\b|\bcommands?\b", re.IGNORECASE)),
+)
+
+
 def enabled() -> bool:
     """Whether the developer switch is on."""
     return os.environ.get(SWITCH) == "1"
@@ -125,6 +143,16 @@ def problems(text: str) -> list[str]:
             found.append(f"names a command: {match.group()!r}")
     for match in _OTHER_COMMANDS.finditer(text):
         found.append(f"names a command: {match.group()!r}")
+    return found
+
+
+def setup_problems(text: str) -> list[str]:
+    """What in a label or description on the setup path a person with no IT background couldn't read; empty when
+    nothing is. Stricter than `problems`, and applied only to what the setup path shows."""
+    found = []
+    for name, pattern in _SETUP_TERMS:
+        for match in pattern.finditer(without_links(text)):
+            found.append(f"names {name}: {match.group()!r}")
     return found
 
 

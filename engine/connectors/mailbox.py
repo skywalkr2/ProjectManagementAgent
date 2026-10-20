@@ -34,17 +34,34 @@ MAX_TEXT = 20_000
 class MailboxSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    host: str = Field(min_length=1, description="The mail server's address (its IMAP host).")
-    port: int = Field(993, ge=1, le=65535, description="Its IMAP port with TLS.")
+    host: str = Field(min_length=1, description="The mail server's name, which your email provider's help page gives.")
+    port: int = Field(
+        993, ge=1, le=65535, description="The number the mail server listens on.", json_schema_extra={"advanced": True}
+    )
     user: str = Field(min_length=1, description="The account's user name, usually the address.")
     password: str = Field(
         min_length=1,
-        description=SecretHint("A secret reference (env:NAME or file:/path) to the password or app password."),
+        description=SecretHint(
+            "The password, or an app password from your email provider. It is kept on this computer."
+        ),
     )
-    folder: str = Field("INBOX", description="The folder to read.")
-    first_read: int = Field(20, ge=0, le=500, description="How many of the latest messages the first read takes.")
-    max_per_read: int = Field(50, ge=1, le=500, description="The most messages one read takes.")
-    timeout_seconds: float = Field(30, gt=0, description="How long to wait for the server.")
+    folder: str = Field("INBOX", description="The folder to read.", json_schema_extra={"advanced": True})
+    first_read: int = Field(
+        20,
+        ge=0,
+        le=500,
+        description="How many of the latest messages the first read takes.",
+        json_schema_extra={"advanced": True},
+    )
+    max_per_read: int = Field(
+        50, ge=1, le=500, description="The most messages one read takes.", json_schema_extra={"advanced": True}
+    )
+    timeout_seconds: float = Field(
+        30,
+        gt=0,
+        description="How many seconds to wait for the server.",
+        json_schema_extra={"advanced": True},
+    )
 
 
 def message_item(raw: bytes) -> SourceItem | None:

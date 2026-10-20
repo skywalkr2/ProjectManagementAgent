@@ -5,11 +5,12 @@
 // also after a restart; "Finish later" closes it for good, and it opens again only when the person asks. The core's own
 // step forms are the ones the setup list uses.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { useToastCount, useToasts } from "../lib/toasts";
 import { after, before, counted, SCREENS, standing, STEP_OF, type Screen } from "../lib/walkthrough";
+import { ContinueSlotProvider, type ContinueSlot, type ContinueSpec } from "../lib/walkthrough-continue";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
@@ -18,7 +19,6 @@ import { StepList, WorkspaceStep } from "./Welcome";
 import { WalkthroughMail } from "./WalkthroughMail";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
-import { WelcomeSpend } from "./WelcomeSpend";
 import styles from "./Walkthrough.module.css";
 
 export interface Handlers {
@@ -50,6 +50,15 @@ export function Walkthrough(
   const requested = useRef(0);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  // What Continue does on this screen, as the screen says (see `useContinue`): kept in a ref and only drawn again when what
+  // shows of it changes.
+  const slot = useRef<ContinueSpec | null>(null);
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  const register: ContinueSlot = useCallback((spec) => {
+    const before = slot.current;
+    slot.current = spec;
+    if (!before !== !spec || before?.disabled !== spec?.disabled || before?.why !== spec?.why || before?.label !== spec?.label) redraw();
+  }, []);
   const data = setup.data;
   // The screen the server named when this opened stays until the person moves: finishing a step must not move them on.
   const first = useRef<Screen | null>(null);
@@ -168,6 +177,25 @@ export function Walkthrough(
     }
   };
 
+  /** Continue: what the screen saves (when it has something), then the next screen. A screen that says it couldn't save
+   * keeps the person where they are. */
+  const carryOn = async () => {
+    const spec = slot.current;
+    if (spec) {
+      setBusy(true);
+      setProblem("");
+      try {
+        if ((await spec.run()) === false) return;
+      } catch (err) {
+        setProblem(problemText(err, t));
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
+    if (next) go(next);
+  };
+
   const finishLater = async () => {
     await keep({ closed: true });
     props.onFinishLater();
@@ -188,6 +216,7 @@ export function Walkthrough(
   };
 
   return (
+    <ContinueSlotProvider value={register}>
     <div className={styles.root} data-walkthrough="">
       <header className={styles.head}>
         <div className={styles.title}>
@@ -234,12 +263,7 @@ export function Walkthrough(
           <p className={styles.why}>{t(`walkthrough.why.${current}`)}</p>
           <div className={styles.body}>
           {current === "you" && <WorkspaceStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
-          {current === "ai" && (
-            <>
-              <WelcomeAi local={data.local} done={aiDone} />
-              <WelcomeSpend />
-            </>
-          )}
+          {current === "ai" && <WelcomeAi local={data.local} done={aiDone} />}
           {current === "mail" && (
             <>
               <WalkthroughMail onChooseSource={props.onChooseSource} onOpenAddons={props.onOpenAddons} />
@@ -250,7 +274,7 @@ export function Walkthrough(
           {current === "backup" && <WelcomeBackup local={data.local} />}
           {current === "people" && (
             <div className="row-end">
-              <button type="button" className={here === "todo" ? "btn primary" : "btn"} onClick={props.onOpenPeople}>
+              <button type="button" className="btn" onClick={props.onOpenPeople}>
                 {t("walkthrough.people.open")}
               </button>
             </div>
@@ -269,21 +293,31 @@ export function Walkthrough(
               <Button variant="primary" onClick={() => void finish()}>
                 {t("walkthrough.finish")}
               </Button>
-            ) : here === "todo" ? (
-              <Button variant="ghost" className={styles.skip} disabled={busy} onClick={() => void skip()}>
-                {t("walkthrough.skip")}
-              </Button>
             ) : (
-              next && (
-                <Button variant="primary" onClick={() => go(next)}>
-                  {t("walkthrough.next")}
-                </Button>
-              )
+              <>
+                {here === "todo" && STEP_OF[current] && (
+                  <Button disabled={busy} onClick={() => void skip()}>
+                    {t("walkthrough.skip")}
+                  </Button>
+                )}
+                {next && (
+                  <Button
+                    variant="primary"
+                    loading={busy}
+                    disabled={!!slot.current?.disabled}
+                    reason={slot.current?.disabled ? slot.current.why : undefined}
+                    onClick={() => void carryOn()}
+                  >
+                    {slot.current?.label ?? t("walkthrough.next")}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </main>
       </div>
     </div>
+    </ContinueSlotProvider>
   );
 }
 

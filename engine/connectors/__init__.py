@@ -484,11 +484,9 @@ def _core() -> dict[str, Connector]:
         "folder": Connector("folder", "A folder", FolderSettings, _read_folder),
         "feed": Connector("feed", "A news feed (RSS or Atom)", FeedSettings, read_feed, network=True),
         "calendar": Connector(
-            "calendar", "A calendar (its private address)", CalendarSettings, read_calendar, True, reads="calendar"
+            "calendar", "A calendar (its private link)", CalendarSettings, read_calendar, True, reads="calendar"
         ),
-        "mailbox": Connector(
-            "mailbox", "A mail folder (IMAP)", MailboxSettings, read_mailbox, network=True, reads="mail"
-        ),
+        "mailbox": Connector("mailbox", "A mail folder", MailboxSettings, read_mailbox, network=True, reads="mail"),
         "fake": Connector("fake", "A stand-in source for tests", FakeSettings, _read_fake, test_only=True),
     }
 

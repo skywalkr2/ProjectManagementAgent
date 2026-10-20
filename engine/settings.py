@@ -50,7 +50,6 @@ BASIC = frozenset(
         "ai.budgets.per_run_usd",
         "ai.budgets.first_go",
         "ai.budgets.confirm_above_usd",
-        "ai.budgets.confirm_unpriced",
         "ai.budgets.per_day_usd",
         "ai.budgets.per_month_usd",
         "ui.toast_seconds",
@@ -96,6 +95,9 @@ class Setting:
     plugin: str | None = None  # the add-on whose settings these are; None for the app's own
     choices: str | None = None  # the named list a text setting picks from (a key of CHOICE_LISTS), when it has one
     secret: bool = False  # the value is a reference to a secret (a password, a key, a private address)
+    advanced: bool = (
+        False  # technical: the screens list it only behind Advanced, in the words the person who set it up uses
+    )
     file_types: list[str] = field(default_factory=list)  # with picker "file": the endings it offers (".ics")
 
 
@@ -287,6 +289,7 @@ def _walk(
                 picker=extra.get("picker") if isinstance(extra.get("picker"), str) else None,
                 choices=list_name,
                 secret=isinstance(info.description, SecretHint),
+                advanced=extra.get("advanced") is True,
                 file_types=[str(x) for x in extra.get("file_types") or [] if isinstance(x, str)],
             )
         )

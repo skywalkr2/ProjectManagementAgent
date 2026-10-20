@@ -628,6 +628,10 @@ Built keys:
     before it is saved.
   - `every_hours` (24), `keep` (14: older backups in each target are removed) and `retry_minutes` (60, at least 5: after a
     failed backup, how long before trying again).
+  - `cloud_folders` (the app's shipped list, `engine/defaults/cloud_folders.yaml`): the cloud drives the setup guide
+    looks for, each a `name` and the places its folder can be on `macos`, `windows` and `linux`, inside the home folder (a
+    `*` matches any characters in a name); the first one found is recommended. `cloud_path` (`Backups`, then the app's
+    name): the folders made one inside the next inside a drive. Both fictional workspaces carry demo values.
   - A backup is a dated folder in each target: a consistent copy of the database (SQLite's online backup) plus `config/`,
     `sources/`, `files/`, `texts/` and `plugin-data/`. The result of the last try per target is kept on this computer. Until a
     backup has succeeded, a mark in the header says "No off-device backup is set up" or that the last try failed; afterwards

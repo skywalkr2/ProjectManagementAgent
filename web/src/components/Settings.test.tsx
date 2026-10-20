@@ -792,7 +792,7 @@ test("Advanced groups the rest by topic, each topic closed until it is opened, a
   await user.click(within(region).getByRole("button", { name: "Open Knowledge" }));
   expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
   // The other topic is still closed.
-  expect(screen.getByRole("button", { name: "Dispatch knowledge", expanded: false })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "What the assistant has learned", expanded: false })).toBeInTheDocument();
 });
 
 const ACCOUNT: S["AiAccountView"] = {
@@ -890,7 +890,7 @@ test("with no add-on data files there is no Add-on files section in the list", a
 test("the AI section keeps its spending settings below the accounts, and puts the cursor on its heading", async () => {
   api([item("ai.budgets.per_run_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "The most one run may cost." })], AI_ROUTES);
   open("ai");
-  expect(await screen.findByLabelText("Maximum cost per AI task (USD)")).toHaveValue("1");
+  expect(await screen.findByLabelText("Most one piece of work may cost")).toHaveValue("1");
   await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: /AI accounts/ })).toHaveFocus());
 });
 
@@ -907,6 +907,89 @@ test("a setting that picks a language shows each tag by its name, sorted by name
   await user.selectOptions(select, "fr-FR");
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toMatchObject({ changes: { "demo.language": "fr-FR" } });
+});
+
+test("the spelling of English is picked by its name: American, British and the rest, never a language tag", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [item("workspace.language", { group: "workspace", type: "choice", choices: "languages", options: ["en-GB", "en-US", "en-AU"], value: "en-US", default: "en-US", source: "file", description: "Which kind of English." })],
+    { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
+  );
+  open();
+  const select = await screen.findByLabelText("English spelling");
+  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["American", "Australian", "British"]);
+  expect(document.body.textContent ?? "").not.toMatch(/\ben-[A-Z]{2}\b/);
+  await user.selectOptions(select, "en-GB");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.language": "en-GB" } });
+});
+
+test("a time zone is picked by its city, with a search, and the setting still holds its id", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [
+      item("workspace.user.timezone", {
+        group: "workspace.user",
+        type: "choice",
+        choices: "time_zones",
+        options: ["Europe/Lisbon", "America/New_York", "America/Los_Angeles", "UTC"],
+        value: "UTC",
+        default: "UTC",
+        source: "file",
+        description: "The time zone your own dates and times are read in.",
+      }),
+    ],
+    { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
+  );
+  open();
+  const select = await screen.findByLabelText("Your time zone");
+  const labels = within(select).getAllByRole("option").map((o) => o.textContent);
+  expect(labels).toContain("New York (Eastern time)");
+  expect(labels.join(" ")).not.toMatch(/America\/|Europe\//);
+  await user.type(screen.getByRole("searchbox", { name: "Find a city" }), "new yo");
+  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["New York (Eastern time)", "UTC"]);
+  await user.selectOptions(select, "America/New_York");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.user.timezone": "America/New_York" } });
+});
+
+test("a technical setting is listed under Advanced and not in its own section", async () => {
+  api([
+    item("ai.budgets.per_run_usd", { group: "ai.budgets", type: "number", value: 1, default: 1, description: "Never start more than this.", basic: true }),
+    item("ai.budgets.confirm_unpriced", { group: "ai.budgets", type: "yes_no", value: false, default: false, description: "Ask before work whose cost can't be seen.", advanced: true }),
+  ], AI_ROUTES);
+  open("ai");
+  await screen.findByLabelText("Most one piece of work may cost");
+  expect(screen.queryByLabelText("Ask me before work whose cost I can't see")).toBeNull();
+  expect(screen.queryByRole("button", { name: "More settings" })).toBeNull();
+});
+
+test("the notices switch is labelled Turn on notices, and the spending settings use plain words", async () => {
+  api(
+    [
+      item("ui.notifications.enabled", { group: "ui.notifications", type: "yes_no", value: false, default: false, description: "Tell me when something needs me. A notice goes out only for what Today's Decide group holds.", basic: true }),
+      item("ai.budgets.confirm_above_usd", { group: "ai.budgets", type: "number", value: 0.1, default: 0.1, description: "Ask me before starting work estimated to cost more than this.", basic: true }),
+    ],
+    AI_ROUTES,
+  );
+  renderApp(<Settings section="today" onSection={() => undefined} onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  expect(await screen.findByRole("checkbox", { name: "Turn on notices" })).toBeInTheDocument();
+  expect(document.body.textContent ?? "").not.toMatch(/Turn on “/);
+});
+
+test("Advanced topics have plain names", async () => {
+  api([
+    item("dispatch.knowledge.learn", { type: "yes_no", group: "dispatch.knowledge", value: true, default: true, basic: false }),
+    item("checks.tuning.x", { type: "yes_no", group: "checks.tuning", value: true, default: true, basic: false }),
+    item("watch.x", { type: "yes_no", group: "watch", value: true, default: true, basic: false }),
+    item("language.reported_speech.x", { type: "yes_no", group: "language.reported_speech", value: true, default: true, basic: false }),
+  ]);
+  renderApp(<Settings section="advanced" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
+  await screen.findByRole("button", { name: "What the assistant has learned" });
+  for (const name of ["How strict the checks are", "How mail and sources are read", "Wording of quoted speech"]) {
+    expect(screen.getByRole("button", { name })).toBeInTheDocument();
+  }
+  expect(screen.queryByRole("button", { name: /Dispatch|tuning|Watch|reported speech/i })).toBeNull();
 });
 
 test("a choice setting that doesn't name a list keeps its own order and wording", async () => {

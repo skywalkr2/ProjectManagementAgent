@@ -43,7 +43,7 @@ function show(lines: Line[], extra: Routes = {}) {
     "GET watch": () => [],
     "GET projects": () => [],
     "GET people": () => [person("PER-2", "Robin Sample"), person("PER-3", "Sam Twin")],
-    "GET status": () => statusFixture(),
+    "GET status": () => statusFixture({}, { assistant: { last_run_at: "2026-10-20T08:00:00Z" } }),
     "GET runtime-config": () => ({ instance: null }),
     "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }),
     ...extra,

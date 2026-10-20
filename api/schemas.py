@@ -2683,6 +2683,11 @@ class SettingItem(BaseModel):
         description="True when the value is a reference to a secret (a password, a key, a private address): the "
         "screen offers a box to type it in, kept by the app, instead of asking where it is kept.",
     )
+    advanced: bool | None = Field(
+        None,
+        description="True when it is technical: a form lists it only behind Advanced, and Settings lists it under "
+        "Advanced, so the setup path never shows it.",
+    )
 
 
 class SettingsView(BaseModel):
@@ -2756,6 +2761,9 @@ class SetupStepView(BaseModel):
         description="The walkthrough screen the step is on. A step on the last screen is an optional extra.",
     )
     counted: bool = Field(False, description="The step counts toward finishing the setup.")
+    applies: bool | None = Field(
+        None, description="False when there is nothing for the person to do here, so the step isn't offered."
+    )
 
 
 WalkthroughScreen = Literal["you", "ai", "mail", "promises", "backup", "people", "done"]
@@ -2828,6 +2836,27 @@ class FolderListView(BaseModel):
     files: list[str] = Field(default_factory=list, description="With a file ending asked for: the files that match.")
 
 
+class CloudFolderView(BaseModel):
+    name: str = Field(description="The cloud drive's name, as the person knows it.")
+    recommended: bool = Field(description="The first one found, which the guide recommends.")
+
+
+class CloudFoldersView(BaseModel):
+    """The cloud drives found on this computer, by name; never where they are."""
+
+    folders: list[CloudFolderView]
+    shown: ScreenText = Field(
+        description='The folder made inside a drive, as plain names joined with arrows ("Backups › App").'
+    )
+
+
+class CloudFolderChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(description="A drive from GET /api/setup/backup-folders.")
+    fingerprint: str
+
+
 class BackupFolderAdd(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -2842,8 +2871,14 @@ class EndpointView(BaseModel):
     adapter: str = Field(description="The adapter to send when adding an account of this kind.")
     base_url: str = Field(description="Its address; empty when the person enters it.")
     key_url: str = Field("", description="Where the person makes a key, to open in a new tab; empty when none.")
+    signup_url: str | None = Field(None, description="Where the person makes an account with the service, if anywhere.")
+    credit_url: str | None = Field(None, description="Where the person adds credit to the account, if anywhere.")
     needs_key: bool = False
     local: bool = Field(False, description="A server on this computer: nothing leaves it.")
+    recommended: bool | None = Field(
+        None, description="True for the one service the setup guide offers first, with a Recommended tag."
+    )
+    alternative: bool | None = Field(None, description="True for the one other service the guide offers beside it.")
     allowed_data: list[Literal["open", "internal", "restricted"]] = Field(
         default_factory=lambda: ["open"], description="The data levels offered by default for an account of this kind."
     )
@@ -3200,6 +3235,38 @@ class AiModelsAsk(BaseModel):
     base_url: str | None = Field(None, description="Its address, for a kind whose address the person enters.")
     key: str | None = Field(None, description="A pasted key; used for this request only and never kept.")
     key_ref: str | None = Field(None, description="Or where the key is: env:NAME or file:/path.")
+
+
+class AiAccountCheck(BaseModel):
+    """Check a new account before it is saved: with the key the person just pasted, every kind of work is tried with the
+    exact settings it will use. Nothing is kept."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(description="The kind of account, from GET /api/ai/endpoints.")
+    base_url: str | None = Field(None, description="Its address, for a kind whose address the person enters.")
+    key: str | None = Field(None, description="A pasted key; used for this request only and never kept.")
+    key_ref: str | None = Field(None, description="Or where the key is: env:NAME or file:/path.")
+    models: dict[str, str] = Field(description="Short names for the account's models, to their ids.")
+    use: dict[str, str] = Field(
+        default_factory=dict,
+        description="The model each tier would use, by its short name; a tier left out uses the first.",
+    )
+    agent: dict[str, Any] | None = Field(None, description="For a command-line agent: its `agent` settings.")
+
+
+class AiAccountChecked(BaseModel):
+    """How a new account's check went, in words that fit the kind of account."""
+
+    ok: bool
+    reason: Literal[
+        "works", "key_missing", "key_refused", "no_credit", "unreachable", "wait", "not_signed_in", "failed"
+    ]
+    message: ScreenText = Field(description="What to do about it, in plain words; empty when it works.")
+    identity: str | None = Field(None, description="The sign-in the account runs as, when the check found it.")
+    identity_unknown: ScreenText | None = Field(
+        None, description="Why that can't be told, in plain words, when the account works but it can't."
+    )
 
 
 class AiModelView(BaseModel):

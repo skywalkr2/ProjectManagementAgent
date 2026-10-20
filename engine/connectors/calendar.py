@@ -40,8 +40,8 @@ class CalendarSettings(BaseModel):
     address: str = Field(
         "",
         description=SecretHint(
-            "The calendar's link: a secret reference (env:NAME or file:/path) holding its private "
-            "address, since anyone with the address can read the calendar. Give this or a file, not both."
+            "The calendar's private link, from your calendar's own settings. Anyone with the link can read the "
+            "calendar, so it is kept on this computer. Give this or a file, not both."
         ),
     )
     file: str = Field(
@@ -50,16 +50,23 @@ class CalendarSettings(BaseModel):
         "computer can read one. Give this or a link, not both.",
         json_schema_extra={"picker": "file", "file_types": [".ics"]},
     )
-    days_ahead: int = Field(30, ge=1, le=366, description="How far ahead single events are read.")
-    days_back: int = Field(1, ge=0, le=31, description="How far back events are read.")
+    days_ahead: int = Field(
+        30, ge=1, le=366, description="How far ahead single events are read.", json_schema_extra={"advanced": True}
+    )
+    days_back: int = Field(
+        1, ge=0, le=31, description="How far back events are read.", json_schema_extra={"advanced": True}
+    )
     expand_days: int = Field(
         60,
         ge=1,
         le=366,
         description="How far ahead the dates of a repeating event are listed. Each date in that window shows on its "
         "own day.",
+        json_schema_extra={"advanced": True},
     )
-    max_kb: int = Field(5120, ge=1, description="A calendar file larger than this is refused.")
+    max_kb: int = Field(
+        5120, ge=1, description="A calendar file larger than this is refused.", json_schema_extra={"advanced": True}
+    )
 
     @model_validator(mode="after")
     def _one_place(self) -> CalendarSettings:

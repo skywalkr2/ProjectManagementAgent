@@ -130,7 +130,14 @@ export function Notifications() {
       {view.data && !view.data.enabled && <p className="hint">{t("notices.off")}</p>}
       <ul className={styles.targets}>
         <BrowserTarget />
-        <WebhookTarget local={setup.data?.local ?? true} />
+        <li className={styles.target}>
+          <details className="more-options advanced">
+            <summary>{t("notices.advanced")}</summary>
+            <ul className={styles.targets}>
+              <WebhookTarget local={setup.data?.local ?? true} />
+            </ul>
+          </details>
+        </li>
         {!view.data?.mail_ready && (
           <li className={styles.target} aria-labelledby={`${base}-mail`}>
             <h4 id={`${base}-mail`}>{t("notices.mail.title")}</h4>

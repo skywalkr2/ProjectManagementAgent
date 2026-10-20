@@ -49,23 +49,25 @@ test.describe.serial("journey: mail", () => {
     await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
     await main.getByLabel("Workspace name").fill("Offsite team");
     await main.getByLabel("Your full name").fill(info.people[0]);
-    await main.getByRole("button", { name: "Save" }).click();
+    await main.getByRole("button", { name: "Continue" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    await main.getByRole("radio", { name: /Something else/ }).check();
     await main.getByText("More options").click();
     await main.getByLabel(/^Another service that speaks/).check();
-    await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
     await main.locator("#ai-key").fill("a-made-up-key");
-    await main.getByRole("button", { name: "Check", exact: true }).click();
-    const everyday = main.getByLabel("AI model for everyday work");
-    await expect(everyday.locator("option")).toHaveCount(2);
-    await main.getByText(/^Selected model:/).click();
-    await everyday.selectOption("fake-small");
-    await main.getByLabel("Internal material").check();
-    await main.getByRole("button", { name: "Add account" }).click();
-    await expect(main.getByText("Everyday work: other — answered")).toBeVisible();
+    await main.getByRole("textbox", { name: "Service address" }).fill(info.ai_base_url);
+    await main.getByRole("textbox", { name: "Service address" }).blur();
+    // The check runs by itself, for every kind of work, before anything is saved.
+    await expect(main.getByText("Works. Ready to use.")).toBeVisible();
+    await main.getByText("Advanced", { exact: true }).click();
+    await main.getByLabel("AI model for everyday work").selectOption("fake-small");
+    await expect(main.getByText("Works. Ready to use.")).toBeVisible();
+    // One explicit yes lets this account read my mail and notes (the usual hand-in is internal material).
+    await main.getByRole("radio", { name: /^Allow/ }).check();
+    await main.getByRole("button", { name: "Continue" }).click();
+    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     await visit(page);
-    await main.getByRole("button", { name: "Next" }).click();
 
     // Mail and calendar: the add-on I had installed is listed as a service, on, with what it reads and what it needs
     // to reach. Nothing has been read, and nothing has asked the assistant anything. No restart is waiting.
@@ -118,7 +120,7 @@ test.describe.serial("journey: mail", () => {
     // The next screen, Your promises, comes right after Mail and calendar, before anything about backups or people. Once
     // the first read has happened it offers the look back over the last 14 days of my own mail, with what it would cost,
     // and the assistant has been asked nothing.
-    await main.getByRole("button", { name: "Next" }).click();
+    await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Your promises" })).toBeVisible();
     const offer = main.locator('[data-first-promises="offer"]');
     await expect(offer.getByRole("heading", { level: 3, name: "Look back over the last 14 days of your own mail" })).toBeVisible({
@@ -147,11 +149,11 @@ test.describe.serial("journey: mail", () => {
     await visit(page);
 
     // Backups and People are left for later, and Done names what was skipped.
-    await main.getByRole("button", { name: "Next" }).click();
+    await main.getByRole("button", { name: "Continue" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
-    await main.getByRole("button", { name: "Skip for now" }).click();
+    await main.getByRole("button", { name: "I'll do this later" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
-    await main.getByRole("button", { name: "Skip for now" }).click();
+    await main.getByRole("button", { name: "I'll do this later" }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
     const recap = main.getByRole("list", { name: "What was set up" });
     await expect(recap.locator('[data-step="mail"]')).toContainText("Done");

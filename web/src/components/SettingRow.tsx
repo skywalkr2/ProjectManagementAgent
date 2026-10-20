@@ -5,10 +5,12 @@ import { useRef, useState } from "react";
 import { api } from "../lib/api";
 import { useTierName } from "../lib/ai-routing";
 import { depthOf, fileName, formatValue, fromDraft, isDefault, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
+import { zoneChoices } from "../lib/time-zones";
 import { dateFormatChoices } from "../lib/date-formats";
 import { languageChoices } from "../lib/languages";
 import { useWords } from "../lib/wording";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
+import { TimeZoneSelect } from "./TimeZoneSelect";
 import { restoreFocus } from "./ModalPanel";
 import { SecretField, type SecretInput } from "./SecretField";
 
@@ -82,8 +84,12 @@ export function SettingRow(props: {
   // formats shows each as today's date written that way.
   const choices =
     item.choices === "languages"
-      ? languageChoices(item.options ?? []).map((c) => ({ tag: c.tag, label: c.label }))
-      : item.choices === "date_formats" || item.choices === "date_time_formats"
+      ? languageChoices(item.options ?? [])
+          .map((c) => ({ tag: c.tag, label: has(`settings.option.${item.key}.${c.tag}`) ? t(`settings.option.${item.key}.${c.tag}`) : c.label }))
+          .sort((a, b) => a.label.localeCompare(b.label))
+      : item.choices === "time_zones"
+        ? zoneChoices(item.options ?? []).map((c) => ({ tag: c.id, label: c.label }))
+        : item.choices === "date_formats" || item.choices === "date_time_formats"
         ? dateFormatChoices(item.options ?? [])
         : item.choices === "people"
           ? (item.options ?? []).map((o) => ({ tag: o, label: personName(o) }))
@@ -95,6 +101,8 @@ export function SettingRow(props: {
                 ? (item.options ?? []).map((o) => ({ tag: o, label: has(`settings.media.${o}`) ? t(`settings.media.${o}`) : o }))
                 : (item.options ?? []).map((o) => ({ tag: o, label: option(o) }));
 
+  /** A value in words: a choice by its label (the spelling of English, a city), anything else as the sheet writes values. */
+  const valueWords = (value: unknown) => (item.type === "choice" ? (choices.find((c) => c.tag === String(value))?.label ?? formatValue(value, t)) : formatValue(value, t));
   const typedSecret = !!props.secret && item.secret === true && item.type === "text" && !readOnly && !item.locked;
   let control;
   if (typedSecret && props.secret) {
@@ -117,7 +125,7 @@ export function SettingRow(props: {
   } else if (readOnly) {
     control = (
       <p className="setting-value" id={id}>
-        {formatValue(item.value, t)}
+        {valueWords(item.value)}
       </p>
     );
   } else if (item.type === "yes_no") {
@@ -131,6 +139,20 @@ export function SettingRow(props: {
         onChange={(e) => {
           props.onChange(e.target.checked);
           props.commit?.(e.target.checked);
+        }}
+      />
+    );
+  } else if (item.type === "choice" && item.choices === "time_zones") {
+    control = (
+      <TimeZoneSelect
+        id={id}
+        value={String(draft)}
+        options={item.options ?? []}
+        disabled={off}
+        describedBy={describedBy}
+        onChange={(zone) => {
+          props.onChange(zone);
+          props.commit?.(zone);
         }}
       />
     );
@@ -317,7 +339,7 @@ export function SettingRow(props: {
         )}
         {item.type !== "other" && (
           <p className="hint" id={`${id}-default`}>
-            {t("settings.default", { value: formatValue(item.default, t) })}
+            {t("settings.default", { value: valueWords(item.default) })}
           </p>
         )}
       </div>
@@ -352,27 +374,38 @@ export function ItemFields(props: {
   /** Lets secret settings be typed (a source's form); left out, they are plain text boxes for where they are kept. */
   secret?: SecretInput;
 }) {
+  const { t } = useWords();
   const canList = useFolderListing(props.items.some((i) => i.picker));
+  const rows = (items: Item[]) =>
+    items.map((item) => {
+      const gate = switchOf(item, props.items);
+      return (
+        <SettingRow
+          key={item.key}
+          item={item}
+          idPrefix={props.idPrefix}
+          draft={item.key in props.edits ? props.edits[item.key] : toDraft(item)}
+          onChange={(draft) => props.onEdit(item.key, draft)}
+          onReset={() => props.onEdit(item.key, toDraft({ ...item, value: item.default }))}
+          disabled={props.disabled ?? false}
+          depth={depthOf(item, props.items)}
+          gate={gate && isOff(gate, props.edits) ? gate : null}
+          canList={canList}
+          secret={props.secret}
+        />
+      );
+    });
+  // Technical settings (a port, a wait in seconds) sit behind Advanced, so the form asks only what a person can answer.
+  const technical = props.items.filter((i) => i.advanced);
   return (
     <>
-      {props.items.map((item) => {
-        const gate = switchOf(item, props.items);
-        return (
-          <SettingRow
-            key={item.key}
-            item={item}
-            idPrefix={props.idPrefix}
-            draft={item.key in props.edits ? props.edits[item.key] : toDraft(item)}
-            onChange={(draft) => props.onEdit(item.key, draft)}
-            onReset={() => props.onEdit(item.key, toDraft({ ...item, value: item.default }))}
-            disabled={props.disabled ?? false}
-            depth={depthOf(item, props.items)}
-            gate={gate && isOff(gate, props.edits) ? gate : null}
-            canList={canList}
-            secret={props.secret}
-          />
-        );
-      })}
+      {rows(props.items.filter((i) => !i.advanced))}
+      {technical.length > 0 && (
+        <details className="more-options advanced">
+          <summary>{t("settings.advanced_items")}</summary>
+          {rows(technical)}
+        </details>
+      )}
     </>
   );
 }

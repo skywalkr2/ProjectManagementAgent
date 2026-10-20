@@ -7,6 +7,12 @@ backups:
   targets:
     - path: /Volumes/Backup/cockpit
       label: external drive
+  cloud_folders:    # the cloud drives the setup guide offers, found by where each keeps its folder
+    - name: Example Drive
+      macos: ["ExampleDrive"]
+      windows: ["ExampleDrive"]
+      linux: ["ExampleDrive"]
+  cloud_path: [Backups, PM Cockpit]
   every_hours: 24
   keep: 14
   automatic: true

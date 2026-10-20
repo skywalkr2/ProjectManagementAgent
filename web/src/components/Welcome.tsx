@@ -8,6 +8,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
 import { useStartSignIn } from "../lib/sign-in-start";
+import { useContinue, useHasContinueSlot } from "../lib/walkthrough-continue";
 import { addonLabel, formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
@@ -15,6 +16,7 @@ import { useActionReview } from "./ActionReview";
 import { SignInRow } from "./SignIns";
 import { WelcomeAi } from "./WelcomeAi";
 import { TemplateList } from "./Templates";
+import { TimeZoneSelect } from "./TimeZoneSelect";
 import { WelcomeBackup } from "./WelcomeBackup";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -56,7 +58,8 @@ export function StepList(props: {
 
   if (setup.isPending) return <Skeleton />;
   if (setup.isError) return <p className="empty">{t("welcome.failed")}</p>;
-  const shown = setup.data.steps.filter((step) => !props.include || props.include(step));
+  // A step with nothing for the person to do (no add-on installed to turn on) isn't offered, so it never reads as done.
+  const shown = setup.data.steps.filter((step) => step.applies !== false && (!props.include || props.include(step)));
   return (
     <>
       <ol className="guide">
@@ -318,18 +321,26 @@ function browserZone(): string {
  * not done yet is also the way on (`onContinue`), so the screen has one primary button; the setup list has none. */
 export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean } = {}) {
   const { t } = useWords();
-  const client = useQueryClient();
-  const afterSave = useAfterSave();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   // The person's name lives on their person record only; the settings hold the workspace's own values.
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  if (!settings.data || !me.data) {
+    return <p className="empty">{t(settings.isError || me.isError ? "welcome.failed" : "loading")}</p>;
+  }
+  return <WorkspaceForm {...props} settings={settings.data} me={me.data} />;
+}
+
+function WorkspaceForm(props: { onContinue?: () => void; done?: boolean; settings: S["SettingsView"]; me: S["MeView"] }) {
+  const { t } = useWords();
+  const client = useQueryClient();
+  const afterSave = useAfterSave();
+  const hasSlot = useHasContinueSlot();
+  const settings = { data: props.settings };
+  const me = { data: props.me };
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [nameEdit, setNameEdit] = useState<string | null>(null);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
-  if (!settings.data || !me.data) {
-    return <p className="empty">{t(settings.isError || me.isError ? "welcome.failed" : "loading")}</p>;
-  }
   const fullName = nameEdit ?? me.data.full_name;
   const nameChanged = fullName.trim() !== me.data.full_name;
 
@@ -356,7 +367,8 @@ export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean }
   const empty = Object.values(changes).some((v) => v === "") || (nameChanged && !fullName.trim());
   const pending = Object.keys(changes).length > 0 || nameChanged;
 
-  const save = async () => {
+  /** Saves the name and the settings that changed. True when it all went through. */
+  const save = async (): Promise<boolean> => {
     setBusy(true);
     setProblem("");
     try {
@@ -374,14 +386,20 @@ export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean }
       } else {
         await client.invalidateQueries({ queryKey: ["setup"] });
       }
-      if (props.onContinue && !props.done) props.onContinue();
+      if (!hasSlot && props.onContinue && !props.done) props.onContinue();
+      return true;
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      return false;
     } finally {
       setBusy(false);
     }
   };
+
+  // Inside the walkthrough the screen's one Continue saves this form (when it has something to save) and moves on.
+  const missing = !props.done && (empty || !pending) ? t(empty ? "welcome.workspace.why_blank" : "welcome.workspace.why") : "";
+  useContinue(hasSlot ? { run: async () => (pending ? save() : true), disabled: !!missing, why: missing } : null);
 
   const field = (key: string, labelKey: string, hintKey: string | null, placeholderKey?: string) => {
     const found = item(key);
@@ -390,7 +408,17 @@ export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean }
     return (
       <div className="field">
         <label htmlFor={id}>{t(labelKey)}</label>
-        {found?.type === "choice" && found.options?.length ? (
+        {key === TIMEZONE && found?.type === "choice" && found.options?.length ? (
+          // A time zone is picked by its city, with a search.
+          <TimeZoneSelect
+            id={id}
+            value={shown(key)}
+            options={found.options ?? []}
+            disabled={off}
+            describedBy={hintKey ? `${id}-hint` : undefined}
+            onChange={(zone) => setEdits({ ...edits, [key]: zone })}
+          />
+        ) : found?.type === "choice" && found.options?.length ? (
           // A setting with a known set of values is a list to pick from, never a box to type in.
           <select
             id={id}
@@ -455,11 +483,13 @@ export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean }
           {problem}
         </p>
       )}
-      <div className="row-end">
-        <button type="submit" className={props.done ? "btn" : "btn primary"} disabled={busy || empty || !pending}>
-          {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
-        </button>
-      </div>
+      {!hasSlot && (
+        <div className="row-end">
+          <button type="submit" className={props.done ? "btn" : "btn primary"} disabled={busy || empty || !pending}>
+            {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
+          </button>
+        </div>
+      )}
     </form>
   );
 }

@@ -105,6 +105,7 @@ ROUTES: dict[str, Declared] = {
     "POST /api/projects/{prj}": _local(_DETAILS),
     "POST /api/settings": _local(_SETTING),
     "POST /api/ai/accounts": _local(_ACCOUNT),
+    "POST /api/ai/account-check": _local(_ACCOUNT + ", checked before they are saved"),
     "POST /api/data-forms/{name}/file": _local("the values of a data file the person edits as configuration"),
     "POST /api/data-forms/{name}/remove": _local("the values of a data file the person edits as configuration"),
     "POST /api/watch/sources": _local(_SETTING),

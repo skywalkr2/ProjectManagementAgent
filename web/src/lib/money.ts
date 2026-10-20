@@ -43,3 +43,9 @@ export function useSmallMoney() {
     return t("money.usd", { amount: text });
   };
 }
+
+/** An amount the person sets, as they would write it: 2 stays "$2" and 0.1 reads "$0.10". The symbol is the sheet's. */
+export function useAmount() {
+  const { t } = useWords();
+  return (usd: number) => t("money.usd", { amount: Number.isInteger(usd) ? String(usd) : usd.toFixed(2) });
+}

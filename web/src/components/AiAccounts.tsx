@@ -606,8 +606,10 @@ function AccountRow(props: {
   const pillTone: PillTone = role === "work" ? "need" : role === "none" && broken(account) ? "warn" : "neutral";
 
   const counts = props.skills ? skillCounts(props.skills.models) : null;
+  // Until a kind of work has a result the row says so, with a button to measure, rather than "Good at 0 of 14".
+  const unmeasured = !!counts && counts.total > 0 && counts.good + counts.below === 0;
   const skillLine =
-    counts && counts.total > 0
+    counts && counts.total > 0 && !unmeasured
       ? [
           t("ai_skills.summary", { good: counts.good, total: counts.total }),
           counts.below > 0 ? tn("ai_skills.summary_below", counts.below) : "",
@@ -616,6 +618,23 @@ function AccountRow(props: {
           .filter(Boolean)
           .join(" · ")
       : "";
+
+  /** Measures this account: when it would cost more than the person asked to be asked about, the compare page shows the cost
+   * and asks; otherwise it starts at once. */
+  const measureNow = async () => {
+    try {
+      const estimate = await api.measureEstimate(account.name);
+      if (estimate.needs_go) {
+        props.onCompare?.();
+        return;
+      }
+      const started = await api.measure(account.name, { confirmed: false });
+      await client.invalidateQueries({ queryKey: ["ai-skills"] });
+      push({ message: started.started.length ? t("ai_compare.started") : t("ai_compare.nothing") });
+    } catch (err) {
+      push({ message: t("error.failed", { detail: err instanceof ApiError ? err.detail : "" }) });
+    }
+  };
 
   const modelLabel = (short: string) =>
     short === EVERYDAY ? t("ai_accounts.model_everyday") : short === HARDER ? t("ai_accounts.model_harder") : t("ai_accounts.model_other", { short });
@@ -695,6 +714,14 @@ function AccountRow(props: {
           {role === "backup" && mains.length > 0 && !running?.running && (
             <span className={styles.meta} data-tone="ok">
               {t("ai_check.backs_up", { main: mains.map((m) => accountName(m, props.kindOf(m), t)).join(", ") })}
+            </span>
+          )}
+          {unmeasured && (
+            <span className={styles.skills} data-not-measured="">
+              {t("ai_skills.not_measured_yet")}{" "}
+              <button type="button" className="link-button" aria-label={t("ai_skills.measure_named", { name })} onClick={() => void measureNow()}>
+                {t("ai_skills.measure")}
+              </button>
             </span>
           )}
           {skillLine && (
