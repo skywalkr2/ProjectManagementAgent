@@ -5,6 +5,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { copyMessage } from "../lib/copy";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
@@ -41,9 +42,7 @@ export function useReplyChoices(line: Line, onClosed?: () => void): ReplyChoices
   };
   const draft = line.reply ?? "";
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(draft);
-    } catch {
+    if ((await copyMessage(draft)) === "blocked") {
       push({ message: t("toast.copy_blocked") });
       return;
     }

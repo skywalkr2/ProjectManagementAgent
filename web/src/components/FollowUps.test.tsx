@@ -60,6 +60,69 @@ test("Copy puts the edited message on the clipboard and changes nothing on the s
   expect(screen.queryByText(/Marked as sent/)).toBeNull();
 });
 
+afterEach(() => {
+  // A test that gave the browser a rich clipboard takes it away again.
+  vi.unstubAllGlobals();
+  if (navigator.clipboard) Reflect.deleteProperty(navigator.clipboard, "write");
+});
+
+/** What a rich copy put on the clipboard, as text by kind. */
+async function richCopies(): Promise<Record<string, string>[]> {
+  const text = (blob: Blob) =>
+    new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsText(blob);
+    });
+  const written: FakeClipboardItem[] = [];
+  vi.stubGlobal("ClipboardItem", FakeClipboardItem);
+  Object.defineProperty(navigator.clipboard, "write", { configurable: true, value: async (items: FakeClipboardItem[]) => void written.push(...items) });
+  return new Proxy([] as Record<string, string>[], {
+    get: (_, key) => (key === "read" ? async () => Promise.all(written.map(async (item) => Object.fromEntries(await Promise.all(item.types.map(async (type) => [type, await text(await item.getType(type))]))))) : undefined),
+  });
+}
+
+test("Copy puts the message on the clipboard formatted and plain together, and what is pasted is the text in the box", async () => {
+  const user = userEvent.setup();
+  fakeApi(markSentRoutes);
+  const rich = (await richCopies()) as unknown as { read: () => Promise<Record<string, string>[]> };
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  const box = screen.getByRole("textbox", { name: /Message to Robin Sample/ });
+  await user.type(box, " <b>PS</b>");
+  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  const [item] = await rich.read();
+  expect(item["text/plain"]).toBe(sections[1].message + " <b>PS</b>");
+  expect(item["text/html"]).toContain("<p>Hi Robin,</p>");
+  expect(item["text/html"]).toContain("Thanks! &lt;b&gt;PS&lt;/b&gt;</p>");
+  expect(item["text/html"]).not.toContain("<b>");
+});
+
+test("the menu's Copy as plain text puts only the plain text on the clipboard, and then the card offers Mark sent", async () => {
+  const user = userEvent.setup();
+  fakeApi(markSentRoutes);
+  const rich = (await richCopies()) as unknown as { read: () => Promise<Record<string, string>[]> };
+  const plain = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  await user.click(screen.getByRole("button", { name: "More actions for Robin Sample" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Copy as plain text" }));
+  await waitFor(() => expect(plain).toHaveBeenCalledWith(sections[1].message));
+  expect(await rich.read()).toHaveLength(0);
+  expect(await screen.findByText("Copied as plain text")).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Mark sent" }).length).toBeGreaterThan(0);
+});
+
+test("the person's own to-do can be handed to the assistant from its row's menu", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ ...markSentRoutes, "POST actions/ACT-9/hand-over": () => ({ request: "R-1" }) });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Approve the proof" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Hand to the assistant" }));
+  await user.click(await screen.findByRole("button", { name: "Hand it over" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-9/hand-over")).toBe(true));
+});
+
 test("Copy on a closed card opens the message first and copies nothing, with the cursor in the message", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(markSentRoutes);
@@ -825,4 +888,61 @@ test("Hold for later offers the meetings the calendar keeps entries for, a serie
   expect(screen.queryByLabelText("Send it on")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Hold for later" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/held-for")?.body).toEqual({ held_for: { series: "SER-1" } }));
+});
+
+// By person or by project (design 7.5): the same open items, grouped under the project each belongs to.
+
+const byProject: S["FollowupSection"][] = [
+  sections[0],
+  {
+    ...sections[1],
+    questions: [{ ...sections[1].questions[0], status: "sent", waiting_days: 5, chase_due: true, project_name: "Cover" }],
+    actions: [{ ...sections[1].actions[0], project_name: "Book" }],
+  },
+];
+
+test("a switch groups the open items by project, each saying who it is with and where it stands, the ones with no project last", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => byProject, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await screen.findByRole("heading", { name: "You" });
+  expect(screen.getByRole("radio", { name: "By person" })).toBeChecked();
+  await user.click(screen.getByRole("radio", { name: "By project" }));
+  const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
+  expect(within(list).getAllByRole("heading").map((h) => h.textContent)).toEqual(["Book", "Cover"]);
+  const book = within(list).getByRole("heading", { name: "Book" }).closest("li")!;
+  expect(within(book).getByText("You · Yours")).toBeInTheDocument();
+  expect(within(book).getByText("Robin Sample · To send")).toBeInTheDocument();
+  expect(within(list).getByText("Robin Sample · waiting 5 days · follow up")).toBeInTheDocument();
+  // The by-person filters are not shown for a grouping they don't apply to.
+  expect(screen.queryByRole("group", { name: "Show" })).toBeNull();
+});
+
+test("an item with no project is gathered under No project, after the projects", async () => {
+  const user = userEvent.setup();
+  const loose = [{ ...sections[1], questions: [], actions: [{ ...sections[1].actions[0], project_name: "" }] }, sections[0]];
+  fakeApi({ "GET followups": () => loose, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("radio", { name: "By project" }));
+  const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
+  expect(within(list).getAllByRole("heading").map((h) => h.textContent)).toEqual(["Book", "No project"]);
+});
+
+test("a row's Open goes to that person's group, on the list that holds what is waiting on them", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => byProject, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("radio", { name: "By project" }));
+  await user.click((await screen.findAllByRole("button", { name: "Open Robin Sample's follow-ups" }))[0]);
+  expect(screen.getByRole("radio", { name: "By person" })).toBeChecked();
+  expect(await screen.findByRole("heading", { name: "Robin Sample" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Waiting on them" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.queryByRole("list", { name: "Open follow-ups by project" })).toBeNull();
+});
+
+test("on Today the switch is not shown", async () => {
+  fakeApi({ "GET followups": () => byProject, "GET people": () => [] });
+  renderApp(<FollowUps compact />);
+  await screen.findByRole("button", { name: /^Robin Sample/ });
+  expect(screen.queryByRole("radio", { name: "By project" })).toBeNull();
 });

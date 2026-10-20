@@ -40,13 +40,13 @@ import { Stages } from "./components/Stages";
 import { Today } from "./components/Today";
 import { ShortcutHelp } from "./components/ShortcutHelp";
 import { SinceYesterday } from "./components/SinceYesterday";
+import { WaitingToGoOut } from "./components/WaitingToGoOut";
 import { WhatChanged } from "./components/WhatChanged";
 import { Walkthrough } from "./components/Walkthrough";
 import { BottomBar } from "./shell/BottomBar";
 import { Header } from "./shell/Header";
 import { Sidebar, useSidebarMode } from "./shell/Sidebar";
 import { useNeedsYouNotices } from "./components/NeedsYouNotices";
-import { EmptyState } from "./ui/EmptyState";
 import shell from "./shell/Shell.module.css";
 
 export function App(props: { rc: S["RuntimeConfig"] }) {
@@ -209,14 +209,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "work/open":
         return <OpenItems />;
       case "work/outgoing":
-        return (
-          <section className="panel-section" aria-labelledby="outgoing-title">
-            <div className="heading">
-              <h1 id="outgoing-title">{t("nav.outgoing")}</h1>
-            </div>
-            <EmptyState icon="upload" text={t("outgoing.empty")} action={{ label: t("outgoing.open_changes"), onClick: () => setView("work/changed") }} />
-          </section>
-        );
+        return <WaitingToGoOut onView={setView} />;
       case "work/stages":
         return <Stages />;
       case "records/projects":

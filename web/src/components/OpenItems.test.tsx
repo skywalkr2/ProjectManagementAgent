@@ -26,6 +26,7 @@ const action = (id: string, text: string, over: Partial<S["OpenActionView"]> = {
   origin: null,
   untouched_days: null,
   owner_question: null,
+  to_send: false,
   ...over,
 });
 
@@ -99,6 +100,14 @@ test("every open to-do is a row with its owners, due date, project and the proje
   expect(all[2]).toHaveTextContent("Not touched for 30 days");
   expect(all[3]).toHaveTextContent("Nobody yet");
   expect(all[4]).toHaveTextContent("On hold: the printer's quote");
+});
+
+test("a to-do whose owner hasn't been told says to send, and the others don't", async () => {
+  api({}, { actions: [action("A-1", "Send the proof", { to_send: true }), action("A-2", "Review it", { to_send: false })] });
+  renderApp(<OpenItems />);
+  const [first, second] = await rows();
+  expect(within(first).getByText("To send")).toBeInTheDocument();
+  expect(within(second).queryByText("To send")).toBeNull();
 });
 
 test("a row's notes are on hover and read by a screen reader too", async () => {

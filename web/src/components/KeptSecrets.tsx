@@ -5,6 +5,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
+
+import { copyPlain } from "../lib/copy";
 import { problemText } from "../lib/problem";
 import { readable } from "../lib/records";
 import { asReference } from "../lib/secret-ref";
@@ -171,12 +173,8 @@ export function BackupKey() {
     }
   };
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(made ?? "");
-      push({ message: t("backup_key.copied") });
-    } catch {
-      push({ message: t("toast.copy_blocked") });
-    }
+    // A key is copied as plain text only.
+    push({ message: t((await copyPlain(made ?? "")) === "blocked" ? "toast.copy_blocked" : "backup_key.copied") });
   };
   return (
     <section className="kept-secrets" aria-labelledby={`${base}-title`}>

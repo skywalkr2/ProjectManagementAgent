@@ -343,7 +343,7 @@ test("after an add the suggested name looks at the accounts as they are now", as
   const calls = api({
     "GET ai/accounts": () => existing,
     "POST ai/accounts": () => {
-      existing = [{ name: "service-a", label: "Service A account", kind: "service-a", adapter: "adapter-one", models: { everyday: "model-a" }, used_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 }];
+      existing = [{ name: "service-a", label: "Service A account", kind: "service-a", adapter: "adapter-one", models: { everyday: "model-a" }, used_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0, accepted_unchecked: false }];
       return { changes: [], fingerprint: "fp-2", needs_restart: false };
     },
   });

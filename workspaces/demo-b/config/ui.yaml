@@ -4,6 +4,7 @@ wording: {}
 shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, move: m, undo: u, hand_in: n, help: "?", ask: /, next_pane: "]", previous_pane: "[", show_new: "N"}
 narrow_below_px: 640   # below this width: the phone layout, with a bottom bar
 toast_seconds: 7
+links: [{name: Planning board, address: "https://planning-board.example.com/spring"}, {name: Shared schedule, address: "https://shared-schedule.example.com/team"}]   # links to your own pages, shown in the header
 feedback_to: feedback@example.com   # where the feedback button writes
 today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1, stale_after_days: 21, top_priorities_lines: 4, top_priorities_ahead_days: 10}   # what Today's agenda and what came in cover
 followups: {action_due_within_days: 5, undated_after_days: 10, question_after_days: 3, second_nudge_items: 2, escalate_after_chases: 2}   # when a sent item is due a follow-up

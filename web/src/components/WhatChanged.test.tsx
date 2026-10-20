@@ -169,6 +169,14 @@ function noteChange(project: string | null): S["ChangeItem"] {
   return { ...base, changeset: { ...base.changeset!, ops: [op] } };
 }
 
+test("an action the assistant added for someone not yet told says to send on its row", async () => {
+  const base = change("REQ-9");
+  const op = { ...base.changeset!.ops[0], op: "action.add", title: "Send the proof", evidence: null, meta: { owners: ["Robin Sample"], to_send: true } };
+  fakeApi({ "GET changes": () => [{ ...base, changeset: { ...base.changeset!, ops: [op] } }] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Robin Sample · To send")).toBeInTheDocument();
+});
+
 test("a filed note says which project it went under", async () => {
   fakeApi({ "GET changes": () => [noteChange("A project")] });
   renderApp(<WhatChanged />);

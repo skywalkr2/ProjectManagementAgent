@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { copyMessage } from "../lib/copy";
 import { day } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useToasts } from "../lib/toasts";
@@ -137,9 +138,7 @@ function FollowUpReady(props: { followUp: NonNullable<Result["follow_up"]> }) {
   const { person, name } = props.followUp;
   const copy = async () => {
     if (!text.trim()) return;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
+    if ((await copyMessage(text)) === "blocked") {
       setCopied(false);
       push({ message: t("toast.copy_blocked") });
       return;

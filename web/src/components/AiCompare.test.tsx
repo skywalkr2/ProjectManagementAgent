@@ -25,6 +25,7 @@ const account = (name: string, label: string, extra: Partial<S["AiAccountView"]>
   checked_at: null,
   paused_until: null,
   check_usd: null,
+  accepted_unchecked: false,
   ...extra,
 });
 

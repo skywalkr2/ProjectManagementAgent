@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
@@ -54,6 +54,7 @@ const view = (name: string, label: string, extra: Partial<S["AiAccountView"]> = 
   checked_at: null,
   paused_until: null,
   check_usd: null,
+  accepted_unchecked: false,
   ...extra,
 });
 
@@ -176,13 +177,16 @@ test("a backup is added, then checked for each kind of work with its exact setti
   await user.click(screen.getByRole("button", { name: /Add and check/ }));
   await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
   expect(body(calls).use).toBeUndefined();
-  const order = calls.map((c) => c.route).filter((r) => r.startsWith("POST ai/accounts"));
-  expect(order).toEqual([
-    "POST ai/accounts",
-    "POST ai/accounts/service-a-account/test?tier=routine&model=everyday",
-    "POST ai/accounts/service-a-account/test?tier=deep&model=everyday",
-    "POST ai/accounts/service-a-account",
-  ]);
+  // The form closes once the account is saved; the checks go on after it, in this order, and the last step makes the backup.
+  const order = () => calls.map((c) => c.route).filter((r) => r.startsWith("POST ai/accounts"));
+  await waitFor(() =>
+    expect(order()).toEqual([
+      "POST ai/accounts",
+      "POST ai/accounts/service-a-account/test?tier=routine&model=everyday",
+      "POST ai/accounts/service-a-account/test?tier=deep&model=everyday",
+      "POST ai/accounts/service-a-account",
+    ]),
+  );
   expect(calls.find((c) => c.route === "POST ai/accounts/service-a-account")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "everyday" } });
 });
 
@@ -213,8 +217,8 @@ test("for the work it replaces the main account, which stays as its backup when 
   await user.click(screen.getByRole("button", { name: /Add and check/ }));
   await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
   expect(body(calls).use).toEqual({ routine: "everyday", deep: "everyday" });
-  expect(calls.find((c) => c.route === "POST ai/accounts/main")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "everyday" } });
   expect(await screen.findByText("Helper now works with Service A account. Main account stands in if it can't answer.")).toBeInTheDocument();
+  expect(calls.find((c) => c.route === "POST ai/accounts/main")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "everyday" } });
 });
 
 test("when the account it replaces fails its check it is not kept as a backup", async () => {
@@ -261,4 +265,24 @@ test("a check that would cost more than the amount the person set asks for a sec
   await user.click(screen.getByRole("button", { name: "Go ahead and check (about $6.00)" }));
   await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(true);
+});
+
+test("the drawer asks to close as soon as the account is saved, before any check has answered, and the button never stays on Adding…", async () => {
+  const user = userEvent.setup();
+  let release: () => void = () => undefined;
+  const slow = new Promise<void>((resolve) => (release = resolve));
+  api([MAIN], {
+    "POST ai/accounts/service-a-account/test?tier=routine&model=everyday": async () => {
+      await slow;
+      return answered("service-a-account")();
+    },
+    "POST ai/accounts/service-a-account/test?tier=deep&model=everyday": answered("service-a-account"),
+  });
+  const handlers = open();
+  await keyed(user);
+  await user.click(screen.getByRole("button", { name: /Add and check/ }));
+  await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText("Adding…")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Adding/ })).toBeNull();
+  await act(async () => release());
 });

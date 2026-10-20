@@ -101,7 +101,7 @@ test("with one project in the list the tag is left out", async () => {
   expect(screen.queryByText("Spring book")).toBeNull();
 });
 
-test("Mark done closes the to-do at once with Undo, and the row has no way to hand it to the assistant", async () => {
+test("Mark done closes the to-do at once with Undo, and the menu has Reassign and Hand to the assistant", async () => {
   const user = userEvent.setup();
   const { calls } = open(priorities(), { "POST actions/ACT-1/status": () => ({ ok: "ACT-1" }) });
   await user.click(await screen.findByRole("button", { name: "Mark done: Send the proofs" }));
@@ -110,7 +110,20 @@ test("Mark done closes the to-do at once with Undo, and the row has no way to ha
   expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "More actions for Send the proofs" }));
   expect(await screen.findByRole("menuitem", { name: "Reassign…" })).toBeInTheDocument();
-  expect(screen.queryByRole("menuitem", { name: /assistant/i })).toBeNull();
+  expect(screen.getByRole("menuitem", { name: "Hand to the assistant" })).toBeInTheDocument();
+});
+
+test("Hand to the assistant asks what is wanted and hands the to-do over, leaving it the person's", async () => {
+  const user = userEvent.setup();
+  const { calls } = open(priorities(), { "POST actions/ACT-1/hand-over": () => ({ request: "R-1" }) });
+  await user.click(await screen.findByRole("button", { name: "More actions for Send the proofs" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Hand to the assistant" }));
+  const box = await screen.findByRole("textbox", { name: /What do you want from it/ });
+  await waitFor(() => expect(box).toHaveFocus());
+  await user.type(box, "A short covering note.");
+  await user.click(screen.getByRole("button", { name: "Hand it over" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hand-over")?.body).toEqual({ note: "A short covering note." }));
+  expect(calls.some((c) => c.route === "POST actions/ACT-1/status")).toBe(false);
 });
 
 test("Reassign asks who from a list and changes the owner as the person's own edit", async () => {

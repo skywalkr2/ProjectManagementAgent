@@ -253,6 +253,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
         new=len(result.new),
         changed=len(result.changed),
         removed=len(result.removed),
+        unsorted=result.note,
         state=poll.state,
         looked_back_to=back_to.isoformat() if back_to else None,
     )

@@ -25,6 +25,7 @@ import {
   type Account,
   type Kind,
 } from "../lib/ai-accounts";
+import { useAccountCheck, setAccountCheck } from "../lib/account-checks";
 import { EVERYDAY, HARDER, modelsOf, planFor, useAccountActs, useConfirmAbove } from "../lib/ai-account-acts";
 import { day, monthDay, wallWhen } from "../lib/dates";
 import { useMoney } from "../lib/money";
@@ -545,6 +546,20 @@ function AccountRow(props: {
   const backupNote = account.check_usd == null ? t("ai_accounts.backup_note_free") : t("ai_accounts.backup_note", { amount: money(account.check_usd) });
 
   const state = stateOf(account, kind, allTiers);
+  // The checks that went on after the account was added, and where the choice to use it without one passing is open: an account
+  // that isn't doing the work, whose check failed, and that the person hasn't accepted yet.
+  const running = useAccountCheck(account.name);
+  const whyFailed = running?.failed?.detail ?? "";
+  const canUseAnyway = role !== "work" && !account.accepted_unchecked && !running?.running && (state.kind === "failed" || !!running?.failed) && shorts.length > 0;
+  const useAnyway = () =>
+    void save(
+      async (fingerprint) => {
+        const accepted = await api.saveSettings({ changes: { [`ai.providers.${account.name}.accepted_unchecked`]: true }, reset: [], fingerprint });
+        const plan = planFor(account, ["routine", "deep"]).filter(([tier]) => !backupFor.includes(tier));
+        return plan.length > 0 ? api.changeAccount(account.name, { fingerprint: accepted.fingerprint, backup: Object.fromEntries(plan) }) : accepted;
+      },
+      t("ai_check.use_anyway_done", { name }),
+    ).then((done) => done && setAccountCheck(account.name, null));
   const next = nextStep(state.kind);
   const now = new Date();
   const stateText = (() => {
@@ -627,6 +642,7 @@ function AccountRow(props: {
         ]
       : []),
     ...(backsUp ? [{ id: "backup", label: t("ai_accounts.use_as_backup"), note: backupNote, run: () => guard(account.check_usd, () => void useAsBackup()), disabled: testing || busy }] : []),
+    ...(canUseAnyway ? [{ id: "use-anyway", label: t("ai_check.use_anyway"), note: t("ai_check.use_anyway_hint"), run: useAnyway, disabled: busy }] : []),
     ...(role === "backup" ? [{ id: "stop-backup", label: t("ai_accounts.stop_backup"), run: stopBackup, disabled: busy }] : []),
     { id: "models", label: t("ai_accounts.change_models"), run: () => open("models") },
     { id: "key", label: t("ai_accounts.replace_key"), run: () => open("key") },
@@ -671,6 +687,16 @@ function AccountRow(props: {
               {identityText}
             </span>
           )}
+          {running?.running && (
+            <span className={styles.meta} data-tone="ok" data-checking="">
+              {t("ai_check.checking", { work: workWords([running.running], t) })}
+            </span>
+          )}
+          {role === "backup" && mains.length > 0 && !running?.running && (
+            <span className={styles.meta} data-tone="ok">
+              {t("ai_check.backs_up", { main: mains.map((m) => accountName(m, props.kindOf(m), t)).join(", ") })}
+            </span>
+          )}
           {skillLine && (
             <span className={styles.skills}>
               {skillLine}
@@ -689,6 +715,21 @@ function AccountRow(props: {
       primary={nextButton}
       menu={<RowMenu label={name} actions={actions} />}
     >
+      {whyFailed && (
+        <div className={styles.outcome} role="status" aria-live="polite">
+          <p className={styles.bad}>{t("ai_check.failed", { detail: whyFailed })}</p>
+          {canUseAnyway && (
+            <>
+              <p className="hint">{t("ai_check.use_anyway_hint")}</p>
+              <div className="row-end">
+                <Button size="sm" disabled={busy} onClick={useAnyway}>
+                  {t("ai_check.use_anyway")}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
       <div className={styles.forms} hidden={!extras}>
         <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
         {mode === "name" && (

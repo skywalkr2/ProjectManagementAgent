@@ -7,6 +7,7 @@ import { useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { copyMessage } from "../lib/copy";
 import { whenText } from "../lib/dates";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { problemText } from "../lib/problem";
@@ -288,9 +289,7 @@ function Report(props: { report: S["ReportView"]; mailTo?: string | null }) {
 
   // Copying only puts the report on the clipboard; the person sends it outside the app, then marks it sent.
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(mailText(r.title, r.text));
-    } catch {
+    if ((await copyMessage(mailText(r.title, r.text))) === "blocked") {
       push({ message: t("ask.copy_blocked") });
       return;
     }

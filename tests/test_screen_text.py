@@ -90,6 +90,48 @@ def test_a_command_is_caught_and_the_subcommand_names_come_from_the_parser():
         assert problems(text), text
 
 
+# ---- raw data ------------------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"title": "Launch", "due": "2026-10-20"}',
+        "Milestone {'name': 'Launch'} is due",
+        "Milestone: {name: Launch, due: 2026-10-20}",
+        'The fields are "title": and "due": in the data',
+        'Review [{"id": 4}] before Friday',
+        'Sent {  "to" : "Ana" } on Monday',
+    ],
+)
+def test_raw_data_in_a_title_or_a_line_is_caught(text):
+    assert any("raw data" in found for found in problems(text)), text
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Write the plan for {full_name} first.",
+        "The folder is plan/chapters/{order:02}-{slug}.",
+        'Ask "Is the index final?" before Friday',
+        "Notes: the printer wants PDF files.",
+        "Decide: print now or wait?",
+        "Review the list [Launch, Ship] with Robin",
+        "Read the section titled 'Costs': it is short.",
+        'A quote: "We ship on Tuesday."',
+    ],
+)
+def test_an_ordinary_line_is_not_taken_for_raw_data(text):
+    assert not any("raw data" in found for found in problems(text)), text
+
+
+def test_screen_text_that_shows_raw_data_is_refused_while_the_check_is_on(monkeypatch):
+    monkeypatch.setenv(SWITCH, "1")
+    with pytest.raises(ValidationError, match="raw data"):
+        Line(waiting='Milestone {"name": "Launch"} is due')
+    assert Line(waiting="Milestone Launch is due").waiting
+
+
 @pytest.mark.parametrize(
     "text",
     [

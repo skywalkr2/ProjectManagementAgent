@@ -1,0 +1,7 @@
+/* The header's "Your pages" button: a quiet text button beside the others, never wider than its words. */
+.pages {
+  display: inline-flex; align-items: center; flex: none; height: var(--btn-h); padding: 0 var(--space-3);
+  border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text); cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-medium);
+}
+.pages:hover { background: var(--surface-hover); }

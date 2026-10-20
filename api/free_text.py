@@ -60,6 +60,9 @@ ROUTES: dict[str, Declared] = {
     "POST /api/changesets/{cs_id}/send-back": _to("the note on the changes sent back is queued with the new run"),
     "POST /api/questions/{qid}/reply": _to("a pasted reply is handed in with a note saying which question it answers"),
     "POST /api/task-kinds/{name}/start": _to("the note on a started piece of work is queued with it"),
+    "POST /api/actions/{action_id}/hand-over": _to(
+        "what the person wants from the work is queued with the request, read as their own note"
+    ),
     # Local: the text is the person's own record or setting.
     "POST /api/followups/{person}/mark-sent": _local(
         "the message as sent, compared with the draft for a quality signal; not a note"

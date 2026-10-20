@@ -13,6 +13,8 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
+from engine.texts import LongText
+
 
 class Record(BaseModel):
     """Base for every stored record. A plugin's record type subclasses it and sets `record_kind` ("<plugin>/<name>")
@@ -527,6 +529,12 @@ class Action(Record):
     news: list[ActionNews] = Field(
         default_factory=list, description="What was heard about it that didn't end it, oldest first."
     )
+    work: Annotated[str | None, LongText("markdown")] = Field(
+        None,
+        description="The work the action stands for (a message, a list, a page) when the assistant drafted it at the "
+        "person's request. It is long text: a draft waits for the person's review and is theirs once they accept it. "
+        "The action itself stays the person's.",
+    )
 
     @model_validator(mode="after")
     def _owners_unless_held(self) -> Action:
@@ -930,6 +938,11 @@ class WatchRun(Record):
     new: int = Field(0, description="Items handed in as new.")
     changed: int = Field(0, description="Items handed in as changed.")
     removed: int = Field(0, description="Items handed in as gone.")
+    unsorted: str | None = Field(
+        None,
+        description="When some of the read's mail wasn't sorted by the assistant, why, in plain words (it was handed "
+        "in as work instead); none when all of it was sorted or placed by the rules.",
+    )
     state: dict[str, Any] = Field(default_factory=dict, description="What the connector keeps between reads.")
     looked_back_to: date | None = Field(
         None,

@@ -1942,12 +1942,21 @@ def _apply_op(
     if isinstance(op, TextAcceptOp):
         from engine.texts import accept
 
+        pending = tx.get("text_version", op.version)
         version = accept(ctx.store, tx, w, op.version, op.read_version, dict(op.choices))
+        if version.data["status"] == "discarded":
+            _record_draft_correction(tx, ctx, pending, "dropped", "set the draft aside, rejecting every change")
+        elif "reject" in op.choices.values():
+            from engine.texts import read_text
+
+            _record_draft_correction(tx, ctx, pending, "draft_edited", read_text(ctx.store, version.data["sha256"]))
         return [{"kind": "text_version", "id": op.version}, {"kind": "text_version", "id": version.id}], None
     if isinstance(op, TextDiscardOp):
         from engine.texts import discard
 
+        pending = tx.get("text_version", op.version)
         discard(tx, w, op.version, op.read_version)
+        _record_draft_correction(tx, ctx, pending, "dropped", "set the draft aside")
         return [{"kind": "text_version", "id": op.version}], None
     if isinstance(op, ProjectAddOp):
         data = {"name": op.name.strip(), "summary": op.summary, "parent": op.parent, "language": op.language}
@@ -2442,6 +2451,30 @@ def _review_reply(tx: Tx, op: ActionReplyOp, ctx: Context, w: WriteContext) -> l
             ctx.store.clock(),
         )
     return [{"kind": "action", "id": op.id}]
+
+
+def _record_draft_correction(tx: Tx, ctx: Context, pending: Any, signal: str, note: str) -> None:
+    """The person's own review of a draft the assistant wrote that changes it or sets it aside: a `draft_edited` signal
+    with the text as they kept it, or a `dropped` one, naming the record the text belongs to and the changeset and run
+    that wrote it. Taking a draft as it is corrects nothing. It is written apart from the change, so Undo leaves it as
+    it was."""
+    if pending is None or pending.data.get("source") != "draft" or not pending.data.get("run"):
+        return
+    changeset, _ = _made_by(tx, "text_version", pending.id)
+    learn.record(
+        tx,
+        ctx.cfg,
+        {
+            "kind": signal,
+            "refs": [pending.data["owner_id"]],
+            "changeset": changeset,
+            "run": pending.data["run"],
+            "note": note,
+            "at": ctx.store.clock(),
+        },
+        WriteContext(actor="pm", trust="trusted", op=signal),
+        ctx.store.clock(),
+    )
 
 
 def _record_dropped(tx: Tx, ctx: Context, kind: str, record_id: str, reason: str, signal: str = "dropped") -> None:

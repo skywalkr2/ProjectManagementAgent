@@ -33,6 +33,7 @@ import { NoteBox, useNoted } from "./NoteBox";
 import { HoldNote, useHold } from "./OnHold";
 import styles from "./OpenItems.module.css";
 import { OriginLink } from "./Origin";
+import { useHandToAssistant } from "./HandToAssistant";
 import { useReassign } from "./ReassignAction";
 import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
@@ -170,6 +171,7 @@ function ActionRow(props: { action: OpenAction }) {
   const change = useChangeThis({ kind: "action", id: a.id }, focus);
   const drop = useDropAction(a, focus);
   const reassign = useReassign(a, focus);
+  const hand = useHandToAssistant(a, focus);
   const edit = useEditAction(a, focus);
   const done = (note?: string) =>
     act(
@@ -194,12 +196,18 @@ function ActionRow(props: { action: OpenAction }) {
     ...(unowned ? [] : [{ id: "note", label: t("note.add"), run: () => setNoting(true) } satisfies MenuAction]),
     ...(unowned ? [] : [edit.entry, reassign.entry]),
     ...(merge ? [merge] : []),
+    ...(unowned || !hand.entry ? [] : [hand.entry]),
     ...(unowned ? [] : [hold.entry]),
     change.entry,
     drop.entry,
   ];
   const meta = join([
     a.owners.length > 0 ? a.owners.map((o) => o.name).join(", ") : t("open.nobody"),
+    a.to_send && (
+      <strong key="s" className={styles.toSend} data-to-send="">
+        {t("action.to_send")}
+      </strong>
+    ),
     a.due && t("op.meta.due", { date: day(a.due) }),
     <ProjectTag key="p" name={a.project_name} parent={a.parent_name} />,
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
@@ -253,6 +261,7 @@ function ActionRow(props: { action: OpenAction }) {
       )}
       {edit.form}
       {reassign.form}
+      {hand.form}
       {hold.form}
       {change.form}
       {drop.form}

@@ -144,6 +144,12 @@ export const api = {
   /** A note goes with the change only when there is one: with none, the request is the same as it always was. */
   actionStatus: (a: string, status: S["ActionState"]["status"], note?: string) =>
     call<S["Noted"]>("POST", `actions/${id(a)}/status`, note ? { status, note } : { status }),
+  /** Ask the assistant to draft the work an open action stands for; the action stays the person's. */
+  handOver: (a: string, note?: string) => call<S["HandedOver"]>("POST", `actions/${id(a)}/hand-over`, note ? { note } : {}),
+  /** Add a meeting in one line, or merge it into the one already on the calendar. */
+  addMeeting: (body: S["MeetingIn"]) => call<S["MeetingAdded"]>("POST", "calendar/meetings", body),
+  /** The actions the assistant has in hand, and which of them has a draft waiting for review. */
+  handed: () => call<S["HandedActionView"][]>("GET", "actions/handed"),
   /** Put an action on hold, waiting for words, or blocked on the person, action or question `on` names. */
   putOnHold: (a: string, waiting_for: string, on?: string | null) =>
     call<S["HoldChanged"]>("POST", `actions/${id(a)}/hold`, on ? { waiting_for, on } : { waiting_for }),

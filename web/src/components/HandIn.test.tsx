@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
@@ -156,4 +156,36 @@ test("a chosen project is sent by its id, and choosing not sure again takes it b
   await user.selectOptions(choice, "Ferry");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "", pasted: "Subject: dates", project: "P-4" }));
+});
+
+// A pasted screenshot (design 7.6): the box takes words, and the assistant reads text. A picture on the clipboard is not
+// dropped without a word: the box says plainly that it can't be read, and what was already there stays.
+
+const picture = () => new File(["x"], "screenshot.png", { type: "image/png" });
+
+test("a pasted picture says it can't be read and asks for its words, and leaves the box as it was", async () => {
+  const { user } = await setup();
+  const box = screen.getByRole("textbox", { name: "Paste or type it here" });
+  await user.type(box, "Notes so far");
+  fireEvent.paste(box, { clipboardData: { files: [picture()], types: ["Files"], getData: () => "" } });
+  expect(await screen.findByText(/A picture can't be read yet/)).toBeInTheDocument();
+  expect(box).toHaveValue("Notes so far");
+});
+
+test("a picture pasted along with its words keeps the words and says nothing about the picture", async () => {
+  const { user } = await setup();
+  const box = screen.getByRole("textbox", { name: "Paste or type it here" });
+  await user.click(box);
+  await user.paste("The words from the page");
+  fireEvent.paste(box, { clipboardData: { files: [picture()], types: ["Files", "text/plain"], getData: () => "The words from the page" } });
+  expect(screen.queryByText(/A picture can't be read yet/)).toBeNull();
+});
+
+test("the note about a picture goes when words are typed after it", async () => {
+  const { user } = await setup();
+  const box = screen.getByRole("textbox", { name: "Paste or type it here" });
+  fireEvent.paste(box, { clipboardData: { files: [picture()], types: ["Files"], getData: () => "" } });
+  await screen.findByText(/A picture can't be read yet/);
+  await user.type(box, "What it said");
+  expect(screen.queryByText(/A picture can't be read yet/)).toBeNull();
 });

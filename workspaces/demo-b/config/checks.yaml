@@ -4,6 +4,7 @@ projects: {}   # per project, e.g. {PRJ-2: {plugin/lint-name: off}}: a check swi
 tuning:
   near_duplicate_action: {similarity: 0.8, date_window_days: 3}   # how alike a new action must be to be flagged (0 to 1); how many days apart two dates for one promise may be
   near_duplicate_question: {similarity: 0.8, days: 14}   # how alike a new question must be to an open or recently answered one to the same person (0 to 1), and how many days back
+  near_duplicate_meeting: {similarity: 0.8, minutes: 30}   # how alike a meeting added in one line must be to one already on the calendar (0 to 1), and how many minutes apart their starts may be
   already_known: {similarity: 0.7}   # how much of a question's subject a recorded fact must hold to count as answering it (0 to 1)
   several_questions: {minimum: 2}   # how many numbered questions in one question's text make it several
   unverified_quote: {min_words: 3}   # how many words a passage in quotation marks needs to count as a quote that must be in the material cited

@@ -22,6 +22,7 @@ import { JobsPanel } from "./JobsPanel";
 import { BrandContrast } from "./BrandContrast";
 import { AddonSecrets, BackupKey } from "./KeptSecrets";
 import { Notifications } from "./Notifications";
+import { PageLinks } from "./PageLinks";
 import { RefreshedLines } from "./RefreshedLines";
 import { SettingRow } from "./SettingRow";
 import { SyncPanel } from "./SyncPanel";
@@ -369,6 +370,7 @@ export function Settings(props: {
         {heading(section)}
         {form(section)}
         {section === "appearance" && <BrandContrast color={brandColor} />}
+        {section === "appearance" && <PageLinks />}
         {section.startsWith("addon/") && <AddonSecrets plugin={section.slice("addon/".length)} name={label(section)} />}
         {section === "today" && <Notifications />}
         {section === "backups" && (

@@ -180,6 +180,8 @@ from engine.dispatcher import (
     waits_on_first_go,
 )
 from engine.followups import (
+    UNTOLD_STANCES,
+    actions_to_send,
     follow_up,
     hold_question,
     mark_followed_up,
@@ -206,6 +208,7 @@ from engine.plugin_host import check_about
 from engine.promises import ENDING_NAMES
 from engine.prompts import render
 from engine.records import Scope, referrers
+from engine.scope import stance_of
 from engine.stages import approve_stage_request, card_details, record_status, stage_history
 from engine.storage import Store, StoreError, WriteContext
 from engine.texts import text_presence
@@ -1343,6 +1346,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         people = People(store, cfg)
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
         sources = {s.id: s.data for s in store.read().list("source")}
+        to_send = actions_to_send(store, cfg)
         kinds = watched_kinds(store.read())
         spent = spent_by_request(store.read())
         mail = {
@@ -1369,7 +1373,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     status=cs.data["status"],
                     reviewed=cs.data["reviewed"],
                     trust=cs.data["trust"],
-                    ops=[_op_view(o, store, people, projects, cfg) for o in cs.data["ops"]],
+                    ops=[_op_view(o, store, people, projects, cfg, to_send) for o in cs.data["ops"]],
                     made=[
                         MadeView(
                             kind=m.kind, id=m.id, label=m.label, record=RecordRef(kind=m.record[0], id=m.record[1])
@@ -2144,7 +2148,12 @@ def _ask(store: Store, people: People, qid: str | None, cfg: Config | None = Non
 
 
 def _op_view(
-    o: dict[str, Any], store: Store, people: People, projects: dict[str, str], cfg: Config | None = None
+    o: dict[str, Any],
+    store: Store,
+    people: People,
+    projects: dict[str, str],
+    cfg: Config | None = None,
+    to_send: set[str] | None = None,
 ) -> OpView:
     op = o["op"]
     record = None
@@ -2170,6 +2179,7 @@ def _op_view(
             meta["due"] = d.get("due")
             meta["project"] = projects.get(d.get("project"))
             meta["action_status"] = d.get("status")
+            meta["to_send"] = rec.id in (to_send or ())
         if kind == "question":
             meta["to"] = people.name(d.get("to"))
         if kind == "note":
@@ -2177,6 +2187,11 @@ def _op_view(
     elif op["op"] == "action.add":
         meta["owners"] = op.get("owners", [])
         meta["due"] = op.get("due")
+        if cfg is not None:
+            meta["to_send"] = any(
+                who != people.pm and stance_of(store.read(), cfg.steward, who) not in UNTOLD_STANCES
+                for who in op.get("owners", [])
+            )
     elif op["op"] == "question.add":
         meta["to"] = op.get("to")
     elif op["op"] == "note":

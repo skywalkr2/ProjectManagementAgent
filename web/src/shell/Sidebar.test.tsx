@@ -52,7 +52,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "What changed",
     "Follow-ups",
     "To-dos and questions",
-    "Drafts to approve",
+    "Waiting to go out",
     "Stages",
     "Goals",
     "Projects",

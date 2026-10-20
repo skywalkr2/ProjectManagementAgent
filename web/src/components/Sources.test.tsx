@@ -152,6 +152,17 @@ test("a source shows its kind, how often it is read and its last read in words",
   expect(item).toHaveTextContent("2 new, 1 changed");
 });
 
+test("a source whose mail the assistant couldn't sort says so on its row, with why, and says nothing when all of it was sorted", async () => {
+  open([
+    source("a", { last: run({ new: 2, unsorted: "2 messages weren't sorted by the assistant (it is paused until 3:00), so they were handed in as work." }) }),
+    source("b", { last: run({ new: 2 }) }),
+  ]);
+  const item = await row("Source a");
+  expect(within(item).getByText("Some of its mail wasn't sorted")).toBeInTheDocument();
+  expect(item).toHaveTextContent("2 messages weren't sorted by the assistant (it is paused until 3:00), so they were handed in as work.");
+  expect(within(await row("Source b")).queryByText("Some of its mail wasn't sorted")).toBeNull();
+});
+
 test("every outcome has its own words", async () => {
   open([
     source("quiet", { last: run() }),

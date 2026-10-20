@@ -46,7 +46,7 @@ test("Work opens a sheet with its views, as links", async () => {
   show();
   await user.click(screen.getByRole("button", { name: "Work" }));
   const sheet = await screen.findByRole("dialog", { name: "Work" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Follow-ups", "To-dos and questions", "Drafts to approve", "Stages"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["What changed", "Follow-ups", "To-dos and questions", "Waiting to go out", "Stages"]);
   expect(within(sheet).getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

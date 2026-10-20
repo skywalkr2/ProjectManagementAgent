@@ -108,9 +108,9 @@ test("an address names the view it opens, and the sidebar marks it", async () =>
   window.location.hash = "#work/outgoing";
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
-  expect(await screen.findByRole("heading", { level: 1, name: "Drafts to approve" })).toBeInTheDocument();
-  expect(screen.getByText("No drafts waiting for approval.")).toBeInTheDocument();
-  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Drafts to approve", current: "page" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Waiting to go out" })).toBeInTheDocument();
+  expect(screen.getByText("Nothing is waiting to go out.")).toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out", current: "page" })).toBeInTheDocument();
 });
 
 test("the projects and people views open the people and projects screen at their own part", async () => {
@@ -138,8 +138,8 @@ test("going to another view moves focus to its heading, but the first load does 
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
   expect(await screen.findByRole("heading", { level: 1, name: "Today" })).not.toHaveFocus();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Drafts to approve" }));
-  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Drafts to approve" })).toHaveFocus());
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out" }));
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Waiting to go out" })).toHaveFocus());
 });
 
 test("Today's heading carries the date, and every view has one h1", async () => {

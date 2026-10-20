@@ -599,6 +599,7 @@ function metaLine(op: S["OpView"], t: T): string {
   const bits: string[] = [];
   const m = op.meta;
   if (m.owners?.length) bits.push(m.owners.join(", "));
+  if (m.to_send) bits.push(t("action.to_send"));
   if (m.to) bits.push(t("op.meta.to", { name: m.to }));
   if (m.due) bits.push(t("op.meta.due", { date: day(m.due) }));
   if (m.project && op.op !== "note") bits.push(m.project);

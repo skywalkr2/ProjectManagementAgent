@@ -18,6 +18,7 @@ import { IconButton } from "../ui/IconButton";
 import { MenuButton, type MenuGroup } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
 import { AssistantLine } from "./AssistantLine";
+import { HeaderLinks } from "./HeaderLinks";
 import { StatusMenu } from "./StatusMenu";
 import { initials } from "./status";
 import styles from "./Header.module.css";
@@ -121,6 +122,7 @@ export function Header(props: {
       </div>
       {!props.narrow && (
         <div className={styles.end}>
+          <HeaderLinks />
           <IconButton icon="alert" label={t("missed.open")} {...{ [MISSED_BUTTON]: "" }} onPress={missed} />
           <Button variant="primary" icon="plus" onClick={props.onHandIn}>
             {t("handin.open")}

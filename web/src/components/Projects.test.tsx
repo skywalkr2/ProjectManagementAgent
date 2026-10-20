@@ -92,6 +92,61 @@ test("projects are grouped by their group, those with none after, and finished o
   expect(groupProjects([project("P", "Only")], { none: "No group", open: "Open projects", completed: "Completed" }).map((g) => g.title)).toEqual(["Open projects"]);
 });
 
+test("a project inside another is listed under its parent, in the parent's group, with the parent's name beside it", () => {
+  const rows = [
+    project("PRJ-1", "The series", { group: "Books" }),
+    project("PRJ-2", "Book two", { group: "Films", parent: "PRJ-1" }),
+    project("PRJ-3", "Book one", { parent: "PRJ-1" }),
+    project("PRJ-4", "Elsewhere", { group: "Books" }),
+    project("PRJ-5", "Chapter", { group: "Films", parent: "PRJ-3" }),
+  ];
+  const groups = groupProjects(rows, { none: "No group", open: "Open projects", completed: "Completed" });
+  expect(groups.map((g) => g.title)).toEqual(["Books"]);
+  // The parent first, then what is inside it (and what is inside that), then the next project of the group.
+  expect(groups[0].rows.map((p) => p.name)).toEqual(["Elsewhere", "The series", "Book one", "Chapter", "Book two"]);
+});
+
+test("a project whose parent is finished or not there is listed on its own", () => {
+  const rows = [
+    project("PRJ-1", "Wrapped", { completed: true, status: "Done" }),
+    project("PRJ-2", "Orphan", { parent: "PRJ-1" }),
+    project("PRJ-3", "Lost", { parent: "PRJ-99" }),
+  ];
+  const groups = groupProjects(rows, { none: "No group", open: "Open projects", completed: "Completed" });
+  expect(groups.map((g) => [g.title, g.rows.map((p) => p.name)])).toEqual([
+    ["Open projects", ["Lost", "Orphan"]],
+    ["Completed", ["Wrapped"]],
+  ]);
+});
+
+test("the table shows the stage, the target day and when it was last updated in words, and no health column without a pack", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
+  try {
+    api([
+      project("PRJ-1", "The series", { phase: "Drafting", target: "2026-12-01", last_change: "2026-10-15T09:00:00Z" }),
+      project("PRJ-2", "Book one", { parent: "PRJ-1", phase: "Editing", last_change: "2026-10-20T08:00:00Z" }),
+      project("PRJ-3", "Old news", { last_change: "2026-08-01T09:00:00Z" }),
+    ]);
+    renderApp(<Projects />);
+    const tr = await row("The series");
+    expect(screen.getByRole("columnheader", { name: "Stage" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Target" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Last updated" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /health/i })).toBeNull();
+    expect(within(tr).getByText("Drafting")).toBeInTheDocument();
+    expect(within(tr).getByText("5 days ago")).toBeInTheDocument();
+    expect(within(await row("Book one")).getByText("today")).toBeInTheDocument();
+    expect(within(await row("Old news")).getByText("2 months ago")).toBeInTheDocument();
+    // The one inside another says so, and sits right after it.
+    expect(await row("Book one")).toHaveTextContent("inside The series");
+    const names = screen.getAllByRole("link").map((l) => l.textContent);
+    expect(names.indexOf("Book one")).toBe(names.indexOf("The series") + 1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 test("a finished project is under Completed at the bottom, still listed with its group, and never removed", async () => {
   api([project("PRJ-1", "Wrapped", { group: "Films", status: "Done", completed: true }), project("PRJ-2", "Going", { group: "Books" })]);
   renderApp(<Projects />);

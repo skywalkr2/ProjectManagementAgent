@@ -74,6 +74,16 @@ export function HandIn(props: { onClose: () => void }) {
     }
   };
 
+  // A picture on the clipboard can't be read (the assistant reads words): say so, and keep what is in the box. A paste that
+  // carries its words as well is an ordinary paste of text.
+  const onPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const data = event.clipboardData;
+    const pictures = Array.from(data?.files ?? []).filter((f) => f.type.startsWith("image/"));
+    if (pictures.length === 0 || data.getData("text")) return;
+    event.preventDefault();
+    setDropProblem(t("handin.picture_not_read"));
+  };
+
   const onDrop = async (event: React.DragEvent<HTMLTextAreaElement>) => {
     const files = Array.from(event.dataTransfer.files);
     if (!files.length) return;
@@ -116,7 +126,11 @@ export function HandIn(props: { onClose: () => void }) {
             className="drop big"
             ref={first}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              setDropProblem("");
+            }}
+            onPaste={onPaste}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => void onDrop(e)}
             placeholder={t("handin.box_placeholder")}

@@ -1142,6 +1142,22 @@ class NearDuplicateActionTuning(ConfigModel):
     )
 
 
+class NearDuplicateMeetingTuning(ConfigModel):
+    similarity: float = Field(
+        0.8,
+        ge=0,
+        le=1,
+        description="How alike a meeting added in one line must be to one already on the calendar to count as the "
+        "same one: 0 counts any shared word, 1 only the same words.",
+    )
+    minutes: int = Field(
+        30,
+        ge=0,
+        le=720,
+        description="How many minutes apart two meetings with alike words may start and still be the same meeting.",
+    )
+
+
 class AlreadyKnownTuning(ConfigModel):
     similarity: float = Field(
         0.7,
@@ -1229,6 +1245,10 @@ class LintTuning(ConfigModel):
     )
     near_duplicate_question: NearDuplicateQuestionTuning = Field(
         default_factory=NearDuplicateQuestionTuning, description="Settings of the near-duplicate question check."
+    )
+    near_duplicate_meeting: NearDuplicateMeetingTuning = Field(
+        default_factory=NearDuplicateMeetingTuning,
+        description="Settings of the check that a meeting added in one line isn't one already on the calendar.",
     )
     already_known: AlreadyKnownTuning = Field(
         default_factory=AlreadyKnownTuning,
@@ -1903,6 +1923,23 @@ class NotificationsSettings(ConfigModel):
         except (KeyError, IndexError, ValueError):
             raise ValueError("a notice can only use {count}") from None
         return value
+#: A header link's address: a web address with no spaces.
+_LINK_ADDRESS = re.compile(r"^https?://\S+$")
+
+
+def _check_links(links: list[dict[str, str]]) -> list[dict[str, str]]:
+    """The links as a list of {name, address}: each named (up to 40 characters) with a web address, nothing else."""
+    clean = []
+    for link in links:
+        if set(link) != {"name", "address"}:
+            raise ValueError("each link has a name and an address, and nothing else")
+        name, address = link["name"].strip(), link["address"].strip()
+        if not name or len(name) > 40:
+            raise ValueError("a link's name is one to 40 characters")
+        if len(address) > 2000 or not _LINK_ADDRESS.match(address):
+            raise ValueError(f"the address for {name} must be a web address starting with http:// or https://")
+        clean.append({"name": name, "address": address})
+    return clean
 
 
 class UiFile(FileModel):
@@ -1921,12 +1958,25 @@ class UiFile(FileModel):
         description="Below this width the screen uses the phone layout: one pane and a bottom bar.",
     )
     toast_seconds: float = Field(7, ge=0, description="How long an undo toast stays; 0 keeps toasts until dismissed.")
+    links: list[dict[str, str]] = Field(
+        default_factory=list,
+        max_length=12,
+        description="Links to your own pages (a board, a schedule, a shared folder) shown in the header, each opening "
+        "in a new tab: a name and a web address.",
+        json_schema_extra={"screen_edit": True},
+    )
     feedback_to: str | None = Field(
         None,
         pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
         description="The address the feedback button writes its email to. Empty uses the address the app was "
         "packaged with, if any; with neither, feedback is drafted to copy.",
     )
+
+    @field_validator("links")
+    @classmethod
+    def _links_are_names_and_addresses(cls, value: list[dict[str, str]]) -> list[dict[str, str]]:
+        return _check_links(value)
+
     today: TodaySettings = Field(
         default_factory=TodaySettings, description="What Today's agenda and its list of what came in cover."
     )

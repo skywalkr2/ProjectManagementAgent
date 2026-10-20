@@ -4,3 +4,4 @@
 .bar select { max-width: 100%; }
 .project { display: inline-block; font-size: var(--text-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); padding: 0 var(--space-2); background: var(--surface-sunk); color: var(--text-muted); }
 .part { overflow-wrap: anywhere; }
+.toSend { font-weight: var(--weight-semibold); color: var(--text); }

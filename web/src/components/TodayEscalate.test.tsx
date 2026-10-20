@@ -110,6 +110,7 @@ test("for an action it reassigns it, taking the one who hasn't answered off it",
     ],
     project_name: "",
     since: "2026-10-01",
+    to_send: false,
   };
   const { calls } = show([line("escalate", { ...escalate, key: "escalate:PER-2:ACT-4", text: "Send the index", questions: [], actions: ["ACT-4"] })], {
     "GET open-items": () => ({ actions: [open], questions: [], stale_days: 21 }),

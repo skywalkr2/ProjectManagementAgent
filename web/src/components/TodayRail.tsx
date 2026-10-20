@@ -1,7 +1,7 @@
 // Today's rail (design 7.7): top priorities, the agenda, the person's own list and what came in, as panels sized to their content beside
 // the queue (below it under 1024px). What needs the person is the queue, not the rail.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
@@ -153,7 +153,7 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
     date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date);
 
   return (
-    <RailPanel id="agenda" title={t("today.agenda.title")} count={agenda.data ? count : null} countText={tn("today.agenda.count", count)}>
+    <RailPanel id="agenda" title={t("today.agenda.title")} count={agenda.data ? count : null} countText={tn("today.agenda.count", count)} footer={<AddMeeting today={today} />}>
       {agenda.isPending ? (
         <Skeleton />
       ) : agenda.isError ? (
@@ -207,6 +207,60 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
         })
       )}
     </RailPanel>
+  );
+}
+
+/** A meeting added in one line (design 7.7): what, the day (today to begin with) and the time (none: all day). The server makes
+ * the person's own calendar entry, or merges the meeting into one already there and says so; Undo takes an added one back. */
+function AddMeeting(props: { today: string }) {
+  const { t } = useWords();
+  const act = useAct();
+  const base = useId();
+  const [what, setWhat] = useState("");
+  const [on, setOn] = useState("");
+  const [at, setAt] = useState("");
+  const day_ = on || props.today;
+  const submit = async () => {
+    const title = what.trim();
+    if (!title) return;
+    const done = await act(
+      () => api.addMeeting({ what: title, day: day_, time: at || null }),
+      (added) =>
+        added.merged
+          ? { message: t("meeting.merged", { what: added.merged_with ?? title }) }
+          : { message: t("meeting.added", { what: title }), undo: () => api.undo(added.changeset ?? "") },
+    );
+    if (done) {
+      setWhat("");
+      setAt("");
+    }
+  };
+  return (
+    <form
+      className="meeting-line"
+      role="group"
+      aria-label={t("meeting.title")}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+    >
+      <div className="field">
+        <label htmlFor={`${base}-what`}>{t("meeting.what")}</label>
+        <input id={`${base}-what`} type="text" value={what} onChange={(e) => setWhat(e.target.value)} />
+      </div>
+      <div className="field">
+        <label htmlFor={`${base}-day`}>{t("meeting.day")}</label>
+        <input id={`${base}-day`} type="date" value={day_} onChange={(e) => setOn(e.target.value)} />
+      </div>
+      <div className="field">
+        <label htmlFor={`${base}-time`}>{t("meeting.time")}</label>
+        <input id={`${base}-time`} type="time" value={at} onChange={(e) => setAt(e.target.value)} />
+      </div>
+      <button type="submit" className="btn" disabled={!what.trim() || !day_}>
+        {t("meeting.add")}
+      </button>
+    </form>
   );
 }
 

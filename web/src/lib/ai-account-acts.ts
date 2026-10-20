@@ -37,11 +37,13 @@ export function useAccountActs() {
     },
     [client, afterSave],
   );
-  /** Checks the account for each kind of work in the plan, with its exact settings; the first that didn't pass, or null. */
+  /** Checks the account for each kind of work in the plan, with its exact settings; the first that didn't pass, or null.
+   * `onStep` is told which kind of work is about to be checked, so a screen can say so. */
   const failing = useCallback(
-    async (name: string, plan: [string, string][]): Promise<S["AiTestResult"] | null> => {
+    async (name: string, plan: [string, string][], onStep?: (tier: string) => void): Promise<S["AiTestResult"] | null> => {
       try {
         for (const [tier, short] of plan) {
+          onStep?.(tier);
           const line = (await api.testAccount(name, tier, short))[0];
           if (line && !line.ok) return line;
         }
@@ -55,8 +57,8 @@ export function useAccountActs() {
   );
   /** Makes the account a backup for the plan's kinds of work once it passed its check for each. Returns the failing check, or null when it stands in now. */
   const standIn = useCallback(
-    async (name: string, plan: [string, string][], message: string): Promise<S["AiTestResult"] | null> => {
-      const bad = await failing(name, plan);
+    async (name: string, plan: [string, string][], message: string, onStep?: (tier: string) => void): Promise<S["AiTestResult"] | null> => {
+      const bad = await failing(name, plan, onStep);
       if (bad) return bad;
       await save((fingerprint) => api.changeAccount(name, { fingerprint, backup: Object.fromEntries(plan) }), message);
       return null;

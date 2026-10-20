@@ -529,6 +529,49 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
+  test("3d. Copy puts the formatted message and its plain text on the clipboard together: a document keeps the formatting, chat gets plain text, and every piece of text is escaped.", async ({ page }) => {
+    await signIn(page);
+    await go(page, "Follow-ups");
+    const sections = await getJson<Section[]>(page, "api/followups");
+    const target = sections.find((s) => !s.is_pm && s.to_send > 0);
+    expect(target, "someone with something to send").toBeTruthy();
+    const card = page.locator("li.line", { has: page.locator("strong", { hasText: new RegExp(`^${target!.name}$`) }) });
+    await card.getByRole("button", { name: `Copy ${target!.to_send}` }).click();
+    const box = card.getByRole("textbox").first();
+    // Text that would be markup if it were not escaped, added to what is shown.
+    const hostile = `<img src=x onerror="window.pasted=1"> & "quoted"`;
+    await box.fill(`${target!.message}\n\n${hostile}`);
+    await card.getByRole("button", { name: `Copy ${target!.to_send}` }).click();
+    await expect(page.getByText("Copied", { exact: true })).toBeVisible();
+
+    // A document (a rich text area) takes the formatting, and nothing in it is markup the person did not write.
+    await page.evaluate(() => {
+      const area = document.createElement("div");
+      area.id = "paste-document";
+      area.contentEditable = "true";
+      area.style.cssText = "position:fixed;left:0;top:0;width:300px;height:100px;background:#fff";
+      document.body.appendChild(area);
+    });
+    await page.locator("#paste-document").click();
+    await page.keyboard.press("ControlOrMeta+V");
+    const document_ = await page.locator("#paste-document").evaluate((el) => ({ html: el.innerHTML, images: el.querySelectorAll("img, script").length, paragraphs: el.querySelectorAll("p").length, text: el.textContent ?? "" }));
+    expect(document_.images).toBe(0);
+    expect(document_.paragraphs).toBeGreaterThan(1);
+    expect(document_.text).toContain(hostile);
+    expect(await page.evaluate(() => (window as unknown as { pasted?: number }).pasted)).toBeUndefined();
+
+    // Chat (a plain text box) takes the text exactly as it was on screen.
+    await page.evaluate(() => {
+      const chat = document.createElement("textarea");
+      chat.id = "paste-chat";
+      chat.style.cssText = "position:fixed;left:0;top:120px;width:300px;height:100px";
+      document.body.appendChild(chat);
+    });
+    await page.locator("#paste-chat").click();
+    await page.keyboard.press("ControlOrMeta+V");
+    expect(await page.locator("#paste-chat").inputValue()).toBe(`${target!.message}\n\n${hostile}`);
+  });
+
   test("4. Open Follow-ups. Each contributor has one section; Copy builds one clean message per person with their questions and actions; Mark sent records it.", async ({ page }) => {
     await signIn(page);
     await go(page, "Follow-ups");

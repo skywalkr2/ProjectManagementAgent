@@ -1,0 +1,100 @@
+// Follow-ups grouped by project (design 7.5): the same open questions and to-dos as the groups by person, each project's
+// together with who each is with and where it stands. A row's button goes to that person's group, where Copy, Mark sent and
+// Record reply are.
+import type { S } from "../lib/api";
+import { useWords } from "../lib/wording";
+import { OriginLink } from "./Origin";
+
+type Section = S["FollowupSection"];
+
+interface Item {
+  id: string;
+  title: string;
+  /** Who it is with: the person's id and name, and whether that is the person themselves. */
+  person: string;
+  name: string;
+  mine: boolean;
+  /** Where it stands, from the sheet. */
+  state: string;
+  kind: "question" | "action";
+  origin?: S["FollowupQuestion"]["origin"];
+}
+
+type Words = ReturnType<typeof useWords>;
+
+function waiting(days: number | null, chase: boolean, w: Words): string {
+  if (days === null) return w.t("followups.by_project.to_send");
+  return w.tn(chase ? "followups.waiting_pill.chase" : "followups.waiting_pill", days);
+}
+
+function itemsOf(section: Section, w: Words): Array<[string, Item]> {
+  const base = { person: section.person, name: section.name, mine: section.is_pm };
+  const out: Array<[string, Item]> = [];
+  for (const q of section.questions) {
+    const state = section.is_pm ? w.t("followups.by_project.yours") : q.status === "sent" ? waiting(q.waiting_days ?? 0, q.chase_due, w) : waiting(null, false, w);
+    out.push([q.project_name ?? "", { ...base, id: q.id, title: q.title, state, kind: "question", origin: q.origin }]);
+  }
+  for (const q of section.later ?? []) {
+    out.push([q.project_name ?? "", { ...base, id: q.id, title: q.title, state: w.t("followups.by_project.later"), kind: "question", origin: q.origin }]);
+  }
+  for (const a of section.actions) {
+    const state = section.is_pm ? w.t("followups.by_project.yours") : waiting(a.told_days, a.chase_due, w);
+    out.push([a.project_name ?? "", { ...base, id: a.id, title: a.text, state, kind: "action", origin: a.origin }]);
+  }
+  return out;
+}
+
+/** The projects with their items: by name, the items with no project last; within one, the person's own first, then by person. */
+export function groupByProject(sections: Section[], w: Words, compact = false): Array<{ project: string; items: Item[] }> {
+  const groups = new Map<string, Item[]>();
+  for (const s of sections) {
+    if (compact && s.is_pm) continue;
+    for (const [project, item] of itemsOf(s, w)) groups.set(project, [...(groups.get(project) ?? []), item]);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)))
+    .map(([project, items]) => ({
+      project,
+      items: [...items].sort((a, b) => Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name) || a.title.localeCompare(b.title)),
+    }));
+}
+
+export function FollowUpsByProject(props: { sections: Section[]; compact: boolean; onOpenPerson: (person: string) => void }) {
+  const words = useWords();
+  const { t } = words;
+  const Heading = props.compact ? "h4" : "h3";
+  const groups = groupByProject(props.sections, words, props.compact);
+  return (
+    <ol className="queue" aria-label={t("followups.by_project.list")}>
+      {groups.map((g) => (
+        <li key={g.project || "none"} className="line" data-project-group={g.project}>
+          <div className="row single">
+            <div className="text">
+              <Heading className="name">{g.project || t("followups.by_project.none")}</Heading>
+              <span className="sub">{words.tn("followups.by_project.count", g.items.length)}</span>
+            </div>
+          </div>
+          <div className="body">
+            <ul className="children">
+              {g.items.map((item) => (
+                <li key={item.id} className="child" data-row tabIndex={-1}>
+                  <div>
+                    <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
+                    <div className="title">{item.title}</div>
+                    <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].join(" · ")}</div>
+                    <OriginLink origin={item.origin} />
+                  </div>
+                  <div className="acts">
+                    <button type="button" className="btn" aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
+                      {t("followups.by_project.open")}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}

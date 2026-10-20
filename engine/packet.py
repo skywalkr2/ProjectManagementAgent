@@ -87,6 +87,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         from engine.learn import build as learning_packet
 
         return learning_packet(ws, store, cfg, req, kind, today)
+    if kind.name == "action-work":
+        from engine.action_work import build as action_work_packet
+
+        return action_work_packet(ws, store, cfg, req, kind, today)
     if kind.name == "follow-on":
         from engine.follow_on import build as follow_on_packet
 

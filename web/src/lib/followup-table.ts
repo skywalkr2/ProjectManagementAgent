@@ -5,6 +5,7 @@
 // cells; nothing in either copy is a title, an instruction or placeholder text. The screen shows these tables before anything is
 // copied, and nothing here calls an AI.
 import type { S } from "./api";
+import { escapeHtml } from "./copy";
 
 export interface TableLink {
   label: string;
@@ -94,7 +95,7 @@ export function tablesOf(section: S["FollowupSection"], w: TableWords, today: st
   return tables;
 }
 
-const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const escape = escapeHtml;
 
 /** The tables as HTML for mail and chat. A link is its page's name; one that isn't a web address is plain text. */
 export function toHtml(tables: Table[], w: TableWords): string {

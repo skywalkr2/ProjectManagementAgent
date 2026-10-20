@@ -1,7 +1,7 @@
 // Top priorities (design 7.7): a short ranked list across every project, in the rail. One row for each of the person's own
 // things, one row for everyone else however much they hold ("Robin Sample: send 1 question, follow up on 3 waiting up to 5
 // days", the items in its tooltip). The server ranks it by rules; this draws it. Its row actions are the ones the to-do
-// list has: Mark done and Reassign.
+// list has: Mark done, with Reassign and Hand to the assistant in the menu.
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { api, type S } from "../lib/api";
@@ -14,6 +14,7 @@ import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Pill, type PillTone } from "../ui/Pill";
 import { Skeleton } from "../ui/Skeleton";
+import { useHandToAssistant } from "./HandToAssistant";
 import { useNoted } from "./NoteBox";
 import { Empty, Failed, RailPanel } from "./RailPanel";
 import { useReassign } from "./ReassignAction";
@@ -180,6 +181,7 @@ function ActionRow(props: { line: Line; mixed: boolean; onView: (view: View) => 
   const { line } = props;
   const id = line.action!;
   const reassign = useReassign({ id, version: line.version ?? 0, owners: line.owners ?? [] }, () => row.current?.focus());
+  const hand = useHandToAssistant({ id }, () => row.current?.focus());
   const done = (note?: string) =>
     act(
       () => api.actionStatus(id, "done", note),
@@ -191,8 +193,9 @@ function ActionRow(props: { line: Line; mixed: boolean; onView: (view: View) => 
       <Button size="sm" variant="primary" data-key="primary" aria-label={t("today.todo.done_named", { text: line.text })} onClick={() => void done()}>
         {t("followups.mark_done")}
       </Button>
-      <RowMenu label={line.text} actions={[reassign.entry]} />
+      <RowMenu label={line.text} actions={[reassign.entry, ...(hand.entry ? [hand.entry] : [])]} />
       {reassign.form}
+      {hand.form}
     </li>
   );
 }

@@ -1,5 +1,6 @@
 """The wording check: text the screen shows never names a settings file, a secret reference, a settings key, a manifest
-field or a command (design 7.0, 7.1). Terminal output may; the screen may not.
+field or a command, and never shows raw data (braces, brackets that open on a quote, quoted keys) in a title or a line
+(design 7.0, 7.1). Terminal output may; the screen may not.
 
 `problems(text)` finds what a person would have to know the product's insides to read. It reads the words with links
 taken out (`engine/check_text.py`): a link with a query string or a dotted domain is not a settings key. A field a
@@ -38,6 +39,13 @@ _OTHER_COMMANDS = re.compile(
     r"|\bgit (?:pull|push|commit|clone|checkout|status|add|merge|rebase|fetch|log|diff|reset|stash|init|config|remote|"
     r"tag|branch)\b"
 )
+
+
+#: Raw data on screen: a brace or bracket opening on a quote, a brace or a bracket (`{"a": 1}`, `[{`), a flow mapping
+#: with a space after its colon (`{name: Launch}`), or a double-quoted key (`"title":`). A placeholder such as
+#: `{full_name}` or `{order:02}` is none of these, nor is a line that quotes someone ("Is it final?") or a heading that
+#: ends in a colon.
+_RAW_DATA = re.compile(r"[{\[]\s*[\"'{\[]|\{\s*[A-Za-z_][\w-]*\s*:\s+\S|\"[\w][\w .-]{0,40}\"\s*:")
 
 
 def enabled() -> bool:
@@ -109,6 +117,8 @@ def problems(text: str) -> list[str]:
     for match in _DOTTED.finditer(text):
         if _is_key_path(match.group()):
             found.append(f"names a settings key: {match.group()!r}")
+    for match in _RAW_DATA.finditer(text):
+        found.append(f"shows raw data: {text[match.start() : match.start() + 24]!r}")
     commands = command_names()
     for match in re.finditer(r"\bcockpit ([a-z][a-z-]*)", text):
         if match.group(1) in commands:

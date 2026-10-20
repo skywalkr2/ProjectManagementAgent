@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { copyBoth, copyMessage, copyPlain, type CopyResult } from "../lib/copy";
 import { day, localDate, monthDay } from "../lib/dates";
 import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
 import { useRowKeys } from "../lib/keys";
@@ -19,6 +20,7 @@ import { LearnedLines } from "./Learned";
 import { useDropAction } from "./DropAction";
 import { HoldNote, useHold } from "./OnHold";
 import { useHoldFor, useSendNow } from "./HoldFor";
+import { useHandToAssistant } from "./HandToAssistant";
 import { NoteBox, useNoted } from "./NoteBox";
 import { NudgeLeftOut } from "./NudgeLeftOut";
 import { OriginLink } from "./Origin";
@@ -29,7 +31,9 @@ import { Button } from "../ui/Button";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
+import { FollowUpsByProject } from "./FollowUpsByProject";
 
+type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
 const FILTERS: Filter[] = ["send", "later", "waiting"];
 
@@ -44,6 +48,7 @@ export function FollowUps(props: { compact?: boolean }) {
   const compact = !!props.compact;
   const Heading = compact ? "h3" : "h1";
   const [filter, setFilter] = useState<Filter>("send");
+  const [group, setGroup] = useState<Group>("person");
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
   // A Today line asking for a question to be answered: the PM's own questions show under "to send", so the row is there.
   const [revealed, setRevealed] = useState<{ id: string; n: number } | null>(null);
@@ -51,19 +56,22 @@ export function FollowUps(props: { compact?: boolean }) {
   latest.current = followups.data;
   useReveal("question", (question) => {
     if (!latest.current?.some((s) => s.is_pm && s.questions.some((q) => q.id === question))) return false;
+    setGroup("person");
     setFilter("send");
     setRevealed({ id: question, n: Date.now() });
     return true;
   });
   // A link to a person's group (a to-do that waits on them): the filter that shows them is chosen, and their group is looked at.
   const [seeking, setSeeking] = useState<{ id: string; n: number } | null>(null);
-  useReveal("person", (person) => {
+  const seek = (person: string) => {
     const found = latest.current?.find((s) => !s.is_pm && s.person === person);
     if (!found) return false;
+    setGroup("person");
     setFilter(waitingQuestions(found).length + waitingActions(found).length > 0 ? "waiting" : "send");
     setSeeking({ id: person, n: Date.now() });
     return true;
-  });
+  };
+  useReveal("person", seek);
   useEffect(() => {
     if (!seeking) return;
     const group = document.getElementById(`w-${seeking.id}`) ?? document.getElementById(`p-${seeking.id}`);
@@ -72,7 +80,7 @@ export function FollowUps(props: { compact?: boolean }) {
       showRow(row);
       setSeeking(null);
     }
-  }, [seeking, filter, followups.data]);
+  }, [seeking, filter, group, followups.data]);
   const sections = (followups.data ?? []).filter(
     (s) => s.questions.length || (s.later ?? []).length || (s.actions.length && !(compact && s.is_pm)),
   );
@@ -87,13 +95,26 @@ export function FollowUps(props: { compact?: boolean }) {
     <section className={compact ? "panel-section compact" : "panel-section"} aria-labelledby="followups-title">
       <div className="heading">
         <Heading id="followups-title">{t("followups.title")}</Heading>
-        <div className="filters" role="group" aria-label={t("followups.filter")}>
-          {FILTERS.map((f) => (
-            <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-              {t(`followups.filter.${f}`)}
-            </button>
-          ))}
-        </div>
+        {!compact && (
+          <SegmentedControl
+            label={t("followups.group")}
+            value={group}
+            onChange={setGroup}
+            options={[
+              { value: "person", label: t("followups.group.person") },
+              { value: "project", label: t("followups.group.project") },
+            ]}
+          />
+        )}
+        {group === "person" && (
+          <div className="filters" role="group" aria-label={t("followups.filter")}>
+            {FILTERS.map((f) => (
+              <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+                {t(`followups.filter.${f}`)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {followups.isPending ? (
         <Skeleton />
@@ -106,6 +127,8 @@ export function FollowUps(props: { compact?: boolean }) {
         </p>
       ) : sections.length === 0 ? (
         <p className="empty">{t("followups.empty")}</p>
+      ) : group === "project" ? (
+        <FollowUpsByProject sections={sections} compact={compact} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
       ) : shown.length === 0 ? (
         <p className="empty">{t(`followups.empty_${filter}`)}</p>
       ) : (
@@ -247,6 +270,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
   const [noting, setNoting] = useState(false);
   const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
   const drop = useDropAction(a, () => ref.current?.focus());
+  const hand = useHandToAssistant(a, () => ref.current?.focus());
   const done = (note?: string) =>
     act(
       () => api.actionStatus(a.id, "done", note),
@@ -267,7 +291,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
         <button type="button" className="btn primary" onClick={() => void done()}>
           {t("followups.mark_done")}
         </button>
-        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry, drop.entry]} />
+        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, ...(hand.entry ? [hand.entry] : []), hold.entry, change.entry, drop.entry]} />
       </div>
       {noting && (
         <NoteBox
@@ -278,6 +302,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
           }}
         />
       )}
+      {hand.form}
       {hold.form}
       {change.form}
       {drop.form}
@@ -315,14 +340,14 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     window.setTimeout(() => area.current?.focus(), 0);
   };
 
-  // Two deliberate steps. Copy only puts the text on the clipboard; nothing changes on the server. Once it has copied, the
-  // card offers Mark sent, which records the box's text as sent (with Undo). The row menu always offers Mark sent, for
-  // after a reload or a message sent some other way. If the browser blocks the copy, the text is selected for a manual copy.
-  const copy = async () => {
+  // Two deliberate steps. Copy only puts the text on the clipboard, formatted and plain together (mail and documents take
+  // the formatting, chat the plain text); nothing changes on the server. Once it has copied, the card offers Mark sent,
+  // which records the box's text as sent (with Undo). The row menu always offers Mark sent, for after a reload or a
+  // message sent some other way, and Copy as plain text. If the browser blocks the copy, the text is selected for a
+  // manual copy.
+  const copyWith = async (put: (text: string) => Promise<CopyResult>, done: string) => {
     if (!message.trim()) return;
-    try {
-      await navigator.clipboard.writeText(message);
-    } catch {
+    if ((await put(message)) === "blocked") {
       setCopied(false);
       setOpen(true);
       window.setTimeout(() => {
@@ -333,8 +358,10 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
       return;
     }
     setCopied(true);
-    push({ message: t("toast.copied") });
+    push({ message: t(done) });
   };
+  const copy = () => copyWith(copyMessage, "toast.copied");
+  const copyPlainText = () => copyWith(copyPlain, "toast.copied_plain");
 
   // The table is what the message holds, in rows: its words come from the sheet and nothing is added to it.
   const words: TableWords = {
@@ -369,15 +396,8 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   /** Copies the table as HTML (with the tab-separated cells as its plain text), for mail and chat. */
   const copyTable = async () => {
     if (!tables.length) return;
-    try {
-      if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) throw new Error("no rich copy");
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "text/html": new Blob([toHtml(tables, words)], { type: "text/html" }),
-          "text/plain": new Blob([toTsv(tables, words)], { type: "text/plain" }),
-        }),
-      ]);
-    } catch {
+    // A table that could not go as a table is not told as one: the table on screen is selected to copy by hand.
+    if ((await copyBoth(toTsv(tables, words), toHtml(tables, words))) !== "formatted") {
       blocked();
       return;
     }
@@ -387,9 +407,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   /** Copies the table as tab-separated cells with full web addresses, for a spreadsheet. */
   const copySheet = async () => {
     if (!tables.length) return;
-    try {
-      await navigator.clipboard.writeText(toTsv(tables, words));
-    } catch {
+    if ((await copyPlain(toTsv(tables, words))) === "blocked") {
       blocked();
       return;
     }
@@ -419,6 +437,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   const hold = useHoldFor(questions);
   const menu: MenuAction[] = [
     { id: "edit", label: t("followups.edit"), run: edit },
+    { id: "copy-plain", label: t("followups.copy_plain"), run: () => void (!open ? edit() : view === "table" ? copySheet() : copyPlainText()) },
     ...(questions.length > 0 ? [hold.entry] : []),
     { id: "mark-sent", label: t("followups.mark_sent"), run: () => void markSent() },
   ];
@@ -608,11 +627,9 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
   const actions = s.actions.filter((a) => nudge.action_ids.includes(a.id));
   const first = s.name.split(" ")[0];
   const round = has(`followups.nudge.round.${nudge.round}`) ? t(`followups.nudge.round.${nudge.round}`) : t("followups.nudge.round_n", { n: nudge.round });
-  const copy = async () => {
+  const copyWith = async (put: (text: string) => Promise<CopyResult>, done: string) => {
     if (!text.trim()) return;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
+    if ((await put(text)) === "blocked") {
       setCopied(false);
       area.current?.focus();
       area.current?.select();
@@ -620,8 +637,10 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
       return;
     }
     setCopied(true);
-    push({ message: t("toast.copied") });
+    push({ message: t(done) });
   };
+  const copy = () => copyWith(copyMessage, "toast.copied");
+  const copyPlainText = () => copyWith(copyPlain, "toast.copied_plain");
   const markSent = async () => {
     if (!text.trim()) return;
     const done = await act(
@@ -720,6 +739,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
           <button type="button" className="btn primary" onClick={() => void (copied ? markSent() : copy())}>
             {copied ? t("followups.mark_sent") : t("followups.nudge.copy")}
           </button>
+          <RowMenu label={s.name} actions={[{ id: "copy-plain", label: t("followups.copy_plain"), run: () => void copyPlainText() }]} />
         </div>
       </div>
     </div>

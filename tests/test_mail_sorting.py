@@ -564,3 +564,38 @@ def test_the_first_go_estimate_includes_the_sorting_run_so_the_person_approves_t
     finally:
         created.state.store.close()
         set_responder(None)
+
+
+# ---- what the Sources screen shows of it ----------------------------------------------------------------------------
+
+
+def test_a_read_that_could_not_sort_some_mail_keeps_why_on_the_run_and_a_later_clean_read_clears_it(tmp_path, account):
+    from engine.watch import last_run
+
+    account.raw = lambda task, call: json.dumps({"answers": [{"id": "m99", "answer": "sales"}]})
+    ws, cfg, store = make(tmp_path, [unplaced(0), unplaced(1)])
+    try:
+        result = read(ws, store)
+        kept = last_run(store, "m").data["unsorted"]
+        assert kept == result.note and "2 messages weren't sorted by the assistant" in kept
+        account.raw = None
+        read(ws, store)
+        assert last_run(store, "m").data["unsorted"] is None, "a read with nothing unsorted says nothing"
+    finally:
+        store.close()
+
+
+def test_the_sources_list_says_on_the_row_when_its_mail_could_not_be_sorted_and_why(tmp_path, account):
+    from api.app import create_app
+
+    account.raw = lambda task, call: json.dumps({"answers": [{"id": "m99", "answer": "sales"}]})
+    ws, cfg, store = make(tmp_path, [unplaced(0), unplaced(1)])
+    result = read(ws, store)
+    store.close()
+    created = create_app(ws, cfg, "t", start_worker=False)
+    client = TestClient(created)
+    client.headers["Authorization"] = "Bearer t"
+    base = cfg.server.base_path.rstrip("/") + "/api"
+    row = next(s for s in client.get(f"{base}/watch").json() if s["id"] == "m")
+    assert row["last"]["unsorted"] == result.note
+    assert "handed in as work" in row["last"]["unsorted"]

@@ -97,6 +97,29 @@ class Section:
     nudge: Nudge | None = None
 
 
+def actions_to_send(store: Store, cfg: Config) -> set[str]:
+    """The ids of the open actions that are "to send" (design 6.10): an owner other than the person was never told about
+    it, or was told something since changed, and is not someone the person only watches or reports to. The same
+    reading as the Follow-ups groups make, for a row to carry as a marker."""
+    view = store.read()
+    people = People(store, cfg)
+    open_actions = [a for a in view.list("action") if a.data["status"] == "open"]
+    history = view.field_changes("action", TOLD_FIELDS) if any(a.data.get("told") for a in open_actions) else {}
+    found = set()
+    for a in open_actions:
+        d = a.data
+        for owner in d.get("owners", []):
+            who = owner["person"]
+            if who == people.pm or stance_of(view, cfg.steward, who) in UNTOLD_STANCES:
+                continue
+            told = d.get("told", {}).get(who)
+            if told and changed_since_told(history.get(a.id, []), who, d):
+                told = None
+            if not told:
+                found.add(a.id)
+    return found
+
+
 def sections(store: Store, cfg: Config, today: date) -> list[Section]:
     people = People(store, cfg)
     here = zone(cfg)

@@ -147,6 +147,15 @@ test("Appearance shows the measured contrast of the text on the accent color, an
   expect(warning).toHaveTextContent(/Warning: text on your accent color has a contrast of \d+\.\d to 1, under the 4\.5 to 1 that WCAG AA asks for\. Choose a lighter or a darker color\./);
 });
 
+test("Appearance has the list of the person's own pages as a part of its own, not as a read-only row", async () => {
+  const links = item("ui.links", { group: "ui", type: "other", value: [{ name: "Planning board", address: `${WEB}boards.example.org/plan` }], default: [], description: "Links to your own pages." });
+  api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." }), links]);
+  open("appearance");
+  expect(await screen.findByRole("heading", { level: 3, name: "Your pages" })).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "Your pages" })).toHaveTextContent("Planning board");
+  expect(screen.queryByText("Links to your own pages.")).toBeNull();
+});
+
 test("without an address to change, the section list still moves between sections", async () => {
   const user = userEvent.setup();
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
@@ -806,6 +815,7 @@ const ACCOUNT: S["AiAccountView"] = {
   checked_at: null,
   paused_until: null,
   check_usd: null,
+  accepted_unchecked: false,
 };
 const AI_ROUTES = {
   "GET ai/accounts": () => [ACCOUNT],

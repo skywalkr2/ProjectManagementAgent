@@ -280,6 +280,11 @@ function SourceRow(props: {
           <span className="sub">{facts.join(" · ")}</span>
           <span className="sub">{schedule.join(" · ")}</span>
           {found.length > 0 && <span className="sub">{found.join(" · ")}</span>}
+          {source.last?.unsorted && (
+            <p className="hint" data-unsorted="">
+              <strong>{t("sources.unsorted")}</strong> {source.last.unsorted}
+            </p>
+          )}
           {problem && (
             <p className="problem-note" role={props.alert ? "alert" : undefined}>
               {problem}

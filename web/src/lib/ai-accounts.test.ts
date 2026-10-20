@@ -22,6 +22,7 @@ const account = (name: string, extra: Partial<A> = {}): A => ({
   checked_at: null,
   paused_until: null,
   check_usd: null,
+  accepted_unchecked: false,
   ...extra,
 });
 const t = (key: string, vars: Record<string, string | number> = {}) => `${key}${Object.keys(vars).length ? JSON.stringify(vars) : ""}`;

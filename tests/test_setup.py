@@ -698,6 +698,8 @@ def test_an_account_becomes_a_backup_only_once_checked_and_says_which_work_it_ba
     backup = {"routine": "everyday", "deep": "everyday"}
     refused = c.post(f"{api}/ai/accounts/spare", json={"backup": backup, "fingerprint": fingerprint})
     assert refused.status_code == 400 and "spare" in refused.text and "already" not in refused.text
+    # The screens offer "Use it anyway" only where it hasn't been chosen: the account says whether it was.
+    assert not any(a["accepted_unchecked"] for a in c.get(f"{api}/ai/accounts").json())
     accepted = c.post(
         f"{api}/settings", json={"changes": {"ai.providers.spare.accepted_unchecked": True}, "fingerprint": fingerprint}
     ).json()
@@ -707,6 +709,7 @@ def test_an_account_becomes_a_backup_only_once_checked_and_says_which_work_it_ba
     assert all(after.ai.tiers[t].fallback[-1] == "spare/everyday" for t in ("routine", "deep"))
     listed = {a["name"]: a for a in c.get(f"{api}/ai/accounts").json()}
     assert sorted(listed["spare"]["backup_for"]) == ["deep", "routine"] and listed["spare"]["used_for"] == []
+    assert listed["spare"]["accepted_unchecked"] is True
     again = c.post(f"{api}/ai/accounts/spare", json={"backup": backup, "fingerprint": done.json()["fingerprint"]})
     assert again.status_code == 400, "an account already a backup there isn't added twice"
 

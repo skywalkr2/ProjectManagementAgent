@@ -1255,6 +1255,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `news[].quote` | str \| None | `None` | The exact words it came from, when an input said it. |
 | `news[].source` | str \| None | `None` | The id of the source it came from, if any. |
 | `news[].delivered` | bool | `False` | It records a part that was delivered, credited to the owners. |
+| `work` | str \| None | `None` | The work the action stands for (a message, a list, a page) when the assistant drafted it at the person's request. It is long text: a draft waits for the person's review and is theirs once they accept it. The action itself stays the person's. |
 
 ### `question` (Q-n)
 
@@ -1928,6 +1929,7 @@ One read of a watched source and what came of it. The watcher writes it; only a 
 | `new` | int | `0` | Items handed in as new. |
 | `changed` | int | `0` | Items handed in as changed. |
 | `removed` | int | `0` | Items handed in as gone. |
+| `unsorted` | str \| None | `None` | When some of the read's mail wasn't sorted by the assistant, why, in plain words (it was handed in as work instead); none when all of it was sorted or placed by the rules. |
 | `state` | dict[str, Any] | `{}` | What the connector keeps between reads. |
 | `looked_back_to` | date \| None | `None` | For a source's first read that took it in quietly: the day before which its mail was not looked at. A look further back moves it earlier; none for a source with no mail or another kind of first read. |
 

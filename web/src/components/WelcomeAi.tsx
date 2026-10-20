@@ -10,6 +10,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { useSmallMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { asReference } from "../lib/secret-ref";
+import { setAccountCheck } from "../lib/account-checks";
 import { useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -352,34 +353,53 @@ export function WelcomeAi(props: {
       if (drawer) {
         const shown = body.label ?? accountId;
         await afterSave(saved, { message: t(asWork ? "ai_add.done_main" : "ai_add.done", { name: shown }) });
-        // Checked for each kind of work it was added for, with the exact settings, so a failure is said now.
+        // The form is done: it closes now, and the checks go on after it. Each kind of work it was added for is checked with
+        // the exact settings, so a failure is said; the account's row shows the checks as they run (`lib/account-checks`),
+        // and one toast says how they ended.
         const shorts = programPicks ? { everyday: "default", deep: "default" } : { everyday: "everyday", deep: second ? HARDER_SHORT : "everyday" };
         const plan: [string, string][] = [
           ["routine", shorts.everyday],
           ["deep", shorts.deep],
         ];
-        if (chosenFor === "backup") {
-          const bad = await acts.standIn(accountId, plan, t("ai_accounts.backup_set", { name: shown }));
-          if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
-        } else if (asWork) {
-          const bad = await acts.failing(accountId, plan);
-          if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
-          // The account it replaces stays as its backup when it passes its own check, so the work is never left with nothing.
-          for (const prev of mains) {
-            const prevPlan = planFor(prev, prev.used_for);
-            const prevName = accountName(prev, endpoints.data?.find((e) => e.id === prev.kind), t);
-            if (await acts.failing(prev.name, prevPlan)) {
-              push({ message: t("ai_accounts.main_made_not_kept", { name: shown, previous: prevName }) });
-            } else {
-              await acts.save(
-                (fingerprint) => api.changeAccount(prev.name, { fingerprint, backup: Object.fromEntries(prevPlan) }),
-                t("ai_accounts.main_made_kept", { name: shown, previous: prevName }),
-              );
-            }
-          }
-        }
-        await client.invalidateQueries({ queryKey: ["ai-accounts"] });
+        const replaced = mains;
+        const forBackup = chosenFor === "backup";
         drawer.onAdded();
+        void (async () => {
+          const step = (name: string) => (tier: string) => setAccountCheck(name, { running: tier, failed: null });
+          const ended = (name: string, bad: S["AiTestResult"] | null) =>
+            setAccountCheck(name, bad ? { running: null, failed: { detail: bad.detail ?? "", tiers: plan.map(([tier]) => tier) } } : null);
+          try {
+            if (forBackup) {
+              const bad = await acts.standIn(accountId, plan, t("ai_accounts.backup_set", { name: shown }), step(accountId));
+              ended(accountId, bad);
+              if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
+            } else if (asWork) {
+              const bad = await acts.failing(accountId, plan, step(accountId));
+              ended(accountId, bad);
+              if (bad) push({ message: t("ai_add.check_failed", { name: shown, detail: bad.detail }) });
+              // The account it replaces stays as its backup when it passes its own check, so the work is never left with nothing.
+              for (const prev of replaced) {
+                const prevPlan = planFor(prev, prev.used_for);
+                const prevName = accountName(prev, endpoints.data?.find((e) => e.id === prev.kind), t);
+                const prevBad = await acts.failing(prev.name, prevPlan, step(prev.name));
+                setAccountCheck(prev.name, null);
+                if (prevBad) {
+                  push({ message: t("ai_accounts.main_made_not_kept", { name: shown, previous: prevName }) });
+                } else {
+                  await acts.save(
+                    (fingerprint) => api.changeAccount(prev.name, { fingerprint, backup: Object.fromEntries(prevPlan) }),
+                    t("ai_accounts.main_made_kept", { name: shown, previous: prevName }),
+                  );
+                }
+              }
+            }
+          } catch (err) {
+            // Nothing is left on the row that would say a check is still running.
+            for (const name of [accountId, ...replaced.map((a) => a.name)]) setAccountCheck(name, null);
+            push({ message: t("error.failed", { detail: err instanceof ApiError ? err.detail : "" }) });
+          }
+          await client.invalidateQueries({ queryKey: ["ai-accounts"] });
+        })();
         return;
       }
       await afterSave(saved, { message: t("welcome.ai.added", { name: shownLabel.trim() }) });

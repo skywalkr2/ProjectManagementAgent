@@ -8,8 +8,8 @@ import { AiRouting } from "./AiRouting";
 type View = S["AiRoutingView"];
 
 const ACCOUNTS = [
-  { name: "main", label: "Main account", kind: "service-a", adapter: "a", base_url: null, models: { everyday: "m1" }, used_for: ["routine"], backup_for: [], has_key: true, key_state: "saved", key_where: null, key_ending: false, answered_at: null, spent_today_usd: 0, checked_for: [], check_failed_for: [], checked_at: null, paused_until: null, check_usd: null },
-  { name: "big", label: "Strong account", kind: "service-a", adapter: "a", base_url: null, models: { everyday: "m2" }, used_for: ["deep"], backup_for: [], has_key: true, key_state: "saved", key_where: null, key_ending: false, answered_at: null, spent_today_usd: 0, checked_for: [], check_failed_for: [], checked_at: null, paused_until: null, check_usd: null },
+  { name: "main", label: "Main account", kind: "service-a", adapter: "a", base_url: null, models: { everyday: "m1" }, used_for: ["routine"], backup_for: [], has_key: true, key_state: "saved", key_where: null, key_ending: false, answered_at: null, spent_today_usd: 0, checked_for: [], check_failed_for: [], checked_at: null, paused_until: null, check_usd: null, accepted_unchecked: false },
+  { name: "big", label: "Strong account", kind: "service-a", adapter: "a", base_url: null, models: { everyday: "m2" }, used_for: ["deep"], backup_for: [], has_key: true, key_state: "saved", key_where: null, key_ending: false, answered_at: null, spent_today_usd: 0, checked_for: [], check_failed_for: [], checked_at: null, paused_until: null, check_usd: null, accepted_unchecked: false },
 ] as S["AiAccountView"][];
 
 const fit = (tier: string, over: Partial<S["AiKindFit"]> = {}): S["AiKindFit"] => ({

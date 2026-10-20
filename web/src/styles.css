@@ -411,6 +411,11 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-row .tb-title .pill { margin: 0 0 0 var(--space-2); }
 .tb-row .answer-form { flex: 1 0 100%; }
 .tb-row .struck { text-decoration: line-through; }
+/* A meeting added in one line, at the foot of the agenda: the fields share the row and wrap rather than widen it. */
+.meeting-line { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-2); }
+.meeting-line .field { flex: 1 1 8rem; min-width: 0; margin-bottom: 0; }
+.meeting-line .field:first-child { flex-basis: 12rem; }
+.meeting-line .btn { flex: none; }
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
 .tb-row.unread .tb-title { font-weight: var(--weight-semibold); }
 .tb-row .btn.small { flex: none; }

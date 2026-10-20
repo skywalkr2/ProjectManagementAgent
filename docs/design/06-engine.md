@@ -462,6 +462,17 @@ models get wrong. The core wraps the text into the `text.draft` op itself, and t
 (target, length limits, never-shown words, wording lints). A draft that would end mid-sentence because the model hit its output
 limit is continued once, then held.
 
+**Handing an action over.** The person can hand an open action to the assistant from its row (7.5): one `action-work` request,
+a core draft task kind (`output: draft`, the action's `work` long text, its prompt in `prompts/action-work.md` and its playbook
+entry), queued as the person's own request and so estimated and held for the go above the configured amount like any run. The
+answer is a pending draft on the action; nothing else about the action changes, and it stays the person's until they close
+it. A second hand-over is refused while a request or a draft is waiting. Taking the draft as it is corrects nothing; keeping
+part of it records a `draft_edited` signal with the text as kept, and discarding it, or rejecting every change, a `dropped`
+signal, each naming the action, the changeset and the run (6.22). The run reads the knowledge that applies and writes its
+knowledge log like every kind. **Built:** `tests/test_action_work.py`, `tests/test_action_work_api.py`. *Not built:* an
+evaluation case for the kind: the golden set, learning pairs and replays all start from a handed-in input or the person's
+correction, so a draft kind needs a harness step first.
+
 **Paragraph anchors.** A task kind that revises existing long text can ask for an anchored draft (`output: draft, anchored:
 true`). The core divides the base text into the units of its format (5.0) and gives each unit an id in the packet, and the model starts each paragraph it writes with the ids it
 comes from: one id for a kept or rewritten paragraph, several for a merge, the same id on two paragraphs for a split, `new` for

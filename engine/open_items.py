@@ -14,7 +14,7 @@ from typing import Any
 
 from engine.applier import _similar, apply_as_person
 from engine.blocked import Blocker, blocker_of
-from engine.followups import ROUTING, held_until_day
+from engine.followups import ROUTING, actions_to_send, held_until_day
 from engine.names import People, render_owner
 from engine.origin import origins
 from engine.storage import StoreError
@@ -63,6 +63,8 @@ class OpenAction:
     untouched_days: int | None = None
     #: For an action with no owner, the open question asking who owns it.
     owner_question: str | None = None
+    #: An owner other than the person hasn't been told about it yet (design 6.10).
+    to_send: bool = False
 
 
 @dataclass
@@ -119,6 +121,7 @@ def open_actions(
         if q.data["status"] == "open" and (q.data.get("resolves") or {}).get("kind") == "owner"
     }
     rows: list[OpenAction] = []
+    to_send = actions_to_send(store, cfg)
     for a in view.list("action"):
         d = a.data
         if d["status"] not in ("open", "held"):
@@ -175,6 +178,7 @@ def open_actions(
                 blocker=blocker,
                 untouched_days=untouched if state == "stale" else None,
                 owner_question=asking_owner.get(a.id) if state == "no_owner" else None,
+                to_send=a.id in to_send,
             )
         )
     if not light:

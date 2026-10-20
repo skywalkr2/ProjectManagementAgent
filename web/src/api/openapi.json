@@ -1375,6 +1375,12 @@
       "AiAccountView": {
         "description": "An AI account in the settings, for the screens: never its key.",
         "properties": {
+          "accepted_unchecked": {
+            "default": false,
+            "description": "The person accepted it as a backup without its connection check passing (\"Use it anyway\"); the choice is set with POST /api/settings on `ai.providers.<name>.accepted_unchecked`.",
+            "title": "Accepted Unchecked",
+            "type": "boolean"
+          },
           "adapter": {
             "title": "Adapter",
             "type": "string"
@@ -6392,6 +6398,24 @@
         "title": "HandIn",
         "type": "object"
       },
+      "HandOverIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person wants from the work, in their own words.",
+            "title": "Note"
+          }
+        },
+        "title": "HandOverIn",
+        "type": "object"
+      },
       "Handed": {
         "properties": {
           "request": {
@@ -6415,6 +6439,71 @@
           "source"
         ],
         "title": "Handed",
+        "type": "object"
+      },
+      "HandedActionView": {
+        "description": "An action the assistant has in hand (GET /api/actions/handed). `state`: working (queued or running), needs_go\n(held for the person's go, `estimate_usd` is about what it costs) or draft (a draft of the action's work waits for\nreview: `draft` is its version, opened with GET /api/text-versions/{id}/review).",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft"
+          },
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Usd"
+          },
+          "request": {
+            "title": "Request",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "working",
+              "needs_go",
+              "draft"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "request",
+          "state"
+        ],
+        "title": "HandedActionView",
+        "type": "object"
+      },
+      "HandedOver": {
+        "properties": {
+          "request": {
+            "description": "The id of the request that was queued; it waits like any other for the go.",
+            "title": "Request",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "HandedOver",
         "type": "object"
       },
       "HandoverChoice": {
@@ -8639,6 +8728,100 @@
         "title": "MeView",
         "type": "object"
       },
+      "MeetingAdded": {
+        "description": "What adding a meeting in one line did. `merged`: it was already there, so nothing was added: `where` says in the\nperson's own entries (`own`, and `entry` is that entry) or in a connected calendar (`calendar`); `merged_with` is\nits title. Otherwise `entry` is the new entry and `changeset` undoes it (POST /api/changesets/{id}/undo).",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changeset"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry"
+          },
+          "merged": {
+            "title": "Merged",
+            "type": "boolean"
+          },
+          "merged_with": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merged With"
+          },
+          "where": {
+            "anyOf": [
+              {
+                "enum": [
+                  "own",
+                  "calendar"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Where"
+          }
+        },
+        "required": [
+          "merged"
+        ],
+        "title": "MeetingAdded",
+        "type": "object"
+      },
+      "MeetingIn": {
+        "properties": {
+          "day": {
+            "description": "The day, as 2026-10-16.",
+            "title": "Day",
+            "type": "string"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The time of day, as 15:00, in the person's time zone; none for all day.",
+            "title": "Time"
+          },
+          "what": {
+            "description": "What the meeting is, in a few words.",
+            "title": "What",
+            "type": "string"
+          }
+        },
+        "required": [
+          "what",
+          "day"
+        ],
+        "title": "MeetingIn",
+        "type": "object"
+      },
       "MissedIn": {
         "properties": {
           "text": {
@@ -9512,6 +9695,18 @@
             ],
             "title": "To"
           },
+          "to_send": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an action: its owner, other than the person, hasn't been told about it yet (design 6.10).",
+            "title": "To Send"
+          },
           "value": {
             "title": "Value"
           }
@@ -9851,6 +10046,12 @@
           "text": {
             "title": "Text",
             "type": "string"
+          },
+          "to_send": {
+            "default": false,
+            "description": "An owner other than the person hasn't been told about it yet (design 6.10).",
+            "title": "To Send",
+            "type": "boolean"
           },
           "untouched_days": {
             "anyOf": [
@@ -19789,6 +19990,18 @@
           "started_at": {
             "title": "Started At",
             "type": "string"
+          },
+          "unsorted": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When some of the read's mail wasn't sorted by the assistant: why, in plain words. That mail was handed in as work. None when all of it was sorted or placed by the rules.",
+            "title": "Unsorted"
           }
         },
         "required": [
@@ -20375,6 +20588,28 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/actions/handed": {
+      "get": {
+        "operationId": "handed_api_actions_handed_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HandedActionView"
+                  },
+                  "title": "Response Handed Api Actions Handed Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Handed"
+      }
+    },
     "/api/actions/{action_id}/drop": {
       "post": {
         "description": "Drop an action that is no longer needed, with a reason and Undo. It is never done or credited, and it leaves\nevery list. Records a dropped correction naming the change and run that made it, when there was one.",
@@ -20423,6 +20658,56 @@
           }
         },
         "summary": "Drop Action"
+      }
+    },
+    "/api/actions/{action_id}/hand-over": {
+      "post": {
+        "description": "Ask the assistant to draft the work an open action stands for. The action stays the person's.",
+        "operationId": "hand_over_api_actions__action_id__hand_over_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandOverIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandedOver"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hand Over"
       }
     },
     "/api/actions/{action_id}/hold": {
@@ -21731,6 +22016,45 @@
           }
         },
         "summary": "Backup Key Set"
+      }
+    },
+    "/api/calendar/meetings": {
+      "post": {
+        "description": "Add a meeting, or merge it into the one that is already on the calendar. The person's own act, with Undo.",
+        "operationId": "add_api_calendar_meetings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingAdded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add"
       }
     },
     "/api/changes": {

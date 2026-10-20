@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import sheet from "./en.json";
 import schema from "../api/openapi.json";
+import { holdsRawData } from "../lib/raw-data";
 
 const words = sheet as Record<string, string>;
 const root = join(__dirname, "..");
@@ -172,4 +173,9 @@ test("a variant keeps the placeholders of the line it stands in for", () => {
     .filter(([key, text]) => JSON.stringify(holes(text)) !== JSON.stringify(holes(words[key.slice(0, -".unnamed".length)] ?? "")))
     .map(([key]) => key);
   expect(off).toEqual([]);
+});
+
+test("no entry of the sheet shows raw data: no braces around a quoted key and no data structure in a line", () => {
+  const raw = Object.entries(words).filter(([, text]) => holdsRawData(text));
+  expect(raw.map(([key]) => key)).toEqual([]);
 });

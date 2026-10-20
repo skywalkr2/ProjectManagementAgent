@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { whenText } from "../lib/dates";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { TodayRail } from "./TodayRail";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
@@ -631,4 +631,58 @@ test("empty panels show no count of zero, in words or as a badge", async () => {
     const col = document.querySelector(`[data-col="${column}"]`) as HTMLElement;
     expect(within(col).queryByText("0")).toBeNull();
   }
+});
+
+// A meeting added in one line (design 7.7): what, the day and the time, at the foot of the agenda.
+
+const meetingRoutes = (answer: S["MeetingAdded"] = { entry: "EVT-9", changeset: "CS-9", merged: false }): Routes => ({
+  "POST calendar/meetings": () => answer,
+  "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }),
+});
+
+const addLine = async () => within(await column("Agenda")).findByRole("group", { name: "Add a meeting" });
+
+test("a meeting is added from one line: what, the day (today until chosen) and the time, with Undo", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const { calls } = open(meetingRoutes());
+  const line = await addLine();
+  const add = within(line).getByRole("button", { name: "Add" });
+  expect(add).toBeDisabled();
+  expect(within(line).getByLabelText("Day")).toHaveValue(TODAY);
+  await user.type(within(line).getByRole("textbox", { name: "What" }), "Print sync");
+  fireEvent.change(within(line).getByLabelText("Day"), { target: { value: "2026-10-16" } });
+  fireEvent.change(within(line).getByLabelText("Time (optional)"), { target: { value: "15:00" } });
+  await user.click(add);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: "15:00" }));
+  expect(await screen.findByText("Print sync added to your calendar.")).toBeInTheDocument();
+  // The line is ready for the next one.
+  expect(within(line).getByRole("textbox", { name: "What" })).toHaveValue("");
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
+});
+
+test("a meeting with no time is sent without one, and Enter in the line adds it", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const { calls } = open(meetingRoutes());
+  const line = await addLine();
+  await user.type(within(line).getByRole("textbox", { name: "What" }), "Offsite{Enter}");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Offsite", day: TODAY, time: null }));
+});
+
+test("a meeting that is already there is merged into it and said so, with nothing to undo", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  open(meetingRoutes({ entry: null, changeset: null, merged: true, merged_with: "Print sync", where: "calendar" }));
+  const line = await addLine();
+  await user.type(within(line).getByRole("textbox", { name: "What" }), "print sync{Enter}");
+  expect(await screen.findByText("Print sync is already on your calendar, so it was not added again.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+});
+
+test("a refusal is told in the server's words and what was typed stays", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  open({ "POST calendar/meetings": () => new Refuse(409, "The day isn't one I can read; choose it from the calendar.") });
+  const line = await addLine();
+  await user.type(within(line).getByRole("textbox", { name: "What" }), "Print sync{Enter}");
+  expect(await screen.findByText(/The day isn't one I can read/)).toBeInTheDocument();
+  expect(within(line).getByRole("textbox", { name: "What" })).toHaveValue("Print sync");
 });

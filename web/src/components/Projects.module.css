@@ -1,0 +1,5 @@
+/* A project inside another sits one step in from the parent's name, however deep it is. */
+.inside {
+  display: block;
+  padding-inline-start: calc(var(--depth, 0) * var(--space-4));
+}

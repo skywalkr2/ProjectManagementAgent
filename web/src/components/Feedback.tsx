@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Heading } from "react-aria-components";
 import { api } from "../lib/api";
+
+import { copyMessage } from "../lib/copy";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { useToasts } from "../lib/toasts";
 import { parseView, type CoreView, type View } from "../lib/views";
@@ -66,9 +68,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const mailIsMain = !noAddress && !tooLong;
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(mailText(subject, body));
-    } catch {
+    if ((await copyMessage(mailText(subject, body))) === "blocked") {
       setBlocked(true);
       return;
     }

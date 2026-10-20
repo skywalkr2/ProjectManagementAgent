@@ -15,3 +15,5 @@
 .forms form { display: grid; gap: var(--space-2); max-width: 520px; }
 .ok { color: var(--ok); margin: 0; }
 .bad { color: var(--danger); margin: 0; }
+/* What the checks after adding an account found, under its row: what failed and the one choice that is open. */
+.outcome { display: grid; gap: var(--space-2); max-width: 520px; }

@@ -8,6 +8,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Heading, Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { api, ApiError, type S } from "../lib/api";
+
+import { copyPlain } from "../lib/copy";
 import { whenText as when } from "../lib/dates";
 import { useSmallMoney, useTotal } from "../lib/money";
 import {
@@ -467,9 +469,7 @@ function CopyLine(props: { text: string; label: string }) {
   const { push } = useToasts();
   const [blocked, setBlocked] = useState(false);
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(props.text);
-    } catch {
+    if ((await copyPlain(props.text)) === "blocked") {
       setBlocked(true);
       return;
     }

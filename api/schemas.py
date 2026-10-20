@@ -505,6 +505,10 @@ class OpMeta(BaseModel):
     due: str | None = None
     project: str | None = None
     action_status: str | None = None
+    to_send: bool | None = Field(
+        None,
+        description="For an action: its owner, other than the person, hasn't been told about it yet (design 6.10).",
+    )
     to: str | None = None
     field: str | None = None
     value: Any = None
@@ -2873,6 +2877,11 @@ class AiAccountView(BaseModel):
         None,
         description="The data levels the sign-in it runs as may see; none: no limit beyond what the account may see.",
     )
+    accepted_unchecked: bool = Field(
+        False,
+        description='The person accepted it as a backup without its connection check passing ("Use it anyway"); the '
+        "choice is set with POST /api/settings on `ai.providers.<name>.accepted_unchecked`.",
+    )
     check_usd: float | None = Field(
         None,
         description="About what one connection check of it costs, from the prices in the settings or kept from earlier "
@@ -3278,6 +3287,11 @@ class WatchRunView(BaseModel):
     new: int = 0
     changed: int = 0
     removed: int = 0
+    unsorted: ScreenText | None = Field(
+        None,
+        description="When some of the read's mail wasn't sorted by the assistant: why, in plain words. That mail was "
+        "handed in as work. None when all of it was sorted or placed by the rules.",
+    )
 
 
 class SourceSecretView(BaseModel):
@@ -4452,11 +4466,54 @@ class OpenActionView(BaseModel):
     )
     origin: Origin | None = Field(None, description="Where it came from, for its link.")
     untouched_days: int | None = Field(None, description="For a stale one, the days nothing has changed on it.")
+    to_send: bool = Field(
+        False, description="An owner other than the person hasn't been told about it yet (design 6.10)."
+    )
     owner_question: str | None = Field(
         None,
         description="For one with no owner, the open question asking who owns it (answered with POST "
         "/api/questions/{id}/answer).",
     )
+
+
+class MeetingIn(BaseModel):
+    what: str = Field(description="What the meeting is, in a few words.")
+    day: str = Field(description="The day, as 2026-10-16.")
+    time: str | None = Field(
+        None, description="The time of day, as 15:00, in the person's time zone; none for all day."
+    )
+
+
+class MeetingAdded(BaseModel):
+    """What adding a meeting in one line did. `merged`: it was already there, so nothing was added: `where` says in the
+    person's own entries (`own`, and `entry` is that entry) or in a connected calendar (`calendar`); `merged_with` is
+    its title. Otherwise `entry` is the new entry and `changeset` undoes it (POST /api/changesets/{id}/undo)."""
+
+    entry: str | None = None
+    changeset: str | None = None
+    merged: bool
+    merged_with: str | None = None
+    where: Literal["own", "calendar"] | None = None
+
+
+class HandOverIn(BaseModel):
+    note: str | None = Field(None, description="What the person wants from the work, in their own words.")
+
+
+class HandedOver(BaseModel):
+    request: str = Field(description="The id of the request that was queued; it waits like any other for the go.")
+
+
+class HandedActionView(BaseModel):
+    """An action the assistant has in hand (GET /api/actions/handed). `state`: working (queued or running), needs_go
+    (held for the person's go, `estimate_usd` is about what it costs) or draft (a draft of the action's work waits for
+    review: `draft` is its version, opened with GET /api/text-versions/{id}/review)."""
+
+    action: str
+    request: str
+    state: Literal["working", "needs_go", "draft"]
+    draft: str | None = None
+    estimate_usd: float | None = None
 
 
 class OpenQuestionView(BaseModel):

@@ -144,6 +144,21 @@ TASKS: dict[str, TaskKind] = {
     ),
     # One run when a dated record moves or a fact is replaced (design 6.7, follow-on changes): it brings the records
     # tied to the move and asks about them, and drafts a correction for anyone already reached (engine/follow_on.py).
+    # An action handed to the assistant (engine/action_work.py): the person asks for the work it stands for (a message,
+    # a list, a page), and the answer is prose filed as a pending draft of the action's `work` text. It changes nothing
+    # else: the action stays the person's.
+    "action-work": TaskKind(
+        name="action-work",
+        ops=("text.draft",),
+        prompt="action-work",
+        playbook="action-work",
+        label="Drafting the work for an action",
+        on="action",
+        output="draft",
+        field="work",
+        where={"status": ("open",)},
+        defaults={"max_output": 3000, "expected_output": 600},
+    ),
     "follow-on": TaskKind(
         name="follow-on",
         ops=FOLLOW_ON_OPS,
