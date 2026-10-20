@@ -1034,6 +1034,10 @@ yet follow, that it is *designed*, with its phase.
 - **How users steer the product:** *Suggest something* (feedback and `report.draft` as one approved flow), a template
   gallery, an ideas board and release notes that say what came from suggestions. The plan is
   `docs/project/business-model.md`.
+- **After the functional designer's review (3.11, 6.32):** the free app connects Gmail and Outlook through the person's own
+  pasted registration; Plus is the add-on's own registration (one-click) and the packs. A sign-in's default registration
+  may need an entitlement, and stops when a licence lapses; packs keep their version. Gallery templates are untrusted
+  content. Designed, not built.
 
 ## 124. The shell: notices, the stages board, the hand-in drawer, Ask as a pane, the phone's review mode and the walkthrough's look (2026-10-20)
 

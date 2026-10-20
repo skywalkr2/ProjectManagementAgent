@@ -4,6 +4,37 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: The free app connects Gmail and Outlook too; Plus is the one-click sign-in (the functional designer's review)
+
+- **Decided (owner, on the functional designer's review of `docs/project/business-model.md`):** the review's two changes,
+  its owner check and its five smaller points are taken in full.
+  - **The free/paid line is convenience and packs, never whether the app works.** Microsoft has turned off password and
+    app-password sign-in for its personal and work mail, so IMAP alone would leave much of the first audience unable to
+    connect. The free app keeps the person's own pasted app registration for Gmail and Outlook (already built); Plus is
+    the add-on's own registration (one-click) and every pack. The Gmail and Outlook add-on is a free download.
+  - **M1 plans on Google's yearly assessment (CASA)**, not an exemption, and asks Google whether a local app sending mail
+    to the person's own AI account is in scope and what its user-data policy requires for AI processing. The price is
+    set from a break-even line (fixed yearly costs against what each licence brings in), recorded beside it.
+  - **M0, before any sale:** the owner reads the IP and outside-business clauses of their employment or contractor
+    agreements, or has a short consult. R9 is reopened until then.
+  - **A lapsed licence** keeps packs at their version; the one-click sign-in stops, with the person's own registration
+    offered in its place and a Today line, so the owner doesn't carry Google's costs for people who stopped paying.
+  - **Gallery templates are untrusted content**: shown in full before they are added, marked by origin, "from outside"
+    in packets, never followed as instructions.
+  - **The ideas board is on the website**, fed by *Suggest something* and a form, so nobody needs a code host account.
+  - **The licence check is not hardened**; patching it out is accepted.
+  - **M5 hides plans from then on, not the past**: what is already published is assumed copied, and what the public
+    core carries is reviewed before it is cut.
+- **Added beside the review (main session):** the free Gmail path's steps tell the person to set their registration to
+  "In production", since a Google registration left in "Testing" issues sign-ins that expire after seven days; the
+  owner's live check confirms the steps before they ship.
+- **Why:** with nothing connected there is nothing to try and nothing to suggest, so the steering loop would stall; the
+  rest closes cost, legal and trust gaps the first version of the plan left open.
+- **Impact:** design 3.11 (licensed packs: a sign-in's own registration may need an entitlement; free add-ons download
+  with no licence) and 6.32's sign-in order (the add-on's default registration only while its entitlement is held);
+  `docs/project/risks.md` R9 reopened; three new tests named in the plan (the free Outlook.com journey, the lapsed
+  licence, the routing template). Folded into the roadmap under open promise P25, after batch B-7.
+
 ## 2026-10-20: Thimbleby is one free app and one paid upgrade, and its users steer what is built
 
 - **Decided (owner):** "i agree with everything you have said. I really want users who will send me input on what

@@ -415,11 +415,13 @@ Everything in a feed is untrusted: text is shown as text, links show their real 
 setting or an instruction.
 
 **Licensed packs.** One licence, not a price per pack (decisions, 2026-10-20; `docs/project/business-model.md`). A catalog
-entry or a plugin manifest may name an entitlement it needs (such as `plus`). The person adds a licence file on a screen;
+entry, a plugin manifest or a sign-in's own app registration may name an entitlement it needs (such as `plus`). The person adds a licence file on a screen;
 the core keeps it in the workspace's private folder and checks its signature against the public key the release ships
 with, on this computer, with no call home. An entry whose entitlement isn't held shows what it needs and how to get it,
-and its Install fetches the release file through a download address that checks the licence, in place of a read token.
-The core checks a signed entitlement without knowing what it unlocks. Not built yet.
+and its Install fetches the release file through a download address that checks the licence, in place of a read token;
+an entry that needs none downloads with no licence. The core checks a signed entitlement without knowing what it unlocks.
+When a licence lapses, installed packs keep working at their version and their updates stop, and a sign-in's own
+registration that needs the entitlement stops being used (6.32). Not built yet.
 
 **Later:** updates with what changed and re-approval when an update asks for more; asking the assistant knows the catalog, so
 a question the core can't answer but a pack can mentions the pack before a report is drafted; a signed feed and pinned
@@ -437,7 +439,8 @@ token (decisions, 2026-10-11).
   token with `context.access_token(name)`; when the person has to sign in again it raises an `auth` error, which asks them once.
   The plugin never sees the sign-in itself or the refresh token.
 - **Nothing to register.** An add-on can ship its own app registration, so the person only signs in; it explains in a note what
-  using it means. A person who wants their own pastes it on the Sign-ins row beside numbered steps the add-on supplies, with no
+  using it means. The registration may name an entitlement it needs (3.11, licensed packs); without it, the person's own
+  registration is the way in, never a dead end. A person who wants their own pastes it on the Sign-ins row beside numbered steps the add-on supplies, with no
   file or variable to edit, and can set it aside and bring it back. The workspace's references win, and a hosted app uses them.
 - **Said before leaving.** The row says in plain words what the sign-in asks to allow, names the account once signed in,
   and names any permission asked for and not granted. Signing out withdraws the access at the service where it can.
