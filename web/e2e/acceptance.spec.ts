@@ -81,7 +81,6 @@ async function changeOf(page: Page, c: Case): Promise<Change> {
 }
 
 const byId = (id: string) => cases.find((c) => c.id === id)!;
-const firstLine = (text: string) => text.split("\n").find((l) => l.trim())!.trim();
 
 async function signIn(page: Page) {
   page.on("console", (msg) => {
@@ -113,7 +112,8 @@ async function handIn(page: Page, c: Case) {
   await page.getByRole("button", { name: "Hand in", exact: true }).click();
   await expect(reviews).toHaveCount(before + 1, { timeout: 20_000 });
   await go(page, "What changed");
-  const row = page.locator("li.line", { hasText: firstLine(c.pasted ?? c.note ?? "") });
+  // What changed is newest first and titles a change as Today does, so the change just handed in is the top row.
+  const row = page.getByRole("main").locator("li.line").first();
   await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 20_000 });
   const expander = row.locator(".expander").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
@@ -161,12 +161,24 @@ async function focusRing(page: Page) {
     let room = Infinity;
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     const range = document.createRange();
+    // Only the text that is drawn counts: text cut off by an ellipsis is clipped by its nearest container that hides
+    // overflow, so each piece of text is measured within that container.
+    const clipOf = (node: Node) => {
+      for (let e = node.parentElement; e && e !== el; e = e.parentElement) {
+        const o = getComputedStyle(e);
+        if (o.overflowX !== "visible" || o.overflow !== "visible") return e.getBoundingClientRect();
+      }
+      return null;
+    };
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (!node.textContent?.trim()) continue;
       range.selectNodeContents(node);
+      const clip = clipOf(node);
       for (const r of Array.from(range.getClientRects())) {
-        if (r.width === 0) continue;
-        room = Math.min(room, r.left - box.left, box.right - r.right);
+        const left = clip ? Math.max(r.left, clip.left) : r.left;
+        const right = clip ? Math.min(r.right, clip.right) : r.right;
+        if (right - left <= 0) continue;
+        room = Math.min(room, left - box.left, box.right - right);
       }
     }
     for (const c of Array.from(el.querySelectorAll("button, input, select, textarea, a"))) {
@@ -689,7 +701,7 @@ test.describe.serial("acceptance scenario", () => {
     // Before the undo the fact is there to be read.
     await getJson(page, `api/record?kind=fact&id=${factId}`);
 
-    const row = page.locator("li.line", { hasText: firstLine(printer.pasted!) });
+    const row = page.locator(`li.line[data-changeset="${changeset}"]`);
     // Only the first change is open on What changed: open this one to see what it did.
     const expander = row.locator(".expander").first();
     if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
