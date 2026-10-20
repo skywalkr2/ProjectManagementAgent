@@ -3,13 +3,20 @@
 An AI-assisted cockpit for running projects. It watches your sources, has an assistant draft updates, questions and action
 items, and gives you one screen to review, correct and send them out. **The AI drafts; you approve everything that goes out.**
 
+It is becoming Thimbleby, a daily assistant for anyone juggling work, not only project managers: it keeps track of what you
+promised and what was promised to you, and gets the next step ready. Until the installers phase renames things, the code
+and these docs still say PM Cockpit.
+
 The core is a generic base: the watch, triage, draft, review and send-out loop, plus the safety rules around it. Everything
 specific to one kind of work comes from plugins:
 
 - **Connectors** bring inputs in (wikis, trackers, folders, mailboxes, feeds).
-- **Channels** take approved content out (pages, messages, email, posts).
-- **Packs** bundle record types, templates, prompts and panels for one use. The first is publishing support for a small imprint;
-  a workplace status-reporting pack is the reference, and personal projects and social media are planned.
+- **Channels** take approved content out (pages, messages, email, posts). Only Copy is built so far: you paste the approved
+  text where it goes, and nothing is sent for you.
+- **Packs** bundle record types, templates, prompts and panels for one use. Packs live in their own repositories; the first
+  in real use are a writing pack, a project management pack and a publishing pack for a small imprint, and a workplace
+  status-reporting pack is the reference (design Part 9). This repository holds the core, the define-your-own kit and an
+  example add-on.
 
 Any AI vendor can be used through configuration.
 
@@ -20,11 +27,20 @@ can change an installation without changing code.
 
 ## Status
 
-Design 1.0 is complete and the launch slice is built: hand something in (one box, and whose words they are), the assistant
-files actions, questions, facts and notes with the evidence for each, names become people (or a "who is this?" question),
-undo from the change log, What changed and Follow-ups by person with Copy and Mark sent, off-device backups with a nag, an
-evaluation harness for choosing a model, and a web UI that works at any base path, by keyboard and on a phone. Not yet
-real-world tested with a live AI account. See the plan in [`docs/project/`](docs/project/).
+The core loop and the screens are built: hand something in (one box, and whose words they are); the assistant files
+actions, questions, facts, notes and promises with the evidence for each; names become people (or a "who is this?"
+question); Today is the home, a ranked list of what needs you, with Top priorities and This week beside it; What changed
+and Follow-ups, by person or by project, with Copy (formatted and plain together) and Mark sent; undo from the change log;
+off-device backups with a reminder; learning from corrections; opt-in notices; calendars from .ics links and files; several
+accounts of one mail or calendar service; and an evaluation harness for choosing a model. The web UI works at any base
+path, by keyboard and on a phone.
+
+Not built yet: sending mail or changing a calendar for you (only Copy); installers for people who never open a terminal
+(today you install from a package file with a script, or run a checkout); running it on a server (it refuses to start in
+hosted mode); and the rest of the daily assistant (reminders, briefings, meeting prep). Its owner has run it on a real AI
+account and fixed what that found; the measured week on real mail and any outside testing are still ahead. The plan is in
+[`docs/project/`](docs/project/), and what is built and what is left is in its
+[roadmap](docs/project/roadmap-to-1.0.md).
 
 ## Try it
 
@@ -46,9 +62,10 @@ test run's). `uv run cockpit update` updates.
 The first time you run it from the checkout (on macOS or Linux), it also makes `cockpit` work in any folder, so after
 that you can leave out `uv run` and the trip to the checkout.
 
-The workspace starts empty. The first screen is a setup walkthrough of about 10 minutes: your name, your AI account
-(with a test), your mail and calendar (installed, turned on and signed in on the screen, with one restart you press), a
-backup folder and the people you work with. You never edit a file, and nothing is spent until you press Go at the end. For a workspace elsewhere, `uv run cockpit init <folder>`
+The workspace starts empty. The first screen is a setup walkthrough of about 10 to 20 minutes: your name, your AI account
+(a recommended service with numbered steps; the key is checked as you paste it), your mail and calendar (installed, turned
+on and signed in on the screen, with one restart you press), a backup folder (the cloud-drive folders found on the computer
+are offered by name) and the people you work with. You never edit a file, and nothing is spent until you press Go at the end. For a workspace elsewhere, `uv run cockpit init <folder>`
 then `uv run cockpit serve -w <folder>`.
 
 Keep the workspace in your home folder: the system's temporary folders (`/tmp`) are emptied when the computer restarts,
@@ -82,7 +99,7 @@ uv run cockpit evaluate -w ~/cockpit --from workspaces/demo-b --runs 3
 Run before finishing any change:
 
 ```
-uv run ruff check . && uv run pytest && uv run python -m engine.selfcheck
+uv run ruff check . && uv run ruff format --check . && uv run pytest && uv run python -m engine.selfcheck
 npm --prefix web test && npm --prefix web run build && npm --prefix web run e2e
 ```
 

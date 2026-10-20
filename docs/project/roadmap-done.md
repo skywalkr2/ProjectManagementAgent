@@ -1922,6 +1922,153 @@ From the original designer's lessons of 2026-10-14:
   `web/src/components/Today.test.tsx`).
 - [x] **This week at every width** (7.7): a collapsed Today section, and the inspector's view when nothing is selected.
   *Built (B-6b):* `tests/test_this_week.py`, `web/src/components/Today.test.tsx`.
+- [x] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
+  tag before a row's title when the screen mixes projects, left out when it holds one; toasts at the bottom left from
+  1280px, never over a row's controls, with room left under the last row; "Change this" on each item of a review card; a card titled by what it holds ("3 things the
+  assistant did"); Followed up and They finished it in an overdue follow-up's menu; a to-do says what it waits on, linked
+  to the question it depends on; the heading's count and the menu's count agree, folded lines not counted; a line that
+  offers another account names it.
+  *Built (B wave 1):* the project tag, on the lines that carry a project (decisions, questions and owner questions), only
+  while the queue names more than one (`web/src/components/Today.test.tsx`: "a row names its project only when the screen
+  holds more than one", "with one project on screen the tag is left out"); toasts at the bottom left over the navigation
+  column from 1280px, and room under the last row (`web/e2e/shell.spec.ts`: "the style guide has every shared component in
+  every state"; `web/e2e/acceptance.spec.ts`, scenario 4, Mark sent); "Change this" on each applied item of a review card
+  (`web/src/components/WhatChanged.test.tsx`: "each item in a review card has its own Change this, which sends back that
+  item and no other"); a card titled by what it holds (`Today.test.tsx`: "a review card is titled by what it holds"); the
+  heading's count and the menu's count are one number (`Today.test.tsx`: "the heading says how many lines need the person,
+  and the same number is the menu's"; `web/src/shell/Sidebar.test.tsx`: "counts show where they help and an empty count
+  shows nothing"); a line that offers another account names it (`HeldLines.test.tsx`, the borrow line, built earlier).
+  *Left:* the project tag on review and send lines (the engine's queue line carries no project for them: it needs the
+  request's or the person's project on `QueueLineView`); Followed up and They finished it are in a follow-up's menu
+  already, but "Draft a nudge" as the primary has no engine behind it (no nudge message is written yet), so a nudge line's
+  primary opens the waiting items; a to-do that waits on something says what (the hold's own words) but is not linked to
+  the question it depends on, because no record ties an action to a question (a design and ops question for the main
+  session).
+  *Built (B-6b, B-7), what was left:* the project tag on review lines (the request's project, else what it is about, the
+  source's only one, or the one every change names) and on send and follow-up lines (the one project everything they list
+  belongs to) (`tests/test_line_projects.py`); "Draft a nudge" as the primary of a person's follow-up line, which opens
+  the nudge message to them (`web/src/components/TodayFirstScreen.test.tsx`: "a person waited on is one follow-up line
+  saying how many are overdue and since when, with Draft a nudge"; `web/src/components/Today.test.tsx`: "a person who
+  hasn't answered gets a nudge line whose button drafts it, open at once in the details"); a to-do tied to a question
+  says what it waits on, with who was asked and when, and links to the question (`web/src/components/OnHold.test.tsx`:
+  "a to-do tied to a question says Waits on the question with who was asked and when it went out, linking to it").
+- [x] **Setup guide** as steps | step.
+  *Built (B-6b, B-7):* the steps in a list beside the screen that is open, done and skipped ones marked and "You are here"
+  on the current one, and each screen's one primary Continue with "I'll do this later" beside it
+  (`web/src/components/Walkthrough.test.tsx`: "the list has no "Not done yet" on a row, marks done and skipped ones, and
+  says which screen is open", "a screen not done yet has Continue as its one primary button, and I'll do this later is
+  the secondary one beside it", "Skip for now skips the step and moves to the next screen; Back and the list move too,
+  and each is kept").
+- [x] **The UI/UX designer's re-review** (owner, 2026-10-19): once B-6b is pushed, the main session messages
+  the session titled "UI/UX design review" (it runs on this repository with full access and builds the screens itself, so
+  no screenshots are sent) with the commit to review and the list of UI changes since its last review (from
+  `docs/design/CHANGES.md`). It builds and reviews the screens and sends its feedback, which is recorded in one file in
+  `docs/project/`, like the designer answers files. Done when that feedback is received and recorded.
+  *Done (2026-10-20):* the re-review of `c8f8e18` was received and is recorded in `docs/project/ui-rereview-2026-10-20.md`
+  (its full text, screenshots and measuring script in `reviews/ui-ux-2026-10/rereview-c8f8e18/`); checked by reading.
+- [x] **Follow-ups by person, or by project** (a switch; from "What the work version's screens show"): the person's own
+  items first, including corrections the assistant is still working on, with the person's note shown under each; then
+  each person with their open questions ("waiting 5d", red past the follow-up time), Record reply and Respond to the
+  assistant on each; Copy and Mark sent for the person's unsent items; their action items folded under a count, with "1
+  to send".
+  *Built (B-6b):* the switch to By project, which lists every open item under its project with who it is with and where
+  it stands (`web/src/components/FollowUps.test.tsx`: "a switch groups the open items by project, each saying who it is
+  with and where it stands, the ones with no project last"); by person was built in the earlier waves.
+- [x] **Projects at a glance** (from "What the work version's screens show"): the Projects table grouped under their parent
+  project, with the stage, the target date and when it was last updated ("5 days ago"); the health (on track, at risk,
+  on hold) comes from the project management pack when it is on (C2).
+  *Built (B-6b):* grouped under the parent, with stage, target and "Updated 5 days ago", and no health column until a pack
+  provides it (`web/src/components/Projects.test.tsx`: "a project inside another is listed under its parent, in the
+  parent's group, with the parent's name beside it", "the table shows the stage, the target day and when it was last
+  updated in words, and no health column without a pack").
+- [x] **Links to the person's own pages** in the header (from "What the work version's screens show"): a list in Settings
+  (name and address), each opening in a new tab, so the boards and pages they check daily are one click away.
+  *Built (B-6b, B-7):* `ui.links` edited in Settings; from B-7 they are the first group of the person's menu, not a header
+  button (`tests/test_header_links.py`, `web/src/shell/HeaderLinks.test.tsx`, `web/src/components/PageLinks.test.tsx`).
+- [x] **A meeting added in one line** (from "What the work version's screens show"; what and when) on the calendar, the
+  assistant merging it with a duplicate.
+  *Built (B-6b, B-7):* the person's own entry with Undo, or merged into one already there; from B-7 it is added in an
+  "Add to agenda" drawer (`tests/test_add_meeting.py`, `web/src/components/TodayRail.test.tsx`: "a meeting is added from
+  the drawer: what, the day (today until chosen) and the time, with Undo, and the drawer closes").
+- [x] **Never raw data on screen** (from "What the work version's screens show"): the work version shows a raw data
+  structure in a milestone's title. Our wording check covers server text; add a check that no title or line holds braces
+  or quoted keys.
+  *Built (B-6b):* braces, quoted keys and flow mappings fail the wording check for server text and for the wording sheet
+  (`tests/test_screen_text.py`, `web/src/lib/raw-data.test.ts`, `web/src/wording/wording.test.ts`).
+- [x] **No bookkeeping in item text** (B-7; the re-review's §3.5, C51): lints (severity `return`) for reasoning clauses in
+  to-do and question titles and for a question that is a statement; a title under three words falls back to the
+  source's title; the provenance label reads "from Jun Park's email, Oct 20", never the source's raw title.
+  *Built (B-7):* the lints `reasoning-in-title` and `question-is-statement`, held for the person after one return when the
+  item reaches someone else, never invariants (`tests/test_item_text_lints.py`; the cases
+  `question-asked-of-me-nothing-holds-it` and `decision-for-pm` in `tests/test_evaluate_harness.py`); a short topic falls
+  back to the input's first meaningful line (`tests/test_item_titles.py`); the provenance label from the person and the
+  kind of input (`tests/test_record_page.py`, `tests/test_project_knows.py`,
+  `web/src/components/RecordPageRecords.test.tsx`).
+- [x] **One row per thing** (B-7; §3.4, C50): one follow-up line per person ("Follow up with … · 2 overdue, oldest …"),
+  opening the per-person nudge; Top priorities without buttons, each entry linking to its queue line or record.
+  *Built (B-7):* one follow-up line per person that covers what 6.9 says is due and what 6.33 says is late, in place of
+  one "Chase" line per promise (a promise owed by someone the person reports to, and the person's own, keep their lines)
+  (`tests/test_follow_up_lines.py`, `tests/test_promise_lines.py`,
+  `tests/test_stance_lines.py`); Top priorities as links with no buttons and no menu
+  (`web/src/components/TopPriorities.test.tsx`: "an entry has no buttons and no menu, only its words as a link", "an
+  entry that has a line in the queue links to it, and choosing it asks Today to open that line"; `web/src/components/TodayFirstScreen.test.tsx`).
+- [x] **Demo data for answers 27 to 31** (B-7; C53): a moved meeting, a held inference, an inferred fact, a series and a
+  rules line in both fictional workspaces.
+  *Built (B-7):* both workspaces carry one of each, from a history made with the app's own code (`tests/test_demo_examples.py`).
+- [x] **First run for a person with no IT background** (B-7; the reviewer's further feedback,
+  `reviews/ui-ux-2026-10/first-run/`, recorded in `docs/project/ui-rereview-2026-10-20.md`): F2, the AI account step (one
+  recommended service with a "Recommended" tag from data, numbered steps for account, credit and key, a check on paste
+  with a reason per account kind, the data question as one explicit yes per account for work mail and notes with its
+  sign-in identity shown (F25: no default), the model chosen per kind of work and its picker in Advanced, spending as a
+  sentence, one Continue, "I'll do this later" as a secondary button); F4 (backups offer the cloud-drive folders found on
+  the computer, by name, from a list in config, with "Back up now and continue"); F5 (the Done step as a compact list,
+  templates in plain words, never Done for a step not done, no restart talk); F6 (Today's empty state by setup state;
+  "Missed one" only after the assistant has worked); F7 and F8 (Settings and setup words); checks N3 to N7, the wording
+  check extended to labels from config schemas and add-on manifests (N5).
+  *Built (B-7):* `tests/test_first_run_ai.py` (the recommended and alternative service from data, the check on paste, the
+  account's sign-in identity, nothing read of work until allowed), `tests/test_cloud_folders.py`,
+  `tests/test_setup_path_words.py`, `tests/test_setup.py`; the screens in `web/src/components/WelcomeAi.test.tsx`,
+  `web/src/components/Walkthrough.test.tsx` (the AI step's spending sentence, Continue and "I'll do this later", Backups'
+  "Back up now and continue", the Done list), `web/src/components/Today.test.tsx` ("with no AI service an empty Today says
+  to connect one, and its button goes on with setup", "with a service connected and nothing worked on yet, an empty Today
+  says what to hand in", "Missed one appears only once the assistant has worked on something"),
+  `web/src/components/AiCompare.test.tsx` ("Not measured yet", "Nothing measured yet") and `web/src/wording/wording.test.ts`.
+  N3 is met as F25 changed it: the assistant reads work only after the person's explicit yes for that account. N1 and N2
+  (an installer and a sign-in with no add-on screen) are phase I's items; N8 (three people set it up alone) is the
+  friends' preview.
+- [x] **The functional designer's answers to F15 to F25** (B-7; 2026-10-20; `docs/decisions.md`, "The functional designer's
+  answers to F15 to F25"): the chase moves to a hold's blocker and Top priorities shows the blocker; a hold waiting on the
+  person is their own to-do (F15); Top priorities' order overdue, waiting on the person, due within the window, at risk,
+  with only acts for today (F16); a second move within 14 days shown in the person's own history (F17); an approved draft
+  doesn't mark its action done (F19); a task-like plain calendar entry offered as a to-do by rule, and one naming a known
+  person or promise linked by rule (F20); "once …" on hold from the start and "before <a known meeting>" due at it (F21);
+  a non-answer restarts the chase clock once, and a second brings the line back (F22, with its test); a new AI account
+  reads nothing of work until the person allows it, with its sign-in identity shown (F25).
+  *Built (B-7):* F15 `tests/test_chase_moves_to_the_blocker.py`, `tests/test_hold_on_self_is_own_todo.py`; F16
+  `tests/test_top_priorities.py`, `web/src/components/TopPriorities.test.tsx`; F17 `tests/test_second_move_in_history.py`,
+  `web/src/components/RecordPageRecords.test.tsx`; F19 `tests/test_approved_draft_is_not_done.py`,
+  `web/src/components/HandToAssistant.test.tsx`; F20 `tests/test_plain_calendar_entries.py`,
+  `web/src/components/TodayRail.test.tsx`; F21 `tests/test_condition_words_hold.py`; F22
+  `tests/test_news_does_not_silence_the_chase.py`, `web/src/components/TodayPromises.test.tsx`; F25
+  `tests/test_first_run_ai.py`.
+- [x] **"Mark this closed" isn't "done"** (B-7; owner, from running, 2026-10-20; `docs/decisions.md`): an ending is done
+  only with delivery words; words of learning it elsewhere, moving it to a meeting or it no longer mattering call it off
+  with no credit; "close" alone asks "Done by <owner>, or no longer needed?"; moved into a meeting goes on that
+  meeting's agenda, linked; called off after the owner was told drafts "no longer needed, thanks"; the three learning
+  pairs pass.
+  *Built (B-7):* `engine/endings.py` reads the quoted words (`tests/test_endings_need_delivery.py`,
+  `web/src/components/TodayPromises.test.tsx`); the agenda item
+  (`tests/test_agenda.py::test_called_off_into_a_meeting_it_is_dropped_and_put_on_that_meetings_agenda_and_undo_takes_both_back`,
+  `web/src/components/AgendaList.test.tsx`); the three pairs `promise-pair-23-covered-elsewhere`, `-24-closed-asks` and
+  `-25-she-sent-it`, which pass with their ideal answers
+  (`tests/test_pairs.py::test_every_pair_and_the_scenario_pass_with_their_ideal_answers`; a run on a model is the
+  owner's learning run).
+- [x] **Outward material never names the assistant** (B-7; owner, from running, 2026-10-20; `docs/decisions.md`): the
+  invariant, the history row's source from the evidence, the three guards (op check, render, send or publish), the
+  blocked names from `assistant_name` and its earlier names, the sweep of existing rows, and the three tests.
+  *Built (B-7):* the invariant `names-assistant`, the row's source, the withheld message that Mark sent refuses, and
+  `outward.sweep` (`tests/test_outward_never_names_assistant.py`). The publisher calls `outward.check_outgoing` when it
+  is built (S1b-1).
 
 ## Phase S: finished items
 
