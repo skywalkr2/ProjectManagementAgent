@@ -12,8 +12,13 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 - **What it means for the order of work:** the free core release, with its website update, comes first and is not held
   for anything the paid upgrade needs; the paid upgrade's items (the licence, gated downloads and the rest P25 lists)
   follow as a later, conditional phase. Nothing in the core is built to depend on the paid upgrade.
+- **Why (owner):** "I don't want to be beholden to this yearly Google assessment": one-click sign-in to Gmail needs
+  the app verified for restricted mail scopes, with a yearly security assessment. The core connects mail without it
+  (an app password over IMAP, or a registration the person makes themselves, with plain numbered steps), so the core
+  never depends on that verification; one-click sign-in belongs to Thimbleby+, if it happens. This narrows the earlier
+  decision that the installers ship the mail add-on ready to sign in: in the core it ships ready to set up.
 - **Impact:** the roadmap's order after B-7 (the fold of P25 sets the phases); the website's content brief (I-2) for
-  the core release.
+  the core release; the I-1 item "Mail and calendar connect with a sign-in on a fresh install".
 
 ## 2026-10-20: Outward material never names the assistant
 
