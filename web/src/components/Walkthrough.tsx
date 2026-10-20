@@ -359,7 +359,7 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
       </ul>
       <section className={styles.extras} aria-labelledby="walkthrough-extras">
         <h3 id="walkthrough-extras">{t("walkthrough.extras.title")}</h3>
-        <p className={styles.why}>{t("walkthrough.extras.why")}</p>
+        <p className={styles.aside}>{t("walkthrough.extras.why")}</p>
         <StepList
           include={(s) => s.group === "done"}
           onOpenPeople={props.onOpenPeople}
@@ -368,7 +368,7 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           onChooseSource={props.onChooseSource}
         />
       </section>
-      <p className={styles.why}>{t("walkthrough.done.next")}</p>
+      <p className={styles.aside}>{t("walkthrough.done.next")}</p>
     </>
   );
 }
