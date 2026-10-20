@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 131, each in exactly one batch; 223 done items are in `roadmap-done.md`.
+- **Open items:** 132, each in exactly one batch; 223 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -79,7 +79,7 @@ keep each item's full text.
     - *Also covers* (the designer's lessons, 2026-10-19): *An unknown status stays unknown, and an add from a link says when nothing could read it* (design 6.19).
     - *Exit:* the tests each item names pass, and the browser test of every main screen at several widths shows no sideways scroll; the owner works through their own open items on a laptop and a phone.
 
-6. **B-6b The rest of B: Today and the shell** (18 open items; size: about one to two days)
+6. **B-6b The rest of B: Today and the shell** (19 open items; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): *The Today rows as the mockup review set them*, *This week at every width*, *Notifications for "needs you" only*, *The walkthrough's look*, *An unnamed assistant reads as one*, *The header shows the assistant is alive*, *Words and accessibility throughout*; and the open items that fit this area: *After a move* (27), *Held for a look* (28), *Work*, *Setup guide*, *The rest* (Stages board, phone review mode, hand-in drawer, Ask as a side pane), *Review after the first Go*, *When something is due a follow-up*, *Top priorities, always current*, *Copy puts the formatted message and its plain text on the clipboard together*, *What the work version's screens show*.
     - *Exit:* phase B's exit test: the owner reviews every screen on a laptop and a phone; checklist items C1 to C46 are marked Done or explained, with screenshots; the journey tests run against the new screens.
 
@@ -482,6 +482,14 @@ From the original designer's lessons of 2026-10-14:
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
   (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.
 - [ ] [B-6b] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
+- [ ] [B-6b] **Found by the owner's first real use (2026-10-20):**
+  - adding a second AI account closes its form once saved; the account's row shows its checks as they run ("Checking for
+    harder work…") and the outcome, and an account whose sign-in can't be told apart says so with "Use it anyway"
+    (the screenshot: "Adding…" held for minutes while the checks ran);
+  - a plain calendar entry is filed by rule with no AI run and no Review line, if the designer agrees (question F20);
+  - the two follow-up settings (`steward.chase_*_days` and `ui.followups.*_days`) become one, with the impact noted;
+  - the toast-at-390px and the Today-cursor browser tests are made robust under load (each failed once under load and
+    passed alone).
 
 The journey tests from A3 run against the new screens as they land.
 
