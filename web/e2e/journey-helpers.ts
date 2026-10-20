@@ -102,10 +102,19 @@ export async function visit(page: Page) {
 
 export const setupStep = (page: Page, name: string) => page.getByLabel(name, { exact: true });
 
-/** Puts away the toasts on screen, as a person does before moving on. */
+/** Puts away the toasts on screen, as a person does before moving on. A toast can be replaced by a newer one while it is
+ * being clicked (on a busy machine, between finding its button and clicking it), so each click finds and presses the
+ * button in one step on the page, and the toasts are looked at again until none is left. */
 export async function dismissToasts(page: Page) {
-  const dismiss = page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Dismiss" });
-  while (await dismiss.count()) await dismiss.last().click();
+  const region = page.getByRole("region", { name: "Notifications" });
+  const dismiss = region.getByRole("button", { name: "Dismiss" });
+  await expect(async () => {
+    await region.evaluateAll((regions) => {
+      const buttons = regions.flatMap((r) => Array.from(r.querySelectorAll<HTMLButtonElement>('button[aria-label="Dismiss"]')));
+      buttons.at(-1)?.click();
+    });
+    expect(await dismiss.count()).toBe(0);
+  }).toPass({ intervals: [100, 250, 500], timeout: 30_000 });
 }
 
 /** Opens a view from the sidebar, or on a phone from the bottom bar's sheets. */
