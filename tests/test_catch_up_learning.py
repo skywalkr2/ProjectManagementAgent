@@ -265,6 +265,16 @@ def test_the_router_skips_an_unchecked_or_failed_backup_and_takes_a_checked_or_a
     assert choice.provider == "second"
 
 
+def test_the_main_account_listed_again_as_its_own_backup_is_never_held_as_an_unchecked_backup(env):
+    ws, _, store = env
+    add_account(ws, "second")
+    flags = {"ai.tiers.routine.use": "second/default", "ai.tiers.routine.fallback": ["second/default"]}
+    cfg = ws.config(env={}, flags=flags)
+    assert [c.provider for c in choices(cfg, "notes", "open", unchecked={("routine", "second/default")})][:1] == [
+        "second"
+    ]
+
+
 def test_when_skipping_an_unchecked_backup_leaves_no_account_the_run_waits_with_the_usual_stop_and_line(env):
     ws, _, store = env
     add_account(ws, "second")

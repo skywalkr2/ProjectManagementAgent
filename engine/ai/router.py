@@ -118,13 +118,14 @@ def choices(
     refused: list[str] = []
     blocked: list[str] = []
     waiting_on_identity: list[IdentityHeld] = []
-    for ref in [use] if use is not None else [tier_cfg.use, *tier_cfg.fallback]:
+    for place, ref in enumerate([use] if use is not None else [tier_cfg.use, *tier_cfg.fallback]):
         provider_name, _, model_key = ref.partition("/")
         provider = cfg.ai.providers.get(provider_name)
         if provider is None:
             refused.append(f"{provider_name} isn't one of your AI accounts")
             continue
-        if use is None and (tier_name, ref) in unchecked:
+        # Only a backup waits for its check: the tier's main account is never one, even when it is also listed as one.
+        if use is None and place > 0 and (tier_name, ref) in unchecked:
             refused.append(f"{provider_name} is a backup that hasn't passed its connection check for this work")
             continue
         if LEVELS.index(data_level) > max(LEVELS.index(lvl) for lvl in provider.allowed_data):
