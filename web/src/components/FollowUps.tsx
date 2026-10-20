@@ -512,6 +512,11 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                 ))}
               </ul>
               <div className="message">
+                {s.withheld && (
+                  <p className="hint" role="alert">
+                    {s.withheld}
+                  </p>
+                )}
                 <label className="hint" htmlFor={`msg-${s.person}`}>
                   {t("followups.message_label", { name: s.name })}
                 </label>
@@ -523,7 +528,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                       {t("followups.reset")}
                     </button>
                   )}
-                  <button type="button" className="btn primary" onClick={primary}>
+                  <button type="button" className="btn primary" onClick={primary} disabled={!!s.withheld}>
                     {copied ? t("followups.mark_sent") : t("followups.copy_message")}
                   </button>
                 </div>
@@ -714,6 +719,11 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
         <NudgeLeftOut items={nudge.left_out} />
       </ul>
       <div className="message">
+        {nudge.withheld && (
+          <p className="hint" role="alert">
+            {nudge.withheld}
+          </p>
+        )}
         <label className="hint" htmlFor={`nudge-msg-${s.person}`}>
           {t("followups.message_label", { name: s.name })}
         </label>
@@ -733,11 +743,11 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
             </button>
           )}
           {!copied && (
-            <button type="button" className="btn quiet" onClick={() => void markSent()}>
+            <button type="button" className="btn quiet" onClick={() => void markSent()} disabled={!!nudge.withheld}>
               {t("followups.mark_sent")}
             </button>
           )}
-          <button type="button" className="btn primary" onClick={() => void (copied ? markSent() : copy())}>
+          <button type="button" className="btn primary" onClick={() => void (copied ? markSent() : copy())} disabled={!!nudge.withheld}>
             {copied ? t("followups.mark_sent") : t("followups.nudge.copy")}
           </button>
           <RowMenu label={s.name} actions={[{ id: "copy-plain", label: t("followups.copy_plain"), run: () => void copyPlainText() }]} />

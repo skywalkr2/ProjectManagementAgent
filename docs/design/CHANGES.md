@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 133. Outward material never names the assistant: the invariant, the render, the send step and the sweep (2026-10-20; batch B-7)
+
+| Where | Before | Now |
+|---|---|---|
+| What others read (6.7) | An input could close someone's action and a history line on a shared page said "Reported by <assistant>, 10/20", "<assistant> PM judgment, 10/6" | An invariant, `names-assistant`, refuses an op that writes what others read (the text of a shared item, a history line, a reporter or an author) when it holds the current `assistant_name`, any name in the settings history or the product's default, as whole words ignoring case; the person's own screen action is not checked. Built: `tests/test_outward_never_names_assistant.py` |
+| A history row's source (7.14) | A row's actor said `assistant` | Rows shown to readers (`changes_for_readers`, plugin API `view.changes`) carry `actor` `pm` or `input` and `source`: the one known person and the day, the input's title and day, or "recorded <day>"; the person's own history is unchanged. `Change.source` is new and `docs/plugin-guide.md` is regenerated; the plugin API version is not changed here |
+| What goes out (6.12) | Copy and the follow-up drafts carried whatever the records held | A message or drafted follow-up that still holds a name is not offered (`withheld`, Copy disabled) and marking it sent is refused; `outward.check_outgoing` is the function the publisher must call when it is built |
+| Lines already written (6.7) | Nothing | `outward.sweep` re-sources a project's history lines that name the assistant from the ledger's evidence, keeping their dates, as one change of the core's own with Undo; it runs when the app starts and after every rename of the assistant |
+| Settings (4.6) | | `language.messages.source_by_person`, `source_input`, `source_recorded`, `source_date_format`, `withheld_where`, `withheld_name`, `resourced_summary` and `resourced_label`, each with a description, a default and demo values in both fictional workspaces |
+
 ## 131. "Mark this closed" isn't "done": an ending needs delivery words, and two leftovers from the designer's answers (2026-10-20; batch B-7)
 
 | Where | Before | Now |

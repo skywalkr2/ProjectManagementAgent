@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import audience, draft_checks, endings, knowledge, learn, proposals, reply_lines, scope
+from engine import audience, draft_checks, endings, knowledge, learn, outward, proposals, reply_lines, scope
 from engine import search as workspace_search
 from engine import series as series_module
 from engine.blocked import blocker_problem
@@ -192,6 +192,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     known_actions = view.list("action")
     similarity = ctx.cfg.checks.tuning.near_duplicate_action.similarity
     first_week = _FirstWeek(ctx, view)
+    assistant_names = outward.assistant_names(view, ctx.cfg.workspace.assistant_name)
     origin = origin_of(ctx)
     about = origin.get("about") or {}
     about_record = view.get(about["kind"], about["id"]) if about.get("kind") and about.get("id") else None
@@ -221,6 +222,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         # The person's own note saying they already asked is theirs to file; outside content never is.
         if name in PERSON_ONLY_OPS and ctx.actor != "pm" and not (name == "question.mark_sent" and _from_pm(view, ctx)):
             refuse(i, "person-only", f"only the person can use {name}")
+            continue
+        # What others read never names the assistant, whoever wrote it but the person on their own screen.
+        if ctx.actor != "pm" and (why := outward.op_problem(op, assistant_names)) is not None:
+            refuse(i, "names-assistant", why)
             continue
         if isinstance(op, (TextEditOp, TextProposeOp, TextDraftOp)):
             why = _text_target(ctx.store, view, op.record.kind, op.record.id, op.field)

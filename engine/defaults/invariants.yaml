@@ -25,6 +25,31 @@ invariants:
     seed: >-
       Some changes are the person's alone: editing text, accepting or discarding a proposed version, editing a
       record's fields. Never include them. Propose the new text for the person to review, or ask a question.
+  names-assistant:
+    ops:
+      - note
+      - fact
+      - event.add
+      - series.add
+      - record.log
+      - action.add
+      - action.reply
+      - action.hold
+      - action.drop
+      - action.part
+      - action.news
+      - question.add
+      - question.update
+      - question.drop
+      - question.done
+      - project.add
+      - record.set
+    line: The assistant is never a source, reporter or author of what others read; its name (now or earlier) in a shared item, a history line or a reporter is refused.
+    seed: >-
+      Never put your own name, or any name you have gone by, in a history line, a reporter, an author or the text of
+      anything another person reads. A history line's source is the evidence: the page, mail or person and the day
+      (for example "the sync notes, Oct 14"), or the person for their own note. When several inputs led to a call,
+      cite those inputs or the person who approved it.
   one-owner:
     ops:
       - action.add

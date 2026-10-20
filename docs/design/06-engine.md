@@ -672,6 +672,25 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
 - The model's name never appears in anything a person sees.
 - A question to anyone but the PM has at least one link, and only links they can open (no local files, no cockpit pages).
 - Unreadable output never applies; the dispatcher retries the run (6.6).
+- **Outward material never names the assistant** (the owner's lesson from running, 2026-10-20; `engine/outward.py`): an op
+  that writes what others read (the text of a shared item, a history line, a reporter or an author) and holds one of the
+  names the assistant has gone by is refused, with the reason in plain words (`names-assistant`; never a lint, never
+  configurable). The names are the current `workspace.assistant_name`, every earlier value in the settings history
+  (`setting_change`) and the product's default, matched as whole words ignoring case, so renaming the assistant blocks the
+  new name and the old one. A name that is also an ordinary word ("assistant") counts in free text only where it
+  attributes something ("by Assistant", "Assistant, 10/8", "Assistant's judgment"), so "an executive assistant" stays
+  writable; the sweep replaces a whole attribution phrase with its source, not only the name. A history line's source is the evidence, never the assistant: the page, mail or person and the
+  day ("the Oct 14 sync notes"), the person for their own note, and for a call from several inputs those inputs or the
+  person who approved it. The person's own action on their own screen is their own words and is not checked; the person's
+  own screens may still say the assistant did something. The same rule guards the render for readers (6.12, 7.14), the
+  send step (6.12) and a sweep: `outward.sweep` re-sources a project's history lines that name the assistant from the
+  ledger's evidence (the row that wrote each line), keeping each line's date, as one change of the core's own that Undo
+  takes back; it runs when the app starts and after every rename. **Built so far (B-7):**
+  `tests/test_outward_never_names_assistant.py::test_an_op_for_what_others_read_naming_the_assistant_is_refused_with_the_reason`,
+  `::test_renaming_the_assistant_blocks_the_new_name_and_the_old_one_on_what_others_read`,
+  `::test_closing_someones_action_from_an_unattributed_input_writes_a_row_sourced_by_the_input`. *Not built:* a plugin's own
+  record types cannot yet say which of their fields others read (the check covers the core's ops and fields); that needs a
+  generic extension point.
 - **Evidence matches:** an op that needs evidence has it, and its quoted words appear in the cited source's saved text
   (whitespace and quote marks normalized). A quote that isn't there is refused: the cheapest defence against a model that is
   confident and wrong, and against an injected instruction pointing at text that doesn't exist. (A real but wrong target, like
@@ -1192,6 +1211,16 @@ for it, that nothing goes out without the PM approving that exact content, alrea
   scheduled draft clears its approval.
 - Change classification for the review list: real change, order only, layout or format only, columns changed, text the target
   doesn't show. Never show an empty "+0 −0" draft.
+- **The send step refuses the assistant's name** (the owner's lesson from running, 2026-10-20; `engine/outward.py`): content
+  going to someone else is refused while it still holds a name the assistant has gone by (6.7), saying where ("the message
+  to Ana"). Today that is Copy: the follow-up message and the drafted follow-up are not offered (`FollowupSection.withheld`,
+  `NudgeView.withheld`, with the reason in `language.messages.withheld_name`, and Copy is disabled), and marking one sent
+  with text that holds a name is refused (409). **The publisher must call `outward.check_outgoing` on every draft before
+  it sends or publishes anything**, with a label for each part; the publisher is not built, so nothing calls it for a
+  channel yet. The readable export (`data/`, the synced folder, backups) is the person's own complete record and is not
+  outward; the first export a person hands to someone else (for example their lessons) must call the same function.
+  **Built so far (B-7):** `tests/test_outward_never_names_assistant.py::test_the_send_step_refuses_what_still_names_the_assistant_and_says_where`,
+  `web/src/components/FollowUps.test.tsx` ("a message that still names the assistant shows why it is held back and cannot be copied").
 
 ## 6.13 Governor, automation problems and reports
 

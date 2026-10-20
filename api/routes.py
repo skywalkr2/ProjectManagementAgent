@@ -1760,7 +1760,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         view = store.read()
         action_origin = origins(view, "action", [a["id"] for s in found for a in s.actions])
         question_origin = origins(view, "question", [q["id"] for s in found for q in (*s.questions, *s.later)])
-        return [_section(s, people, action_origin, question_origin) for s in found]
+        return [_section(s, people, action_origin, question_origin, store, cfg) for s in found]
 
     @r.post("/followups/{person}/mark-sent")
     def sent(person: str, body: SentText) -> SentCounts:
@@ -2269,9 +2269,10 @@ def _op_view(
     )
 
 
-def _nudge_view(n: Any) -> NudgeView:
+def _nudge_view(n: Any, withheld: str | None = None) -> NudgeView:
     return NudgeView(
-        text=n.text,
+        text="" if withheld else n.text,
+        withheld=withheld,
         round=n.round,
         question_ids=n.question_ids,
         action_ids=n.action_ids,
@@ -2279,7 +2280,16 @@ def _nudge_view(n: Any) -> NudgeView:
     )
 
 
-def _section(s: Any, people: People, action_origin: dict[str, Any], question_origin: dict[str, Any]) -> FollowupSection:
+def _section(
+    s: Any, people: People, action_origin: dict[str, Any], question_origin: dict[str, Any], store: Any, cfg: Any
+) -> FollowupSection:
+    from engine.followups import message_where
+    from engine.outward import outgoing_problem
+
+    where = message_where(cfg, s.name)
+    held = None if s.is_pm else outgoing_problem(store.read(), cfg, {where: s.message})
+    nudge_held = None if s.is_pm or s.nudge is None else outgoing_problem(store.read(), cfg, {where: s.nudge.text})
+
     def question_views(rows: list[dict[str, Any]]) -> list[FollowupQuestion]:
         return [_followup_question(q, people, question_origin) for q in rows]
 
@@ -2310,9 +2320,10 @@ def _section(s: Any, people: People, action_origin: dict[str, Any], question_ori
         questions=questions,
         later=later,
         actions=actions,
-        message=s.message,
+        message="" if held else s.message,
+        withheld=held,
         to_send=s.to_send,
-        nudge=_nudge_view(s.nudge) if s.nudge is not None else None,
+        nudge=_nudge_view(s.nudge, nudge_held) if s.nudge is not None else None,
     )
 
 

@@ -333,7 +333,7 @@ Live records of a kind, optionally only those in one project (`project=None` for
 
 #### `view.changes(kind: str, record_id: str, /) -> list[Change]`
 
-The history of a record as readers are shown it, oldest first, for a status page or a report: every change but one that only moves a date on an existing item (the same words, a new due or start date), which is not news. A date move together with any other change, a first date, a date taken away and every new, closed or blocked item stay. The ledger keeps every change; this only leaves some out of what is shown. Reading another plugin's kind raises PluginMisuse; a record that doesn't exist has no changes.
+The history of a record as readers are shown it, oldest first, for a status page or a report: every change but one that only moves a date on an existing item (the same words, a new due or start date), which is not news. A date move together with any other change, a first date, a date taken away and every new, closed or blocked item stay. The ledger keeps every change; this only leaves some out of what is shown. Each change says where it came from in `source` (the input and its day, or the person for their own words), and its `actor` is `pm` or `input`, never the assistant. Reading another plugin's kind raises PluginMisuse; a record that doesn't exist has no changes.
 
 #### `view.person_name(person_id: str | None = None) -> str`
 
@@ -411,7 +411,7 @@ A record as read: its kind, id, current version (state it when updating), whethe
 
 ### Change
 
-One change to one field of a record, as a reader of its history is shown it: when, by whom, and the value before and after. A record's creation or removal has no `field`.
+One change to one field of a record, as a reader of its history is shown it: when, by whom, and the value before and after. A record's creation or removal has no `field`. `actor` is `pm` for the person's own change and `input` for any other; `source` is where it came from, worded for a reader (the input and its day, or the person for their own words), which is never the assistant.
 
 | Field | Type | Default |
 |---|---|---|
@@ -422,6 +422,7 @@ One change to one field of a record, as a reader of its history is shown it: whe
 | `after` | Any | required |
 | `actor` | str | required |
 | `version` | int | required |
+| `source` | str | `''` |
 
 ## Events
 

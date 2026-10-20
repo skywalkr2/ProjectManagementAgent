@@ -1700,6 +1700,7 @@ class PluginHost:
         view.read_interface = lambda spec, project=None: self.read_interface(plugin, spec, project)
         view.find_interface_about = lambda item, task: self.interface_about(plugin, item, task)
         view.user = self.cfg.workspace.user.person
+        view.source_cfg = self.cfg
         view.stage_status_of = self._stage_status
         return view
 

@@ -6608,6 +6608,18 @@
           "to_send": {
             "title": "To Send",
             "type": "integer"
+          },
+          "withheld": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the message is not offered to copy: it still names the assistant, which what goes to someone else never does. `message` is empty then.",
+            "title": "Withheld"
           }
         },
         "required": [
@@ -9897,6 +9909,18 @@
           "text": {
             "title": "Text",
             "type": "string"
+          },
+          "withheld": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the message is not offered to copy: it still names the assistant. `text` is empty then.",
+            "title": "Withheld"
           }
         },
         "required": [

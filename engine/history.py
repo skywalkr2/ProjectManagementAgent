@@ -8,7 +8,10 @@ is news and stays. The ledger keeps every row; this only decides what a reader i
 
 The person's own history is the one place a date move can show: a second move of the same date within a configured
 number of days is kept, marked with how many times it has moved in the run and the day the run began, for the screen to
-say "moved again (second time since Oct 6)". Nothing drafted for others, and no plugin's view, reads it. Reads only.
+say "moved again (second time since Oct 6)". Nothing drafted for others, and no plugin's view, reads it.
+
+What readers see also never says the assistant made a change: each row gives its source as the evidence instead.
+Reads only.
 """
 
 from __future__ import annotations
@@ -131,6 +134,14 @@ def changes_for_person(view: Any, kind: str, record_id: str, within_days: int) -
     return out
 
 
-def changes_for_readers(view: Any, kind: str, record_id: str) -> list[dict[str, Any]]:
-    """A record's ledger rows as readers see them, oldest first: every change but a pure date move."""
-    return for_readers(view.ledger(kind=kind, record_id=record_id), view.models.get(kind))
+def changes_for_readers(view: Any, kind: str, record_id: str, cfg: Any = None) -> list[dict[str, Any]]:
+    """A record's ledger rows as readers see them, oldest first: every change but a pure date move, each with the
+    evidence it rests on as `source` (the input and its day, or the person for their own words) and `actor` as the
+    person or an input, never the assistant (`engine/outward.py`). `cfg` gives the wording and the person's name."""
+    from engine.outward import SourceLabels, reader_row
+
+    labels = SourceLabels(view, cfg)
+    return [
+        reader_row(r, labels(r))
+        for r in for_readers(view.ledger(kind=kind, record_id=record_id), view.models.get(kind))
+    ]

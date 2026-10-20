@@ -114,7 +114,9 @@ class NeedsPerson(StoreError):
 @dataclass(frozen=True)
 class Change:
     """One change to one field of a record, as a reader of its history is shown it: when, by whom, and the value before
-    and after. A record's creation or removal has no `field`."""
+    and after. A record's creation or removal has no `field`. `actor` is `pm` for the person's own change and `input`
+    for any other; `source` is where it came from, worded for a reader (the input and its day, or the person for
+    their own words), which is never the assistant."""
 
     at: str
     op: str
@@ -123,6 +125,7 @@ class Change:
     after: Any
     actor: str
     version: int
+    source: str = ""
 
 
 class ReadView:
@@ -194,19 +197,32 @@ class ReadView:
     find_interface_about: Callable[..., Any] | None = None
     #: Set by the host: the id of the person this workspace belongs to (the PM), when set up.
     user: str | None = None
+    #: Set by the host: the settings the wording of a history row's source follows.
+    source_cfg: Any = None
 
     def changes(self, kind: str, record_id: str, /) -> list[Change]:
         """The history of a record as readers are shown it, oldest first, for a status page or a report: every change
         but one that only moves a date on an existing item (the same words, a new due or start date), which is not
         news. A date move together with any other change, a first date, a date taken away and every new, closed or
-        blocked item stay. The ledger keeps every change; this only leaves some out of what is shown. Reading another
-        plugin's kind raises PluginMisuse; a record that doesn't exist has no changes."""
+        blocked item stay. The ledger keeps every change; this only leaves some out of what is shown. Each change says
+        where it came from in `source` (the input and its day, or the person for their own words), and its `actor` is
+        `pm` or `input`, never the assistant. Reading another plugin's kind raises PluginMisuse; a record that doesn't
+        exist has no changes."""
         from engine.history import changes_for_readers
 
         self._allow(kind)
         return [
-            Change(str(r["at"]), r["op"], r.get("field"), r.get("before"), r.get("after"), r["actor"], r["version"])
-            for r in changes_for_readers(self.__view, kind, record_id)
+            Change(
+                str(r["at"]),
+                r["op"],
+                r.get("field"),
+                r.get("before"),
+                r.get("after"),
+                r["actor"],
+                r["version"],
+                r["source"],
+            )
+            for r in changes_for_readers(self.__view, kind, record_id, self.source_cfg)
         ]
 
     def person_name(self, person_id: str | None = None) -> str:

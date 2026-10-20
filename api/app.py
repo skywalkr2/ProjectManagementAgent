@@ -150,6 +150,13 @@ def create_app(
     ensure_lists(store)
     seed_rules(store)
     try:
+        # History lines that name the assistant are re-sourced from the ledger's evidence, once; later starts find none.
+        from engine.outward import sweep as resource_history
+
+        resource_history(store, cfg)
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't re-source history lines that name the assistant: %s", err)
+    try:
         # Names older settings and rules hold for a project or person become their ids, so a rename can't detach them.
         from engine.references import join_stored_names
 

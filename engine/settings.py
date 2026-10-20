@@ -563,9 +563,22 @@ def save(
             if key == PLUGINS_ENABLED:
                 audit.plugin_changes(tx, list(was or []), list(after or []))
             saved.changes.append({k: v for k, v in entry.items() if k != "at"})
+    if any(c["key"] == "workspace.assistant_name" for c in saved.changes):
+        _resource_history(store, checked)
     if cfg.storage.export.commit:
         _commit(ws.root, [config_dir / f"{name}.yaml" for name in texts], [c["key"] for c in saved.changes])
     return saved
+
+
+def _resource_history(store: Any, cfg: Any) -> None:
+    """After the assistant is renamed, history lines that name it (now or before) are re-sourced from the ledger. A
+    failure here never undoes the save."""
+    from engine.outward import sweep
+
+    try:
+        sweep(store, cfg)
+    except Exception as err:
+        log.warning("Couldn't re-source history lines after the assistant's rename: %s", err)
 
 
 #: The setting that lists the add-ons that run; changing it is audited.

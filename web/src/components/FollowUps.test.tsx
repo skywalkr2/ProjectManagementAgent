@@ -60,6 +60,18 @@ test("Copy puts the edited message on the clipboard and changes nothing on the s
   expect(screen.queryByText(/Marked as sent/)).toBeNull();
 });
 
+test("a message that still names the assistant shows why it is held back and cannot be copied", async () => {
+  const user = userEvent.setup();
+  const reason = "Held back: the message to Robin Sample names Helper. Take the name out before this goes to anyone.";
+  const held = [sections[0], { ...sections[1], message: "", withheld: reason }];
+  const calls = fakeApi({ ...markSentRoutes, "GET followups": () => held });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(reason);
+  expect(screen.getByRole("button", { name: "Copy message" })).toBeDisabled();
+  expect(posts(calls)).toHaveLength(0);
+});
+
 afterEach(() => {
   // A test that gave the browser a rich clipboard takes it away again.
   vi.unstubAllGlobals();

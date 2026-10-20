@@ -295,6 +295,11 @@ Built keys:
   reason; "closed" ("close", "closed", "close out") with neither, or both kinds together, asks "Done by <owner>, or no longer
   needed?". Whole words, ignoring case; demo values in both fictional workspaces. `messages.called_off_notice` is the one line
   drafted for someone who was already told about an action when it is called off.
+- `language.messages.source_by_person`, `source_input`, `source_recorded` and `source_date_format`: how a history row's source is
+  worded for readers (6.7): the one known person and the day, an input's title and day, or "recorded <day>"; `withheld_where`
+  and `withheld_name` say why a message to someone else is not offered while it names the assistant; `resourced_summary`
+  and `resourced_label` word the change the sweep makes. Each has a description, a default and demo values in both fictional
+  workspaces.
 - `task_verbs`: the verbs a task's title starts with ("pay", "send", "book", …); a plain calendar entry whose first word is
   one is offered as a to-do with one click (6.2, 6.32).
 - `steward.second_move_days` (14): a second move of the same date within this many days is shown in the person's own

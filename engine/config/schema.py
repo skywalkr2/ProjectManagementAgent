@@ -1394,6 +1394,45 @@ class MessageSettings(ConfigModel):
         description="The one line drafted for someone who was already told about an action when it is called off, for "
         "you to send: {item} is the action. Nothing is sent by itself.",
     )
+    source_by_person: str = Field(
+        "{who}, {date}",
+        description="What a history line's source says when the evidence is one known person (an input from them, or "
+        "the person's own note): {who} is their name and {date} the day. Never the assistant.",
+    )
+    source_input: str = Field(
+        "the {date} {what}",
+        description="What a history line's source says when the evidence is an input that is not from one known "
+        "person: {date} is the day it came in and {what} its title. Never the assistant.",
+    )
+    source_recorded: str = Field(
+        "recorded {date}",
+        description="What a history line's source says when nothing shows where the change came from: {date} is the "
+        "day it was recorded.",
+    )
+    source_date_format: str = Field(
+        "%b %d",
+        description="How the day in a history line's source is written: pick one; each shows today's date written "
+        "that way.",
+        json_schema_extra={"choices": "date_formats"},
+    )
+    withheld_where: str = Field(
+        "the message to {name}",
+        description="How a message to one person is named in the reason it is held back: {name} is the person.",
+    )
+    resourced_summary: str = Field(
+        "Took the assistant's name out of {count} history lines and said where each came from",
+        description="The line saying what the sweep did when it re-sourced history lines that named the assistant: "
+        "{count} is how many lines.",
+    )
+    resourced_label: str = Field(
+        "Put where the change came from in a history line instead of the assistant's name",
+        description="The line for one project's history lines in that change.",
+    )
+    withheld_name: str = Field(
+        "Held back: {where} names {name}. Take the name out before this goes to anyone.",
+        description="Why a message for someone else is not offered to copy: {where} says which part names the "
+        "assistant and {name} is the name it holds.",
+    )
     folded_note: str = Field(
         "Also came up: {text} (\u201c{quote}\u201d)",
         description="The line added to an action's notes when another action is added to it instead of being kept "

@@ -832,6 +832,10 @@ class NudgeView(BaseModel):
     left_out: list[LeftOutView] = Field(
         default_factory=list, description="What the message leaves out because it was settled since it went out."
     )
+    withheld: str | None = Field(
+        None,
+        description="Why the message is not offered to copy: it still names the assistant. `text` is empty then.",
+    )
 
 
 class FollowupSection(BaseModel):
@@ -845,6 +849,11 @@ class FollowupSection(BaseModel):
     )
     actions: list[FollowupAction]
     message: str
+    withheld: str | None = Field(
+        None,
+        description="Why the message is not offered to copy: it still names the assistant, which what goes to "
+        "someone else never does. `message` is empty then.",
+    )
     to_send: int
     nudge: NudgeView | None = Field(None, description="The follow-up message to draft, when anything is due one.")
 

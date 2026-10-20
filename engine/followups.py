@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
-from engine import learn, promises, sent_version
+from engine import learn, outward, promises, sent_version
 from engine.blocked import ViewNames, blocker_of, blocker_problem, holds_up
 from engine.cleaning import normalize
 from engine.config import Config
@@ -432,6 +432,19 @@ def compose_nudge(s: Section, cfg: Config, people: People, today: date) -> Nudge
     )
 
 
+def message_where(cfg: Config, name: str) -> str:
+    """Where a message to one person sits, for the reason a message is held back."""
+    return cfg.language.messages.withheld_where.format(name=name)
+
+
+def _guard_sent_text(store: Store, cfg: Config, person: str, text: str | None) -> None:
+    """A message that goes to someone else is refused while it names the assistant (the send step; design 6.12)."""
+    if text is None or person == People(store, cfg).pm:
+        return
+    where = message_where(cfg, People(store, cfg).name(person))
+    outward.check_outgoing(store.read(), cfg, {where: text})
+
+
 def mark_sent(
     store: Store, cfg: Config, person: str, *, sent_text: str | None = None, now: datetime | None = None
 ) -> dict[str, Any]:
@@ -439,6 +452,7 @@ def mark_sent(
     sending, that is recorded as a quality signal. Returns the counts and the ids, which `unmark_sent` takes."""
     now = now or datetime.now(UTC)
     today = now.date()
+    _guard_sent_text(store, cfg, person, sent_text)
     current = next((s for s in sections(store, cfg, today) if s.person == person), None)
     if current is None:
         return {"questions": 0, "actions": 0, "question_ids": [], "action_ids": []}
@@ -545,6 +559,7 @@ def mark_followed_up(
     recorded as a quality signal, as an edited first message is. Returns what `unmark_followed_up` takes."""
     now = now or datetime.now(UTC)
     today = now.date().isoformat()
+    _guard_sent_text(store, cfg, person, sent_text)
     current = next((s for s in sections(store, cfg, now.date()) if s.person == person), None)
     drafted = current.nudge.text if current is not None and current.nudge is not None else None
     previous: dict[str, str | None] = {}
