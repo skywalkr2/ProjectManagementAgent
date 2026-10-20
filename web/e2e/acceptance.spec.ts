@@ -554,6 +554,9 @@ test.describe.serial("acceptance scenario", () => {
       const s = sections.find((x) => x.person === id)!;
       const { questions, actions } = toSend(s);
       const card = sectionOf(s.name);
+      // The first Copy opens the message it will copy (design 7.5); the second puts it on the clipboard.
+      await card.getByRole("button", { name: `Copy ${s.to_send}` }).click();
+      await expect(card.getByRole("textbox").first()).toBeVisible();
       await card.getByRole("button", { name: `Copy ${s.to_send}` }).click();
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       expect(copied).toBe(s.message);
@@ -585,6 +588,8 @@ test.describe.serial("acceptance scenario", () => {
     const target = withQuestions[0];
     const { questions, actions } = toSend(target);
     const card = sectionOf(target.name);
+    await card.getByRole("button", { name: `Copy ${target.to_send}` }).click();
+    await expect(card.getByRole("textbox").first()).toBeVisible();
     await card.getByRole("button", { name: `Copy ${target.to_send}` }).click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(target.message);
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
@@ -744,7 +749,8 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Add a source" }).click();
     const form = page.getByRole("form", { name: "Add a source" });
     await expect(form).toBeVisible();
-    await expect(form.getByRole("heading", { name: "Add a source" })).toBeFocused();
+    // The cursor starts in the form's first field: the kind of source to add (design 7.0).
+    await expect(form.getByRole("radio").first()).toBeFocused();
     await form.getByRole("radio").first().check();
     await expect(form.getByLabel("Name", { exact: true })).toBeVisible();
     await expect(form.getByLabel("How often to read")).toBeVisible();
