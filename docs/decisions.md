@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: The installers ship the mail and calendar add-ons, ready to sign in
+
+- **Decided (owner):** "from a user perspective anything that makes a non technical user life easier is what I would
+  chose", on the UI/UX reviewer's first-run finding F3 (mail and calendar is a dead end on a fresh install).
+- **What it means:** the Windows and macOS installers bundle the mail and calendar add-ons, installed and turned on in a
+  new workspace, so the setup step shows their sign-in tiles with no add-on screen and no restart (check N2). The
+  bundling is generic: the release build reads the list of add-on packages from a repository variable, so this
+  repository never names a private add-on; the add-ons keep their own repository and releases.
+- **Impact:** phase I (the I-1 item "Mail and calendar connect with a sign-in on a fresh install"); the core gains
+  "add-ons a new workspace starts with turned on" as a setting the installer fills in. The sign-in approval research
+  (I-2) covers the unverified-app warning.
+
 ## 2026-10-20: A new AI account may read the person's own work material by default
 
 - **Decided (main session, on the owner's acceptance of the reviewer's first-run feedback):** the AI account step asks

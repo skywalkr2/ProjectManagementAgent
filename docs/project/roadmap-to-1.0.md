@@ -360,8 +360,12 @@ From the original designer's lessons of 2026-10-14:
 - [ ] [I-1] **Mail and calendar connect with a sign-in on a fresh install** (the first-run review's F3 and N2): Gmail or
   Microsoft 365 connects with a sign-in, with no add-on screen, restart or server setting on the person's path; "Other
   email" fills the server from the address; server, port and secret settings under Advanced in plain words; the
-  unverified-app warning explained where it appears. *Waits on the owner* (asked 2026-10-20): the common connectors are
-  the private mail add-on, so whether the installer ships it (or a separate public one) is the owner's decision.
+  unverified-app warning explained where it appears. *Decided (owner, 2026-10-20: "anything that makes a non technical
+  user life easier"):* the installer ships the mail and calendar add-ons installed and turned on, so their sign-in
+  tiles are on the setup step from the first start. Built as a generic feature: the release build bundles the add-on
+  packages a repository variable lists (as the catalog and feedback addresses are filled in), installs them with the app
+  and turns them on in a new workspace with no restart; this repository names none of them. The add-ons stay in their
+  own repository and release there.
 - [ ] [B-5] **Add-ons install from the screen** (P15; owner, 2026-10-16: "they still require manual command line installs
   instead of through the screen. the screen lists zero available plugins"). *Built:* with no catalog listed Add-ons
   offers an address field (the cursor in it) that saves into `workspace.plugins.catalog.feeds` and reads it at once; the
