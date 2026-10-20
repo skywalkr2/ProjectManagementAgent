@@ -1,11 +1,14 @@
 /* The assistant's line beside the status chip: its name, an icon and a few words, in the muted text color when all is
-   well, amber when work is held up and red when it can't work. The icon and the words always say it. */
+   well, amber when work is held up and red when it can't work. The icon and the words always say it. When the header is
+   tight the words give way first; the icon always stays, so the line is never narrower than a target should be. */
 .line {
-  display: inline-flex; align-items: center; gap: var(--space-2); flex: 0 1 auto; min-width: 0;
+  display: inline-flex; align-items: center; gap: var(--space-2); flex: 0 1 auto;
+  min-width: calc(2 * var(--space-3) + 16px);
   height: var(--btn-h-sm); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-full); background: transparent;
   color: var(--text-muted); font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm);
   white-space: nowrap; cursor: pointer; overflow: hidden;
 }
+.line svg { flex: none; }
 .line:hover { background: var(--surface-sunk); }
 .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: var(--weight-semibold); color: var(--text); }
 .say { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

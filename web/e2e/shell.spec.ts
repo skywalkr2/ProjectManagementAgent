@@ -405,6 +405,22 @@ test.describe("screen use and the shell", () => {
       // The plugin panels are in the sidebar, under Work and Records, and scroll there if they don't fit.
       await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /number 1$/ })).toHaveCount(1);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+      // Every header button stays a target of at least 24px (WCAG 2.5.8), also when the computer's fonts run wider than
+      // ours and the row gets tight (a CI runner's did): letter spacing stands in for those fonts.
+      const narrowest = async () =>
+        Math.min(...(await header.locator("a, button").evaluateAll((els) =>
+          els.filter((e) => (e as HTMLElement).getClientRects().length > 0).map((e) => e.getBoundingClientRect().width))));
+      expect(await narrowest()).toBeGreaterThanOrEqual(24);
+      const spacing = (value: string) =>
+        header.evaluate((h, v) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = v; }), value);
+      await spacing("0.25em");
+      expect(await narrowest()).toBeGreaterThanOrEqual(24);
+      // The assistant's line gives up its words first and keeps its icon, which says how it is.
+      const [line, icon] = await assistant.evaluate((e) => [e.getBoundingClientRect(), e.querySelector("svg")!.getBoundingClientRect()].map((r) => [r.left, r.right]));
+      expect(icon[1] - icon[0]).toBeGreaterThanOrEqual(16);
+      expect(icon[0]).toBeGreaterThanOrEqual(line[0]);
+      expect(icon[1]).toBeLessThanOrEqual(line[1]);
+      await spacing("");
     }
   });
 
