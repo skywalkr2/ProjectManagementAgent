@@ -8037,8 +8037,8 @@
           },
           "kind": {
             "enum": [
-              "question",
-              "action"
+              "action",
+              "question"
             ],
             "title": "Kind",
             "type": "string"

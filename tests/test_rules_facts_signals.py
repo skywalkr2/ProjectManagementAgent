@@ -290,7 +290,11 @@ def test_saying_who_a_name_is_names_the_changeset_and_its_run(env):
     stranger = "Jordan " + "Pike"
     pasted = f"{stranger} will book the venue."
     answers(
-        {"ops": [{"op": "action.add", "text": "Book it", "owners": [stranger], "evidence": {"quote": pasted[:-1]}}]}
+        {
+            "ops": [
+                {"op": "action.add", "text": "Book the venue", "owners": [stranger], "evidence": {"quote": pasted[:-1]}}
+            ]
+        }
     )
     _, cs_id = run(env, pasted)
     run_id = store.read().get("changeset", cs_id).data["run"]

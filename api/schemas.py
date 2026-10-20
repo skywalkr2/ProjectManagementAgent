@@ -803,7 +803,7 @@ class LeftOutView(BaseModel):
     """Something that went in the same first message as what a nudge lists and was answered or done since: the nudge
     leaves it out, and the screen says so above the box ("answered Oct 12, left out")."""
 
-    kind: Literal["question", "action"]
+    kind: Literal["action", "question"]
     id: str
     text: str
     on: str = Field(description="The day it was answered (a question) or done (an action), as an ISO date.")
