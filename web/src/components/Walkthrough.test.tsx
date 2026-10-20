@@ -1091,10 +1091,11 @@ describe("the look", { timeout: 20_000 }, () => {
     await user.clear(box);
     await user.click(box);
     await user.paste("Harbor work");
-    const save = await screen.findByRole("button", { name: "Save" });
-    await waitFor(() => expect(save).toBeEnabled(), { timeout: 5000 });
-    await user.click(save);
-    await waitFor(() => expect(save).toBeDisabled(), { timeout: 5000 });
+    // Saving reloads the settings, which can draw the form again with a new button: each check finds it afresh.
+    const save = () => screen.getByRole("button", { name: "Save" });
+    await waitFor(() => expect(save()).toBeEnabled(), { timeout: 5000 });
+    await user.click(save());
+    await waitFor(() => expect(save()).toBeDisabled(), { timeout: 5000 });
     expect(screen.getByRole("heading", { level: 2, name: "You" })).toBeInTheDocument();
   });
 });
