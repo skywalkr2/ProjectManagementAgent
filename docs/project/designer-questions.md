@@ -11,7 +11,7 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
-## Open: F15 to F20 (2026-10-19 and 20, phase B-6)
+## Open: F15 to F25 (2026-10-19 and 20, phases B-6 and B-7)
 
 Each is built to its default tonight; a different answer changes the build, not the plan.
 
@@ -45,6 +45,31 @@ one invited and no notes ("Nothing recorded" fourteen times). *Default proposed:
 rule (an `event.add` with no AI run and no Review line); the assistant reads only an invitation from someone else, an
 entry with a description, or one that changed a date a promise is due at. Is there a kind of plain entry the assistant
 should still read?
+
+**F21. A date the rules can't read** (the owner's learning run, 2026-10-20). S1-1 made the rules' reading of the date
+words win, and words they couldn't read gave no date. That dropped good dates the model had read from the same words.
+*Built (B-7):* the rules still win when they read the words; words they can't read keep the model's date, marked for
+the person to check; words that make the due a condition ("once the keys arrive", "after the workshop", "before his
+leave") keep no date. *Question:* is "keep the model's date, marked to check" right, or should an unread phrase stay
+dateless? And is "before" a condition word (it also drops the model's date for "before <something unreadable>")?
+
+**F22. A reply that doesn't answer is news** (the same run). *Built (B-7):* a reply that only acknowledges, thanks,
+defers or changes the subject is one `action.news` on the open action, never an ending, an answer or "nothing to
+record". Agree?
+
+**F23. Chasing someone else's promise is the one follow-up to that person** (the UI reviewer's §3.4, 2026-10-20). Today
+had one "Chase <person>: <item>" line per late promise owed by someone else, beside the per-person follow-up line.
+*Built (B-7):* a late promise owed by someone the person works alongside joins that person's one follow-up line and its
+one message ("Follow up with Robin · 2 overdue, oldest Tue, Oct 13"); promise lines stay for the person's own and for
+someone they report to (design 6.33 and 6.34 updated). Does that keep what 6.33 meant by a promise's line?
+
+**F24. Top priorities has no buttons** (the UI reviewer's §3.4). It repeated the queue's actions. *Built (B-7):* its
+ranked entries stay (F16's order), each a link to its queue line or record; the queue is the only place to act. Agree?
+
+**F25. A new AI account may read the person's work material by default** (the UI reviewer's first-run review, F2).
+With only "open" allowed by default, the assistant couldn't work on the person's own mail and notes. *Built (B-7):*
+"Can the AI service read your work mail and notes? · Yes" chosen, allowing open and internal; restricted stays opt-in in
+Advanced; saved accounts keep theirs. Any data-level concern with that default?
 
 Earlier rounds: The UI designer's round 33 to 38 (2026-10-16) is answered in
 `reviews/ui-ux-2026-10/answers-33-38.md`, with mockups in `reviews/ui-ux-2026-10/mockup-round-33-38/`, and goes into phase
