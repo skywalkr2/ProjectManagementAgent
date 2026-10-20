@@ -7,17 +7,19 @@ line; its wording comes from config/language.yaml.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
 from engine import learn, sent_version
+from engine.blocked import ViewNames, blocker_of, blocker_problem
 from engine.cleaning import normalize
 from engine.config import Config
 from engine.dispatcher import signal
 from engine.names import People
 from engine.scope import stance_of
 from engine.storage import Store, WriteContext
+from engine.today import zone
 
 _PM = WriteContext(actor="pm", trust="trusted", op="followup")
 
@@ -74,6 +76,8 @@ class Section:
     name: str
     is_pm: bool
     questions: list[dict[str, Any]] = field(default_factory=list)
+    #: Open questions held for a meeting or a day, out of To send until it comes (`held_until` on each).
+    later: list[dict[str, Any]] = field(default_factory=list)
     actions: list[dict[str, Any]] = field(default_factory=list)
     message: str = ""
     to_send: int = 0
@@ -82,6 +86,7 @@ class Section:
 
 def sections(store: Store, cfg: Config, today: date) -> list[Section]:
     people = People(store, cfg)
+    here = zone(cfg)
     projects = {p.id: p.data["name"] for p in store.read().list("project")}
     project_links = {p.id: p.data.get("links", []) for p in store.read().list("project")}
     by_person: dict[str, Section] = {}
@@ -102,8 +107,12 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
         # The wait counts from the last word to the person: the message, or the latest chase after it.
         last_word = date.fromisoformat(chased[-1]) if chased else sent
         waiting = (today - last_word).days if last_word else None
-        section(d["to"]).questions.append(
+        held_until, held_name = held_until_day(store.read(), d.get("held_for"), today, here)
+        later = d["status"] == "open" and held_until is not None and held_until > today
+        (section(d["to"]).later if later else section(d["to"]).questions).append(
             {
+                "held_until": held_until.isoformat() if later and held_until else None,
+                "held_for_name": held_name if later else None,
                 "id": q.id,
                 "title": d["title"],
                 "text": d.get("text", ""),
@@ -135,6 +144,9 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
             last_chase = str(max(chases)) if chases else None
             told_days = (today - date.fromisoformat(told)).days if told else None
             hold = d.get("on_hold")
+            blocker = blocker_of(view, hold, people, here)
+            if blocker is not None and blocker.resolved:
+                hold = None  # what it waited on is over, so it is chased by its own dates again
             section(owner["person"]).actions.append(
                 {
                     "id": a.id,
@@ -148,6 +160,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                     "followed_up": last_chase,
                     "chases": len(chases),
                     "on_hold": hold["waiting_for"] if hold else None,
+                    "blocker": asdict(blocker) if blocker is not None else None,
                     "chase_due": follow_up_due(
                         cfg,
                         today,
@@ -498,19 +511,82 @@ def _open_action(tx: Any, action_id: str) -> Any:
     return rec
 
 
-def put_on_hold(
-    store: Store, action_id: str, waiting_for: str, *, now: datetime | None = None
+def held_until_day(
+    view: Any, held_for: dict[str, Any] | None, today: date, here: Any
+) -> tuple[date | None, str | None]:
+    """The day a held question comes back to To send, and the name of the meeting it waits for (None for a day).
+    A calendar entry is read where it is now, so a moved meeting moves the day; a series is its first instance on or
+    after the day the question was held. None when it names nothing that can be dated, which leaves the question
+    where it is, in To send."""
+    from engine.series import next_instance, span
+
+    if not held_for:
+        return None, None
+    if held_for.get("on"):
+        return date.fromisoformat(str(held_for["on"])), None
+    entry = None
+    if held_for.get("event"):
+        entry = view.get("event", held_for["event"])
+        name = entry.data["title"] if entry is not None else None
+    elif held_for.get("series"):
+        since = date.fromisoformat(str(held_for["since"])) if held_for.get("since") else today
+        entry = next_instance(view, held_for["series"], since, here)
+        found = view.get("series", held_for["series"])
+        name = found.data["title"] if found is not None else None
+    if entry is None:
+        return None, None
+    days = span(entry.data, here)
+    return (days[0] if days else None), name
+
+
+def hold_question(
+    store: Store, question_id: str, held_for: dict[str, Any] | None, *, today: date | None = None
 ) -> dict[str, Any] | None:
-    """Put an open action on hold, waiting for `waiting_for` (plain words), starting today. A signal records it as the
-    person's own change. Returns what the action was waiting for before (or None), which `restore_hold` takes."""
+    """Hold an open question for a meeting or a day, or (with None) send it now. A meeting must be dated, and a day
+    must be after today. Returns what it was held for before (or None), which putting it back takes."""
+    today = today or datetime.now(UTC).date()
+    with store.transaction() as tx:
+        rec = tx.get("question", question_id)
+        if rec is None or rec.data["status"] != "open":
+            raise FollowUpError("only a question that hasn't gone out can be held")
+        previous = rec.data.get("held_for")
+        new = None
+        if held_for is not None:
+            new = {k: v for k, v in held_for.items() if v is not None}
+            new.setdefault("since", today.isoformat())
+            here = zone(store.plugins.cfg)
+            until, _ = held_until_day(tx, new, today, here)
+            if until is None:
+                raise FollowUpError("that meeting has no day to wait for")
+            if until <= today:
+                raise FollowUpError("a question is held until a day after today")
+        tx.update("question", question_id, {"held_for": new}, _PM, read_version=rec.version)
+    return previous
+
+
+def put_on_hold(
+    store: Store, action_id: str, waiting_for: str = "", *, on: str | None = None, now: datetime | None = None
+) -> dict[str, Any] | None:
+    """Put an open action on hold, waiting for `waiting_for` (plain words), starting today. With `on` (a person, an
+    action or a question) the hold names its blocker, the action is blocked, and the words, when none are given, are
+    the blocker's name. A signal records it as the person's own change. Returns what the action was waiting for
+    before (or None), which `restore_hold` takes."""
     waiting_for = " ".join(waiting_for.split())
-    if not waiting_for:
+    if not waiting_for and not on:
         raise FollowUpError("say what it is waiting for")
     now = now or datetime.now(UTC)
     with store.transaction() as tx:
         rec = _open_action(tx, action_id)
+        if on is not None:
+            if (why := blocker_problem(tx, action_id, on)) is not None:
+                raise FollowUpError(why)
+            if not waiting_for:
+                named = blocker_of(tx, {"on": on}, ViewNames(tx))
+                waiting_for = named.name if named is not None and named.name else on
         previous = rec.data.get("on_hold")
         hold = {"waiting_for": waiting_for, "since": now.date().isoformat()}
+        if on is not None:
+            hold["on"] = on
         tx.update("action", action_id, {"on_hold": hold}, _PM, read_version=rec.version)
     signal(store, "put_on_hold", [action_id], note=waiting_for, now=now)
     return previous

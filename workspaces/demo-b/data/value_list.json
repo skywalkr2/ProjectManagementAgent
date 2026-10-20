@@ -1,0 +1,29 @@
+[
+  {
+    "id": "LIST-1",
+    "label": "Project status",
+    "meanings": {
+      "At risk": "at_risk",
+      "Done": "done",
+      "Off track": "at_risk",
+      "On hold": "blocked",
+      "On track": "open"
+    },
+    "name": "project-status",
+    "retired": [],
+    "tones": {
+      "At risk": "warn",
+      "Done": "ok",
+      "Off track": "danger",
+      "On hold": "warn",
+      "On track": "ok"
+    },
+    "values": [
+      "On track",
+      "At risk",
+      "Off track",
+      "On hold",
+      "Done"
+    ]
+  }
+]

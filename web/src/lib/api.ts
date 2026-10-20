@@ -143,7 +143,12 @@ export const api = {
   /** A note goes with the change only when there is one: with none, the request is the same as it always was. */
   actionStatus: (a: string, status: S["ActionState"]["status"], note?: string) =>
     call<S["Noted"]>("POST", `actions/${id(a)}/status`, note ? { status, note } : { status }),
-  putOnHold: (a: string, waiting_for: string) => call<S["HoldChanged"]>("POST", `actions/${id(a)}/hold`, { waiting_for }),
+  /** Put an action on hold, waiting for words, or blocked on the person, action or question `on` names. */
+  putOnHold: (a: string, waiting_for: string, on?: string | null) =>
+    call<S["HoldChanged"]>("POST", `actions/${id(a)}/hold`, on ? { waiting_for, on } : { waiting_for }),
+  /** Hold an unsent question for a meeting, a series or a day; null sends it now. */
+  holdQuestion: (q: string, held_for: S["HeldForIn"] | null) =>
+    call<S["HeldChanged"]>("POST", `questions/${id(q)}/held-for`, { held_for }),
   takeOffHold: (a: string) => call<S["HoldChanged"]>("POST", `actions/${id(a)}/unhold`),
   restoreHold: (a: string, hold: S["HoldState"] | null) => call<S["Ok"]>("POST", `actions/${id(a)}/hold/restore`, { hold }),
   reply: (q: string, text: string) => call<S["Handed"]>("POST", `questions/${id(q)}/reply`, { text }),
@@ -282,7 +287,11 @@ export const api = {
   panelDocument: (name: string, project?: string) =>
     call<S["DocumentView"]>("GET", `panels/${named(name)}/document${project ? `?project=${id(project)}` : ""}`),
   valueLists: () => call<S["ValueListView"][]>("GET", "lists"),
-  listAdd: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/add`, { value }),
+  listAdd: (list: string, value: string, meant?: { tone?: S["ListSuggestionView"]["tone"]; meaning?: S["ListSuggestionView"]["meaning"] }) =>
+    call<S["Applied"]>("POST", `lists/${named(list)}/add`, { value, ...(meant?.tone ? { tone: meant.tone } : {}), ...(meant?.meaning ? { meaning: meant.meaning } : {}) }),
+  /** The tone, and for a status list the meaning, offered for a value being added. */
+  listSuggestion: (list: string, value: string) =>
+    call<S["ListSuggestionView"]>("GET", `list-suggestion?list=${encodeURIComponent(list)}&value=${encodeURIComponent(value)}`),
   listRename: (list: string, value: string, to: string) =>
     call<S["Applied"]>("POST", `lists/${named(list)}/rename`, { value, to }),
   listRetire: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/retire`, { value }),

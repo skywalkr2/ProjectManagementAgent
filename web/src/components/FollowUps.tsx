@@ -16,7 +16,8 @@ import { AskChooser } from "./AskChooser";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { LearnedLines } from "./Learned";
 import { useDropAction } from "./DropAction";
-import { HoldPill, useHold } from "./OnHold";
+import { HoldNote, useHold } from "./OnHold";
+import { useHoldFor, useSendNow } from "./HoldFor";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -27,8 +28,8 @@ import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
 
-type Filter = "send" | "waiting";
-const FILTERS: Filter[] = ["send", "waiting"];
+type Filter = "send" | "later" | "waiting";
+const FILTERS: Filter[] = ["send", "later", "waiting"];
 
 const toSendQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "open");
 const toSendActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told === null);
@@ -70,9 +71,15 @@ export function FollowUps(props: { compact?: boolean }) {
       setSeeking(null);
     }
   }, [seeking, filter, followups.data]);
-  const sections = (followups.data ?? []).filter((s) => s.questions.length || (s.actions.length && !(compact && s.is_pm)));
+  const sections = (followups.data ?? []).filter(
+    (s) => s.questions.length || (s.later ?? []).length || (s.actions.length && !(compact && s.is_pm)),
+  );
   const shown = sections.filter((s) =>
-    filter === "send" ? s.is_pm || s.to_send > 0 : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
+    filter === "send"
+      ? s.is_pm || s.to_send > 0
+      : filter === "later"
+        ? (s.later ?? []).length > 0
+        : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
   );
   return (
     <section className={compact ? "panel-section compact" : "panel-section"} aria-labelledby="followups-title">
@@ -98,11 +105,13 @@ export function FollowUps(props: { compact?: boolean }) {
       ) : sections.length === 0 ? (
         <p className="empty">{t("followups.empty")}</p>
       ) : shown.length === 0 ? (
-        <p className="empty">{t(filter === "send" ? "followups.empty_send" : "followups.empty_waiting")}</p>
+        <p className="empty">{t(`followups.empty_${filter}`)}</p>
       ) : (
         <ol className="queue">
           {shown.map((s) =>
-            s.is_pm ? (
+            filter === "later" ? (
+              <LaterSection key={s.person} section={s} />
+            ) : s.is_pm ? (
               <YourSection key={s.person} section={s} compact={compact} reveal={revealed} />
             ) : filter === "send" ? (
               <PersonSection key={s.person} section={s} />
@@ -243,7 +252,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
       <div>
         <div className="title">
           {a.text}
-          {a.on_hold && <HoldPill what={a.on_hold} due={a.due} />}
+          <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} />
         </div>
         <div className="meta">{actionMeta(a, t)}</div>
         <OriginLink origin={a.origin} />
@@ -398,8 +407,10 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   };
 
   const primary = () => void (copied ? markSent() : view === "table" ? copyTable() : copy());
+  const hold = useHoldFor(questions);
   const menu: MenuAction[] = [
     { id: "edit", label: t("followups.edit"), run: edit },
+    ...(questions.length > 0 ? [hold.entry] : []),
     { id: "mark-sent", label: t("followups.mark_sent"), run: () => void markSent() },
   ];
   useRowKeys(ref, {
@@ -423,6 +434,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
           <RowMenu label={s.name} actions={menu} />
         </div>
       </div>
+      {hold.form}
       {open && (
         <div className="body">
           <SegmentedControl
@@ -491,6 +503,46 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
           )}
         </div>
       )}
+    </li>
+  );
+}
+
+// Questions held for a meeting or a day, per person: out of To send until that day, with the way to send one now.
+function LaterSection(props: { section: S["FollowupSection"] }) {
+  const { tn } = useWords();
+  const s = props.section;
+  const later = s.later ?? [];
+  return (
+    <li className="line" aria-labelledby={`l-${s.person}`}>
+      <div className="row pair">
+        <div className="text">
+          <strong id={`l-${s.person}`}>{s.name}</strong>
+          <span className="sub">{tn("followups.later_count", later.length)}</span>
+        </div>
+      </div>
+      <div className="body">
+        <ul className="plain-list" aria-labelledby={`l-${s.person}`}>
+          {later.map((q) => (
+            <LaterQuestion key={q.id} question={q} />
+          ))}
+        </ul>
+      </div>
+    </li>
+  );
+}
+
+function LaterQuestion(props: { question: S["FollowupQuestion"] }) {
+  const { t } = useWords();
+  const q = props.question;
+  const sendNow = useSendNow(q);
+  const when = q.held_until ? day(q.held_until) : "";
+  return (
+    <li>
+      <span className="title">{q.title}</span>
+      <span className="meta">
+        {q.held_for_name ? t("followups.later_for", { meeting: q.held_for_name, date: when }) : t("followups.later_until", { date: when })}
+      </span>
+      <RowMenu label={q.title} actions={[sendNow]} />
     </li>
   );
 }
@@ -805,7 +857,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
       <div>
         <div className="title">
           {a.text}
-          {a.on_hold ? <HoldPill what={a.on_hold} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
+          {a.on_hold || a.blocker ? <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
         </div>
         {meta && <div className="meta">{meta}</div>}
         <OriginLink origin={a.origin} />

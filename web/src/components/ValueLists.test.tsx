@@ -163,3 +163,85 @@ test("a refused add shows why and keeps what was typed", async () => {
   expect(await within(group).findByRole("alert")).toHaveTextContent("That is not a valid value.");
   expect(field).toHaveValue("??");
 });
+
+// ---- tone and meaning ---------------------------------------------------------------------------------------------------
+
+const statusList = (): S["ValueListView"] => ({
+  id: "L-1",
+  name: "project-status",
+  label: "Project status",
+  values: ["On track", "At risk", "Parked"],
+  retired: [],
+  used_by: ["project.status"],
+  status: true,
+  tones: { "On track": "ok", "At risk": "warn", Parked: "neutral" },
+  meanings: { "On track": "open", "At risk": "at_risk", Parked: "blocked" },
+});
+
+test("each value says what it counts as and how it looks, in words as well as color, and a plain value says nothing", async () => {
+  fakeApi({ "GET lists": () => [statusList(), { ...lists()[1], tones: { Books: "danger" }, values: ["Books", "Misc"] }] });
+  renderApp(<ValueLists />);
+  const status = await block("Project status");
+  const items = within(status).getAllByRole("listitem");
+  expect(items[0]).toHaveTextContent("On trackCounts as: Under way");
+  expect(items[1]).toHaveTextContent("At riskCounts as: At risk");
+  expect(items[2]).toHaveTextContent("ParkedCounts as: Blocked");
+  expect(within(items[1]).getByText("Counts as: At risk")).toHaveAttribute("data-tone", "warn");
+  const group = await block("Project group");
+  expect(within(group).getByText("Problem")).toBeInTheDocument();
+  expect(within(group).getAllByRole("listitem")[1]).toHaveTextContent(/^Misc/);
+  expect(within(group).getAllByRole("listitem")[1]).not.toHaveTextContent("Plain");
+});
+
+test("adding a value to a status list asks what it means, with the suggestion chosen, and sends both", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "GET lists": () => [statusList()],
+    "GET list-suggestion?list=project-status&value=Paused": () => ({ tone: "warn", meaning: "blocked" }),
+    "POST lists/project-status/add": () => ({ changeset: "CS-9" }),
+  });
+  renderApp(<ValueLists />);
+  const row = await block("Project status");
+  await user.type(within(row).getByRole("textbox", { name: "Add a choice to Project status" }), "Paused");
+  const meaning = within(row).getByRole("combobox", { name: "What it means" });
+  await waitFor(() => expect(meaning).toHaveValue("blocked"));
+  expect(within(row).getByRole("combobox", { name: "How it looks" })).toHaveValue("warn");
+  expect(within(row).getByText("Suggested from the wording; change it if it's wrong.")).toBeInTheDocument();
+  await user.selectOptions(meaning, "at_risk");
+  expect(within(row).queryByText("Suggested from the wording; change it if it's wrong.")).toBeNull();
+  await user.click(within(row).getByRole("button", { name: /^Add/ }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST lists/project-status/add")?.body).toEqual({ value: "Paused", tone: "warn", meaning: "at_risk" }));
+});
+
+test("a status value typed before any suggestion arrives is sent as open work with no color", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "GET lists": () => [statusList()], "POST lists/project-status/add": () => ({ changeset: "CS-9" }) });
+  renderApp(<ValueLists />);
+  const row = await block("Project status");
+  await user.type(within(row).getByRole("textbox", { name: "Add a choice to Project status" }), "Zzz{Enter}");
+  await waitFor(() => expect(calls.find((c) => c.route === "POST lists/project-status/add")?.body).toEqual({ value: "Zzz", tone: "neutral", meaning: "open" }));
+});
+
+test("a list with no meanings asks only how a value looks, and sends nothing extra when left plain", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST lists/project-group/add": () => ({ changeset: "CS-5" }) });
+  renderApp(<ValueLists />);
+  const group = await block("Project group");
+  await user.type(within(group).getByRole("textbox", { name: "Add a choice to Project group" }), "Books");
+  expect(within(group).queryByRole("combobox", { name: "What it means" })).toBeNull();
+  const tone = within(group).getByRole("combobox", { name: "How it looks" });
+  expect(tone).toHaveValue("neutral");
+  await user.click(within(group).getByRole("button", { name: /^Add/ }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST lists/project-group/add")?.body).toEqual({ value: "Books" }));
+});
+
+test("choosing a look for a value on a list with no meanings sends the tone", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST lists/project-group/add": () => ({ changeset: "CS-5" }) });
+  renderApp(<ValueLists />);
+  const group = await block("Project group");
+  await user.type(within(group).getByRole("textbox", { name: "Add a choice to Project group" }), "Urgent");
+  await user.selectOptions(within(group).getByRole("combobox", { name: "How it looks" }), "danger");
+  await user.click(within(group).getByRole("button", { name: /^Add/ }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST lists/project-group/add")?.body).toEqual({ value: "Urgent", tone: "danger" }));
+});

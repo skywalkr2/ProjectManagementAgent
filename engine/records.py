@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Annotated, Any, ClassVar, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
 
 class Record(BaseModel):
@@ -238,6 +238,18 @@ class ProjectRole(BaseModel):
     )
 
 
+#: The kinds of record a hold can name as its blocker, by the start of their ids.
+BLOCKER_KINDS: dict[str, str] = {"PER-": "person", "ACT-": "action", "Q-": "question"}
+
+
+def blocker_kind(record_id: str) -> str | None:
+    """The kind a blocker's id belongs to (person, action or question), or None for any other id."""
+    for prefix, kind in BLOCKER_KINDS.items():
+        if record_id.startswith(prefix) and record_id[len(prefix) :].isdigit():
+            return kind
+    return None
+
+
 class OnHold(BaseModel):
     """What an action waits for before it can go on. Set and cleared by the person; an action on hold is never due,
     overdue or chased."""
@@ -246,6 +258,26 @@ class OnHold(BaseModel):
 
     waiting_for: str = Field(min_length=1, description="What it waits for, in plain words.")
     since: date = Field(description="The day it was put on hold.")
+    on: str | None = Field(
+        None,
+        description="What it is blocked on, when the hold names its blocker: the id of a person, an action or a "
+        "question. A hold with only words is on hold; one that names a blocker is blocked.",
+    )
+
+    @field_validator("on")
+    @classmethod
+    def _a_blocker_is_a_person_an_action_or_a_question(cls, value: str | None) -> str | None:
+        if value is not None and blocker_kind(value) is None:
+            raise ValueError("a hold can name a person, an action or a question")
+        return value
+
+    @model_serializer(mode="wrap")
+    def _leave_out_an_unnamed_blocker(self, handler: Any) -> dict[str, Any]:
+        """A hold with only words is stored as it always was, with no blocker key."""
+        data = handler(self)
+        if data.get("on") is None:
+            data.pop("on", None)
+        return data
 
 
 class ActionNews(BaseModel):
@@ -503,6 +535,33 @@ class Action(Record):
         return self
 
 
+class HeldFor(BaseModel):
+    """What a question is held for, out of To send until its day: a meeting (a calendar entry, or a series, which is its
+    next instance from the day it was held) or a day to send it on. Exactly one of the three is named."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event: Annotated[str | None, RefTo("event")] = Field(None, description="The id of the calendar entry it waits for.")
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series it waits for: its first instance on or after the day it was held."
+    )
+    on: date | None = Field(None, description="The day to send it, when it waits for a date.")
+    since: date | None = Field(
+        None, description="The day it was held, set when it is; a series is read from this day on."
+    )
+
+    @model_validator(mode="after")
+    def _one_thing(self) -> HeldFor:
+        if sum(x is not None for x in (self.event, self.series, self.on)) != 1:
+            raise ValueError("a question is held for one thing: a meeting, a series or a day")
+        return self
+
+    @model_serializer(mode="wrap")
+    def _leave_out_what_it_is_not_held_for(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        return {k: v for k, v in data.items() if v is not None}
+
+
 class Question(Record):
     """A question for a person; a decision is a question to the PM. Added by `question.add` or by the engine, closed by
     `question.done`; the person sends, drops or answers them in the app."""
@@ -532,6 +591,11 @@ class Question(Record):
     )
     batch: Literal["now", "later"] = Field(
         "now", description="Whether it is ready to go out now or waits for a later batch."
+    )
+    held_for: HeldFor | None = Field(
+        None,
+        description="What it is held for: a meeting (a calendar entry, or a series' next instance) or a day. It stays "
+        "out of To send, in Later, until that meeting's day or the day, and is then to send as any other.",
     )
     status: Literal["open", "sent", "answered", "dropped"] = Field(
         "open",
@@ -1918,6 +1982,16 @@ class ValueList(Record):
     retired: list[str] = Field(
         default_factory=list, description="Values no longer offered that records may still hold."
     )
+    tones: dict[str, Literal["ok", "warn", "danger", "neutral"]] = Field(
+        default_factory=dict,
+        description="How each value is colored: ok, warn, danger or neutral. A value with none reads the tone the core "
+        "ships for that wording, else neutral.",
+    )
+    meanings: dict[str, Literal["not_started", "open", "at_risk", "blocked", "done"]] = Field(
+        default_factory=dict,
+        description="What each value of a status list means: not_started, open, at_risk, blocked or done. Ranking, "
+        "at-risk lines, colors and completed read this, never the wording.",
+    )
 
     @model_validator(mode="after")
     def _distinct(self) -> ValueList:
@@ -1926,6 +2000,9 @@ class ValueList(Record):
             raise ValueError("a list's values are words, not blanks")
         if len({v.casefold() for v in everything}) != len(everything):
             raise ValueError("a list holds each value once")
+        known = {*self.values, *self.retired}
+        if stray := (set(self.tones) | set(self.meanings)) - known:
+            raise ValueError(f"a tone or meaning is for a value on the list, not {sorted(stray)[0]!r}")
         return self
 
 
@@ -2012,6 +2089,9 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("said_by", "person"),
         ("asker", "person"),
         ("due_event", "event"),
+        ("on_hold.on", "person"),
+        ("on_hold.on", "action"),
+        ("on_hold.on", "question"),
         ("source", "source"),
     ],
     "question": [
@@ -2019,6 +2099,8 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("projects[]", "project"),
         ("event", "event"),
         ("series", "series"),
+        ("held_for.event", "event"),
+        ("held_for.series", "series"),
         ("source", "source"),
     ],
     "source": [("projects[]", "project"), ("author", "person")],

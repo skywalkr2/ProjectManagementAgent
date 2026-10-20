@@ -9,6 +9,8 @@ and `list.retire`.
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,12 +23,91 @@ DEFAULTS = Path(__file__).parent / "defaults" / "value_lists.yaml"
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="lists.ensure")
 
 
+#: The tones a value can be colored with, and the meanings a status list's values can have.
+TONES = ("ok", "warn", "danger", "neutral")
+MEANINGS = ("not_started", "open", "at_risk", "blocked", "done")
+
+#: How urgent each meaning is when projects are ranked, most urgent first; a value with no meaning ranks after open
+#: and not-started work and before finished work, so unknown stays unknown.
+_URGENCY = {"at_risk": 0, "blocked": 1, "open": 2, "not_started": 3, None: 4, "done": 5}
+
+
+def _data() -> dict[str, Any]:
+    return load_yaml(DEFAULTS.read_text(encoding="utf-8")) or {}
+
+
 def core_lists() -> dict[str, dict[str, Any]]:
-    data = load_yaml(DEFAULTS.read_text(encoding="utf-8")) or {}
     return {
-        str(name): {"label": str(entry["label"]), "values": [str(v) for v in entry.get("values") or []]}
-        for name, entry in (data.get("lists") or {}).items()
+        str(name): {
+            "label": str(entry["label"]),
+            "values": [str(v) for v in entry.get("values") or []],
+            "status": bool(entry.get("status")),
+            "tones": {str(k): str(v) for k, v in (entry.get("tones") or {}).items()},
+            "meanings": {str(k): str(v) for k, v in (entry.get("meanings") or {}).items()},
+        }
+        for name, entry in (_data().get("lists") or {}).items()
     }
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"\w+", text.casefold())
+
+
+def suggest(value: str) -> dict[str, str]:
+    """The tone and meaning offered for a typed value: the first shipped suggestion whose words appear in it, else open
+    work with no color. The person can change both; a list with no meanings uses only the tone."""
+    typed = _words(value)
+    for row in _data().get("suggestions") or []:
+        for phrase in row.get("words") or []:
+            words = _words(str(phrase))
+            if words and any(typed[i : i + len(words)] == words for i in range(len(typed) - len(words) + 1)):
+                return {"tone": str(row["tone"]), "meaning": str(row["meaning"])}
+    return {"tone": "neutral", "meaning": "open"}
+
+
+@dataclass(frozen=True)
+class ValueMeaning:
+    """How a value is colored and, on a status list, what it means (None where it has none)."""
+
+    tone: str = "neutral"
+    meaning: str | None = None
+
+
+def is_status_list(view: Any, name: str) -> bool:
+    """Whether the list's values carry a meaning: the core ships it as a status list."""
+    return bool((core_lists().get(name) or {}).get("status"))
+
+
+def describe(view: Any, name: str, value: str | None) -> ValueMeaning:
+    """The tone and meaning of one value of a list: what the person's list holds for it, else what the core ships for
+    the same wording (so a workspace made before meanings existed reads them), else neutral and no meaning. A meaning is
+    never guessed from the wording of a value the core doesn't ship."""
+    if not value:
+        return ValueMeaning()
+    record = next((r for r in view.list("value_list") if r.data["name"] == name), None)
+    shipped = core_lists().get(name) or {}
+    tones = {**{k.casefold(): v for k, v in (shipped.get("tones") or {}).items()}}
+    meanings = {k.casefold(): v for k, v in (shipped.get("meanings") or {}).items()}
+    if record is not None:
+        tones |= {k.casefold(): v for k, v in (record.data.get("tones") or {}).items()}
+        meanings |= {k.casefold(): v for k, v in (record.data.get("meanings") or {}).items()}
+    key = value.strip().casefold()
+    return ValueMeaning(tones.get(key, "neutral"), meanings.get(key))
+
+
+def status_rank(view: Any, name: str, value: str | None) -> int:
+    """How urgent a status value is, from its meaning (0 is the most urgent): at risk, blocked, open, not started, no
+    meaning, done. Never from its wording."""
+    return _URGENCY[describe(view, name, value).meaning]
+
+
+def projects_at_risk(view: Any) -> list[str]:
+    """The ids of the projects whose status means at risk, by the status's meaning, not its wording."""
+    return [
+        p.id
+        for p in view.list("project")
+        if describe(view, "project-status", p.data.get("status")).meaning == "at_risk"
+    ]
 
 
 def declared(store: Any) -> dict[str, dict[str, Any]]:
@@ -64,7 +145,14 @@ def ensure(store: Any) -> list[str]:
             values = list(entry["values"])
             known = {v.casefold() for v in values}
             values += [v for v in in_use(tx, tx.models, name) if v.casefold() not in known]
-            tx.create("value_list", {"name": name, "label": entry["label"], "values": values}, _ENGINE)
+            shipped = {v.casefold() for v in entry["values"]}
+            tones = {v: t for v, t in (entry.get("tones") or {}).items() if v in values and v.casefold() in shipped}
+            meanings = {v: m for v, m in (entry.get("meanings") or {}).items() if v in values}
+            tx.create(
+                "value_list",
+                {"name": name, "label": entry["label"], "values": values, "tones": tones, "meanings": meanings},
+                _ENGINE,
+            )
             created.append(name)
     return created
 
@@ -105,6 +193,8 @@ def _merge(tx: Any, op: Any, w: WriteContext, value_list: Any) -> list[dict[str,
         {
             "values": [v for v in value_list.data["values"] if v != op.value],
             "retired": [v for v in value_list.data["retired"] if v != op.value],
+            "tones": {k: t for k, t in (value_list.data.get("tones") or {}).items() if k != op.value},
+            "meanings": {k: m for k, m in (value_list.data.get("meanings") or {}).items() if k != op.value},
         },
         w,
         read_version=value_list.version,
@@ -134,6 +224,7 @@ def apply(tx: Any, op: Any, w: WriteContext) -> list[dict[str, Any]]:
     values, retired = list(value_list.data["values"]), list(value_list.data["retired"])
     every = {v.casefold(): v for v in (*values, *retired)}
     touched = [{"kind": "value_list", "id": value_list.id}]
+    tones, meanings = dict(value_list.data.get("tones") or {}), dict(value_list.data.get("meanings") or {})
     if op.op == "list.add":
         value = " ".join(op.value.split())
         if value.casefold() in every:
@@ -142,8 +233,17 @@ def apply(tx: Any, op: Any, w: WriteContext) -> list[dict[str, Any]]:
                 raise StoreError(f"{existing!r} is already on the list")
             retired.remove(existing)  # adding a retired value offers it again
             values.append(existing)
+            value = existing
         else:
             values.append(value)
+        status = bool(core_lists().get(op.list, {}).get("status"))
+        if op.meaning and not status:
+            raise StoreError(f"the values of {value_list.data['label']} have no meanings")
+        offered = suggest(value)
+        if op.tone or value not in tones:
+            tones[value] = op.tone or (offered["tone"] if status else "neutral")
+        if status and (op.meaning or value not in meanings):
+            meanings[value] = op.meaning or offered["meaning"]
     elif op.op == "list.retire":
         if op.value not in values:
             raise StoreError(f"{op.value!r} isn't offered on the list")
@@ -157,9 +257,15 @@ def apply(tx: Any, op: Any, w: WriteContext) -> list[dict[str, Any]]:
             raise StoreError(f"{every[to.casefold()]!r} is already on the list; retire one of them instead")
         values = [to if v == op.value else v for v in values]
         retired = [to if v == op.value else v for v in retired]
+        tones = {(to if k == op.value else k): t for k, t in tones.items()}
+        meanings = {(to if k == op.value else k): m for k, m in meanings.items()}
         # The list first, so the records' new value is on it when they are written.
         tx.update(
-            "value_list", value_list.id, {"values": values, "retired": retired}, w, read_version=value_list.version
+            "value_list",
+            value_list.id,
+            {"values": values, "retired": retired, "tones": tones, "meanings": meanings},
+            w,
+            read_version=value_list.version,
         )
         for kind, model in tx.models.items():
             for field, bound, many in list_fields(model):
@@ -176,5 +282,11 @@ def apply(tx: Any, op: Any, w: WriteContext) -> list[dict[str, Any]]:
                     tx.update(kind, record.id, {field: new}, w, read_version=record.version)
                     touched.append({"kind": kind, "id": record.id})
         return touched
-    tx.update("value_list", value_list.id, {"values": values, "retired": retired}, w, read_version=value_list.version)
+    tx.update(
+        "value_list",
+        value_list.id,
+        {"values": values, "retired": retired, "tones": tones, "meanings": meanings},
+        w,
+        read_version=value_list.version,
+    )
     return touched

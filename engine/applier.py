@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from engine import audience, draft_checks, knowledge, learn, proposals, reply_lines, scope
 from engine import search as workspace_search
 from engine import series as series_module
+from engine.blocked import blocker_problem
 from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
@@ -373,6 +374,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             problems.append(Problem("ending-confirm", "hold", i, ENDING_WAITS))
         if isinstance(op, (ActionHoldOp, ActionDropOp)):
             why = action_hold_problem(view, op)
+            if not why and isinstance(op, ActionHoldOp) and op.on:
+                why = blocker_problem(view, op.id, op.on)
             if why:
                 refuse(i, "targets", why)
             elif evidence is not None and not _shares_words(evidence.quote, view.get("action", op.id).data["text"]):
@@ -2114,6 +2117,8 @@ def _apply_op(
     elif isinstance(op, ActionHoldOp):
         cur = tx.get("action", op.id)
         hold = {"waiting_for": " ".join(op.waiting_for.split()), "since": today.isoformat()}
+        if op.on:
+            hold["on"] = op.on
         tx.update("action", op.id, {"on_hold": hold}, w, read_version=cur.version)
         made("action", op.id)
     elif isinstance(op, ActionUnholdOp):

@@ -1,14 +1,21 @@
 // Lists in Settings: the choices dropdowns offer, one block per list. A value can be added, renamed (everywhere it is
 // held) or stopped being offered, and a value that is no longer offered can be offered again. Every change acts at once
 // with Undo.
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { offers, useListChange, useValueLists, type ValueList } from "../lib/lists";
 import { readable, readableTail } from "../lib/records";
 import { useWords } from "../lib/wording";
+import { Pill } from "../ui/Pill";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
 const slug = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, "-");
+
+type Tone = S["ListSuggestionView"]["tone"];
+type Meaning = NonNullable<S["ListSuggestionView"]["meaning"]>;
+const TONES: Tone[] = ["ok", "warn", "danger", "neutral"];
+const MEANINGS: Meaning[] = ["not_started", "open", "at_risk", "blocked", "done"];
 
 /** `level` 2 makes the heading the heading of a section of its own, which takes the cursor when the section opens. */
 export function ValueLists(props: { level?: 2 | 3 }) {
@@ -56,8 +63,20 @@ function ListBlock(props: { list: ValueList }) {
   const used = useUsedBy(list);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [newValue, setNewValue] = useState("");
+  const [chosenTone, setChosenTone] = useState<Tone | null>(null);
+  const [chosenMeaning, setChosenMeaning] = useState<Meaning | null>(null);
   const [showRetired, setShowRetired] = useState(false);
   const [problem, setProblem] = useState("");
+  // What the typed value suggests: its tone, and on a status list its meaning. The person can change either.
+  const typed = newValue.trim();
+  const suggestion = useQuery({
+    queryKey: ["list-suggestion", list.name, typed],
+    queryFn: () => api.listSuggestion(list.name, typed),
+    enabled: !!typed,
+    retry: false,
+  });
+  const tone: Tone = chosenTone ?? suggestion.data?.tone ?? "neutral";
+  const meaning: Meaning | null = list.status ? (chosenMeaning ?? suggestion.data?.meaning ?? "open") : null;
 
   // After a change the row that held focus may be gone, so focus goes to the list's own name.
   const settle = () => window.requestAnimationFrame(() => document.getElementById(`${base}-name`)?.focus());
@@ -69,8 +88,8 @@ function ListBlock(props: { list: ValueList }) {
     return !failed;
   };
 
-  const add = async (value: string, message: string) => {
-    const ok = await run(() => api.listAdd(list.name, value), message);
+  const add = async (value: string, message: string, meant?: Parameters<typeof api.listAdd>[2]) => {
+    const ok = await run(() => api.listAdd(list.name, value, meant), message);
     if (ok) settle();
     return ok;
   };
@@ -114,6 +133,7 @@ function ListBlock(props: { list: ValueList }) {
                 ) : (
                   <>
                     <span className="list-value">{value}</span>
+                    <Meant list={list} value={value} />
                     <RowMenu
                       label={t("lists.value_menu", { value, list: list.label })}
                       actions={
@@ -148,7 +168,14 @@ function ListBlock(props: { list: ValueList }) {
               setNewValue("");
               return;
             }
-            void add(value, t("lists.added_toast", { value, list: list.label })).then((ok) => ok && setNewValue(""));
+            // A value on a status list is asked for its meaning with its tone; elsewhere a tone is sent only when chosen.
+            const meant = list.status ? { tone, meaning: meaning ?? undefined } : chosenTone ? { tone: chosenTone } : undefined;
+            void add(value, t("lists.added_toast", { value, list: list.label }), meant).then((ok) => {
+              if (!ok) return;
+              setNewValue("");
+              setChosenTone(null);
+              setChosenMeaning(null);
+            });
           }}
         >
           <label className="sr" htmlFor={`${base}-add`}>
@@ -162,10 +189,35 @@ function ListBlock(props: { list: ValueList }) {
             placeholder={t("lists.add_placeholder")}
             onChange={(e) => setNewValue(e.target.value)}
           />
+          {typed && list.status && (
+            <>
+              <label htmlFor={`${base}-meaning`}>{t("lists.meaning_label")}</label>
+              <select id={`${base}-meaning`} value={meaning ?? "open"} onChange={(e) => setChosenMeaning(e.target.value as Meaning)}>
+                {MEANINGS.map((m) => (
+                  <option key={m} value={m}>
+                    {t(`lists.meaning.${m}`)}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+          {typed && (
+            <>
+              <label htmlFor={`${base}-tone`}>{t("lists.tone_label")}</label>
+              <select id={`${base}-tone`} value={tone} onChange={(e) => setChosenTone(e.target.value as Tone)}>
+                {TONES.map((x) => (
+                  <option key={x} value={x}>
+                    {t(`lists.tone.${x}`)}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
           <button type="submit" className="btn" disabled={!newValue.trim()}>
             {t("lists.add")} <span className="sr">{t("lists.add_for", { list: list.label })}</span>
           </button>
         </form>
+        {typed && suggestion.data && chosenTone === null && chosenMeaning === null && <p className="hint">{t("lists.suggested")}</p>}
         {problem && (
           <p className="problem-note" role="alert">
             {problem}
@@ -236,4 +288,14 @@ function RenameField(props: { id: string; value: string; onSave: (to: string) =>
       </button>
     </form>
   );
+}
+
+/** How a value looks and, on a status list, what it counts as: a small label whose words say it, so the color is never all
+ * there is. A value with neither says nothing. */
+function Meant(props: { list: ValueList; value: string }) {
+  const { t } = useWords();
+  const tone = props.list.tones?.[props.value] ?? "neutral";
+  const meaning = props.list.meanings?.[props.value];
+  if (!meaning && tone === "neutral") return null;
+  return <Pill tone={tone}>{meaning ? t("lists.means", { meaning: t(`lists.meaning.${meaning}`) }) : t(`lists.tone.${tone}`)}</Pill>;
 }

@@ -131,16 +131,21 @@ def _check_references(store: Store, name: str) -> list[Finding]:
     ids = {kind: {s.id for s in view.list(kind)} for kind in kinds}
     findings = []
     for kind, refs in REFERENCES.items():
+        # A path that may name more than one kind of record (a hold's blocker) is declared once for each kind, and the
+        # value has to be found among them.
+        targets: dict[str, list[str]] = {}
+        for field, target in refs:
+            targets.setdefault(field, []).append(target)
         for stored in view.list(kind):
-            for field, target in refs:
+            for field, kinds_named in targets.items():
                 for value in values_at(stored.data, field):
-                    if value is not None and value not in ids.get(target, set()):
+                    if value is not None and not any(value in ids.get(target, set()) for target in kinds_named):
                         findings.append(
                             Finding(
                                 "fixture",
                                 f"workspaces/{name}/data/{kind}.json",
                                 0,
-                                f"{stored.id}.{field} points to missing {target} {value}",
+                                f"{stored.id}.{field} points to missing {' or '.join(kinds_named)} {value}",
                             )
                         )
     return findings

@@ -706,3 +706,106 @@ test("nothing is offered to draft while nothing has waited long enough", async (
   await screen.findByRole("heading", { name: "Quinn Sample" });
   expect(screen.queryByRole("button", { name: "Draft a nudge" })).toBeNull();
 });
+
+// ---- Later: a question held for a meeting or a day ---------------------------------------------------------------------
+
+function withLater(): S["FollowupSection"][] {
+  const held = structuredClone(sections);
+  const [first] = held[1].questions;
+  held[1].questions = [];
+  held[1].later = [{ ...first, id: "Q-1", held_until: "2026-10-20", held_for_name: null }];
+  held[1].to_send = 1;
+  return held;
+}
+
+test("Later lists the questions held for a meeting or a day, per person, and To send does not", async () => {
+  const user = userEvent.setup();
+  const held = withLater();
+  const later = held[1].later ?? [];
+  held[1].later = [...later, { ...later[0], id: "Q-5", title: "Is the cover final?", held_until: "2026-10-22", held_for_name: "Print sync" }];
+  fakeApi({ "GET followups": () => held, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  expect(await screen.findByRole("button", { name: /^Robin Sample/ })).toHaveTextContent("1 to send");
+  expect(screen.queryByText("Is the index final?")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Later" }));
+  const card = screen.getByRole("listitem", { name: "Robin Sample" });
+  expect(within(card).getByText("2 for later")).toBeInTheDocument();
+  const rows = within(card).getAllByRole("listitem");
+  expect(rows[0]).toHaveTextContent(/Is the index final\?/);
+  expect(rows[0]).toHaveTextContent(/Waiting until .*20/);
+  expect(rows[1]).toHaveTextContent(/Is the cover final\?/);
+  expect(rows[1]).toHaveTextContent(/Waiting for Print sync, .*22/);
+  expect(screen.queryByRole("button", { name: /Copy/ })).toBeNull();
+});
+
+test("Later says so when nothing is held, and Send now brings a question back with Undo", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => sections, "GET people": () => [] });
+  const { unmount } = renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Later" }));
+  expect(screen.getByText(/Nothing is waiting for later\./)).toBeInTheDocument();
+  unmount();
+  const previous = { on: "2026-10-20", since: "2026-10-14" };
+  const calls = fakeApi({
+    "GET followups": () => withLater(),
+    "GET people": () => [],
+    "POST questions/Q-1/held-for": () => ({ ok: "Q-1", previous }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Later" }));
+  await user.click(await screen.findByRole("button", { name: "More actions for Is the index final?" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Send now" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/held-for")?.body).toEqual({ held_for: null }));
+  expect(await screen.findByText("Brought back to what is left to send.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST questions/Q-1/held-for").at(-1)?.body).toEqual({ held_for: previous }));
+});
+
+test("Hold for later on a card holds a question for a day, with the cursor in the field, at once and with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET followups": () => sections,
+    "GET people": () => [],
+    "GET today/agenda": () => [],
+    "POST questions/Q-1/held-for": () => ({ ok: "Q-1", previous: null }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
+  const choice = screen.getByRole("combobox", { name: "Hold it for" });
+  expect(choice).toHaveFocus();
+  const save = screen.getByRole("button", { name: "Hold for later" });
+  expect(save).toBeDisabled();
+  await user.type(screen.getByLabelText("Send it on"), "2099-01-05");
+  expect(save).toBeEnabled();
+  await user.click(save);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/held-for")?.body).toEqual({ held_for: { on: "2099-01-05" } }));
+  expect(await screen.findByText(/^Kept for later, until /)).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST questions/Q-1/held-for").at(-1)?.body).toEqual({ held_for: null }));
+});
+
+test("Hold for later offers the meetings the calendar keeps entries for, a series as its next one, and holds for the one picked", async () => {
+  const user = userEvent.setup();
+  const meeting = (extra: Partial<S["AgendaItemView"]>): S["AgendaItemView"] => ({
+    snapshot: "s", source: "c", title: "Print sync", start: "2026-10-20", all_day: true, cancelled: false, days: ["2026-10-20"], own: true, open_items: 0, entry: "EVT-1", ...extra,
+  });
+  const calls = fakeApi({
+    "GET followups": () => sections,
+    "GET people": () => [],
+    "GET today/agenda": () => [meeting({ series: "SER-1" }), meeting({ title: "One-off review", entry: "EVT-2", series: null }), meeting({ title: "No entry", entry: null }), meeting({ title: "Called off", entry: "EVT-3", cancelled: true })],
+    "POST questions/Q-1/held-for": () => ({ ok: "Q-1", previous: null }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
+  const choice = await screen.findByRole("combobox", { name: "Hold it for" });
+  await waitFor(() => expect(within(choice).getAllByRole("option")).toHaveLength(3));
+  expect(within(choice).getByRole("option", { name: "Print sync, the next one" })).toBeInTheDocument();
+  expect(within(choice).getByRole("option", { name: /^One-off review, / })).toBeInTheDocument();
+  expect(within(choice).queryByRole("option", { name: /No entry|Called off/ })).toBeNull();
+  await user.selectOptions(choice, "series:SER-1");
+  expect(screen.queryByLabelText("Send it on")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Hold for later" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/held-for")?.body).toEqual({ held_for: { series: "SER-1" } }));
+});

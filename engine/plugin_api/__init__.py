@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.82"
+PLUGIN_API_VERSION = "0.3.83"
 
 
 class Settings(BaseModel):
@@ -109,6 +109,20 @@ def _data_path(path: str) -> str:
 
 class NeedsPerson(StoreError):
     """An op set a value only the person may set; the host holds it for the person instead of applying it."""
+
+
+@dataclass(frozen=True)
+class Change:
+    """One change to one field of a record, as a reader of its history is shown it: when, by whom, and the value before
+    and after. A record's creation or removal has no `field`."""
+
+    at: str
+    op: str
+    field: str | None
+    before: Any
+    after: Any
+    actor: str
+    version: int
 
 
 class ReadView:
@@ -180,6 +194,20 @@ class ReadView:
     find_interface_about: Callable[..., Any] | None = None
     #: Set by the host: the id of the person this workspace belongs to (the PM), when set up.
     user: str | None = None
+
+    def changes(self, kind: str, record_id: str, /) -> list[Change]:
+        """The history of a record as readers are shown it, oldest first, for a status page or a report: every change
+        but one that only moves a date on an existing item (the same words, a new due or start date), which is not
+        news. A date move together with any other change, a first date, a date taken away and every new, closed or
+        blocked item stay. The ledger keeps every change; this only leaves some out of what is shown. Reading another
+        plugin's kind raises PluginMisuse; a record that doesn't exist has no changes."""
+        from engine.history import changes_for_readers
+
+        self._allow(kind)
+        return [
+            Change(str(r["at"]), r["op"], r.get("field"), r.get("before"), r.get("after"), r["actor"], r["version"])
+            for r in changes_for_readers(self.__view, kind, record_id)
+        ]
 
     def person_name(self, person_id: str | None = None) -> str:
         """A person's display name (the workspace's own person when no id is given), for a byline or a signature;
@@ -2077,6 +2105,7 @@ from engine.extract.core import ExtractError  # noqa: E402 - part of the plugin 
 from engine.net import retry_after  # noqa: E402 - part of the plugin API
 
 __all__ = [
+    "Change",
     "ConnectorError",
     "retry_after",
     "Poll",

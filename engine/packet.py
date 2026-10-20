@@ -324,6 +324,8 @@ def _item_block(ws: Workspace, store: Store, cfg: Config, req: Stored, source: S
             }
             if d.get("on_hold"):
                 out["on_hold"] = d["on_hold"]["waiting_for"]
+                if d["on_hold"].get("on"):
+                    out["blocked_on"] = d["on_hold"]["on"]
         elif kind == "question":
             out |= {
                 "title": d["title"],
@@ -742,6 +744,7 @@ def _open_actions(store: Store, people: People) -> str:
         owners = ", ".join(people.name(o["person"]) for o in d.get("owners", [])) or "no owner yet"
         due = f"; due {d['due']}" if d.get("due") else ""
         hold = f"; on hold, waiting for {d['on_hold']['waiting_for']}" if d.get("on_hold") else ""
+        hold += f" (blocked on {d['on_hold']['on']})" if (d.get("on_hold") or {}).get("on") else ""
         owed = f"; reply owed to {people.name(d['asker'])}" if d.get("reply_owed") and d.get("asker") else ""
         owed = owed or ("; a reply owed" if d.get("reply_owed") else "")
         project = f"[{d['project']}] " if d.get("project") else ""

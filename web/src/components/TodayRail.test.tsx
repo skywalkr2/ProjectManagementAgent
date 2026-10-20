@@ -221,6 +221,46 @@ test("to do: an action on hold leaves Overdue and sits last under On hold, sayin
   expect(overdue).not.toHaveTextContent("Sign the contract");
 });
 
+test("to do: a to-do whose blocker is over goes first under Unblocked, saying who answered and when, and Take off hold clears it", async () => {
+  const user = userEvent.setup();
+  const answered: S["TodoView"] = {
+    action: "ACT-6",
+    text: "Ship the proofs",
+    project: null,
+    due: "2026-10-01",
+    overdue: true,
+    on_hold: null,
+    blocker: { kind: "question", id: "Q-4", name: "Can proof copies ship by Nov 3?", who: "Morgan Sample", state: "answered", answered: "2026-10-09" },
+  };
+  const calls = fakeApi(routes({ "GET today/todo": () => [...todo, answered], "POST actions/ACT-6/unhold": () => ({ ok: "ACT-6", previous: { waiting_for: "Morgan Sample", since: "2026-10-01", on: "Q-4" } }) }));
+  renderApp(<TodayRail onView={vi.fn()} />);
+  const col = await column("Your to-dos");
+  const heads = await within(col).findAllByRole("heading", { level: 3 });
+  expect(heads.map((h) => h.textContent)).toEqual(["Unblocked 1", "Overdue 1", "Today 1", "Later 1", "No date 1"]);
+  const group = within(col).getByRole("heading", { name: "Unblocked 1" }).closest("[data-group]") as HTMLElement;
+  expect(group).toHaveTextContent("Ship the proofs");
+  expect(within(group).getByText(/^Unblocked: Morgan Sample answered .*9$/)).toBeInTheDocument();
+  await user.click(within(group).getByRole("button", { name: "More actions for Ship the proofs" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Take off hold" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-6/unhold")).toBe(true));
+});
+
+test("to do: a blocked to-do stays under On hold and says Blocked, waiting on who or what it waits on", async () => {
+  const blocked: S["TodoView"] = {
+    action: "ACT-7",
+    text: "Sign the contract",
+    project: null,
+    due: null,
+    overdue: false,
+    on_hold: "Morgan Sample",
+    blocker: { kind: "person", id: "PER-9", name: "Morgan Sample", state: "waiting" },
+  };
+  open({ "GET today/todo": () => [blocked] });
+  const col = await column("Your to-dos");
+  const group = (await within(col).findByRole("heading", { name: "On hold 1" })).closest("[data-group]") as HTMLElement;
+  expect(within(group).getByText(/Blocked, waiting on/)).toHaveTextContent("Blocked, waiting on Morgan Sample");
+});
+
 test("marking a to-do done uses the action path and offers Undo", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { calls } = open({

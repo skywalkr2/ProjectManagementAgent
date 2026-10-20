@@ -8,6 +8,7 @@ from datetime import date, datetime
 from typing import Any, Literal, get_args, get_origin
 from zoneinfo import ZoneInfo
 
+from engine.history import changes_for_readers
 from engine.names import render_owner
 from engine.origin import origins
 from engine.records import ref_fields, values_at
@@ -252,13 +253,14 @@ def _open_with(view: Any, kind: str, record_id: str) -> tuple[list[Any], list[An
 def _activity(
     view: Any, kind: str, record_id: str, actions: list[Any], questions: list[Any], name_of: Any, pm: str | None
 ) -> list[dict[str, Any]]:
-    """What happened to the record and to what is open with it: one entry per change, newest first."""
+    """What happened to the record and to what is open with it: one entry per change, newest first. A change that only
+    moves a date on an existing item is left out (it is not news; the ledger keeps it)."""
     entries = []
     related = [("action", a.id) for a in actions] + [("question", q.id) for q in questions]
     if kind == "project":
         related += [("note", n.id) for n in view.list("note") if n.data.get("project") == record_id]
     for ref_kind, ref_id in [(kind, record_id), *related]:
-        for row in view.ledger(kind=ref_kind, record_id=ref_id):
+        for row in changes_for_readers(view, ref_kind, ref_id):
             entries.append(
                 {
                     "at": str(row["at"]),

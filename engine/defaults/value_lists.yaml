@@ -1,15 +1,45 @@
 # The core's value lists and their first values. A workspace gets each list the first time it opens; after that the
 # list is the person's, changed from the screens (add, rename, retire). Values a workspace already uses are added.
+#
+# Each value has a tone (ok, warn, danger or neutral), which is how it is colored. A list with `status: true` is a status
+# list: each of its values also has a meaning (not_started, open, at_risk, blocked or done), and the ranking, the at-risk
+# lines, the colors and "completed" read the meaning, never the wording. A value a workspace adds takes the tone and
+# meaning the person picks; a value with none reads what is shipped for the same wording here, else neutral.
 lists:
   project-status:
     label: Project status
+    status: true
     values: [On track, At risk, Off track, On hold, Done]
+    tones: {On track: ok, At risk: warn, Off track: danger, On hold: warn, Done: ok}
+    meanings: {On track: open, At risk: at_risk, Off track: at_risk, On hold: blocked, Done: done}
   project-phase:
     label: Project phase
     values: [Idea, Planning, Underway, Wrapping up, Finished]
+    tones: {Idea: neutral, Planning: neutral, Underway: neutral, Wrapping up: neutral, Finished: ok}
   project-priority:
     label: Project priority
     values: [High, Medium, Low]
+    tones: {High: warn, Medium: neutral, Low: neutral}
   project-group:
     label: Project group
     values: []
+
+# What a typed value suggests when the person adds one: the first row whose words appear in it (whole words, any case)
+# gives the tone and meaning offered, which the person can change. A value no row matches is suggested as open work with
+# no color.
+suggestions:
+  - words: [done, complete, completed, finished, shipped, closed, delivered, launched]
+    meaning: done
+    tone: ok
+  - words: [hold, paused, pause, blocked, stuck, waiting, parked, frozen]
+    meaning: blocked
+    tone: warn
+  - words: [risk, late, behind, slipping, delayed, off track, troubled]
+    meaning: at_risk
+    tone: warn
+  - words: [not started, to do, planned, planning, backlog, idea, pending, new, proposed, unstarted]
+    meaning: not_started
+    tone: neutral
+  - words: [track, underway, active, ongoing, progress, going, healthy, fine]
+    meaning: open
+    tone: ok

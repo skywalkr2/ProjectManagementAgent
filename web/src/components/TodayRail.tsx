@@ -11,7 +11,7 @@ import { useWords } from "../lib/wording";
 import { useChangeThis } from "./ChangeThis";
 import { LearnedLines } from "./Learned";
 import { useDropAction } from "./DropAction";
-import { HoldPill, useHold } from "./OnHold";
+import { HoldNote, useHold } from "./OnHold";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
 import { dateAndTime, useRemindMe } from "./ReminderLine";
@@ -317,9 +317,12 @@ function TodoPanel() {
   const today = localDate(useNow());
   const items = todo.data ?? [];
   const names = new Map((projects.data ?? []).map((p) => [p.id, p.name]));
-  const live = items.filter((x) => !x.on_hold);
+  // A to-do whose blocker is over (a question answered, a to-do finished) goes first, saying so.
+  const unblocked = items.filter((x) => !!x.blocker && x.blocker.state !== "waiting");
+  const live = items.filter((x) => !x.on_hold && !unblocked.includes(x));
   const isToday = (x: Todo) => !x.overdue && !!x.due && x.due <= today;
   const groups = [
+    { id: "unblocked", label: t("today.todo.unblocked"), rows: unblocked },
     { id: "overdue", label: t("today.todo.overdue"), rows: live.filter((x) => x.overdue) },
     { id: "today", label: t("today.todo.today"), rows: live.filter(isToday) },
     { id: "later", label: t("today.todo.later"), rows: live.filter((x) => !x.overdue && !isToday(x) && !!x.due) },
@@ -366,7 +369,7 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
   const [noting, setNoting] = useState(false);
   const [ticked, setTicked] = useState(false);
   const { item } = props;
-  const hold = useHold({ id: item.action, on_hold: item.on_hold });
+  const hold = useHold({ id: item.action, on_hold: item.on_hold, blocker: item.blocker });
   const change = useChangeThis({ kind: "action", id: item.action }, () => row.current?.focus());
   const drop = useDropAction({ id: item.action }, () => row.current?.focus());
   const remind = useRemindMe(item.action, item.remind_at, () => row.current?.focus());
@@ -401,7 +404,7 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
       <div className="tb-what">
         <div className="tb-title">
           {item.text}
-          {item.on_hold && <HoldPill what={item.on_hold} due={item.due} />}
+          <HoldNote on_hold={item.on_hold} blocker={item.blocker} due={item.due} />
         </div>
         {meta && <div className="tb-meta">{meta}</div>}
         <OriginLink origin={item.origin} />

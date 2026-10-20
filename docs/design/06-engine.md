@@ -966,12 +966,20 @@ is marked *designed*, with the phase.
   Today's overdue line and the to-do list's Overdue group (it sits last, under On hold), it is never chased, and the
   Follow-ups row says "On hold: what it waits for", with its old due date in the tooltip. The due date is kept for when it
   comes off hold, and the assistant's packets say it is on hold. A hold is not `held` (the status for an action waiting for
-  its first owner). **Blocked** (*phase B-6a*) is a hold that names its blocker: `on_hold.on` is a person, an action or
-  a question, the row reads "Blocked, waiting on <the person or the action>" or, for a question, "Waits on: <the
-  question> (<who>, sent <date>)" linking to it, and Top priorities counts the blocked ones; a hold with only words
-  reads "On hold: …". When the question it waits on is answered, the to-do goes to the top of the rail with "Unblocked:
-  <who> answered <date>" (the UI designer's answer 35). The tie is set by the person or by an op naming the question,
-  never by matching text. Taking it off hold when an input says the wait is over is *designed, phase L3b, not built*
+  its first owner). **Blocked** (built, phase B-6a) is a hold that names its blocker: `on_hold.on` is the id of a person, an
+  action or a question, picked from a list in Put on hold (never typed) or named by the assistant's `action.hold` (which is
+  refused for a blocker that doesn't exist or is the action itself). With a blocker and no words, the words are the
+  blocker's name. The row reads "Blocked, waiting on <the person or the action>" or, for a question, "Waits on: <the
+  question> (<who>, sent <date>)", each name linking to what it names; a hold with only words reads "On hold: …". It is
+  still one state: never due or chased, and `blocked_actions` (`engine/blocked.py`) counts the open actions whose blocker
+  still blocks, by project and in all, for Top priorities (batch B-6b shows it; nothing on screen reads it yet). When the
+  question it waits on is answered (or the action it waits on is finished or dropped), the to-do is unblocked: it is due
+  again by its own date, goes to the top of the rail under Unblocked with "Unblocked: <who> answered <date>" (the UI
+  designer's answer 35; the day is read from the ledger), and stays unblocked until the person takes it off hold; the
+  hold is not removed for them. The tie is set by the person or by an op naming the blocker, never by matching text.
+  (the designer's F15: a blocked action stays not due and not chased.) **Built:**
+  `tests/test_blocked_actions.py` (the blocker, its words, the count, Undo, the op, the rows, the unblocked to-do first),
+  `web/src/components/OnHold.test.tsx` (the picker and the rows), `web/src/components/TodayRail.test.tsx`. Taking it off hold when an input says the wait is over is *designed, phase L3b, not built*
   (`tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`,
   `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal`,
   `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`,

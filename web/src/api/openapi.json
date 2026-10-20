@@ -3285,6 +3285,85 @@
         "title": "BackupStatus",
         "type": "object"
       },
+      "BlockerView": {
+        "description": "What a hold is blocked on, for a row to say: a person, an action or a question.",
+        "properties": {
+          "answered": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a question that was answered, the day it was.",
+            "title": "Answered"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "person",
+              "action",
+              "question"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "A person's name, an action's text or a question's title.",
+            "title": "Name",
+            "type": "string"
+          },
+          "sent": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a question, the day it was sent.",
+            "title": "Sent"
+          },
+          "state": {
+            "default": "waiting",
+            "description": "waiting: still waited on. answered: the question was answered. done: the action is finished or dropped, or the question was dropped.",
+            "enum": [
+              "waiting",
+              "answered",
+              "done"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "who": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a question, the person who was asked.",
+            "title": "Who"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "title": "BlockerView",
+        "type": "object"
+      },
       "CatalogAddress": {
         "additionalProperties": false,
         "properties": {
@@ -5571,6 +5650,17 @@
       },
       "FollowupAction": {
         "properties": {
+          "blocker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlockerView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What its hold is blocked on, when the hold names a blocker (a person, action or question)."
+          },
           "chase_due": {
             "default": false,
             "description": "Whether the follow-up rule says chasing is the next step: its due date is near or past, or it has waited long enough with no word, and it is not on hold.",
@@ -5720,6 +5810,30 @@
             "description": "The day the person was last chased about it (a date).",
             "title": "Followed Up"
           },
+          "held_for_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a question held for a meeting: the meeting's name; none for a question held for a day.",
+            "title": "Held For Name"
+          },
+          "held_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a question in Later: the day it comes back to To send (a date).",
+            "title": "Held Until"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -5833,6 +5947,14 @@
           "is_pm": {
             "title": "Is Pm",
             "type": "boolean"
+          },
+          "later": {
+            "description": "Unsent questions held for a meeting or a day, out of To send until it comes.",
+            "items": {
+              "$ref": "#/components/schemas/FollowupQuestion"
+            },
+            "title": "Later",
+            "type": "array"
           },
           "message": {
             "title": "Message",
@@ -6322,6 +6444,157 @@
         "title": "HeldAsk",
         "type": "object"
       },
+      "HeldChanged": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "string"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeldForState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the question was held for before the change, for undoing it (none: it was not held)."
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "HeldChanged",
+        "type": "object"
+      },
+      "HeldForIn": {
+        "additionalProperties": false,
+        "description": "What a question is held for: exactly one of a calendar entry, a series or a day.",
+        "properties": {
+          "event": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the calendar entry to wait for.",
+            "title": "Event"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day to send it.",
+            "title": "On"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the series to wait for: its next instance.",
+            "title": "Series"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day it was held, when putting a hold back as it was.",
+            "title": "Since"
+          }
+        },
+        "title": "HeldForIn",
+        "type": "object"
+      },
+      "HeldForState": {
+        "properties": {
+          "event": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          }
+        },
+        "title": "HeldForState",
+        "type": "object"
+      },
+      "HeldIn": {
+        "properties": {
+          "held_for": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeldForIn"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What to hold the question for; none sends it now (it leaves Later)."
+          }
+        },
+        "title": "HeldIn",
+        "type": "object"
+      },
       "HoldChanged": {
         "properties": {
           "ok": {
@@ -6348,16 +6621,25 @@
       },
       "HoldIn": {
         "properties": {
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of a person, an action or a question the action is blocked on. A hold with only words is on hold; one that names a blocker is blocked.",
+            "title": "On"
+          },
           "waiting_for": {
-            "description": "What the action waits for, in plain words.",
-            "minLength": 1,
+            "default": "",
+            "description": "What the action waits for, in plain words. Left out when `on` names the blocker: the words are then its name.",
             "title": "Waiting For",
             "type": "string"
           }
         },
-        "required": [
-          "waiting_for"
-        ],
         "title": "HoldIn",
         "type": "object"
       },
@@ -6380,6 +6662,18 @@
       },
       "HoldState": {
         "properties": {
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it is blocked on, when the hold names its blocker.",
+            "title": "On"
+          },
           "since": {
             "description": "The day it was put on hold (a date).",
             "title": "Since",
@@ -7707,9 +8001,85 @@
         "title": "ListRenameIn",
         "type": "object"
       },
+      "ListSuggestionView": {
+        "description": "The tone and meaning offered for a typed value, which the person can change.",
+        "properties": {
+          "meaning": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_started",
+                  "open",
+                  "at_risk",
+                  "blocked",
+                  "done"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty for a list whose values have no meanings.",
+            "title": "Meaning"
+          },
+          "tone": {
+            "enum": [
+              "ok",
+              "warn",
+              "danger",
+              "neutral"
+            ],
+            "title": "Tone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tone"
+        ],
+        "title": "ListSuggestionView",
+        "type": "object"
+      },
       "ListValueIn": {
         "additionalProperties": false,
         "properties": {
+          "meaning": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_started",
+                  "open",
+                  "at_risk",
+                  "blocked",
+                  "done"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the value means, when adding one to a status list; left out, the suggestion is used.",
+            "title": "Meaning"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ok",
+                  "warn",
+                  "danger",
+                  "neutral"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the value is colored, when adding one; left out, the suggestion is used.",
+            "title": "Tone"
+          },
           "value": {
             "maxLength": 80,
             "minLength": 1,
@@ -10732,7 +11102,7 @@
           },
           "completed": {
             "default": false,
-            "description": "Its status is the one the settings say means finished: it is listed under Completed, not removed.",
+            "description": "Its status means finished (done), or is the one the settings name: it is listed under Completed, not removed.",
             "title": "Completed",
             "type": "boolean"
           },
@@ -10879,6 +11249,55 @@
               }
             ],
             "title": "Status"
+          },
+          "status_meaning": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_started",
+                  "open",
+                  "at_risk",
+                  "blocked",
+                  "done"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What its status means, from the status list; empty when it has none.",
+            "title": "Status Meaning"
+          },
+          "status_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How urgent its status is by its meaning (0 first): at risk, blocked, open, not started, none, done.",
+            "title": "Status Rank"
+          },
+          "status_tone": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ok",
+                  "warn",
+                  "danger",
+                  "neutral"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How its status is colored, from the status list; plain when none.",
+            "title": "Status Tone"
           },
           "summary": {
             "anyOf": [
@@ -17347,6 +17766,17 @@
             "title": "Action",
             "type": "string"
           },
+          "blocker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlockerView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What its hold is blocked on, when the hold names a blocker. When the blocker is over (the question answered, the action finished) it says so, `on_hold` is empty and the to-do is first on the list."
+          },
           "due": {
             "anyOf": [
               {
@@ -17719,6 +18149,21 @@
             "title": "Label",
             "type": "string"
           },
+          "meanings": {
+            "additionalProperties": {
+              "enum": [
+                "not_started",
+                "open",
+                "at_risk",
+                "blocked",
+                "done"
+              ],
+              "type": "string"
+            },
+            "description": "What each value of a status list means; ranking and colors read this.",
+            "title": "Meanings",
+            "type": "object"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -17730,6 +18175,32 @@
             },
             "title": "Retired",
             "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether its values carry a meaning (a status list), asked for when one is added.",
+            "title": "Status"
+          },
+          "tones": {
+            "additionalProperties": {
+              "enum": [
+                "ok",
+                "warn",
+                "danger",
+                "neutral"
+              ],
+              "type": "string"
+            },
+            "description": "How each value is colored; a value left out is neutral.",
+            "title": "Tones",
+            "type": "object"
           },
           "used_by": {
             "description": "The fields that take their values from it, as kind.field.",
@@ -22173,6 +22644,55 @@
         "summary": "Retire"
       }
     },
+    "/api/list-suggestion": {
+      "get": {
+        "description": "The tone, and for a status list the meaning, offered for a value being added; the person can change both.",
+        "operationId": "list_suggestion_api_list_suggestion_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "list",
+            "required": true,
+            "schema": {
+              "title": "List",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "value",
+            "required": true,
+            "schema": {
+              "title": "Value",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListSuggestionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Suggestion"
+      }
+    },
     "/api/lists": {
       "get": {
         "description": "Every value list, with the fields that use it.",
@@ -24588,6 +25108,56 @@
           }
         },
         "summary": "Sent"
+      }
+    },
+    "/api/questions/{question_id}/held-for": {
+      "post": {
+        "description": "Hold an unsent question for a meeting, a series or a day (it waits in Later, out of To send, until that\nday), or send it now (no hold). Undo puts back what `previous` says.",
+        "operationId": "question_held_for_api_questions__question_id__held_for_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "title": "Question Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeldIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeldChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Question Held For"
       }
     },
     "/api/record": {

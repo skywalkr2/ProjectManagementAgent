@@ -245,6 +245,8 @@ def build() -> str:
             f"`ANY`: {constants.get('ANY', '')}",
             "### Stored\n\n" + _para(_doc(api.Stored)),
             _table(["Field", "Type", "Default"], _dataclass_rows(api.Stored)),
+            "### Change\n\n" + _para(_doc(api.Change)),
+            _table(["Field", "Type", "Default"], _dataclass_rows(api.Change)),
         ),
         _section(
             "Events",

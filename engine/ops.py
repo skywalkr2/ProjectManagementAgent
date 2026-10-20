@@ -351,6 +351,11 @@ class ActionHoldOp(OpModel):
     op: Literal["action.hold"] = "action.hold"
     id: str = Field(description="The id of the open action to put on hold.")
     waiting_for: str = Field(min_length=1, max_length=200, description="What it waits for, in plain words.")
+    on: str | None = Field(
+        None,
+        description="When the input names what blocks it, the id of that person, action or question (one the context "
+        "lists); the action is then blocked on it. Leave it out when the wait is only words.",
+    )
     evidence: EvidenceIn | None = Field(
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
@@ -831,6 +836,14 @@ class ListAddOp(OpModel):
     op: Literal["list.add"] = "list.add"
     list: str = Field(min_length=1, description='The list\'s name, such as "project-status".')
     value: str = Field(min_length=1, max_length=80, description="The value to offer.")
+    tone: Literal["ok", "warn", "danger", "neutral"] | None = Field(
+        None, description="How the value is colored. Left out, the suggestion for its wording is used."
+    )
+    meaning: Literal["not_started", "open", "at_risk", "blocked", "done"] | None = Field(
+        None,
+        description="For a status list, what the value means. Left out, the suggestion for its wording is used, and "
+        "open work when there is none. A list with no meanings refuses one.",
+    )
 
     def describe(self) -> str | None:
         return f"Add {' '.join(self.value.split())!r} to the list {self.list}"

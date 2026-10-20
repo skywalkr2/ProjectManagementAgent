@@ -10,6 +10,20 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.83 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.
+
+- **A record's history as readers see it:** `view.changes(kind, record_id)` returns the record's changes oldest first as
+  `Change`s (`at`, `op`, `field`, `before`, `after`, `actor`, `version`), leaving out a change that only moves a date on an
+  existing item (the same words, a new due or start date). A date move together with any other change, a first date, a
+  date taken away and every new, closed or blocked item stay. The ledger keeps everything; a pack's published status page
+  reads this so a date that merely slipped is not reported as news.
+- **Core records:** `Action.on_hold.on` (what a hold is blocked on: the id of a person, an action or a question; a hold
+  with only words has none), `Question.held_for` (a meeting, a series or a day it waits for, out of To send until then),
+  and `ValueList.tones` and `ValueList.meanings` (how each value is colored and, on a status list, what it means).
+- **Core ops:** `action.hold` takes an optional `on`; `list.add` takes an optional `tone` and `meaning`.
+
 ## What 0.3.82 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change: a connector that calls `context.access_token(name)`

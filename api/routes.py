@@ -9,6 +9,7 @@ import asyncio
 import base64
 import json
 import logging
+from dataclasses import asdict
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 from urllib.parse import quote
@@ -41,6 +42,7 @@ from api.schemas import (
     AssistantStatus,
     AuthorSpan,
     BackupStatus,
+    BlockerView,
     ChangeItem,
     ChangesetView,
     ChoiceOption,
@@ -62,6 +64,8 @@ from api.schemas import (
     HandoverChoice,
     HandoverSideView,
     HandoverView,
+    HeldChanged,
+    HeldIn,
     HoldChanged,
     HoldIn,
     HoldRestore,
@@ -71,6 +75,7 @@ from api.schemas import (
     JobView,
     KindView,
     ListRenameIn,
+    ListSuggestionView,
     ListValueIn,
     MadeView,
     NetworkWait,
@@ -175,6 +180,7 @@ from engine.dispatcher import (
 )
 from engine.followups import (
     follow_up,
+    hold_question,
     mark_followed_up,
     mark_sent,
     put_on_hold,
@@ -399,6 +405,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/lists")
     def value_lists() -> list[ValueListView]:
         """Every value list, with the fields that use it."""
+        from engine.lists import is_status_list
         from engine.records import list_fields
 
         users: dict[str, list[str]] = {}
@@ -413,6 +420,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 values=r.data["values"],
                 retired=r.data["retired"],
                 used_by=users.get(r.data["name"], []),
+                status=is_status_list(store.read(), r.data["name"]),
+                tones=r.data.get("tones") or {},
+                meanings=r.data.get("meanings") or {},
             )
             for r in sorted(store.read().list("value_list"), key=lambda r: r.data["label"].casefold())
         ]
@@ -427,7 +437,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/lists/{name:path}/add")
     def list_add(name: str, body: ListValueIn) -> Applied:
         """Add a value to a list (or offer a retired one again), with Undo."""
-        return list_op({"op": "list.add", "list": name, "value": body.value}, "Added to a list")
+        op = {"op": "list.add", "list": name, "value": body.value}
+        op |= {k: v for k, v in (("tone", body.tone), ("meaning", body.meaning)) if v}
+        return list_op(op, "Added to a list")
+
+    @r.get("/list-suggestion")
+    def list_suggestion(list: str, value: str) -> ListSuggestionView:
+        """The tone, and for a status list the meaning, offered for a value being added; the person can change both."""
+        from engine.lists import is_status_list, suggest
+
+        offered = suggest(value)
+        status = is_status_list(store.read(), list)
+        return ListSuggestionView(tone=offered["tone"], meaning=offered["meaning"] if status else None)
 
     @r.post("/lists/{name:path}/rename")
     def list_rename(name: str, body: ListRenameIn) -> Applied:
@@ -564,7 +585,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         found = today.todo(store, cfg, datetime.now(UTC))
         origin = origins(store.read(), "action", [t.action for t in found])
-        return [TodoView(**vars(t), origin=origin[t.action]) for t in found]
+        return [
+            TodoView(
+                **{k: v for k, v in vars(t).items() if k != "blocker"},
+                blocker=BlockerView(**asdict(t.blocker)) if t.blocker is not None else None,
+                origin=origin[t.action],
+            )
+            for t in found
+        ]
 
     @r.get("/today/arrived")
     def today_arrived() -> InboxView:
@@ -1552,7 +1580,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def action_put_on_hold(action_id: str, body: HoldIn) -> HoldChanged:
         """Put an open action on hold, waiting for something. It is never due, overdue or chased while it is."""
         need("action", action_id)
-        previous = guard(lambda: put_on_hold(store, action_id, body.waiting_for))
+        previous = guard(lambda: put_on_hold(store, action_id, body.waiting_for, on=body.on))
         changed()
         return HoldChanged(ok=action_id, previous=previous)
 
@@ -1571,6 +1599,16 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         guard(lambda: restore_hold(store, action_id, body.hold.model_dump() if body.hold else None))
         changed()
         return Ok(ok=action_id)
+
+    @r.post("/questions/{question_id}/held-for")
+    def question_held_for(question_id: str, body: HeldIn) -> HeldChanged:
+        """Hold an unsent question for a meeting, a series or a day (it waits in Later, out of To send, until that
+        day), or send it now (no hold). Undo puts back what `previous` says."""
+        need("question", question_id)
+        held = body.held_for.model_dump(exclude_none=True) if body.held_for else None
+        previous = guard(lambda: hold_question(store, question_id, held))
+        changed()
+        return HeldChanged(ok=question_id, previous=previous)
 
     @r.post("/followups/{person}/actions/{action_id}/followed-up")
     def action_followed_up(person: str, action_id: str, body: NoteIn | None = None) -> FollowedUp:
@@ -1684,7 +1722,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         found = sections(store, cfg, date.today())
         view = store.read()
         action_origin = origins(view, "action", [a["id"] for s in found for a in s.actions])
-        question_origin = origins(view, "question", [q["id"] for s in found for q in s.questions])
+        question_origin = origins(view, "question", [q["id"] for s in found for q in (*s.questions, *s.later)])
         return [_section(s, people, action_origin, question_origin) for s in found]
 
     @r.post("/followups/{person}/mark-sent")
@@ -1861,6 +1899,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/projects")
     def projects() -> list[ProjectView]:
+        from engine.lists import describe, status_rank
         from engine.projects import language_for, spent_on
         from engine.record_page import counts
         from engine.scope import role_of
@@ -1869,6 +1908,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         view = store.read()
         seen = counts(view)["projects"]
         done = cfg.workspace.project.completed_status.strip().casefold()
+        meant = {p.id: describe(view, "project-status", p.data.get("status")) for p in view.list("project")}
         return [
             ProjectView(
                 parent=p.data.get("parent"),
@@ -1888,7 +1928,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 owner=p.data.get("owner"),
                 owner_name=names.name(p.data["owner"]) if p.data.get("owner") else None,
                 summary=p.data.get("summary"),
-                completed=bool(done) and (p.data.get("status") or "").strip().casefold() == done,
+                completed=meant[p.id].meaning == "done"
+                or (bool(done) and (p.data.get("status") or "").strip().casefold() == done),
+                status_tone=meant[p.id].tone,
+                status_meaning=meant[p.id].meaning,
+                status_rank=status_rank(view, "project-status", p.data.get("status")),
                 **seen.get(p.id, {}),
             )
             for p in store.read().list("project")
@@ -2155,28 +2199,11 @@ def _op_view(
 
 
 def _section(s: Any, people: People, action_origin: dict[str, Any], question_origin: dict[str, Any]) -> FollowupSection:
-    questions = []
-    for q in s.questions:
-        resolves = q.get("resolves") or {}
-        questions.append(
-            FollowupQuestion(
-                id=q["id"],
-                title=q["title"],
-                text=q["text"],
-                links=q["links"],
-                kind=q["kind"],
-                status=q["status"],
-                project_name=q["project_name"],
-                sent=q["sent"],
-                followed_up=q["followed_up"],
-                chases=q["chases"],
-                waiting_days=q["waiting_days"],
-                chase_due=q["chase_due"],
-                about=resolves.get("kind"),
-                options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
-                origin=question_origin.get(q["id"]),
-            )
-        )
+    def question_views(rows: list[dict[str, Any]]) -> list[FollowupQuestion]:
+        return [_followup_question(q, people, question_origin) for q in rows]
+
+    questions = question_views(s.questions)
+    later = question_views(s.later)
     actions = [
         FollowupAction(
             id=a["id"],
@@ -2189,6 +2216,7 @@ def _section(s: Any, people: People, action_origin: dict[str, Any], question_ori
             followed_up=a["followed_up"],
             chases=a["chases"],
             on_hold=a["on_hold"],
+            blocker=BlockerView(**a["blocker"]) if a.get("blocker") else None,
             chase_due=a["chase_due"],
             origin=action_origin.get(a["id"]),
         )
@@ -2199,8 +2227,32 @@ def _section(s: Any, people: People, action_origin: dict[str, Any], question_ori
         name=s.name,
         is_pm=s.is_pm,
         questions=questions,
+        later=later,
         actions=actions,
         message=s.message,
         to_send=s.to_send,
         nudge=NudgeView(**vars(s.nudge)) if s.nudge is not None else None,
+    )
+
+
+def _followup_question(q: dict[str, Any], people: People, question_origin: dict[str, Any]) -> FollowupQuestion:
+    resolves = q.get("resolves") or {}
+    return FollowupQuestion(
+        id=q["id"],
+        title=q["title"],
+        text=q["text"],
+        links=q["links"],
+        kind=q["kind"],
+        status=q["status"],
+        project_name=q["project_name"],
+        sent=q["sent"],
+        followed_up=q["followed_up"],
+        chases=q["chases"],
+        waiting_days=q["waiting_days"],
+        chase_due=q["chase_due"],
+        held_until=q.get("held_until"),
+        held_for_name=q.get("held_for_name"),
+        about=resolves.get("kind"),
+        options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
+        origin=question_origin.get(q["id"]),
     )

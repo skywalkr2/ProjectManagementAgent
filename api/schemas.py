@@ -104,12 +104,46 @@ class Unfollow(BaseModel):
 
 
 class HoldIn(BaseModel):
-    waiting_for: str = Field(min_length=1, description="What the action waits for, in plain words.")
+    waiting_for: str = Field(
+        "",
+        description="What the action waits for, in plain words. Left out when `on` names the blocker: the words are "
+        "then its name.",
+    )
+    on: str | None = Field(
+        None,
+        description="The id of a person, an action or a question the action is blocked on. A hold with only words is "
+        "on hold; one that names a blocker is blocked.",
+    )
 
 
 class HoldState(BaseModel):
     waiting_for: str = Field(description="What the action waits for.")
     since: str = Field(description="The day it was put on hold (a date).")
+    on: str | None = Field(None, description="What it is blocked on, when the hold names its blocker.")
+
+
+class HeldForIn(BaseModel):
+    """What a question is held for: exactly one of a calendar entry, a series or a day."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event: str | None = Field(None, description="The id of the calendar entry to wait for.")
+    series: str | None = Field(None, description="The id of the series to wait for: its next instance.")
+    on: date | None = Field(None, description="The day to send it.")
+    since: date | None = Field(None, description="The day it was held, when putting a hold back as it was.")
+
+
+class HeldForState(BaseModel):
+    event: str | None = None
+    series: str | None = None
+    on: date | None = None
+    since: date | None = None
+
+
+class HeldIn(BaseModel):
+    held_for: HeldForIn | None = Field(
+        None, description="What to hold the question for; none sends it now (it leaves Later)."
+    )
 
 
 class HoldRestore(BaseModel):
@@ -287,6 +321,13 @@ class NudgeRecorded(BaseModel):
         description="The day each action's person was told before, by action id."
     )
     signal_at: str | None = Field(None, description="When an edit of the message was recorded, if it was edited.")
+
+
+class HeldChanged(BaseModel):
+    ok: str
+    previous: HeldForState | None = Field(
+        None, description="What the question was held for before the change, for undoing it (none: it was not held)."
+    )
 
 
 class HoldChanged(BaseModel):
@@ -675,6 +716,22 @@ class SourceView(BaseModel):
     limit: SourceLimit | None = Field(None, description="Who its sender limited it to; none when it has no limit.")
 
 
+class BlockerView(BaseModel):
+    """What a hold is blocked on, for a row to say: a person, an action or a question."""
+
+    kind: Literal["person", "action", "question"]
+    id: str
+    name: str = Field(description="A person's name, an action's text or a question's title.")
+    state: Literal["waiting", "answered", "done"] = Field(
+        "waiting",
+        description="waiting: still waited on. answered: the question was answered. done: the action is finished or "
+        "dropped, or the question was dropped.",
+    )
+    who: str | None = Field(None, description="For a question, the person who was asked.")
+    sent: date | None = Field(None, description="For a question, the day it was sent.")
+    answered: date | None = Field(None, description="For a question that was answered, the day it was.")
+
+
 class FollowupQuestion(BaseModel):
     id: str
     title: str
@@ -691,6 +748,12 @@ class FollowupQuestion(BaseModel):
     )
     chase_due: bool = Field(
         False, description="Whether it has gone unanswered as long as the follow-up rule says, so chasing is next."
+    )
+    held_until: str | None = Field(
+        None, description="For a question in Later: the day it comes back to To send (a date)."
+    )
+    held_for_name: str | None = Field(
+        None, description="For a question held for a meeting: the meeting's name; none for a question held for a day."
     )
     about: str | None
     options: list[Option]
@@ -711,6 +774,9 @@ class FollowupAction(BaseModel):
     chases: int = Field(0, description="How many times the person was chased about it.")
     on_hold: str | None = Field(
         None, description="What the action waits for while it is on hold; an action on hold is never chased."
+    )
+    blocker: BlockerView | None = Field(
+        None, description="What its hold is blocked on, when the hold names a blocker (a person, action or question)."
     )
     chase_due: bool = Field(
         False,
@@ -736,6 +802,10 @@ class FollowupSection(BaseModel):
     name: str
     is_pm: bool
     questions: list[FollowupQuestion]
+    later: list[FollowupQuestion] = Field(
+        default_factory=list,
+        description="Unsent questions held for a meeting or a day, out of To send until it comes.",
+    )
     actions: list[FollowupAction]
     message: str
     to_send: int
@@ -838,7 +908,19 @@ class ProjectView(BaseModel):
     last_change: str | None = Field(None, description="When the project record last changed.")
     completed: bool = Field(
         False,
-        description="Its status is the one the settings say means finished: it is listed under Completed, not removed.",
+        description="Its status means finished (done), or is the one the settings name: it is listed under Completed, "
+        "not removed.",
+    )
+    status_tone: Literal["ok", "warn", "danger", "neutral"] | None = Field(
+        None, description="How its status is colored, from the status list; plain when none."
+    )
+    status_meaning: Literal["not_started", "open", "at_risk", "blocked", "done"] | None = Field(
+        None, description="What its status means, from the status list; empty when it has none."
+    )
+    status_rank: int | None = Field(
+        None,
+        description="How urgent its status is by its meaning (0 first): at risk, blocked, open, not started, none, "
+        "done.",
     )
 
 
@@ -1473,11 +1555,35 @@ class ValueListView(BaseModel):
     values: list[str] = Field(description="The values offered, in order.")
     retired: list[str] = Field(description="Values no longer offered that records may still hold.")
     used_by: list[str] = Field(description="The fields that take their values from it, as kind.field.")
+    status: bool | None = Field(
+        None, description="Whether its values carry a meaning (a status list), asked for when one is added."
+    )
+    tones: dict[str, Literal["ok", "warn", "danger", "neutral"]] = Field(
+        default_factory=dict, description="How each value is colored; a value left out is neutral."
+    )
+    meanings: dict[str, Literal["not_started", "open", "at_risk", "blocked", "done"]] = Field(
+        default_factory=dict, description="What each value of a status list means; ranking and colors read this."
+    )
 
 
 class ListValueIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     value: str = Field(min_length=1, max_length=80)
+    tone: Literal["ok", "warn", "danger", "neutral"] | None = Field(
+        None, description="How the value is colored, when adding one; left out, the suggestion is used."
+    )
+    meaning: Literal["not_started", "open", "at_risk", "blocked", "done"] | None = Field(
+        None, description="What the value means, when adding one to a status list; left out, the suggestion is used."
+    )
+
+
+class ListSuggestionView(BaseModel):
+    """The tone and meaning offered for a typed value, which the person can change."""
+
+    tone: Literal["ok", "warn", "danger", "neutral"]
+    meaning: Literal["not_started", "open", "at_risk", "blocked", "done"] | None = Field(
+        None, description="Empty for a list whose values have no meanings."
+    )
 
 
 class ListRenameIn(BaseModel):
@@ -1643,6 +1749,11 @@ class TodoView(BaseModel):
     due: date | None = None
     overdue: bool = Field(description="Whether it is past its due date; never true while it is on hold.")
     on_hold: str | None = Field(None, description="What it waits for while it is on hold; its due date is kept.")
+    blocker: BlockerView | None = Field(
+        None,
+        description="What its hold is blocked on, when the hold names a blocker. When the blocker is over (the "
+        "question answered, the action finished) it says so, `on_hold` is empty and the to-do is first on the list.",
+    )
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
     remind_at: datetime | None = Field(
         None, description="When the person asked to be reminded of it, on their own clock (their time zone)."

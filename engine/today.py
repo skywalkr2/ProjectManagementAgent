@@ -12,7 +12,9 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from engine.blocked import Blocker, blocker_of
 from engine.connectors import moment
+from engine.names import People
 from engine.records import entry_time
 
 
@@ -278,6 +280,9 @@ class Todo:
     overdue: bool
     on_hold: str | None = None
     remind_at: datetime | None = None
+    #: What its hold is blocked on, when the hold names a blocker (a person, an action or a question). A blocker that is
+    #: over (an answered question, a finished action) leaves the to-do unblocked: `on_hold` is None and it is due again.
+    blocker: Blocker | None = None
 
 
 def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
@@ -287,14 +292,20 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
     me = cfg.workspace.user.person
     if not me:
         return []
-    today_here = now.astimezone(zone(cfg)).date()
+    here = zone(cfg)
+    today_here = now.astimezone(here).date()
+    view = store.read()
+    people = People(store, cfg)
     found = []
-    for action in store.read().list("action"):
+    for action in view.list("action"):
         data = action.data
         if data.get("status") != "open" or not any(o.get("person") == me for o in data.get("owners") or []):
             continue
         due = date.fromisoformat(str(data["due"])) if data.get("due") else None
         hold = data.get("on_hold")
+        blocker = blocker_of(view, hold, people, here)
+        if blocker is not None and blocker.resolved:
+            hold = None  # what it waited on is over: it is due again by its own date, and goes first
         found.append(
             Todo(
                 action=action.id,
@@ -303,9 +314,11 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
                 due=due,
                 overdue=due is not None and due < today_here and not hold,
                 on_hold=hold["waiting_for"] if hold else None,
-                remind_at=datetime.fromisoformat(str(data["remind_at"])).astimezone(zone(cfg))
+                remind_at=datetime.fromisoformat(str(data["remind_at"])).astimezone(here)
                 if data.get("remind_at")
                 else None,
+                blocker=blocker,
             )
         )
-    return sorted(found, key=lambda t: (t.due is None, t.due or today_here, t.text))
+    unblocked = lambda t: not (t.blocker is not None and t.blocker.resolved)  # noqa: E731
+    return sorted(found, key=lambda t: (unblocked(t), t.due is None, t.due or today_here, t.text))

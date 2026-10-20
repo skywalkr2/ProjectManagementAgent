@@ -68,6 +68,13 @@ test("projects are a table: the name is a link to its page, the counts are numbe
   expect(screen.getByRole("columnheader", { name: "Open to-dos" })).toBeInTheDocument();
 });
 
+test("a project's status is colored by its status list's tone, and the words stay", async () => {
+  api([project("PRJ-1", "Harbor", { status: "Parked", status_tone: "warn", status_meaning: "blocked" }), project("PRJ-2", "Dock", { status: "Plain words" })]);
+  renderApp(<Projects />);
+  expect(await screen.findByText("Parked")).toHaveAttribute("data-tone", "warn");
+  expect(screen.getByText("Plain words")).toHaveAttribute("data-tone", "neutral");
+});
+
 test("projects are grouped by their group, those with none after, and finished ones last under Completed with their group kept", () => {
   const rows = [
     project("PRJ-1", "Zebra", { group: "Books" }),

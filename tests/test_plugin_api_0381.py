@@ -70,8 +70,8 @@ def workspace(tmp_path, today):
     return ws, cfg, Store(ws.db_path, cfg=cfg)
 
 
-def test_the_version_is_this_one_and_the_groups_are_the_cores():
-    assert PLUGIN_API_VERSION >= "0.3.81"
+def test_the_version_is_this_one_or_later_and_the_groups_are_the_cores():
+    assert tuple(int(n) for n in PLUGIN_API_VERSION.split(".")) >= (0, 3, 81)
     assert TODAY_GROUPS == ("decide", "risk", "review", "send")
 
 

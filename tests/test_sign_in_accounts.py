@@ -344,4 +344,4 @@ def test_the_accounts_of_a_sign_in_are_listed_oldest_first_and_a_new_one_never_r
 def test_the_version_is_at_least_the_one_that_added_accounts():
     from engine.plugin_api import PLUGIN_API_VERSION
 
-    assert PLUGIN_API_VERSION >= "0.3.82"
+    assert tuple(int(n) for n in PLUGIN_API_VERSION.split(".")) >= (0, 3, 82)

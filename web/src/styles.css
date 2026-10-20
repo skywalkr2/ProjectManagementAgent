@@ -68,6 +68,7 @@ main p { max-width: var(--measure); }
 .name { margin: 0; font-size: var(--text-md); }
 .kind, .pill { font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); padding: 0 var(--pill-px); min-height: var(--pill-h); display: inline-flex; align-items: center; white-space: nowrap; }
 .pill { margin-left: var(--space-2); }
+.pill.wraps { white-space: normal; overflow-wrap: anywhere; text-align: left; }
 .pill a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .k-review { background: var(--surface-sunk); color: var(--text-muted); }
 .k-send { background: var(--accent-soft); color: var(--accent-text); }

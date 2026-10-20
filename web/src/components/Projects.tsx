@@ -63,7 +63,7 @@ export function Projects() {
 
   const columns: TableColumn<Project>[] = [
     { id: "group", header: t("projects.col.group"), rank: 2, cell: (p) => p.group ?? "" },
-    { id: "status", header: t("setup.status"), rank: 1, cell: (p) => (p.status ? <Pill tone="neutral">{p.status}</Pill> : "") },
+    { id: "status", header: t("setup.status"), rank: 1, cell: (p) => (p.status ? <Pill tone={p.status_tone ?? "neutral"}>{p.status}</Pill> : "") },
     { id: "phase", header: t("setup.phase"), rank: 3, cell: (p) => p.phase ?? "" },
     { id: "target", header: t("projects.col.target"), rank: 2, cell: (p) => (p.target ? day(p.target) : "") },
     { id: "owner", header: t("setup.owner"), rank: 2, cell: (p) => p.owner_name ?? "" },
@@ -145,7 +145,7 @@ function ProjectDetail(props: { project: Project; parent?: Project; total: (n: n
     <>
       <div className="row-end">
         {p.completed && <Pill tone="ok">{t("projects.group.completed")}</Pill>}
-        {p.status && !p.completed && <Pill tone="neutral">{p.status}</Pill>}
+        {p.status && !p.completed && <Pill tone={p.status_tone ?? "neutral"}>{p.status}</Pill>}
       </div>
       {p.summary && <SafeText text={p.summary} />}
       <dl className="details-list">
