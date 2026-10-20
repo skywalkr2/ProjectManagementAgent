@@ -32,7 +32,7 @@ from engine.names import People
 from engine.owners import suggest_owner
 from engine.plugin_api import TODAY_GROUPS
 from engine.scope import stance_of
-from engine.titles import Title, head_of, title_for
+from engine.titles import Title, head_of, subject_of, title_for
 from engine.today import zone
 
 GROUPS = TODAY_GROUPS
@@ -137,7 +137,9 @@ class Line:
     none before it, overdue for a last one older than `storage.backups.every_hours` twice over, whose age in hours is
     `age_hours`).
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
-    one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
+    one thing's own words when a review or overdue line covers exactly one (the screen titles it by them) and `did` what
+    that one thing was, as the op's name and the item's own words (the screen says it in the past tense); `deciding`
+    the keys of the Decide lines of a review line's own held ops, which the line leaves out of its count; `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
     the engine said it."""
 
@@ -160,6 +162,8 @@ class Line:
     actions: list[str] = field(default_factory=list)
     questions: list[str] = field(default_factory=list)
     outcome: dict[str, int] = field(default_factory=dict)
+    did: dict[str, str] | None = None
+    deciding: list[str] = field(default_factory=list)
     untrusted: bool = False
     estimate_usd: float | None = None
     unpriced: int = 0
@@ -227,6 +231,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             min_words=cfg.language.title_min_words,
             head=head,
             watched_kind=kinds.get((watched.get("source"), watched.get("key"))),
+            subject=subject_of(reader, request) if source is None and request.get("origin") != "pm" else "",
         )
 
     lines: list[Line] = []
@@ -302,7 +307,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     request=req.id,
                     changeset=cs_id,
                     op=outcome["index"],
-                    waiting=outcome.get("reason"),
+                    waiting=held_ask.reason_of(outcome),
                     held=held_ask.describe(
                         reader,
                         people,
@@ -835,7 +840,12 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
-    # Review: the assistant's work waiting for a look.
+    # Review: the assistant's work waiting for a look. A held op is asked once, on its own line under Decide, so it
+    # leaves its change's line, which says how many wait there.
+    asked: dict[str, dict[int, str]] = {}
+    for line in lines:
+        if line.kind in ("held", "who_is") and line.changeset and line.op is not None:
+            asked.setdefault(line.changeset, {})[line.op] = line.key
     for req in requests.values():
         d = req.data
         if d.get("dismissed") or d.get("state") != "review" or not d.get("changeset") or req.id in hidden:
@@ -843,7 +853,8 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         cs = changesets.get(d["changeset"]) or {}
         if cs.get("reviewed"):
             continue
-        outcome, shown = _outcome_of(cs)
+        waiting = asked.get(d["changeset"], {})
+        outcome, shown = _outcome_of(cs, set(waiting))
         counted = len(shown)
         if not counted and not outcome.get("refused"):
             continue  # nothing applied, held or refused, so nothing to look over
@@ -859,6 +870,8 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 subject=(shown[0].get("label") or _op_text(shown[0].get("op") or {}) or None)
                 if len(shown) == 1
                 else None,
+                did=_did(reader, shown[0]) if len(shown) == 1 and shown[0].get("status") == "applied" else None,
+                deciding=[waiting[i] for i in sorted(waiting)],
                 project=_request_project(reader, req, cs),
                 request=req.id,
                 changeset=d["changeset"],
@@ -1206,11 +1219,16 @@ _KIND_ORDER = {
 }
 
 
-def _outcome_of(cs: dict[str, Any]) -> tuple[dict[str, int], list[dict[str, Any]]]:
+def _outcome_of(
+    cs: dict[str, Any], leave_out: set[int] | frozenset[int] = frozenset()
+) -> tuple[dict[str, int], list[dict[str, Any]]]:
     """What a changeset did, counted by the outcome word the screen uses (held and refused ops counted as such), and
-    the ops that were applied or are held."""
+    the ops that were applied or are held. The ops whose index is in `leave_out` (those asked on a line of their own)
+    are counted nowhere."""
     outcome: dict[str, int] = {}
     for o in cs.get("ops", []):
+        if o.get("index") in leave_out:
+            continue
         status = o.get("status")
         if status in ("held", "refused"):
             outcome[status] = outcome.get(status, 0) + 1
@@ -1218,7 +1236,25 @@ def _outcome_of(cs: dict[str, Any]) -> tuple[dict[str, int], list[dict[str, Any]
             continue
         word = _OUTCOME.get((o.get("op") or {}).get("op", ""), "other")
         outcome[word] = outcome.get(word, 0) + 1
-    return outcome, [o for o in cs.get("ops", []) if o.get("status") in ("applied", "held")]
+    return outcome, [
+        o for o in cs.get("ops", []) if o.get("status") in ("applied", "held") and o.get("index") not in leave_out
+    ]
+
+
+#: The kinds of record an op's `id` names, by the op's name before the dot.
+_OP_RECORD = {"action": "action", "question": "question", "event": "event"}
+
+
+def _did(reader: Any, outcome: dict[str, Any]) -> dict[str, str] | None:
+    """What one applied op did, as its name and the words of the item it is about, for a review line that covers it
+    alone (the screen says it in the past tense)."""
+    op = outcome.get("op") or {}
+    name = str(op.get("op") or "")
+    kind = _OP_RECORD.get(name.partition(".")[0])
+    found = reader.get(kind, op["id"]) if kind and op.get("id") else None
+    item = _op_text(found.data if found is not None else op)
+    item = " ".join(item.split())
+    return {"op": name, "item": item} if name and item else None
 
 
 def _aware(stamp: str) -> datetime:

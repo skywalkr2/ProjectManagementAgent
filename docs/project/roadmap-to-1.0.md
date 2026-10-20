@@ -683,17 +683,35 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   - S1: one decision is one Today line: a held op leaves its change's review line; the review line says how many wait
     under Decide; a change holding only held ops shows no review line; approving a review never settles a held op
     (true in the code today: `looks_good` only marks the change reviewed; a test pins it) (check C57: no item on two
-    Today lines);
+    Today lines). **Built (B-9):** `tests/test_one_decision_one_line.py` (the held op leaves the review line, the line's
+    `deciding` keys, a change with only held ops has no review line, `looks_good` never settles a held op, no op on two
+    lines), `tests/test_source_intake.py`, `web/src/components/TodayOneDecision.test.tsx` ("the decision stays a question
+    under Decide, and the review line beside it says it waits there", "Go to what waits opens the held line's details");
+    the browser check "one decision is one line…" in `web/e2e/today-capacity.spec.ts` is written, not run;
   - S2: a held line's details show only the held decision (the question, the quote and who said it, the source, why it
-    waits, the two answers); a held op's label is conditional ("Would close a to-do");
-  - S3: the pill column has one fixed width on every row, so every title starts in line;
+    waits, the two answers); a held op's label is conditional ("Would close a to-do"). **Built (B-9):**
+    `web/src/components/TodayOneDecision.test.tsx` ("a held line opens on only its decision…", "a held op the engine
+    doesn't shape as a question opens as its own row…", "a held op's label on its change's card says what it would do…"),
+    `web/src/wording/wording.test.ts` ("every op that says what was done has a conditional twin…");
+  - S3: the pill column has one fixed width on every row, so every title starts in line. **Built (B-9):**
+    `web/src/components/TodayOneDecision.test.tsx` ("the lines that stop or ask for something use the queue's columns…");
+    measured at 1440px on the demo's build: every line's title starts at x = 413, where the Access line started at 344 and
+    the Rules line at 333 (the browser checks in `web/e2e/today-capacity.spec.ts` and `web/e2e/work-access.spec.ts` are
+    written, not run);
   - S4: What changed and Today topics come from a short topic, never a cut-off first sentence; "Work <assistant>
-    started" says what the work was;
+    started" says what the work was. **Built (B-9):** `tests/test_item_titles.py` ("a short topic beats a first line that
+    would be cut off", "with no topic and a first line too long to show whole the topic is empty", "work the app
+    started…"), `web/src/lib/queue-words.test.ts`;
   - S5: under Review a change the assistant made reads in the past tense ("<assistant> dropped …"); under Decide, a
-    question;
+    question. **Built (B-9):** `tests/test_one_decision_one_line.py` ("a review line for one thing says what was done and
+    to what"), `web/src/components/TodayOneDecision.test.tsx` ("a review line says what the assistant did in the past
+    tense…"), `web/src/wording/wording.test.ts` ("a review title for one thing the assistant did is in the past tense…");
   - S6: with nothing connected, the mail step shows only "I'll do this later"; Continue appears once something is
-    connected;
-  - `docs/project/ui-review-status-2026-10-20.md` carries the reviewer's marks at `0f37be4` and then B-9's.
+    connected. **Built (B-9):** `web/src/components/Walkthrough.test.tsx` ("the mail step with nothing connected has one way
+    on…", "the mail step has Continue once something is connected…");
+  - `docs/project/ui-review-status-2026-10-20.md` carries the reviewer's marks at `0f37be4` and then B-9's. **Built (B-9):**
+    the file (a documentation item, so no test). **Left:** the full browser run of the three new checks, and the
+    reviewer's look at S1 to S6 on screen.
 
 ## Phase S: the daily steward (after phase B, before phase I)
 

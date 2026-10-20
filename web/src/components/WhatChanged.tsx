@@ -269,7 +269,7 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
   // never as its title. Until then (waiting, or stopped) they are all that says what the row is.
   // The item is titled by the same rule as on Today ("Email from <person> · <topic>"), never by the first line of what
   // came in ("From: <person>"); a stored title is only the way back when the rule has nothing to say.
-  const title = titleWords(item.title, t) || item.source_title || (cs ? "" : firstLine(item.note)) || t("changes.untitled");
+  const title = titleWords(item.title, t, has) || item.source_title || (cs ? "" : firstLine(item.note)) || t("changes.untitled");
   const live = cs ? cs.ops.filter((o) => o.status === "applied" || o.status === "held") : [];
   useEffect(() => {
     if (!props.reveal) return;
@@ -524,8 +524,8 @@ const CHANGEABLE: ChangeKind[] = ["action", "question", "decision", "event", "fa
 /** The ops about a promise: the row shows why it exists and how it ended, beside the words the op rests on. */
 const PROMISE_OPS = new Set(["action.add", "action.close", "action.drop", "action.move", "action.part", "action.news"]);
 
-function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string | null }) {
-  const { t, tn } = useWords();
+export function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string | null }) {
+  const { t, tn, has } = useWords();
   const act = useAct();
   const { op, cs } = props;
   const ref = useRef<HTMLLIElement>(null);
@@ -572,7 +572,7 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
           </div>
         )}
         <div className="what">
-          {opLabel(op, t)}
+          {opLabel(op, t, has)}
           {pill && <span className={`pill ${pill}`}>{t(`op.status.${pillKey}`)}</span>}
         </div>
         <div className="title">{op.title}</div>
@@ -628,9 +628,11 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
 }
 
 /** What the assistant did, in words; a filed note also says where it went. */
-function opLabel(op: S["OpView"], t: T): string {
-  if (op.op === "note") return op.meta.project ? t("op.note.under", { project: op.meta.project }) : t("op.note.none");
-  return t(`op.${op.op}`);
+function opLabel(op: S["OpView"], t: T, has: (key: string) => boolean): string {
+  // Before it is decided an op is only what would happen ("Would close a to-do"); done is said once it is.
+  const word = op.status === "held" && has(`op.would.${op.op}`) ? "op.would" : "op";
+  if (op.op === "note") return op.meta.project ? t(`${word}.note.under`, { project: op.meta.project }) : t(`${word}.note.none`);
+  return t(`${word}.${op.op}`);
 }
 
 /** A value an op sets, as words: a date as elsewhere in the app, never as it is stored. */
@@ -653,7 +655,7 @@ function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string): str
   return bits.join(" · ");
 }
 
-function SourcePanel(props: { id: string; quote: string }) {
+export function SourcePanel(props: { id: string; quote: string }) {
   const { t } = useWords();
   const source = useQuery({ queryKey: ["source", props.id], queryFn: () => api.source(props.id) });
   if (source.isPending) return <div className="source">{t("loading")}</div>;

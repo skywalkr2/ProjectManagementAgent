@@ -1,15 +1,19 @@
 /* Today's lines for work that has stopped or needs a check, drawn as rows of the queue (design 7.7): a pill, the words and
    the buttons, running edge to edge with a hairline under each. */
+/* The same columns as every other row (pill column of one fixed width, the words, the buttons), so a title starts at the same
+   place on every line of Today (design 7.14). */
 .line {
-  display: flex; align-items: center; gap: var(--space-3); min-width: 0;
+  display: grid; grid-template-columns: var(--row-pill-w) minmax(0, 1fr) auto; align-items: center; column-gap: var(--row-gap); min-width: 0;
   padding: var(--row-py) var(--row-px); background: var(--surface); border-bottom: 1px solid var(--border);
   font-size: var(--text-sm); line-height: var(--lh-sm); list-style: none; margin: 0;
 }
+.line > :first-child { justify-self: start; min-width: 0; }
 .line:last-child { border-bottom: 0; }
 .line:focus { outline: none; }
 .line:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
-:global([data-narrow]) .line { flex-wrap: wrap; }
-.body { min-width: 0; flex: 1 1 auto; }
+:global([data-narrow]) .line { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--space-1); }
+:global([data-narrow]) .line > :first-child { grid-column: 1 / -1; }
+.body { min-width: 0; }
 .text { margin: 0; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
 .sub { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
 .actions { display: flex; align-items: center; gap: var(--space-1); flex: none; margin-left: auto; }

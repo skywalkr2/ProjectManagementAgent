@@ -13,6 +13,7 @@ import { DecisionRow, PersonSection, WaitingSection } from "./FollowUps";
 import { PromiseWhy } from "./PromiseWhy";
 import { ReassignForm } from "./ReassignAction";
 import { TodoRow } from "./TodayRail";
+import { HeldDetail } from "./HeldDetail";
 import { ChangeRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
@@ -30,6 +31,8 @@ export function LineDetail(props: { line: QueueLine; sendBack?: boolean; onOpenG
     case "owner":
     case "who_is":
       return <QuestionDetail line={line} onOpenGuide={props.onOpenGuide} />;
+    case "held":
+      return <HeldDetail line={line} />;
     case "moved":
       return <MovedDetail line={line} />;
     case "send":

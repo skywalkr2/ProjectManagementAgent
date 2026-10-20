@@ -27,7 +27,7 @@ internal_terms: [changeset, ledger, applier, the assistant noticed]
 request_words: [can, could, will, would, please, need to, needs to, should, must]
 # Lines an item's title is never taken from: greetings, quoted headers, sign-offs.
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
-# The fewest words a title's topic may have; a shorter one is replaced by the first meaningful line of what came in.
+# The fewest words a title's topic may have; a shorter one gives way to the first meaningful line of what came in, but only when that line fits whole.
 title_min_words: 3
 # Notes under this many words with no link are bare confirmations and stay with the change.
 bare_confirmation_words: 4

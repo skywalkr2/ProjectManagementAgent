@@ -2,9 +2,11 @@
 
 A title is "{kind} from {person} · {topic}": the kind of input, who it came from, and a few words on what it is about.
 Each part comes from structured fields first (a watched item's kind, author and subject; a pasted message's own header
-lines), then from the assistant's short topic for the input, and only then from the first meaningful line of the text,
-skipping greetings, quoted headers and sign-offs (`language.title_skip`). A topic from the assistant with fewer words
-than `language.title_min_words` is passed over for the input's own words. The screen puts the parts into words.
+lines), then from the assistant's short topic for the input. A topic from the assistant with fewer words than
+`language.title_min_words` gives way to the first meaningful line of the text (skipping greetings, quoted headers and
+sign-offs, `language.title_skip`) only when that line fits whole: a title never ends in a piece of a sentence. With no
+whole line, a short topic of at least two words stays; with nothing usable the topic is empty and the screen says it is
+missing. Work the app started carries its kind of task and what it is about, which the screen puts into words.
 """
 
 from __future__ import annotations
@@ -37,6 +39,9 @@ class Title:
     person: str | None
     sender: str | None
     topic: str
+    #: For work the app started: its kind of task (an AI task kind id) and what it is about, in the record's own words.
+    task: str | None = None
+    subject: str = ""
 
 
 def title_for(
@@ -49,35 +54,62 @@ def title_for(
     head: str = "",
     watched_kind: str | None = None,
     min_words: int = 1,
+    subject: str = "",
 ) -> Title:
     """The title of one request: `source` is its input's record (if any), `changeset` the assistant's answer (if any),
-    `head` the beginning of the input's text, and `watched_kind` "email" or "calendar" when the watched item said what
-    it was. A topic from the assistant with fewer than `min_words` words (a bare "Noted.") is not used while the input's
-    own words can give one."""
+    `head` the beginning of the input's text, `watched_kind` "email" or "calendar" when the watched item said what
+    it was, and `subject` the words of the record work the app started is about. A topic from the assistant with fewer
+    than `min_words` words (a bare "Noted.") gives way to the input's first line only when that line is whole."""
     skipping = [re.compile(p, re.IGNORECASE) for p in skip]
-    assistant_topic = (changeset or {}).get("topic") or ""
-    short = assistant_topic and len(assistant_topic.split()) < min_words
-    held = assistant_topic if short else ""
-    if short:
-        assistant_topic = ""
+    assistant = (changeset or {}).get("topic") or ""
+
+    def topic_from(text: str) -> str:
+        return _topic(assistant, text, skipping, min_words)
+
     if source is None:
         note = request.get("note") or ""
-        kind = "note" if request.get("origin") == "pm" else "task"
-        return Title(kind, None, None, assistant_topic or first_words(note, skipping) or held)
+        if request.get("origin") == "pm":
+            return Title("note", None, None, topic_from(note))
+        return Title("task", None, None, assistant, request.get("task") or None, subject)
     watched = source.get("watched")
     if watched:
         sender = watched.get("author")
         person, shown = _who(sender, people)
-        topic = _clean_subject(source.get("title") or "") or assistant_topic or first_words(head, skipping) or held
-        return Title(watched_kind or "change", person, shown, topic)
+        return Title(
+            watched_kind or "change", person, shown, _clean_subject(source.get("title") or "") or topic_from(head)
+        )
     if source.get("trust") == "trusted":
-        return Title("note", None, None, assistant_topic or first_words(head, skipping) or held)
+        return Title("note", None, None, topic_from(head))
     headers = _headers(head)
     if "from" in headers or "subject" in headers:
         person, shown = _who(headers.get("from"), people)
-        topic = _clean_subject(headers.get("subject", "")) or assistant_topic or first_words(head, skipping) or held
-        return Title("email", person, shown, topic)
-    return Title("pasted", None, None, assistant_topic or first_words(head, skipping) or held)
+        return Title("email", person, shown, _clean_subject(headers.get("subject", "")) or topic_from(head))
+    return Title("pasted", None, None, topic_from(head))
+
+
+def _topic(assistant: str, text: str, skipping: list[re.Pattern[str]], min_words: int) -> str:
+    """The topic of an input: the assistant's when it has enough words; else the input's first meaningful line when that
+    fits whole; else the assistant's short topic when it is more than a bare word; else none."""
+    words = len(assistant.split())
+    if words >= max(min_words, 1):
+        return assistant
+    return first_line(text, skipping) or (assistant if words >= 2 else "")
+
+
+def subject_of(view: Any, request: dict[str, Any]) -> str:
+    """The words of the record work the app started is about (the record the request names, or the one its stage entry
+    belongs to), or nothing when it is about none or the record has no words of its own."""
+    about = request.get("about") or {}
+    kind, record_id = about.get("kind"), about.get("id")
+    if not kind and request.get("stage_start"):
+        kind, record_id = request["stage_start"].get("kind"), request["stage_start"].get("record")
+    found = view.get(kind, record_id) if kind and record_id else None
+    if found is None:
+        return ""
+    for key in ("title", "name", "full_name", "text"):
+        if found.data.get(key):
+            return " ".join(str(found.data[key]).split())
+    return ""
 
 
 def source_kind(source: dict[str, Any], *, watched_kind: str | None = None) -> str:
@@ -91,17 +123,15 @@ def source_kind(source: dict[str, Any], *, watched_kind: str | None = None) -> s
     return "email" if _HEADER.match(source.get("title") or "") else "pasted"
 
 
-def first_words(text: str, skipping: list[re.Pattern[str]]) -> str:
-    """The first meaningful line of `text`, cut to a few words at a word boundary: greetings, quoted header lines,
-    sign-offs and blank lines are passed over."""
+def first_line(text: str, skipping: list[re.Pattern[str]]) -> str:
+    """The first meaningful line of `text` when it fits in a title whole (at most `TOPIC_WORDS` words); a longer one is
+    never cut, so there is none. Greetings, quoted header lines, sign-offs and blank lines are passed over."""
     for line in text.splitlines()[:_HEAD_LINES]:
         stripped = line.strip()
         if not stripped or any(p.match(stripped) for p in skipping):
             continue
         words = stripped.split()
-        cut = words[:TOPIC_WORDS]
-        shown = " ".join(cut).rstrip(" ,;:-")
-        return shown + ("…" if len(words) > TOPIC_WORDS else "")
+        return " ".join(words) if len(words) <= TOPIC_WORDS else ""
     return ""
 
 

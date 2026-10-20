@@ -351,8 +351,9 @@ def test_opening_the_list_marks_it_seen_and_the_individual_lines_come_back_and_u
     marked = source_intake.mark_seen(store, "m")
     assert sorted(marked) == sorted(r.id for r in (first, second, third))
     assert lines_of(env, "intake_review") == []
-    assert {x.request for x in lines_of(env, "review")} == {first.id, second.id}, "each shows one by one again"
-    assert len(lines_of(env, "held")) == 1
+    # Each shows one by one again; the change whose only op is held is asked once, under Decide, and has no review line.
+    assert {x.request for x in lines_of(env, "review")} == {first.id}
+    assert [x.request for x in lines_of(env, "held")] == [second.id]
     assert source_intake.mark_seen(store, "m") == []
     assert source_intake.mark_unseen(store, marked) == 3
     assert len(lines_of(env, "intake_review")) == 1 and lines_of(env, "held") == []

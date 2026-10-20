@@ -231,3 +231,20 @@ test("no entry on the setup path names a time zone id, a language tag, a secret 
     .flatMap(([key, text]) => setupProblems(text).map((p) => `${key}: ${p}`));
   expect(leaks).toEqual([]);
 });
+
+// Before an op is decided it says what it would do, never that it did it (design 7.6): every op that says what was done has
+// a conditional twin that starts with "Would", and a past-tense review title for one thing says what the assistant did.
+test("every op that says what was done has a conditional twin, 'Would …', for the time before it is decided", () => {
+  const done = Object.keys(words).filter((k) => k.startsWith("op.") && !/^op\.(status|because|show_source|hide_source|undo_this|do_anyway|meta|would)\b/.test(k));
+  expect(done.filter((k) => !(`op.would.${k.slice(3)}` in words))).toEqual([]);
+  const twins = Object.entries(words).filter(([k]) => k.startsWith("op.would."));
+  expect(twins.filter(([k]) => !(`op.${k.slice("op.would.".length)}` in words)).map(([k]) => k)).toEqual([]);
+  expect(twins.filter(([, text]) => !/^Would /.test(text)).map(([k]) => k)).toEqual([]);
+});
+
+test("a review title for one thing the assistant did is in the past tense and names the assistant", () => {
+  const did = Object.entries(words).filter(([k]) => k.startsWith("queue.review.did.") && !k.endsWith(".unnamed"));
+  expect(did.length).toBeGreaterThan(0);
+  expect(did.filter(([, text]) => !text.startsWith("{assistant} ") || !text.includes("{item}")).map(([k]) => k)).toEqual([]);
+  expect(did.filter(([, text]) => /^\{assistant\} (add|close|drop|move|mark|take|ask|file|record)\b/i.test(text)).map(([k]) => k)).toEqual([]);
+});

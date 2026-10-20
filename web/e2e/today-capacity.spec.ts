@@ -106,4 +106,54 @@ test.describe("Today's capacity", () => {
     expect(boxes.filter((b) => b.outsideInPill).length).toBe(2);
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
+
+  test("every line's title starts at the same place at 1440px, whichever kind of line it is", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await signIn(page);
+    const rows = page.locator("[data-queue-line]");
+    await expect(rows.first()).toBeVisible();
+    await layoutSettled(page);
+    // The words column is the second part of every line, after its pill column.
+    const starts = await rows.evaluateAll((els) =>
+      els.map((e) => ({
+        kind: e.getAttribute("data-queue-line"),
+        x: Math.round(e.children[1].getBoundingClientRect().left * 10) / 10,
+        pill: Math.round(e.children[0].getBoundingClientRect().width),
+      })),
+    );
+    expect(starts.length).toBeGreaterThan(5);
+    expect(new Set(starts.map((r) => r.x)).size, JSON.stringify(starts)).toBe(1);
+  });
+
+  test("one decision is one line: no item is on two Today lines, read from the demo through the API", async ({ page }) => {
+    await signIn(page);
+    type Line = { key: string; kind: string; changeset: string | null; op: number | null; count: number; deciding?: string[]; outcome: Record<string, number> };
+    type Change = { state: string; changeset: { id: string; reviewed: boolean; ops: Array<{ index: number; status: string }> } | null };
+    const lines: Line[] = await (await page.request.get("api/today/queue")).json();
+    const changes: Change[] = await (await page.request.get("api/changes")).json();
+    const ops = new Map(changes.filter((c) => c.changeset).map((c) => [c.changeset!.id, c.changeset!.ops]));
+    // Where each decision is asked: its own line, under Decide.
+    const asked = new Map<string, string>();
+    for (const l of lines.filter((x) => (x.kind === "held" || x.kind === "who_is") && x.changeset && x.op !== null)) {
+      const key = `${l.changeset}:${l.op}`;
+      expect(asked.has(key), `${l.key} and ${asked.get(key)} ask the same thing`).toBe(false);
+      asked.set(key, l.key);
+    }
+    expect(asked.size, "the demo holds at least one decision for the person").toBeGreaterThan(0);
+    // A review line counts what was done and nothing that is asked elsewhere, and says where the rest waits.
+    for (const l of lines.filter((x) => x.kind === "review" && x.changeset)) {
+      const mine = ops.get(l.changeset!) ?? [];
+      const elsewhere = mine.filter((o) => asked.has(`${l.changeset}:${o.index}`));
+      const counted = mine.filter((o) => (o.status === "applied" || o.status === "held") && !elsewhere.includes(o));
+      if (counted.length > 0) expect(l.count, l.key).toBe(counted.length);
+      expect([...(l.deciding ?? [])].sort(), l.key).toEqual(elsewhere.map((o) => asked.get(`${l.changeset}:${o.index}`)!).sort());
+    }
+    // A change whose only ops are asked elsewhere has no review line at all.
+    for (const c of changes.filter((x) => x.changeset && x.state === "review" && !x.changeset.reviewed)) {
+      const live = c.changeset!.ops.filter((o) => o.status === "applied" || o.status === "held");
+      if (live.length > 0 && live.every((o) => asked.has(`${c.changeset!.id}:${o.index}`))) {
+        expect(lines.some((l) => l.kind === "review" && l.changeset === c.changeset!.id), c.changeset!.id).toBe(false);
+      }
+    }
+  });
 });

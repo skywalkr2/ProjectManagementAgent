@@ -1692,8 +1692,9 @@ class LanguageFile(FileModel):
         3,
         ge=1,
         le=12,
-        description="The fewest words a title's topic may have: a shorter one from the assistant (a bare 'Noted.') is "
-        "replaced by the first meaningful line of what came in.",
+        description="The fewest words a title's topic may have: a shorter one from the assistant (a bare 'Noted.') "
+        "gives way to the first meaningful line of what came in, but only when that line fits whole; with no whole "
+        "line a short topic of two words or more stays, and with none the title says its topic is missing.",
     )
     run_on_separators: list[str] = Field(
         default_factory=lambda: [" / ", "; "],

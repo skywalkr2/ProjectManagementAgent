@@ -311,7 +311,8 @@ Built keys:
   words that mark the assistant's reasoning ("no recorded fact", "couldn't find", …), and the characters that end a question
   ("?", "？", "؟").
 - `title_min_words` (3, 1 to 12): the fewest words an item title's topic may have; a shorter topic from the assistant (a bare
-  "Noted.") gives way to the first meaningful line of the input (7.14).
+  "Noted.") gives way to the first meaningful line of the input only when that line fits whole; with no whole line a short
+  topic of two words or more stays, and with none the title says its topic is missing (7.14).
 - `never_shown`: words that must never appear in anything people see; model names are added to it.
 - `title_skip`: regular expressions, matched at the start of a line, ignoring case, for lines an item's title never comes
   from: greetings, quoted mail headers, sign-offs. A title is taken from the first line left (7.14).

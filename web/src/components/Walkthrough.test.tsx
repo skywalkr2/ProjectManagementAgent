@@ -1133,6 +1133,32 @@ describe("the look", { timeout: 20_000 }, () => {
     expect(within(main).queryByRole("button", { name: "I'll do this later" })).toBeNull();
   });
 
+  test("the mail step with nothing connected has one way on, I'll do this later, and no Continue beside it", async () => {
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "mail" }));
+    open();
+    await screenTitle();
+    const main = screen.getByRole("main");
+    expect(within(main).getByRole("button", { name: "I'll do this later" })).toBeEnabled();
+    expect(within(main).queryByRole("button", { name: "Continue" })).toBeNull();
+    expect(primaries(main)).toEqual([]);
+  });
+
+  test("the mail step has Continue once something is connected, and no I'll do this later", async () => {
+    fakeApi(routes({}, CORE.map((id) => step(id, id === "mail" ? { done: true } : {})), { step: "mail" }));
+    open();
+    await screenTitle();
+    const main = screen.getByRole("main");
+    expect(primaries(main).map((b) => b.textContent)).toEqual(["Continue"]);
+    expect(within(main).queryByRole("button", { name: "I'll do this later" })).toBeNull();
+  });
+
+  test("a mail step left for later offers Continue when it is opened again", async () => {
+    fakeApi(routes({}, CORE.map((id) => step(id, id === "mail" ? { skipped: true } : {})), { step: "mail" }));
+    open();
+    await screenTitle();
+    expect(within(screen.getByRole("main")).getByRole("button", { name: "Continue" })).toBeInTheDocument();
+  });
+
   test("You: Continue says what is missing, then saves the form and opens the next screen", async () => {
     const user = userEvent.setup();
     const calls = fakeApi(routes({ "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) }));

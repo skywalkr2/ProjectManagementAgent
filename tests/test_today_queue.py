@@ -13,7 +13,7 @@ from engine.ai.adapters.stub import set_responder
 from engine.config.schema import DEFAULT_TITLE_SKIP
 from engine.evaluate import load_cases
 from engine.names import Resolved
-from engine.titles import first_words, title_for
+from engine.titles import first_line, title_for
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 
@@ -79,11 +79,12 @@ def test_an_unknown_sender_is_kept_as_written_without_address_or_parenthesis():
 
 
 def test_greetings_headers_and_sign_offs_never_start_a_title():
-    text = "Hi team,\n\nTo: everyone\n--\nThe launch reading moves to the second week of December this year.\nThanks!"
-    assert (
-        first_words(text, [__import__("re").compile(p, 2) for p in SKIP])
-        == "The launch reading moves to the second week…"
-    )
+    skipping = [__import__("re").compile(p, 2) for p in SKIP]
+    text = "Hi team,\n\nTo: everyone\n--\nThe launch reading moves to December.\nThanks!"
+    assert first_line(text, skipping) == "The launch reading moves to December."
+    # A first line too long to show whole is never cut: there is no line to use.
+    long = "Hi team,\n\nThe launch reading moves to the second week of December this year.\nThanks!"
+    assert first_line(long, skipping) == ""
 
 
 def test_the_assistants_topic_comes_before_the_first_line():

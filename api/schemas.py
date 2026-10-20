@@ -612,7 +612,15 @@ class ItemTitle(BaseModel):
     person: str | None = Field(None, description="The id of who it came from, when known.")
     person_name: str | None = Field(None, description="That person's full name.")
     sender: str | None = Field(None, description="Who it came from as written, when not a known person.")
-    topic: str = Field("", description="A few words on what it is about; may be empty.")
+    topic: str = Field(
+        "",
+        description="A few words on what it is about; empty when the assistant gave none and the input has no line "
+        "short enough to use.",
+    )
+    task: str | None = Field(
+        None, description="For task: the kind of work (an AI task kind id), when the request names one."
+    )
+    subject: str | None = Field(None, description="For task: the words of the record the work is about, when known.")
 
 
 class StopCauseView(BaseModel):
@@ -2007,6 +2015,13 @@ class ReminderItemView(BaseModel):
     at: datetime = Field(description="When the reminder was set for, on the person's own clock.")
 
 
+class ReviewDid(BaseModel):
+    """What one op did: its name (`action.drop`) and the words of the item it is about."""
+
+    op: str
+    item: str
+
+
 class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
@@ -2156,6 +2171,16 @@ class QueueLineView(BaseModel):
         default_factory=dict,
         description="What the assistant did, counted: actions_added, actions_closed, questions, notes, recorded, "
         "people, projects, drafts, other; and held, refused.",
+    )
+    did: ReviewDid | None = Field(
+        None,
+        description="For a review line that covers one applied op: what it did, as the op's name and the item's own "
+        "words, which the screen says in the past tense; null when the line groups several.",
+    )
+    deciding: list[str] = Field(
+        default_factory=list,
+        description="For a review line: the keys of the lines under Decide that ask about its own held ops, which the "
+        "line leaves out of its count and the screen links to.",
     )
     untrusted: bool = Field(False, description="Built from outside content.")
     estimate_usd: float | None = Field(

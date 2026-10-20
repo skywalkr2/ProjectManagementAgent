@@ -1355,7 +1355,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/changes")
     def changes() -> list[ChangeItem]:
-        from engine.titles import head_of, title_for
+        from engine.titles import head_of, subject_of, title_for
         from engine.today_queue import watched_kinds
 
         people = People(store, cfg)
@@ -1434,6 +1434,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                             min_words=cfg.language.title_min_words,
                             head=head_of(ws.sources_dir, (source or {}).get("content_hash")),
                             watched_kind=kinds.get((watched.get("source"), watched.get("key"))),
+                            subject=subject_of(store.read(), d) if source is None and d.get("origin") != "pm" else "",
                         ),
                         people,
                     ),
@@ -2151,6 +2152,8 @@ def _title_view(title: Any, people: People) -> ItemTitle | None:
         person_name=people.name(title.person) if title.person else None,
         sender=title.sender,
         topic=title.topic,
+        task=title.task,
+        subject=title.subject or None,
     )
 
 

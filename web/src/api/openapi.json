@@ -7773,9 +7773,33 @@
             "description": "Who it came from as written, when not a known person.",
             "title": "Sender"
           },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For task: the words of the record the work is about, when known.",
+            "title": "Subject"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For task: the kind of work (an AI task kind id), when the request names one.",
+            "title": "Task"
+          },
           "topic": {
             "default": "",
-            "description": "A few words on what it is about; may be empty.",
+            "description": "A few words on what it is about; empty when the assistant gave none and the input has no line short enough to use.",
             "title": "Topic",
             "type": "string"
           }
@@ -14789,6 +14813,25 @@
             "description": "For a rule_review line: how many days the flagged rules have been given and never applied. For an intake_go line: how many days back the source's mail was read; none when it holds no mail.",
             "title": "Days"
           },
+          "deciding": {
+            "description": "For a review line: the keys of the lines under Decide that ask about its own held ops, which the line leaves out of its count and the screen links to.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Deciding",
+            "type": "array"
+          },
+          "did": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a review line that covers one applied op: what it did, as the op's name and the item's own words, which the screen says in the past tense; null when the line groups several."
+          },
           "due": {
             "anyOf": [
               {
@@ -15887,6 +15930,25 @@
           }
         },
         "title": "RetryRequest",
+        "type": "object"
+      },
+      "ReviewDid": {
+        "description": "What one op did: its name (`action.drop`) and the words of the item it is about.",
+        "properties": {
+          "item": {
+            "title": "Item",
+            "type": "string"
+          },
+          "op": {
+            "title": "Op",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "item"
+        ],
+        "title": "ReviewDid",
         "type": "object"
       },
       "RuleReviewPutOff": {

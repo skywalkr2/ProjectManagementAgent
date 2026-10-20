@@ -158,6 +158,8 @@ export function Walkthrough(
     void keep({ step: screen });
   };
   const here = standing(steps, current);
+  // With nothing connected the mail step has one way on, "I'll do this later"; a Continue beside it would do the same thing.
+  // Continue comes once something is connected (the step is done), or once the step was left for later.
   const next = after(current);
   const previous = before(current);
 
@@ -300,7 +302,7 @@ export function Walkthrough(
                     {t("walkthrough.skip")}
                   </Button>
                 )}
-                {next && (
+                {next && !(current === "mail" && here === "todo") && (
                   <Button
                     variant="primary"
                     loading={busy}

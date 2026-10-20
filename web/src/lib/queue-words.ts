@@ -116,10 +116,19 @@ export function afterMove(line: S["QueueLineView"], t: T): string {
 }
 
 /** An item's title by the title rule ("Email from <person> · <topic>"), the same words on Today and in What changed;
- * nothing when the item has none. */
-export function titleWords(title: S["ItemTitle"] | null | undefined, t: T): string {
+ * nothing when the item has none. With no topic the title says so, never a piece of the input's first sentence. Work the
+ * app started is named by its kind of task and what it is about ("Filing notes · Launch reading"); `has` tells which
+ * kinds of task the wording sheet names, and the others read as the assistant's work. */
+export function titleWords(title: S["ItemTitle"] | null | undefined, t: T, has?: (key: string) => boolean): string {
   if (!title) return "";
+  if (title.kind === "task") {
+    const named = !title.task ? "" : has?.(`task.${title.task}`) === false ? t("task.other") : t(`task.${title.task}`);
+    const head = named ? named.charAt(0).toUpperCase() + named.slice(1) : t("queue.title.task");
+    const about = title.subject || title.topic;
+    return about ? t("queue.title.with_topic", { head, topic: about }) : head;
+  }
   const who = title.person_name ?? title.sender ?? t("queue.title.someone");
   const head = t(`queue.title.${title.kind}`, { who });
+  // With no topic worth showing, the title is the kind and who it came from, never a cut-off sentence.
   return title.topic ? t("queue.title.with_topic", { head, topic: title.topic }) : head;
 }

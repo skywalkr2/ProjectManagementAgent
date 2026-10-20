@@ -1384,10 +1384,13 @@ the structured fields of watched items (6.2), so no AI call stands between a mes
 - the **topic** is a watched item's subject (with "Re:" and "Fwd:" removed), or a pasted message's `Subject:`; else the
   **changeset's `topic`**, the few words the assistant gives for what the input was about (kept to one line, cut at a word,
   at most 60 characters; for a plugin's person action, the proposal's topic); and only then the first meaningful line of the
-  text, with greetings, quoted headers and sign-offs skipped (`language.title_skip`, 4.6), cut at eight words.
-  **Built (B-7):** a topic from the assistant with fewer than `language.title_min_words` words (3) is not used while the
-  input's own first meaningful line can give one, so a bare "Noted." never titles an item (`title_for(min_words=…)`;
-  `tests/test_item_titles.py`).
+  text, with greetings, quoted headers and sign-offs skipped (`language.title_skip`, 4.6), and never cut: a line of more
+  than eight words is not used.
+  **Built (B-7, changed in B-9):** a topic from the assistant with fewer than `language.title_min_words` words (3) gives way
+  to the input's first meaningful line only when that line fits whole; otherwise a short topic of two words or more stays
+  (a bare "Noted." is one word and never titles an item), and with nothing usable the topic is empty and the screen says
+  so (`title_for(min_words=…)`; `tests/test_item_titles.py`). Work the app started (no source, not the person's own note)
+  carries its task kind and what it is about (`Title.task`, `Title.subject`, `engine/titles.py` `subject_of`).
 A title never starts with a greeting or "From:". The same title is on Today, What changed and the review.
 
 ## 6.16 AI provider layer (any model, by configuration)

@@ -16,7 +16,7 @@ import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
 import { useHeldAnswers } from "../lib/held-answers";
 import { afterMove, heldMeta, heldTitle, moveTitle, titleWords } from "../lib/queue-words";
-import { revealOrKeep } from "../lib/reveal";
+import { revealOrKeep, showRow } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
@@ -477,8 +477,8 @@ interface Described {
 type ItemTitle = S["ItemTitle"];
 
 function useTitleWords(): (title: ItemTitle | null | undefined) => string {
-  const { t } = useWords();
-  return (title) => titleWords(title, t);
+  const { t, has } = useWords();
+  return (title) => titleWords(title, t, has);
 }
 
 /** What the line for the changes since yesterday counted, in plain words: "3 closed, 2 moved, 4 new". */
@@ -529,7 +529,7 @@ function useReviewCount(): (line: QueueLine) => string {
 /** A line's title (design 7.14): what to do, in a verb. A line that holds one item is titled by the item itself, with its
  * pill saying what it is and its button what to do; a line that groups several says how many. */
 export function useLineTitle(): (line: QueueLine) => string {
-  const { t, tn } = useWords();
+  const { t, tn, has } = useWords();
   const titleWords = useTitleWords();
   const firstGoText = useFirstGoText();
   const reviewCount = useReviewCount();
@@ -561,8 +561,12 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.failed", { what });
       case "overdue":
         return line.count === 1 && line.subject ? line.subject : tn("queue.overdue", line.count);
-      case "review":
-        return line.count === 1 && line.subject && !reviewParts(line).refusedOnly ? line.subject : reviewCount(line);
+      case "review": {
+        if (!(line.count === 1 && line.subject && !reviewParts(line).refusedOnly)) return reviewCount(line);
+        // What the assistant did is said as done, never as an order: "<name> dropped 'X'". Under Decide it stays a question.
+        const did = line.did;
+        return did && has(`queue.review.did.${did.op}`) ? t(`queue.review.did.${did.op}`, { item: did.item }) : line.subject;
+      }
       case "intake_review":
         return tn("queue.intake_review.title", line.count, { source: line.subject ?? line.source ?? "" });
       case "send": {
@@ -753,17 +757,32 @@ function QueueRow(props: {
         };
       case "review": {
         const held = (line.outcome ?? {}).held ?? 0;
+        // The held ops of this change are asked once, on their own lines under Decide; this line says how many and goes there.
+        const deciding = line.deciding ?? [];
+        const goToDeciding: MenuAction[] =
+          deciding.length > 0
+            ? [
+                {
+                  id: "waiting",
+                  label: t("queue.review.show_waiting"),
+                  run: () => {
+                    props.onSelect({ key: deciding[0] ?? "", sendBack: false });
+                    window.setTimeout(() => showRow(document.querySelector<HTMLElement>(`[data-line-key="${CSS.escape(deciding[0] ?? "")}"]`)), 0);
+                  },
+                },
+              ]
+            : [];
         // A line that holds one item is titled by it, so the counted sentence moves to the words under the title.
         const single = title !== reviewCount(line);
         return {
           pill: t("queue.pill.review"),
           tone: "neutral",
-          meta: meta(single && reviewCount(line), what, held > 0 && tn("queue.review.waits", held)),
+          meta: meta(single && reviewCount(line), what, held > 0 && tn("queue.review.waits", held), deciding.length > 0 && tn("queue.review.waits_decide", deciding.length)),
           primary: {
             label: t("queue.act.all_good"),
             run: () => void act(() => api.looksGood(line.changeset ?? ""), () => ({ message: t("toast.looks_good"), many: (n) => tn("toast.looks_good_many", n), undo: () => api.reopen(line.changeset ?? "") })),
           },
-          menu: [show, { id: "send-back", label: t("changes.send_back"), run: () => select(true, true) }],
+          menu: [show, ...goToDeciding, { id: "send-back", label: t("changes.send_back"), run: () => select(true, true) }],
         };
       }
       case "intake_review": {
