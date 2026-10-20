@@ -355,6 +355,13 @@ From the original designer's lessons of 2026-10-14:
   *Left:* the removed add-on's row and note going together.
 - [ ] [I-1] **A launcher for people who never open a terminal** (owner, 2026-10-13): moved to phase I, where the macOS and
   Windows installers give the app icon and Start menu entry.
+  The UI/UX reviewer's first-run review (2026-10-20, F1, `reviews/ui-ux-2026-10/first-run/`) sets the bar N1: a person who
+  has never used a terminal installs and opens the app from a downloaded file, before any non-technical tester.
+- [ ] [I-1] **Mail and calendar connect with a sign-in on a fresh install** (the first-run review's F3 and N2): Gmail or
+  Microsoft 365 connects with a sign-in, with no add-on screen, restart or server setting on the person's path; "Other
+  email" fills the server from the address; server, port and secret settings under Advanced in plain words; the
+  unverified-app warning explained where it appears. *Waits on the owner* (asked 2026-10-20): the common connectors are
+  the private mail add-on, so whether the installer ships it (or a separate public one) is the owner's decision.
 - [ ] [B-5] **Add-ons install from the screen** (P15; owner, 2026-10-16: "they still require manual command line installs
   instead of through the screen. the screen lists zero available plugins"). *Built:* with no catalog listed Add-ons
   offers an address field (the cursor in it) that saves into `workspace.plugins.catalog.feeds` and reads it at once; the
@@ -503,6 +510,16 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     phone's rail panels one line each below the queue; review lines tagged "Outside" with the full phrase as its name.
   - **Demo data for answers 27 to 31** (C53): a moved meeting, a held inference, an inferred fact, a series and a
     rules line in both fictional workspaces.
+  - **First run for a person with no IT background** (the reviewer's further feedback, `reviews/ui-ux-2026-10/first-run/`,
+    recorded in `docs/project/ui-rereview-2026-10-20.md`): F2, the AI account step (one recommended service with a
+    "Recommended" tag from data, numbered steps for account, credit and key, a check on paste with a reason per account
+    kind, the data question in plain words defaulting to the person's own work material, the model chosen per kind of
+    work and its picker in Advanced, spending as a sentence, one Continue, "I'll do this later" as a secondary button);
+    F4 (backups offer the cloud-drive folders found on the computer, by name, from a list in config, with "Back up now
+    and continue"); F5 (the Done step as a compact list, templates in plain words, never Done for a step not done, no
+    restart talk); F6 (Today's empty state by setup state; "Missed one" only after the assistant has worked); F7 and F8
+    (Settings and setup words); checks N3 to N7, the wording check extended to labels from config schemas and add-on
+    manifests (N5).
   - **The reviewer's further feedback** (owner, 2026-10-20: "provide the UI/UX agent the next batch when you can because
     it already has more feedback"): asked for on 2026-10-20 and folded into this batch when it arrives; when B-7 is
     pushed and green, the reviewer gets the commit, the status for C1–C53 and every place the build chose differently.
@@ -729,6 +746,9 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   Install on Add-ons puts add-ons in a per-person add-ons folder in the app-data place, which the app reads at start.
 - [ ] [I-1] **Updates:** the app checks the release feed it was built with (a build variable, empty in the repository) and
   shows "A new version is ready" with what changed; the person downloads and installs it themselves; their data stays.
+- [ ] [I-2] **Three people set it up alone** (the first-run review's N8): three people who match the persona each complete
+  setup alone ("set it up and see what it does with one of your emails") in under 20 minutes, watched without help;
+  every stop or question becomes a finding. The exit test of the tester milestone.
 - [ ] [I-2] **The release build fills in its catalog and feedback addresses** from repository variables, as the package build
   already does, so a tester's Add-ons lists packs with nothing to type.
 - [ ] [I-1] **Signed so the systems let it open** (the owner's decision, open: costs money): without signing, macOS refuses

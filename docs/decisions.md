@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: A new AI account may read the person's own work material by default
+
+- **Decided (main session, on the owner's acceptance of the reviewer's first-run feedback):** the AI account step asks
+  "Can the AI service read your work mail and notes?" with "Yes, that's what it's for" chosen, which allows the open and
+  internal data levels; "Only things that could be public" allows open only. Restricted material stays opt-in, in
+  Advanced with the three levels.
+- **Why:** with only "open" allowed by default, the assistant couldn't work on the person's own mail and notes, so every
+  new person hit a wall the setup never explained (`reviews/ui-ux-2026-10/first-run/`, F2, N3). The account is the
+  person's own, added to work on their material.
+- **Impact:** design 6.16 (accounts and data levels) and the walkthrough's AI step; the default changes for new accounts
+  only, never for accounts already saved.
+
 ## 2026-10-20: The UI/UX re-review is accepted in full, and the learning-run fixes join it (B-7)
 
 - **Decided (owner):** "give them what they want and include the ai fixes". Batch B-7 builds every finding of the

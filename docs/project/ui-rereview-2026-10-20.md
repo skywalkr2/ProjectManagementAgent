@@ -27,3 +27,22 @@ the owner accepted; the roadmap's B-7 items carry the work.
 
 All of it (owner, 2026-10-20: "give them what they want and include the ai fixes"), with the choices recorded in
 `docs/decisions.md` (2026-10-20, "The UI/UX re-review is accepted in full"). The work is the roadmap's B-7 items.
+
+## Further feedback: first run and Settings, for someone with no IT background (received 2026-10-20)
+
+Asked for at the owner's word ("it already has more feedback") and sent the same day: `reviews/ui-ux-2026-10/first-run/`
+(`README.md` with findings F1–F8 and acceptance checks N1–N8, `screens/`, `mockup-first-run.html` and three mockups),
+checked on a brand-new workspace from `cockpit init` at `dda256d`.
+
+- **Verdict:** a person who has never used a terminal can't finish setup alone. Four walls: installing needs a terminal
+  (F1, P0); the AI account step assumes knowledge of the AI market, and its default data choice leaves the assistant
+  unable to read the person's own mail and notes (F2, P0); mail and calendar is a dead end on a fresh install, ending in
+  a raw server form (F3, P0); backups open on a blank path (F4, P1).
+- **Also:** the Done step's layout and words (F5), Today's first screen for a new person (F6), Settings vocabulary (F7)
+  and smaller points (F8).
+- **Acceptance:** N1 to N8, N8 being three people of the persona each setting it up alone in under 20 minutes.
+
+Where it goes: F2, F4 (candidate folders from config), F5 to F8 and the checks N3 to N7 join B-7; F1 (N1) is phase I's
+installer work, already planned before any tester; N8 is the tester milestone's exit (I-2); F3 (N2), common mail and
+calendar connectors on the person's path with no add-on screen or restart, waits on the owner's decision (the roadmap
+item says what).
