@@ -272,7 +272,11 @@ test.describe.serial("journey: mail", () => {
     await expect(page.locator("#set-aside").locator("li.line", { hasText: later.subject })).toContainText(
       `Set aside because: it is from ${later.sender}`,
     );
-    expect((await requests()).work).toBe(handedIn + 1);
+    // Counted by input: on a busy computer a call that times out goes to the next account with the same input, which is
+    // the same work, not new work.
+    const after = await requests();
+    expect(after.inputs.filter((input) => input.includes(later.subject))).toHaveLength(0);
+    expect(new Set(after.inputs).size).toBe(handedIn + 1);
     expect(await service()).toMatchObject({ unauthorized: 0, refused: 0 });
   });
 });
