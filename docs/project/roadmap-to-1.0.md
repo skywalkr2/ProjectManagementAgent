@@ -45,7 +45,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   mail (R9 rules out work mail), before testers. The owner tries the app in the evenings as it goes.
 - **Owner action pending:** one run of the learning tests (O3), at the end of batch S1-1, on the commit that batch
   pushes.
-- **Open items:** 139, each in exactly one batch; 215 done items are in `roadmap-done.md`.
+- **Open items:** 133, each in exactly one batch; 221 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.81 (see the table below).
 
 ## The plan in batches
@@ -74,7 +74,7 @@ keep each item's full text.
     - *Covers:* *Wave 5* with P17 (.ics calendars, full featured) and P18 (several accounts of one service); the items that belong with it: *Passwords, keys and private addresses typed on the screen* (P16), *Add-ons install from the screen* (P15), *Mailbox and calendar passwords and addresses entered on screen* (all in phase B, built to S's shape).
     - *Exit:* the tests each item names pass; the owner adds an .ics link and file and a second account of one service, and types a password and a key on screen, with no file edit.
 
-5. **B-6a The rest of B: records, Settings and forms** (18 open items, plus the numbered wave 6 entry; size: about one to two days)
+5. **B-6a The rest of B: records, Settings and forms** (12 open items, plus the numbered wave 6 entry; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): the designer's F12 and F13 and P26 (in the wave 6 entry), *Lists, not typing*, *The cursor starts where you type*, *Value-list values carry meaning*, *Follow-ups' Later*, *An action can be blocked*, *The obvious next steps on screen*; and the open items that fit this area: *A project's "what the assistant knows"*, *"Overlaps with …"*, *The Quality screen*, *Where a fact came from* (29), *A series page* (30), *A date move isn't news*, *Settings*, *Learning on screen*, *Action items and open questions, cleaned up*, *The app's own kit*, *Found by the phase A journeys*.
     - *Also covers* (the designer's lessons, 2026-10-19): *An unknown status stays unknown, and an add from a link says when nothing could read it* (design 6.19).
     - *Exit:* the tests each item names pass, and the browser test of every main screen at several widths shows no sideways scroll; the owner works through their own open items on a laptop and a phone.
@@ -298,11 +298,6 @@ From L3 (design 7.18):
 - [ ] [B-6a] **An unknown status stays unknown** (the designer's lessons, 2026-10-19; design 6.19): `project.add` refuses a
   status with no words behind it, as `record.set` does; an add from a link says "not read" when nothing set up can open
   the link. Reading the link's system of record is C4's fact lookups.
-- [ ] [B-6a] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
-  glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
-- [ ] [B-6a] "Overlaps with …" on the Learned line, linking the entry a proposal would merge with.
-- [ ] [B-6a] The Quality screen (6.20): the knowledge-used and repeat-correction rates and the weekly missing-op list, from
-  `GET /api/quality` (built in L3).
 
 From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux-2026-10/answers-25-32.md`, mockups in
 `reviews/ui-ux-2026-10/mockup-round-25-32/`; each answer has its layout, exact wording, edge cases and the test for done):
@@ -312,12 +307,6 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
 - [ ] [B-6b] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
   the other answer a visible button.
   *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. Left: "Drop it and draft the note", which waits for the publisher (S1b).
-- [ ] [B-6a] **29 Where a fact came from**: the source label in the meta line as the "Where it came from" link; "≈ Inferred" in a
-  dashed outline with Confirm it; no italics; never in copied or published text.
-  *Built (wave 4) on the fact's record page:* `RecordPageRecords.test.tsx`, `tests/test_record_page.py`. Left: the label on Knowledge and in the inspector.
-- [ ] [B-6a] **30 A series page**: next meeting's open items by person, past meetings collapsed, details; item rows link "for
-  Thursday's print sync"; the agenda stays the project management pack's.
-  *Built (wave 4):* `tests/test_series_page.py`, `SeriesPage.test.tsx`. Left: "usually with", which needs a meeting's attendees (P17).
 
 From the original designer's lessons of 2026-10-14:
 - [ ] [B-6b] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
@@ -361,10 +350,6 @@ From the original designer's lessons of 2026-10-14:
   links small below), tested at about 1,000 px wide. (The line and the two-row header below 1280px are built under "Ready
   for real use"; what is left here is the final layout and a browser check of the header at about 1,000 px wide.)
 - [ ] [B-6b] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
-- [ ] [B-6a] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
-  Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago"). Built: the Knowledge screen and
-  each row's use (`web/src/components/Knowledge.test.tsx`, `tests/test_knowledge_screen.py::test_the_knowledge_list_carries_how_much_each_entry_was_used`).
-  Left: the per-project section.
 - [ ] [B-6b] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
   empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
   Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.

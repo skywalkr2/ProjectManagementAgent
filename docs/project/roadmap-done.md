@@ -1822,6 +1822,32 @@ From the original designer's lessons of 2026-10-14:
   owner's real use sign in to a named service instead.
   *Built (B-5):* the core mailbox's password and the calendar's private address are typed on the Sources form and kept
   like a key (`tests/test_typed_secrets.py`, `web/src/components/Sources.test.tsx` (the calendar's private link box)).
+- [x] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
+  glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
+  *Built (B-6a):* sources with the last input, facts with source and date, terms, who answers what, and what is still
+  unknown with its question (`tests/test_project_knows.py`, `web/src/components/ProjectKnows.test.tsx`). An "Ask someone"
+  form for an unknown with no question is not built; the row says nobody has been asked.
+- [x] "Overlaps with …" on the Learned line, linking the entry a proposal would merge with.
+  *Built (B-6a):* `tests/test_learned_lines.py` (the overlap tests), `web/src/components/Learned.test.tsx`.
+- [x] The Quality screen (6.20): the knowledge-used and repeat-correction rates and the weekly missing-op list, from
+  `GET /api/quality` (built in L3).
+  *Built (L3, checked in B-6a):* `tests/test_quality.py::test_the_quality_route_reports_the_three_measures_and_the_default_gate_hides_a_small_week`,
+  `web/src/components/Quality.test.tsx` ("the other measures read in the same plain style").
+- [x] **29 Where a fact came from**: the source label in the meta line as the "Where it came from" link; "≈ Inferred" in a
+  dashed outline with Confirm it; no italics; never in copied or published text.
+  *Built (wave 4) on the fact's record page:* `RecordPageRecords.test.tsx`, `tests/test_record_page.py`. Left: the label on Knowledge and in the inspector.
+  *Built (B-6a):* the label on every fact row, the project's knowledge section included, marked never copied
+  (`web/src/components/ProjectKnows.test.tsx`); the Knowledge screen and the inspector hold no fact rows, so there is
+  nothing there to label.
+- [x] **30 A series page**: next meeting's open items by person, past meetings collapsed, details; item rows link "for
+  Thursday's print sync"; the agenda stays the project management pack's.
+  *Built (wave 4):* `tests/test_series_page.py`, `SeriesPage.test.tsx`. Left: "usually with", which needs a meeting's attendees (P17).
+  *Built (B-6a):* "usually with" (`tests/test_series_page.py`, `web/src/components/SeriesPage.test.tsx`).
+- [x] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
+  Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago"). Built: the Knowledge screen and
+  each row's use (`web/src/components/Knowledge.test.tsx`, `tests/test_knowledge_screen.py::test_the_knowledge_list_carries_how_much_each_entry_was_used`).
+  Left: the per-project section.
+  *Built (B-6a):* the per-project section (`tests/test_project_knows.py`).
 
 ## Phase S: finished items
 
