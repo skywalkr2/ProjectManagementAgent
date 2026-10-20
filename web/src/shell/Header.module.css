@@ -37,6 +37,11 @@
 }
 @media (pointer: coarse) { .avatar { width: var(--tap-min); height: var(--tap-min); } }
 
+/* Below 1440px the status holds only the chip (the assistant's state is in its popover): the chip keeps its size, as a
+   status and a target, and the workspace's name gives way instead. */
+@media (max-width: 1439px) {
+  .status { flex: none; }
+}
 @media (max-width: 1023px) {
   .ask { display: none; }
   .askIcon { display: inline-flex; }

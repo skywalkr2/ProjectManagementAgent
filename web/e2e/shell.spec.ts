@@ -461,6 +461,14 @@ test.describe("screen use and the shell", () => {
         expect(b.x).toBeGreaterThanOrEqual(0);
         expect(b.x + b.width).toBeLessThanOrEqual(width);
       }
+      // No two controls overlap: each can be clicked where it is drawn.
+      const boxes = await Promise.all(controls.map(async (c) => (await c.boundingBox())!));
+      for (let i = 0; i < boxes.length; i++)
+        for (let j = i + 1; j < boxes.length; j++) {
+          const [a, b] = [boxes[i], boxes[j]];
+          const apart = a.x + a.width <= b.x + 0.5 || b.x + b.width <= a.x + 0.5 || a.y + a.height <= b.y + 0.5 || b.y + b.height <= a.y + 0.5;
+          expect(apart, `header controls ${i} and ${j} overlap`).toBe(true);
+        }
       // No assistant line, no "Your pages" and no bare icon for Missed one.
       await expect(header.getByRole("button", { name: /^Assistant/ })).toHaveCount(0);
       await expect(header.getByRole("button", { name: "Your pages" })).toHaveCount(0);
