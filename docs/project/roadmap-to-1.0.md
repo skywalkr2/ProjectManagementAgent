@@ -633,7 +633,11 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     tests' fixture has a stand-in account so the yes can be captured;
   - R6–R11: the Done step's empty cards; the series page's side panel (labels above values, an item not listed in both
     Agenda and Next); the rules line's weight and pill; 24px hit areas for checkboxes; no "From: <person>" titles in What
-    changed; shorter Top priorities wording.
+    changed; shorter Top priorities wording;
+  - CI's python-later job (the tests with the clock 40 days ahead) finishes: on `46cc3ea` it ran past 30 minutes with
+    every other job green and was cancelled, as the same run hung locally at 94% with three workers and passed with two.
+    The job now has a time limit and prints the stack of any test past five minutes; the hanging test is found and fixed,
+    and the job passes on the batch's commit.
 
 ## Phase S: the daily steward (after phase B, before phase I)
 
