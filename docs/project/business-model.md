@@ -9,7 +9,7 @@ them in (open promise P25).
 | | **Thimbleby** (free) | **Thimbleby Plus** (one licence) |
 |---|---|---|
 | What it is | The core: the daily steward, hand-in, the define-your-own kit and its templates, the person's own AI accounts, everything kept on the person's computer. Mail and calendars from any service: IMAP and calendar links, and **Gmail and Outlook through the person's own app registration**, pasted on the Sign-ins row beside the add-on's numbered steps | Everything in the free app, plus **one-click** Gmail and Outlook sign-in (the add-on's own registration), every pack (writing first, then project management, publishing and the ones that follow) and updates |
-| Where it lives | Open source under Apache-2.0, published from the private working repository at each release. The Gmail and Outlook add-on is a free download from the catalog | Private repositories, as the packs are today |
+| Where it lives | Open source under Apache-2.0, published from the private working repository at each release. The Gmail and Outlook add-on is open source under Apache-2.0 too, in its own public repository, and a free download from the catalog | The packs' private repositories, as today; the add-on's own registration, which only its release build carries |
 | Installers | Signed installers, free to download | The same installers; the licence turns on the add-on's own registration and the packs |
 | Price | Free | A yearly licence; what a lapse keeps is below. The amount follows from the break-even line below |
 
@@ -32,9 +32,17 @@ add-on's own registration stops: the Sign-ins row says the one-click sign-in nee
 registration in place, and a Today line says mail isn't being read until they choose. So the owner never carries
 Google's yearly costs for people who have stopped paying. Tested both ways (below).
 
-**Why the core stays open:** an assistant that reads mail is easier to trust when its code can be read, and companies
-approve Apache-2.0 (decisions, 2026-10-09). The licence check in the open core can be patched out; that is accepted for
-this market, and no effort goes into hardening it.
+**Why the core and the mail add-on stay open:** an assistant that reads mail is easier to trust when its code can be
+read, and companies approve Apache-2.0 (decisions, 2026-10-09). For most people the Gmail and Outlook add-on is the code
+that signs in and reads their mail, so it is open as well; nothing paid is given away, since Plus sells the one-click
+registration and the packs, not the mail code. The add-on's repository leaves its registration empty and its release
+build fills it in, as `catalog/product.yaml` does for the core.
+
+**Accepted, not hardened:** the licence check in the open code can be patched out, and the add-on's own registration
+can be lifted from the release build and used without a licence (a registration for an app on a person's computer
+can't hold a secret). Someone who does so is covered by the owner's verification and assessment. Both are accepted for
+this market and no effort goes into preventing them; if the registration is misused at scale, the owner replaces it in
+the next release.
 
 ## Users steer what is built
 
@@ -92,10 +100,11 @@ the paying users needed to break even:
 | Google's security assessment (CASA), yearly | $1,000 to $5,000: a placeholder until M1 brings a quote; it is the largest unknown |
 | Apple developer programme and Windows signing | about $219 (decisions, 2026-10-17) |
 | The website and its domain | about $100 |
-| **Total** | **about $1,300 to $5,300** |
+| **Total** | **$1,319 to $5,319** |
 
-At a price of **$75 a year**, with the payment service taking about 5% plus $0.50 a sale, each licence brings in about
-$70.75, so **break-even is about 19 to 76 paying users**. The page records the real number here once M1 is answered,
+At a price of **$75 a year**, with the payment service taking about 5% plus $0.50 a sale, each licence brings in
+$70.75: $1,319 ÷ $70.75 ≈ 18.6 and $5,319 ÷ $70.75 ≈ 75.2, rounded up because a part of a user doesn't pay, so
+**break-even is 19 to 76 paying users**. The page records the real number here once M1 is answered,
 beside the price chosen.
 
 ## The path to a paid 1.0
@@ -109,7 +118,7 @@ beside the price chosen.
 | M2 | Microsoft publisher verification for the Outlook add-on's registration. | Lighter than Google, but needs the website and a privacy policy. |
 | M3 | Signing: Apple's developer programme and Windows signing (about $219 a year, decisions 2026-10-17). | "Unsigned to start" is fine for testers, not for paying customers. |
 | M4 | Pick a payment service that is the merchant of record (for example Paddle, Lemon Squeezy or Polar): it takes payment, handles sales tax and VAT, refunds and receipts, and issues the licences. | The app never handles payment (decisions, 2026-10-11); this keeps tax and billing off the owner's desk. |
-| M5 | Make the working repository private; publish the open core from it at each release as a fresh public repository (the roadmap's "Publish 1.0" already plans one starting commit). Everything already published, `docs/project/` included, is assumed copied: going private hides plans from then on, not the past. Before the first public core is cut, a session lists what in `docs/project/` and the design is the owner's own business rather than the product's, and the owner decides what the public core carries. | Plans and test runs shouldn't keep being published; what was published stays out there. |
+| M5 | Make the working repository private; publish the open core from it at each release as a fresh public repository (the roadmap's "Publish 1.0" already plans one starting commit). Everything already published, `docs/project/` included, is assumed copied: going private hides plans from then on, not the past. Before the first public core is cut, a session lists what in `docs/project/` and the design is the owner's own business rather than the product's, and the owner decides what the public core carries. The mail add-on's repository goes public the same way: a fresh snapshot, checked first, with its registration left to the release build. | Plans and test runs shouldn't keep being published; what was published stays out there. |
 | M6 | The website (open promise P24): pricing, privacy policy, terms, the ideas board and its form. | Google and Microsoft both ask for the privacy policy; the board lives there. |
 
 ### Built in the product

@@ -1038,6 +1038,8 @@ yet follow, that it is *designed*, with its phase.
   pasted registration; Plus is the add-on's own registration (one-click) and the packs. A sign-in's default registration
   may need an entitlement, and stops when a licence lapses; packs keep their version. Gallery templates are untrusted
   content. Designed, not built.
+- **The mail add-on is open source (3.11):** its repository leaves the registration empty for its release build; a lifted
+  registration is accepted like a patched licence check.
 
 ## 124. The shell: notices, the stages board, the hand-in drawer, Ask as a pane, the phone's review mode and the walkthrough's look (2026-10-20)
 

@@ -4,6 +4,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: The mail add-on is open source too; a lifted registration is accepted
+
+- **Decided (owner, on the functional designer's check of the revised plan):** the Gmail and Outlook add-on is published
+  under Apache-2.0 in its own public repository, from a fresh snapshot checked as the core's is (M5). Only its shipped
+  registration is gated by the licence; its repository leaves the registration empty and the release build fills it
+  in, as `catalog/product.yaml` does for the core. A registration lifted from the release build and used without a
+  licence is accepted in the same way as a patched-out licence check; if it is misused at scale, the next release
+  replaces it.
+- **Why:** the open core's case is that mail-reading code can be read, and for most people the add-on is that code.
+  Plus sells the one-click registration and the packs, not the mail code, so nothing paid is given away. A desktop
+  app's registration can't hold a secret, so saying so now makes it a decision rather than a surprise.
+- **Also:** the break-even line shows its exact totals ($1,319 to $5,319) and rounds up: 19 to 76 paying users at $75.
+- **Impact:** `docs/project/business-model.md`; design 3.11 ("Nothing to register": a registration may come from the
+  release build); the mail add-on's builder is told (open promise P26). No change to the core's code or schedule.
+
 ## 2026-10-20: The free app connects Gmail and Outlook too; Plus is the one-click sign-in (the functional designer's review)
 
 - **Decided (owner, on the functional designer's review of `docs/project/business-model.md`):** the review's two changes,

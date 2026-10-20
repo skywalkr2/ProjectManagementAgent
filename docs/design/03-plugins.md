@@ -440,7 +440,9 @@ token (decisions, 2026-10-11).
   The plugin never sees the sign-in itself or the refresh token.
 - **Nothing to register.** An add-on can ship its own app registration, so the person only signs in; it explains in a note what
   using it means. The registration may name an entitlement it needs (3.11, licensed packs); without it, the person's own
-  registration is the way in, never a dead end. A person who wants their own pastes it on the Sign-ins row beside numbered steps the add-on supplies, with no
+  registration is the way in, never a dead end. An open-source add-on's repository may leave its registration empty for its
+release build to fill in; a registration for an app on a person's computer holds no secret, so it can be reused, and
+that is accepted (decisions, 2026-10-20). A person who wants their own pastes it on the Sign-ins row beside numbered steps the add-on supplies, with no
   file or variable to edit, and can set it aside and bring it back. The workspace's references win, and a hosted app uses them.
 - **Said before leaving.** The row says in plain words what the sign-in asks to allow, names the account once signed in,
   and names any permission asked for and not granted. Signing out withdraws the access at the service where it can.
