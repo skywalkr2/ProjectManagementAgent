@@ -386,8 +386,10 @@ From the original designer's lessons of 2026-10-14:
   unverified-app warning explained where it appears. *Decided (owner, 2026-10-20: "anything that makes a non technical
   user life easier"), narrowed the same day (core first):* the installer ships the mail and calendar add-ons installed
   and turned on, **ready to set up**: their tiles are on the setup step from the first start, and they connect through a
-  registration the person makes with plain numbered steps (Gmail's set to "In production"), or an app password over
-  IMAP. One-click sign-in through the add-on's own registration is Thimbleby+ (phase T), since it needs Google's yearly
+  registration the person makes with plain numbered steps (Gmail's set to "In production"), or for other mail an app
+  password over IMAP. Gmail's app passwords aren't counted on (password sign-in ended for Workspace accounts; personal
+  Gmail unconfirmed, `business-model-delta-gmail-later.md`): the owner's live check says whether the steps may offer
+  them second, so the Gmail steps are written as the app's best walkthrough, a screenshot per step. One-click sign-in through the add-on's own registration is Thimbleby+ (phase T), since it needs Google's yearly
   assessment. To be built as a generic feature (nothing of it exists in the code yet: no bundling step or setting): the release build
   bundles the add-on packages a repository variable lists (as the catalog and feedback addresses are filled in), installs them with the app
   and turns them on in a new workspace with no restart; this repository names none of them. The add-ons stay in their
@@ -962,7 +964,10 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
 The paid upgrade in `docs/project/business-model.md` (decisions, 2026-10-20): one yearly licence for one-click Gmail and
 Outlook and every pack. It is conditional (owner, 2026-10-20: "a 'maybe' Thimbleby+"; "I don't want to be beholden to
 this yearly Google assessment"), so nothing in the core depends on it. Owner actions M0 to M4 come first, M0 before
-anything else. Each item ends with its named test.
+anything else. Each item ends with its named test. **Proposed, awaiting the functional designer's review**
+(`docs/project/business-model-delta-gmail-later.md`): Plus launches with one-click Outlook and every pack, and Gmail's
+one-click sign-in (with Google's yearly assessment, M1b) waits for a trigger; a tester registration the owner keeps in
+Google's Testing status (M7) serves testers and founding members. The items below take it once it is accepted.
 
 - [ ] [T-1] **The Plus licence, checked offline:** a licence file signed by the owner's key, kept in the workspace's
   private folder and checked with the public key the app ships with; no call home. Generic in the core: a catalog entry,
