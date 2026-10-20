@@ -1036,6 +1036,7 @@ yet follow, that it is *designed*, with its phase.
 | A fact's source label (7.14, answer 29) | Only on the fact's own page | The same label, the dashed "Inferred" tag and Confirm it on each fact row of a project's knowledge section; the label is marked as never copied and can't be selected. Facts have no row on the Knowledge screen or in Today's inspector, so those two places have nothing to show yet. Built: `web/src/components/ProjectKnows.test.tsx` |
 | A series page (7.14, answer 30) | The details had no "usually with" | The people on more than `ui.series.usually_with_share` (0.5) of the meetings whose guest lists are known, once at least `usually_with_min_meetings` (2) are known, at most `usually_with_max` (6); calendar entries' attendees resolved to people, the person themselves, a declined answer and a called-off meeting left out. Built: `tests/test_series_page.py`, `web/src/components/SeriesPage.test.tsx` |
 | Settings (4.0) | | `ui.series` with the three keys above, a description and default each, and demo values in both workspaces |
+
 ## 115. Add-on keys and the backup key typed on the screen (2026-10-19)
 
 | Where | Before | Now |
