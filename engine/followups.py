@@ -12,7 +12,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from engine import learn, promises, sent_version
-from engine.blocked import ViewNames, blocker_of, blocker_problem
+from engine.blocked import ViewNames, blocker_of, blocker_problem, holds_up
 from engine.cleaning import normalize
 from engine.config import Config
 from engine.dispatcher import signal
@@ -121,6 +121,32 @@ def actions_to_send(store: Store, cfg: Config) -> set[str]:
     return found
 
 
+def _pulled(view: Any, cfg: Config, today: date, held_up: dict[str, list[str]], pm: str | None) -> dict[str, int]:
+    """The blockers whose follow-up comes due because of what they hold up, each with how many of those actions are
+    overdue. A blocked action is never chased itself; its chase clock goes to the question or action that holds it up,
+    which comes due as the blocked action's would have: one the person owes, once its date is within the follow-up
+    window or past; one someone else owes, by the follow-up rule on how long they have been told."""
+    rule = cfg.ui.followups
+    found: dict[str, int] = {}
+    for blocker, held in held_up.items():
+        for action_id in held:
+            data = view.get("action", action_id).data
+            due = date.fromisoformat(str(data["due"])) if data.get("due") else None
+            would = False
+            for owner in data.get("owners") or []:
+                who = owner["person"]
+                told = (data.get("told") or {}).get(who)
+                if who == pm:
+                    would = would or (due is not None and (due - today).days <= rule.action_due_within_days)
+                elif told:
+                    would = would or follow_up_due(
+                        cfg, today, waiting_days=(today - date.fromisoformat(str(told))).days, action=True, due=due
+                    )
+            if would:
+                found[blocker] = found.get(blocker, 0) + int(due is not None and due < today)
+    return found
+
+
 def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None = None) -> list[Section]:
     """Each person's questions and actions with what is due a follow-up. An action someone else owes is also due one
     when the promise rule says it is late with nothing heard (design 6.33), so Today's one follow-up line per person and
@@ -132,6 +158,8 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
         if promises.is_follow_up(x)
     }
     here = zone(cfg)
+    held_up = holds_up(store.read(), people)
+    pulled = _pulled(store.read(), cfg, today, held_up, people.pm)
     projects = {p.id: p.data["name"] for p in store.read().list("project")}
     project_links = {p.id: p.data.get("links", []) for p in store.read().list("project")}
     by_person: dict[str, Section] = {}
@@ -169,7 +197,10 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                 "followed_up": chased[-1] if chased else None,
                 "chases": len(chased),
                 "waiting_days": waiting,
-                "chase_due": d["status"] == "sent" and follow_up_due(cfg, today, waiting_days=waiting),
+                "chase_due": d["status"] == "sent"
+                and (follow_up_due(cfg, today, waiting_days=waiting) or q.id in pulled),
+                "holds_up": len(held_up.get(q.id, [])),
+                "holds_overdue": pulled.get(q.id, 0),
                 "options": d.get("options", []),
                 "resolves": d.get("resolves"),
             }
@@ -215,7 +246,10 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                         action=True,
                         due=date.fromisoformat(str(d["due"])) if d.get("due") else None,
                         on_hold=bool(hold),
-                    ),
+                    )
+                    or (a.id in pulled and told_days is not None and owner["person"] != people.pm and not hold),
+                    "holds_up": len(held_up.get(a.id, [])),
+                    "holds_overdue": pulled.get(a.id, 0),
                 }
             )
     for s in by_person.values():

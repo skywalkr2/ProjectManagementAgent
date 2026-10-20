@@ -9,7 +9,7 @@ import { TopPriorities } from "./TopPriorities";
 type Line = S["PriorityLineView"];
 
 function line(extra: Partial<Line> & Pick<Line, "key" | "rank" | "kind" | "text">): Line {
-  return { person: "PER-1", person_name: "Pat Example", project: null, project_name: null, due: null, days: null, owners: [], things: [], send: 0, chase: 0, overdue: 0, due_soon: 0, ...extra };
+  return { person: "PER-1", person_name: "Pat Example", project: null, project_name: null, due: null, days: null, owners: [], things: [], holds_up: 0, send: 0, chase: 0, overdue: 0, due_soon: 0, ...extra };
 }
 
 const overdue = line({
@@ -62,6 +62,11 @@ const rows = async () => {
   return Array.from((await screen.findByRole("region", { name: "Top priorities" })).querySelectorAll<HTMLElement>("[data-row]"));
 };
 
+const rows2 = async () => {
+  await screen.findByText("Which floor plan?");
+  return Array.from((await screen.findByRole("region", { name: "Top priorities" })).querySelectorAll<HTMLElement>("[data-row]"));
+};
+
 test("the lines are listed in the order the server ranks them, each with a chip, a verb first and why on the second line", async () => {
   open();
   const found = await rows();
@@ -87,6 +92,15 @@ test("one row for a person holds everything of theirs, with the items in its too
   expect(title.getAttribute("title")).toBe("Which date?\nWhich size?\nWhich paper?\nWho prints it?");
   expect(within(found[4]).getByText("Which date? · and 3 more")).toBeInTheDocument();
   expect(within(found[4]).queryAllByRole("button")).toEqual([]);
+});
+
+test("a question or a person that holds up blocked to-dos says how many, and the blocked to-do itself is never listed", async () => {
+  const holding = line({ key: "question:Q-4", rank: "waiting", kind: "question", text: "Which floor plan?", question: "Q-4", days: 1, holds_up: 2 });
+  const holdingPerson = { ...person, holds_up: 1 };
+  open(priorities({ lines: [holding, holdingPerson] }));
+  const found = await rows2();
+  expect(within(found[0]).getByText("Waiting for your answer for 1 day · It holds up 2 to-dos")).toBeInTheDocument();
+  expect(within(found[1]).getByText("Which date? · and 3 more · It holds up 1 to-do")).toBeInTheDocument();
 });
 
 test("a row names its project only when the list holds more than one", async () => {

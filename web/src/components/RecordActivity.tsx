@@ -51,6 +51,12 @@ export function RecordActivity(props: { page: Page }) {
     const plain = own !== "record.edit" && has(`record.op.${own}`);
     return !plain && e.field ? t("record.did_field", { field: labelOf(e.field).toLocaleLowerCase() }) : verb(e.op);
   };
+  // A second or later move of the same date, in the person's own history: "moved again (second time since Oct 6)".
+  const movedAgain = (e: Page["activity"][number]) => {
+    if (!e.moved_again || !e.moved_since) return null;
+    const time = e.moved_again === 2 ? t("record.activity.time.second") : e.moved_again === 3 ? t("record.activity.time.third") : t("record.activity.time.many", { n: e.moved_again });
+    return t("record.activity.moved_again", { time, date: monthDay(e.moved_since) });
+  };
   const completed = page.completed_actions ?? [];
   const open = page.open_actions.length + page.open_questions.length;
   return (
@@ -114,6 +120,7 @@ export function RecordActivity(props: { page: Page }) {
                 <span className="when">{monthDay(e.at)}</span>{" "}
                 <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
                 <strong>{e.name}</strong>
+                {movedAgain(e) && <span> · {movedAgain(e)}</span>}
               </li>
             ))}
           </ol>

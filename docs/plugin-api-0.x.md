@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.85 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.
+
+- **`EventDetails.described`:** whether a calendar event has a description (`None` when the connector can't say, which the
+  core counts as described). A connector that keeps entries (`entries=True`) and says `described=False` lets the core file
+  an event with nobody else invited as a plain calendar entry by rule, with no run of the assistant.
+- **Core records:** `CalendarEntry.plain` and `CalendarEntry.people` (the known people its title names), `ActionNews.non_answer`
+  (a reply that didn't answer, written by `action.news`), and `Copy.kind` `work` (the draft made for an action, approved
+  or copied).
+
 ## What 0.3.84 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.

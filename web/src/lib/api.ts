@@ -213,6 +213,8 @@ export const api = {
   answeredAnotherWay: (a: string, body: S["AnsweredAnotherWayIn"]) => call<S["Applied"]>("POST", `replies/${id(a)}/answered`, body),
   /** Keep the drafted reply as the person copied it, so the message they send can be matched to it. */
   replyCopied: (a: string) => call<S["Copied"]>("POST", `replies/${id(a)}/copied`),
+  /** Keep the draft made for an action as the person copied it; the action stays open until the sent message is seen. */
+  workCopied: (a: string) => call<S["Copied"]>("POST", `actions/${id(a)}/work/copied`),
   /** The answer to "Did your message go out?"; the result is what Undo takes. */
   settleCopy: (c: string, how: S["CopyAnswer"]["how"]) => call<S["CopySettled"]>("POST", `copies/${id(c)}/settle`, { how }),
   unsettleCopy: (c: string, body: S["CopySettled"]) => call<S["Ok"]>("POST", `copies/${id(c)}/unsettle`, body),
@@ -282,6 +284,8 @@ export const api = {
 
   pluginToday: () => call<S["TodayLineView"][]>("GET", "plugin-today"),
   agenda: () => call<S["AgendaItemView"][]>("GET", "today/agenda"),
+  /** Make the to-do a plain calendar entry is offered as: the person's own, due on the entry's day. */
+  entryTodo: (entry: string) => call<S["EntryTodoMade"]>("POST", `events/${id(entry)}/todo`),
   todo: () => call<S["TodoView"][]>("GET", "today/todo"),
   priorities: () => call<S["TopPrioritiesView"]>("GET", "today/priorities"),
   thisWeek: () => call<S["ThisWeekView"]>("GET", "today/week"),

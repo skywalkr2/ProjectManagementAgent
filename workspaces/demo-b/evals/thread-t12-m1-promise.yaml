@@ -19,6 +19,7 @@ expect:
   text_has: [key]
   due_words: Once the keys arrive
   due: null
+  on_hold: true
 stub_answer:
   summary: A promise is made.
   ops:

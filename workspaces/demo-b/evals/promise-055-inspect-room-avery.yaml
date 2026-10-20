@@ -15,6 +15,7 @@ expect:
   text_has: [key]
   due_words: Once I receive the keys
   due: null
+  on_hold: true
 stub_answer:
   summary: 'Ansel Wick promises: inspect the room for Avery once the keys are received.'
   ops:

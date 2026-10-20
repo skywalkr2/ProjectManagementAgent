@@ -290,15 +290,55 @@ def answered_by_sent(ws: Any, store: Any, cfg: Any, owed: Owed, ask: Any, sent_s
     return None
 
 
-def close_answered(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -> list[str]:
-    """End every open reply owed that the person's own sent mail has answered, as their own act: `action.close`,
-    credited to the person, with the sent message's words as the evidence. Idempotent: what is closed is not looked at
-    again. Returns the changesets made."""
+def close_by_sent(
+    ws: Any, store: Any, cfg: Any, action_id: str, source: Any, summary: str, now: datetime | None = None
+) -> str:
+    """End an open action as the person's own act because their sent message shows it done: `action.close`, credited
+    to the person, with the sent message's words as the evidence, applied at once as a change made by the rule
+    `ANSWERED_RULE`. Returns the changeset's id."""
     from engine.applier import Context, Inputs, apply_changeset
     from engine.names import People
     from engine.ops import CHANGESET
     from engine.storage import WriteContext
 
+    text = _read_source(ws, source)
+    sent = read_message(text, _stamp(source.data["received_at"]))
+    assert sent is not None
+    op = {"op": "action.close", "id": action_id, "evidence": {"quote": _quote_of(sent)}}
+    changeset = CHANGESET.validate_python({"summary": summary, "ops": [op]}, context={"op_models": store.plugins.ops})
+    with store.transaction() as tx:
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "input",
+                "state": "done",
+                "source": source.id,
+                "note": summary,
+                "created_at": store.clock(),
+            },
+            WriteContext("engine", "trusted", "reply.ended"),
+        )
+    people = People(store, cfg)
+    ctx = Context(
+        store, cfg, people, ("action.close",), Inputs(request.id, source.id, text, "", "untrusted"), reporter=people.pm
+    )
+    cs_id = apply_changeset(changeset, [], ctx, run=None, now=now, extra={"by_rule": ANSWERED_RULE})
+    with store.transaction() as tx:
+        current = tx.get("request", request.id)
+        tx.update(
+            "request",
+            request.id,
+            {"changeset": cs_id},
+            WriteContext("engine", "trusted", "reply.ended"),
+            read_version=current.version,
+        )
+    return cs_id
+
+
+def close_answered(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -> list[str]:
+    """End every open reply owed that the person's own sent mail has answered, as their own act (`close_by_sent`).
+    Idempotent: what is closed is not looked at again. Returns the changesets made."""
     view = store.read()
     waiting = plan(ws, view)
     if not waiting:
@@ -316,47 +356,5 @@ def close_answered(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -
         source = answered_by_sent(ws, store, cfg, owed, ask, mine)
         if source is None:
             continue
-        text = _read_source(ws, source)
-        sent = read_message(text, _stamp(source.data["received_at"]))
-        assert sent is not None
-        quote = _quote_of(sent)
-        op = {"op": "action.close", "id": owed.action, "evidence": {"quote": quote}}
-        summary = "Closed a reply owed: you answered it"
-        changeset = CHANGESET.validate_python(
-            {"summary": summary, "ops": [op]}, context={"op_models": store.plugins.ops}
-        )
-        with store.transaction() as tx:
-            request = tx.create(
-                "request",
-                {
-                    "task": "notes",
-                    "origin": "input",
-                    "state": "done",
-                    "source": source.id,
-                    "note": summary,
-                    "created_at": store.clock(),
-                },
-                WriteContext("engine", "trusted", "reply.ended"),
-            )
-        people = People(store, cfg)
-        ctx = Context(
-            store,
-            cfg,
-            people,
-            ("action.close",),
-            Inputs(request.id, source.id, text, "", "untrusted"),
-            reporter=people.pm,
-        )
-        cs_id = apply_changeset(changeset, [], ctx, run=None, now=now, extra={"by_rule": ANSWERED_RULE})
-        with store.transaction() as tx:
-            current = tx.get("request", request.id)
-            tx.update(
-                "request",
-                request.id,
-                {"changeset": cs_id},
-                WriteContext("engine", "trusted", "reply.ended"),
-                read_version=current.version,
-            )
-        view = store.read()
-        made.append(cs_id)
+        made.append(close_by_sent(ws, store, cfg, owed.action, source, "Closed a reply owed: you answered it", now))
     return made

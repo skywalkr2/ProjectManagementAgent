@@ -49,8 +49,9 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.get("/today/priorities")
     def priorities() -> TopPrioritiesView:
         """Top priorities: a short ranked list across every project, by rules and never by an AI call. Overdue first,
-        then due within the follow-up window, waiting on the person, then at risk; one line for each other person; the
-        blocked counted; and the dated to-dos of the next days after the lines."""
+        then waiting on the person, due within the follow-up window, then at risk; one line for each other person; a
+        blocked action only as the question or action that holds it up; the blocked counted; and the dated to-dos of
+        the next days after the lines."""
         reader = store.read()
         people = People(store, cfg)
         projects = {p.id: p.data["name"] for p in reader.list("project")}
@@ -74,6 +75,7 @@ def build_today_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     question=line.question,
                     version=record.version if record is not None else None,
                     owners=owners_of(people, record.data) if record is not None else [],
+                    holds_up=line.holds_up,
                     send=line.send,
                     chase=line.chase,
                     overdue=line.overdue,

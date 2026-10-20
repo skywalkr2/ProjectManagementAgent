@@ -14,6 +14,7 @@ expect:
   promised_to: [PER-1]
   due_words: before your presentation
   due: null
+  on_hold: false
 stub_answer:
   summary: 'Varo Stone promises: make sure Avery has the slides before the presentation.'
   ops:

@@ -495,6 +495,12 @@ function sinceWords(line: QueueLine, t: (key: string, vars?: Record<string, stri
 /** What a review line counted, by the kinds of thing the assistant did. */
 const REVIEW_KINDS = ["actions_added", "actions_closed", "questions", "notes", "recorded", "people", "projects", "drafts"] as const;
 
+/** A promise that has had replies without an answer, and what to do: "Sam replied twice without a date: ask again?" */
+function repliedWords(replies: number, name: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
+  const times = replies === 1 ? t("queue.replied.once") : replies === 2 ? t("queue.replied.twice") : t("queue.replied.times", { n: replies });
+  return t("queue.replied", { name, times });
+}
+
 function reviewParts(line: QueueLine) {
   const kinds = REVIEW_KINDS.filter((k) => ((line.outcome ?? {})[k] ?? 0) > 0);
   const done = kinds.reduce((n, k) => n + ((line.outcome ?? {})[k] ?? 0), 0);
@@ -576,6 +582,7 @@ export function useLineTitle(): (line: QueueLine) => string {
         return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: line.subject }) : tn("queue.stale", line.count);
       case "promise": {
         const vars = { name, text: line.text ?? "", date: line.due ? day(line.due) : "" };
+        if ((line.replies ?? 0) > 0) return repliedWords(line.replies ?? 0, name, t);
         // Someone the person reports to is waited on, never chased (design 6.34).
         const waiting = line.stance === "report_to";
         if (!line.due) {
@@ -867,10 +874,11 @@ function QueueRow(props: {
           late > 0 && line.due
             ? [tn("queue.nudge.overdue", late, { date: day(line.due) }), line.count > late ? tn("queue.nudge.others", line.count - late) : ""].filter(Boolean).join(" · ")
             : tn("queue.nudge.meta", line.count, { days });
+        const replied = (line.replies ?? 0) > 0 ? repliedWords(line.replies ?? 0, line.person_name ?? "", t) : "";
         return {
           pill: tn("queue.pill.waiting_days", days),
           tone: "warn",
-          meta: meta(words),
+          meta: meta([words, replied].filter(Boolean).join(" · ")),
           primary: { label: t("queue.act.follow_up") },
           menu: [],
         };

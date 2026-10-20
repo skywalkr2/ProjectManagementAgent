@@ -67,7 +67,20 @@ to the calendar): its place, who organizes it and who is asked (each resolved to
 came as an invitation (the calendar sent it as a request, or its organizer isn't the person) and the person's own answer. A
 repeating event's entries are one series. A moved date moves only its own entry, and a promise due at it follows (6.33); a date
 called off, or skipped by its series, marks only its entry and gives a promise due at it one news line, its date unchanged. The
-agenda lists each date once and links its entry, whose page lists the people asked. *Built so far (P17, B-5):*
+agenda lists each date once and links its entry, whose page lists the people asked.
+**A plain entry needs no AI run** (the functional designer's F20, 2026-10-20; batch B-7; `engine/entry_rules.py`). An entry
+with nobody else invited, no description (`EventDetails.described` is False; a connector that doesn't say counts as
+described) and no change to a date a promise is due at is **plain**: the rules keep it in the calendar, with no run of the
+assistant, no request and no Review line (`CalendarEntry.plain`). The assistant still reads an invitation from someone else,
+an entry with a description, and one that moved a date a promise is due at (the promise still follows by rule). A plain entry
+whose title's **first word is one of `language.task_verbs`** ("Pay the deposit") is offered as a to-do, one click in its
+agenda row's menu: the person's own `action.add`, in the entry's words, on the entry (due on its day, moving with it), with
+Undo (`POST /api/events/{id}/todo`, `AgendaItemView.todo_offer`). A plain entry whose title **names a known person** (their
+full name, else a first name or alias only one person has; never the person themselves) is linked to them
+(`CalendarEntry.people`); one that **names a promise's words**, on that promise's day, becomes the day the promise is due at
+(`due_event`), so it moves with it; a promise on another day, or with none, is never linked. *Built:*
+`tests/test_plain_calendar_entries.py` (a calendar fixture of each kind), `web/src/components/TodayRail.test.tsx`.
+*Built so far (P17, B-5):*
 `tests/test_ics_full.py` (the connector, a source's read, the entries, the agenda and the add-source routes),
 `tests/test_calendar_mail.py`, `web/src/components/Sources.test.tsx` (the file picker),
 `web/src/components/RecordPageRecords.test.tsx` (the people asked) and `web/src/components/TodayRail.test.tsx` (the link). Left: an
@@ -1014,6 +1027,16 @@ is marked *designed*, with the phase.
   typed on) all ask it, as the to-do list and Follow-ups already did, so a to-do whose blocker is over is due, chased, reminded
   and shown again everywhere by its own dates, and the assistant is no longer told it is on hold. **Built:**
   `tests/test_unblocked_lines.py`.
+  **The chase moves to the blocker** (the functional designer's F15, 2026-10-20; batch B-7). A blocked action is never due
+  or chased itself, but the follow-up clock of what it waits on is not left stopped: a hold that waits on a **question**
+  (sent) or on **another action** (someone's, already told) gives that blocker the chase, which comes due as the blocked
+  action's would have (the person's own blocked action once its day is within `ui.followups.action_due_within_days` or
+  past; someone else's by the follow-up rule on how long they have been told), so the question or action is chased though
+  it hasn't waited the usual days (`followups.sections`: `chase_due`, `holds_up`, `holds_overdue` on each row). Top
+  priorities lists the blocker with what it holds up ("It holds up 2 to-dos"), never the blocked action (7.7). A hold that
+  **waits on the person themselves** (a question asked of them, an action of theirs, or themselves named) **isn't blocked**:
+  it isn't counted in `blocked_actions(…, people)`, and it is the person's own to-do, listed as one (7.7). *Built:*
+  `tests/test_chase_moves_to_the_blocker.py`.
   (the designer's F15: a blocked action stays not due and not chased.) **Built:**
   `tests/test_blocked_actions.py` (the blocker, its words, the count, Undo, the op, the rows, the unblocked to-do first),
   `web/src/components/OnHold.test.tsx` (the picker and the rows), `web/src/components/TodayRail.test.tsx`. Taking it off hold when an input says the wait is over is *designed, phase L3b, not built*
@@ -2959,6 +2982,19 @@ conditions), `tests/test_promises.py::test_a_leading_on_or_due_and_an_ordinal_ar
 `::test_a_condition_keeps_its_words_and_has_no_date_even_when_the_model_gave_one`,
 `::test_the_reading_follows_the_language_settings_words`, and `tests/test_learning_run_b7.py` (every case that expects a
 condition, and the cases that expect no date for words that are neither).
+*Conditions and "before" (the functional designer's F21, 2026-10-20; batch B-7).* A condition that **waits for something to
+happen** ("once the keys arrive", "after the workshop", "until you publish it", "as soon as …", "of receiving …") puts the
+promise **on hold from the start**, waiting for those words (`on_hold.waiting_for`, the day it was added), where it used to
+be merely dateless; an `action.add` that also names its own `waiting_for` keeps that wording. "Before <a meeting>" is **due
+at that calendar entry** (`due_event`, so it moves with it) when the words after "before" name exactly one entry that is
+still ahead (a title the words hold whole; the soonest of a repeating title; a title that is part of a longer matching one
+is the same meeting), and has **no date with its words kept** when they name none or several ("before his leave starts").
+Condition words that only leave the date open ("soon", "eventually") stay dateless and not on hold. Which words are which is
+configuration, beside `language.due_condition_words`: `language.due_hold_words` (the ones that put a promise on hold) and
+`language.due_before_words` (the ones after which an entry may be named). The golden cases that expect a condition say
+`on_hold: true` (`promise-017-get-back-tavish`, `-021-send-ansel-estimate`, `-033-reply-oren-after`, `-052-return-averys-samples`,
+`-055-inspect-room-avery`, `-064-keep-averys-draft`, `-067-reply-avery-after`, `thread-t12-m1-promise`) or `false` for a
+"before" nobody can place (`-031-make-sure-tavish`, `-060-make-sure-avery`). *Built so far:* `tests/test_condition_words_hold.py`.
 
 **How a promise ends, each an op with its evidence:**
 - done: `action.close` (credited to its owners, with who reported it, as today);
@@ -2988,7 +3024,17 @@ follow-up and no draft, only a line of its own, "Waiting on Ana: the budget answ
 gets no line at all, though the action still counts as covered, so no other line picks it up. A person with no stance has the default stance. A reply owed (6.35) is the person's own and is never gated by stance. A nudge never ends it. A waiting-on is not left to go stale: with a date it
 is due a follow-up from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
 `steward.chase_undated_days` (14) with no news since it was made or since its last news (it joins the person's follow-up line,
-"no date, nothing heard for 14 days" in its row). One chased lately waits as long again. Never while it is on hold. *Built so far (batch B-7):* the one follow-up line per person
+"no date, nothing heard for 14 days" in its row). One chased lately waits as long again. Never while it is on hold.
+**News mustn't silence the chase clock** (the functional designer's F22, 2026-10-20; batch B-7). A reply that doesn't answer
+is news (`action.news`, which records it as `non_answer` on the news entry; a part delivered and a call-off carry none, and
+an entry written before this had none either, so it keeps the rule it had). The first non-answer since the promise's line
+began restarts the clock **once**: for a dated promise the line is quiet for `steward.chase_dated_days` (7) from that
+reply, for an undated one for its `chase_undated_days` (14); a **second** brings the line back at once with the news shown
+("Robin replied twice without a date: ask again?"; `replies` on the line, on the promise's own line and on the person's
+follow-up line). News of any other kind still ends the wait for its day. *Built so far (F22):*
+`tests/test_news_does_not_silence_the_chase.py` (an overdue waiting-on with two non-answers gets its line back),
+`web/src/components/TodayPromises.test.tsx`.
+*Built so far (batch B-7):* the one follow-up line per person
 (`promises.waiting_on` and `promises.is_follow_up` give the list `followups.sections` and Today's queue share, so the line and
 the message it opens cover the same items): `tests/test_follow_up_lines.py`, `tests/test_promise_lines.py`,
 `tests/test_stance_lines.py`.
@@ -3120,6 +3166,16 @@ already in the configured sent folder.
   2 by default) becomes one Today line: "Did your message to <name> go out?", with *Yes, another way*, *Not sent* and
   *Still to send*. A draft the person never copied asks nothing, and so does a person with no sent folder being read.
 
+- **An approved draft isn't done** (the functional designer's F19, 2026-10-20; batch B-7). Approving or copying the draft
+  the assistant made for an action (6.7, "hand an action to the assistant") **leaves the action open**: a nudge isn't
+  completion. The approved text, or the one copied (`POST /api/actions/{id}/work/copied`, which also keeps a draft still
+  waiting), is kept as a `copy` of kind `work`, for the first person the action was promised to, else the one whose message
+  asked. It ends when **the sent version is seen in the sent folder**: the match above ends the action at once, as the
+  person's own act, with the sent message's first line as the evidence (the person's own sent mail applies at once, 6.33),
+  or when the person marks it done. With nothing matching sent after `steward.sent_match.ask_after_days` (2), the same
+  line asks "Did your message to <name> go out?" (only while a sent folder is being read, and not once the action is
+  over); answering that it went another way, or never went, settles the copy and leaves the action to the person. A draft
+  for nobody known is kept but never matched or asked about. *Built:* `tests/test_approved_draft_is_not_done.py`.
 *Built so far (S1-2, learning from the sent version):* each copy of a follow-up or a drafted reply is kept as a `copy`
 record with the text exactly as copied; the sent folder's messages are matched to copies by rules in the pass that ends
 replies owed; a differing pair records `draft_edited` with the sent text and an identical one records nothing; and the

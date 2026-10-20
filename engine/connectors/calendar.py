@@ -351,6 +351,7 @@ def _item(
         method=method,
         notes=tuple(reading.notes),
         entries=True,
+        described=bool(description),
     )
     return SourceItem(key, title[:200], "\n".join(lines), who, changed, None, event=details)
 

@@ -29,7 +29,7 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from engine import audience
+from engine import audience, entry_rules
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.extract.attached import with_files_read
 from engine.names import People
@@ -349,6 +349,7 @@ def _compare(
     listed = set()
     entries: list[_Entry] = []
     unplaced: dict[str, dict[str, Any]] = {}
+    plain = entry_rules.Plain(store.read(), cfg, source.id)
     for polled in poll.items:
         listed.add(polled.key)
         # Files an item carries are read as text first, so the item is compared and handed in with their words.
@@ -369,6 +370,8 @@ def _compare(
         facts = _change(cfg, source, item, change, old)
         closed, kept = classify(store, cfg, facts)
         handed = not baseline or (recent is not None and is_recent(details, item.changed_at, now, recent))
+        if handed and plain.of(item):
+            handed = False  # a plain calendar entry is kept by rule, with no run and no line (design 6.32)
         if closed is None and not kept:
             closed = _carried_sorting(before)
         if handed and closed is None and not kept and before is None and item.message is not None:
@@ -1019,6 +1022,7 @@ def _hand_in_window(
     }
     pending: list[tuple[Any, SourceItem, dict[str, str] | None]] = []
     unplaced: dict[str, dict[str, Any]] = {}
+    plain = entry_rules.Plain(store.read(), cfg, source_id)
     for snap in store.read().find("snapshot", {"source": source_id}):
         data = snap.data
         if data.get("gone") or data.get("deleted") or data.get("set_aside") or data["key"] in handed:
@@ -1035,6 +1039,8 @@ def _hand_in_window(
             event=EventDetails.from_dict(data["event"]) if data.get("event") else None,
             message=_message_of(data.get("message")),
         )
+        if plain.of(item):
+            continue  # a plain calendar entry is kept by rule, so the assistant has nothing to read
         facts = _change(cfg, source, item, "new", None)
         closed, kept = classify(store, cfg, facts)
         if closed is None and not kept and item.message is not None:

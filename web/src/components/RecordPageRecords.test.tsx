@@ -90,6 +90,16 @@ test("activity says who changed which field of what, by the field's label and th
   expect(within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem")[0]).toHaveTextContent("Your assistant changed the due date of Send two spine options");
 });
 
+test("a second move of the same date says it moved again, neutrally, with how many times and since when", async () => {
+  const moved = (n: number): S["ActivityEntry"] => ({ at: "2026-10-12T09:00:00Z", kind: "action", id: "ACT-1", name: "Send two spine options", op: "record.edit", field: "due", actor: "pm", by_assistant: false, moved_again: n, moved_since: "2026-10-06" });
+  api("project", "PRJ-1", { name: "Harbor" }, page({ activity: [moved(3), moved(2)] }));
+  renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const rows = within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem");
+  expect(rows[0]).toHaveTextContent("moved again (third time since Oct 6)");
+  expect(rows[1]).toHaveTextContent("moved again (second time since Oct 6)");
+  expect(rows[1].textContent).not.toMatch(/slip/i);
+});
+
 test("a meta line joins only the parts it has: no dot beside nothing, no lone dot", async () => {
   api(
     "project",

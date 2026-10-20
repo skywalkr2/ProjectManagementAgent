@@ -2,7 +2,10 @@
 
 Blocked is not a second state. The hold is the state; `OnHold.on` says what it waits on, and this module reads that: who
 or what the blocker is by name, whether it still blocks, and how many actions are blocked, by project and in all (the
-count Top priorities reads). A hold with only words is on hold, never blocked. Reads only.
+count Top priorities reads). A hold with only words is on hold, never blocked. A hold that waits on the person
+themselves (a question for them, an action of theirs, themselves named) isn't blocked either: it is their own to-do.
+The chase of a blocked action moves to its blocker, so `holds_up` says which questions and actions hold up which
+actions. Reads only.
 """
 
 from __future__ import annotations
@@ -111,6 +114,49 @@ def standing_hold(
     return None if found is not None and found.resolved else hold
 
 
+def owed_by(view: Any, target: str | None) -> tuple[str, ...]:
+    """The people a blocker waits on: the person named, whoever owns the action, or whoever the question was asked of.
+    Empty for a blocker that is gone."""
+    kind = blocker_kind(target) if target else None
+    record = view.get(kind, target) if kind is not None and target else None
+    if record is None:
+        return ()
+    if kind == "person":
+        return (str(target),)
+    if kind == "action":
+        return tuple(o["person"] for o in record.data.get("owners") or [] if o.get("person"))
+    return (record.data["to"],) if record.data.get("to") else ()
+
+
+def waits_on_person(view: Any, hold: dict[str, Any] | None, pm: str | None) -> bool:
+    """Whether a hold that names its blocker waits on the person themselves: they are the person named, the one the
+    question was asked of, or an owner of the action. Such a hold isn't blocked: it is the person's own to-do."""
+    target = (hold or {}).get("on")
+    return bool(pm) and pm in owed_by(view, target)
+
+
+def holds_up(view: Any, people: People | None = None) -> dict[str, list[str]]:
+    """The open actions each question and action still holds up, by the blocker's id: every open action whose hold names
+    that question or action and whose blocker hasn't ended. A person as a blocker isn't listed (it has no chase of its
+    own), and neither is a blocker that is over. The one reading of "what it holds up" that the chase, the Follow-ups
+    rows and Top priorities share."""
+    found: dict[str, list[str]] = {}
+    names = people if people is not None else ViewNames(view)
+    for stored in view.list("action"):
+        data = stored.data
+        if data.get("status") != "open":
+            continue
+        hold = data.get("on_hold") or {}
+        target = hold.get("on")
+        if not target or blocker_kind(target) not in ("question", "action"):
+            continue
+        blocker = blocker_of(view, hold, names)
+        if blocker is None or blocker.resolved:
+            continue
+        found.setdefault(str(target), []).append(stored.id)
+    return found
+
+
 def blocker_problem(view: Any, action_id: str, on: str) -> str | None:
     """Why `on` can't be what an action is blocked on, or None: it must be an existing person, action or question, and
     not the action itself."""
@@ -134,18 +180,19 @@ class BlockedCount:
 
 def blocked_actions(source: Any, people: People | None = None) -> BlockedCount:
     """The open actions whose hold names a blocker that still blocks, counted in all and by project. A hold with only
-    words, and one whose blocker is gone, answered, finished or dropped, are not counted. `source` is a store or a
-    view. Top priorities reads this."""
+    words, one whose blocker is gone, answered, finished or dropped, and one that waits on the person themselves are not
+    counted (`people` says who the person is). `source` is a store or a view. Top priorities reads this."""
     view = source.read() if hasattr(source, "read") else source
     count = BlockedCount()
     if people is None:
         people = ViewNames(view)
+    pm = getattr(people, "pm", None)
     for stored in view.list("action"):
         data = stored.data
         if data.get("status") != "open":
             continue
         found = blocker_of(view, data.get("on_hold"), people)
-        if found is None or found.resolved:
+        if found is None or found.resolved or waits_on_person(view, data.get("on_hold"), pm):
             continue
         count.total += 1
         project = data.get("project")

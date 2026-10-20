@@ -303,6 +303,17 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
   const { event } = props;
   const row = useRef<HTMLLIElement>(null);
   const change = useChangeThis({ kind: "event", id: event.snapshot }, () => row.current?.focus());
+  const act = useAct();
+  // A plain entry that reads as a task is offered as a to-do, one click, with Undo.
+  const offer = event.entry && event.todo_offer ? { entry: event.entry, text: event.todo_offer } : null;
+  const addTodo = offer
+    ? {
+        id: "add-todo",
+        label: t("today.agenda.add_todo"),
+        icon: "plus" as const,
+        run: () => void act(() => api.entryTodo(offer.entry), (made) => ({ message: t("today.agenda.todo_added", { what: offer.text }), undo: () => api.undo(made.changeset) })),
+      }
+    : null;
   const meta = [event.where, event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
   // A meeting of a series shows how many open items wait for it, linking to the series' page; with none, nothing is said.
   const open = event.series && (event.open_items ?? 0) > 0 ? event.open_items! : 0;
@@ -331,6 +342,7 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
         {meta && <div className="tb-meta">{meta}</div>}
       </div>
       {event.own && <RowMenu label={event.title} actions={[change.entry]} />}
+      {!event.own && addTodo && <RowMenu label={event.title} actions={[addTodo]} />}
       {event.own && change.form}
       {event.own && <LearnedLines records={[event.snapshot]} />}
     </li>

@@ -51,8 +51,13 @@ function chip(line: Line, t: T, tn: Tn): { text: string; tone: PillTone } {
   return { text: t("today.priorities.pill.at_risk"), tone: "warn" };
 }
 
-/** The second line: why it is listed, and for someone else what it is about. */
+/** The second line: why it is listed, and for someone else what it is about; a question or action that holds others up says how many. */
 function metaOf(line: Line, t: T, tn: Tn): string {
+  const base = baseMeta(line, t, tn);
+  return (line.holds_up ?? 0) > 0 ? [base, tn("today.priorities.holds_up", line.holds_up ?? 0)].filter(Boolean).join(" · ") : base;
+}
+
+function baseMeta(line: Line, t: T, tn: Tn): string {
   if (line.kind === "person") {
     const things = line.things ?? [];
     const first = things[0]?.text ?? "";

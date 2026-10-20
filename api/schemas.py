@@ -1207,6 +1207,12 @@ class ActivityEntry(BaseModel):
     field: str | None = None
     actor: str
     by_assistant: bool
+    moved_again: int | None = Field(
+        None,
+        description="For a second or later move of the same date within the configured days: how many times the date "
+        "has moved in that run (2 for the second). A first move isn't an entry at all.",
+    )
+    moved_since: str | None = Field(None, description="For a move that moved again: the day the run of moves began.")
 
 
 class SeriesMeeting(BaseModel):
@@ -1515,6 +1521,13 @@ class Applied(BaseModel):
     changeset: str
 
 
+class EntryTodoMade(BaseModel):
+    """The to-do made from a calendar entry: its `action` and the `changeset` Undo takes."""
+
+    action: str
+    changeset: str
+
+
 class ReminderIn(BaseModel):
     """The person's own change to an action's reminder: a snooze choice, or a time they picked (one without a zone is
     on their own clock). Neither clears the reminder."""
@@ -1765,6 +1778,12 @@ class AgendaItemView(BaseModel):
     series: str | None = Field(None, description="The series this date or entry is one meeting of, when it is.")
     open_items: int = Field(
         0, description="For a meeting of a series: how many open actions and questions sit on it (never shown as zero)."
+    )
+    todo_offer: str | None = Field(
+        None,
+        description="For a plain entry (nobody else invited, no description) whose title starts with a task verb and "
+        "that has no to-do yet: the to-do it is offered as, in its own words. Posting to `/api/events/{entry}/todo` "
+        "makes it.",
     )
 
 
@@ -2050,6 +2069,11 @@ class QueueLineView(BaseModel):
     count: int
     overdue: int | None = Field(
         None, description="For a nudge line: how many of its items are past their date; `due` is the oldest of those."
+    )
+    replies: int | None = Field(
+        None,
+        description="For a promise or nudge line: how many replies that didn't answer its promise has had since the "
+        'line began (the most of its promises, for a nudge). The line says it: "replied twice without a date".',
     )
     age_hours: float | None = Field(
         None, description="For a backup line: the hours since the last backup that worked; none when none has."
@@ -4568,9 +4592,10 @@ class PriorityThingView(BaseModel):
     kind: Literal["action", "question"]
     id: str
     text: str
-    why: Literal["overdue", "due_soon", "chase", "send", "answer", "at_risk"]
+    why: Literal["overdue", "due_soon", "chase", "send", "answer", "waiting", "at_risk"]
     due: date | None = None
     waiting_days: int | None = Field(None, description="For something sent, the days since the last word to them.")
+    holds_up: int | None = Field(None, description="How many blocked actions this question or action holds up.")
 
 
 class PriorityLineView(BaseModel):
@@ -4594,6 +4619,11 @@ class PriorityLineView(BaseModel):
     question: str | None = None
     version: int | None = Field(None, description="The action's version, to state when reassigning it.")
     owners: list[OwnerNameView] = Field(default_factory=list, description="The action's owners, for Reassign.")
+    holds_up: int | None = Field(
+        None,
+        description="How many blocked actions this line's question or action holds up, in all for a person line. A "
+        "blocked action is never listed itself: its blocker is.",
+    )
     send: int = 0
     chase: int = 0
     overdue: int = 0

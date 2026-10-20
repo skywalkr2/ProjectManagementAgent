@@ -14,6 +14,7 @@ expect:
   promised_to: [PER-102]
   due_words: before his leave starts
   due: null
+  on_hold: false
 stub_answer:
   summary: 'Avery promises: make sure Tavish receives the handover.'
   ops:

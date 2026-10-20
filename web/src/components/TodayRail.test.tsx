@@ -172,6 +172,28 @@ test("a meeting of a series says how many open items wait for it, linking to the
   expect(quiet).not.toHaveTextContent("0");
 });
 
+test("a plain entry that reads as a task is offered as a to-do in its menu, one click, with Undo; others have no menu", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const { calls } = open(
+    {
+      "GET today/agenda": () => [event({ title: "Pay the deposit", entry: "EVT-9", todo_offer: "Pay the deposit" }), event({ title: "Standup", entry: "EVT-8", start: at(TODAY, 9) })],
+      "POST events/EVT-9/todo": () => ({ action: "ACT-9", changeset: "CS-9" }),
+      "POST changesets/CS-9/undo": () => ({ restored: [0] }),
+    },
+  );
+  const col = await column("Agenda");
+  const rows = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
+  const pay = rows.find((row) => row.textContent?.includes("Pay the deposit"))!;
+  const standup = rows.find((row) => row.textContent?.includes("Standup"))!;
+  expect(within(standup).queryByRole("button", { name: /More actions/ })).toBeNull();
+  await user.click(within(pay).getByRole("button", { name: "More actions for Pay the deposit" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Add as a to-do" }));
+  expect(await screen.findByText("Added a to-do: Pay the deposit")).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST events/EVT-9/todo")).toBe(true);
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route.startsWith("POST changesets/CS-9/undo"))).toBe(true));
+});
+
 test("a date of an event read from a calendar links to its entry's page, where the people asked are listed", async () => {
   open({
     "GET today/agenda": () => [

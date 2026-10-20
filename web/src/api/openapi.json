@@ -596,6 +596,30 @@
             "title": "Kind",
             "type": "string"
           },
+          "moved_again": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a second or later move of the same date within the configured days: how many times the date has moved in that run (2 for the second). A first move isn't an entry at all.",
+            "title": "Moved Again"
+          },
+          "moved_since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a move that moved again: the day the run of moves began.",
+            "title": "Moved Since"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -1030,6 +1054,18 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "todo_offer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a plain entry (nobody else invited, no description) whose title starts with a task verb and that has no to-do yet: the to-do it is offered as, in its own words. Posting to `/api/events/{entry}/todo` makes it.",
+            "title": "Todo Offer"
           },
           "where": {
             "anyOf": [
@@ -5212,6 +5248,25 @@
           "base_url"
         ],
         "title": "EndpointView",
+        "type": "object"
+      },
+      "EntryTodoMade": {
+        "description": "The to-do made from a calendar entry: its `action` and the `changeset` Undo takes.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "changeset"
+        ],
+        "title": "EntryTodoMade",
         "type": "object"
       },
       "Evidence": {
@@ -11877,6 +11932,18 @@
             "title": "Due Soon",
             "type": "integer"
           },
+          "holds_up": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many blocked actions this line's question or action holds up, in all for a person line. A blocked action is never listed itself: its blocker is.",
+            "title": "Holds Up"
+          },
           "key": {
             "title": "Key",
             "type": "string"
@@ -12033,6 +12100,18 @@
             ],
             "title": "Due"
           },
+          "holds_up": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many blocked actions this question or action holds up.",
+            "title": "Holds Up"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -12068,6 +12147,7 @@
               "chase",
               "send",
               "answer",
+              "waiting",
               "at_risk"
             ],
             "title": "Why",
@@ -14625,6 +14705,18 @@
             },
             "title": "Reminders",
             "type": "array"
+          },
+          "replies": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a promise or nudge line: how many replies that didn't answer its promise has had since the line began (the most of its promises, for a nudge). The line says it: \"replied twice without a date\".",
+            "title": "Replies"
           },
           "reply": {
             "anyOf": [
@@ -21047,6 +21139,46 @@
         "summary": "Action Taken Off Hold"
       }
     },
+    "/api/actions/{action_id}/work/copied": {
+      "post": {
+        "description": "Keep the draft made for an action exactly as the person copied it (the draft waiting for review, else the\ntext they approved), so the message they then send can be matched to it. The action stays open: copying is not\ndoing. Copying it again moves the same copy forward.",
+        "operationId": "work_copied_api_actions__action_id__work_copied_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Copied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Work Copied"
+      }
+    },
     "/api/addon-secrets": {
       "get": {
         "description": "Each running add-on's declared secrets and where each is read from now; never a value.",
@@ -23035,6 +23167,46 @@
           }
         },
         "summary": "Stream"
+      }
+    },
+    "/api/events/{event_id}/todo": {
+      "post": {
+        "description": "Make the to-do a plain calendar entry is offered as (its title starts with a task verb), as the person's own\nchange: owned by them, due on the entry's day and moving with it. Undo takes the changeset.",
+        "operationId": "entry_todo_api_events__event_id__todo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryTodoMade"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entry Todo"
       }
     },
     "/api/file-kinds": {
@@ -29936,7 +30108,7 @@
     },
     "/api/today/priorities": {
       "get": {
-        "description": "Top priorities: a short ranked list across every project, by rules and never by an AI call. Overdue first,\nthen due within the follow-up window, waiting on the person, then at risk; one line for each other person; the\nblocked counted; and the dated to-dos of the next days after the lines.",
+        "description": "Top priorities: a short ranked list across every project, by rules and never by an AI call. Overdue first,\nthen waiting on the person, due within the follow-up window, then at risk; one line for each other person; a\nblocked action only as the question or action that holds it up; the blocked counted; and the dated to-dos of\nthe next days after the lines.",
         "operationId": "priorities_api_today_priorities_get",
         "responses": {
           "200": {

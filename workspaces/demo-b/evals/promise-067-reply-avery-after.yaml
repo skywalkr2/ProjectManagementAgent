@@ -14,6 +14,7 @@ expect:
   promised_to: [PER-1]
   due_words: as soon as I've spoken to the surveyor
   due: null
+  on_hold: true
 stub_answer:
   summary: 'Oren Pike promises: reply to Avery after speaking to the surveyor.'
   ops:

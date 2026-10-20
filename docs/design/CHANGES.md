@@ -1027,6 +1027,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 130. The functional designer's answers to F15 to F25, the first part: the chase moves to the blocker, Top priorities' order, a second move, an approved draft, plain calendar entries, conditions and news (2026-10-20; batch B-7)
+
+| Where | Before | Now |
+|---|---|---|
+| A blocked action (6.9) | Never due or chased, and nothing took over its follow-up; a hold waiting on the person themselves was counted blocked | The question or action it waits on gets the chase clock and comes due as the blocked action's would have (`holds_up`, `holds_overdue` on the Follow-ups rows); a hold that waits on the person themselves isn't blocked and is their own to-do. Built: `tests/test_chase_moves_to_the_blocker.py` |
+| Top priorities (7.7) | Overdue, due within the window, waiting on the person, at risk; the blocked counted under the list | Overdue, waiting on the person, due within the window, at risk; a blocked action only as the question or action that holds it up ("It holds up 2 to-dos"), ranked by what it holds up; one line per person and the cap stay. Built: `tests/test_top_priorities.py`, `tests/test_chase_moves_to_the_blocker.py`, `web/src/components/TopPriorities.test.tsx` |
+| A date moved twice (6.33, 7.14) | Every date move left out of the history | A second move of the same date within `steward.second_move_days` (14) shows in the person's own history, "moved again (second time since Oct 6)"; never in a packet, a copied message or a plugin's view. Built: `tests/test_second_move_in_history.py`, `web/src/components/RecordPageRecords.test.tsx` |
+| A draft made for an action (6.35) | Approving it changed nothing else, and nothing watched for it going out | Approving or copying it leaves the action open and keeps a `copy` (kind `work`); the sent version in the sent folder ends the action at once as the person's own act, nothing matching in 2 days asks "Did your message go out?". `POST /api/actions/{id}/work/copied`. Built: `tests/test_approved_draft_is_not_done.py` |
+| A plain calendar entry (6.2, 6.32) | Every entry of a calendar file was an input the assistant read: one run and one Review line each | Nobody else invited, no description and no change to a date a promise is due at: kept by rule, no run, no line (`CalendarEntry.plain`). A task verb first word (`language.task_verbs`) offers a to-do in the agenda row's menu (`POST /api/events/{id}/todo`); a known person in the title is linked (`people`), a promise's words on its day link it (`due_event`). Built: `tests/test_plain_calendar_entries.py`, `web/src/components/TodayRail.test.tsx` |
+| Conditions and "before" (6.33) | A condition kept its words and no date | "Once …" and the other words that wait for something put the promise on hold from the start, waiting for them; "before <a known meeting>" is due at that entry, else dateless with the words kept. Eight golden cases now say `on_hold: true` and two say `false`. Built: `tests/test_condition_words_hold.py` |
+| A reply that doesn't answer (6.33) | News silenced the chase clock for good | The first non-answer restarts it once (7 days dated, 14 undated); a second brings the line back with "replied twice without a date: ask again?". `ActionNews.non_answer`, `Late.replies`, the queue line's `replies`. Built: `tests/test_news_does_not_silence_the_chase.py`, `web/src/components/TodayPromises.test.tsx` |
+| Plugin API (3.9) | 0.3.84 | 0.3.85: `EventDetails.described`; core records `CalendarEntry.plain` and `people`, `ActionNews.non_answer`, `Copy.kind` `work` |
+| Settings (4.6) | | `steward.second_move_days`, `language.due_hold_words`, `language.due_before_words` and `language.task_verbs`, each with a description, a default and demo values in both fictional workspaces |
+
 ## 128. Tables beside the pane, What changed's meta line, one header row, target sizes and weights (2026-10-20; the UI/UX re-review, 3.3, 3.6, 3.7, 3.8, 3.9, 3.13, batch B-7)
 
 | Where | Before | Now |
@@ -1039,7 +1053,6 @@ yet follow, that it is *designed*, with its phase.
 | Weights (7.12) | 700 from the browser's own bold on `strong`, `th` and `b`, and a fallback number in one style sheet | A stylelint rule `cockpit/weight-tokens` allows only the three weight tokens (no number or word, no fallback number, in `font-weight` or `font`); the base styles give the browser-bold elements the semibold token. Built: `web/src/theme/stylelint-rules.test.ts` |
 | Small points (7.7, 7.3, 7.13) | The inspector's "1 of 21 · j / k" wrapped; the Send back box spanned the pane and its disabled button gave no reason; "Whose words" was two stacked radios | The count stays on one line; the box is at most 72ch and the button says "Write what to do differently first."; "Whose words are these?" is the segmented control (arrows move along it, Space chooses). Built: `web/src/components/SmallPoints.test.tsx` |
 | Settings | | None new |
-
 ## 127. Today's first screen and one row per thing (2026-10-20; the UI/UX re-review, 3.1, 3.4, 3.12, 3.14, 3.15, batch B-7)
 
 | Where | Before | Now |

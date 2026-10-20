@@ -6,7 +6,8 @@ Early next week means its first three configured working days. Part-of-day
 phrases identify a date but leave the time unset. Explicit times are local wall
 times. A leading lead word ("on", "due", "due by") is read past, and an ordinal day ("the 25th") is the next day of the
 month with that number. Unknown phrases stay unresolved. The words of the language (lead words, ordinal endings, the
-words that make a due a condition) are arguments, with English defaults here that the language settings override.
+words that make a due a condition, which of those wait for something to happen, and which name an entry) are arguments,
+with English defaults here that the language settings override.
 """
 
 from __future__ import annotations
@@ -23,6 +24,40 @@ DEFAULT_CONDITION_WORDS = (
     *("once", "after", "before", "when", "whenever", "until", "till", "if", "unless", "upon", "as soon as"),
     *("of receiving", "of receipt", "sometime", "soon", "eventually"),
 )
+#: The condition words that wait for something to happen: a due with one is on hold from the start. The rest of the
+#: condition words only leave the date open.
+DEFAULT_HOLD_WORDS = (
+    *("once", "after", "when", "whenever", "until", "till", "if", "unless", "upon", "as soon as"),
+    *("of receiving", "of receipt"),
+)
+#: The condition words after which a calendar entry may be named: a due "before the print sync" is due at that entry.
+DEFAULT_BEFORE_WORDS = ("before",)
+#: The verbs a task's title starts with: a plain calendar entry whose first word is one is offered as a to-do.
+DEFAULT_TASK_VERBS = (
+    *("pay", "send", "call", "email", "text", "book", "buy", "order", "renew", "submit", "file", "return", "pick"),
+    *("drop", "cancel", "confirm", "schedule", "register", "sign", "review", "write", "finish", "prepare", "collect"),
+    *("fix", "clean", "pack", "check", "ask", "remind", "reply", "print", "post", "pickup", "organize", "arrange"),
+)
+
+
+def after_marker(phrase: str, markers: Sequence[str]) -> str | None:
+    """The words that follow the first marker found in the phrase (as whole words, ignoring case), or None when no
+    marker is there: "before the print sync" gives "the print sync"."""
+    value = " ".join(phrase.lower().split())
+    found = [
+        match
+        for marker in markers
+        if marker.strip()
+        and (match := re.search(rf"(?<![\w'])(?:{re.escape(marker.lower())})(?![\w'])\s*(.*)$", value))
+    ]
+    return min(found, key=lambda m: m.start())[1] if found else None
+
+
+def names_title(phrase: str, title: str) -> bool:
+    """Whether a title's words appear in the phrase, whole and in order, ignoring case and punctuation."""
+    wanted = re.findall(r"[\w']+", title.casefold())
+    words = re.findall(r"[\w']+", phrase.casefold())
+    return bool(wanted) and any(words[i : i + len(wanted)] == wanted for i in range(len(words) - len(wanted) + 1))
 
 
 def is_condition(phrase: str, markers: Sequence[str]) -> bool:

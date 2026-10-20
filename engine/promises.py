@@ -27,8 +27,9 @@ def is_promise(data: dict[str, Any]) -> bool:
 class Late:
     """An open action that needs a line: its `action`, the `due` day (none when undated), its `text`, `owner`, the
     person to chase (none when it is the person's own), `stance` (who that person is to the person, design 6.34: none
-    for the person's own and for a reply owed, which a stance never gates), and `quiet` days: past its date (negative
-    while the date is still ahead), or, for an undated one, since it was made or last heard of."""
+    for the person's own and for a reply owed, which a stance never gates), `quiet` days: past its date (negative
+    while the date is still ahead), or, for an undated one, since it was made or last heard of, and `replies`: how many
+    replies that didn't answer it has had since its line began, shown with the line (design 6.33)."""
 
     action: str
     due: date | None
@@ -38,6 +39,7 @@ class Late:
     quiet: int
     since: date
     stance: str | None = None
+    replies: int = 0
 
 
 def held_endings(changesets: dict[str, dict[str, Any]], live: set[str]) -> set[str]:
@@ -63,6 +65,9 @@ def late(
     - Owed by someone else, which the person waits on: with a date, from `steward.chase_dated_days` before it and once
       it has passed (a past one with no news since its day); with none, after `steward.chase_undated_days` with no news
       since it was made or since its latest news. One chased lately waits as long again.
+    - A reply that didn't answer (a non-answer, written by the news op) is news that mustn't silence the chase: the
+      first restarts the clock once, for the dated window (`steward.chase_dated_days`) of a dated promise and the
+      undated wait of an undated one, and a second brings the line back at once with `replies` counted.
     Each waiting-on carries the owner's stance (the screens word it by that, and Today leaves out a watched one).
     `made` gives the day an action was made. Oldest first."""
     found: list[Late] = []
@@ -82,7 +87,8 @@ def late(
         if not owners:
             continue
         due = date.fromisoformat(str(d["due"])) if d.get("due") else None
-        news = [date.fromisoformat(str(n["on"])) for n in d.get("news") or []]
+        entries = [(date.fromisoformat(str(n["on"])), bool(n.get("non_answer"))) for n in d.get("news") or []]
+        news = [on for on, _ in entries]
         mine = pm in owners
         text, project = str(d["text"]), d.get("project")
         if mine:
@@ -94,15 +100,34 @@ def late(
         if due is not None:
             if (due - today).days > rule.chase_dated_days:
                 continue
-            if any(n >= (due if due < today else due - timedelta(days=rule.chase_dated_days)) for n in news):
-                continue
+            start = due if due < today else due - timedelta(days=rule.chase_dated_days)
+            heard = [(on, non) for on, non in entries if on >= start]
+            replies = [on for on, non in heard if non]
+            if len(replies) < len(heard):
+                continue  # news that wasn't a non-answer ends the wait for its day
+            if len(replies) == 1 and (today - replies[0]).days < rule.chase_dated_days:
+                continue  # one non-answer restarts the clock once
             if chased and (today - max(chased)).days < wait:
                 continue
-            found.append(Late(record.id, due, text, owners[0], project, (today - due).days, due, stance(owners[0], d)))
+            found.append(
+                Late(
+                    record.id,
+                    due,
+                    text,
+                    owners[0],
+                    project,
+                    (today - due).days,
+                    due,
+                    stance(owners[0], d),
+                    len(replies),
+                )
+            )
             continue
         began = made(record.id)
         since = max([*news, *chased, *([began] if began else [])], default=None)
-        if since is not None and (today - since).days < rule.chase_undated_days:
+        last_chase = max(chased, default=None)
+        replies = [on for on, non in entries if non and (last_chase is None or on > last_chase)]
+        if len(replies) < 2 and since is not None and (today - since).days < rule.chase_undated_days:
             continue
         found.append(
             Late(
@@ -114,6 +139,7 @@ def late(
                 (today - since).days if since else 0,
                 since or today,
                 stance(owners[0], d),
+                len(replies),
             )
         )
     return sorted(found, key=lambda x: (x.since, x.action))

@@ -49,6 +49,7 @@ from api.schemas import (
     Created,
     DocumentBlock,
     DocumentView,
+    EntryTodoMade,
     FieldView,
     FileKindView,
     FileView,
@@ -583,6 +584,17 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         from engine import today
 
         return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, datetime.now(UTC))]
+
+    @r.post("/events/{event_id}/todo")
+    def entry_todo(event_id: str) -> EntryTodoMade:
+        """Make the to-do a plain calendar entry is offered as (its title starts with a task verb), as the person's own
+        change: owned by them, due on the entry's day and moving with it. Undo takes the changeset."""
+        from engine import entry_todo as make_todo
+
+        need("event", event_id)
+        action, changeset = guard(lambda: make_todo.make(store, cfg, event_id))
+        changed()
+        return EntryTodoMade(action=action, changeset=changeset)
 
     @r.get("/today/todo")
     def today_todo() -> list[TodoView]:
@@ -1168,6 +1180,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             owner_format=cfg.workspace.owner_format,
             today=datetime.now(UTC).astimezone(here).date(),
             here=here,
+            second_move_days=cfg.steward.second_move_days,
         )
         if found is None:
             raise HTTPException(status_code=404, detail=f"There is no {kind} {record_id}.")

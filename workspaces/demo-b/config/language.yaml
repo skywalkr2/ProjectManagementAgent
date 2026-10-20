@@ -31,10 +31,14 @@ title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to
 title_min_words: 3
 # Notes under this many words with no link are bare confirmations and stay with the change.
 bare_confirmation_words: 4
-# Words that begin a due date's words without being part of it ("due Oct 22", "on the 3rd"), the endings of a day of the month ("the 25th"), and the words that tie a due to something that happens, so it has no date ("once the keys arrive").
+# Words that begin a due date's words without being part of it ("due Oct 22", "on the 3rd"), the endings of a day of the month ("the 25th"), and the words that tie a due to something that happens, so it has no date ("once the keys arrive"); of those, the ones that put a promise on hold from the start, and the ones after which a calendar entry may be named ("before the print sync").
 due_lead_words: [by, "on", due, due on, due by, on or before, no later than, not later than]
 due_ordinal_suffixes: [st, nd, rd, th]
 due_condition_words: [once, after, before, when, whenever, until, till, if, unless, upon, as soon as, of receiving, of receipt, sometime, soon, eventually]
+due_hold_words: [once, after, when, whenever, until, till, if, unless, upon, as soon as, of receiving, of receipt]
+due_before_words: [before]
+# The verbs a task's title starts with: a plain calendar entry whose first word is one is offered as a to-do.
+task_verbs: [pay, send, call, email, text, book, buy, order, renew, submit, file, return, pick, drop, cancel, confirm, schedule, register, sign, review, write, finish, prepare, collect, fix, clean, pack, check, ask, remind, reply, print, post, pickup, organize, arrange]
 # Phrases that say the person already sent something (see the unnamed-recipient check).
 already_sent_phrases: [I sent, I've sent, I have sent, I just sent, I emailed, I've emailed, I forwarded, I've forwarded, we sent, we've sent]
 # Phrases with which a sender limits who may see a message (see the audience check).

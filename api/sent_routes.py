@@ -2,8 +2,9 @@
 their answer to "Did your message go out?".
 
 A follow-up's copy is kept by `POST /api/followups/{person}/mark-sent`. A reply's is kept here, when the person
-copies the draft. The answers settle a copy the sent folder never matched; each is undone by `unsettle` with what the
-answer returned."""
+copies the draft, and so is the draft made for an action (approving it keeps one too, and leaves the action open).
+The answers settle a copy the sent folder never matched; each is undone by `unsettle` with what the answer
+returned."""
 
 from __future__ import annotations
 
@@ -46,6 +47,19 @@ def build_sent_router(cfg: Config, store: Store, events: Events, worker: Worker)
         made = sent_version.record_copy(
             store, "reply", record.data.get("asker"), draft, actions=[action_id], now=worker.now()
         )
+        events.changed()
+        return Copied(id=made)
+
+    @r.post("/actions/{action_id}/work/copied")
+    def work_copied(action_id: str) -> Copied:
+        """Keep the draft made for an action exactly as the person copied it (the draft waiting for review, else the
+        text they approved), so the message they then send can be matched to it. The action stays open: copying is not
+        doing. Copying it again moves the same copy forward."""
+        if store.read().get("action", action_id) is None:
+            raise HTTPException(status_code=404, detail=f"action {action_id} doesn't exist")
+        made = sent_version.keep_work(store, action_id, now=worker.now())
+        if made is None:
+            raise HTTPException(status_code=409, detail="There is nothing drafted to copy.")
         events.changed()
         return Copied(id=made)
 

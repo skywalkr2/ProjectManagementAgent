@@ -126,8 +126,9 @@ class Line:
     their ids in `actions`, the longest untouched in `waiting_days`, and one's own words in `subject` when there is just
     one).
     nudge is the one follow-up line for a person the person is waiting on (`count` of their items, `overdue` how many
-    are past their date and `due` the oldest of those, `waiting_days` the longest wait), opening the one message to
-    them.
+    are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
+    without an answer any of its promises has had, which the line says), opening the one message to them. A promise
+    line says its `replies` the same way.
     backup (no backup that works: `state` is unset for none set up, never for none yet, failed for a try that failed and
     none before it, overdue for a last one older than `storage.backups.every_hours` twice over, whose age in hours is
     `age_hours`).
@@ -193,6 +194,7 @@ class Line:
     stance: str | None = None
     sent_copy: str | None = None
     overdue: int = 0
+    replies: int = 0
     age_hours: float | None = None
     since: str = ""
 
@@ -660,6 +662,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     covered = promises.waiting_on(store, cfg, today, hidden)
     on_a_line = {x.action for x in covered}
     quiet = {x.action: x.quiet for x in covered if promises.is_follow_up(x)}
+    replied = {x.action: x.replies for x in covered}
     for x in covered:
         if x.stance == "watch" or promises.is_follow_up(x):
             continue
@@ -676,6 +679,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 actions=[x.action],
                 subject=x.text,
                 stance=x.stance,
+                replies=x.replies,
                 since=x.since.isoformat(),
             )
         )
@@ -1024,6 +1028,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     waiting_days=longest,
                     due=late_on[0].isoformat() if late_on else None,
                     overdue=len(late_on),
+                    replies=max((replied.get(a["id"], 0) for a in told), default=0),
                     since=s.name.lower(),
                 )
             )

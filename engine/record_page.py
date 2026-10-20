@@ -8,7 +8,7 @@ from datetime import date, datetime
 from typing import Any, Literal, get_args, get_origin
 from zoneinfo import ZoneInfo
 
-from engine.history import changes_for_readers
+from engine.history import changes_for_person
 from engine.names import render_owner
 from engine.origin import origins
 from engine.records import ref_fields, values_at
@@ -59,6 +59,7 @@ def page(
     owner_format: str = "{full_name}",
     today: date | None = None,
     here: ZoneInfo | None = None,
+    second_move_days: int = 14,
 ) -> dict[str, Any] | None:
     view = store.read()
     record = view.get(kind, record_id)
@@ -142,7 +143,7 @@ def page(
         ],
         "completed_actions": _completed(view, kind, record_id, name_of),
         "fact_source": fact_source(view, record) if kind == "fact" else None,
-        "activity": _activity(view, kind, record_id, actions, questions, name_of, pm),
+        "activity": _activity(view, kind, record_id, actions, questions, name_of, pm, second_move_days),
     }
 
 
@@ -276,16 +277,24 @@ def _open_with(view: Any, kind: str, record_id: str) -> tuple[list[Any], list[An
 
 
 def _activity(
-    view: Any, kind: str, record_id: str, actions: list[Any], questions: list[Any], name_of: Any, pm: str | None
+    view: Any,
+    kind: str,
+    record_id: str,
+    actions: list[Any],
+    questions: list[Any],
+    name_of: Any,
+    pm: str | None,
+    second_move_days: int = 14,
 ) -> list[dict[str, Any]]:
     """What happened to the record and to what is open with it: one entry per change, newest first. A change that only
-    moves a date on an existing item is left out (it is not news; the ledger keeps it)."""
+    moves a date on an existing item is left out (it is not news; the ledger keeps it), except a second move of the
+    same date within `second_move_days`, which says it moved again and since when."""
     entries = []
     related = [("action", a.id) for a in actions] + [("question", q.id) for q in questions]
     if kind == "project":
         related += [("note", n.id) for n in view.list("note") if n.data.get("project") == record_id]
     for ref_kind, ref_id in [(kind, record_id), *related]:
-        for row in changes_for_readers(view, ref_kind, ref_id):
+        for row in changes_for_person(view, ref_kind, ref_id, second_move_days):
             entries.append(
                 {
                     "at": str(row["at"]),
@@ -296,6 +305,8 @@ def _activity(
                     "field": row.get("field"),
                     "actor": row["actor"],
                     "by_assistant": row["actor"] not in ("pm",),
+                    "moved_again": row.get("moved_again"),
+                    "moved_since": row.get("moved_since"),
                     "seq": row["seq"],
                 }
             )

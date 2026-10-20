@@ -15,6 +15,7 @@ expect:
   text_has: [measurement]
   due_words: when the measurements arrive
   due: null
+  on_hold: true
 stub_answer:
   summary: 'Avery promises: send Ansel the estimate once the measurements arrive.'
   ops:

@@ -292,6 +292,12 @@ class ActionNews(BaseModel):
     quote: str | None = Field(None, description="The exact words it came from, when an input said it.")
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     delivered: bool = Field(False, description="It records a part that was delivered, credited to the owners.")
+    non_answer: bool = Field(
+        False,
+        description="It records a reply that didn't answer (an acknowledgement, thanks, a deferral or a change of "
+        "subject), written by the news op. A non-answer restarts the chase clock once; a second brings the line back "
+        "with the news shown. Other news (a part delivered, a call-off) has none.",
+    )
 
 
 class Person(Record):
@@ -857,6 +863,7 @@ class SnapshotEvent(BaseModel):
     method: str | None = None
     notes: list[str] = Field(default_factory=list)
     entries: bool = False
+    described: bool | None = None
 
 
 class SnapshotMessage(BaseModel):
@@ -1551,6 +1558,15 @@ class CalendarEntry(Record):
     notes: list[str] = Field(
         default_factory=list, description="What had to be guessed in reading it (a time zone, a repeat rule)."
     )
+    plain: bool = Field(
+        False,
+        description="Nobody else is invited and it has no description, so the rules kept it without the assistant "
+        "reading it. A plain entry whose title starts with a task verb is offered as a to-do, and one whose title "
+        "names a known person or a promise's words is linked to them.",
+    )
+    people: list[Annotated[str, RefTo("person")]] = Field(
+        default_factory=list, description="The known people its title names, linked by rule when it is plain."
+    )
     evidence: Evidence | None = Field(None, description="The words that justify it.")
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
@@ -1943,15 +1959,17 @@ class Signal(Record):
 class Copy(Record):
     """A message the person copied to send, kept exactly as copied: who it was for, when, and the questions and actions
     it covered. It is what the sent message is matched against (6.35): the difference between the two is what the person
-    changed before sending. The engine writes it when a follow-up is marked as sent and when a drafted reply is copied;
-    the person settles it when the message went out another way or never went."""
+    changed before sending. The engine writes it when a follow-up is marked as sent, when a drafted reply is copied and
+    when the draft made for an action is approved or copied; the person settles it when the message went out another
+    way or never went."""
 
     record_kind: ClassVar[str] = "copy"
     prefix: ClassVar[str] = "COPY"
 
-    kind: Literal["follow_up", "reply"] = Field(
+    kind: Literal["follow_up", "reply", "work"] = Field(
         description="follow_up: the message to one person that lists their questions and actions; reply: the drafted "
-        "reply to a message that asked the person something."
+        "reply to a message that asked the person something; work: the draft the assistant made for an action, "
+        "approved or copied (the action stays open until the sent message is seen or the person ends it)."
     )
     person: Annotated[str | None, RefTo("person")] = Field(
         None,

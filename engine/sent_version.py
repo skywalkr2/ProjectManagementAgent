@@ -1,11 +1,13 @@
 """Learning from the sent version (design 6.35): what the person copied, matched to what they then sent.
 
-Each time a follow-up is marked as sent or a drafted reply is copied, a `copy` record keeps the text exactly as copied,
+Each time a follow-up is marked as sent, a drafted reply is copied or the draft made for an action is approved or copied
+(which leaves the action open), a `copy` record keeps the text exactly as copied,
 who it was for, when, and the questions and actions it covered. When the sent folder's mail is taken in, each sent
 message is matched, by rules alone, to the newest copy not yet matched that was for the same recipient, was copied no
 more than `steward.sent_match.window_days` before it, and is at least `steward.sent_match.similarity` like it. A matched
 pair whose texts differ is a `draft_edited` signal carrying the sent text, exactly as an edit made in the app is, so
-what the assistant learns reaches it by the same path. A copy that stays unmatched for
+what the assistant learns reaches it by the same path; a matched copy of an action's draft also ends that action, at
+once, as the person's own act. A copy that stays unmatched for
 `steward.sent_match.ask_after_days` becomes one Today line asking whether it went out, only while a sent folder is
 being read. Nothing here calls AI."""
 
@@ -53,31 +55,73 @@ def record_copy(
     items and words, not yet matched or settled) moves that copy forward instead of keeping a second. Returns its id."""
     stamp = (now or datetime.now(UTC)).isoformat()
     with store.transaction() as tx:
-        for found in tx.list("copy"):
-            d = found.data
-            if (
-                d["kind"] == kind
-                and d.get("person") == person
-                and not d.get("sent_source")
-                and not d.get("settled")
-                and set(d["questions"]) == set(questions)
-                and set(d["actions"]) == set(actions)
-                and normalize(d["text"]) == normalize(text)
-            ):
-                tx.update("copy", found.id, {"at": stamp, "ask_again_at": None}, _COPY, read_version=found.version)
-                return found.id
-        return tx.create(
-            "copy",
-            {
-                "kind": kind,
-                "person": person,
-                "text": text,
-                "at": stamp,
-                "questions": list(questions),
-                "actions": list(actions),
-            },
-            _COPY,
-        ).id
+        return _keep(tx, kind, person, text, questions, actions, stamp)
+
+
+def _keep(
+    tx: Any,
+    kind: str,
+    person: str | None,
+    text: str,
+    questions: list[str] | tuple[str, ...],
+    actions: list[str] | tuple[str, ...],
+    stamp: str,
+) -> str:
+    for found in tx.list("copy"):
+        d = found.data
+        if (
+            d["kind"] == kind
+            and d.get("person") == person
+            and not d.get("sent_source")
+            and not d.get("settled")
+            and set(d["questions"]) == set(questions)
+            and set(d["actions"]) == set(actions)
+            and normalize(d["text"]) == normalize(text)
+        ):
+            tx.update("copy", found.id, {"at": stamp, "ask_again_at": None}, _COPY, read_version=found.version)
+            return found.id
+    return tx.create(
+        "copy",
+        {
+            "kind": kind,
+            "person": person,
+            "text": text,
+            "at": stamp,
+            "questions": list(questions),
+            "actions": list(actions),
+        },
+        _COPY,
+    ).id
+
+
+def keep_work_in(tx: Any, store: Any, action_id: str, text: str, stamp: str) -> str | None:
+    """Keep the draft made for an action as a copy, in a change already open: the message the person means to send,
+    for the first person the action was promised to, else the one whose message asked. The action stays open. Returns
+    the copy's id, or None when there is no such action or no text."""
+    found = tx.get("action", action_id)
+    if found is None or not text.strip():
+        return None
+    d = found.data
+    person = next(iter(d.get("promised_to") or []), None) or d.get("asker")
+    return _keep(tx, "work", person, text, (), (action_id,), stamp)
+
+
+def keep_work(store: Any, action_id: str, *, now: datetime | None = None) -> str | None:
+    """The person copied the draft made for an action (the one waiting for review, else the text they approved): keep
+    it as a copy so the sent message can be matched to it. Copying again moves the same copy forward. Returns its id,
+    or None when there is nothing drafted."""
+    from engine import action_work
+    from engine.texts import current, read_text
+
+    view = store.read()
+    waiting = action_work.pending_draft(view, action_id)
+    kept = waiting if waiting is not None else current(view, "action", action_id, "work")
+    if kept is None:
+        return None
+    text = read_text(store, kept.data["sha256"])
+    stamp = (now or datetime.now(UTC)).isoformat()
+    with store.transaction() as tx:
+        return keep_work_in(tx, store, action_id, text, stamp)
 
 
 def forget_copy(store: Any, person: str, question_ids: list[str], action_ids: list[str]) -> None:
@@ -162,8 +206,21 @@ def match_sent(ws: Any, store: Any, cfg: Any, now: datetime | None = None) -> li
             continue
         open_copies.remove(best)
         _record_match(store, cfg, best, source, sent.new_text, now)
+        if best.data["kind"] == "work":
+            _end_actions(ws, store, cfg, best, source, now)
         made.append(best.id)
     return made
+
+
+def _end_actions(ws: Any, store: Any, cfg: Any, copy: Any, source: Any, now: datetime) -> None:
+    """The sent message is the draft made for an action: the person's own sent mail ends the action, at once, as their
+    act (`reply_lines.close_by_sent`). An action already ended is left alone."""
+    from engine.reply_lines import close_by_sent
+
+    for action_id in copy.data["actions"]:
+        found = store.read().get("action", action_id)
+        if found is not None and found.data["status"] == "open":
+            close_by_sent(ws, store, cfg, action_id, source, "Closed an action: you sent what was drafted for it", now)
 
 
 def _record_match(store: Any, cfg: Any, copy: Any, source: Any, sent_text: str, now: datetime) -> None:
@@ -243,6 +300,10 @@ def unsent(view: Any, cfg: Any, now: datetime) -> list[Unsent]:
             owed = [view.get("action", a) for a in d["actions"]]
             if not any(a is not None and a.data.get("status") == "open" and a.data.get("reply_owed") for a in owed):
                 continue
+        if d["kind"] == "work":
+            open_ones = [view.get("action", a) for a in d["actions"]]
+            if not any(a is not None and a.data.get("status") == "open" for a in open_ones):
+                continue  # the person ended it themselves
         found.append(Unsent(copy.id, d["kind"], d["person"], copied, list(d["questions"]), list(d["actions"])))
     return sorted(found, key=lambda x: (x.at, x.copy))
 
@@ -286,7 +347,7 @@ def settle(store: Any, cfg: Any, copy_id: str, how: str, now: datetime | None = 
             a = view.get("action", aid)
             if a is not None and d.get("person") in (a.data.get("told") or {}):
                 previous["told"][aid] = a.data["told"][d["person"]]
-        if d.get("person"):
+        if d.get("person") and d["kind"] != "work":
             followups.unmark_sent(store, d["person"], d["questions"], d["actions"], forget_copy=False)
     with store.transaction() as tx:
         current = tx.get("copy", copy_id)

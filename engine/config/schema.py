@@ -13,7 +13,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from engine.due_phrases import DEFAULT_CONDITION_WORDS, DEFAULT_LEAD_WORDS, DEFAULT_ORDINAL_SUFFIXES
+from engine.due_phrases import (
+    DEFAULT_BEFORE_WORDS,
+    DEFAULT_CONDITION_WORDS,
+    DEFAULT_HOLD_WORDS,
+    DEFAULT_LEAD_WORDS,
+    DEFAULT_ORDINAL_SUFFIXES,
+    DEFAULT_TASK_VERBS,
+)
 from engine.secrets import SecretHint
 
 
@@ -1656,6 +1663,25 @@ class LanguageFile(FileModel):
         "keep their words and have no date, whatever date the assistant gave. Other due words the reader can't read "
         "keep the assistant's own date, marked for you to check. Case is ignored.",
     )
+    due_hold_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_HOLD_WORDS),
+        description='The condition words that wait for something to happen ("once the keys arrive", "after the '
+        'workshop", "until you publish it"). A promise whose due words hold one, and that the date reader can\'t read '
+        "as a date, is put on hold from the start, waiting for those words. Condition words not listed here only leave "
+        "the date open. Case is ignored.",
+    )
+    due_before_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_BEFORE_WORDS),
+        description='The condition words after which a calendar entry may be named ("before the print sync"). When the '
+        "words that follow name one entry that is still ahead, the promise is due at that entry and moves with it; "
+        "when they name none, or more than one, it has no date and keeps its words. Case is ignored.",
+    )
+    task_verbs: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_TASK_VERBS),
+        description='The verbs a task\'s title starts with ("pay", "send", "book"). A plain calendar entry (nobody '
+        'else invited, no description) whose first word is one of them is offered as a to-do with one click ("Pay '
+        'the deposit"); other entries are just kept in the calendar. Case is ignored.',
+    )
     limit_markings: list[str] = Field(
         default_factory=lambda: [
             *("internal only", "do not forward", "don't forward", "not for the client"),
@@ -2504,6 +2530,14 @@ class StewardFile(FileModel):
         le=365,
         description="A promise someone owes the person that has a date gets a line on Today only from this many days "
         "before its date, and once the date has passed. Nothing is shown while it is on hold.",
+    )
+    second_move_days: int = Field(
+        14,
+        ge=0,
+        le=365,
+        description="A change that only moves a date isn't shown in a record's history. A second move of the same date "
+        'within this many days of the one before is shown in your own history, as "moved again" with how many times '
+        "and since when; it is never in anything drafted for someone else. Zero shows no second moves.",
     )
     reminders: RemindersSettings = Field(
         default_factory=RemindersSettings, description="When a reminder on a dated thing reaches the person."

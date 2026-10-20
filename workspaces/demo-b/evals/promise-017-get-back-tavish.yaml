@@ -14,6 +14,7 @@ expect:
   promised_to: [PER-102]
   due_words: after the workshop
   due: null
+  on_hold: true
 stub_answer:
   summary: 'Avery promises: get back to Tavish.'
   ops:

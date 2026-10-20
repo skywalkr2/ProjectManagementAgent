@@ -286,6 +286,13 @@ Built keys:
   begin a due and say only that a date follows ("by", "on", "due", "due by", "no later than"), the endings of a day of the
   month ("st", "nd", "rd", "th"), and the words that make a due a condition so it has no date ("once", "after", "before",
   "when", "until", "as soon as", "soon"). Whole words, ignoring case; demo values in both fictional workspaces.
+- `due_hold_words` and `due_before_words`: which of those condition words wait for something to happen, so a promise is on hold
+  from the start waiting for them ("once", "after", "when", "until", "as soon as", "of receiving", …), and which let a
+  calendar entry be named, so the promise is due at it ("before the print sync"); the rest only leave the date open. (6.33.)
+- `task_verbs`: the verbs a task's title starts with ("pay", "send", "book", …); a plain calendar entry whose first word is
+  one is offered as a to-do with one click (6.2, 6.32).
+- `steward.second_move_days` (14): a second move of the same date within this many days is shown in the person's own
+  history as "moved again" (7.14, 6.33); zero shows none.
 - `reasoning_phrases` and `question_marks`: what the `reasoning-in-title` and `question-is-statement` lints read (6.7): the
   words that mark the assistant's reasoning ("no recorded fact", "couldn't find", …), and the characters that end a question
   ("?", "？", "؟").

@@ -99,6 +99,18 @@ test("a promise someone else owes is a line that starts with Chase, names the wo
   expect(within(row).getByRole("button", { name: "Followed up" })).toBeInTheDocument();
 });
 
+test("a promise that has had replies without an answer says so and asks whether to ask again", async () => {
+  show([chase({ replies: 2 })]);
+  const row = await rowOf("Robin Sample replied twice without a date: ask again?");
+  expect(within(row).getByRole("button", { name: "Followed up" })).toBeInTheDocument();
+});
+
+test("a follow-up line for a person says how many of their replies didn't answer", async () => {
+  show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 1, overdue: 1, due: "2026-10-13", waiting_days: 3, actions: ["ACT-1"], replies: 2 })]);
+  const row = await rowOf("Follow up with Robin Sample");
+  expect(row).toHaveTextContent("Robin Sample replied twice without a date: ask again?");
+});
+
 test("Followed up records the follow-up, which keeps the promise open, with Undo", async () => {
   const user = userEvent.setup();
   const { calls } = show([chase()], {

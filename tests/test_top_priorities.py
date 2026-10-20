@@ -1,7 +1,8 @@
 """Top priorities (design 7.7): a short ranked list across every project, by rules, never an AI call.
 
-The order is overdue, due within the follow-up window, waiting on the person, at risk; ties go by the project's
-priority, then by date; one line per other person; something on hold is never listed and the blocked are counted.
+The order is overdue, waiting on the person, due within the follow-up window, at risk (the functional designer's F16,
+B-7); ties go by the project's priority, then by date; one line per other person; something on hold is never listed as
+itself and the blocked are counted (what holds them up is in `test_chase_moves_to_the_blocker.py`).
 The follow-up rule is the one the Follow-ups screen reads. Names, ids and numbers come from the fixtures and the
 settings.
 """
@@ -88,14 +89,15 @@ def test_a_to_do_due_within_the_follow_up_window_is_listed_and_one_due_later_is_
     assert f"action:{later}" not in found
 
 
-def test_a_question_for_the_person_is_waiting_on_them_and_ranks_after_what_is_due(env):
+def test_a_question_for_the_person_is_waiting_on_them_and_ranks_after_what_is_overdue_and_before_what_is_due(env):
     _, cfg, store = env
     asked = make(store, "question", to=me(cfg), title="Which printer?", status="open")
     soon = own(store, cfg, "Check the cover", due=day(1))
     found = lines_of(env)
     assert found[f"question:{asked}"].rank == "waiting" and found[f"question:{asked}"].question == asked
-    order = keys(env, only={asked, soon})
-    assert order == [f"action:{soon}", f"question:{asked}"]
+    late = own(store, cfg, "Send the proofs", due=day(-1))
+    order = keys(env, only={asked, soon, late})
+    assert order == [f"action:{late}", f"question:{asked}", f"action:{soon}"]
 
 
 def test_a_to_do_of_a_project_at_risk_is_listed_last_of_the_ranks_and_a_later_to_do_of_another_is_not(env):
@@ -110,7 +112,7 @@ def test_a_to_do_of_a_project_at_risk_is_listed_last_of_the_ranks_and_a_later_to
     assert keys(env, only={asked, in_risk}) == [f"question:{asked}", f"action:{in_risk}"]
 
 
-def test_the_ranks_run_overdue_then_due_soon_then_waiting_then_at_risk(env):
+def test_the_ranks_run_overdue_then_waiting_then_due_soon_then_at_risk(env):
     _, cfg, store = env
     risky = make(store, "project", name="A risky book", status="At risk")
     at_risk = own(store, cfg, "Tidy the schedule", due=day(40), project=risky)
@@ -119,8 +121,8 @@ def test_the_ranks_run_overdue_then_due_soon_then_waiting_then_at_risk(env):
     late = own(store, cfg, "Send the proofs", due=day(-1))
     assert keys(env, only={at_risk, asked, soon, late}) == [
         f"action:{late}",
-        f"action:{soon}",
         f"question:{asked}",
+        f"action:{soon}",
         f"action:{at_risk}",
     ]
 
@@ -186,6 +188,40 @@ def test_a_person_with_only_something_to_send_ranks_as_waiting_on_the_person(env
     make(store, "question", to=who, title="Which paper?", status="open")
     line = lines_of(env)[f"person:{who}"]
     assert (line.rank, line.send, line.chase) == ("waiting", 1, 0)
+
+
+def test_a_person_with_something_to_send_ranks_before_one_due_a_follow_up_and_after_one_overdue(env):
+    _, cfg, store = env
+    rule = cfg.ui.followups
+    to_send, chased, late = (
+        someone(store, "Quinn Fictional"),
+        someone(store, "Robin Fictional"),
+        someone(store, "Sam F."),
+    )
+    make(store, "question", to=to_send, title="Which paper?", status="open")
+    make(
+        store,
+        "question",
+        to=chased,
+        title="Which date?",
+        status="sent",
+        sent_at=(NOW - timedelta(days=rule.question_after_days + 1)).isoformat(),
+    )
+    told(store, late, "Send the file", ago=rule.question_after_days, due=day(-2))
+    assert keys(env, only={late, to_send, chased}) == [f"person:{late}", f"person:{to_send}", f"person:{chased}"]
+
+
+def test_nothing_with_no_act_for_the_person_today_is_listed(env):
+    _, cfg, store = env
+    rule = cfg.ui.followups
+    quiet = someone(store)
+    # Told lately, due far ahead, nothing to send, nothing unanswered: no act for the person today.
+    told(store, quiet, "Plan the reprint", ago=0, due=day(rule.action_due_within_days + 30))
+    make(store, "question", to=quiet, title="Which date?", status="answered", sent_at=NOW.isoformat())
+    far = own(store, cfg, "Plan the launch", due=day(rule.action_due_within_days + 30))
+    undated = own(store, cfg, "Tidy the shelves")
+    found = lines_of(env)
+    assert f"person:{quiet}" not in found and f"action:{far}" not in found and f"action:{undated}" not in found
 
 
 def test_the_follow_up_rule_is_the_one_the_follow_ups_screen_reads(env):

@@ -1978,6 +1978,18 @@ def _apply_op(
 
         pending = tx.get("text_version", op.version)
         version = accept(ctx.store, tx, w, op.version, op.read_version, dict(op.choices))
+        if version.data["status"] != "discarded" and (pending.data["owner_kind"], pending.data["field"]) == (
+            "action",
+            "work",
+        ):
+            # Approving the draft made for an action leaves the action open; the approved text is the message to send.
+            from engine import sent_version
+            from engine.texts import read_text as _read
+
+            owner = tx.get("action", pending.data["owner_id"])
+            sha = owner.data.get("work") if owner is not None else None
+            if sha:
+                sent_version.keep_work_in(tx, ctx.store, owner.id, _read(ctx.store, sha), ctx.store.clock())
         if version.data["status"] == "discarded":
             _record_draft_correction(tx, ctx, pending, "dropped", "set the draft aside, rejecting every change")
         elif "reject" in op.choices.values():
@@ -2167,8 +2179,18 @@ def _apply_op(
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         due, check = _due(tx, ctx, source, op.due_words, op.due)
         placed = series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg))
-        if op.due_at_event and placed:
-            due, check = _event_day(tx, placed), False
+        due_event = placed if op.due_at_event and placed else None
+        started_on_hold = None
+        if due_event:
+            due, check = _event_day(tx, due_event), False
+        elif (op.due_words or "").strip() and due is None:
+            # Words that wait for something to happen put the promise on hold from the start; "before <a known
+            # entry>" is due at that entry.
+            kind, entry = _condition(tx, ctx, source, op.due_words, today)
+            if kind == "event" and entry:
+                due, check, due_event = _event_day(tx, entry), False, entry
+            elif kind == "hold":
+                started_on_hold = {"waiting_for": " ".join(op.due_words.split()), "since": today.isoformat()}
         same = _same_promise(tx, ctx, op)
         if same is not None and _within_window(same.data.get("due"), due, ctx):
             _merge_promise(tx, same, op, ctx, w, due, check, ev, today, source)
@@ -2184,11 +2206,11 @@ def _apply_op(
             "promised_to": [ctx.people.resolve(n).person for n in op.promised_to],
             "basis": op.basis,
             "said_by": said.person if said is not None and said.status == "ok" else None,
-            "due_event": placed if op.due_at_event and placed else None,
+            "due_event": due_event,
             "due_by_person": due is not None and _persons_own(tx, ctx),
             "on_hold": {"waiting_for": " ".join(op.waiting_for.split()), "since": today.isoformat()}
             if op.waiting_for and op.waiting_for.strip()
-            else None,
+            else started_on_hold,
             "project": op.project,
             "event": placed,
             "series": op.series,
@@ -2270,6 +2292,7 @@ def _apply_op(
             "quote": quote,
             "source": source,
             "delivered": isinstance(op, ActionPartOp),
+            "non_answer": isinstance(op, ActionNewsOp),
         }
         changes: dict[str, Any] = {"news": [*cur.data.get("news", []), entry]}
         if isinstance(op, ActionPartOp):
@@ -2381,6 +2404,36 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
         return given, True
     # One day read with doubt ("next Friday", a year-less date far ahead) is checked; a range is due at its end.
     return day, not found.exact and found.start == found.end
+
+
+def _condition(tx: Tx, ctx: Context, source: str | None, words: str, today: date) -> tuple[str | None, str | None]:
+    """What due words the rules can't read as a date still say (design 6.33, the language settings): `hold` for words
+    that wait for something to happen ("once the keys arrive"), `event` with the entry's id for "before <an entry
+    still ahead>" when the words name exactly one, `open` for the rest of the condition words (and for a "before" that
+    names no known entry, or several), and none for words that aren't a condition."""
+    from engine.due_phrases import after_marker, is_condition, names_title
+
+    settings = ctx.cfg.language
+    language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
+    if not language.lower().startswith("en") or not is_condition(words, settings.due_condition_words):
+        return None, None
+    if is_condition(words, settings.due_hold_words):
+        return "hold", None
+    named = after_marker(words, settings.due_before_words)
+    if named:
+        titles: dict[str, list[Any]] = {}
+        for entry in tx.list("event"):
+            data = entry.data
+            if data.get("cancelled") or str(data.get("start") or "")[:10] < today.isoformat():
+                continue
+            if names_title(named, str(data["title"])):
+                titles.setdefault(str(data["title"]).casefold(), []).append(entry)
+        # A title that is part of a longer matching one is the same meeting named less fully.
+        kept = [t for t in titles if not any(t != o and names_title(o, t) for o in titles)]
+        if len(kept) == 1:
+            soonest = min(titles[kept[0]], key=lambda e: (str(e.data["start"]), e.id))
+            return "event", soonest.id
+    return "open", None
 
 
 def _received_at(tx: Tx, ctx: Context, source: str | None) -> datetime:

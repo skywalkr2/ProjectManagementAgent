@@ -15,7 +15,9 @@ may name several kinds (`op: [fact, action.add]`) when the case checks something
 any one of them. Wherever an expectation lists words (`text_has`, `topic_has`), a word with `|` is met by any one of its
 alternatives (`complet|finish|done`), each a case-insensitive part of the text. An expected `action.add` may also name
 `reply_has` (words in the drafted reply attached to the action) or `no_reply: true` (the action carries no draft), and,
-for a promise (design 6.33), `promised_to` (the people it is owed to) and `due_words` (the words its date came from).
+for a promise (design 6.33), `promised_to` (the people it is owed to), `due_words` (the words its date came from) and
+`on_hold` (true when it starts on hold, waiting for those words, as a condition that waits for something does; false
+when it doesn't).
 An expected `action.move`, `action.part` or `action.news` names the action's `id`, and may name `due_words` (a move) or
 `text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title); an
 ending that waits only for the person's Keep counts as made, for what a case expects and for what it forbids.
@@ -701,6 +703,8 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
         if "promised_to" in e and sorted(a.get("promised_to") or []) != sorted(e["promised_to"]):
             return False
         if "due_words" in e and _squeezed(a.get("due_words")) != _squeezed(e["due_words"]):
+            return False
+        if "on_hold" in e and bool(a.get("on_hold")) != bool(e["on_hold"]):
             return False
         return "status" not in e or a["status"] == e["status"]
     if op in ("action.close", "action.hold", "action.unhold", "action.drop", "question.drop", "question.done"):

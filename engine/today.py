@@ -12,6 +12,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from engine import entry_rules
 from engine.blocked import Blocker, blocker_of
 from engine.connectors import moment
 from engine.names import People
@@ -34,6 +35,7 @@ class AgendaItem:
     entry: str | None = None  # the calendar entry kept for this date of an event read from a connected calendar
     series: str | None = None  # the series an own entry is one meeting of
     open_items: int = 0  # for such a meeting: how many open actions and questions sit on it
+    todo_offer: str | None = None  # a plain entry whose title reads as a task: the to-do it is offered as, in its words
 
 
 @dataclass
@@ -74,6 +76,7 @@ def agenda(store: Any, cfg: Any, now: datetime, through: date | None = None) -> 
     kept = {
         (e.data["source"], e.data["key"]): e for e in view.list("event") if e.data.get("key") and e.data.get("source")
     }
+    with_todo = {a.data["event"] for a in view.list("action") if a.data.get("event")}
     for snap in view.list("snapshot"):
         data = snap.data
         event = data.get("event")
@@ -101,6 +104,9 @@ def agenda(store: Any, cfg: Any, now: datetime, through: date | None = None) -> 
                     open_items=_open_on(view, entry, days[0], here)
                     if entry is not None and entry.data.get("series")
                     else 0,
+                    todo_offer=entry_rules.task_offer(entry.data, cfg)
+                    if entry is not None and entry.id not in with_todo
+                    else None,
                 )
             )
     found.sort(key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))

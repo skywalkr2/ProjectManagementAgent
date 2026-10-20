@@ -14,6 +14,7 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from engine import entry_rules
 from engine.connectors import EventDetails, SourceItem, moment
 from engine.records import canonical_time, entry_problem
 from engine.storage import StoreError, WriteContext
@@ -30,19 +31,18 @@ def keep(store: Any, cfg: Any, source: Any, items: list[SourceItem], now: dateti
     if not wanted:
         return []
     from engine.names import People
-    from engine.reply_lines import my_addresses
 
     view = store.read()
     people = People(store, cfg)
-    mine = {a.email.casefold() for a in my_addresses(view, cfg)}
-    me = view.get("person", cfg.workspace.user.person) if cfg.workspace.user.person else None
-    names = {n.casefold() for n in [*cfg.workspace.user.accounts, me.data["full_name"] if me else ""] if n}
+    mine, names = entry_rules.identity(view, cfg)
     made: list[str] = []
     try:
         with store.transaction() as tx:
             have = {e.data["key"]: e for e in tx.find("event", {"source": source.id}) if e.data.get("key")}
             for item in wanted:
                 made += _keep_item(tx, source, item, have, people, mine, names, now)
+            for entry_id in dict.fromkeys(made):
+                entry_rules.link(tx, entry_id, _KEEP, cfg.workspace.user.person)
     except StoreError as err:
         log.warning("The calendar entries of %s couldn't be kept: %s", source.id, err)
         return []
@@ -59,15 +59,6 @@ def _who(people: Any, given: Any) -> dict[str, Any]:
     person = {"address": given.address, "name": given.name, "response": given.response, "person": None}
     person["person"] = _known(people, person)
     return person
-
-
-def _is_mine(person: dict[str, Any] | None, mine: set[str], names: set[str]) -> bool:
-    if person is None:
-        return False
-    return bool(
-        (person["address"] and person["address"].casefold() in mine)
-        or (person["name"] and person["name"].casefold() in names)
-    )
 
 
 def _times(details: EventDetails, start: str, end: str | None) -> tuple[str, str | None] | None:
@@ -101,10 +92,9 @@ def _keep_item(
     dates = list(details.occurrences) if series_item else [None]
     organizer = _who(people, details.organizer) if details.organizer is not None else None
     attendees = [_who(people, a) for a in details.attendees]
-    invited = details.method == "REQUEST" or (
-        organizer is not None and not _is_mine(organizer, mine, names) and (organizer["address"] or organizer["name"])
-    )
-    own = next((a for a in attendees if _is_mine(a, mine, names)), None)
+    invited = entry_rules.is_invitation(details, mine, names)
+    plain = entry_rules.is_plain(details, mine, names)
+    own = next((a for a in attendees if entry_rules.is_mine(a, mine, names)), None)
     existing = [e for k, e in have.items() if k.startswith(f"{item.key}#")] if series_item else []
     series = next((e.data["series"] for e in existing if e.data.get("series")), None)
     if series_item and series is None and len(dates) > 1:
@@ -129,6 +119,7 @@ def _keep_item(
             "where": (date_.where if date_ is not None else None) or details.where,
             "cancelled": gone,
             "invitation": bool(invited),
+            "plain": plain,
             "organizer": organizer,
             "attendees": attendees,
             "response": own["response"] if own is not None else None,

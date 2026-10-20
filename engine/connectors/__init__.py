@@ -65,7 +65,9 @@ class EventDetails:
     `attendees`: who invited and who is asked. `method`: how the calendar says the event was sent (`REQUEST` for an
     invitation). `notes`: plain sentences about how the event was read that the person should see (a repeat rule
     that wasn't understood, a time zone that was guessed). `entries`: ask the core to keep each date as a calendar
-    entry of its own (with its attendees), so a promise can be due at it and move with it."""
+    entry of its own (with its attendees), so a promise can be due at it and move with it. `described`: whether the
+    event has a description; None when the connector can't say, which the core counts as described. An entry with
+    nobody else invited and `described` False is a plain one: the rules file it without the assistant reading it."""
 
     start: str
     end: str | None = None
@@ -79,6 +81,7 @@ class EventDetails:
     method: str | None = None
     notes: tuple[str, ...] = ()
     entries: bool = False
+    described: bool | None = None
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> EventDetails:
