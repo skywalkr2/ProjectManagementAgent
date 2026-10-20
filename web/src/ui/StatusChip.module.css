@@ -1,14 +1,20 @@
+/* When the row is tight the detail wraps onto a second line, which the chip's height hides: the dot and the word always
+   show whole, and the chip never draws past its own box. */
 .chip {
-  display: inline-flex; align-items: center; gap: var(--space-2); flex: none;
+  display: inline-flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 0 var(--space-2);
+  flex: 0 1 auto; min-width: 0; overflow: hidden;
   height: var(--btn-h-sm); padding: 0 var(--space-3);
   border: 0; border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text-muted);
-  font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-regular);
+  font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--btn-h-sm); font-weight: var(--weight-regular);
   white-space: nowrap; cursor: pointer;
 }
 .chip:hover { background: var(--border); }
+.head { display: inline-flex; align-items: center; gap: var(--space-2); flex: none; }
 .dot { width: 8px; height: 8px; flex: none; border-radius: var(--radius-full); background: var(--ok); }
 .warn .dot { background: var(--warn); }
 .word { color: var(--text); font-weight: var(--weight-semibold); }
 .warn .word { color: var(--warn); }
 .detail { color: var(--text-muted); font-weight: var(--weight-regular); }
 :global([data-narrow]) .detail { display: none; }
+/* Below 1440px the header has no room for it; the popover and the chip's name say it in full. */
+@media (max-width: 1439px) { .detail { display: none; } }
