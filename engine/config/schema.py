@@ -1923,6 +1923,8 @@ class NotificationsSettings(ConfigModel):
         except (KeyError, IndexError, ValueError):
             raise ValueError("a notice can only use {count}") from None
         return value
+
+
 #: A header link's address: a web address with no spaces.
 _LINK_ADDRESS = re.compile(r"^https?://\S+$")
 
