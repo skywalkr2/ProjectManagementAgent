@@ -10,7 +10,7 @@ import base64
 import json
 import logging
 from dataclasses import asdict
-from datetime import UTC, date, datetime
+from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -585,7 +585,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         in the person's time zone."""
         from engine import today
 
-        return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, datetime.now(UTC))]
+        return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, worker.now())]
 
     @r.post("/events/{event_id}/todo")
     def entry_todo(event_id: str) -> EntryTodoMade:
@@ -603,7 +603,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         """The person's own open actions: overdue, due today, then the rest."""
         from engine import today
 
-        found = today.todo(store, cfg, datetime.now(UTC))
+        found = today.todo(store, cfg, worker.now())
         origin = origins(store.read(), "action", [t.action for t in found])
         return [
             TodoView(
@@ -619,7 +619,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         """Messages from watched mailboxes received within the configured hours, newest first."""
         from engine import today
 
-        inbox = today.arrived(store, cfg, datetime.now(UTC))
+        inbox = today.arrived(store, cfg, worker.now())
         return InboxView(
             items=[ArrivedView(**vars(a)) for a in inbox.items], left_out=inbox.left_out, set_aside=inbox.set_aside
         )
@@ -661,7 +661,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         events.changed()
         if handed:
             worker.poke()
-        inbox = today.arrived(store, cfg, datetime.now(UTC))
+        inbox = today.arrived(store, cfg, worker.now())
         return InboxCheckView(
             items=[ArrivedView(**vars(a)) for a in inbox.items],
             left_out=inbox.left_out,
@@ -1180,7 +1180,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             record_id,
             pm=cfg.workspace.user.person,
             owner_format=cfg.workspace.owner_format,
-            today=datetime.now(UTC).astimezone(here).date(),
+            today=worker.now().astimezone(here).date(),
             here=here,
             second_move_days=cfg.steward.second_move_days,
         )
@@ -1756,8 +1756,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/followups")
     def followups() -> list[FollowupSection]:
+        from engine.today import zone
+
         people = People(store, cfg)
-        found = sections(store, cfg, date.today())
+        found = sections(store, cfg, worker.now().astimezone(zone(cfg)).date())
         view = store.read()
         action_origin = origins(view, "action", [a["id"] for s in found for a in s.actions])
         question_origin = origins(view, "question", [q["id"] for s in found for q in (*s.questions, *s.later)])

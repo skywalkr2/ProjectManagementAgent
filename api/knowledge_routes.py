@@ -4,7 +4,7 @@ at once, with Undo through the change it makes, and records a signal (6.20)."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
@@ -338,7 +338,7 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events, worker: Wo
         most present first, with the size of what every run is sent and how many rules the latest run had moved out of
         it. A rule a code check enforces is never in the list."""
         view = store.read()
-        now = datetime.now(UTC)
+        now = worker.now()
         settings = cfg.dispatch.knowledge
         found = review(view, settings, now)
         return RuleReviewView(
@@ -366,7 +366,7 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events, worker: Wo
         """ "Not now" on the rules review line: the line leaves Today for `knowledge.rule_review_every_days`, as it does
         when the person keeps, narrows or retires a rule, so the person never has to decide something to make it go
         away. It records a `not_now` signal naming the rules flagged, and changes no rule."""
-        now = datetime.now(UTC)
+        now = worker.now()
         settings = cfg.dispatch.knowledge
         flagged = review(store.read(), settings, now).flagged
         made = signal(store, "not_now", [f.id for f in flagged], now=now)

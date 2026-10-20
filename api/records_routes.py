@@ -3,8 +3,6 @@ and a fact that need more than a record's own fields."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import Applied, ProjectKnowsView, SeriesPageView, UnfiledFile, UnfiledItem, UnfiledView
@@ -14,10 +12,10 @@ from engine.applier import apply_as_person
 from engine.config import Config
 from engine.storage import Store, StoreError
 from engine.today import zone
-from engine.worker import Events
+from engine.worker import Events, Worker
 
 
-def build_records_router(cfg: Config, store: Store, events: Events) -> APIRouter:
+def build_records_router(cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
 
     @r.get("/unfiled")
@@ -60,7 +58,7 @@ def build_records_router(cfg: Config, store: Store, events: Events) -> APIRouter
         found = series_page.page(
             store.read(),
             series_id,
-            datetime.now(UTC).astimezone(here).date(),
+            worker.now().astimezone(here).date(),
             here,
             pm=cfg.workspace.user.person,
             owner_format=cfg.workspace.owner_format,

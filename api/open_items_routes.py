@@ -8,7 +8,6 @@ Editing, closing, reassigning, holding and dropping from a row use the routes th
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -72,7 +71,7 @@ def build_open_items_router(ws: Workspace, cfg: Config, store: Store, events: Ev
         """Every action still to do, with its owners, due date, project, parent project and where it came from, and
         every
         question still waiting, with who it waits on and since when."""
-        now = datetime.now(UTC)
+        now = worker.now()
         today = now.astimezone(zone(cfg)).date()
         return OpenItemsView(
             actions=[_action(a) for a in open_actions(store, cfg, today, now=now)],

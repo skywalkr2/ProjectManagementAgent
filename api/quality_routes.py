@@ -3,7 +3,7 @@ records alone."""
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException
 
@@ -49,7 +49,7 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
         and the replay set."""
         view = store.read()
         people = People(store, cfg)
-        now = datetime.now(UTC)
+        now = worker.now()
         settings = cfg.dispatch.knowledge
         days, here = settings.quality_window_days, zone(cfg)
         span = gate_measures.window(now, days, here)

@@ -5,7 +5,6 @@ theirs to send."""
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -50,7 +49,7 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
                     "origin": "pm",
                     "state": "queued",
                     "waiting": "With the assistant, starting now",
-                    "created_at": datetime.now(UTC).isoformat(),
+                    "created_at": worker.now().isoformat(),
                 },
                 _PM,
             )

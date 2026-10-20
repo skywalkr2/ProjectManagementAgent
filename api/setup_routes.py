@@ -921,7 +921,6 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.get("/ai/accounts")
     def ai_accounts() -> list[AiAccountView]:
         """The AI accounts in the settings, as they are on disk now; never a key."""
-        from datetime import UTC, datetime
 
         from engine.ai import check_cost
         from engine.ai.account_state import AccountState, account_states
@@ -930,9 +929,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         from engine.today import zone
 
         ai = current().ai
-        states = account_states(ws, store, current(), datetime.now(UTC))
+        states = account_states(ws, store, current(), worker.now())
         catalogs = Catalogs(store.path.parent / ".cockpit" / "ai-catalog.json", ai.catalog_refresh_hours)
-        today = datetime.now(zone(current())).date()
+        today = worker.now().astimezone(zone(current())).date()
 
         def key_state(ref: str | None) -> tuple[str, str | None]:
             if not ref:
@@ -986,7 +985,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         """Which model does what (design 7.9): each kind of work (the core's and every running add-on's) with the tier
         it uses now, what was measured for the model each tier uses, the cheapest tier that passed, each tier with its
         account and second try, the routing rules in the order they are checked, and the rules the measurements back."""
-        from datetime import UTC, datetime
+        from datetime import UTC
 
         from engine.ai import matrix, suggest
         from engine.ai.adapters import make_adapter
@@ -997,7 +996,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
         cfg_now = current()
         ai = cfg_now.ai
-        today = datetime.now(UTC).date()
+        today = worker.now().astimezone(UTC).date()
         sets: dict[str, dict[str, str]] = {}
         needed: dict[str, list[str]] = {}
         for demo_name in DEMOS:
@@ -1104,14 +1103,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         """What each account's models can do, from the evaluation runs kept in this workspace: per model and skill the
         pass rate, the runs, the age of the last one, the cost of a passing run and whether it is stale or under the
         minimum score (design 6.16). A skill nobody measured is listed as not measured."""
-        from datetime import UTC, datetime
+        from datetime import UTC
 
         from engine.ai import matrix, measure
         from engine.ai.adapters import make_adapter
         from engine.shipped import DEMOS, demo
 
         now = current()
-        today = datetime.now(UTC).date()
+        today = worker.now().astimezone(UTC).date()
         asked = measure.read(ws)
         sets: dict[str, dict[str, str]] = {}
         for name in DEMOS:
