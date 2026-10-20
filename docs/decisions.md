@@ -4,6 +4,29 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: The UI/UX re-review is accepted in full, and the learning-run fixes join it (B-7)
+
+- **Decided (owner):** "give them what they want and include the ai fixes". Batch B-7 builds every finding of the
+  re-review at `c8f8e18` (`reviews/ui-ux-2026-10/rereview-c8f8e18/README.md`, recorded in
+  `docs/project/ui-rereview-2026-10-20.md`), its checklist additions C47 to C53, and the demo data it asked for; and the
+  fixes from the owner's learning run (the B-6b item "the rest of the owner's learning run") are built in the same batch.
+- **Where the review offered a choice (main session):**
+  - *Top priorities* stays, as context without buttons: each entry links to its queue line, or to its record when it has
+    none. The queue is the only place to act. It keeps the owner's picture of the work version (P11).
+  - When a table's priority columns don't fit beside the detail pane, the pane overlays the table instead of squeezing it.
+  - The review asks the applier to *refuse* reasoning in titles and statement-questions. Telling reasoning from content
+    is fuzzy, so these are lints with severity `return` (one return to the model, then held for the person when the item
+    reaches someone else), never invariants (CLAUDE.md, "Checks are invariants or lints"). A title under three words
+    falls back to the source's title, and the provenance label is rendered from the person and the kind of source,
+    which are deterministic.
+- **Why:** the findings are product-rule breaks (ids and bookkeeping on screen) and layout faults the owner's first
+  screens would show; the learning fixes are a regression found by the owner's run.
+- **Impact:** design 7.1 (the header below 1440px: the assistant's state in the status chip's popover; "Your pages" in
+  the person's menu), 7.6 and 7.7 (Today: the backup reminder is an At risk line plus the chip; This week a rail panel;
+  one follow-up line per person; Top priorities without buttons), 7.9 (tables: column priority, no word breaks, no
+  per-row Details button) and 6.7 (the new lints). Each change edits its section and is listed in
+  `docs/design/CHANGES.md` when built.
+
 ## 2026-10-17: Repeating events are expanded by `engine/recurrence.py`, on `python-dateutil`
 
 - **Decided (main session):** the core expands iCalendar repeat rules with a pure function in `engine/recurrence.py`

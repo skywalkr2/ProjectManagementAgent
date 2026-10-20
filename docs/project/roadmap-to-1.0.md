@@ -87,8 +87,8 @@ keep each item's full text.
     - *Covers:* *The UI/UX designer's re-review* (phase B, last group): once B-6b is pushed, the main session messages the session titled "UI/UX design review" with the commit to review and the list of UI changes since its last review (`docs/design/CHANGES.md`); it builds and reviews the screens itself. The ping carries what the reviewer asked for (2026-10-20): the branch and commit, the main session's own Done / Partial / Not done table for C1–C46 (each row citing its test, audited against the code by a subagent first), its bug list re-checked, and every place the build chose differently from the review, with why.
     - *Exit:* its feedback is received and recorded in one file in `docs/project/`.
 
-8. **B-7 UI/UX feedback** (1 open item; size: set when the feedback arrives)
-    - *Covers:* *Build the UI/UX designer's accepted feedback* (phase B, last group): what the owner accepts from that file, built before the gate week.
+8. **B-7 UI/UX feedback** (1 open item; size: about two days)
+    - *Covers:* *Build the UI/UX designer's accepted feedback* (phase B, last group): the whole re-review of 2026-10-20 (`docs/project/ui-rereview-2026-10-20.md`), its demo data, and the owner's learning-run fixes from B-6b, in four briefs: records and item text (§3.2, §3.5) beside the learning fixes, then Today (§3.1, §3.4, §3.12, §3.14, §3.15) beside the rest of the P2s and tables (§3.3, §3.6–§3.11, §3.13), then the demo data.
     - *Exit:* each accepted item has its test, and the owner sees the changed screens.
 
 9. **Gate week (owner)** (no items; the gate is written out in phase S; size: two measured days, then the counted week)
@@ -460,8 +460,8 @@ From the original designer's lessons of 2026-10-14:
     unread phrase drops it; one promise per owner splits a shared task, which older cases still expect as one):** a
     condition ("once the keys arrive", "after the workshop") goes in the promise's due words (8 misses); a reply that
     doesn't answer is `action.news` (7 misses); the date reader takes a leading "on" or "due" and ordinals (about 8);
-    then the owner re-runs the failed cases with `--case-failed`. Proposed: built before the gate week, right after the UI
-    gate ping (asked 2026-10-20; the owner's call).
+    then the owner re-runs the failed cases with `--case-failed`. Built in batch B-7 (owner, 2026-10-20: "include the
+    ai fixes").
   - `cockpit evaluate` waits for the network as the app's own runs do (a lost network uses up no try and fails no case),
     and the pair harness's practice copies never hold the main account as an unchecked backup (fixed:
     `tests/test_catch_up_learning.py::test_the_main_account_listed_again_as_its_own_backup_is_never_held_as_an_unchecked_backup`).
@@ -475,7 +475,36 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   `docs/design/CHANGES.md`). It builds and reviews the screens and sends its feedback, which is recorded in one file in
   `docs/project/`, like the designer answers files. Done when that feedback is received and recorded.
 - [ ] [B-7] **Build the UI/UX designer's accepted feedback** (owner, 2026-10-19): the feedback the owner accepts from that
-  re-review is built before the gate week, each item with its test.
+  re-review is built before the gate week, each item with its test. *Received 2026-10-20 and accepted in full*
+  (`docs/project/ui-rereview-2026-10-20.md`; the review's sections are cited as §3.x; choices in `docs/decisions.md`,
+  2026-10-20). Each sub-item is done when its test passes:
+  - **Record pages and every view say names, dates and words** (§3.2, C19, C48): references resolved to names, dates
+    formatted, enums as labels, no help text on view, details ordered (name, role, organization, how to reach, the
+    rest), meta joined only from non-empty parts, activity worded "Quill changed the due date of …" with field labels,
+    links by title with the domain as a hint; a sweep test over every view and record kind that fails on an id, an ISO
+    date, an empty separator or a raw enum value.
+  - **No bookkeeping in item text** (§3.5, C51): lints (severity `return`) for reasoning clauses in to-do and question
+    titles and for a question that is a statement; a title under three words falls back to the source's title; the
+    provenance label reads "from Jun Park's email, Oct 20", never the source's raw title.
+  - **Today's first screen** (§3.1, C47): the backup reminder is an At risk line plus the status chip, This week is a
+    rail panel at every width, and at 1280×720 with setup unfinished the first queue line is at most 260px down with at
+    least six lines visible (at most 200px with setup done), checked in `shell.spec.ts`.
+  - **One row per thing** (§3.4, C50): one follow-up line per person ("Follow up with … · 2 overdue, oldest …"),
+    opening the per-person nudge; Top priorities without buttons, each entry linking to its queue line or record.
+  - **Tables beside the detail pane** (§3.3, C49): no break inside a word, columns by priority, the pane overlaying the
+    table when even those don't fit, no per-row Details button, the People organization filter sized to its content
+    and its Organizations list as a table.
+  - **The P2 findings** (§3.6 to §3.15, C52): What changed opens the first item and edits in the meta line; the header
+    below 1440px puts the assistant's state in the status chip's popover and "Your pages" in the person's menu, and the
+    ⚠ gets a label or joins the chip; no visible interactive element under 24×24 (checked in `a11y.spec.ts`); only the
+    weight tokens (a stylelint rule); the compare page and account row say "Not measured yet"; setup's primary is
+    Continue, Skip a secondary button, amounts in currency fields; "Add to agenda" opens the drawer; the inspector
+    header on one line, Send back at 72ch with its reason, the hand-in's "Whose words" as a segmented control; the
+    phone's rail panels one line each below the queue; review lines tagged "Outside" with the full phrase as its name.
+  - **Demo data for answers 27 to 31** (C53): a moved meeting, a held inference, an inferred fact, a series and a
+    rules line in both fictional workspaces.
+  - **The learning-run fixes** (owner, 2026-10-20: built in this batch): the B-6b items "date words the rules can't
+    read" and "the rest of the owner's learning run", then the owner re-runs the failed cases with `--case-failed`.
 
 ## Phase S: the daily steward (after phase B, before phase I)
 
