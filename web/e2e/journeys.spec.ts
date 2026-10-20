@@ -153,7 +153,9 @@ test.describe.serial("journeys", () => {
     await review.getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Look closer" }).click();
     await expect(review.getByText("Added a to-do").first()).toBeVisible();
-    await expect(review.getByText(new RegExp(`${info.people[0]} · due`))).toBeVisible();
+    // My name and the due day show on the item's own line, and again in the line that says why it is here (each part editable there).
+    await expect(review.getByText(new RegExp(`^${info.people[0]} · due [^·]+$`))).toBeVisible();
+    await expect(review.locator("[data-promise-line]").first()).toContainText(new RegExp(`${info.people[0]} · due`));
     await expect(review.getByText("Who owns this?")).toBeVisible();
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);

@@ -91,6 +91,13 @@ test("the name link opens the pane on a plain click and still points at the page
   expect(await screen.findByRole("dialog", { name: "Harbor" })).toBeInTheDocument();
 });
 
+test("a name too long for its column ends in an ellipsis, with the whole name as the cell's title", async () => {
+  projectsApi();
+  renderApp(<Projects />);
+  const tr = await rowOf("Harbor");
+  expect(tr.querySelector("td")).toHaveAttribute("title", "Harbor");
+});
+
 test("beside the pane only the priority columns stay, and the column picker brings the others back", async () => {
   const user = userEvent.setup();
   wide(1200);

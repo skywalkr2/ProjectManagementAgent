@@ -162,7 +162,15 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
       title={t("today.agenda.title")}
       count={agenda.data ? count : null}
       countText={tn("today.agenda.count", count)}
-      summary={agenda.data ? (count > 0 ? tn("today.agenda.count", count) : t("today.agenda.none_today")) : ""}
+      summary={
+        agenda.data
+          ? count > 0
+            ? tn("today.agenda.count", count)
+            : groups.length === 0 && sourceState.problems.length > 0
+              ? t("today.rail.not_read")
+              : t("today.agenda.none_today")
+          : ""
+      }
       footer={<AddMeeting today={today} />}
     >
       {agenda.isPending ? (
@@ -558,7 +566,15 @@ function ArrivedPanel(props: { onView: (view: View) => void; onAddSource?: () =>
       title={t("today.arrived.title")}
       count={arrived.data ? items.length : null}
       countText={tn("today.arrived.count", items.length)}
-      summary={arrived.data ? (items.length > 0 ? String(items.length) : t("today.rail.nothing")) : ""}
+      summary={
+        arrived.data
+          ? items.length > 0
+            ? String(items.length)
+            : sourceState.problems.length > 0
+              ? t("today.rail.not_read")
+              : t("today.rail.nothing")
+          : ""
+      }
       action={watch.data && anyReading(watch.data) ? <CheckNow /> : undefined}
       footer={
         (setAside > 0 || leftOut > 0) && (

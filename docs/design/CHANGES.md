@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 134. What the full browser run of batch B-7 found (2026-10-20; batch B-7)
+
+| What | Before | Now |
+|---|---|---|
+| The phone's folded rail panels (7.7) | A panel whose source couldn't be read folded to "Came in · nothing", a failed read shown as empty | The folded line says it couldn't be read, and the open panel says why. Built: `web/src/components/TodayRail.test.tsx`, `web/e2e/layout.spec.ts` |
+| A name cut off in a table (7.9) | A long name ended in an ellipsis with no way to see it whole | The name cell carries the whole name as its title, as the other cut-off cells do. Built: `web/src/components/TablesBesidePane.test.tsx`, `web/e2e/layout.spec.ts` |
+| The tables' browser check | `tables.spec.ts` belonged to no test project, so it never ran | A `root-tables` project runs it. Built: `web/e2e/tables.spec.ts` |
+
 ## 133. Outward material never names the assistant: the invariant, the render, the send step and the sweep (2026-10-20; batch B-7)
 
 | Where | Before | Now |

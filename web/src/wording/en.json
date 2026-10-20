@@ -2042,6 +2042,7 @@
 
   "today.rail.label": "Agenda, to-dos and mail",
   "today.rail.nothing": "nothing",
+  "today.rail.not_read": "couldn't be read",
   "today.agenda.add_todo": "Add as a to-do",
   "today.agenda.todo_added": "Added a to-do: {what}",
   "today.agenda.title": "Agenda",

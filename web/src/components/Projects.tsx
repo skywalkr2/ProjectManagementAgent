@@ -128,6 +128,7 @@ export function Projects() {
               label={t("setup.projects")}
               name={{
                 header: t("projects.col.name"),
+                title: (p) => p.name,
                 cell: (p, open) => (
                   <span className={styles.inside} data-depth={depth(p)} style={{ "--depth": depth(p) } as React.CSSProperties}>
                     <a href={viewHref(recordView("project", p.id))} onClick={open}>

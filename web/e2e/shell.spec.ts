@@ -340,7 +340,14 @@ test.describe("screen use and the shell", () => {
       await expect.poll(overlap).toBeNull();
       await shoot(page, `walkthrough-toast-${width}`);
       await main.getByRole("button", { name: "Back" }).click({ trial: true });
-      await main.getByRole("button", { name: /^Continue$/ }).click({ trial: true });
+      // Continue waits on this screen until an account is chosen (it says what is missing), so it can't be pressed; what
+      // matters is that nothing covers it: the topmost thing at its centre is the button itself.
+      const next = main.getByRole("button", { name: /^Continue$/ });
+      expect(await next.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return !!top && el.contains(top);
+      })).toBe(true);
       await main.getByRole("button", { name: "Back" }).click();
       await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
       await expect(notices.getByText("Nothing to undo.")).toHaveCount(0);

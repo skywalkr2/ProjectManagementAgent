@@ -131,6 +131,7 @@ export function People() {
                 label={t("setup.people")}
                 name={{
                   header: t("people.col.name"),
+                  title: (p) => p.name,
                   cell: (p, open) => (
                     <>
                       <a href={viewHref(recordView("person", p.id))} onClick={open}>

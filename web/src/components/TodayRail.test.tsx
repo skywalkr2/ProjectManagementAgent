@@ -91,6 +91,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   document.documentElement.removeAttribute("data-today");
+  document.documentElement.removeAttribute("data-narrow");
 });
 
 test("five panels in reading order, each with its heading and count, and nothing about what needs you", async () => {
@@ -727,4 +728,19 @@ test("an empty agenda is one line, with when it was checked and no form", async 
   expect(line.tagName).toBe("P");
   expect(line.closest("[data-col='agenda']")!.querySelectorAll(".tb-empty p")).toHaveLength(0);
   expect(screen.queryByRole("textbox", { name: "What" })).toBeNull();
+});
+
+test("on the phone a panel folded to one line says its source couldn't be read, never that it is empty", async () => {
+  document.documentElement.setAttribute("data-narrow", "");
+  open({
+    ...EMPTY,
+    "GET watch": () => [
+      unread("cal", ["calendar"], "failed", { label: "Work calendar", problem: "Work calendar can't be read: the service refused the sign-in." }),
+      unread("mail", ["mail"], "offline", { label: "Work mail" }),
+    ],
+  });
+  expect(await screen.findByRole("button", { name: "Agenda · couldn't be read" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Came in · couldn't be read" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Agenda · nothing today" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Came in · nothing" })).toBeNull();
 });

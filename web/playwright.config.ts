@@ -80,6 +80,8 @@ export default defineConfig({
         // checks in light and dark at four widths (once, at the root; the nested path changes no screen).
         { name: `${s.name}-panes`, testMatch: /panes\.spec\.ts/, use, dependencies: [s.name] },
         ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
+        // The tables beside the detail pane at 1440px (once, at the root).
+        ...(s.base === "/" ? [{ name: `${s.name}-tables`, testMatch: /tables\.spec\.ts/, use, dependencies: [s.name] }] : []),
       ];
     }),
     { name: "layout", testMatch: /layout\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },

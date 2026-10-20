@@ -34,7 +34,12 @@ export function RecordsTable<T>(props: {
   label: string;
   /** The first column: the record's name, usually a link to its page. `open` is the link's click handler: a plain click opens
    * the row's pane, a modified one (a new tab) is left to the browser. */
-  name: { header: string; cell: (row: T, open: (event: MouseEvent) => void) => ReactNode };
+  name: {
+    header: string;
+    cell: (row: T, open: (event: MouseEvent) => void) => ReactNode;
+    /** The whole name, as the cell's title, for when a name too long for its column ends in an ellipsis. */
+    title?: (row: T) => string;
+  };
   columns: TableColumn<T>[];
   groups: TableGroup<T>[];
   rowKey: (row: T) => string;
@@ -136,7 +141,9 @@ function TableRow<T>(props: { row: T; table: Parameters<typeof RecordsTable<T>>[
         table.onSelect(row);
       }}
     >
-      <td className={styles.name}>{table.name.cell(row, open)}</td>
+      <td className={styles.name} title={table.name.title?.(row) || undefined}>
+        {table.name.cell(row, open)}
+      </td>
       {props.columns.map((c) => {
         const content = c.cell(row);
         return (

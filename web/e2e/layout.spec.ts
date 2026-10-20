@@ -30,6 +30,13 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
     ready: async (page) => {
       await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
       await expect(page.locator('[data-queue-line="review"]').first()).toBeVisible();
+      // On the phone the rail's panels are folded to one line; the one holding the failed read says so, and is opened to measure it.
+      const folded = page.getByRole("button", { name: /Came in/, expanded: false });
+      if ((await folded.count()) > 0) {
+        await expect(folded).toContainText("couldn't be read");
+        await folded.click();
+        await expect(page.getByRole("button", { name: /Came in/ })).toHaveAttribute("aria-expanded", "true");
+      }
       await expect(page.locator("[data-source-problems]").first()).toBeVisible();
       await expect(page.locator("[data-source-problems]").first()).toContainText(strings["mail-01"].slice(0, 12));
     },
@@ -78,7 +85,7 @@ const text = (page: Page, words: string) => expect(page.getByText(words.slice(0,
 
 /** How wide the page and its body are against the window, and what sticks out past it without making the page scroll
  * (content a parent clips is as bad: it is cut off). Fixed layers and anything inside a box that scrolls itself are the
- * box's own business. */
+ * box's own business; so is text a cell ends in an ellipsis with its whole value as the title. */
 const overflow = (page: Page) =>
   page.evaluate(() => {
     const limit = window.innerWidth;
@@ -86,11 +93,19 @@ const overflow = (page: Page) =>
       for (; el; el = el.parentElement) if (/auto|scroll/.test(getComputedStyle(el).overflowX)) return true;
       return false;
     };
+    // Text that a table cell shortens on purpose is not cut off: it ends in an ellipsis and the cell's title holds the whole value.
+    const shortened = (el: Element): boolean => {
+      for (let up: Element | null = el; up; up = up.parentElement) {
+        const style = getComputedStyle(up);
+        if (style.overflowX === "hidden" && style.textOverflow === "ellipsis") return !!el.closest("[title]");
+      }
+      return false;
+    };
     const cut: string[] = [];
     for (const el of Array.from(document.querySelectorAll("body *"))) {
       const box = el.getBoundingClientRect();
       const parent = el.parentElement!.getBoundingClientRect();
-      if (box.width > 0 && box.height > 0 && box.right > limit + 1 && parent.right <= limit + 1 && getComputedStyle(el).position !== "fixed" && !scrolls(el)) {
+      if (box.width > 0 && box.height > 0 && box.right > limit + 1 && parent.right <= limit + 1 && getComputedStyle(el).position !== "fixed" && !scrolls(el) && !shortened(el)) {
         cut.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} reaches ${Math.round(box.right)}`);
       }
     }

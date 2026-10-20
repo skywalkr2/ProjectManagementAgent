@@ -54,7 +54,7 @@ export function Organizations() {
       ) : (
         <RecordsTable
           label={t("setup.organizations")}
-          name={{ header: t("orgs.col.name"), cell: (o) => o.name }}
+          name={{ header: t("orgs.col.name"), title: (o) => o.name, cell: (o) => o.name }}
           columns={columns}
           groups={[{ id: "all", title: t("setup.organizations"), rows }]}
           rowKey={(o) => o.id}
