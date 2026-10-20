@@ -503,6 +503,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     phone's rail panels one line each below the queue; review lines tagged "Outside" with the full phrase as its name.
   - **Demo data for answers 27 to 31** (C53): a moved meeting, a held inference, an inferred fact, a series and a
     rules line in both fictional workspaces.
+  - **The reviewer's further feedback** (owner, 2026-10-20: "provide the UI/UX agent the next batch when you can because
+    it already has more feedback"): asked for on 2026-10-20 and folded into this batch when it arrives; when B-7 is
+    pushed and green, the reviewer gets the commit, the status for C1–C53 and every place the build chose differently.
   - **The learning-run fixes** (owner, 2026-10-20: built in this batch): the B-6b items "date words the rules can't
     read" and "the rest of the owner's learning run", then the owner re-runs the failed cases with `--case-failed`.
 
