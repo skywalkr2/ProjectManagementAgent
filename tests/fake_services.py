@@ -687,10 +687,12 @@ def start_secure(state: State, port: int, add_ons: tuple[str, ...] = ("journey_p
     )
     server = uvicorn.Server(config)
     threading.Thread(target=server.run, daemon=True).start()
+    # An event's timed wait, not time.sleep: under a shifted clock (CI's faketime job) a plain sleep fails.
+    pause = threading.Event()
     for _ in range(200):
         if server.started:
             return server
-        time.sleep(0.05)
+        pause.wait(0.05)
     raise RuntimeError("the HTTPS fake services did not start")
 
 
