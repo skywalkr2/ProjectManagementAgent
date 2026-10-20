@@ -137,6 +137,10 @@ time. These rules hold for the main session and every subagent.
 - **Don't poll with sleep loops**; a foreground `sleep` may return at once. Run a long job in the background and wait for
   its notification.
 - **Judge a run by its exit code**, not by grepping a summary line (pytest here prints none with `-q -n auto`).
+- **The browser tests run the built app, never the source** (owner, 2026-10-20: two re-runs tested a stale build):
+  build and test in one command, and start the tests only when the build exited 0.
+- **Measure a layout fault before changing CSS**: print each element's width in the state that failed (a header after
+  the acceptance scenario, a wider font through `FONTCONFIG_FILE`), then make one change that answers the numbers.
 - **A failure under load is re-run once on its own** before it is called real or a flake; a test that fails only under
   load is made robust, not retried until it passes.
 - **After every push, check CI's result** for that commit, not only the local run. A red CI may stay red (owner,
