@@ -4,6 +4,31 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: Thimbleby is one free app and one paid upgrade, and its users steer what is built
+
+- **Decided (owner):** "i agree with everything you have said. I really want users who will send me input on what
+  they would like to see added". The plan is `docs/project/business-model.md`. In short:
+  - **Free:** the core, open source under Apache-2.0, published from a private working repository at each release.
+    Ideas, problem reports and templates are welcome; code pull requests are not accepted.
+  - **Thimbleby Plus:** one yearly licence (the version in hand is kept if the person stops paying) for one-click Gmail
+    and Outlook, every pack and updates. No marketplace: no per-pack price or licence.
+  - **Users steer it:** *Send feedback* and `report.draft` become one *Suggest something* flow the person approves
+    word for word; the assistant offers it when it hits something it can't do; a shared template gallery; a public
+    ideas board; "You asked for" in each release's notes; founding members among the first buyers.
+  - **A base for almost anything, staged:** product 1.0 ships on plugin API 0.x and no longer waits for every pack to
+    be designed; plugin API 1.0 keeps its existing test (two packs unchanged through real use); outside builders come
+    after it.
+- **Why:** an assistant that reads mail is easier to trust when its code can be read, and companies approve Apache-2.0
+  (2026-10-09). What made the earlier plan heavy was a marketplace and a public plugin contract, not the open core, so
+  those go. Gmail and Outlook are what most people need and what costs the owner verification and fees, so they are the
+  paid line; the free app works without them.
+- **Impact:** design 3.11 ("Licensed packs" becomes one entitlement, checked offline); new build items after phase S,
+  beside phase I: the Plus licence, licence-gated downloads (replacing release-host read tokens for customers),
+  *Suggest something*, the template gallery, CONTRIBUTING, SECURITY and a trademark note. Owner actions M1 to M6 (Google
+  and Microsoft verification, signing, a payment service, the private working repository, the website) are on the
+  critical path to selling. The roadmap's batches take these items, and its "every pack designed before plugin API 1.0"
+  wording is reshaped, when the main session folds them in (open promise P25); nothing in batch B-7 changes.
+
 ## 2026-10-20: The UI/UX re-review is accepted in full, and the learning-run fixes join it (B-7)
 
 - **Decided (owner):** "give them what they want and include the ai fixes". Batch B-7 builds every finding of the

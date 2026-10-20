@@ -1100,7 +1100,7 @@ plugin API 1.0, so the API holds the base any pack could need. The items below a
 - Which of a pack's AI work a project allows (the writing pack's question 198, after 1.0): a project, inherited from the
   workspace and its parent, names the task kinds or groups that may run, or none; the core refuses to queue the rest from
   anywhere, says why once, and hides actions and lines that lead only to disallowed work.
-- Licensed (paid) packs: the design is accepted, but whether to charge is the owner's call, after launch.
+- A price per pack, or a marketplace: one Plus licence covers every pack instead (decisions, 2026-10-20; `business-model.md`, whose items the batches take under open promise P25).
 - The delivery chain of the end state (charter, owner 2026-10-14): a requirement carried from business analysis through
   project management and technical design to development, testing, acceptance and deployment, with a development pack
   (sprints, built-in testing, demos), a testing and acceptance pack (internal test cases, UAT) and a deployment pack.

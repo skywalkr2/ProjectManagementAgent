@@ -414,8 +414,12 @@ A workspace can turn the catalog off or add feeds (`workspace.plugins.catalog`).
 Everything in a feed is untrusted: text is shown as text, links show their real domain, and nothing in it becomes a rule, a
 setting or an instruction.
 
-**Licensed packs.** The design accepts that a pack may be licensed: a price in its catalog entry and a licence key kept as a
-plugin secret. Whether to charge for any pack is the owner's call, after launch. No licence checking is built.
+**Licensed packs.** One licence, not a price per pack (decisions, 2026-10-20; `docs/project/business-model.md`). A catalog
+entry or a plugin manifest may name an entitlement it needs (such as `plus`). The person adds a licence file on a screen;
+the core keeps it in the workspace's private folder and checks its signature against the public key the release ships
+with, on this computer, with no call home. An entry whose entitlement isn't held shows what it needs and how to get it,
+and its Install fetches the release file through a download address that checks the licence, in place of a read token.
+The core checks a signed entitlement without knowing what it unlocks. Not built yet.
 
 **Later:** updates with what changed and re-approval when an update asks for more; asking the assistant knows the catalog, so
 a question the core can't answer but a pack can mentions the pack before a report is drafted; a signed feed and pinned

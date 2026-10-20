@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 125. One free app, one paid upgrade, and users who steer it (2026-10-20)
+
+- **Licensed packs (3.11):** one entitlement (Thimbleby Plus) instead of a price per pack, checked offline from a signed
+  licence file; installs of an entitled pack go through a licence-checked download address. Designed, not built.
+- **How users steer the product:** *Suggest something* (feedback and `report.draft` as one approved flow), a template
+  gallery, an ideas board and release notes that say what came from suggestions. The plan is
+  `docs/project/business-model.md`.
+
 ## 124. The shell: notices, the stages board, the hand-in drawer, Ask as a pane, the phone's review mode and the walkthrough's look (2026-10-20)
 
 | Where | Before | Now |
