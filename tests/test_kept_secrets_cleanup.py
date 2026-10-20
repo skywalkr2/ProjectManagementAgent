@@ -10,7 +10,9 @@ from engine.storage import Store
 from tests.test_setup import client, make
 from tests.test_typed_secrets import TYPED, _added_with_password, mailbox_kind, new_source, sources
 
-NOW = datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
+# The settings saves in these tests are stamped with the real clock, so the sweep's clock starts an hour after them: past
+# the Undo grace, whatever day the tests run on.
+NOW = datetime.now(UTC).replace(microsecond=0) + timedelta(hours=1)
 
 
 def keys_of(ws):
