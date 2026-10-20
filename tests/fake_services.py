@@ -687,7 +687,7 @@ def start_secure(state: State, port: int, add_ons: tuple[str, ...] = ("journey_p
     )
     server = uvicorn.Server(config)
     threading.Thread(target=server.run, daemon=True).start()
-    # An event's timed wait, not time.sleep: under a shifted clock (CI's faketime job) a plain sleep fails.
+    # An event's timed wait: it can't be cut short by a clock tool, as a plain sleep was.
     pause = threading.Event()
     for _ in range(200):
         if server.started:

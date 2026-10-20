@@ -150,6 +150,10 @@ time. These rules hold for the main session and every subagent.
   test that got slow.
   - Tests stay fast: no sleeps, no real network, shared fixtures over new workspaces, and the cheapest level that
     proves the behavior (a unit test before an API test, an API test before a browser test).
+  - **Moving the date in tests: never faketime or any LD_PRELOAD clock tool** (owner, 2026-10-20). It works below
+    Python and breaks its timers: with the monotonic clock moved, a timed wait never ends; with it real, short sleeps
+    fail with "Invalid argument". Move the date inside the test process with `time-machine` (`TEST_CLOCK_DAYS_AHEAD`,
+    `tests/conftest.py`), or pass the time in (`worker.now()`, a `now=` argument).
 
 ## How work reaches the owner (review, 2026-10-12)
 - The plan is `docs/project/roadmap-to-1.0.md`: one phase at a time, each ending on its exit test. One stream of work at

@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: Tests move the date with time-machine, never with faketime
+
+- **Decided (owner):** "lets document no use of faketime so we dont do that again". CI's later-date job (the suite with
+  the date 40 days ahead) and any test that needs another date use `time-machine` inside the test process, or pass the
+  time in; never faketime or another tool that swaps the system clock through LD_PRELOAD.
+- **Why:** faketime cost three rounds. With the monotonic clock moved, a timer's deadline landed 40 days out and the
+  job hung (`tests/test_events.py::test_wait_returns_when_the_counter_moves`); with it kept real
+  (`FAKETIME_DONT_FAKE_MONOTONIC`), short sleeps failed with "Invalid argument", which every program a test starts can
+  hit (33 failures and 19 errors at `0f37be4`); its own fix (`FAKETIME_FORCE_MONOTONIC_FIX`) hung again. time-machine
+  moves `datetime.now` and `time.time` only, so timers stay real and started programs see the real date.
+- **Impact:** `.github/workflows/ci.yml` (`python-later`, `TEST_CLOCK_DAYS_AHEAD: "40"`), `tests/conftest.py`,
+  `time-machine` in the dev dependencies, and CLAUDE.md's test rules.
+
 ## 2026-10-20: Thimbleby core first, Thimbleby+ after, and only maybe
 
 - **Decided (owner):** "Basically core Thimbleby vs paid Thimbleby+. Good thing is we can actually get to Thimbleby core
