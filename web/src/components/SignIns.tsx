@@ -206,7 +206,9 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                 return (
                   <li key={a.key} className="row pair">
                     <span className="sub">
-                      {who}
+                      {accounts.length === 1 && a.status !== "expired" && a.address
+                        ? t("sign_in.status.signed_in_as", { account: a.address })
+                        : who}
                       {a.status === "expired" && <> · {t("sign_in.status.expired")}</>}
                     </span>
                     <span className="acts">

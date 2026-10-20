@@ -615,7 +615,8 @@ test("a service that names its accounts lists each by its address with Sign out 
   expect(await screen.findByText("Signed out pat@example.com of Service demo/one.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "DELETE sign-ins/demo/one?account=k1")).toHaveLength(1);
   await waitFor(() => expect(within(one).queryByText("pat@example.com")).toBeNull());
-  expect(within(one).getByText("sam@example.com")).toBeInTheDocument();
+  // With one account left the row says whose it is in a sentence.
+  expect(within(one).getByText("Signed in as sam@example.com")).toBeInTheDocument();
   // Adding another account starts the same sign-in flow.
   await user.click(within(one).getByRole("button", { name: "Add another account to Service demo/one" }));
   await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?another=1"));
