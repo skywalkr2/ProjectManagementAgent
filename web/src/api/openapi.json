@@ -7253,6 +7253,294 @@
         "title": "KnowledgeView",
         "type": "object"
       },
+      "KnowsFact": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "description": "One of the facts that matter most.",
+            "title": "Key",
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FactSource"
+          },
+          "text": {
+            "description": "The fact as a statement, without its source.",
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "text",
+          "key",
+          "source"
+        ],
+        "title": "KnowsFact",
+        "type": "object"
+      },
+      "KnowsInput": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "title": {
+            "description": "The input's short name.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "received_at"
+        ],
+        "title": "KnowsInput",
+        "type": "object"
+      },
+      "KnowsQuestion": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "sent"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          },
+          "to_name": {
+            "title": "To Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "to",
+          "to_name",
+          "status"
+        ],
+        "title": "KnowsQuestion",
+        "type": "object"
+      },
+      "KnowsRouting": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "look_up": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where to look it up instead, in plain words.",
+            "title": "Look Up"
+          },
+          "negative": {
+            "description": "True when they don't answer it.",
+            "title": "Negative",
+            "type": "boolean"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          },
+          "who": {
+            "description": "The person's or team's name.",
+            "title": "Who",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topic",
+          "who",
+          "negative"
+        ],
+        "title": "KnowsRouting",
+        "type": "object"
+      },
+      "KnowsSource": {
+        "description": "One place a project's inputs come from, with how many it gave and the latest. A watched source has its own\n`label`; any other input is grouped by the `kind` of way it arrived.",
+        "properties": {
+          "inputs": {
+            "description": "How many inputs it gave about the project.",
+            "title": "Inputs",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the input arrived (pasted, email and so on), for inputs not watched.",
+            "title": "Kind"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A watched source's name as set up.",
+            "title": "Label"
+          },
+          "last": {
+            "$ref": "#/components/schemas/KnowsInput"
+          }
+        },
+        "required": [
+          "key",
+          "inputs",
+          "last"
+        ],
+        "title": "KnowsSource",
+        "type": "object"
+      },
+      "KnowsTerm": {
+        "properties": {
+          "confidence": {
+            "enum": [
+              "confirmed",
+              "assumed",
+              "unknown"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "term",
+          "meaning",
+          "confidence"
+        ],
+        "title": "KnowsTerm",
+        "type": "object"
+      },
+      "KnowsUnknown": {
+        "description": "Something about the project nobody has said: one of its own blank fields (`field`) or a term with no meaning\nyet (`term`, and the `entry` that holds it), with the question already asked for it when there is one.",
+        "properties": {
+          "entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "enum": [
+                  "status",
+                  "phase",
+                  "target",
+                  "owner",
+                  "summary"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "kind": {
+            "enum": [
+              "field",
+              "term"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowsQuestion"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The open question that asks about it, if one does."
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "KnowsUnknown",
+        "type": "object"
+      },
       "LearnedLine": {
         "description": "What the assistant learned from one correction, for the line under that correction's card (design 7.18).\n`learning`: the assistant is still working on it (`waiting` says why and until when). `proposed`: there is a\n`proposal` to keep. `kept`: the person's own words were kept at once; `undo` is the change that makes Undo.",
         "properties": {
@@ -8875,6 +9163,47 @@
         "title": "OutsideEditView",
         "type": "object"
       },
+      "OverlapView": {
+        "description": "The entry a proposal would merge with: one of its kind that says the same thing over a target that overlaps.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "lesson",
+              "glossary_entry",
+              "routing_entry",
+              "style_note",
+              "rule"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "active"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "description": "The entry in plain words.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "text",
+          "status"
+        ],
+        "title": "OverlapView",
+        "type": "object"
+      },
       "OwnerPick": {
         "properties": {
           "note": {
@@ -10157,6 +10486,70 @@
         "title": "ProjectIn",
         "type": "object"
       },
+      "ProjectKnowsView": {
+        "description": "What the assistant knows about one project (design 7.18), for its page.",
+        "properties": {
+          "facts": {
+            "description": "Its facts that nothing replaces, key ones first, then newest.",
+            "items": {
+              "$ref": "#/components/schemas/KnowsFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "routing": {
+            "description": "Who answers what, for work on it.",
+            "items": {
+              "$ref": "#/components/schemas/KnowsRouting"
+            },
+            "title": "Routing",
+            "type": "array"
+          },
+          "sources": {
+            "description": "Where its inputs come from, the latest first.",
+            "items": {
+              "$ref": "#/components/schemas/KnowsSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "terms": {
+            "description": "The glossary terms used there.",
+            "items": {
+              "$ref": "#/components/schemas/KnowsTerm"
+            },
+            "title": "Terms",
+            "type": "array"
+          },
+          "unknown": {
+            "description": "What is still unknown.",
+            "items": {
+              "$ref": "#/components/schemas/KnowsUnknown"
+            },
+            "title": "Unknown",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sources",
+          "facts",
+          "terms",
+          "routing",
+          "unknown"
+        ],
+        "title": "ProjectKnowsView",
+        "type": "object"
+      },
       "ProjectPatch": {
         "properties": {
           "budget_usd": {
@@ -11084,6 +11477,17 @@
               }
             ],
             "description": "Where it came from, for its link."
+          },
+          "overlaps_with": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OverlapView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The other entry it would merge with (an active one first, else the oldest proposed), when it says what that one says over an overlapping target; none when it stands alone."
           },
           "pack": {
             "anyOf": [
@@ -14039,6 +14443,14 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "usually_with": {
+            "description": "The people who are on most of its meetings, from the guest lists the calendar gave, resolved to people the workspace knows; empty when too few meetings have a guest list.",
+            "items": {
+              "$ref": "#/components/schemas/SeriesRegular"
+            },
+            "title": "Usually With",
+            "type": "array"
           }
         },
         "required": [
@@ -14143,6 +14555,37 @@
           "items"
         ],
         "title": "SeriesPersonGroup",
+        "type": "object"
+      },
+      "SeriesRegular": {
+        "description": "Someone who is on most of a series' meetings (design 7.14, answer 30).",
+        "properties": {
+          "meetings": {
+            "description": "How many of the meetings with a known guest list they are on.",
+            "title": "Meetings",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "of": {
+            "description": "How many of the series' meetings have a known guest list.",
+            "title": "Of",
+            "type": "integer"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "name",
+          "meetings",
+          "of"
+        ],
+        "title": "SeriesRegular",
         "type": "object"
       },
       "SetAsideDone": {
@@ -23324,6 +23767,46 @@
           }
         },
         "summary": "Set Project Role"
+      }
+    },
+    "/api/projects/{project_id}/knows": {
+      "get": {
+        "description": "What the assistant knows about a project: where its inputs come from and the last of each, its facts with\nwho they rest on and when, the glossary terms used there, who answers what, and what is still unknown with the\nquestion asked for it.",
+        "operationId": "project_knows_view_api_projects__project_id__knows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectKnowsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Knows View"
       }
     },
     "/api/promises/{action_id}": {

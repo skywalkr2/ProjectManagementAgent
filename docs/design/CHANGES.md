@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 117. What the assistant knows about a project, overlaps, the fact label and "usually with" (2026-10-20)
+
+| Where | Before | Now |
+|---|---|---|
+| A project's page (7.18, 7.14) | Activity and details only; nothing said what the assistant knew of the project | A section "What the assistant knows" under the activity: the project's sources (inputs grouped by a watched source or the way they arrived, with how many and the last), its facts with who they rest on and when (key ones first, nothing a newer fact replaces, a parent project's fact only when it says it reaches the projects inside), the glossary terms used there marked confirmed, assumed or not known yet, who answers what, and what is still unknown (the project's blank fields and unknown terms, each with the open question that uses the term, or "Nobody has been asked."). `GET /api/projects/{id}/knows`. Built: `tests/test_project_knows.py`, `web/src/components/ProjectKnows.test.tsx`, `web/src/components/RecordPageRecords.test.tsx` |
+| The Learned line (7.18) | A proposal showed no relation to entries that already say the same | A proposal that says what another active or proposed entry says over an overlapping target (the rule that merges duplicates, `proposals.duplicate_of`) shows "Overlaps with: <that entry> · kept or waiting", linked to it; `ProposalView.overlaps_with`. Built: `tests/test_learned_lines.py`, `web/src/components/Learned.test.tsx` |
+| A fact's source label (7.14, answer 29) | Only on the fact's own page | The same label, the dashed "Inferred" tag and Confirm it on each fact row of a project's knowledge section; the label is marked as never copied and can't be selected. Facts have no row on the Knowledge screen or in Today's inspector, so those two places have nothing to show yet. Built: `web/src/components/ProjectKnows.test.tsx` |
+| A series page (7.14, answer 30) | The details had no "usually with" | The people on more than `ui.series.usually_with_share` (0.5) of the meetings whose guest lists are known, once at least `usually_with_min_meetings` (2) are known, at most `usually_with_max` (6); calendar entries' attendees resolved to people, the person themselves, a declined answer and a called-off meeting left out. Built: `tests/test_series_page.py`, `web/src/components/SeriesPage.test.tsx` |
+| Settings (4.0) | | `ui.series` with the three keys above, a description and default each, and demo values in both workspaces |
 ## 115. Add-on keys and the backup key typed on the screen (2026-10-19)
 
 | Where | Before | Now |

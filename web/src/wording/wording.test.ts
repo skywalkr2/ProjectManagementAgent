@@ -76,6 +76,9 @@ test("key families built at run time are complete", () => {
     "op.note.under",
     "op.note.none",
     ...(s.ProposalView.properties.came_from.enum ?? []).map((x) => `learned.from.${x}`),
+    ...(s.KnowsTerm.properties.confidence.enum ?? []).map((x) => `knows.confidence.${x}`),
+    ...["status", "phase", "target", "owner", "summary"].map((x) => `knows.unknown.${x}`),
+    ...["pasted", "email", "calendar", "change", "note", "task", "other"].map((x) => `knows.kind.${x}`),
     ...(s.AiState.properties.state.enum ?? []).filter((x) => x !== "ok").flatMap((x) => ["title", "todo"].map((y) => `ai.${x}.${y}`)),
     ...["action.add", "action.close", "question.add", "question.done", "fact", "note", "record.set", "record.log", "person.add"].map((x) => `op.${x}`),
   ];

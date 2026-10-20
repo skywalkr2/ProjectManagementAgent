@@ -1136,6 +1136,15 @@ class SeriesPast(SeriesMeeting):
     moved: list[SeriesMovedItem]
 
 
+class SeriesRegular(BaseModel):
+    """Someone who is on most of a series' meetings (design 7.14, answer 30)."""
+
+    person: str
+    name: str
+    meetings: int = Field(description="How many of the meetings with a known guest list they are on.")
+    of: int = Field(description="How many of the series' meetings have a known guest list.")
+
+
 class SeriesPageView(BaseModel):
     """A series' page (design 7.14): the next meeting's open items by person, then the meetings that passed."""
 
@@ -1144,9 +1153,87 @@ class SeriesPageView(BaseModel):
     repeats: str | None = Field(None, description="How often it repeats, in the person's own words.")
     project: str | None = None
     project_name: str | None = None
+    usually_with: list[SeriesRegular] = Field(
+        default_factory=list,
+        description="The people who are on most of its meetings, from the guest lists the calendar gave, resolved to "
+        "people the workspace knows; empty when too few meetings have a guest list.",
+    )
     next: SeriesNext | None = Field(None, description="The next meeting; null when none is scheduled.")
     past: list[SeriesPast] = Field(description="Meetings that passed, newest first.")
     open_without_next: int = Field(0, description="Open items waiting when no later meeting exists.")
+
+
+class KnowsInput(BaseModel):
+    id: str
+    title: str = Field(description="The input's short name.")
+    received_at: datetime
+
+
+class KnowsSource(BaseModel):
+    """One place a project's inputs come from, with how many it gave and the latest. A watched source has its own
+    `label`; any other input is grouped by the `kind` of way it arrived."""
+
+    key: str
+    label: str | None = Field(None, description="A watched source's name as set up.")
+    kind: str | None = Field(
+        None, description="How the input arrived (pasted, email and so on), for inputs not watched."
+    )
+    inputs: int = Field(description="How many inputs it gave about the project.")
+    last: KnowsInput
+
+
+class KnowsFact(BaseModel):
+    id: str
+    version: int
+    text: str = Field(description="The fact as a statement, without its source.")
+    key: bool = Field(description="One of the facts that matter most.")
+    source: FactSource
+
+
+class KnowsTerm(BaseModel):
+    id: str
+    term: str
+    meaning: str
+    confidence: Literal["confirmed", "assumed", "unknown"]
+
+
+class KnowsRouting(BaseModel):
+    id: str
+    topic: str
+    who: str = Field(description="The person's or team's name.")
+    negative: bool = Field(description="True when they don't answer it.")
+    look_up: str | None = Field(None, description="Where to look it up instead, in plain words.")
+
+
+class KnowsQuestion(BaseModel):
+    id: str
+    title: str
+    to: str
+    to_name: str
+    status: Literal["open", "sent"]
+
+
+class KnowsUnknown(BaseModel):
+    """Something about the project nobody has said: one of its own blank fields (`field`) or a term with no meaning
+    yet (`term`, and the `entry` that holds it), with the question already asked for it when there is one."""
+
+    kind: Literal["field", "term"]
+    field: Literal["status", "phase", "target", "owner", "summary"] | None = None
+    term: str | None = None
+    entry: str | None = None
+    question: KnowsQuestion | None = Field(None, description="The open question that asks about it, if one does.")
+
+
+class ProjectKnowsView(BaseModel):
+    """What the assistant knows about one project (design 7.18), for its page."""
+
+    id: str
+    name: str
+    sources: list[KnowsSource] = Field(description="Where its inputs come from, the latest first.")
+    facts: list[KnowsFact] = Field(description="Its facts that nothing replaces, key ones first, then newest.")
+    terms: list[KnowsTerm] = Field(description="The glossary terms used there.")
+    routing: list[KnowsRouting] = Field(description="Who answers what, for work on it.")
+    unknown: list[KnowsUnknown] = Field(description="What is still unknown.")
 
 
 class RecordPageView(BaseModel):
@@ -3789,6 +3876,15 @@ class KnowledgeDiscard(BaseModel):
     reason: str | None = Field(None, description="Why, if the person says.")
 
 
+class OverlapView(BaseModel):
+    """The entry a proposal would merge with: one of its kind that says the same thing over a target that overlaps."""
+
+    id: str
+    kind: Literal["lesson", "glossary_entry", "routing_entry", "style_note", "rule"]
+    text: str = Field(description="The entry in plain words.")
+    status: Literal["proposed", "active"]
+
+
 class ProposalView(KnowledgeView):
     """One proposal waiting for the person: a piece of what the assistant learned, or a standing rule, to keep, set
     aside "just this time" or discard. `came_from` says where it came from (an input, or one of the person's
@@ -3806,6 +3902,11 @@ class ProposalView(KnowledgeView):
     )
     just_this_time_before: int = Field(
         0, description='How many times the person said "just this time" to the same correction before.'
+    )
+    overlaps_with: OverlapView | None = Field(
+        None,
+        description="The other entry it would merge with (an active one first, else the oldest proposed), when it "
+        "says what that one says over an overlapping target; none when it stands alone.",
     )
     expires_at: datetime | None = Field(None, description="When it expires unreviewed; none for one that never does.")
     from_changeset: str | None = Field(

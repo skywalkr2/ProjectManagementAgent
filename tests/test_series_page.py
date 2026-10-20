@@ -118,6 +118,7 @@ def test_the_route_returns_the_page(tmp_path):
         found = client.get(f"/api/series/{sid}/page")
         assert found.status_code == 200
         assert found.json()["title"] == "Print sync" and found.json()["next"] is None
+        assert found.json()["usually_with"] == []
         assert client.get("/api/series/SER-999/page").status_code == 404
 
 
@@ -131,3 +132,88 @@ def test_a_meeting_on_todays_agenda_counts_what_is_open_for_it(made):
     when = datetime(2026, 10, 20, 8, 0, tzinfo=UTC)
     mine = {a.snapshot: a for a in today.agenda(store, cfg, when)}
     assert mine[first].series == sid and mine[first].open_items == 1
+
+
+# ---- usually with (design 7.14, answer 30) ------------------------------------------------------------------------
+
+
+def guests(store, entry, *who, organizer=None, **by_response):
+    """Give a meeting its guest list: each person in `who` is on it; `by_response` maps a person to their answer."""
+    listed = [{"person": p, "response": by_response.get(p)} for p in who]
+    fields = {"attendees": listed, **({"organizer": {"person": organizer}} if organizer else {})}
+    with store.transaction() as tx:
+        tx.update("event", entry, fields, _PM, read_version=store.read().get("event", entry).version)
+
+
+def regulars(store, sid, **settings):
+    from engine.config.schema import SeriesSettings
+
+    view = page(store.read(), sid, TODAY, HERE, pm=ME, settings=SeriesSettings(**settings))
+    return [(r["person"], r["meetings"], r["of"]) for r in view["usually_with"]]
+
+
+def test_the_people_on_most_of_the_meetings_are_who_the_series_is_usually_with_and_the_person_is_left_out(made):
+    store, sid, entries = made
+    third = PEOPLE[2]["id"]
+    guests(store, entries[0], ME, OTHER, third)
+    guests(store, entries[1], ME, OTHER)
+    guests(store, entries[2], ME, OTHER, third)
+    # the one who is on all of them first, then the one on two of three; the person themselves is never listed
+    assert regulars(store, sid) == [(OTHER, 3, 3), (third, 2, 3)]
+    view = shown(store, sid)
+    assert [r["name"] for r in view["usually_with"]] == [PEOPLE[1]["full_name"], PEOPLE[2]["full_name"]]
+
+
+def test_the_share_the_least_known_lists_and_the_longest_list_are_settings(made):
+    store, sid, entries = made
+    third = PEOPLE[2]["id"]
+    guests(store, entries[0], OTHER, third)
+    guests(store, entries[1], OTHER)
+    guests(store, entries[2], OTHER)
+    assert regulars(store, sid) == [(OTHER, 3, 3)]
+    assert regulars(store, sid, usually_with_share=0.3) == [(OTHER, 3, 3), (third, 1, 3)]
+    assert regulars(store, sid, usually_with_share=0.3, usually_with_max=1) == [(OTHER, 3, 3)]
+    assert regulars(store, sid, usually_with_min_meetings=4) == []
+
+
+def test_a_guest_who_declined_is_not_on_the_meeting_and_one_with_no_person_is_not_counted(made):
+    store, sid, entries = made
+    for entry in entries:
+        guests(store, entry, OTHER, **{OTHER: "declined"})
+    assert regulars(store, sid) == []
+    with store.transaction() as tx:
+        for entry in entries:
+            tx.update(
+                "event",
+                entry,
+                {"attendees": [{"address": "visitor@example.com", "name": "A Visitor"}]},
+                _PM,
+                read_version=store.read().get("event", entry).version,
+            )
+    assert regulars(store, sid) == []
+
+
+def test_meetings_without_a_guest_list_or_called_off_are_not_counted_either_way(made):
+    store, sid, entries = made
+    guests(store, entries[0], OTHER)
+    guests(store, entries[1], OTHER)
+    # the third has no list, so two of two known lists say OTHER is regular
+    assert regulars(store, sid) == [(OTHER, 2, 2)]
+    guests(store, entries[2], ME)
+    with store.transaction() as tx:
+        tx.update(
+            "event", entries[2], {"cancelled": True}, _PM, read_version=store.read().get("event", entries[2]).version
+        )
+    assert regulars(store, sid) == [(OTHER, 2, 2)]
+
+
+def test_the_organizer_counts_as_being_on_the_meeting(made):
+    store, sid, entries = made
+    for entry in entries:
+        guests(store, entry, ME, organizer=OTHER)
+    assert regulars(store, sid) == [(OTHER, 3, 3)]
+
+
+def test_a_series_with_no_guest_lists_has_nobody_it_is_usually_with(made):
+    store, sid, _ = made
+    assert shown(store, sid)["usually_with"] == []

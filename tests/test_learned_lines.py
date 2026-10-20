@@ -139,3 +139,93 @@ def test_an_applied_rule_or_fact_is_listed_with_its_kind(app):
     assert kinds == {rule: "rule", fact: "fact"}
     (the_fact,) = [a for a in item["changeset"]["applied"] if a["kind"] == "fact"]
     assert the_fact["applies_to"] is None and the_fact["id"].startswith(REGISTRY["fact"].prefix)
+
+
+# ---- "Overlaps with" (design 7.18) ----------------------------------------------------------------------------
+
+_MERGE = WriteContext(actor="pm", trust="trusted", op="test.overlap")
+
+
+def waiting(client, entry_id):
+    return next(p for p in client.get("/api/knowledge/proposals").json()["proposals"] if p["id"] == entry_id)
+
+
+def entry(store, kind, data):
+    from datetime import UTC, datetime
+
+    from tests.test_knowledge_records import PM
+
+    now = datetime(2026, 10, 14, 9, 0, tzinfo=UTC).isoformat()
+    base = {"origin": "input", "status": "proposed", "learned_at": now, "trust": "trusted", "applies_to": {}}
+    if data.get("status") == "active":
+        base |= {"origin": "person", "kept_by": PM, "kept_at": now}
+    with store.transaction() as tx:
+        return tx.create(kind, {**base, **data}, _MERGE).id
+
+
+def test_a_proposal_that_says_what_an_entry_already_says_names_the_entry_it_would_merge_with(app):
+    client, env = app
+    store = env[2]
+    kept = entry(store, "lesson", {"text": NOTE, "status": "active"})
+    waits = entry(store, "lesson", {"text": NOTE})
+    overlap = waiting(client, waits)["overlaps_with"]
+    assert overlap == {"id": kept, "kind": "lesson", "text": NOTE, "status": "active"}
+    # the entry that is kept is not itself waiting, and a proposal never overlaps itself
+    assert kept not in [p["id"] for p in client.get("/api/knowledge/proposals").json()["proposals"]]
+
+
+def test_a_proposal_over_other_projects_or_other_words_overlaps_nothing(app):
+    client, env = app
+    store = env[2]
+    from tests.test_knowledge_records import PROJECT, second_project
+
+    other = second_project(store)
+    entry(
+        store, "lesson", {"text": NOTE, "status": "active", "applies_to": {"scope": "projects", "projects": [PROJECT]}}
+    )
+    apart = entry(store, "lesson", {"text": NOTE, "applies_to": {"scope": "projects", "projects": [other]}})
+    different = entry(store, "lesson", {"text": "Covers go to the designer first."})
+    assert waiting(client, apart)["overlaps_with"] is None
+    assert waiting(client, different)["overlaps_with"] is None
+
+
+def test_a_meaning_proposed_beside_a_term_the_person_kept_as_unknown_names_that_term(app):
+    client, env = app
+    store, cfg = env[2], env[1]
+    from tests.test_knowledge_records import person_adds, proposal
+
+    unknown = person_adds(
+        store,
+        cfg,
+        {
+            "op": "glossary.add",
+            "text": "Gutter: not known yet.",
+            "term": "Gutter",
+            "meaning": "not known",
+            "confidence": "unknown",
+        },
+    )
+    meaning = proposal(
+        store,
+        cfg,
+        {"op": "glossary.add", "text": "Gutter: the inner margin.", "term": "Gutter", "meaning": "the inner margin"},
+    )
+    assert meaning != unknown
+    overlap = waiting(client, meaning)["overlaps_with"]
+    assert overlap["id"] == unknown and overlap["kind"] == "glossary_entry" and overlap["status"] == "active"
+
+
+def test_the_learned_line_carries_the_overlap_too(app):
+    client, env = app
+    store = env[2]
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, NOTE, now=NOW)
+    (queued,) = learning(store)
+    scripted(lesson_answer("go to the editor first"))
+    run_learning(env, queued.id)
+    (line,) = lines(client)
+    assert line["state"] == "proposed" and line["proposal"]["overlaps_with"] is None
+    # the person kept the same wording elsewhere in the meantime: the line now says which entry it would merge with
+    kept = entry(store, "lesson", {"text": line["proposal"]["text"], "status": "active"})
+    (line,) = lines(client)
+    assert line["proposal"]["overlaps_with"]["id"] == kept

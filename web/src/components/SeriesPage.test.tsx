@@ -34,6 +34,7 @@ const view = (over: Partial<S["SeriesPageView"]> = {}): S["SeriesPageView"] => (
     },
   ],
   open_without_next: 0,
+  usually_with: [],
   ...over,
 });
 
@@ -93,4 +94,25 @@ test("with no later meeting it says how many open items wait for the next one", 
   show(view({ next: null, open_without_next: 2, past: [] }));
   expect(await screen.findByRole("heading", { name: "No later meeting is scheduled" })).toBeInTheDocument();
   expect(screen.getByText("2 open items wait for the next meeting.")).toBeInTheDocument();
+});
+
+test("the details name who the series is usually with, one row each with how many meetings, and say nothing when it isn't known", async () => {
+  const { unmount } = show(
+    view({
+      usually_with: [
+        { person: "PER-2", name: "Casey Moor", meetings: 6, of: 6 },
+        { person: "PER-3", name: "Dara Keene", meetings: 4, of: 6 },
+      ],
+    }),
+  );
+  const details = await screen.findByRole("complementary", { name: "Details" });
+  expect(within(details).getByText("Usually with")).toBeInTheDocument();
+  const rows = within(within(details).getByRole("list", { name: "Usually with" })).getAllByRole("listitem");
+  expect(rows).toHaveLength(2);
+  expect(within(rows[0]).getByRole("link", { name: "Casey Moor" }).getAttribute("href")).toMatch(/#records\/person\/PER-2$/);
+  expect(rows[0]).toHaveTextContent("Casey Moor · 6 of 6 meetings");
+  expect(rows[1]).toHaveTextContent("Dara Keene · 4 of 6 meetings");
+  unmount();
+  show(view());
+  expect(within(await screen.findByRole("complementary", { name: "Details" })).queryByText("Usually with")).toBeNull();
 });

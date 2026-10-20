@@ -209,6 +209,7 @@ export const api = {
   notes: () => call<S["NoteView"][]>("GET", "notes"),
   unfiled: () => call<S["UnfiledView"]>("GET", "unfiled"),
   fileUnfiled: (body: S["UnfiledFile"]) => call<S["Applied"]>("POST", "unfiled/file", body),
+  projectKnows: (project: string) => call<S["ProjectKnowsView"]>("GET", `projects/${id(project)}/knows`),
   seriesPage: (series: string) => call<S["SeriesPageView"]>("GET", `series/${id(series)}/page`),
   recordPage: (kind: string, record: string) => call<S["RecordPageView"]>("GET", `record-pages/${id(record)}?kind=${id(kind)}`),
   declineOp: (cs: string, index: number) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/decline`),

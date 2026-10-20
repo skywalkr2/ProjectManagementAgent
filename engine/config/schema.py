@@ -1649,6 +1649,29 @@ class WalkthroughSettings(ConfigModel):
     )
 
 
+class SeriesSettings(ConfigModel):
+    usually_with_share: float = Field(
+        0.5,
+        gt=0,
+        le=1,
+        description="A series' page lists, as who it is usually with, the people on more than this share of the "
+        "meetings whose guest lists are known (0.5: more than half).",
+    )
+    usually_with_min_meetings: int = Field(
+        2,
+        ge=1,
+        le=50,
+        description="A series' page names who it is usually with only once at least this many of its meetings have a "
+        "known guest list.",
+    )
+    usually_with_max: int = Field(
+        6,
+        ge=1,
+        le=50,
+        description="The most people a series' page lists as who it is usually with, the most regular first.",
+    )
+
+
 class BrandSettings(ConfigModel):
     color: str | None = Field(
         None,
@@ -1705,6 +1728,9 @@ class UiFile(FileModel):
     )
     walkthrough: WalkthroughSettings = Field(
         default_factory=WalkthroughSettings, description="What the new-start walkthrough shows."
+    )
+    series: SeriesSettings = Field(
+        default_factory=SeriesSettings, description="What a series' page works out from its meetings' guest lists."
     )
     brand: BrandSettings = Field(default_factory=BrandSettings, description="The accent color and logo.")
     theme: Literal["system", "light", "dark"] = Field(

@@ -138,7 +138,7 @@ def page(
             for q in questions
         ],
         "completed_actions": _completed(view, kind, record_id, name_of),
-        "fact_source": _fact_source(view, record) if kind == "fact" else None,
+        "fact_source": fact_source(view, record) if kind == "fact" else None,
         "activity": _activity(view, kind, record_id, actions, questions, name_of, pm),
     }
 
@@ -197,7 +197,7 @@ def _completed(view: Any, kind: str, record_id: str, name_of: Any) -> list[dict[
     return found[:COMPLETED_MAX]
 
 
-def _fact_source(view: Any, record: Any) -> dict[str, Any]:
+def fact_source(view: Any, record: Any) -> dict[str, Any]:
     """Who a fact rests on and where it came from, for the label in its meta line: the basis (the person, someone
     else, or the assistant's inference), who said it and who reported it, the input and the day. The day is the one the
     person confirmed it when they did, else the day it was true as of, else the day it was filed."""

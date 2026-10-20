@@ -17,6 +17,7 @@ import { OriginLink } from "./Origin";
 import { PersonDrawer } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
 import { Attendees } from "./Attendees";
+import { ProjectKnows } from "./ProjectKnows";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
@@ -118,6 +119,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {kind === "action" && <PromiseWhy action={id} quiet omitOrigin />}
           {kind === "event" && <Attendees fields={data.fields} names={names} />}
           {page.data && <RecordActivity page={page.data} />}
+          {kind === "project" && <ProjectKnows id={id} />}
           {data.long_text.map((field) => (
             <TextSection
               key={field}

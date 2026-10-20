@@ -169,3 +169,31 @@ test("a reach that leaves projects out says which, by name", async () => {
     expect(reach.parentElement!.querySelector("[data-reach-said]")).toHaveTextContent("All projects except Autumn list · for filing notes"),
   );
 });
+
+test("a proposal that would merge with an entry says which, as a link to that entry", async () => {
+  show([
+    learnedLine({
+      proposal: proposal({ overlaps_with: { id: "LES-7", kind: "lesson", text: "Interior files go to the editor first.", status: "active" } }),
+    }),
+  ]);
+  const said = (await screen.findByRole("link", { name: "Interior files go to the editor first." })).closest("p")!;
+  expect(said.getAttribute("data-overlaps")).toBe("LES-7");
+  expect(within(said).getByRole("link").getAttribute("href")).toMatch(/#records\/knowledge$/);
+  expect(said).toHaveTextContent("Overlaps with: Interior files go to the editor first. · kept");
+});
+
+test("a proposal that overlaps a rule links to that rule's own page and says it is still waiting", async () => {
+  show([
+    learnedLine({ proposal: proposal({ kind: "rule", overlaps_with: { id: "RULE-3", kind: "rule", text: "Never send a draft unreviewed.", status: "proposed" } }) }),
+  ]);
+  const link = await screen.findByRole("link", { name: "Never send a draft unreviewed." });
+  expect(link.getAttribute("href")).toMatch(/#records\/rule\/RULE-3$/);
+  expect(link.closest("p")).toHaveTextContent("Overlaps with: Never send a draft unreviewed. · waiting");
+});
+
+test("a proposal that overlaps nothing says nothing about it", async () => {
+  show([learnedLine()]);
+  await screen.findByText("Interior files go to the editor before the printer.");
+  expect(document.querySelector("[data-overlaps]")).toBeNull();
+  expect(screen.queryByText(/Overlaps with/)).toBeNull();
+});

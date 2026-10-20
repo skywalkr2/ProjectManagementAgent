@@ -1,6 +1,7 @@
 // Where a fact came from (design 7.14, answer 29): one label in the meta line that is itself the "Where it came from" link,
 // and for what the assistant only worked out, a dashed "Inferred" tag and "Confirm it". No italics (they mean a quote here),
-// and the label is never part of copied or published text.
+// and the label is never part of copied or published text: it is marked `data-copy="never"` and can't be selected, so
+// what is copied from beside it is the fact alone. In a row's meta line it is drawn inline.
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
@@ -30,7 +31,7 @@ export function useFactLabel(): (source: S["FactSource"]) => string {
   };
 }
 
-export function FactSource(props: { source: S["FactSource"]; fact: string; version: number }) {
+export function FactSource(props: { source: S["FactSource"]; fact: string; version: number; /** Drawn in a line of text (a row's meta) instead of as a paragraph. */ inline?: boolean }) {
   const { t } = useWords();
   const act = useAct();
   const label = useFactLabel()(props.source);
@@ -46,8 +47,9 @@ export function FactSource(props: { source: S["FactSource"]; fact: string; versi
         },
       }),
     );
+  const Tag = props.inline ? "span" : "p";
   return (
-    <p className={styles.line} data-fact-source="">
+    <Tag className={styles.line} data-fact-source="" data-copy="never">
       {inferred && (
         <Pill inferred describedAs={t("fact.src.inferred_sr")}>
           {t("fact.inferred")}
@@ -59,6 +61,6 @@ export function FactSource(props: { source: S["FactSource"]; fact: string; versi
           {t("fact.confirm")}
         </Button>
       )}
-    </p>
+    </Tag>
   );
 }

@@ -65,6 +65,20 @@ export function SeriesPage(props: { id: string; onBack: () => void }) {
                     </dd>
                   </div>
                 )}
+                {(data.usually_with ?? []).length > 0 && (
+                  <div className="detail">
+                    <dt id="series-usually">{t("series.usually_with")}</dt>
+                    <dd>
+                      <ul className="plain-list" aria-labelledby="series-usually">
+                        {(data.usually_with ?? []).map((p) => (
+                          <li key={p.person}>
+                            <a href={viewHref(recordView("person", p.person))}>{p.name}</a> · {t("series.usually_count", { n: p.meetings, of: p.of })}
+                          </li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </div>
+                )}
                 <div className="detail">
                   <dt>{t("series.rolling")}</dt>
                   <dd>{t("series.rolling_rule")}</dd>

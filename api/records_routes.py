@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import Applied, SeriesPageView, UnfiledFile, UnfiledItem, UnfiledView
-from engine import series_page
+from api.schemas import Applied, ProjectKnowsView, SeriesPageView, UnfiledFile, UnfiledItem, UnfiledView
+from engine import project_knows, series_page
 from engine import unfiled as unfiled_module
 from engine.applier import apply_as_person
 from engine.config import Config
@@ -64,9 +64,20 @@ def build_records_router(cfg: Config, store: Store, events: Events) -> APIRouter
             here,
             pm=cfg.workspace.user.person,
             owner_format=cfg.workspace.owner_format,
+            settings=cfg.ui.series,
         )
         if found is None:
             raise HTTPException(status_code=404, detail=f"There is no series {series_id}.")
         return SeriesPageView(**found)
+
+    @r.get("/projects/{project_id}/knows")
+    def project_knows_view(project_id: str) -> ProjectKnowsView:
+        """What the assistant knows about a project: where its inputs come from and the last of each, its facts with
+        who they rest on and when, the glossary terms used there, who answers what, and what is still unknown with the
+        question asked for it."""
+        found = project_knows.knows(store.read(), project_id, cfg)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"There is no project {project_id}.")
+        return ProjectKnowsView(**found)
 
     return r

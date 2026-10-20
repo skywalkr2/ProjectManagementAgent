@@ -12,6 +12,7 @@ import { reachChoices, useReachNames, useReachWords, type ReachChoice } from "..
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
+import { entryHref } from "./Because";
 import styles from "./Learned.module.css";
 
 export type Proposal = S["ProposalView"];
@@ -135,6 +136,19 @@ export function ProposalEvidence(props: { p: Proposal }) {
   );
 }
 
+/** The entry a proposal would merge with, as a link to it with whether it is kept or still waiting. Nothing when it
+ * overlaps nothing. */
+export function ProposalOverlap(props: { p: Proposal }) {
+  const { t } = useWords();
+  const twin = props.p.overlaps_with;
+  if (!twin) return null;
+  return (
+    <p className={styles.evidence} data-overlaps={twin.id}>
+      {t("learned.overlaps")} <a href={entryHref(twin)}>{twin.text}</a> · {t(twin.status === "active" ? "learned.overlaps.kept" : "learned.overlaps.waiting")}
+    </p>
+  );
+}
+
 /** The wording of a proposal in a box, with the reach beside it; Keep keeps what is shown as the person's own words. */
 function EditForm(props: { p: Proposal; state: ReturnType<typeof useProposal>; onClose: () => void }) {
   const { t } = useWords();
@@ -214,6 +228,7 @@ function ProposalLine(props: { p: Proposal }) {
         <span className={styles.label}>{t("learned.label")}</span> {p.text}
       </p>
       <ProposalEvidence p={p} />
+      <ProposalOverlap p={p} />
       {p.just_this_time_before > 0 && <p className={styles.hint}>{tn("learned.said_just_this_time", p.just_this_time_before)}</p>}
       <div className={styles.acts}>
         <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} said={state.reachSaid} />

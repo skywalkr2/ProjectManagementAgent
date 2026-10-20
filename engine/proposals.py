@@ -96,16 +96,18 @@ def scopes_overlap(a: dict[str, Any] | Scope, b: dict[str, Any] | Scope) -> bool
 # ---- duplicates and near-discards ------------------------------------------------------------------------------------
 
 
-def duplicate_of(view: Any, kind: str, data: dict[str, Any]) -> Any | None:
+def duplicate_of(view: Any, kind: str, data: dict[str, Any], *, own_id: str | None = None) -> Any | None:
     """The proposed or active entry of this kind that says the same thing over an overlapping target, if any; an
-    active one first, then the oldest."""
+    active one first, then the oldest. `own_id` names an entry that is not its own duplicate (one asking which other
+    entry it would merge with)."""
     subject = subject_of(kind, data)
     if not subject:
         return None
     found = [
         s
         for s in view.list(kind)
-        if s.data.get("status") in ("active", "proposed")
+        if s.id != own_id
+        and s.data.get("status") in ("active", "proposed")
         and subject_of(kind, s.data) == subject
         and scopes_overlap(s.data.get("applies_to") or {}, data.get("applies_to") or {})
     ]

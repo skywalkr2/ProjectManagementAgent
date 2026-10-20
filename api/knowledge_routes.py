@@ -20,6 +20,7 @@ from api.schemas import (
     LearnedLine,
     LearnedView,
     Ok,
+    OverlapView,
     ProposalsView,
     ProposalView,
     ReadVersion,
@@ -116,6 +117,7 @@ def _proposal(
         if found.came_from == proposals.FROM_INPUT and learned
         else None
     )
+    twin = proposals.duplicate_of(view, found.kind, data, own_id=stored.id)
     return ProposalView(
         id=stored.id,
         kind=found.kind,
@@ -137,6 +139,11 @@ def _proposal(
         came_from=found.came_from,
         batch=batch,
         just_this_time_before=proposals.just_this_time_before(view, found.kind, data, own_id=stored.id),
+        overlaps_with=(
+            OverlapView(id=twin.id, kind=found.kind, text=twin.data["text"], status=twin.data["status"])
+            if twin is not None
+            else None
+        ),
         expires_at=expires,
         from_changeset=card_learning.changeset_of_entry(view, stored),
         **{name: value for name, value in own.items() if value is not None or name == "negative"},

@@ -72,6 +72,21 @@ test("a project's page shows what is open with it, what was finished and by whom
   expect(screen.getByRole("region", { name: "Details" })).toBeInTheDocument();
 });
 
+test("a project's page has what the assistant knows about it, and a person's page does not", async () => {
+  api("project", "PRJ-1", { name: "Harbor" }, page(), {
+    "GET projects/PRJ-1/knows": () => ({ id: "PRJ-1", name: "Harbor", sources: [], facts: [{ id: "FACT-1", version: 1, text: "Trim size is fixed.", key: false, source: { basis: "person", on: "2026-10-08", origin: null } }], terms: [], routing: [], unknown: [] }),
+  });
+  const { unmount } = renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const knows = await screen.findByRole("region", { name: "What Helper knows" });
+  expect(await within(knows).findByRole("link", { name: "Trim size is fixed." })).toBeInTheDocument();
+  expect(within(knows).getByText(`from you, ${day("2026-10-08")}`)).toBeInTheDocument();
+  unmount();
+  api("person", "PER-1", { full_name: "Robin Sample" }, page({ kind: "person", id: "PER-1", name: "Robin Sample" }));
+  renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: "Robin Sample" });
+  expect(screen.queryByRole("region", { name: "What Helper knows" })).toBeNull();
+});
+
 test("a section with nothing in it isn't there: no Completed, no zero", async () => {
   api("project", "PRJ-1", { name: "Harbor" }, page());
   renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);

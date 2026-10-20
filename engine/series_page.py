@@ -8,6 +8,7 @@ from datetime import date
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from engine.config.schema import SeriesSettings
 from engine.names import render_owner
 from engine.series import SETTLED, instances, next_instance, span
 
@@ -28,8 +29,43 @@ def _rolled(view: Any, kind: str, record_id: str) -> list[tuple[str | None, str 
     ]
 
 
+def _declined(guest: dict[str, Any]) -> bool:
+    return str(guest.get("response") or "").strip().casefold() == "declined"
+
+
+def usually_with(meetings: list[Any], pm: str | None, settings: SeriesSettings) -> list[tuple[str, int, int]]:
+    """The people who are on more than `usually_with_share` of the meetings whose guest lists are known, as
+    (person, meetings they are on, meetings with a known list), the most regular first. A meeting the calendar says
+    was called off has no guests to count, a guest who declined isn't on it, and a guest the workspace can't tell
+    from a person (no person id on the entry) or the person themselves is left out. Nothing is said with fewer than
+    `usually_with_min_meetings` known lists."""
+    known = 0
+    counts: dict[str, int] = {}
+    for meeting in meetings:
+        data = meeting.data
+        guests = [g for g in [data.get("organizer"), *(data.get("attendees") or [])] if g]
+        if data.get("cancelled") or not guests:
+            continue
+        known += 1
+        here = {g["person"] for g in guests if g.get("person") and not _declined(g)}
+        for pid in here:
+            counts[pid] = counts.get(pid, 0) + 1
+    if known < settings.usually_with_min_meetings:
+        return []
+    regular = [(pid, n) for pid, n in counts.items() if pid != pm and n / known > settings.usually_with_share]
+    regular.sort(key=lambda pair: (-pair[1], pair[0]))
+    return [(pid, n, known) for pid, n in regular[: settings.usually_with_max]]
+
+
 def page(
-    view: Any, series_id: str, today: date, here: ZoneInfo, *, pm: str | None, owner_format: str = "{full_name}"
+    view: Any,
+    series_id: str,
+    today: date,
+    here: ZoneInfo,
+    *,
+    pm: str | None,
+    owner_format: str = "{full_name}",
+    settings: SeriesSettings | None = None,
 ) -> dict[str, Any] | None:
     found = view.get("series", series_id)
     if found is None:
@@ -94,12 +130,16 @@ def page(
             groups.setdefault(pid, []).append({k: v for k, v in item.items() if k != "people"})
     ordered = sorted(groups, key=lambda pid: (pid == pm, person(pid).casefold() if pid else ""))
     project = view.get("project", data["project"]) if data.get("project") else None
+    regulars = usually_with(meetings, pm, settings or SeriesSettings())
     return {
         "id": series_id,
         "title": data["title"],
         "repeats": data.get("repeats"),
         "project": data.get("project"),
         "project_name": project.data["name"] if project is not None else None,
+        "usually_with": [
+            {"person": pid, "name": person(pid), "meetings": n, "of": known} for pid, n, known in regulars
+        ],
         "next": (
             {
                 **meeting(upcoming),
