@@ -111,7 +111,7 @@ def test_a_refused_renewal_shows_at_once_and_asks_once(signing):
     c.headers["Authorization"] = "Bearer t"
     api = cfg.server.base_path.rstrip("/") + "/api"
     sign_in(c, api)
-    kept = ws.root / ".cockpit" / "keys" / "p18" / "sign-in-service.json"
+    kept = next((ws.root / ".cockpit" / "keys" / "p18").glob("sign-in-service--*.json"))  # kept under its account
     kept.write_text(json.dumps({**json.loads(kept.read_text()), "expires_at": time.time() - 1}))
     context = store.plugins.connector_context("p18", ws.root)
     for _ in range(2):

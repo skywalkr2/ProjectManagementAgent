@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.81"
+PLUGIN_API_VERSION = "0.3.82"
 
 
 class Settings(BaseModel):
@@ -1769,8 +1769,10 @@ class Registrar:
         status to check; both mean "start over with a full read". A throttled read isn't counted as a failure,
         and the source isn't read again before its wait ends. `context.secret(name)` reads a secret named in
         `requires.secrets` (None when it isn't set), `context.keep_secret(name, value)` keeps one on this computer,
-        and `context.access_token(name)` gives a current token for one of the plugin's sign-ins. Test a connector
-        with `engine.plugin_api.testing`.
+        and `context.access_token(name)` gives a current token for one of the plugin's sign-ins: the token of the
+        account the source reads with (see `registrar.sign_in`), so a connector needs no change to read several
+        accounts. `context.account` is that account's address, read-only (None when the sign-in names no accounts, or
+        several are signed in and the source names none). Test a connector with `engine.plugin_api.testing`.
         `reads="mail"` or `reads="calendar"` says what the connector reads, so the setup walkthrough offers its
         add-on as a mail or calendar service, also before it is installed. Say it in the manifest too, as
         `provides.connector_reads: {<connector>: mail}`, which the registration must match. A connector that says
@@ -1823,10 +1825,20 @@ class Registrar:
         ...)`, which asks them once; naming a sign-in the plugin doesn't register raises `PluginMisuse`. The
         plugin never sees the sign-in itself or the refresh token.
 
+        **Several accounts at once:** when `account` is given, the person can sign in to the service again ("Add
+        another account") and the core keeps each account's tokens apart, known by the name `account` returned (the
+        same name again is the same account, and signing in replaces its tokens). Each source of the plugin has an
+        `account` setting, a list of the accounts signed in (the only one is used when there is one; a source must
+        choose when there are several), and `context.access_token(name)` in its read gives that account's token;
+        `context.account` is its name. Signing one account out pauses only the sources reading with it, with the
+        usual "sign in again" line naming it. A sign-in without `account` has one account, which a new sign-in
+        replaces. The sources a sign-in starts (`sources=`) are started for the account just added.
+
         `allows` says in plain words what the person is asked to allow ("Read your mail"), shown on the Sign-ins
         row and the setup step before they leave for the service's page. `account(context) -> str`, when given, is
-        called once after signing in, with a context like a connector's (`context.web`, `context.access_token`), and
-        names the signed-in account ("Signed in as …"); a failure leaves it unnamed: a `ConnectorError` quietly, and
+        called once after signing in, with a context like a connector's (`context.web`, `context.access_token`, which
+        gives the token just granted), and names the signed-in account ("Signed in as …"), best as its address; a
+        failure leaves it unnamed: a `ConnectorError` quietly, and
         anything else also counts as the plugin failing (failure containment). `context.granted(name)` is the set of
         scopes the person allowed (the service's answer, or everything asked when it doesn't say); the row names
         any scope asked for and not granted. It is empty while signed out, so ask `context.access_token(name)` first

@@ -665,6 +665,62 @@ describe("a source's menu", () => {
     expect(body(calls, "POST watch/sources/a")).toMatchObject({ author: "p1" });
   });
 
+  describe("which account a source reads", () => {
+    const withAccounts = (accounts: string[]): S["WatchKindView"][] => [
+      { ...kind("demo/mailbox", "A mailbox", "demo", [field("folder", "text")], "recent"), accounts },
+    ];
+
+    test("with several signed in, adding a source asks which account, and saves it", async () => {
+      const user = userEvent.setup();
+      const { calls } = open([], [], {
+        "GET watch/kinds": () => withAccounts(["pat@example.com", "sam@example.com"]),
+        "POST watch/sources": () => SAVED([], [{ id: "a" }]),
+      }, { add: { plugin: "demo", n: 1 } });
+      const form = await screen.findByRole("form", { name: "Add a source" });
+      const pick = await within(form).findByLabelText("Account to read");
+      expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual([
+        "Choose an account",
+        "pat@example.com",
+        "sam@example.com",
+      ]);
+      const save = within(form).getByRole("button", { name: "Add source" });
+      await waitFor(() => expect(within(form).getByLabelText("About folder")).toBeInTheDocument());
+      expect(save).toBeDisabled(); // several accounts: one must be chosen
+      await user.type(within(form).getByLabelText("About folder"), "INBOX");
+      await user.selectOptions(pick, "sam@example.com");
+      expect(save).toBeEnabled();
+      await user.click(save);
+      await waitFor(() => expect(body(calls, "POST watch/sources")).toBeDefined());
+      expect(body(calls, "POST watch/sources")).toMatchObject({ connector: "demo/mailbox", account: "sam@example.com" });
+    });
+
+    test("with one signed in it is already chosen, and a source's own account is shown on its row and in Change", async () => {
+      const user = userEvent.setup();
+      const { calls } = open([source("a", { connector: "demo/mailbox", account: "sam@example.com" })], [], {
+        "GET watch/kinds": () => withAccounts(["pat@example.com", "sam@example.com"]),
+        "GET settings": () => stored(items("demo/mailbox")),
+        "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
+      });
+      expect(within(await row("Source a")).getByText(/Reads sam@example.com/)).toBeInTheDocument();
+      await choose(user, "Source a", "Change");
+      const form = await screen.findByRole("form", { name: "Change Source a" });
+      const pick = await within(form).findByLabelText("Account to read");
+      expect(pick).toHaveValue("sam@example.com");
+      await user.selectOptions(pick, "pat@example.com");
+      await waitFor(() => expect(within(form).getByLabelText("About folder")).toBeInTheDocument());
+      await user.click(within(form).getByRole("button", { name: "Save changes" }));
+      await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
+      expect(body(calls, "POST watch/sources/a")).toMatchObject({ account: "pat@example.com" });
+    });
+
+    test("a kind with no accounts has no account list and sends none", async () => {
+      open([], [], { "GET watch/kinds": () => KINDS }, { add: { plugin: "other", n: 1 } });
+      const form = await screen.findByRole("form", { name: "Add a source" });
+      await screen.findByLabelText("How often to read");
+      expect(within(form).queryByLabelText("Account to read")).toBeNull();
+    });
+  });
+
   test("when the saved settings don't hold the source's own, only its name and schedule can change", async () => {
     const user = userEvent.setup();
     const { calls } = open([source("a", { connector: "folder" })], [], {

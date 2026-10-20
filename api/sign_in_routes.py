@@ -11,7 +11,7 @@ from urllib.parse import quote, urlencode
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
-from api.schemas import Ok, SignInApp, SignInStarted, SignInStep, SignInView
+from api.schemas import Ok, SignInAccount, SignInApp, SignInStarted, SignInStep, SignInView
 from engine import audit
 from engine import sign_in as flow
 from engine.config import Config
@@ -48,6 +48,7 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
     def view(s: flow.SignIn) -> SignInView:
         client_id, _, source = host.sign_in_app(s, ws.root)
         status = flow.status(keys(s.plugin), s)
+        accounts = flow.list_accounts(keys(s.plugin), s)
         return SignInView(
             name=s.name,
             label=s.label,
@@ -55,7 +56,17 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
             ready=bool(client_id),
             callback=flow.redirect_uri(cfg.server),
             allows=list(s.allows),
-            account=(flow.kept(keys(s.plugin), s) or {}).get("account"),
+            account=accounts[0].address if accounts else None,
+            accounts=[
+                SignInAccount(
+                    key=a.key,
+                    address=a.address,
+                    status=flow.account_status(a),  # type: ignore[arg-type]
+                    missing=flow.missing(s, flow.allowed_scopes(s, a.tokens)),
+                )
+                for a in accounts
+            ],
+            several=s.account is not None,
             missing=flow.missing(s, flow.granted(keys(s.plugin), s)) if status == "signed_in" else [],
             app=source,  # type: ignore[arg-type]
             app_note=s.default_app_note if source == "add-on" else None,
@@ -166,40 +177,52 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         try:
             client_id, client_secret, _ = host.sign_in_app(s, ws.root)
             done, tokens = flow.finish(state, code, web, client_id or "", client_secret)
-            flow.keep(keys(done.plugin), done, tokens)
+            # Whose account this is is read with the new tokens before they are kept, so each account is kept under
+            # its own address; signing in again to an account replaces its tokens.
+            address = host.read_account(done, ws.root, tokens)
+            flow.keep(keys(done.plugin), done, tokens, address)
         except (flow.SignInError, ConnectorError):
             return back(f"sign_in=failed&name={quote(s.name)}")
         finally:
             web.close()
-        host.signed_in(done, ws.root)
-        audit.record(store, "sign_in", done.name, label=done.label)
+        host.signed_in(done, ws.root, address)
+        audit.record(store, "sign_in", done.name, label=done.label, detail=address)
         try:
-            if start_sources(ws, cfg, store, done):
+            if start_sources(ws, cfg, store, done, accounts=[address]):
                 worker.read_sources_now()
         except Exception as err:  # the sign-in stands; the person can still add the sources by hand
             log.warning("Couldn't start the sources for %s: %s", done.name, err)
         return back(f"sign_in=done&name={quote(s.name)}")
 
     @r.delete("/sign-ins/{name:path}")
-    def sign_out(name: str) -> Ok:
+    def sign_out(name: str, account: str | None = None) -> Ok:
+        """Sign out of a service: one account, by its key (`?account=`), or every account when none is named. Only the
+        sources reading with a signed-out account stop, with the usual line asking to sign in again."""
         s = find(name)
-        withdrawn = False
+        accounts = [a for a in flow.list_accounts(keys(s.plugin), s) if account is None or a.key == account]
+        if account is not None and not accounts:
+            raise HTTPException(status_code=404, detail="That account isn't signed in.")
+        withdrawn_all = {}
         if s.revoke_url:
             from engine.net import WebClient
 
             web = WebClient(list(host.manifests[s.plugin].requires.network))
             try:
-                withdrawn = flow.revoke(web, s, flow.kept(keys(s.plugin), s), host.sign_in_app(s, ws.root)[0])
+                client_id = host.sign_in_app(s, ws.root)[0]
+                for a in accounts:
+                    withdrawn_all[a.key] = flow.revoke(web, s, a.tokens, client_id)
             finally:
                 web.close()
-        if flow.forget(keys(s.plugin), s):
-            audit.record(
-                store,
-                "sign_out",
-                s.name,
-                label=s.label,
-                detail="The service was told to withdraw the access." if withdrawn else None,
-            )
+        for a in accounts:
+            if flow.forget(keys(s.plugin), s, a.key):
+                detail = "The service was told to withdraw the access." if withdrawn_all.get(a.key) else None
+                audit.record(
+                    store,
+                    "sign_out",
+                    s.name,
+                    label=s.label,
+                    detail=" ".join(x for x in (a.address, detail) if x) or None,
+                )
         return Ok(ok="signed_out")
 
     return r

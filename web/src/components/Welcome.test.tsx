@@ -391,6 +391,7 @@ describe("a sign-in step that is done", () => {
     can_paste: false,
     needs_secret: false,
     set_aside: false,
+    several: false,
     default_unusable: false,
   });
 

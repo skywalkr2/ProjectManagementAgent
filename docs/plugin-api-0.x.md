@@ -10,6 +10,24 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.82 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change: a connector that calls `context.access_token(name)`
+reads whichever account its source names.
+
+- **Several accounts of one service at once:** when a sign-in names its account (`registrar.sign_in(..., account=fn)`), the
+  person can sign in again ("Add another account") and the core keeps each account's tokens apart, known by the name `fn`
+  returned (best the account's address: the same name again is the same account, and signing in replaces its tokens). Each
+  source of the plugin gets a core setting `account`, a list of the accounts signed in; `context.access_token(name)` in its
+  read returns that account's token. With one account signed in, a source needs no choice; with several it must choose.
+  Signing one account out pauses only the sources reading with it. The sources a sign-in starts (`sources=`) are started for
+  the account just added. A sign-in without `account` has one account, which signing in again replaces.
+- **`context.account`:** the address of the account the source reads with (read-only text), for a plugin that wants to show it;
+  `None` when the sign-in names no accounts, or several are signed in and the source names none. The test kit's
+  `connector_context(..., account=...)` sets it.
+- `account(context)` now reads the new account with the token just granted: `context.access_token(name)` inside it gives that
+  token, before it is kept under its account.
+
 ## What 0.3.81 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change: a Today line without a `group` works as before.

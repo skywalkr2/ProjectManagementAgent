@@ -81,6 +81,7 @@ from engine import settings as config_screens
 from engine import sorting_rules as sorting
 from engine.config import Config, ConfigError, load_config
 from engine.config.schema import WatchSource
+from engine.sign_in_sources import accounts_of
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -456,6 +457,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     name=name,
                     label=connector.label,
                     plugin=plugin,
+                    accounts=accounts_of(ws, store, plugin) if plugin else None,
                     first_run=NEW_SOURCE_FIRST_RUN,
                     items=[SettingItem(**vars(i)) for i in items],
                 )
@@ -496,6 +498,26 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if view.get("person", author) is None and view.get("team", author) is None:
             raise HTTPException(status_code=400, detail="Choose a person or a team from the list.")
         return author
+
+    def checked_account(connector: str, account: str | None) -> str | None:
+        """The account a source of this kind reads: one signed in (by address, in any case), else the only one when
+        none is named. Several signed in and none named is refused, as is an account that isn't signed in."""
+        accounts = accounts_of(ws, store, connector.split("/", 1)[0]) if "/" in connector else None
+        wanted = (account or "").strip()
+        if accounts is None:
+            if wanted:
+                raise HTTPException(status_code=400, detail="This kind of source has no account to choose.")
+            return None
+        if wanted:
+            found = next((a for a in accounts if a.lower() == wanted.lower()), None)
+            if found is None:
+                raise HTTPException(
+                    status_code=400, detail="That account isn't signed in. Sign in to it first, then choose it."
+                )
+            return found
+        if len(accounts) > 1:
+            raise HTTPException(status_code=400, detail="Choose which account this source reads.")
+        return accounts[0] if accounts else None
 
     def with_secrets(
         kind: str, source_id: str, settings: dict[str, Any], pasted: dict[str, str], supplied: dict[str, Any]
@@ -557,6 +579,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             new["project"] = checked_project(body.project)
         if body.author:
             new["author"] = checked_author(body.author)
+        if account := checked_account(body.connector, body.account):
+            new["account"] = account
         fresh = keep_all(to_keep)
         try:
             done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
@@ -646,6 +670,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 found[key] = value
         if "author" in body.model_fields_set:
             found["author"] = checked_author(body.author) if body.author else None
+        if "account" in body.model_fields_set:
+            found["account"] = checked_account(found["connector"], body.account)
         fresh = keep_all(to_keep)
         try:
             return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))

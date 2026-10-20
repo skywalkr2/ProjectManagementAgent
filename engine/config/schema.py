@@ -1946,6 +1946,11 @@ class WatchSource(ConfigModel):
         description="How sensitive what this source holds is: its items go only to AI accounts allowed this level. "
         "Empty: the level set for its kind of source, else the default for all sources.",
     )
+    account: str | None = Field(
+        None,
+        description="For a source of an add-on that signs in as you: which signed-in account it reads, by its address. "
+        "Empty: the only account signed in; with several signed in, a source must say which.",
+    )
     author: str | None = Field(
         None,
         description="Whose work the source holds when it is all one person's or one team's: a person's id (yours "

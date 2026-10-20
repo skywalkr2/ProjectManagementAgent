@@ -311,6 +311,9 @@ class ConnectorContext:
     keep_secret: Callable[[str, str], None] | None = None  # keep a declared secret (a refreshed token) on this computer
     access_token: Callable[[str], str] | None = None  # a current token for one of the plugin's own sign-ins
     granted: Callable[[str], set[str]] | None = None  # the scopes the person allowed for one of its sign-ins
+    #: The address of the account of the plugin's sign-in this source reads with (read-only): what the source names,
+    #: else the one account signed in. None when none is signed in, or several are and none is named.
+    account: str | None = None
     #: The moment of this read, and the person's time zone (an IANA name), for the core's own connectors: a window
     #: and times with no zone are read against them. Not given to a plugin's connector.
     now: datetime | None = None

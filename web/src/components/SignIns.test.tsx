@@ -17,6 +17,7 @@ function signIn(name: string, extra: Partial<S["SignInView"]> = {}): S["SignInVi
     can_paste: false,
     needs_secret: false,
     set_aside: false,
+    several: false,
     default_unusable: false,
     own_app_steps: [],
     ...extra,
@@ -580,4 +581,74 @@ test("no such hint while the add-on's own registration works", async () => {
   open();
   await screen.findByText("Service demo/three");
   expect(screen.queryByText(/doesn't work at this app's address/)).toBeNull();
+});
+
+const account = (address: string | null, key: string, status: "signed_in" | "expired" = "signed_in") => ({
+  key,
+  address,
+  status,
+  missing: [] as string[],
+});
+
+test("a service that names its accounts lists each by its address with Sign out on each, and Add another account", async () => {
+  const user = userEvent.setup();
+  let accounts = [account("pat@example.com", "k1"), account("sam@example.com", "k2")];
+  const calls = fakeApi({
+    ...settings,
+    "GET sign-ins": () => [signIn("demo/one", { status: "signed_in", several: true, account: "pat@example.com", accounts })],
+    "POST sign-ins/demo/one/start": () => ({ url: "http://localhost:9090/login?another=1" }),
+    "DELETE sign-ins/demo/one?account=k1": () => {
+      accounts = accounts.filter((a) => a.key !== "k1");
+      return { ok: true };
+    },
+  });
+  open();
+  const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
+  const list = within(one).getByRole("list", { name: "Signed-in accounts" });
+  expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+    "pat@example.comSign out",
+    "sam@example.comSign out",
+  ]);
+  expect(within(one).queryByText("Signed in as pat@example.com")).toBeNull();
+  // Signing one account out forgets only that one; the other stays listed.
+  await user.click(within(list).getByRole("button", { name: "Sign out pat@example.com" }));
+  expect(await screen.findByText("Signed out pat@example.com of Service demo/one.")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "DELETE sign-ins/demo/one?account=k1")).toHaveLength(1);
+  await waitFor(() => expect(within(one).queryByText("pat@example.com")).toBeNull());
+  expect(within(one).getByText("sam@example.com")).toBeInTheDocument();
+  // Adding another account starts the same sign-in flow.
+  await user.click(within(one).getByRole("button", { name: "Add another account to Service demo/one" }));
+  await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?another=1"));
+  expect(calls.filter((c) => c.route === "POST sign-ins/demo/one/start")).toHaveLength(1);
+});
+
+test("an account that needs signing in again says so beside its address and can sign in again", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    ...settings,
+    "GET sign-ins": () => [
+      signIn("demo/one", {
+        status: "signed_in",
+        several: true,
+        accounts: [account("pat@example.com", "k1", "expired"), account("sam@example.com", "k2")],
+      }),
+    ],
+    "POST sign-ins/demo/one/start": () => ({ url: "http://localhost:9090/login?again=1" }),
+  });
+  open();
+  const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
+  expect(within(one).getByText("pat@example.com · Sign-in expired")).toBeInTheDocument();
+  expect(within(one).getAllByText(/Sign-in expired/)).toHaveLength(1);
+  await user.click(within(one).getByRole("button", { name: "Sign in again as pat@example.com" }));
+  await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?again=1"));
+  expect(calls.filter((c) => c.route === "POST sign-ins/demo/one/start")).toHaveLength(1);
+});
+
+test("a service that doesn't name its accounts keeps the one row and its menu's Sign out", async () => {
+  fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/one", { status: "signed_in", account: "pat@example.com" })] });
+  open();
+  const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
+  expect(within(one).getByText("Signed in as pat@example.com")).toBeInTheDocument();
+  expect(within(one).queryByRole("button", { name: /Add another account/ })).toBeNull();
+  expect(within(one).queryByRole("list", { name: "Signed-in accounts" })).toBeNull();
 });

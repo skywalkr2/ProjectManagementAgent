@@ -14,6 +14,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 
 type SignIn = S["SignInView"];
+type Account = S["SignInAccount"];
 
 /** The add-on a sign-in belongs to: the part of its name before the "/", or none when the name has no such part. */
 export const addonOfSignIn = (name: string): string | null => (name.includes("/") ? name.split("/", 1)[0] : null);
@@ -86,6 +87,20 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
     setSigningOut(false);
   };
 
+  // A service that names its accounts lists each one with its own Sign out; signing in again adds another.
+  const several = Boolean(item.several);
+  const accounts = several ? (item.accounts ?? []) : [];
+  const signOutAccount = async (a: Account) => {
+    setSigningOut(true);
+    setOutProblem("");
+    const who = a.address ?? t("sign_in.account_unnamed");
+    await act(
+      () => api.signOut(item.name, a.key),
+      () => ({ message: t("sign_in.signed_out_account_toast", { account: who, label: item.label }) }),
+    );
+    setSigningOut(false);
+  };
+
   const again = item.status === "expired";
   const notReading = signedIn ? (item.not_reading ?? []) : [];
   const label = notReading.length > 0
@@ -152,7 +167,7 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   if (signedIn && notReading.length > 0) {
     actions.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(item.name)), disabled: busy });
   }
-  if (signedIn) {
+  if (signedIn && !several) {
     actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => void signOut(), disabled: busy });
     actions.push({ id: "sign-in-again", label: t("sign_in.sign_in_again"), run: () => void start(), disabled: busy || !item.ready });
   }
@@ -184,11 +199,62 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
       <div className="row pair">
         <div className="text">
           <strong id={`${base}-title`}>{item.label}</strong>
-          <span className="sub">
-            {signedIn && item.account
-              ? t("sign_in.status.signed_in_as", { account: item.account })
-              : t(`sign_in.status.${item.status}`)}
-          </span>
+          {accounts.length > 0 ? (
+            <ul className="plain-list" aria-label={t("sign_in.accounts")}>
+              {accounts.map((a) => {
+                const who = a.address ?? t("sign_in.account_unnamed");
+                return (
+                  <li key={a.key} className="row pair">
+                    <span className="sub">
+                      {who}
+                      {a.status === "expired" && <> · {t("sign_in.status.expired")}</>}
+                    </span>
+                    <span className="acts">
+                      {a.status === "expired" && (
+                        <button
+                          type="button"
+                          className="btn quiet"
+                          disabled={busy || !item.ready}
+                          aria-label={t("sign_in.sign_in_again_account", { account: who })}
+                          onClick={() => void start()}
+                        >
+                          {t("sign_in.sign_in_again")}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn quiet"
+                        disabled={busy}
+                        aria-label={t("sign_in.sign_out_account", { account: who })}
+                        onClick={() => void signOutAccount(a)}
+                      >
+                        {t("sign_in.sign_out")}
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <span className="sub">
+              {signedIn && item.account
+                ? t("sign_in.status.signed_in_as", { account: item.account })
+                : t(`sign_in.status.${item.status}`)}
+            </span>
+          )}
+          {several && accounts.length > 0 && (
+            <div className="row-end">
+              <button
+                type="button"
+                className="btn quiet"
+                disabled={busy || !item.ready}
+                aria-label={t("sign_in.add_account_named", { label: item.label })}
+                onClick={() => void start()}
+              >
+                {t("sign_in.add_account")}
+              </button>
+            </div>
+          )}
           {allows.length > 0 && (
             <div className="field">
               <span className="what" id={`${base}-allows`}>

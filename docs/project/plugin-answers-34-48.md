@@ -149,3 +149,25 @@ says each model can do; the setup step is the "add to a setting" step of 183 and
 pack's tier. A declared tier the person hasn't mapped runs on its named fallback, with one Today line saying so and
 offering to map it; it never fails silently and never picks an account on its own (the fallback is a tier the person
 already mapped, so "no silent default provider" holds). Batch.
+
+## Draft note: reading several accounts of one service (plugin API 0.3.82; not yet sent)
+
+For the builder of a mail or calendar add-on. A person can now be signed in to several accounts of one service at once, and
+the add-on changes nothing to support it.
+
+- **What the core does.** When a sign-in declares `account`, the Sign-ins row lists each account by the name `account(context)`
+  returned (give an address: two accounts with the same name are one account, and signing in again replaces its tokens) with
+  Sign out on each, and "Add another account" runs the same flow. Tokens are kept per account. A source of the add-on gets a
+  core setting `account`, a list of the accounts signed in; one account needs no choice, several must be chosen between.
+- **What your connector does.** The same as before: `context.access_token(name)` in a read returns the token of the account
+  that source reads with. Nothing about accounts goes into your connector settings. `context.account` is that account's
+  address as read-only text, for a connector that wants to show it, and is `None` when the sign-in names no accounts or
+  several are signed in and the source names none. In `account(context)` itself, `context.access_token(name)` gives the token
+  just granted.
+- **What the person sees when one is signed out.** Only the sources reading with that account stop, with the usual
+  "sign in again" line, which names the account in its words. The others keep reading. Raise `ConnectorError("auth", ...)`
+  as before; don't name accounts yourself.
+- **Sources a sign-in starts** (`sources=`) are started for the account just added, once per account, so the second sign-in
+  gets its own inbox and calendar sources. A source that existed before a second account was added keeps reading the first.
+- **Test kit:** `connector_context(..., account="a@example.com")` sets `context.account`; `tokens=` still answers
+  `context.access_token(name)`.

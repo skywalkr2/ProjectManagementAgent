@@ -15197,6 +15197,51 @@
         "title": "SetupView",
         "type": "object"
       },
+      "SignInAccount": {
+        "description": "One account signed in to a sign-in.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account's address, when the add-on can name it.",
+            "title": "Address"
+          },
+          "key": {
+            "description": "Its short key, for DELETE /api/sign-ins/{name}?account={key}.",
+            "title": "Key",
+            "type": "string"
+          },
+          "missing": {
+            "description": "Scopes asked for that the person didn't allow for this account.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "status": {
+            "description": "Expired: it can't be renewed, so the person signs in again.",
+            "enum": [
+              "signed_in",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "status"
+        ],
+        "title": "SignInAccount",
+        "type": "object"
+      },
       "SignInApp": {
         "additionalProperties": false,
         "description": "A person's own app registration for a sign-in, pasted on the Sign-ins row.",
@@ -15276,8 +15321,16 @@
                 "type": "null"
               }
             ],
-            "description": "The signed-in account, when the add-on can name it.",
+            "description": "The first signed-in account, when the add-on can name it.",
             "title": "Account"
+          },
+          "accounts": {
+            "description": "Every account signed in (or needing to sign in again), the first signed in first. Signing out one is DELETE /api/sign-ins/{name}?account={key}; adding another is starting the sign-in again.",
+            "items": {
+              "$ref": "#/components/schemas/SignInAccount"
+            },
+            "title": "Accounts",
+            "type": "array"
           },
           "allows": {
             "description": "What the person is asked to allow, in plain words.",
@@ -15376,6 +15429,12 @@
             "default": false,
             "description": "A pasted registration was set aside and can be brought back.",
             "title": "Set Aside",
+            "type": "boolean"
+          },
+          "several": {
+            "default": false,
+            "description": "The add-on names its accounts, so the person can sign in to several at once; otherwise a new sign-in replaces the old one.",
+            "title": "Several",
             "type": "boolean"
           },
           "status": {
@@ -17823,6 +17882,21 @@
       "WatchKindView": {
         "description": "A kind of source the assistant can keep reading, with the form its settings take.",
         "properties": {
+          "accounts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a kind from an add-on that signs in as you: the addresses of the accounts signed in, to pick from (a source says which it reads); None for a kind with no account to choose.",
+            "title": "Accounts"
+          },
           "first_run": {
             "default": "intake",
             "description": "What the first read of a source of this kind added here does: intake takes it in quietly (one summary and one list to look over), baseline only notes what is there, recent also hands in the last day's, all hands everything in.",
@@ -17960,6 +18034,18 @@
       "WatchSourceChange": {
         "additionalProperties": false,
         "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The address of the signed-in account it reads (GET /api/watch/kinds); empty, when sent, goes back to the only account, and is refused while several are signed in.",
+            "title": "Account"
+          },
           "author": {
             "anyOf": [
               {
@@ -18040,6 +18126,18 @@
       "WatchSourceIn": {
         "additionalProperties": false,
         "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a kind with accounts (GET /api/watch/kinds): the address of the signed-in account it reads. Required when several are signed in; the only one is used when it is left out.",
+            "title": "Account"
+          },
           "author": {
             "anyOf": [
               {
@@ -18108,6 +18206,18 @@
       "WatchSourceView": {
         "description": "One place the assistant keeps reading, from watch.yaml, with its last read.",
         "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a source of an add-on that signs in as you: the account it reads, by its address.",
+            "title": "Account"
+          },
           "author": {
             "anyOf": [
               {
@@ -26158,6 +26268,7 @@
     },
     "/api/sign-ins/{name}": {
       "delete": {
+        "description": "Sign out of a service: one account, by its key (`?account=`), or every account when none is named. Only the\nsources reading with a signed-out account stop, with the usual line asking to sign in again.",
         "operationId": "sign_out_api_sign_ins__name__delete",
         "parameters": [
           {
@@ -26167,6 +26278,22 @@
             "schema": {
               "title": "Name",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account"
             }
           }
         ],

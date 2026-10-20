@@ -626,9 +626,10 @@ class PluginHost:
 
         return address_allowed(redirect_uri(self.cfg.server), sign_in.default_redirects)
 
-    def sign_in_token(self, name: str, workspace_root: Any) -> str:
-        """A current access token for a sign-in, renewed when needed; ConnectorError("auth") when the person needs
-        to sign in."""
+    def sign_in_token(self, name: str, workspace_root: Any, account: str | None = None) -> str:
+        """A current access token for one account of a sign-in (the only one signed in, when none is named), renewed
+        when needed; ConnectorError("auth") when the person needs to sign in, "no_access" when several accounts are
+        signed in and none was chosen."""
         from engine.connectors import ConnectorError
         from engine.net import WebClient
         from engine.sign_in import SignInError, access_token
@@ -641,34 +642,35 @@ class PluginHost:
         keys = Path(workspace_root) / ".cockpit" / "keys" / plugin
         web = WebClient(list(self.manifests[plugin].requires.network))
         try:
-            return access_token(keys, sign_in, web, client_id, client_secret)
+            return access_token(keys, sign_in, web, client_id, client_secret, account=account)
         except SignInError as err:
             if err.refused:
-                self.tell_sign_in_refused(sign_in)
-            raise ConnectorError("auth", str(err)) from None
+                self.tell_sign_in_refused(sign_in, err.account)
+            raise ConnectorError("no_access" if err.ambiguous else "auth", str(err)) from None
         finally:
             web.close()
 
-    def tell_sign_in_refused(self, sign_in: Any) -> None:
-        """Ask the person once to sign in again, unless a question about this sign-in is already open."""
+    def tell_sign_in_refused(self, sign_in: Any, account: str | None = None) -> None:
+        """Ask the person once to sign in again, unless a question about this sign-in (and account) is already open."""
         from engine.storage import WriteContext
 
         pm = self.cfg.workspace.user.person
         if not pm or self.store.read().get("person", pm) is None:
             return
-        resolves = {"kind": "sign_in", "name": sign_in.name}
+        resolves = {"kind": "sign_in", "name": sign_in.name, **({"account": account} if account else {})}
         if any(
             q.data.get("resolves") == resolves and q.data["status"] == "open"
             for q in self.store.read().list("question")
         ):
             return
+        named = f"{sign_in.label} ({account})" if account else sign_in.label
         with self.store.transaction() as tx:
             tx.create(
                 "question",
                 {
                     "to": pm,
-                    "title": f"Sign in to {sign_in.label} again",
-                    "text": f"{sign_in.label} stopped accepting this app's sign-in, so it can't be read. Sign in "
+                    "title": f"Sign in to {named} again",
+                    "text": f"{named} stopped accepting this app's sign-in, so it can't be read. Sign in "
                     "again from Settings, under Sign-ins.",
                     "kind": "decision",
                     "resolves": resolves,
@@ -676,17 +678,18 @@ class PluginHost:
                 WriteContext(actor="engine", trust="trusted", op="sign_in.refused"),
             )
 
-    def signed_in(self, sign_in: Any, workspace_root: Any) -> str | None:
-        """After signing in: close the question asking to, and name the account when the plugin can. Returns it."""
-        from engine.connectors import ConnectorError
-        from engine.sign_in import keep, kept
+    def signed_in(self, sign_in: Any, workspace_root: Any, account: str | None = None) -> None:
+        """After signing in: close the questions asking the person to sign in to this account (or, with no account
+        named, to the sign-in with none named)."""
         from engine.storage import WriteContext
 
-        resolves = {"kind": "sign_in", "name": sign_in.name}
         open_ones = [
             q
             for q in self.store.read().list("question")
-            if q.data.get("resolves") == resolves and q.data["status"] == "open"
+            if (resolves := q.data.get("resolves") or {}).get("kind") == "sign_in"
+            and resolves.get("name") == sign_in.name
+            and resolves.get("account") == account
+            and q.data["status"] == "open"
         ]
         if open_ones:
             with self.store.transaction() as tx:
@@ -698,9 +701,18 @@ class PluginHost:
                         WriteContext(actor="engine", trust="trusted", op="sign_in.done"),
                         read_version=q.version,
                     )
+
+    def read_account(self, sign_in: Any, workspace_root: Any, tokens: dict[str, Any]) -> str | None:
+        """The address of the account just signed in, as the plugin names it, read with the new tokens before they are
+        kept; None when the plugin names none or can't."""
+        from dataclasses import replace
+
+        from engine.connectors import ConnectorError
+
         if sign_in.account is None:
             return None
         context = self.connector_context(sign_in.plugin, workspace_root)
+        context = replace(context, access_token=lambda _name: tokens["access_token"])
         where = f"account name for {sign_in.name}"
         try:
             name = sign_in.account(context)
@@ -715,11 +727,7 @@ class PluginHost:
             if context.web is not None:
                 context.web.close()
         self.succeeded(sign_in.plugin, where)
-        keys = Path(workspace_root) / ".cockpit" / "keys" / sign_in.plugin
-        tokens = kept(keys, sign_in)
-        if tokens is not None:
-            keep(keys, sign_in, {**tokens, "account": " ".join(name.split())[:120]})
-        return name
+        return " ".join(name.split())[:120]
 
     @property
     def value_lists(self) -> dict[str, dict[str, Any]]:
@@ -823,8 +831,10 @@ class PluginHost:
         except ExtractError as err:
             raise StoreError(f"{record.data['name']} can't be read: {err.reason}") from None
 
-    def connector_context(self, plugin: str, workspace_root: Any) -> Any:
-        """What a plugin's connector gets: a web client for its declared hosts, and its declared secrets."""
+    def connector_context(self, plugin: str, workspace_root: Any, account: str | None = None) -> Any:
+        """What a plugin's connector gets: a web client for its declared hosts, and its declared secrets. `account` is
+        the address of the account the source reading it uses: its tokens come from that account, and
+        `context.account` says which. With none named, the one account signed in is used."""
         from engine.connectors import ConnectorContext
         from engine.net import WebClient
 
@@ -847,7 +857,7 @@ class PluginHost:
 
             if name not in own_sign_ins:
                 raise PluginMisuse(f"{name} isn't a sign-in this plugin registers")
-            return self.sign_in_token(name, workspace_root)
+            return self.sign_in_token(name, workspace_root, account)
 
         def allowed(name: str) -> set[str]:
             from engine.plugin_api import PluginMisuse
@@ -855,7 +865,7 @@ class PluginHost:
 
             if name not in own_sign_ins:
                 raise PluginMisuse(f"{name} isn't a sign-in this plugin registers")
-            return granted(keys, self.registrars[plugin].sign_ins[name])
+            return granted(keys, self.registrars[plugin].sign_ins[name], account)
 
         def keep_secret(name: str, value: str) -> None:
             import os
@@ -877,15 +887,28 @@ class PluginHost:
             keep_secret=keep_secret if declared else None,
             access_token=token if own_sign_ins else None,
             granted=allowed if own_sign_ins else None,
+            account=account or self._only_account(plugin, own_sign_ins, keys),
         )
 
-    def poll_connector(self, connector: Any, settings: Any, state: dict[str, Any], context: Any) -> Any:
-        """Read a plugin's connector: its ConnectorError passes through; anything else is contained like a job."""
+    def _only_account(self, plugin: str, own_sign_ins: set[str], keys: Path) -> str | None:
+        """The address of the one account signed in to the plugin's sign-ins, when there is exactly one."""
+        from engine.sign_in import list_accounts
+
+        found = {
+            a.address for name in own_sign_ins for a in list_accounts(keys, self.registrars[plugin].sign_ins[name])
+        }
+        return next(iter(found)) if len(found) == 1 and None not in found else None
+
+    def poll_connector(
+        self, connector: Any, settings: Any, state: dict[str, Any], context: Any, account: str | None = None
+    ) -> Any:
+        """Read a plugin's connector, as the source's account when it names one: its ConnectorError passes through;
+        anything else is contained like a job."""
         from engine.connectors import ConnectorError, checked_poll
 
         plugin = connector.name.split("/", 1)[0]
         where = f"connector {connector.name}"
-        context = self.connector_context(plugin, context.workspace_root)
+        context = self.connector_context(plugin, context.workspace_root, account)
         try:
             poll = checked_poll(connector.poll(settings, deepcopy(state), context))
         except ConnectorError:

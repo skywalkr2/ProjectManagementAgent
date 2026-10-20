@@ -2488,6 +2488,20 @@ private repository; the core signs in"). The mechanism is generic: an add-on dec
   started is kept on this computer; a sign-in made before its add-on declared any gets them at the next start.
 - **"Not reading".** If the person later removed the sources, the Sign-ins row says what it is not reading and offers **Start
   reading**, which adds them again with one click.
+- **Several accounts of one service at once** (roadmap wave 5, P18). When the add-on names the signed-in
+  account (the `account` function), the sign-in row lists each account by its address with **Sign out** on each, and **Add
+  another account** starts the same flow and keeps the new account beside the others. Tokens are kept per account, one file for
+  each (`sign-in-<name>--<key>.json`, the key a short hash of the address, readable by its owner only); a sign-in made before
+  accounts existed is read as the first account and moved to its own file on first read, or stays as one unnamed account when
+  its tokens never said whose they were. The same address again is the same account: signing in replaces its tokens. A source
+  of such an add-on has an `account` setting (4.5), a list of the accounts signed in: the only one when there is one, a choice
+  the source form requires when there are several; when a second account is signed in, sources that named none keep the first
+  account, and the sources the sign-in starts are started for the new account. The add-on's connector needs no change:
+  `context.access_token(name)` gives the token of the source's own account, and `context.account` its address (plugin API
+  0.3.82). Signing one account out forgets only its tokens: the sources reading with it fail as `auth` and wait with the
+  existing "sign in again" line, which names the account; the other accounts' sources go on. *Built so far (B-5, P18):*
+  `tests/test_sign_in_accounts.py` and the account list in `web/src/components/SignIns.test.tsx` and the account choice in
+  `web/src/components/Sources.test.tsx`.
 
 ## 6.28 Live updates
 

@@ -213,6 +213,9 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   - `first_run_days` (14, 1 to 365): with `intake`, for mail, how many days back the first read looks; older mail isn't
     read and Today says "Not looked at before <date>". Any other kind of source is taken in whole;
   - `report_removed` (true): hand in an item that disappeared from a complete listing;
+  - `account` (empty): for a source of an add-on that signs in as the person, which signed-in account it reads, by its
+    address (6.27). Empty reads the only account signed in; with several signed in, a source says which. The source form shows
+    it as a list of the accounts signed in;
   - `data_level` (open, internal or restricted; empty): how sensitive its items are, so they go only to AI accounts allowed
     that level. Empty: the level for its kind of source (`connector_data_levels`, below), else `default_data_level`;
   - `settings`: the connector's own settings, checked against the connector's schema (a folder's path, a mail folder and

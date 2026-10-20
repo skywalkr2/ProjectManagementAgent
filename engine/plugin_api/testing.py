@@ -18,7 +18,8 @@ headers and body (text, and `form` / `json()` parsed). A `Reply()` with neither 
 answer `Reply(json={})` for a service that answers an empty JSON object. Only hosts in `network` are reached, over
 HTTPS, as in the app. `secrets` answers `context.secret(name)` and records `context.keep_secret`; `tokens` answers
 `context.access_token(name)`, and a sign-in missing from it raises `ConnectorError("auth")` as an expired sign-in
-does; `granted` answers `context.granted(name)` with each sign-in's allowed scopes (left out, `context.granted` is
+does; `account` is what `context.account` says, the address of the account the source reads with (left out, None);
+`granted` answers `context.granted(name)` with each sign-in's allowed scopes (left out, `context.granted` is
 None, as for a connector of a plugin with no sign-ins). `read` runs `poll` and checks its answer the way the
 watcher does.
 """
@@ -95,6 +96,7 @@ def connector_context(
     secrets: dict[str, str] | None = None,
     tokens: dict[str, str] | None = None,
     granted: dict[str, set[str]] | None = None,
+    account: str | None = None,
     workspace_root: Path | str = ".",
 ) -> ConnectorContext:
     """A connector's context whose web client is answered by `service`. `kept` secrets land in `secrets`."""
@@ -134,6 +136,7 @@ def connector_context(
         keep_secret=kept.__setitem__,
         access_token=access_token,
         granted=(lambda name: set(allowed.get(name, set()))) if granted is not None else None,
+        account=account,
     )
 
 

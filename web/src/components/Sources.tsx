@@ -262,6 +262,7 @@ function SourceRow(props: {
     source.connector_label || t("sources.kind_none"),
     source.read_at && source.items > 0 ? tn("sources.items", source.items) : "",
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
+    ...(source.account ? [t("sources.reads_account", { account: source.account })] : []),
   ].filter(Boolean);
   const schedule = [
     source.enabled ? tn("sources.read_every", source.every_minutes) : t("sources.off"),
@@ -373,6 +374,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [every, setEvery] = useState(String(source?.every_minutes ?? 60));
   const [project, setProject] = useState("");
   const [author, setAuthor] = useState(source?.author ?? "");
+  const [account, setAccount] = useState(source?.account ?? "");
   const [edits, setEdits] = useState<Record<string, Draft>>({});
   const [pasted, setPasted] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -436,7 +438,13 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
 
   const everyOptions = [...new Set([...EVERY_CHOICES, Number(every)])].filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
   const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
-  const ready = kind !== undefined && !busy && bad.length === 0 && opened !== null;
+  // A kind from an add-on that signs in as the person has a list of accounts to read: the only one is chosen already,
+  // and with several one must be chosen. The source's own account stays in the list when it was signed out since.
+  const accountList = kind?.accounts ?? null;
+  const accountChoices = accountList ? [...new Set([...(accountList ?? []), ...(account ? [account] : [])])] : [];
+  const accountChosen = accountList === null ? "" : account || (accountList.length === 1 ? accountList[0] : "");
+  const accountMissing = accountList !== null && accountList.length > 1 && accountChosen === "";
+  const ready = kind !== undefined && !busy && bad.length === 0 && opened !== null && !accountMissing;
 
   const submit = async () => {
     if (!ready || !kind || opened === null) return;
@@ -453,6 +461,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           every_minutes: minutes,
           project: project || null,
           author: author || null,
+          ...(accountList !== null && accountChosen ? { account: accountChosen } : {}),
           settings: nest(sent),
           ...(Object.keys(typed).length > 0 ? { secrets: typed } : {}),
           fingerprint: fp,
@@ -463,6 +472,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           ...(name ? { label: name } : {}),
           every_minutes: minutes,
           author: author || null,
+          ...(accountList !== null && accountChosen ? { account: accountChosen } : {}),
           ...(items.length > 0 ? { settings: nest(sent) } : {}),
           ...(Object.keys(typed).length > 0 ? { secrets: typed } : {}),
           fingerprint: fp,
@@ -587,6 +597,27 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+          {accountList !== null && (
+            <div className="field">
+              <label htmlFor={`${base}-account`}>{t("sources.field.account")}</label>
+              <select
+                id={`${base}-account`}
+                value={accountChosen}
+                aria-describedby={`${base}-account-hint`}
+                onChange={(e) => setAccount(e.target.value)}
+              >
+                {accountChosen === "" && <option value="">{t("sources.field.choose_account")}</option>}
+                {accountChoices.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+              <p className="hint" id={`${base}-account-hint`}>
+                {t("sources.field.account_hint")}
+              </p>
             </div>
           )}
           {(authors.data?.length ?? 0) > 0 && (

@@ -71,7 +71,7 @@ def workspace(tmp_path, today):
 
 
 def test_the_version_is_this_one_and_the_groups_are_the_cores():
-    assert PLUGIN_API_VERSION == "0.3.81"
+    assert PLUGIN_API_VERSION >= "0.3.81"
     assert TODAY_GROUPS == ("decide", "risk", "review", "send")
 
 

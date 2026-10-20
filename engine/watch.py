@@ -213,7 +213,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
             first = err.errors()[0]
             where = ".".join(str(p) for p in first["loc"]) or "settings"
             raise ConnectorError("no_access", f"its settings don't fit: {where}: {first['msg']}") from None
-        poll = _poll(store, connector, settings, state, ws, cfg, now)
+        poll = _poll(store, connector, settings, state, ws, cfg, now, source.account)
     except ConnectorError as err:
         outcome = {"offline": "offline", "throttled": "throttled"}.get(err.kind, "failed")
         wait = err.retry_after if err.retry_after is not None else source.every_minutes * 60
@@ -277,7 +277,14 @@ def _after_mail(ws: Any, store: Any, cfg: Any, now: datetime) -> None:
 
 
 def _poll(
-    store: Any, connector: Connector, settings: Any, state: dict[str, Any], ws: Any, cfg: Any, now: datetime
+    store: Any,
+    connector: Connector,
+    settings: Any,
+    state: dict[str, Any],
+    ws: Any,
+    cfg: Any,
+    now: datetime,
+    account: str | None = None,
 ) -> Any:
     context = ConnectorContext(
         workspace_root=ws.root,
@@ -287,7 +294,7 @@ def _poll(
     )
     if "/" not in connector.name:
         return connector.poll(settings, state, context)
-    return store.plugins.poll_connector(connector, settings, state, context)
+    return store.plugins.poll_connector(connector, settings, state, context, account)
 
 
 def is_recent(details: dict[str, Any], changed_at: str | None, now: datetime, window: timedelta) -> bool:

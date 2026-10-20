@@ -1037,6 +1037,15 @@ yet follow, that it is *designed*, with its phase.
 | A series page (7.14, answer 30) | The details had no "usually with" | The people on more than `ui.series.usually_with_share` (0.5) of the meetings whose guest lists are known, once at least `usually_with_min_meetings` (2) are known, at most `usually_with_max` (6); calendar entries' attendees resolved to people, the person themselves, a declined answer and a called-off meeting left out. Built: `tests/test_series_page.py`, `web/src/components/SeriesPage.test.tsx` |
 | Settings (4.0) | | `ui.series` with the three keys above, a description and default each, and demo values in both workspaces |
 
+## 116. Several accounts of one service at once (2026-10-20)
+
+| Where | Before | Now |
+|---|---|---|
+| Sign-ins (6.27) | One set of tokens per sign-in, so a second Sign in replaced the first account | One set of tokens per account, each known by the address the add-on names it with (`sign-in-<name>--<key>.json`, 0600). The old single file is the first account and is moved to its own file on first read (or stays as one unnamed account when it never named itself). The same address twice is one account |
+| Sign-ins row (7.9) | One account line and one Sign out | Each account by its address with its own Sign out, and "Add another account" (the same flow, the new account kept beside the others). Signing one account out forgets only its tokens and withdraws only its access |
+| Sources (4.5, 6.2) | A source of a signing-in add-on read the one account | A core setting `account` on each source, a list of the accounts signed in: the only one by default, required to choose with several. Sources made before a second account keep the first account; the sources a sign-in starts are started for the account it just added, once per account |
+| Plugin API (0.3.82) | `context.access_token(name)` gave the sign-in's one token | It gives the token of the source's own account, so connectors change nothing; `context.account` is its address; the test kit's `connector_context(account=...)` sets it. Signing an account out makes only its sources wait, with the existing "sign in again" line naming it |
+
 ## 115. Add-on keys and the backup key typed on the screen (2026-10-19)
 
 | Where | Before | Now |

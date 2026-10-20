@@ -7,7 +7,8 @@ starts it from the screens; the core opens the service's page, receives the answ
 keeps the tokens on this computer, beside the plugin's other kept secrets, never in the settings files or the export.
 A plugin's code asks for a current access token with `context.access_token(name)`; the core renews it when it is
 about to run out, and a sign-in that can't be renewed reads as an `auth` failure, so the person is asked to sign in
-again.
+again. A sign-in may hold several accounts of the service at once, each with its own tokens, known by its address; a
+source reads with the account it names.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -34,11 +36,14 @@ CALLBACK_PATH = "/api/sign-ins/callback"
 
 class SignInError(Exception):
     """A sign-in can't start, finish or be renewed; the message says why in plain words. `refused`: the service
-    refused to renew it just now, so the person has to sign in again."""
+    refused to renew it just now, so the person has to sign in again. `ambiguous`: several accounts are signed in and
+    none was chosen. `account`: the address of the account it is about, when it is about one."""
 
-    def __init__(self, message: str, refused: bool = False):
+    def __init__(self, message: str, refused: bool = False, ambiguous: bool = False, account: str | None = None):
         super().__init__(message)
         self.refused = refused
+        self.ambiguous = ambiguous
+        self.account = account
 
 
 @dataclass(frozen=True)
@@ -250,50 +255,160 @@ def _tokens(
 
 
 # ---- tokens kept on this computer -----------------------------------------------------------------------------------
+#
+# One file of tokens per account of a sign-in: `sign-in-<name>--<key>.json`, the key a short hash of the account's
+# address (a file name that is safe on every system, and the same address is always the same account). A sign-in made
+# before accounts existed is one file with no key: when the tokens say whose they are it is moved to its account's file
+# on first read; when they don't, it stays as the one account that has no address.
+
+UNNAMED = "unnamed"  # the key of an account whose address isn't known: the file with no key in its name
+_KEYED = re.compile(r"--([0-9a-f]{16})\.json$")
 
 
-def _path(keys: Path, sign_in: SignIn) -> Path:
-    return keys / ("sign-in-" + sign_in.name.split("/", 1)[1] + ".json")
+@dataclass(frozen=True)
+class Account:
+    """One account signed in to a sign-in: its key (see `account_key`), its address (None when it was never read) and
+    its tokens."""
+
+    key: str
+    address: str | None
+    tokens: dict[str, Any]
 
 
-def keep(keys: Path, sign_in: SignIn, tokens: dict[str, Any]) -> None:
-    keys.mkdir(parents=True, exist_ok=True)
-    os.chmod(keys, 0o700)
-    path = _path(keys, sign_in)
-    write_whole(path, json.dumps(tokens), mode=0o600)
+def account_key(address: str) -> str:
+    """The short, file-safe key of an account: a hash of its address, in any case (one address is one account)."""
+    return hashlib.sha256(" ".join(address.split()).lower().encode()).hexdigest()[:16]
 
 
-def kept(keys: Path, sign_in: SignIn) -> dict[str, Any] | None:
+def _base(sign_in: SignIn) -> str:
+    return "sign-in-" + sign_in.name.split("/", 1)[1]
+
+
+def _path(keys: Path, sign_in: SignIn, key: str = UNNAMED) -> Path:
+    return keys / (_base(sign_in) + ".json" if key == UNNAMED else f"{_base(sign_in)}--{key}.json")
+
+
+def _read(path: Path) -> dict[str, Any] | None:
     try:
-        data = json.loads(_path(keys, sign_in).read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     return data if isinstance(data, dict) and data.get("access_token") else None
 
 
-def forget(keys: Path, sign_in: SignIn) -> bool:
-    path = _path(keys, sign_in)
-    if path.exists():
-        path.unlink()
-        return True
-    return False
+def _migrate(keys: Path, sign_in: SignIn) -> None:
+    """Move a sign-in made before accounts existed to its account's file, when its tokens name the account. An account
+    already kept under its own file wins over the old copy."""
+    old = _path(keys, sign_in)
+    tokens = _read(old)
+    address = tokens.get("account") if tokens else None
+    if not isinstance(address, str) or not address.strip():
+        return
+    target = _path(keys, sign_in, account_key(address))
+    if not target.exists():
+        write_whole(target, json.dumps(tokens), mode=0o600)
+    old.unlink(missing_ok=True)
+
+
+def list_accounts(keys: Path, sign_in: SignIn) -> list[Account]:
+    """The accounts signed in (or that need signing in again), the one signed in first first."""
+    _migrate(keys, sign_in)
+    found = []
+    candidates = [(UNNAMED, _path(keys, sign_in))] + sorted(
+        (m.group(1), p) for p in keys.glob(_base(sign_in) + "--*.json") if (m := _KEYED.search(p.name))
+    )
+    for key, path in candidates:
+        tokens = _read(path)
+        if tokens is not None:
+            address = tokens.get("account")
+            found.append(Account(key, address if isinstance(address, str) and address else None, tokens))
+    return sorted(found, key=lambda a: (float(a.tokens.get("signed_in_at") or 0), a.key))
+
+
+def _find(keys: Path, sign_in: SignIn, account: str | None) -> Account | None:
+    """The account with this address, or (no address given) the first one."""
+    accounts = list_accounts(keys, sign_in)
+    if account is None:
+        return accounts[0] if accounts else None
+    wanted = account_key(account)
+    return next((a for a in accounts if a.address and account_key(a.address) == wanted), None)
+
+
+def keep(keys: Path, sign_in: SignIn, tokens: dict[str, Any], account: str | None = None) -> None:
+    """Keep the tokens of one account: the address in `account` or in the tokens' own `account`; with neither, the
+    account that has no address. Keeping an address again replaces its tokens (one address is one account)."""
+    keys.mkdir(parents=True, exist_ok=True)
+    os.chmod(keys, 0o700)
+    address = account or tokens.get("account")
+    if isinstance(address, str) and address.strip():
+        tokens = {**tokens, "account": address}
+        path = _path(keys, sign_in, account_key(address))
+        # An account kept before its address could be read is this sign-in's earlier account, not a second one.
+        _path(keys, sign_in).unlink(missing_ok=True)
+    else:
+        path = _path(keys, sign_in)
+    write_whole(path, json.dumps(tokens), mode=0o600)
+
+
+def kept(keys: Path, sign_in: SignIn, account: str | None = None) -> dict[str, Any] | None:
+    """The tokens of the account with this address, or of the first account when none is named."""
+    found = _find(keys, sign_in, account)
+    return found.tokens if found else None
+
+
+def forget(keys: Path, sign_in: SignIn, key: str | None = None) -> bool:
+    """Forget one account's tokens by its key, or all of the sign-in's when no key is given. True when any was kept."""
+    _migrate(keys, sign_in)
+    gone = False
+    for found in list_accounts(keys, sign_in):
+        if key is None or found.key == key:
+            _path(keys, sign_in, found.key).unlink(missing_ok=True)
+            gone = True
+    return gone
+
+
+def _named(sign_in: SignIn, address: str | None) -> str:
+    return f"{sign_in.label} ({address})" if address else sign_in.label
+
+
+def choose(keys: Path, sign_in: SignIn, account: str | None) -> Account:
+    """The account a read uses: the one with this address, or, when none is named, the only one signed in. Raises
+    SignInError when the person needs to sign in (that account, or at all) or must choose between several."""
+    if account is not None:
+        found = _find(keys, sign_in, account)
+        if found is None:
+            raise SignInError(f"{account} isn't signed in to {sign_in.label}. Sign in again.", account=account)
+        return found
+    accounts = list_accounts(keys, sign_in)
+    if not accounts:
+        raise SignInError(f"Sign in to {sign_in.label} first.")
+    if len(accounts) > 1:
+        raise SignInError(
+            f"More than one account is signed in to {sign_in.label}: choose which one this reads.", ambiguous=True
+        )
+    return accounts[0]
 
 
 def access_token(
-    keys: Path, sign_in: SignIn, web: Any, client_id: str | None, client_secret: str | None, now: float | None = None
+    keys: Path,
+    sign_in: SignIn,
+    web: Any,
+    client_id: str | None,
+    client_secret: str | None,
+    now: float | None = None,
+    account: str | None = None,
 ) -> str:
-    """A current access token, renewed first when it is about to run out. Raises SignInError when the person needs to
-    sign in (again)."""
+    """A current access token for one account (the only one signed in, when none is named), renewed first when it is
+    about to run out. Raises SignInError when the person needs to sign in (again)."""
     now = time.time() if now is None else now
-    tokens = kept(keys, sign_in)
-    if tokens is None:
-        raise SignInError(f"Sign in to {sign_in.label} first.")
+    chosen = choose(keys, sign_in, account)
+    tokens, address = chosen.tokens, chosen.address
     if tokens.get("refused"):
-        raise SignInError(f"The sign-in to {sign_in.label} was withdrawn. Sign in again.")
+        raise SignInError(f"The sign-in to {_named(sign_in, address)} was withdrawn. Sign in again.", account=address)
     if float(tokens.get("expires_at") or 0) - now > RENEW_SECONDS:
         return tokens["access_token"]
     if not tokens.get("refresh_token") or not client_id:
-        raise SignInError(f"The sign-in to {sign_in.label} ran out. Sign in again.")
+        raise SignInError(f"The sign-in to {_named(sign_in, address)} ran out. Sign in again.", account=address)
     form = {
         "grant_type": "refresh_token",
         "refresh_token": tokens["refresh_token"],
@@ -312,31 +427,46 @@ def access_token(
     except (ConnectorError, SignInError) as err:
         if isinstance(err, ConnectorError) and err.kind not in ("auth", "no_access"):
             raise  # the service is failing or out of reach: try again later, the sign-in still stands
-        keep(keys, sign_in, {**tokens, "refused": True})
-        raise SignInError(f"The sign-in to {sign_in.label} was withdrawn. Sign in again.", refused=True) from None
+        keep(keys, sign_in, {**tokens, "refused": True}, address)
+        raise SignInError(
+            f"The sign-in to {_named(sign_in, address)} was withdrawn. Sign in again.", refused=True, account=address
+        ) from None
     renewed["signed_in_at"] = tokens.get("signed_in_at")
     renewed["account"] = tokens.get("account")
     renewed["scope"] = renewed.get("scope") or tokens.get("scope")
-    keep(keys, sign_in, renewed)
+    keep(keys, sign_in, renewed, address)
     return renewed["access_token"]
 
 
-def status(keys: Path, sign_in: SignIn, now: float | None = None) -> str:
-    """ "signed_in", "expired" (and can't be renewed) or "signed_out"."""
+def account_status(account: Account, now: float | None = None) -> str:
+    """ "signed_in", or "expired" when the account can't be renewed and the person has to sign in again."""
     now = time.time() if now is None else now
-    tokens = kept(keys, sign_in)
-    if tokens is None:
-        return "signed_out"
+    tokens = account.tokens
     if tokens.get("refused") or (float(tokens.get("expires_at") or 0) <= now and not tokens.get("refresh_token")):
         return "expired"
     return "signed_in"
 
 
-def granted(keys: Path, sign_in: SignIn) -> set[str]:
-    """The scopes the person allowed: what the service said it granted, or everything asked when it didn't say."""
-    tokens = kept(keys, sign_in)
-    if tokens is None:
-        return set()
+def status(keys: Path, sign_in: SignIn, now: float | None = None, account: str | None = None) -> str:
+    """ "signed_in", "expired" (and can't be renewed) or "signed_out". For one account (by address); with none named,
+    for the sign-in: signed in when any account is, else expired when any account needs signing in again."""
+    now = time.time() if now is None else now
+    if account is not None:
+        found = _find(keys, sign_in, account)
+        return "signed_out" if found is None else account_status(found, now)
+    states = {account_status(a, now) for a in list_accounts(keys, sign_in)}
+    return "signed_in" if "signed_in" in states else ("expired" if states else "signed_out")
+
+
+def granted(keys: Path, sign_in: SignIn, account: str | None = None) -> set[str]:
+    """The scopes the person allowed: what the service said it granted, or everything asked when it didn't say. For
+    one account; with none named, the first."""
+    tokens = kept(keys, sign_in, account)
+    return set() if tokens is None else allowed_scopes(sign_in, tokens)
+
+
+def allowed_scopes(sign_in: SignIn, tokens: dict[str, Any]) -> set[str]:
+    """The scopes one account's tokens carry: what the service said, or everything asked when it didn't say."""
     scope = tokens.get("scope")
     return set(str(scope).split()) if scope else set(sign_in.scopes)
 

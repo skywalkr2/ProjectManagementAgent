@@ -3110,6 +3110,9 @@ class WatchSourceView(BaseModel):
     every_minutes: int
     author: str | None = Field(None, description="The person or team whose work all it holds is, as an id.")
     author_name: str | None = Field(None, description="Their name, for showing; empty when none is set or it is gone.")
+    account: str | None = Field(
+        None, description="For a source of an add-on that signs in as you: the account it reads, by its address."
+    )
     items: int = Field(description="Items it held at the last read.")
     last: WatchRunView | None = None
     read_at: str | None = Field(
@@ -3367,6 +3370,19 @@ class FingerprintIn(BaseModel):
     fingerprint: str
 
 
+class SignInAccount(BaseModel):
+    """One account signed in to a sign-in."""
+
+    key: str = Field(description="Its short key, for DELETE /api/sign-ins/{name}?account={key}.")
+    address: str | None = Field(None, description="The account's address, when the add-on can name it.")
+    status: Literal["signed_in", "expired"] = Field(
+        description="Expired: it can't be renewed, so the person signs in again."
+    )
+    missing: list[str] = Field(
+        default_factory=list, description="Scopes asked for that the person didn't allow for this account."
+    )
+
+
 class SignInView(BaseModel):
     name: str
     label: str = Field(description="What to call the service's sign-in on screen.")
@@ -3376,7 +3392,17 @@ class SignInView(BaseModel):
     allows: list[ScreenText] = Field(
         default_factory=list, description="What the person is asked to allow, in plain words."
     )
-    account: str | None = Field(None, description="The signed-in account, when the add-on can name it.")
+    account: str | None = Field(None, description="The first signed-in account, when the add-on can name it.")
+    accounts: list[SignInAccount] = Field(
+        default_factory=list,
+        description="Every account signed in (or needing to sign in again), the first signed in first. Signing out "
+        "one is DELETE /api/sign-ins/{name}?account={key}; adding another is starting the sign-in again.",
+    )
+    several: bool = Field(
+        False,
+        description="The add-on names its accounts, so the person can sign in to several at once; otherwise a new "
+        "sign-in replaces the old one.",
+    )
     missing: list[str] = Field(
         default_factory=list, description="Scopes asked for that the person didn't allow, while signed in."
     )
@@ -3693,6 +3719,11 @@ class WatchKindView(BaseModel):
     name: str
     label: str
     plugin: str | None = Field(None, description="The add-on it comes from; None for the app's own.")
+    accounts: list[str] | None = Field(
+        None,
+        description="For a kind from an add-on that signs in as you: the addresses of the accounts signed in, to pick "
+        "from (a source says which it reads); None for a kind with no account to choose.",
+    )
     first_run: Literal["intake", "baseline", "recent", "all"] = Field(
         "intake",
         description="What the first read of a source of this kind added here does: intake takes it in quietly (one "
@@ -3710,6 +3741,11 @@ class WatchSourceIn(BaseModel):
     every_minutes: int = Field(60, ge=5)
     project: str | None = None
     author: str | None = Field(None, description="A person's or team's id, from GET /api/watch/authors.")
+    account: str | None = Field(
+        None,
+        description="For a kind with accounts (GET /api/watch/kinds): the address of the signed-in account it reads. "
+        "Required when several are signed in; the only one is used when it is left out.",
+    )
     settings: dict[str, Any] = Field(default_factory=dict, description="Its settings, by field (nested as objects).")
     secrets: dict[str, str] = Field(
         default_factory=dict,
@@ -3728,6 +3764,11 @@ class WatchSourceChange(BaseModel):
     enabled: bool | None = None
     author: str | None = Field(
         None, description="A person's or team's id, from GET /api/watch/authors; empty, when sent, clears it."
+    )
+    account: str | None = Field(
+        None,
+        description="The address of the signed-in account it reads (GET /api/watch/kinds); empty, when sent, goes "
+        "back to the only account, and is refused while several are signed in.",
     )
     settings: dict[str, Any] | None = None
     secrets: dict[str, str] = Field(
