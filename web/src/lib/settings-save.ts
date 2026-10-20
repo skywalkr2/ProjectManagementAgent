@@ -23,15 +23,20 @@ export const knownFingerprint = (client: QueryClient, loaded?: string): string |
 export function useAfterSave() {
   const client = useQueryClient();
   const { push } = useToasts();
-  const { t, has } = useWords();
+  const { t, tn, has } = useWords();
   const restart = useRestart();
   return useCallback(
     (saved: S["SettingsSaved"], opts: { message?: string } = {}): Promise<void> => {
       rememberFingerprint(client, saved.fingerprint);
       if (saved.needs_restart) restart.offer();
       const refreshed = client.invalidateQueries();
+      // Removing a source or an account also removes the passwords and keys kept for it, once no Undo needs them.
+      const going = saved.kept_secrets_going ?? 0;
+      const minutes = saved.kept_secrets_undo_minutes ?? 0;
+      const secrets = going === 0 ? "" : minutes > 0 ? tn("kept_secrets.going", going, { minutes }) : tn("kept_secrets.gone", going);
+      const said = (message: string) => (secrets ? `${message} ${secrets}` : message);
       if (!saved.changes.length) {
-        push({ message: opts.message ?? t("settings.nothing_changed") });
+        push({ message: said(opts.message ?? t("settings.nothing_changed")) });
         return refreshed;
       }
       const known = client.getQueryData<S["SettingsView"]>(["settings"])?.items ?? [];
@@ -43,7 +48,7 @@ export function useAfterSave() {
       const lines = saved.changes.slice(0, SHOWN).map(line);
       if (saved.changes.length > SHOWN) lines.push(t("settings.saved_more", { n: saved.changes.length - SHOWN }));
       push({
-        message: opts.message ?? t("settings.saved", { changes: lines.join("; ") }),
+        message: said(opts.message ?? t("settings.saved", { changes: lines.join("; ") })),
         undo: async () => {
           // Saves made since then moved the fingerprint on; a change made elsewhere still gets the refusal.
           const undone = await api.saveSettings(undoBody(saved.changes, knownFingerprint(client, saved.fingerprint) ?? saved.fingerprint));
@@ -54,7 +59,7 @@ export function useAfterSave() {
       });
       return refreshed;
     },
-    [client, push, t, has, restart],
+    [client, push, t, tn, has, restart],
   );
 }
 

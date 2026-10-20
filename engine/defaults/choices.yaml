@@ -1,0 +1,32 @@
+# Lists a setting that holds a short, known set of values offers instead of a box to type in. A value a workspace
+# already uses that isn't here is added to the list it sees, so the screen never shows a value that isn't the setting's.
+
+# How an action's owner can be shown ({full_name} and, optionally, {team}).
+owner_formats:
+  - "{full_name}"
+  - "{full_name} ({team})"
+  - "{team} ({full_name})"
+  - "{team}: {full_name}"
+
+# The kinds of file a person may add, by media type.
+media_types:
+  - application/pdf
+  - application/msword
+  - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+  - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+  - application/vnd.openxmlformats-officedocument.presentationml.presentation
+  - application/epub+zip
+  - application/json
+  - image/png
+  - image/jpeg
+  - image/gif
+  - image/webp
+  - image/svg+xml
+  - text/plain
+  - text/markdown
+  - text/csv
+  - text/html
+  - font/otf
+  - font/ttf
+  - font/woff
+  - font/woff2

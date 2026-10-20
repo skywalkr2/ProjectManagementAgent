@@ -37,3 +37,25 @@ test("a dialog is labelled by its heading, Esc closes it and focus returns to wh
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await waitFor(() => expect(screen.getByRole("button", { name: "Open" })).toHaveFocus());
 });
+
+test("a dialog opens with the cursor in its first field, or on its heading when it has none", async () => {
+  const { unmount } = render(
+    <ModalPanel titleId="a" onClose={() => undefined}>
+      <h2 id="a">Rename it</h2>
+      <button type="button">Help</button>
+      <label>
+        New name
+        <input />
+      </label>
+    </ModalPanel>,
+  );
+  await waitFor(() => expect(screen.getByLabelText("New name")).toHaveFocus());
+  unmount();
+  render(
+    <ModalPanel titleId="b" onClose={() => undefined}>
+      <h2 id="b">Short question</h2>
+      <button type="button">Yes</button>
+    </ModalPanel>,
+  );
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Short question" })).toHaveFocus());
+});

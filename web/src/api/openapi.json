@@ -3218,6 +3218,30 @@
             "title": "Fingerprint",
             "type": "string"
           },
+          "kept_secrets_going": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many passwords or keys kept on this computer go with what was just removed (a source or an account). They are removed once Undo can no longer need them; left out when nothing was kept for it.",
+            "title": "Kept Secrets Going"
+          },
+          "kept_secrets_undo_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many minutes they stay so Undo can bring them back (`storage.kept_secrets.undo_grace_minutes`); left out with the count.",
+            "title": "Kept Secrets Undo Minutes"
+          },
           "made": {
             "anyOf": [
               {
@@ -6059,6 +6083,19 @@
       "GenericRecordView": {
         "description": "Any shown record: its ordinary fields and the names of its long text fields (read those from /texts).",
         "properties": {
+          "changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the record was last written. An edit refused because it changed meanwhile says when.",
+            "title": "Changed At"
+          },
           "fields": {
             "additionalProperties": true,
             "title": "Fields",
@@ -9008,6 +9045,18 @@
             ],
             "description": "The name of what the op proposes to add, such as a project.",
             "title": "Name"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A line the person should read beside the op: for a project added from a link nothing set up can open, that it was not read.",
+            "title": "Note"
           },
           "owners": {
             "default": [],
@@ -15902,6 +15951,30 @@
             "title": "Fingerprint",
             "type": "string"
           },
+          "kept_secrets_going": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many passwords or keys kept on this computer go with what was just removed (a source or an account). They are removed once Undo can no longer need them; left out when nothing was kept for it.",
+            "title": "Kept Secrets Going"
+          },
+          "kept_secrets_undo_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many minutes they stay so Undo can bring them back (`storage.kept_secrets.undo_grace_minutes`); left out with the count.",
+            "title": "Kept Secrets Undo Minutes"
+          },
           "needs_restart": {
             "description": "These settings take effect after a restart. Nothing restarts until the person chooses to: ask them first, then POST /api/restart. False when the change is in use already (AI accounts are).",
             "title": "Needs Restart",
@@ -15918,6 +15991,19 @@
       },
       "SettingsView": {
         "properties": {
+          "changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the settings files were last written. A save refused because they changed meanwhile says when, so the person can see what changed underneath them.",
+            "title": "Changed At"
+          },
           "fingerprint": {
             "description": "Send it back with a save, so two saves never race.",
             "title": "Fingerprint",

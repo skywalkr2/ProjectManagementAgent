@@ -147,6 +147,9 @@ How to answer:
   the words that name it as the evidence, and file the rest of the answer with no project. It waits for the PM, who may add it, say it is part of an existing
   project, or say it is not a project at all. Never propose a project for a topic, a task, a product feature or a
   passing mention, and never when a project in the list already goes by that name.
+  Give the project's "status" only when the input states where it stands, and then quote the words that state it as the
+  evidence; a status nobody stated is left out and stays unknown, never "not started" or a guess. When the input gives
+  a link the project comes from, give it as "link"; the project is not filled in from what the link would say.
 - When the input says who runs, designs or only watches a project in the projects list now ("I'm running it now", "they
   want me to PM it", "I'm just keeping an eye on it"), propose it with "project.role": the project's id, the person
   (the PM's id for "I" and "me"), the "role" ("run", "design" or "watch") and the words that say it as the evidence. It

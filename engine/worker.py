@@ -9,7 +9,7 @@ import os
 import threading
 import time
 from collections.abc import Callable, Collection
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +50,7 @@ LIVE_KEYS = (
     "storage.backups.",
     "storage.export.every_minutes",
     "storage.sync.shared",
+    "storage.kept_secrets.",
     "storage.files.read_max_mb",
     "storage.files.read_max_chars",
     "watch.",
@@ -269,6 +270,7 @@ class Worker:
         self._measuring: threading.Thread | None = None
         self._swept_on: date | None = None
         self._rolled_on: date | None = None
+        self._secrets_swept_at: datetime | None = None
         self._catch_up_queued = False
         self._synced_at: int | None = -1
         self._said_no_git = False
@@ -516,6 +518,22 @@ class Worker:
             self.events.changed()
         return expired
 
+    def sweep_kept_secrets_if_due(self) -> list[str]:
+        """Every few minutes, remove the passwords and keys kept on this computer that nothing refers to any more and
+        no Undo can need (`storage.kept_secrets`, read as the files hold them now). Returns the names removed."""
+        from engine import kept_secrets
+        from engine.config import ConfigError, load_config
+
+        now = self.now()
+        if self._secrets_swept_at is not None and now - self._secrets_swept_at < timedelta(minutes=5):
+            return []
+        self._secrets_swept_at = now
+        try:
+            cfg = load_config(self.ws.config_dir, env=dict(os.environ))
+        except ConfigError:
+            cfg = self.cfg
+        return kept_secrets.sweep(self.ws, self.store, cfg, now)
+
     def roll_series_if_due(self) -> list[str]:
         """Once a day, move each open item on a series from an instance that has passed to the series' next one
         (design 6.7). Returns the ids of the items moved."""
@@ -759,6 +777,10 @@ class Worker:
                 self.sweep_proposals_if_due()
             except Exception:  # the sweep runs again the next time round; nothing here may stop the thread
                 log.exception("expiring old proposals failed")
+            try:
+                self.sweep_kept_secrets_if_due()
+            except Exception:  # the sweep runs again the next time round; nothing here may stop the thread
+                log.exception("removing old kept secrets failed")
             try:
                 self.roll_series_if_due()
             except Exception:  # the roll runs again the next time round; nothing here may stop the thread

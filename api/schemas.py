@@ -513,6 +513,11 @@ class OpMeta(BaseModel):
     stance: Literal["manage", "alongside", "report_to", "watch"] | None = Field(
         None, description="Who a person is to the user that the op sets (design 6.34)."
     )
+    note: str | None = Field(
+        None,
+        description="A line the person should read beside the op: for a project added from a link nothing set up can "
+        "open, that it was not read.",
+    )
 
 
 class OpView(BaseModel):
@@ -1661,6 +1666,10 @@ class GenericRecordView(BaseModel):
     origin: Origin | None = Field(
         None, description="For an action or a question: where it came from, for its link. Null for any other record."
     )
+    changed_at: datetime | None = Field(
+        None,
+        description="When the record was last written. An edit refused because it changed meanwhile says when.",
+    )
 
 
 class OutsideEditView(BaseModel):
@@ -2593,6 +2602,11 @@ class SettingItem(BaseModel):
 
 class SettingsView(BaseModel):
     fingerprint: str = Field(description="Send it back with a save, so two saves never race.")
+    changed_at: datetime | None = Field(
+        None,
+        description="When the settings files were last written. A save refused because they changed meanwhile says "
+        "when, so the person can see what changed underneath them.",
+    )
     items: list[SettingItem]
 
 
@@ -2618,6 +2632,16 @@ class SettingsSaved(BaseModel):
     needs_restart: bool = Field(
         description="These settings take effect after a restart. Nothing restarts until the person chooses to: ask "
         "them first, then POST /api/restart. False when the change is in use already (AI accounts are)."
+    )
+    kept_secrets_going: int | None = Field(
+        None,
+        description="How many passwords or keys kept on this computer go with what was just removed (a source or an "
+        "account). They are removed once Undo can no longer need them; left out when nothing was kept for it.",
+    )
+    kept_secrets_undo_minutes: int | None = Field(
+        None,
+        description="How many minutes they stay so Undo can bring them back "
+        "(`storage.kept_secrets.undo_grace_minutes`); left out with the count.",
     )
 
 

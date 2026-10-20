@@ -149,19 +149,38 @@ test("Discard this version is in the menu and sends no choices", async () => {
   expect(await screen.findByText("That version was discarded.")).toBeInTheDocument();
 });
 
-test("if the text changed meanwhile, the server's words and a hint to reload show, and Reload asks again", async () => {
+test("if the text changed meanwhile, it is read again at once: choices on passages that did not change are kept, and the rest are refreshed and listed", async () => {
   let reads = 0;
+  const posts: unknown[] = [];
   show({
-    [REVIEW]: () => review({}, { version: 7 + reads++ }),
-    "POST text-versions/V-2/accept": () => new Refuse(409, "the text changed since you opened it"),
+    [REVIEW]: () => {
+      reads += 1;
+      if (reads === 1) return review({}, { version: 7 });
+      const moved = review({}, { version: 8 });
+      moved.regions[0] = { ...moved.regions[0], pending: "A different opening." };
+      return moved;
+    },
+    "POST text-versions/V-2/accept": (body) => {
+      posts.push(body);
+      return posts.length === 1 ? new Refuse(409, "the text changed since you opened it") : { changeset: "CS-1" };
+    },
   });
   const { user, dialog } = await open();
+  // The person keeps the current text for both changes before saving.
+  const [first, second] = [within(dialog).getByRole("group", { name: /Change 1 of 2/ }), within(dialog).getByRole("group", { name: /Change 2 of 2/ })];
+  await user.click(within(first).getByRole("radio", { name: "Keep current" }));
+  await user.click(within(second).getByRole("radio", { name: "Keep current" }));
   await user.click(within(dialog).getByRole("button", { name: "Save my choices" }));
   const alert = await within(dialog).findByRole("alert");
   expect(alert).toHaveTextContent("the text changed since you opened it");
-  expect(alert).toHaveTextContent("Reload it before choosing");
-  expect(screen.getByRole("dialog")).toBeInTheDocument();
-  await user.click(within(alert).getByRole("button", { name: "Reload" }));
-  await waitFor(() => expect(within(dialog).queryByRole("alert")).toBeNull());
-  expect(reads).toBe(2);
+  expect(alert).toHaveTextContent("Your choices on passages that did not change are kept");
+  await waitFor(() => expect(reads).toBe(2));
+  const lines = await within(dialog).findByRole("status", { name: "Refreshed from what is saved now" });
+  expect(lines).toHaveTextContent("refreshed: Change 1 of 2 is now A different opening., changed elsewhere");
+  // Change 2 did not move, so the choice stays; change 1 moved, so it is back to the default for the person to look at.
+  expect(within(within(dialog).getByRole("group", { name: /Change 2 of 2/ })).getByRole("radio", { name: "Keep current" })).toBeChecked();
+  expect(within(within(dialog).getByRole("group", { name: /Change 1 of 2/ })).getByRole("radio", { name: "Accept" })).toBeChecked();
+  await user.click(within(dialog).getByRole("button", { name: "Save my choices" }));
+  await waitFor(() => expect(posts).toHaveLength(2));
+  expect(posts[1]).toEqual({ read_version: 8, choices: { r1: "accept", r2: "reject" } });
 });

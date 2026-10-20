@@ -332,6 +332,27 @@ test("a change made elsewhere since the screen opened is refused in plain words 
   expect(notes).toHaveValue("routine"); // what is saved
 });
 
+test("after the refusal what changed elsewhere is refreshed and listed with when, and the choice that was refused is not applied", async () => {
+  const user = userEvent.setup();
+  const first = start();
+  let moved = false;
+  const calls = server(first, {
+    "GET ai/routing": () => ({ ...first, kinds: first.kinds.map((k) => (moved && k.name === "sort-mail" ? { ...k, tier: "deep", custom: true } : k)) }),
+    "GET settings": () => ({ fingerprint: moved ? "fp-9" : "fp-1", changed_at: "2026-10-20T09:14:00Z", items: [] }),
+  });
+  renderApp(<AiRouting />);
+  const notes = await screen.findByLabelText(NOTES);
+  await user.click(notes);
+  moved = true;
+  await user.selectOptions(notes, "deep");
+  const lines = await screen.findByRole("status", { name: "Refreshed from what is saved now" });
+  expect(lines).toHaveTextContent(/refreshed: Sorting mail is now Harder work, changed elsewhere at .*\d/);
+  expect(lines).not.toHaveTextContent("Filing what you hand in");
+  await waitFor(() => expect(screen.getByLabelText("Sorting mail")).toHaveValue("deep"));
+  expect(notes).toHaveValue("routine");
+  expect(posted(calls)).toHaveLength(1);
+});
+
 test("the spending line says when the stronger model needs the person's go, from the amounts in the settings", async () => {
   server(start({ confirm_above_usd: 0.5, per_run_usd: 2 }));
   renderApp(<AiRouting />);

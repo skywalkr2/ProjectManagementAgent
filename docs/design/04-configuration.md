@@ -582,6 +582,11 @@ Built keys:
     can change the folder. When true, outside edits arrive as content, not as the person's own words (12.8).
   - `lease_stale_after_minutes` (10): how long after the other computer was last seen the workspace can be opened here
     without it closing first.
+- `kept_secrets`: how long passwords and keys typed on a screen are kept (4.24); both keys are live.
+  - `keep_days` (30): how many days an old password or key that nothing refers to any more is kept before it is removed (after
+    one is replaced, the old one is kept so Undo works). The backup key is never removed, because older backups need it.
+  - `undo_grace_minutes` (10; 0 removes at once): how long a password or key a save stopped using stays, so Undo can bring it
+    back; removing a source or an account removes the ones kept for it when this has passed.
 - `backups`: full backups to somewhere off this computer, **on their own** (decisions, 2026-10-11, "Backups run on their own;
   a missing backup folder is never created"):
   - `automatic` (true): a background thread makes a backup whenever one is due, including right after the computer wakes (it
@@ -832,6 +837,19 @@ the workspace's private folder, `<workspace>/.cockpit/`, which the workspace's g
 - where each outside program is found, per plugin tool (`.cockpit/tools.yaml`); two computers can differ;
 - which setup steps were skipped, the result of the last backup per target, and which sign-ins have already had their sources
   started.
+
+**Old kept secrets** (the designer's F13). Replacing a password or key keeps the old file beside the new one so Undo works,
+and nothing else used to remove it. Each secret the app keeps for a screen is listed in a small index beside the folder
+(`.cockpit/kept-secrets.json`: its name, what it was kept for, whether it is kept for ever); only what is listed is ever
+removed, so sign-in tokens, a plugin's own files and anything the person put there are never touched. A kept secret goes when
+no setting refers to it any more and it has gone unreferenced for `storage.kept_secrets.keep_days`, or at once when the
+source or account it was kept for was removed (the removal's toast says "Its saved password or key is deleted from this
+computer in 10 minutes; Undo until then brings it back"). It never goes while an Undo can still point at it: a save recorded in
+the last `undo_grace_minutes` that names it, before or after, keeps it, and a setting that refers to it again (an Undo, or a
+reference typed in) keeps it for good. The backup key is exempt. The worker sweeps every few minutes
+(`engine/kept_secrets.py`). *Built so far:* all of the above (`tests/test_kept_secrets_cleanup.py`,
+`web/src/components/Sources.test.tsx` (the removal line)). *Left:* a secret kept before this index existed isn't listed, so
+it is never swept; with `ui.toast_seconds` at 0 an Undo toast can outlast the grace.
 
 Each of these small files is written whole (a temporary file replaced over the old one), so a reader never finds half of
 one, and a change that reads, changes and writes one holds that file's lock, so changes made at the same moment (request

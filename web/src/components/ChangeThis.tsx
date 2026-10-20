@@ -161,7 +161,7 @@ export function RerouteForm(props: { q: { id: string }; onClose: () => void }) {
         if (e.key === "Escape") props.onClose();
       }}
     >
-      <PersonPicker label={t("question.reroute_label")} value={person} onChange={setPerson} suggested={[]} people={everyone} />
+      <PersonPicker label={t("question.reroute_label")} value={person} onChange={setPerson} suggested={[]} people={everyone} autoFocus />
       <Actions onClose={props.onClose} label={t("question.reroute_go")} disabled={!person} />
     </form>
   );

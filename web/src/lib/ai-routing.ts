@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { api, ApiError, type S } from "./api";
 import { problemText } from "./problem";
+import { changedTime, type Refreshed } from "./refreshed";
 import { readable } from "./records";
 import { knownFingerprint, rememberFingerprint, useAfterSave } from "./settings-save";
 import { useWords } from "./wording";
@@ -74,7 +75,48 @@ export function moved(rows: RuleRow[], index: number, step: -1 | 1): RuleRow[] {
   return next;
 }
 
-export type Result = { ok: true } | { ok: false; problem: string };
+/** The rules after a refusal because they changed elsewhere meanwhile: the rules saved now, except those the person took
+ * out, then the rows they added or changed. `old` is what the screen showed, `mine` what it held when they saved. */
+export function mergeRules(old: RuleRow[], mine: RuleRow[], now: RuleRow[]): RuleRow[] {
+  const key = (r: RuleRow) => JSON.stringify(r);
+  const was = new Set(old.map(key));
+  const kept = new Set(mine.map(key));
+  const taken = new Set(old.filter((r) => !kept.has(key(r))).map(key));
+  const here = new Set(now.map(key));
+  return [...now.filter((r) => !taken.has(key(r))), ...mine.filter((r) => !was.has(key(r)) && !here.has(key(r)))];
+}
+
+type T = (key: string, vars?: Record<string, string | number>) => string;
+
+/** What changed in the routing while the screen was open, in the words of its rows. */
+export function routingRefreshed(
+  before: Routing,
+  after: Routing,
+  t: T,
+  tn: (key: string, n: number) => string,
+  has: (key: string) => boolean,
+  tierName: (tier: string) => string,
+): Refreshed[] {
+  const lines: Refreshed[] = [];
+  for (const k of after.kinds) {
+    const was = before.kinds.find((x) => x.name === k.name);
+    if (was && was.tier !== k.tier) lines.push({ label: has(`ai_routing.kind.${k.name}`) ? t(`ai_routing.kind.${k.name}`) : k.label, value: tierName(k.tier) });
+  }
+  for (const tier of after.tiers) {
+    const was = before.tiers.find((x) => x.name === tier.name);
+    if (was && (was.escalate_to ?? "") !== (tier.escalate_to ?? "")) {
+      lines.push({ label: t("ai_routing.escalate_for", { work: tierName(tier.name) }), value: tier.escalate_to ? tierName(tier.escalate_to) : t("ai_routing.escalate.never") });
+    }
+  }
+  if (JSON.stringify(before.rules) !== JSON.stringify(after.rules)) lines.push({ label: t("ai_routing.rules"), value: tn("ai_routing.rules_now", after.rules.length) });
+  return lines;
+}
+
+/** Where the lines a refused save refreshed are kept for the screen to show, until the next save goes through. */
+export const ROUTING_REFRESHED = ["routing-refreshed"] as const;
+export type RoutingRefreshed = { lines: Refreshed[]; time: string };
+
+export type Result = { ok: true } | { ok: false; problem: string; stale?: { was: Routing | undefined; now: Routing } };
 
 /** Saves settings changes from this part, one at a time, each on the fingerprint the one before answered with. A save
  * made on an old fingerprint is refused in plain words and the newest fingerprint is adopted, so what the person typed
@@ -82,7 +124,8 @@ export type Result = { ok: true } | { ok: false; problem: string };
 export function useRoutingSave() {
   const client = useQueryClient();
   const afterSave = useAfterSave();
-  const { t } = useWords();
+  const { t, tn, has } = useWords();
+  const tierName = useTierName();
   const chain = useRef<Promise<unknown>>(Promise.resolve());
   return useCallback(
     (body: { changes?: Record<string, unknown>; reset?: string[] }, message: string): Promise<Result> => {
@@ -99,8 +142,11 @@ export function useRoutingSave() {
           if (err instanceof ApiError && err.status === 409) {
             const fresh = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
             rememberFingerprint(client, fresh.fingerprint);
-            void client.invalidateQueries({ queryKey: ["ai-routing"] });
-            return { ok: false, problem: t("settings.changed_since_opened") };
+            const was = client.getQueryData<Routing>(["ai-routing"]);
+            const now = await client.fetchQuery({ queryKey: ["ai-routing"], queryFn: api.aiRouting, staleTime: 0 });
+            // What the person didn't touch shows what is saved now, and each thing that moved is listed.
+            client.setQueryData<RoutingRefreshed>(ROUTING_REFRESHED, { lines: was ? routingRefreshed(was, now, t, tn, has, tierName) : [], time: changedTime(fresh) });
+            return { ok: false, problem: t("settings.changed_since_opened"), stale: { was, now } };
           }
           return { ok: false, problem: err instanceof ApiError && err.detail ? err.detail : problemText(err, t) };
         }
@@ -109,7 +155,7 @@ export function useRoutingSave() {
       chain.current = next;
       return next;
     },
-    [client, afterSave, t],
+    [client, afterSave, t, tn, has, tierName],
   );
 }
 

@@ -165,6 +165,14 @@ def fingerprint(config_dir: Path) -> str:
     return digest.hexdigest()
 
 
+def changed_at(config_dir: Path) -> datetime | None:
+    """When the config files the screens edit were last written (the newest of them), so a refused save can say when
+    what the person was looking at changed underneath them. None when there are no files."""
+    paths = [config_dir / f"{name}.yaml" for name in FILES] + sorted((config_dir / "plugins").glob("*.yaml"))
+    times = [p.stat().st_mtime for p in paths if p.exists()]
+    return datetime.fromtimestamp(max(times), UTC) if times else None
+
+
 def describe(
     cfg: Any, plugins: Any = None, config_dir: Path | None = None, live: dict[str, list[str]] | None = None
 ) -> list[Setting]:
@@ -244,7 +252,12 @@ def _walk(
         if list_name and (live or {}).get(list_name):
             named = (live or {})[list_name].copy
         if named is not None and (listed := named()):
-            kind, options = "choice", _with_current(listed, (values or {}).get(key))
+            if kind == "list":
+                # Several values from a known set are ticked, never typed; one already held stays on the list.
+                held = [v for v in ((values or {}).get(key) or []) if isinstance(v, str) and v not in listed]
+                options = [*listed, *held]
+            else:
+                kind, options = "choice", _with_current(listed, (values or {}).get(key))
         else:
             list_name = None
         switch = extra.get("enabled_by")
@@ -321,9 +334,53 @@ def _languages() -> list[str]:
     return [str(tag) for tag in data.get("languages") or []]
 
 
+DATE_FORMATS_FILE = Path(__file__).parent / "defaults" / "date_formats.yaml"
+
+
+def _date_formats_of(name: str) -> list[str]:
+    data = load_yaml(DATE_FORMATS_FILE.read_text(encoding="utf-8")) or {}
+    return [str(code) for code in data.get(name) or []]
+
+
+CHOICES_FILE = Path(__file__).parent / "defaults" / "choices.yaml"
+
+
+def _choices_of(name: str) -> list[str]:
+    data = load_yaml(CHOICES_FILE.read_text(encoding="utf-8")) or {}
+    return [str(value) for value in data.get(name) or []]
+
+
+def _owner_formats() -> list[str]:
+    """The ways an action's owner can be shown, from the shipped list."""
+    return _choices_of("owner_formats")
+
+
+def _media_types() -> list[str]:
+    """The kinds of file that can be allowed, by media type, from the shipped list."""
+    return _choices_of("media_types")
+
+
+def _date_formats() -> list[str]:
+    """The ways a date can be written (strftime codes), from the shipped list."""
+    return _date_formats_of("date_formats")
+
+
+def _date_time_formats() -> list[str]:
+    """The ways a date and time can be written (strftime codes), from the shipped list."""
+    return _date_formats_of("date_time_formats")
+
+
 #: Lists of choices a text setting can name (`json_schema_extra={"choices": ...}`), so the screens offer a list
 #: instead of a box to type in.
-CHOICE_LISTS = {"time_zones": _time_zones, "languages": _languages, "times_of_day": _times_of_day}
+CHOICE_LISTS = {
+    "time_zones": _time_zones,
+    "languages": _languages,
+    "times_of_day": _times_of_day,
+    "date_formats": _date_formats,
+    "date_time_formats": _date_time_formats,
+    "owner_formats": _owner_formats,
+    "media_types": _media_types,
+}
 
 
 def _source(dotted: str, sources: dict[str, str]) -> str:

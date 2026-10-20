@@ -35,6 +35,7 @@ class UserSettings(ConfigModel):
     person: str | None = Field(
         None,
         description="The PM's own person record id, e.g. PER-1. Their name and other names live on that record only.",
+        json_schema_extra={"choices": "people"},
     )
     timezone: str = Field(
         "UTC",
@@ -174,6 +175,7 @@ class WorkspaceFile(FileModel):
         "{full_name}",
         description='How an action owner is shown: {full_name} and, if you like, {team}, e.g. "{team} ({full_name})". '
         "An owner with no team is shown by the full name alone.",
+        json_schema_extra={"choices": "owner_formats"},
     )
     language: str = Field(
         "en-US",
@@ -325,7 +327,8 @@ class FileLimits(ConfigModel):
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         ],
-        description="Media types a file may have; a file kind can narrow this further.",
+        description="The kinds of file that may be added; a file kind can narrow this further.",
+        json_schema_extra={"choices": "media_types"},
     )
     read_max_mb: float = Field(
         25,
@@ -369,6 +372,25 @@ class SyncSettings(ConfigModel):
     )
 
 
+class KeptSecretSettings(ConfigModel):
+    keep_days: int = Field(
+        30,
+        ge=1,
+        le=3650,
+        description="How many days an old password or key that nothing refers to any more is kept on this computer "
+        "before it is removed (after one is replaced, the old one is kept so Undo works). Backup keys are never "
+        "removed, because older backups need them.",
+    )
+    undo_grace_minutes: int = Field(
+        10,
+        ge=0,
+        le=1440,
+        description="How many minutes after a change a password or key it stopped using stays on this computer, so "
+        "Undo can bring it back. Removing a source or an account removes the passwords and keys kept for it when this "
+        "time has passed; 0 removes them at once.",
+    )
+
+
 class StorageFile(FileModel):
     backend: Literal["sqlite"] = Field("sqlite", description="Where records live. Postgres comes later.")
     export: ExportSettings = Field(default_factory=ExportSettings, description="The readable export and its history.")
@@ -376,6 +398,9 @@ class StorageFile(FileModel):
     files: FileLimits = Field(default_factory=FileLimits, description="Limits on files people and programs add.")
     sync: SyncSettings = Field(
         default_factory=SyncSettings, description="Handing the workspace between computers through a synced folder."
+    )
+    kept_secrets: KeptSecretSettings = Field(
+        default_factory=KeptSecretSettings, description="How long passwords and keys typed on a screen are kept."
     )
 
 
@@ -593,7 +618,9 @@ class TaskSettings(ConfigModel):
 
 class RoleSettings(ConfigModel):
     tier: str | None = Field(
-        None, description="The tier for every kind of work in this role, unless tasks.<kind>.tier says otherwise."
+        None,
+        description="The tier for every kind of work in this role, unless tasks.<kind>.tier says otherwise.",
+        json_schema_extra={"choices": "tiers"},
     )
     same_account: bool = Field(
         False,
@@ -1303,6 +1330,11 @@ class MessageSettings(ConfigModel):
         description="Why an action that was added to another one is closed as dropped: {text} is the action it "
         "went into.",
     )
+    link_not_read: str = Field(
+        "Not read: nothing set up can open this link",
+        description="What a project added from a link is labeled when no source set up reads that address, so the "
+        "project is not filled in from the link's words alone.",
+    )
     part_of_meaning: str = Field(
         "A name for {project}.",
         description="What the glossary entry says when the person tells the assistant that words it took for a new "
@@ -1322,11 +1354,16 @@ class MessageSettings(ConfigModel):
         "You said this isn't a project",
         description="Why a proposed project is set aside when the person says the words aren't a project.",
     )
-    date_format: str = Field("%a, %b %d", description="How dates appear in messages (strftime codes).")
+    date_format: str = Field(
+        "%a, %b %d",
+        description="How dates appear in messages: pick one; each shows today's date written that way.",
+        json_schema_extra={"choices": "date_formats"},
+    )
     date_time_format: str = Field(
         "%a, %b %d, %Y, %H:%M",
-        description="How a date and time appear in the assistant's notes and other text it writes (strftime codes), "
-        "in your time zone.",
+        description="How a date and time appear in the assistant's notes and other text it writes, in your time "
+        "zone: pick one; each shows the present moment written that way.",
+        json_schema_extra={"choices": "date_time_formats"},
     )
 
 

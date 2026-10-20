@@ -3,6 +3,7 @@
 // losing it. Focus returns to what opened it when it closes.
 import { useId, useState, type ReactNode } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { useCursorRef } from "../lib/cursor";
 import { useWords } from "../lib/wording";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
@@ -24,6 +25,8 @@ export function Drawer(props: {
   const [guarding, setGuarding] = useState(false);
   // Each drawer has its own heading id, so one opened over another is named by its own title.
   const titleId = useId();
+  // The cursor starts in the drawer's first field, or on its heading when it has none (design 7.0).
+  const cursor = useCursorRef(titleId);
   const close = () => {
     setGuarding(false);
     props.onClose();
@@ -42,7 +45,7 @@ export function Drawer(props: {
       className={styles.overlay}
     >
       <Modal className={[styles.modal, props.wide ? styles.wide : ""].filter(Boolean).join(" ")} data-modal-open="">
-        <Dialog className={styles.dialog} aria-labelledby={titleId}>
+        <Dialog ref={cursor} className={styles.dialog} aria-labelledby={titleId}>
           <div className={styles.head}>
             <Heading slot="title" id={titleId} className={styles.title}>
               {props.title}

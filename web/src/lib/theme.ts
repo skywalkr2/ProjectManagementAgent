@@ -113,6 +113,17 @@ export function brandTokens(color: string): Record<string, string> | null {
   return tokens;
 }
 
+/** What the text on an accent color has to read against: white, else the near-black the app switches to (the better of
+ * the two), its contrast ratio, and whether that meets AA's 4.5 to 1. Null when the text isn't a `#rrggbb` color. */
+export function accentContrast(color: string): { text: "white" | "dark"; ratio: number; ok: boolean } | null {
+  if (!parseHex(color)) return null;
+  const white = contrast("#ffffff", color);
+  const dark = contrast(NEAR_BLACK, color);
+  const text = white >= dark ? "white" : "dark";
+  const ratio = Math.max(white, dark);
+  return { text, ratio, ok: ratio >= 4.5 };
+}
+
 const BRAND_NAMES = ["--brand-600", "--brand-700", "--brand-650", "--brand-50", "--brand-300", "--brand-200", "--brand-900", "--text-on-accent"];
 
 /** Sets the brand primitives on the page, or clears them when there is no (valid) brand color. */

@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { applyBrand, applyDensity, applyTheme, brandTokens, contrast, initAppearance, parseHex, setDensity, setTheme, useAppearance } from "./theme";
+import { accentContrast, applyBrand, applyDensity, applyTheme, brandTokens, contrast, initAppearance, parseHex, setDensity, setTheme, useAppearance } from "./theme";
 
 const root = () => document.documentElement;
 
@@ -117,4 +117,15 @@ test("blocked storage never breaks the page", () => {
   expect(root()).toHaveAttribute("data-theme", "light");
   expect(() => setTheme("dark")).not.toThrow();
   expect(root()).toHaveAttribute("data-theme", "dark");
+});
+
+test("the contrast of the text on an accent color is measured against white and the near-black the app switches to", () => {
+  expect(accentContrast("#4f46e5")).toMatchObject({ text: "white", ok: true });
+  // A light accent keeps its look and gets dark text.
+  expect(accentContrast("#ffd166")).toMatchObject({ text: "dark", ok: true });
+  // A middle grey is readable with neither.
+  const mid = accentContrast("#7a7a7a");
+  expect(mid!.ok).toBe(false);
+  expect(mid!.ratio).toBeLessThan(4.5);
+  expect(accentContrast("not a color")).toBeNull();
 });

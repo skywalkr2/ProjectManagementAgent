@@ -7,7 +7,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
-import { useRestart } from "../lib/restart";
 import { useStartSignIn } from "../lib/sign-in-start";
 import { addonLabel, formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
@@ -15,6 +14,7 @@ import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
 import { SignInRow } from "./SignIns";
 import { WelcomeAi } from "./WelcomeAi";
+import { TemplateList } from "./Templates";
 import { WelcomeBackup } from "./WelcomeBackup";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -77,7 +77,7 @@ export function StepList(props: {
               ) : step.id === "workspace" ? (
                 <WorkspaceStep />
               ) : step.id === "template" ? (
-                <TemplateStep />
+                <TemplateList />
               ) : step.id === "ai" ? (
                 <WelcomeAi local={setup.data.local} done={step.done} />
               ) : step.id === "backup" ? (
@@ -462,81 +462,3 @@ export function WorkspaceStep() {
   );
 }
 
-// ---- template ------------------------------------------------------------------------------------------------------
-
-function TemplateStep() {
-  const { t } = useWords();
-  const act = useAct();
-  const restart = useRestart();
-  const templates = useQuery({ queryKey: ["templates"], queryFn: api.templates });
-  const [busy, setBusy] = useState(false);
-  if (templates.isPending) return <Skeleton />;
-  if (templates.isError || !templates.data.length) return <p className="empty">{t("welcome.template.none")}</p>;
-  const apply = async (template: S["TemplateView"]) => {
-    setBusy(true);
-    const done = await act(
-      () => api.applyTemplate(template.id),
-      () => ({ message: t("welcome.template.applied", { name: template.name }) }),
-    );
-    setBusy(false);
-    if (done?.needs_restart) restart.offer();
-  };
-  return (
-    <ul className="queue">
-      {templates.data.map((tpl) => {
-        const adds = tpl.adds ?? [];
-        const addsId = `template-${tpl.id.replace(/[^A-Za-z0-9_-]/g, "-")}-adds`;
-        return (
-          <li key={tpl.id} className="line">
-            <div className="row pair">
-              <div className="text">
-                <strong>{tpl.name}</strong>
-                {tpl.description && <span className="sub">{tpl.description}</span>}
-                {adds.length > 0 && (
-                  <div className="template-adds">
-                    <span className="what" id={addsId}>
-                      {t("welcome.template.adds")}
-                    </span>
-                    <ul className="plain-list" aria-labelledby={addsId}>
-                      {adds.map((add) => (
-                        <li key={add.name}>
-                          <strong>{add.name}</strong>
-                          {(add.fields.length > 0 || add.stages.length > 0) && (
-                            <ul className="plain-list">
-                              {add.fields.length > 0 && <li>{t("welcome.template.fields", { list: add.fields.join(", ") })}</li>}
-                              {add.stages.length > 0 && (
-                                <li>{t("welcome.template.steps", { list: add.stages.join(t("welcome.template.step_join")) })}</li>
-                              )}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-              <div className="acts">
-                {tpl.set_up ? (
-                  <span className="template-set-up">
-                    <span aria-hidden="true">✓ </span>
-                    {t("welcome.template.set_up")}
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={busy}
-                    aria-label={t("welcome.template.apply_named", { name: tpl.name })}
-                    onClick={() => void apply(tpl)}
-                  >
-                    {t("welcome.template.apply")}
-                  </button>
-                )}
-              </div>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}

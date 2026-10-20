@@ -1,6 +1,7 @@
 # Kinds of AI account the Add account screen offers, so a person picks a service by name instead of typing addresses.
 # Naming public services here (and only here, in data) is a product decision (decisions.md). Each entry:
-#   id, name           shown on screen; the id is also the new account's suggested short name
+#   id, name           shown on screen; the name starts the new account's name ("<name> account"), and the id is
+#                      its short name in the settings until the person names it themselves
 #   adapter            the adapter that talks to it
 #   base_url           the base address of its endpoint ("" when the person enters it)
 #   key_url            where the person makes a key ("" when it needs none)
@@ -96,8 +97,8 @@ endpoints:
     name: Another service that speaks the common chat format
     adapter: openai-compatible
     base_url: ""
-    needs_key: true
-    note: Enter its address from the service's own documentation.
+    needs_key: false
+    note: Enter its address from the service's own documentation. Add a key only if the service asks for one.
   - id: claude-code
     name: Claude Code
     adapter: cli-agent

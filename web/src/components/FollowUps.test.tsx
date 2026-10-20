@@ -60,6 +60,23 @@ test("Copy puts the edited message on the clipboard and changes nothing on the s
   expect(screen.queryByText(/Marked as sent/)).toBeNull();
 });
 
+test("Copy on a closed card opens the message first and copies nothing, with the cursor in the message", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(markSentRoutes);
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Copy 2" }));
+  const box = await screen.findByRole("textbox", { name: /Message to Robin Sample/ });
+  expect(box).toHaveValue(sections[1].message);
+  await waitFor(() => expect(box).toHaveFocus());
+  expect(await navigator.clipboard.readText()).toBe("");
+  expect(screen.queryByText("Copied")).toBeNull();
+  expect(posts(calls)).toHaveLength(0);
+  // Only the message on screen is copied, and then the card offers Mark sent.
+  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  expect(await navigator.clipboard.readText()).toBe(sections[1].message);
+  expect(await screen.findByText("Copied")).toBeInTheDocument();
+});
+
 test("after copying, the card's primary and the button under the box become Mark sent", async () => {
   const user = userEvent.setup();
   fakeApi(markSentRoutes);
@@ -107,9 +124,9 @@ test("when the clipboard is blocked nothing is marked and the card keeps Copy", 
   const user = userEvent.setup();
   const calls = fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />);
-  const button = await screen.findByRole("button", { name: "Copy 2" });
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
-  await user.click(button);
+  await user.click(screen.getByRole("button", { name: "Copy message" }));
   expect(await screen.findByText(/blocked copying/)).toBeInTheDocument();
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
   expect(screen.queryByText(/Marked as sent/)).toBeNull();

@@ -262,7 +262,12 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             refuse(i, "targets", why)
         # evidence
         evidence = _evidence(op)
-        needs = name in NEEDS_EVIDENCE or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
+        needs = (
+            name in NEEDS_EVIDENCE
+            or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
+            # A status is an evidence field wherever it is set: one nobody stated stays unknown.
+            or (isinstance(op, ProjectAddOp) and op.status is not None)
+        )
         # Evidence backs claims taken from inputs; the person's own change (actor pm) isn't one.
         if needs and evidence is None and ctx.actor != "pm":
             refuse(i, "evidence", f"{name} needs evidence: the exact words from the input that justify it")
@@ -904,6 +909,16 @@ def _text_target(store: Store, view: Any, kind: str, record_id: str, field: str)
     if field not in long_text_fields(model):
         return f"{kind}.{field} isn't a long text field"
     return None
+
+
+def _link_label(cfg: Config, link: str, read: bool) -> str:
+    """What a project's link is called: the address's host when a source reads it, else the wording that says it was
+    not read."""
+    if not read:
+        return cfg.language.messages.link_not_read
+    from engine.draft_checks import link_key
+
+    return link_key(link)[0] or link
 
 
 def _evidence(op: OpModel) -> EvidenceIn | None:
@@ -1936,6 +1951,14 @@ def _apply_op(
         return [{"kind": "text_version", "id": op.version}], None
     if isinstance(op, ProjectAddOp):
         data = {"name": op.name.strip(), "summary": op.summary, "parent": op.parent, "language": op.language}
+        if op.status is not None:
+            data["status"] = op.status
+        if op.link:
+            # An address nothing set up can open is kept as a link that says so; nothing is read from it.
+            from engine.projects import source_for_link
+
+            read = source_for_link(ctx.cfg, op.link) is not None
+            data["links"] = [{"label": _link_label(ctx.cfg, op.link, read), "url": op.link}]
         made = tx.create("project", data, w)
         moved = []
         for child in op.children:

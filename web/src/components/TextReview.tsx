@@ -2,13 +2,15 @@
 // where the text moved on after a copy went out, a passage both sides changed is marked as a conflict. The choices go
 // back as one step, with Undo (design 7.2).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
 import { ApiError, api, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
+import type { Refreshed } from "../lib/refreshed";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu } from "./RowMenu";
 import { SafeText } from "./SafeText";
 
@@ -51,10 +53,14 @@ export function TextReview(props: { version: string; onClose: () => void }) {
   const [choices, setChoices] = useState<Record<string, Choice>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ text: string; stale: boolean } | null>(null);
+  const [refreshed, setRefreshed] = useState<Refreshed[]>([]);
+  // The choices to keep when the text is read again after a refusal; a new version otherwise starts with none.
+  const carry = useRef<Record<string, Choice> | null>(null);
 
   const data = review.data;
   useEffect(() => {
-    setChoices({});
+    setChoices(carry.current ?? {});
+    carry.current = null;
   }, [data?.version.version]);
 
   const done = async (result: S["Applied"], message: string) => {
@@ -85,15 +91,33 @@ export function TextReview(props: { version: string; onClose: () => void }) {
         await done(result, t("text_review.discarded"));
       }
     } catch (err) {
-      setError({ text: problemText(err, t), stale: err instanceof ApiError && err.status === 409 });
+      const stale = err instanceof ApiError && err.status === 409;
+      setError({ text: problemText(err, t), stale });
       setBusy(false);
+      if (stale) void reload(true);
     }
   };
 
-  const reload = () => {
-    setError(null);
-    setChoices({});
-    void review.refetch();
+  /** Read the text again. A choice on a passage that is the same as before is kept; a passage that moved goes back to
+   * the default and is listed, so the person looks at it again. */
+  const reload = async (afterRefusal = false) => {
+    if (!afterRefusal) setError(null);
+    const same = (r: S["TextRegion"]) => `${r.current}\u0000${r.pending}`;
+    const before = new Map((data?.regions ?? []).filter((r) => r.id).map((r) => [r.id, same(r)]));
+    const fresh = (await review.refetch()).data;
+    if (!fresh) return;
+    const kept: Record<string, Choice> = {};
+    const moved: Refreshed[] = [];
+    const now = fresh.regions.filter((r) => r.id);
+    now.forEach((r, i) => {
+      const choice = choices[r.id];
+      if (choice === undefined || !before.has(r.id)) return;
+      if (before.get(r.id) === same(r)) kept[r.id] = choice;
+      else moved.push({ label: t("text_review.change_n", { n: i + 1, total: now.length }), value: r.pending || t("text_review.nothing") });
+    });
+    carry.current = kept;
+    setChoices(kept);
+    setRefreshed(moved);
   };
 
   const changes = data?.regions.filter((r) => r.id) ?? [];
@@ -114,7 +138,7 @@ export function TextReview(props: { version: string; onClose: () => void }) {
       {review.isError && (
         <p className="problem-note" role="alert">
           {problemText(review.error, t)}{" "}
-          <button type="button" className="btn" onClick={reload}>
+          <button type="button" className="btn" onClick={() => void reload()}>
             {t("action.try_again")}
           </button>
         </p>
@@ -122,16 +146,10 @@ export function TextReview(props: { version: string; onClose: () => void }) {
       {error && (
         <div className="problem-note" role="alert">
           <p>{error.text}</p>
-          {error.stale && (
-            <p>
-              {t("text_review.reload_hint")}{" "}
-              <button type="button" className="btn" onClick={reload}>
-                {t("text_review.reload")}
-              </button>
-            </p>
-          )}
+          {error.stale && <p>{t("text_review.reload_hint")}</p>}
         </div>
       )}
+      <RefreshedLines lines={refreshed} time="" />
       {data && (
         <div className="review-body review-wide">
           {data.version.note && (

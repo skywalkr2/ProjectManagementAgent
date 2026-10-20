@@ -435,6 +435,61 @@ test.describe("screen use and the shell", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Sources" })).toBeFocused();
   });
 
+  // The cursor starts where you type (design 7.0): in a screen's first main field, or on its heading when it has none.
+  // Each main screen is opened from another by its address, as a person does by a link, and the cursor is found where it
+  // belongs once the screen has loaded. A screen with a field names it here; any other must have the cursor on its heading.
+  const SCREENS: Array<{ name: string; hash: string; field?: (page: Page) => Locator }> = [
+    { name: "Today", hash: "today" },
+    { name: "What changed", hash: "work/changed" },
+    { name: "Since yesterday", hash: "work/since" },
+    { name: "Follow-ups", hash: "work/followups" },
+    { name: "Drafts to approve", hash: "work/outgoing" },
+    { name: "Stages", hash: "work/stages" },
+    { name: "Projects", hash: "records/projects" },
+    { name: "People", hash: "records/people" },
+    { name: "Files", hash: "records/files" },
+    { name: "Knowledge", hash: "records/knowledge" },
+    { name: "Rules review", hash: "records/rules-review" },
+    { name: "Sources", hash: "sources" },
+    { name: "Add-ons", hash: "addons" },
+    { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "Workspace name" }) },
+    { name: "What each account can do", hash: "settings/ai-compare" },
+    { name: "Quality", hash: "quality", field: (page) => page.locator("main form input[type=date]").first() },
+    { name: "Handover", hash: "handover" },
+  ];
+  for (const screen of SCREENS) {
+    test(`${screen.name} opens with the cursor in its first field, or on its heading when it has none`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await signIn(page);
+      // Arrive from another screen, so the address changes the way a link does.
+      await page.evaluate(() => {
+        window.location.hash = "work/stages";
+      });
+      await expect(page.getByRole("heading", { level: 1, name: "Stages" })).toBeVisible();
+      await page.evaluate((h) => {
+        window.location.hash = h;
+      }, screen.hash);
+      await expect(page).toHaveURL(new RegExp(`#${screen.hash}$`));
+      if (screen.field) {
+        await expect(screen.field(page)).toBeFocused({ timeout: 15_000 });
+        return;
+      }
+      await expect
+        .poll(
+          () =>
+            page.evaluate(() => {
+              const at = document.activeElement;
+              const main = document.querySelector("main");
+              if (!at || !main || !main.contains(at)) return false;
+              // On the heading, or in a field the screen put the cursor in itself.
+              return at.tagName === "H1" || ["INPUT", "SELECT", "TEXTAREA"].includes(at.tagName);
+            }),
+          { timeout: 15_000 },
+        )
+        .toBe(true);
+    });
+  }
+
   test("going offline shows in the status chip within five seconds, and coming back clears it", async ({ page, context }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page);

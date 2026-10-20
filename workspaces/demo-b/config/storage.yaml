@@ -22,3 +22,6 @@ sync:
   watch_outside_edits: true
   shared: false
   lease_stale_after_minutes: 10
+kept_secrets:
+  keep_days: 30
+  undo_grace_minutes: 10

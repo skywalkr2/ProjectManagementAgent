@@ -19,6 +19,8 @@ export function PersonPicker(props: {
   onAdd?: () => void;
   /** Leave the add choice out (a place that only picks among those already on file). */
   noAdd?: boolean;
+  /** The list takes the cursor when it appears: a form whose first field it is. */
+  autoFocus?: boolean;
 }) {
   const { t } = useWords();
   const id = useId();
@@ -37,6 +39,7 @@ export function PersonPicker(props: {
       <select
         id={id}
         ref={select}
+        autoFocus={props.autoFocus}
         value={props.value}
         onChange={(e) => {
           if (e.target.value !== ADD) return props.onChange(e.target.value);

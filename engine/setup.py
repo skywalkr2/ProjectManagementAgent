@@ -426,15 +426,20 @@ def secret_path(ws: Any, name: str) -> Path:
     return ws.private_dir / "keys" / name
 
 
-def keep_secret(ws: Any, name: str, value: str) -> str:
+def keep_secret(ws: Any, name: str, value: str, *, owner: str | None = None, forever: bool = False) -> str:
     """Keep a pasted password, key or private address in the workspace's private folder on this computer, readable only
-    by this user. Returns the reference the setting holds. Keeping a name again replaces what was kept."""
+    by this user. Returns the reference the setting holds. Keeping a name again replaces what was kept. `owner` says
+    what it was kept for (`source:<id>`, `ai:<account>`), so removing that takes it away too; `forever` marks one
+    that is never removed (the backup key). Both are noted in `engine.kept_secrets`."""
     if not value.strip():
         raise StoreError("there is nothing to keep")
     path = secret_path(ws, name)
     path.parent.mkdir(parents=True, exist_ok=True)
     os.chmod(path.parent, 0o700)
     write_whole(path, value.strip() + "\n", mode=0o600)
+    from engine import kept_secrets
+
+    kept_secrets.record(ws, name, owner=owner, forever=forever)
     return f"file:{path.resolve()}"
 
 
@@ -484,4 +489,4 @@ def keep_key(ws: Any, account: str, key: str) -> str:
     """Keep a pasted AI key (see `keep_secret`), under the account's name. Returns the reference `ai.yaml` holds."""
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", account):
         raise StoreError("an account's name is lowercase letters, digits and dashes")
-    return keep_secret(ws, account, key)
+    return keep_secret(ws, account, key, owner=f"ai:{account}")

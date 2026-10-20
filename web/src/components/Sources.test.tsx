@@ -635,6 +635,57 @@ describe("a source's menu", () => {
     expect(calls.filter((c) => c.route === "POST watch/sources/a").map((c) => (c.body as { fingerprint: string }).fingerprint)).toEqual(["fp-1", "fp-2"]);
   });
 
+  test("after the refusal what the person did not touch is refreshed and listed, and what they typed is kept", async () => {
+    const user = userEvent.setup();
+    let moved = false;
+    const { calls } = open([source("a", { connector: "folder", every_minutes: 60 })], [], {
+      "GET watch": () => [source("a", { connector: "folder", every_minutes: moved ? 240 : 60 })],
+      "GET settings": () => ({
+        ...stored([{ id: "a", settings: { path: moved ? "elsewhere" : "inbox", patterns: ["*.md"] } }].map((x) => x)),
+        fingerprint: moved ? "fp-2" : "fp-1",
+        changed_at: "2026-10-20T09:14:00Z",
+      }),
+      "POST watch/sources/a": (sent) => {
+        if ((sent as { fingerprint: string }).fingerprint === "fp-1") {
+          moved = true;
+          return new Refuse(409, "The settings changed since you opened them. Look again, then save.");
+        }
+        return SAVED([{ id: "a" }], [{ id: "a" }]);
+      },
+    });
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: "Change Source a" });
+    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
+    await waitFor(() => expect(within(form).getByRole("button", { name: "Save changes" })).toBeEnabled());
+    await user.clear(within(form).getByLabelText("Name"));
+    await user.type(within(form).getByLabelText("Name"), "Renamed");
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    const lines = await within(form).findByRole("status", { name: "Refreshed from what is saved now" });
+    expect(lines).toHaveTextContent(/refreshed: How often to read is now every 240 minutes, changed elsewhere at .*\d/);
+    expect(lines).toHaveTextContent(/refreshed: About path is now elsewhere, changed elsewhere at/);
+    expect(lines).not.toHaveTextContent("Name");
+    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("elsewhere"));
+    expect(within(form).getByLabelText("How often to read")).toHaveValue("240");
+    expect(within(form).getByLabelText("Name")).toHaveValue("Renamed");
+    await waitFor(() => expect(within(form).getByRole("button", { name: "Save changes" })).toBeEnabled());
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST watch/sources/a")).toHaveLength(2));
+    expect(calls.filter((c) => c.route === "POST watch/sources/a")[1].body).toMatchObject({ label: "Renamed", every_minutes: 240, settings: { path: "elsewhere" }, fingerprint: "fp-2" });
+  });
+
+  test("the form for a new source opens with the cursor in its first field, and the form for changing one in its name", async () => {
+    const user = userEvent.setup();
+    open([source("a", { connector: "folder" })], []);
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    const adding = await screen.findByRole("form", { name: "Add a source" });
+    await waitFor(() => expect(adding.contains(document.activeElement) && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement!.tagName)).toBe(true));
+    expect(within(adding).getAllByRole("radio")[0]).toHaveFocus();
+    await user.click(within(adding).getByRole("button", { name: "Cancel" }));
+    await choose(user, "Source a", "Change");
+    const changing = await screen.findByRole("form", { name: "Change Source a" });
+    await waitFor(() => expect(within(changing).getByLabelText("Name")).toHaveFocus());
+  });
+
   test("a source's author is picked from a list of the person, colleagues and teams, and saved with the source", async () => {
     const user = userEvent.setup();
     const authors: S["WatchAuthorOption"][] = [
@@ -767,6 +818,24 @@ describe("a source's menu", () => {
     await waitFor(() => expect(body(calls, "POST watch/sources/a/remove")).toEqual({ fingerprint: "fp-1" }));
     expect(await screen.findByText("Removed Source a.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  });
+
+  test("Remove says when the password kept for the source is deleted from this computer, once Undo can't need it", async () => {
+    const user = userEvent.setup();
+    open([source("a")], [], {
+      "POST watch/sources/a/remove": () => ({ ...SAVED([{ id: "a" }], []), kept_secrets_going: 1, kept_secrets_undo_minutes: 10 }),
+    });
+    await choose(user, "Source a", "Remove");
+    expect(await screen.findByText(/Removed Source a\. Its saved password or key is deleted from this computer in 10 minutes; Undo until then brings it back\./)).toBeInTheDocument();
+  });
+
+  test("Remove with no wait says the saved password or key was deleted", async () => {
+    const user = userEvent.setup();
+    open([source("a")], [], {
+      "POST watch/sources/a/remove": () => ({ ...SAVED([{ id: "a" }], []), kept_secrets_going: 2, kept_secrets_undo_minutes: 0 }),
+    });
+    await choose(user, "Source a", "Remove");
+    expect(await screen.findByText(/Removed Source a\. Its 2 saved passwords or keys were deleted from this computer\./)).toBeInTheDocument();
   });
 
   test("a refusal is said in a toast, and the source stays as it was", async () => {

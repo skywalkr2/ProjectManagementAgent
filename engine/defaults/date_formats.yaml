@@ -1,0 +1,22 @@
+# The date formats a setting that holds one offers as a list, written as strftime codes. The screens show each one as
+# today's date in that format, never the codes. A format a workspace already uses that isn't here is added to the list
+# it sees, so the screen never shows a value that isn't the setting's.
+date_formats:
+  - "%a, %b %d"
+  - "%A, %B %d"
+  - "%b %d"
+  - "%d %b"
+  - "%b %d, %Y"
+  - "%d %B %Y"
+  - "%Y-%m-%d"
+  - "%m/%d/%Y"
+  - "%d/%m/%Y"
+date_time_formats:
+  - "%a, %b %d, %Y, %H:%M"
+  - "%a, %b %d, %Y, %I:%M %p"
+  - "%b %d, %Y, %H:%M"
+  - "%b %d, %Y, %I:%M %p"
+  - "%d %b %Y, %H:%M"
+  - "%Y-%m-%d %H:%M"
+  - "%m/%d/%Y %I:%M %p"
+  - "%d/%m/%Y %H:%M"

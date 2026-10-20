@@ -89,6 +89,8 @@ test("Widen adds a person picked from the list, leaving out those already in, wi
   const dialog = await openSource(user);
   await user.click(await within(dialog).findByRole("button", { name: "Widen" }));
   const pick = within(dialog).getByLabelText("Add someone who may see it");
+  // Opening the form puts the cursor in its list.
+  await waitFor(() => expect(pick).toHaveFocus());
   expect(within(pick).queryByRole("option", { name: "Pat Example" })).toBeNull();
   await user.selectOptions(pick, "PER-3");
   await user.click(within(dialog).getByRole("button", { name: "Add them" }));

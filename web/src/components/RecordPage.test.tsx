@@ -286,6 +286,17 @@ test("Edit details offers the right control for each editable field and skips th
   for (const skipped of ["Id", "Link", "Locked", "Body text", "Raw"]) expect(within(form).queryByLabelText(skipped)).toBeNull();
 });
 
+test("when a person is the kind's first field the form opens with the cursor in that list", async () => {
+  const user = userEvent.setup();
+  fakeApi(
+    editRoutes({
+      [`GET kinds/${KIND}`]: () => ({ kind: KIND, fields: [{ name: "owner", description: "", refers_to: "person", type: "reference", required: false, editable: true }] }),
+    }),
+  );
+  const form = await openForm(user);
+  await waitFor(() => expect(within(form).getByRole("combobox", { name: "Owner" })).toHaveFocus());
+});
+
 test("Save sends only the changed fields with the version that was read, then offers Undo", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(
@@ -330,6 +341,41 @@ test("a refusal shows the server's words and keeps the form open with what was t
   expect(screen.getByRole("form", { name: "Edit details" })).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("The harbor!");
   expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+});
+
+test("after a refusal because it changed meanwhile, fields not touched take what is saved now and are listed, and typed ones are kept", async () => {
+  const user = userEvent.setup();
+  let moved = false;
+  const calls = fakeApi(
+    editRoutes({
+      [`GET record?${on}`]: () => ({
+        kind: KIND,
+        id: ID,
+        version: moved ? 5 : 4,
+        changed_at: "2026-10-20T09:14:00Z",
+        fields: { id: ID, title: "The harbor", pages: moved ? 20 : 12, final: false, due: "2026-11-01", state: "draft", mood: "calm", owner: "P-2", tags: ["one", "two"], locked: "x" },
+        long_text: [field],
+      }),
+      "POST records/edit": (body) => {
+        if ((body as { read_version: number }).read_version === 4) {
+          moved = true;
+          return new Refuse(409, "This record changed after you opened it.");
+        }
+        return { changeset: "CS-9" };
+      },
+    }),
+  );
+  const form = await openForm(user);
+  await user.type(within(form).getByRole("textbox", { name: "Title" }), "!");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  const lines = await screen.findByRole("status", { name: "Refreshed from what is saved now" });
+  expect(lines).toHaveTextContent(/refreshed: Pages is now 20, changed elsewhere at .*\d/);
+  await waitFor(() => expect(within(form).getByRole("spinbutton", { name: "Pages" })).toHaveValue(20));
+  expect(within(form).getByRole("textbox", { name: "Title" })).toHaveValue("The harbor!");
+  expect(screen.getByRole("alert")).toHaveTextContent("What you typed is still here");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST records/edit")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST records/edit")[1].body).toEqual({ kind: KIND, id: ID, read_version: 5, fields: { title: "The harbor!" } });
 });
 
 test("Cancel puts the values back and closes the form", async () => {

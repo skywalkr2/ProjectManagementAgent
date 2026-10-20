@@ -9,14 +9,17 @@ import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { whenText as when } from "../lib/dates";
 import { problemText } from "../lib/problem";
+import { startCursor } from "../lib/cursor";
 import { projectChoices } from "../lib/project-choices";
 import { failureText } from "../lib/sources";
-import { addonLabel, formValues, nest, prefill, type Draft } from "../lib/settings";
+import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
+import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, type Draft } from "../lib/settings";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
+import { RefreshedLines } from "./RefreshedLines";
 import { ItemFields } from "./SettingRow";
 import { SetAside } from "./SetAside";
 import { SignIns } from "./SignIns";
@@ -382,10 +385,19 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   // The settings as they were when the form opened: what the typed values were made from. A save sends this one, so a
   // change made meanwhile is refused rather than overwritten; it moves on only after the person was told.
   const [opened, setOpened] = useState<string | null>(null);
+  // What the form showed when it opened (or was last refreshed), to tell which fields the person touched after a refusal,
+  // and what a refusal refreshed.
+  const shown = useRef({ label: source?.label ?? "", every: String(source?.every_minutes ?? 60), author: source?.author ?? "", account: source?.account ?? "" });
+  const storedWas = useRef<unknown>(undefined);
+  const [refreshed, setRefreshed] = useState<{ lines: Refreshed[]; time: string }>({ lines: [], time: "" });
 
+  // The cursor starts in the form's first field (the kind to add, else the name), or on its heading until one has loaded.
+  const formEl = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    heading.current?.focus();
     heading.current?.scrollIntoView?.({ block: "nearest" });
+    return formEl.current ? startCursor(formEl.current, `${base}-title`) : undefined;
+    // Once, when the form opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -409,6 +421,9 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     const mine = list.find((entry) => typeof entry === "object" && entry !== null && (entry as { id?: unknown }).id === source.id);
     return mine ? ((mine as { settings?: unknown }).settings ?? {}) : undefined;
   })();
+  useEffect(() => {
+    if (storedWas.current === undefined) storedWas.current = stored;
+  }, [stored]);
   const waitingForSettings = !adding && settings.isPending;
   const items = kind && !waitingForSettings && (adding || stored !== undefined) ? (adding ? kind.items : prefill(kind.items, stored)) : [];
   const { values, bad } = formValues(items, edits);
@@ -445,6 +460,46 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const accountChosen = accountList === null ? "" : account || (accountList.length === 1 ? accountList[0] : "");
   const accountMissing = accountList !== null && accountList.length > 1 && accountChosen === "";
   const ready = kind !== undefined && !busy && bad.length === 0 && opened !== null && !accountMissing;
+
+  /** After a refusal: what the person didn't touch takes what is saved now and is listed; what they typed stays. */
+  const refreshForm = async (was: Source, of: Kind) => {
+    try {
+      const [list, view] = await Promise.all([
+        client.fetchQuery({ queryKey: ["watch"], queryFn: api.watchSources, staleTime: 0 }),
+        client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 }),
+      ]);
+      const now = list.find((x) => x.id === was.id);
+      if (!now) return;
+      const saved = { label: now.label, every: String(now.every_minutes), author: now.author ?? "", account: now.account ?? "" };
+      const out = reconcile<string>(shown.current, { label, every, author, account }, saved);
+      setLabel(out.next.label);
+      setEvery(out.next.every);
+      setAuthor(out.next.author);
+      setAccount(out.next.account);
+      shown.current = saved;
+      const lines: Refreshed[] = [];
+      const words: Record<string, string> = { label: t("sources.field.label"), every: t("sources.field.every"), author: t("sources.field.author"), account: t("sources.field.account") };
+      for (const key of out.refreshed) {
+        const value = key === "every" ? tn("sources.every", now.every_minutes) : saved[key as keyof typeof saved] || t("settings.empty");
+        lines.push({ label: words[key], value });
+      }
+      const list2 = view.items.find((i) => i.key === "watch.sources")?.value;
+      const mine = Array.isArray(list2) ? list2.find((e) => typeof e === "object" && e !== null && (e as { id?: unknown }).id === was.id) : undefined;
+      const storedNow = mine ? ((mine as { settings?: unknown }).settings ?? {}) : undefined;
+      if (storedNow !== undefined) {
+        for (const item of of.items) {
+          const before = valueAt(storedWas.current ?? {}, item.key);
+          const after = valueAt(storedNow, item.key);
+          if (item.key in edits || JSON.stringify(before ?? null) === JSON.stringify(after ?? null)) continue;
+          lines.push({ label: labelOf(item, t, has), value: formatValue(after, t) });
+        }
+        storedWas.current = storedNow;
+      }
+      setRefreshed({ lines, time: changedTime(view) });
+    } catch {
+      // Without the current list the form can't be refreshed; the next look at the screen finds the cause.
+    }
+  };
 
   const submit = async () => {
     if (!ready || !kind || opened === null) return;
@@ -490,6 +545,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         } catch {
           // Without a current fingerprint the form can't save, and the next look at the settings finds the cause.
         }
+        if (source && kind) await refreshForm(source, kind);
       } else {
         setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
       }
@@ -500,6 +556,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const titleId = `${base}-title`;
   return (
     <form
+      ref={formEl}
       className="panel source-form"
       aria-labelledby={titleId}
       onSubmit={(e) => {
@@ -655,6 +712,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           {problem}
         </p>
       )}
+      <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
       <div className="row-end">
         <button type="button" className="btn quiet" onClick={props.onClose}>
           {t("action.cancel")}

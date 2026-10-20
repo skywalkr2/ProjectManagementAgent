@@ -75,7 +75,7 @@ from api.schemas import (
     WatchSourceChange,
     WatchSourceIn,
 )
-from engine import audit, references, setup, templates
+from engine import audit, kept_secrets, references, setup, templates
 from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
 from engine import sorting_rules as sorting
@@ -189,13 +189,19 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         except ConfigError:
             return cfg
 
-    def saved(result: config_screens.Saved) -> SettingsSaved:
+    def saved(result: config_screens.Saved, released: kept_secrets.Released | None = None) -> SettingsSaved:
         events.changed()
         return SettingsSaved(
             changes=[SettingChangeView(**c) for c in result.changes],
             fingerprint=result.fingerprint,
             needs_restart=bool(result.changes) and worker.needs_restart(),
+            kept_secrets_going=(released.going or None) if released else None,
+            kept_secrets_undo_minutes=released.undo_minutes if released and released.going else None,
         )
+
+    def let_go(owner: str, before: Any) -> kept_secrets.Released:
+        """The secrets kept for what was just removed go once no Undo points at them (design 12.3)."""
+        return kept_secrets.release(ws, store, current(), owner=owner, before=before)
 
     def save(changes: dict[str, Any], reset: list[str], fingerprint: str, allow: tuple[str, ...] = ()) -> Any:
         try:
@@ -219,12 +225,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def _live_lists() -> dict[str, list[str]]:
         """The choices of the settings that pick from a list the person keeps (a value list), as it stands now."""
         lists = {v.data["name"]: v.data["values"] for v in store.read().list("value_list")}
-        return {"project_status": list(lists.get("project-status", []))}
+        return {
+            "project_status": list(lists.get("project-status", [])),
+            # The people there are and the tiers the AI settings define: lists their own records and settings keep.
+            "people": [p.id for p in store.read().list("person") if p.data.get("status", "active") != "left"],
+            "tiers": list(current().ai.tiers),
+        }
 
     @r.get("/settings")
     def settings_view() -> SettingsView:
         return SettingsView(
             fingerprint=config_screens.fingerprint(ws.config_dir),
+            changed_at=config_screens.changed_at(ws.config_dir),
             items=[
                 SettingItem(**vars(s))
                 for s in config_screens.describe(current(), store.plugins, ws.config_dir, _live_lists())
@@ -547,12 +559,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             to_keep[name] = value
         return merged, to_keep
 
-    def keep_all(to_keep: dict[str, str]) -> list[Path]:
+    def keep_all(to_keep: dict[str, str], owner: str) -> list[Path]:
         """Keep each pasted secret; returns the files that didn't exist before, to remove if the save is refused."""
         fresh = [setup.secret_path(ws, name) for name in to_keep if not setup.secret_path(ws, name).exists()]
         try:
             for name, value in to_keep.items():
-                setup.keep_secret(ws, name, value)
+                setup.keep_secret(ws, name, value, owner=owner)
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
         return fresh
@@ -581,7 +593,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             new["author"] = checked_author(body.author)
         if account := checked_account(body.connector, body.account):
             new["account"] = account
-        fresh = keep_all(to_keep)
+        fresh = keep_all(to_keep, f"source:{source_id}")
         try:
             done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
         except HTTPException:
@@ -672,7 +684,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             found["author"] = checked_author(body.author) if body.author else None
         if "account" in body.model_fields_set:
             found["account"] = checked_account(found["connector"], body.account)
-        fresh = keep_all(to_keep)
+        fresh = keep_all(to_keep, f"source:{source_id}")
         try:
             return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))
         except HTTPException:
@@ -687,7 +699,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if not any(s["id"] == source_id for s in sources):
             raise HTTPException(status_code=404, detail=f"There is no source {source_id}.")
         rest = [s for s in sources if s["id"] != source_id]
-        return saved(save({"watch.sources": rest}, [], body.fingerprint, allow=("watch.sources",)))
+        done = save({"watch.sources": rest}, [], body.fingerprint, allow=("watch.sources",))
+        gone = next(s for s in sources if s["id"] == source_id)
+        return saved(done, let_go(f"source:{source_id}", gone))
 
     # ---- sorting mail: the person's own rules, and confirming set-aside mail ----------------------------------
 
@@ -1285,7 +1299,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         changes, reset, pending = account_plan(name, body)
         before = current()
         if pending is not None:
-            setup.keep_secret(ws, *pending)
+            setup.keep_secret(ws, *pending, owner=f"ai:{name}")
         try:
             done = save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers."))
         except HTTPException:
@@ -1442,7 +1456,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     kept = [ref for ref in kept if ref != heir]
             if kept != list(tier.fallback):
                 changes[f"ai.tiers.{tier_name}.fallback"] = kept
-        return saved(save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
+        done = save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers."))
+        return saved(done, let_go(f"ai:{name}", ai.providers[name].model_dump(mode="json")))
 
     @r.post("/ai/accounts")
     def ai_account_add(body: AiAccountAdd) -> SettingsSaved:
@@ -1481,7 +1496,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.key:
             try:
                 kept = setup.key_name(ws, body.name)
-                provider["auth"] = setup.keep_secret(ws, kept, body.key)
+                provider["auth"] = setup.keep_secret(ws, kept, body.key, owner=f"ai:{body.name}")
             except StoreError as err:
                 raise HTTPException(status_code=400, detail=str(err)) from None
         elif body.key_ref:

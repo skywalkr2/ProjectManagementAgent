@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { firstField } from "../lib/cursor";
 import { problemText } from "../lib/problem";
 import { projectChoices } from "../lib/project-choices";
 import { addonLabel, changedValues, type Draft } from "../lib/settings";
@@ -302,9 +303,12 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const loaded = !!view.data;
+  // The cursor starts in the form's first field once it has loaded.
+  const formEl = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (!loaded) return;
-    heading.current?.focus();
+    const field = formEl.current ? firstField(formEl.current) : null;
+    (field ?? heading.current)?.focus({ preventScroll: true });
     heading.current?.scrollIntoView?.({ block: "nearest" });
   }, [loaded]);
 
@@ -337,6 +341,7 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
   const titleId = `${base}-title`;
   return (
     <form
+      ref={formEl}
       className="panel data-file-form"
       aria-labelledby={titleId}
       onSubmit={(e) => {

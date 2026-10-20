@@ -1,14 +1,18 @@
-// A modal dialog (design 7.12): labelled by its heading, focus kept inside, Escape closes. The marker attribute pauses the
+// A modal dialog (design 7.12): labelled by its heading, focus kept inside, the cursor starting in its first field (or on
+// its heading), Escape closes. The marker attribute pauses the
 // row shortcuts while it is open. Where focus goes on close is up to the caller (see restoreFocus).
 import type { ReactNode } from "react";
 import { Dialog, Modal, ModalOverlay } from "react-aria-components";
+import { useCursorRef } from "../lib/cursor";
 import styles from "./ModalPanel.module.css";
 
 export function ModalPanel(props: { titleId: string; onClose: () => void; /** A click outside closes it too. */ dismissable?: boolean; children: ReactNode }) {
+  // The cursor starts in the dialog's first field, or on its heading when it has none (design 7.0).
+  const cursor = useCursorRef(props.titleId);
   return (
     <ModalOverlay isOpen onOpenChange={(open) => !open && props.onClose()} isDismissable={props.dismissable} className={styles.overlay}>
       <Modal className={`${styles.modal} dialog-panel`} data-modal-open>
-        <Dialog aria-labelledby={props.titleId} className={`${styles.dialog} help-dialog`}>
+        <Dialog ref={cursor} aria-labelledby={props.titleId} className={`${styles.dialog} help-dialog`}>
           {props.children}
         </Dialog>
       </Modal>

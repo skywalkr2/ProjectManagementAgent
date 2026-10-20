@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from engine.draft_checks import KnownLinks, link_key
+
 
 def chain(view: Any, project_id: str | None) -> list[Any]:
     """The project and the projects above it, nearest first; stops at a loop or a missing parent."""
@@ -16,6 +18,19 @@ def chain(view: Any, project_id: str | None) -> list[Any]:
         up = current.data.get("parent")
         current = view.get("project", up) if isinstance(up, str) else None
     return found
+
+
+def source_for_link(cfg: Any, link: str) -> str | None:
+    """The id of a running source that reads addresses on the link's host, else None: nothing set up can open it."""
+    host = link_key(link)[0]
+    for source in cfg.watch.sources:
+        if not source.enabled:
+            continue
+        known = KnownLinks()
+        known.add_values(source.settings)
+        if host and host in known.hosts:
+            return source.id
+    return None
 
 
 def project_of(record: Any) -> str | None:

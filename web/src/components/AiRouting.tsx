@@ -3,6 +3,7 @@
 // once more on; and the rules that send hard work to a stronger model first. Every choice is a list to pick from and is
 // saved as it is made, with Undo. A suggestion from the measurements is only ever offered, never applied.
 import { useQuery } from "@tanstack/react-query";
+import { RefreshedLines } from "./RefreshedLines";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { accountName, type Account, type Kind } from "../lib/ai-accounts";
@@ -10,7 +11,9 @@ import {
   LEVELS,
   ROUTING_KEY,
   escalateKey,
+  mergeRules,
   moved,
+  ROUTING_REFRESHED,
   rowOf,
   rulesOf,
   ruleProblem,
@@ -18,6 +21,7 @@ import {
   useRoutingSave,
   useTierName,
   type Fit,
+  type RoutingRefreshed,
   type RuleRow,
   type WorkKind,
 } from "../lib/ai-routing";
@@ -45,6 +49,8 @@ function Part(props: { view: Routing; accounts: Account[]; kinds: Kind[] }) {
   const tierName = useTierName();
   const money = useMoney();
   const { view } = props;
+  // What a refused save refreshed from what is saved now (kept by `useRoutingSave`), until the next save goes through.
+  const refreshed = useQuery<RoutingRefreshed>({ queryKey: ROUTING_REFRESHED, queryFn: () => ({ lines: [], time: "" }), staleTime: Infinity });
   /** A tier as a list shows it: its plain name and the account that does its work. */
   const model = (tier: string) => {
     const name = view.tiers.find((x) => x.name === tier)?.account;
@@ -57,6 +63,7 @@ function Part(props: { view: Routing; accounts: Account[]; kinds: Kind[] }) {
     <section className={styles.part} aria-labelledby="ai-routing-title">
       <h3 id="ai-routing-title">{t("ai_routing.title")}</h3>
       <p className="hint">{t("ai_routing.intro")}</p>
+      <RefreshedLines lines={refreshed.data?.lines ?? []} time={refreshed.data?.time ?? ""} />
       <Kinds view={view} model={model} />
       {view.tiers.length > 1 && <Escalation view={view} model={model} />}
       <Rules view={view} model={model} />
@@ -334,6 +341,8 @@ function Rules(props: { view: Routing; model: (tier: string) => string }) {
     const done = await save({ changes: { [ROUTING_KEY]: rules } }, tn("ai_routing.rules_saved", rules.length));
     if (!done.ok) {
       setProblem(done.problem);
+      // Rules changed elsewhere stay; the person's own added, changed and removed rows are kept on top of them.
+      if (done.stale) setLocal(mergeRules(served, next, done.stale.now.rules.map(rowOf)));
       return;
     }
     // Everything on screen is saved now unless a row still waits for its conditions.

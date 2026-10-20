@@ -184,3 +184,11 @@ test("Escape closes the dialog", async () => {
   await user.keyboard("{Escape}");
   expect(onClose).toHaveBeenCalled();
 });
+
+test("the dialog opens with the cursor in its first field, the file to choose", async () => {
+  fakeApi(routes());
+  renderApp(<AddFile onClose={() => undefined} />);
+  const dialog = await screen.findByRole("dialog");
+  await waitFor(() => expect(dialog.contains(document.activeElement) && document.activeElement !== dialog).toBe(true));
+  expect(["INPUT", "SELECT", "TEXTAREA"]).toContain(document.activeElement?.tagName);
+});

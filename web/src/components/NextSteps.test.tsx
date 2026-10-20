@@ -233,6 +233,32 @@ test("It's part of picks a project from the list with the cursor in it, files th
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-6/undo"));
 });
 
+test("a project added from a link nothing can open says it was not read, in its row", async () => {
+  const change = projectChange();
+  change.changeset!.ops[1].meta = { owners: [], name: "Harvest Fair", note: "Not read: nothing set up can open this link" };
+  fakeApi({ ...projectRoutes, "GET changes": () => [change] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Not read: nothing set up can open this link")).toBeInTheDocument();
+});
+
+test("a project whose name shares a word with the held one is offered by name in the menu, filed there in one click", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    ...projectRoutes,
+    "GET projects": () => [
+      { id: "PRJ-1", name: "Sample Series", parent: null },
+      { id: "PRJ-3", name: "Harvest Planning", parent: "PRJ-1" },
+    ],
+    "POST changesets/CS-5/ops/1/part-of": () => ({ changeset: "CS-6" }),
+  });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Harvest Fair" }));
+  expect(screen.queryByRole("menuitem", { name: "It's part of Sample Series" })).toBeNull();
+  await user.click(await screen.findByRole("menuitem", { name: "It's part of Sample Series › Harvest Planning" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-5/ops/1/part-of")?.body).toEqual({ project: "PRJ-3" }));
+  expect(await screen.findByText("Filed under Sample Series › Harvest Planning. “Harvest Fair” is kept as a name for it.")).toBeInTheDocument();
+});
+
 test("Not a project sets it aside at once, says the words are kept, and offers Undo", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(projectRoutes);

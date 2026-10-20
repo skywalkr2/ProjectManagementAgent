@@ -8,6 +8,7 @@ import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useValueLists } from "../lib/lists";
 import { problemText } from "../lib/problem";
+import { changedTime, changedUnderneath, refreshedSettings, type Refreshed } from "../lib/refreshed";
 import { addonLabel, fromDraft, groupLabel, isOff, depthOf, matches, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
 import { isListed, navSections, sectionItems, sectionOfItem, topics } from "../lib/settings-sections";
 import { knownFingerprint, rememberFingerprint, useAfterSave } from "../lib/settings-save";
@@ -18,8 +19,10 @@ import { AiRouting } from "./AiRouting";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
+import { BrandContrast } from "./BrandContrast";
 import { AddonSecrets, BackupKey } from "./KeptSecrets";
 import { NotifyPermission } from "./NotifyPermission";
+import { RefreshedLines } from "./RefreshedLines";
 import { SettingRow } from "./SettingRow";
 import { SyncPanel } from "./SyncPanel";
 import { ValueLists } from "./ValueLists";
@@ -80,10 +83,17 @@ export function Settings(props: {
   const [query, setQuery] = useState("");
   const [edits, setEdits] = useState<Edits>({});
   const [problems, setProblems] = useState<Record<string, string>>({});
+  // What a refused save refreshed from what is saved now, and when it changed, until the next save goes through.
+  const [refreshed, setRefreshed] = useState<{ lines: Refreshed[]; time: string }>({ lines: [], time: "" });
+  const editsNow = useRef(edits);
+  editsNow.current = edits;
   const searchId = useId();
   const content = useRef<HTMLDivElement>(null);
 
   const everything = settings.data?.items ?? [];
+  // The accent color as it stands on screen: what is typed, else what is saved.
+  const brand = everything.find((i) => i.key === "ui.brand.color");
+  const brandColor = brand ? String(brand.key in edits ? edits[brand.key] : (brand.value ?? "")) : "";
   const canList = useFolderListing(everything.some((i) => i.picker));
   const listed = navSections(everything, {
     lists: (lists.data?.length ?? 0) > 0,
@@ -170,13 +180,28 @@ export function Settings(props: {
         },
       );
       drop(key, sent);
+      setRefreshed({ lines: [], time: "" });
       await afterSave(saved);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        // Out of date: load again, keeping what was typed, and say so on the row.
+        // Out of date: load again. What the person didn't touch takes what is saved now and is listed; what they
+        // changed stays as typed, and is marked on its row.
         adopt.current = true;
-        void client.invalidateQueries({ queryKey: ["settings"] });
-        setProblems((all) => ({ ...all, [key]: t("settings.changed_since_opened") }));
+        const typed = editsNow.current;
+        try {
+          const now = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+          rememberFingerprint(client, now.fingerprint);
+          const was = view.items;
+          setRefreshed({ lines: refreshedSettings(was, now.items, (k) => k in typed, t, has), time: changedTime(now) });
+          setProblems((all) => {
+            const next = { ...all, [key]: t("settings.changed_since_opened") };
+            for (const k of Object.keys(typed)) if (changedUnderneath(was, now.items, k)) next[k] = t("settings.changed_since_opened");
+            return next;
+          });
+        } catch {
+          void client.invalidateQueries({ queryKey: ["settings"] });
+          setProblems((all) => ({ ...all, [key]: t("settings.changed_since_opened") }));
+        }
         return;
       }
       setProblems((all) => ({ ...all, [key]: err instanceof ApiError && err.detail ? err.detail : problemText(err, t) }));
@@ -343,6 +368,7 @@ export function Settings(props: {
       <>
         {heading(section)}
         {form(section)}
+        {section === "appearance" && <BrandContrast color={brandColor} />}
         {section.startsWith("addon/") && <AddonSecrets plugin={section.slice("addon/".length)} name={label(section)} />}
         {section === "today" && <NotifyPermission />}
         {section === "backups" && (
@@ -427,7 +453,10 @@ export function Settings(props: {
           ) : query.trim() ? (
             results()
           ) : (
-            body()
+            <>
+              <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
+              {body()}
+            </>
           )}
         </div>
       </div>

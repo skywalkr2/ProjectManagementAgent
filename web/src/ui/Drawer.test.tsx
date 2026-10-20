@@ -103,3 +103,18 @@ test("a drawer opened over another is named by its own title", async () => {
   expect(await screen.findByRole("dialog", { name: "Add a person" })).toBeInTheDocument();
   expect(screen.getByRole("dialog", { name: "Add a project", hidden: true })).toBeInTheDocument();
 });
+
+test("a drawer opens with the cursor in its first field, or on its heading when it has none", async () => {
+  const user = userEvent.setup();
+  const { unmount } = render(<Demo />);
+  await user.click(screen.getByRole("button", { name: "Open drawer" }));
+  await waitFor(() => expect(screen.getByLabelText("Name")).toHaveFocus());
+  unmount();
+  render(
+    <Drawer open title="What this means" onClose={() => undefined}>
+      <p>Words only.</p>
+      <button type="button">Got it</button>
+    </Drawer>,
+  );
+  await waitFor(() => expect(screen.getByRole("heading", { name: "What this means" })).toHaveFocus());
+});

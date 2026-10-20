@@ -407,7 +407,10 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     }
   };
 
-  const primary = () => void (copied ? markSent() : view === "table" ? copyTable() : copy());
+  // Copy never reaches the clipboard unless the message it copies is on screen: on a closed card it opens the message
+  // (with the cursor in it) and the next Copy is the one that copies.
+  const copyShown = () => void (!open ? edit() : view === "table" ? copyTable() : copy());
+  const primary = () => void (copied ? markSent() : copyShown());
   const hold = useHoldFor(questions);
   const menu: MenuAction[] = [
     { id: "edit", label: t("followups.edit"), run: edit },
@@ -417,7 +420,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   useRowKeys(ref, {
     toggle: () => setOpen((v) => !v),
     primary,
-    copy: () => void (view === "table" ? copyTable() : copy()),
+    copy: copyShown,
     edit,
   });
 

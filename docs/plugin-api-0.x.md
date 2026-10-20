@@ -10,6 +10,14 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.84 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.
+
+- **Core op `project.add`** takes an optional `status` (a value of the project-status list, with the exact words behind it
+  in the evidence, or it is refused, so an unknown status stays unknown) and an optional `link` (the page the project
+  came from; an add from a link nothing set up can open says "Not read" and fills nothing from it).
+
 ## What 0.3.83 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.

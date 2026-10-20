@@ -69,7 +69,7 @@ def build_secret_router(ws: Workspace, cfg: Config, store: Store, events: Events
         return done
 
     def kept_or_named(
-        name: str, value: str | None, reference: str | None, make: bool = False
+        name: str, value: str | None, reference: str | None, make: bool = False, owner: str | None = None
     ) -> tuple[str, str | None, Path | None]:
         """What a secret setting holds, from what the person gave: the reference, the key just made (when asked to
         make one) and the file this call made, to take away again if the save is refused. Nothing typed is kept when
@@ -85,7 +85,8 @@ def build_secret_router(ws: Workspace, cfg: Config, store: Store, events: Events
         kept = setup.unused_secret_name(ws, name)
         made = secrets.token_urlsafe(MADE_KEY_BYTES) if make else None
         try:
-            return setup.keep_secret(ws, kept, made or value or ""), made, setup.secret_path(ws, kept)
+            reference = setup.keep_secret(ws, kept, made or value or "", owner=owner, forever=name == BACKUP_KEY_NAME)
+            return reference, made, setup.secret_path(ws, kept)
         except StoreError as err:
             raise HTTPException(status_code=400, detail=str(err)) from None
 
@@ -125,7 +126,9 @@ def build_secret_router(ws: Workspace, cfg: Config, store: Store, events: Events
             )
         if secret not in names:
             raise HTTPException(status_code=404, detail="That isn't one of the secrets this add-on says it needs.")
-        reference, _, fresh = kept_or_named(setup.secret_name("addon", plugin, secret), body.value, body.reference)
+        reference, _, fresh = kept_or_named(
+            setup.secret_name("addon", plugin, secret), body.value, body.reference, owner=f"addon:{plugin}:{secret}"
+        )
         try:
             done = save(
                 {f"workspace.plugins.secrets.{plugin}.{secret}": reference},

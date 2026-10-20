@@ -107,6 +107,8 @@ test("opening a file shows it as a form; saving writes your copy with only what 
   const form = await screen.findByRole("form", { name: "Changing classic.yaml" });
   expect(within(form).getByText(/Saves your own copy/)).toBeInTheDocument();
   expect(await within(form).findByLabelText("About title")).toHaveValue("Classic");
+  // The cursor starts in the form's first field once the file has loaded.
+  await waitFor(() => expect(within(form).getByLabelText("About title")).toHaveFocus());
   expect(within(form).getByLabelText("About sizes.body")).toHaveValue("11");
   // Nothing changed yet, so there is nothing to save.
   expect(within(form).getByRole("button", { name: "Save classic.yaml" })).toBeDisabled();

@@ -455,6 +455,40 @@ test("Change AI models saves with the fingerprint it opened with: a change made 
   expect(calls.filter((c) => c.route === "POST ai/accounts/trial").map((c) => (c.body as { fingerprint: string }).fingerprint)).toEqual(["fp-1", "fp-2"]);
 });
 
+test("after a refusal the models nobody typed in are refreshed from what is saved now and listed, and the ones typed are kept", async () => {
+  const user = userEvent.setup();
+  let moved = false;
+  const calls = api({
+    "GET ai/accounts": () => [
+      account("trial", { label: "Trial account", models: moved ? { everyday: "model-elsewhere", harder: "model-new" } : { everyday: "model-a", harder: "model-b" } }),
+    ],
+    "GET settings": () => ({ fingerprint: moved ? "fp-2" : "fp-1", changed_at: "2026-10-20T09:14:00Z", items: [LIMIT] }),
+    "POST ai/accounts/trial": (sent) => {
+      if ((sent as { fingerprint: string }).fingerprint === "fp-1") {
+        moved = true;
+        return new Refuse(409, "The settings changed since you opened them. Look again, then save.");
+      }
+      return SAVED;
+    },
+  });
+  open();
+  await screen.findByText("Trial account");
+  await menu(user, "Trial account", "Change AI models");
+  const everyday = await screen.findByLabelText("AI model for everyday work");
+  await user.clear(everyday);
+  await user.type(everyday, "model-z");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  const lines = await screen.findByRole("status", { name: "Refreshed from what is saved now" });
+  expect(lines).toHaveTextContent(/refreshed: AI model for harder work is now model-new, changed elsewhere at .*\d/);
+  expect(lines).not.toHaveTextContent("everyday");
+  expect(screen.getByLabelText("AI model for everyday work")).toHaveValue("model-z");
+  await waitFor(() => expect(screen.getByLabelText("AI model for harder work")).toHaveValue("model-new"));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled());
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/accounts/trial")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST ai/accounts/trial")[1].body).toEqual({ fingerprint: "fp-2", models: { everyday: "model-z", harder: "model-new" } });
+});
+
 test("a backup that gains a harder model offers to move its harder work there, checked first, in one click", async () => {
   const user = userEvent.setup();
   const calls = api({

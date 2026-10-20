@@ -84,8 +84,6 @@ export function WelcomeAi(props: {
   const [usingFound, setUsingFound] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [nameTouched, setNameTouched] = useState(false);
   const [address, setAddress] = useState("");
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -140,8 +138,8 @@ export function WelcomeAi(props: {
   })();
   const shownLabel = labelTouched ? labelText : defaultLabel;
   // The id in the settings: typed under Advanced in the guide, made from the name in the drawer.
-  const accountId = drawer ? (kind ? idFrom(shownLabel, kind.id, taken) : "") : nameTouched ? name : kind ? freeName(kind.id, taken) : "";
-  const nameBad = !drawer && accountId !== "" && !ACCOUNT_NAME.test(accountId);
+  // Left as suggested in the guide, the id stays the kind's own; a name the person typed makes its own.
+  const accountId = kind ? (drawer || labelTouched ? idFrom(shownLabel, kind.id, taken) : freeName(kind.id, taken)) : "";
 
   const list: ModelInfo[] = server ? server.models.map((id) => ({ id })) : (models ?? []);
   const asked = models !== null || listProblem !== "";
@@ -168,7 +166,7 @@ export function WelcomeAi(props: {
   }, [added]);
 
   // In the drawer: a typed key or name is unsaved text, and the cursor starts in the first main field, the choice of service.
-  const typed = key.trim() !== "" || keyRef.trim() !== "" || labelTouched || nameTouched;
+  const typed = key.trim() !== "" || keyRef.trim() !== "" || labelTouched;
   const onDirty = drawer?.onDirty;
   useEffect(() => {
     onDirty?.(typed);
@@ -268,7 +266,7 @@ export function WelcomeAi(props: {
 
   const ready =
     !!kind &&
-    ACCOUNT_NAME.test(accountId) && (!drawer || shownLabel.trim() !== "") &&
+    ACCOUNT_NAME.test(accountId) && shownLabel.trim() !== "" &&
     (programPicks || everyday.trim() !== "") &&
     !noMatch &&
     levels.length > 0 &&
@@ -321,7 +319,7 @@ export function WelcomeAi(props: {
     const second = !agent && harder !== HARDER_SAME && harder !== everyday ? harder : "";
     const body: S["AiAccountAdd"] = {
       name: accountId,
-      label: drawer ? shownLabel.trim() : defaultLabel,
+      label: shownLabel.trim(),
       adapter: kind.adapter,
       endpoint: kind.id,
       models: programPicks ? {} : second ? { everyday: everyday.trim(), harder: second } : { everyday: everyday.trim() },
@@ -349,8 +347,8 @@ export function WelcomeAi(props: {
       setResults(null);
       setAdded(accountId);
       // The next suggested name looks at the accounts as they are now, so a second account of this kind gets -2.
-      setName("");
-      setNameTouched(false);
+      setLabelText("");
+      setLabelTouched(false);
       if (drawer) {
         const shown = body.label ?? accountId;
         await afterSave(saved, { message: t(asWork ? "ai_add.done_main" : "ai_add.done", { name: shown }) });
@@ -384,7 +382,7 @@ export function WelcomeAi(props: {
         drawer.onAdded();
         return;
       }
-      await afterSave(saved, { message: t("welcome.ai.added", { name: accountId }) });
+      await afterSave(saved, { message: t("welcome.ai.added", { name: shownLabel.trim() }) });
       await client.invalidateQueries({ queryKey: ["ai-accounts"] });
       void test();
     } catch (err) {
@@ -869,24 +867,23 @@ export function WelcomeAi(props: {
               <details className="more-options advanced">
                 <summary>{t("welcome.ai.advanced")}</summary>
                 {!drawer && (
-                <div className="field">
-                  <label htmlFor="ai-name">{t("welcome.ai.name")}</label>
-                  <input
-                    id="ai-name"
-                    type="text"
-                    value={accountId}
-                    autoComplete="off"
-                    aria-invalid={nameBad ? true : undefined}
-                    aria-describedby="ai-name-hint"
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      setNameTouched(true);
-                    }}
-                  />
-                  <p className={nameBad ? "problem-note" : "hint"} id="ai-name-hint">
-                    {t("welcome.ai.name_hint")}
-                  </p>
-                </div>
+                  <div className="field">
+                    <label htmlFor="ai-name">{t("welcome.ai.name")}</label>
+                    <input
+                      id="ai-name"
+                      type="text"
+                      value={shownLabel}
+                      autoComplete="off"
+                      aria-describedby="ai-name-hint"
+                      onChange={(e) => {
+                        setLabelText(e.target.value);
+                        setLabelTouched(true);
+                      }}
+                    />
+                    <p className="hint" id="ai-name-hint">
+                      {t("welcome.ai.name_hint")}
+                    </p>
+                  </div>
                 )}
                 {takesAddress(kind) && !asksAddress(kind) && (
                   <div className="field">

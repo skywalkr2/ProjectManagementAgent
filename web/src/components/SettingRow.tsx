@@ -1,7 +1,11 @@
 // One setting as a form control, with its label, hint, default and a way back to the default. Used by the Settings screen
 // and by every other form built from setting items (a source's settings, an add-on's data file).
+import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { api } from "../lib/api";
+import { useTierName } from "../lib/ai-routing";
 import { depthOf, fileName, formatValue, fromDraft, isDefault, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
+import { dateFormatChoices } from "../lib/date-formats";
 import { languageChoices } from "../lib/languages";
 import { useWords } from "../lib/wording";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
@@ -66,11 +70,30 @@ export function SettingRow(props: {
     .join(" ");
   const off = item.locked || props.disabled || props.gate !== null;
   const option = (o: string) => (has(`settings.option.${item.key}.${o}`) ? t(`settings.option.${item.key}.${o}`) : o);
-  // A list of languages shows each tag as its name in the browser's language, in the order of those names.
+  // Lists the person's own records and settings keep show them by name: people, and the tiers by their plain names.
+  const people = useQuery({ queryKey: ["people"], queryFn: api.people, enabled: item.choices === "people" });
+  const tierName = useTierName();
+  const personName = (id: string) => (people.data ?? []).find((p) => p.id === id)?.name ?? id;
+  const ownerExample = (format: string) =>
+    format.replace("{full_name}", t("settings.owner_example_name")).replace("{team}", t("settings.owner_example_team"));
+  // A setting that may be empty starts its list with a line that says so.
+  const mayBeEmpty = item.default === "" || item.default == null;
+  // A list of languages shows each tag as its name in the browser's language, in the order of those names; a list of date
+  // formats shows each as today's date written that way.
   const choices =
     item.choices === "languages"
       ? languageChoices(item.options ?? []).map((c) => ({ tag: c.tag, label: c.label }))
-      : (item.options ?? []).map((o) => ({ tag: o, label: option(o) }));
+      : item.choices === "date_formats" || item.choices === "date_time_formats"
+        ? dateFormatChoices(item.options ?? [])
+        : item.choices === "people"
+          ? (item.options ?? []).map((o) => ({ tag: o, label: personName(o) }))
+          : item.choices === "tiers"
+            ? (item.options ?? []).map((o) => ({ tag: o, label: tierName(o) }))
+            : item.choices === "owner_formats"
+              ? (item.options ?? []).map((o) => ({ tag: o, label: ownerExample(o) }))
+              : item.choices === "media_types"
+                ? (item.options ?? []).map((o) => ({ tag: o, label: has(`settings.media.${o}`) ? t(`settings.media.${o}`) : o }))
+                : (item.options ?? []).map((o) => ({ tag: o, label: option(o) }));
 
   const typedSecret = !!props.secret && item.secret === true && item.type === "text" && !readOnly && !item.locked;
   let control;
@@ -123,6 +146,9 @@ export function SettingRow(props: {
           props.commit?.(e.target.value);
         }}
       >
+        {mayBeEmpty && !choices.some((c) => c.tag === "") && (
+          <option value="">{t(item.choices === "people" ? "settings.no_one_chosen" : "settings.none_chosen")}</option>
+        )}
         {choices.map((c) => (
           <option key={c.tag} value={c.tag}>
             {c.label}

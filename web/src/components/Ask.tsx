@@ -14,6 +14,7 @@ import { useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
+import { OwnKindsOffer } from "./Templates";
 import { SafeText } from "./SafeText";
 
 type AskItem = S["AskView"];
@@ -87,6 +88,7 @@ export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?:
           </button>
         </div>
       </form>
+      <OwnKindsOffer />
       <section aria-labelledby={`${base}-recent`} className="asks">
         <h3 id={`${base}-recent`} className="what">
           {t("ask.recent")}

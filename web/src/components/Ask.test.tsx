@@ -324,3 +324,25 @@ test("Close and Escape both close the dialog", async () => {
   await user.keyboard("{Escape}");
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
 });
+
+test("Ask offers to set up kinds of items of your own, listing the starting templates only once it is opened, and applies one", async () => {
+  const user = userEvent.setup();
+  const calls = open([], {
+    "GET templates": () => [
+      { id: "tpl-a", name: "Client requests", description: "Requests with steps.", set_up: false, adds: [] },
+      { id: "tpl-b", name: "Trip", description: "Places and plans.", set_up: true, adds: [] },
+    ],
+    "POST templates/apply": () => ({ plugins: ["kit"], needs_restart: true }),
+  }).calls;
+  const offer = await screen.findByRole("button", { name: "Keep track of something of your own" });
+  expect(offer).toHaveAttribute("aria-expanded", "false");
+  expect(calls.some((c) => c.route === "GET templates")).toBe(false);
+  expect(screen.queryByText("Client requests")).toBeNull();
+  await user.click(offer);
+  expect(offer).toHaveAttribute("aria-expanded", "true");
+  expect(await screen.findByText("Client requests")).toBeInTheDocument();
+  expect(screen.getByText("Already set up")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Use Client requests" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST templates/apply")?.body).toEqual({ id: "tpl-a" }));
+  expect(await screen.findByText("Applied Client requests.")).toBeInTheDocument();
+});

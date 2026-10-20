@@ -45,7 +45,7 @@ export function SourceLimit(props: { source: string; limit: S["SourceLimit"] }) 
         </button>
       ) : (
         <div className="source-widen">
-          <PersonPicker label={t("source.limit.add_label")} value={person} onChange={setPerson} suggested={[]} people={others} noAdd />
+          <PersonPicker label={t("source.limit.add_label")} value={person} onChange={setPerson} suggested={[]} people={others} noAdd autoFocus />
           <div className="row-end">
             <button type="button" className="btn primary" disabled={!person} onClick={() => void widen({ people: [person], open: false }, t("source.limit.widened"))}>
               {t("source.limit.add")}

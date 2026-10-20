@@ -131,6 +131,22 @@ test("choosing a section shows that section's settings and no others; the choice
   expect(chosen).toHaveBeenCalledWith("appearance");
 });
 
+test("Appearance shows the measured contrast of the text on the accent color, and warns when it fails AA", async () => {
+  const user = userEvent.setup();
+  const color = (value: string) => item("ui.brand.color", { group: "ui.brand", value, default: "", description: "The accent color." });
+  api([...ITEMS, color("#4f46e5")]);
+  open("appearance");
+  const line = await screen.findByRole("status", { name: "Contrast of the accent color" });
+  expect(line).toHaveTextContent(/Text on your accent color has a contrast of \d+\.\d to 1, which meets the 4\.5 to 1 that WCAG AA asks for\./);
+  expect(line).not.toHaveTextContent("under");
+  // Typing a color that fails shows the warning at once, before it is saved, in words as well as color.
+  const box = screen.getByLabelText("The accent color.");
+  await user.clear(box);
+  await user.type(box, "#7a7a7a");
+  const warning = await screen.findByRole("status", { name: "Contrast of the accent color" });
+  expect(warning).toHaveTextContent(/Warning: text on your accent color has a contrast of \d+\.\d to 1, under the 4\.5 to 1 that WCAG AA asks for\. Choose a lighter or a darker color\./);
+});
+
 test("without an address to change, the section list still moves between sections", async () => {
   const user = userEvent.setup();
   api([...ITEMS, item("ui.theme", { group: "ui", description: "How it looks." })]);
@@ -356,6 +372,96 @@ test("a change made elsewhere meanwhile is refused in the 'changed since you ope
   expect(screen.getByLabelText("The display name.")).toHaveValue("Lanternx");
   await waitFor(() => expect(calls.filter((c) => c.route === "GET settings").length).toBeGreaterThan(before));
   expect(screen.queryByText(/^Saved/)).toBeNull();
+});
+
+test("the person's own record is picked from the people by name, with a blank for no one yet, and saved as the record's id", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [
+      ...ITEMS,
+      item("workspace.user.person", { type: "choice", choices: "people", options: ["PER-1", "PER-2"], value: "", default: "", description: "Your own record." }),
+    ],
+    { "GET people": () => [{ id: "PER-1", name: "Ada Example", status: "active" }, { id: "PER-2", name: "Robin Sample", status: "active" }] },
+  );
+  open();
+  const list = await screen.findByLabelText("Your own record.");
+  await waitFor(() => expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["No one chosen yet", "Ada Example", "Robin Sample"]));
+  expect(list).toHaveValue("");
+  await user.selectOptions(list, "PER-2");
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "workspace.user.person": "PER-2" } });
+});
+
+test("a role's tier is picked from the tiers by their plain names", async () => {
+  api([...ITEMS, item("ai.roles.write.tier", { type: "choice", choices: "tiers", options: ["routine", "deep", "extra-care"], value: "routine", default: "", description: "The tier for writing." })]);
+  open();
+  const list = await screen.findByLabelText("The tier for writing.");
+  expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "Everyday work", "Harder work", "Extra care"]);
+});
+
+test("how an owner is shown is a list of examples, and the file types that may be added are ticked by plain names", async () => {
+  api([
+    ...ITEMS,
+    item("workspace.owner_format", { type: "choice", choices: "owner_formats", options: ["{full_name}", "{team} ({full_name})"], value: "{full_name}", default: "{full_name}", description: "How an owner is shown." }),
+    item("storage.files.accepted_types", { type: "list", choices: "media_types", options: ["application/pdf", "text/csv", "image/png"], value: ["application/pdf"], default: [], description: "File types that may be added." }),
+  ]);
+  open();
+  const owner = await screen.findByLabelText("How an owner is shown.");
+  expect(within(owner).getAllByRole("option").map((o) => o.textContent)).toEqual(["Ada Example", "Design (Ada Example)"]);
+  const types = screen.getByRole("group", { name: /File types that may be added/ });
+  expect(within(types).getAllByRole("checkbox").map((c) => c.closest("label")?.textContent)).toEqual(["PDF", "CSV spreadsheet", "PNG image"]);
+  expect(within(types).getByRole("checkbox", { name: "PDF" })).toBeChecked();
+});
+
+test("a setting that holds a date format is a list showing today's date in each format, not the codes", async () => {
+  const user = userEvent.setup();
+  const formats = ["%a, %b %d", "%Y-%m-%d"];
+  api([
+    ...ITEMS,
+    item("language.messages.date_format", { group: "language.messages", type: "choice", choices: "date_formats", options: formats, value: "%a, %b %d", default: "%a, %b %d", description: "How dates appear.", basic: true }),
+  ]);
+  open("advanced");
+  await user.click(await screen.findByRole("button", { name: /messages/i }));
+  const list = await screen.findByLabelText("How dates appear.");
+  expect(list.tagName).toBe("SELECT");
+  const labels = within(list).getAllByRole("option").map((o) => o.textContent);
+  expect(labels).toHaveLength(2);
+  expect(labels.join(" ")).not.toContain("%");
+  expect(labels[1]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("after a refusal the settings the person did not touch are refreshed and listed, and the ones they changed are kept and marked", async () => {
+  const user = userEvent.setup();
+  let moved = false;
+  fakeApi({
+    "GET settings": () => ({
+      fingerprint: moved ? "fp-2" : "fp-1",
+      changed_at: "2026-10-20T09:14:00Z",
+      items: ITEMS.map((i) => (moved && i.key === "demo.limit" ? { ...i, value: 9 } : moved && i.key === "demo.title" ? { ...i, value: "Elsewhere" } : i)),
+    }),
+    "POST settings": (body) => {
+      if ((body as S["SettingsSave"]).fingerprint === "fp-1") {
+        moved = true;
+        return new Refuse(409, "The settings changed since you opened them. Look again, then save.");
+      }
+      return { changes: [{ key: "demo.title", before: "Elsewhere", after: "Lanternx", was_default: false, is_default: false }], fingerprint: "fp-3", needs_restart: false };
+    },
+  });
+  open();
+  await user.type(await screen.findByLabelText("The display name."), "x");
+  await user.tab();
+  const lines = await screen.findByRole("status", { name: "Refreshed from what is saved now" });
+  expect(lines).toHaveTextContent(/refreshed: What demo\.limit does is now 9, changed elsewhere at .*\d/);
+  expect(lines).not.toHaveTextContent("demo.title");
+  await waitFor(() => expect(screen.getByLabelText("What demo.limit does")).toHaveValue("9"));
+  // The one they typed in is kept and marked, with its own words on its row.
+  expect(screen.getByLabelText("The display name.")).toHaveValue("Lanternx");
+  expect(rowOf("The display name.")).toHaveTextContent("This was changed since you opened it.");
+  // The second Save is on what is saved now and goes through.
+  await user.click(screen.getByLabelText("The display name."));
+  await user.tab();
+  expect(await screen.findByText(/^Saved\./)).toBeInTheDocument();
+  expect(screen.queryByRole("status", { name: "Refreshed from what is saved now" })).toBeNull();
 });
 
 test("a refused value shows the server's words on its own row and keeps what was typed", async () => {

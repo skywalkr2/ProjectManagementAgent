@@ -350,9 +350,9 @@ test("after an add the suggested name looks at the accounts as they are now", as
   open();
   await keyed(user);
   const advanced = screen.getByText("Advanced").closest("details")!;
-  expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a");
+  expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("Service A account");
   await user.click(screen.getByRole("button", { name: "Add account" }));
-  await waitFor(() => expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a-2"));
+  await waitFor(() => expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("Service A account 2"));
   expect(calls.filter((c) => c.route === "GET ai/accounts").length).toBeGreaterThan(1);
   // The account just made is listed by the name the person sees (never its id), with a way to fix or remove it.
   const row = (await screen.findByText("Service A account", { selector: "li[data-row] span[id$=title]" })).closest("li")!;
@@ -368,11 +368,12 @@ test("a name the person typed is dropped after an add, so the next one is sugges
   const advanced = screen.getByText("Advanced").closest("details")!;
   const name = within(advanced).getByLabelText("Account name", { selector: "input" });
   await user.clear(name);
-  await user.type(name, "mine");
+  await user.type(name, "My AI");
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
-  expect(body(calls).name).toBe("mine");
-  await waitFor(() => expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a"));
+  expect(body(calls).name).toBe("my-ai");
+  expect(body(calls).label).toBe("My AI");
+  await waitFor(() => expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("Service A account"));
 });
 
 test("adding sends the kind, both models, the data levels the kind allows and what to use them for", async () => {
@@ -399,7 +400,7 @@ test("adding sends the kind, both models, the data levels the kind allows and wh
     use: { routine: "everyday", deep: "harder" },
     fingerprint: "fp-1",
   });
-  expect(await screen.findByText("Added the account service-a. Testing it now.")).toBeInTheDocument();
+  expect(await screen.findByText("Added the account Service A account. Testing it now.")).toBeInTheDocument();
   // The pasted key is not left on screen after it was sent.
   expect(screen.getByLabelText("Access key")).toHaveValue("");
 });
@@ -426,7 +427,7 @@ test("when the guide step was already done, using it for my work starts unticked
   expect(body(calls).use).toBeUndefined();
 });
 
-test("the account name gets -2 when an account of that name exists, and can be changed under Advanced", async () => {
+test("the suggested name is the service's name, numbered when taken, and the id in the settings follows it", async () => {
   const user = userEvent.setup();
   const calls = api({
     "GET settings": () => ({
@@ -437,10 +438,12 @@ test("the account name gets -2 when an account of that name exists, and can be c
   open();
   await keyed(user);
   const advanced = screen.getByText("Advanced").closest("details")!;
-  expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a-3");
+  // The ids service-a and service-a-2 are taken in the settings; the name the person sees is still the service's.
+  expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("Service A account");
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls).name).toBe("service-a-3");
+  expect(body(calls).label).toBe("Service A account");
 });
 
 test("Advanced holds the account name, the fixed address read-only and the key's other home", async () => {
@@ -459,7 +462,6 @@ test("Advanced holds the account name, the fixed address read-only and the key's
   await screen.findByLabelText("AI model for everyday work");
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });
   await user.clear(within(advanced).getByLabelText("Account name", { selector: "input" }));
-  await user.type(within(advanced).getByLabelText("Account name", { selector: "input" }), "Bad Name");
   expect(screen.getByRole("button", { name: "Add account" })).toBeDisabled();
 });
 

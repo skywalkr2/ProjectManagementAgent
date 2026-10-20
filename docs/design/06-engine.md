@@ -577,7 +577,10 @@ How each is recorded (decided 2026-10-15; *being built, L3b*):
   the person even from their own note, and its kinds are `workspace.contact_kinds`; "It's part of" and "Not a project"
   are `POST /api/changesets/{cs}/ops/{i}/part-of` and `/not-a-project`, each setting the held proposal aside, adding an
   active confirmed glossary entry (wording in `language.messages`) and recording `held_declined`. **Built:**
-  `tests/test_next_steps.py`.
+  `tests/test_next_steps.py`. *On screen (B-6a):* the held project's row has Add as its one primary action, and in its menu
+  "It's part of <project>" once for each of up to three projects whose names share a word with the held one (one click files it
+  there), "It's part of…" for the whole list, and "Not a project" (`web/src/components/NextSteps.test.tsx`). Today's held line
+  has no inline offers: it opens the change.
 
 `event.set` (data tier, offered to reading notes) moves an entry already in the calendar: a new `start`, a new `end` or
 both, with the input's words as evidence (required), refused alone when the entry doesn't exist or the end would come
@@ -1364,6 +1367,12 @@ in, and the person never types a command); paste the key, which is kept on this 
 aggregator too; it also says that notes, mail and meetings are internal, so the assistant can work on them only once
 Internal is ticked, and a run stopped because no account may see its material offers "Let <account> see internal
 material" as its action, the person's own one-click raise, phase A); run the evaluation (below) before a model is approved for a tier.
+*Found by the first journeys (B-6a):* a new account's suggested name is the service's name ("<service> account", numbered when
+taken), never its catalog id, which stays the short name in the settings until the person names the account themselves; and a
+custom address (the catalog's "another service" kind) needs no key, since the service may take none: a key is asked for only
+by the kinds that need one, and a service that does refuses without it in plain words. **Built:**
+`web/src/components/WelcomeAi.test.tsx` (the suggested name, a custom address added with no key),
+`tests/test_forms_b6a.py::test_a_custom_address_needs_no_key_because_the_service_may_take_none`.
 
 **One provider-neutral contract.** Every call is an `AiTask`:
 
@@ -1816,10 +1825,15 @@ person about who to ask, never a guess from a passing mention. **Built:** the pr
 <link>" reads the link before anything is added, through whatever configured source can read it: its status, what
 shipped and its dates, each as a fact with its evidence. Something the source says is finished isn't new work: it is
 added with those facts, and the person is asked whether to mark it complete. A status nobody stated stays unknown,
-never "not started": status is an evidence field, so a status with no words behind it is refused (built today for
-`record.set`; B-6a makes `project.add` follow the same rule). When no source can read the link, the add says so ("not
-read: nothing set up can open this link") instead of filling the record from the link's text alone. The full lookup of
-a system of record is phase C4's fact lookups.
+never "not started": status is an evidence field, so a status with no words behind it is refused, by `record.set` and by
+`project.add` (its `status` takes the words that state it as evidence, from the assistant; the person's own screens need none,
+and a status the value list lacks is refused). When no source can read the link, the add says so ("Not read: nothing set up
+can open this link", `language.messages.link_not_read`) instead of filling the record from the link's text alone:
+`project.add`'s `link` is kept as a link on the project labeled so, the held row shows the same line (`OpMeta.note`), and a
+source that reads addresses on the link's host (`engine/projects.py::source_for_link`) makes it an ordinary link. **Built:**
+`tests/test_forms_b6a.py` (a status with no words, a quote not in the input, a stated status that waits and is kept, no status
+left unknown, a status the list lacks, a link nothing can open, a link a source reads, the held row's note),
+`web/src/components/NextSteps.test.tsx`. The full lookup of a system of record is phase C4's fact lookups.
 
 ## 6.20 Quality signals
 

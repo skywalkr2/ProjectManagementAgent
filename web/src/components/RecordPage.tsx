@@ -8,6 +8,8 @@ import { usePluginRun } from "../lib/plugin-run";
 import { problemText } from "../lib/problem";
 import { changedFields, editableFields, initialDraft, type Draft } from "../lib/record-edit";
 import { readable, readableTail, useValueLines } from "../lib/records";
+import { reconcile, type Refreshed } from "../lib/refreshed";
+import { time } from "../lib/dates";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { useChangeThis, useQuestionMenu, type ChangeKind } from "./ChangeThis";
@@ -22,6 +24,7 @@ import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
 import { RecordActivity } from "./RecordActivity";
+import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { StancePicker } from "./StancePicker";
 import { TextSection } from "./TextSection";
@@ -240,6 +243,11 @@ function DetailsForm(props: {
   const base = useId();
   const { record, fields } = props;
   const [draft, setDraft] = useState<Draft>(() => initialDraft(fields, record.fields));
+  // What the form showed when it opened, or when a refused save last refreshed it: the untouched fields are the ones
+  // still equal to it.
+  const [shown, setShown] = useState<Draft>(draft);
+  const [refreshed, setRefreshed] = useState<{ lines: Refreshed[]; time: string }>({ lines: [], time: "" });
+  const lines = useValueLines();
   const [error, setError] = useState<{ text: string; stale: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const changed = changedFields(fields, record.fields, draft);
@@ -263,7 +271,25 @@ function DetailsForm(props: {
       });
       props.onDone();
     } catch (err) {
-      setError({ text: problemText(err, t), stale: err instanceof ApiError && err.status === 409 });
+      const stale = err instanceof ApiError && err.status === 409;
+      setError({ text: problemText(err, t), stale });
+      if (stale) {
+        // Fields the person didn't touch take what is saved now and are listed; the ones they changed are kept.
+        try {
+          const now = await client.fetchQuery({ queryKey: ["record", props.kind, record.id], queryFn: () => api.record(props.kind, record.id), staleTime: 0 });
+          const saved = initialDraft(fields, now.fields);
+          const out = reconcile(shown, draft, saved);
+          setDraft(out.next as Draft);
+          setShown(saved);
+          const at = now.changed_at ? new Date(now.changed_at) : null;
+          setRefreshed({
+            lines: out.refreshed.map((name) => ({ label: readable(name), value: lines(now.fields[name]).join(", ") || t("settings.empty") })),
+            time: at && !Number.isNaN(at.getTime()) ? time(at) : "",
+          });
+        } catch {
+          // Without the current record the form can't be refreshed; the next look at the page finds the cause.
+        }
+      }
       setSaving(false);
     }
   };
@@ -298,6 +324,7 @@ function DetailsForm(props: {
           {error.stale && <p>{t("record.edit_stale")}</p>}
         </div>
       )}
+      <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
       <div className="row-end">
         <button type="button" className="btn quiet" onClick={props.onDone}>
           {t("action.cancel")}
@@ -345,7 +372,7 @@ function DetailInput(props: {
   if (f.type === "reference" && f.refers_to === "person") {
     // The person who is picked stays pickable even after they have left.
     const people = props.people.filter((p) => p.status === "active" || p.id === text);
-    return <PersonPicker label={label} value={text} onChange={props.onChange} suggested={[]} people={people} />;
+    return <PersonPicker label={label} value={text} onChange={props.onChange} suggested={[]} people={people} autoFocus={props.autoFocus} />;
   }
   if (f.value_list) {
     return (

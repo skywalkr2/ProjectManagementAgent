@@ -339,6 +339,14 @@ special from the core.
   Defining types on the Settings screens, a screen or route for "Save as template" (today it is `cockpit template save`),
   renaming a field in every record and the guard that stops deleting a type with items are designed and not yet built.
 
+**Where the kit is offered** (owner, 2026-10-13: "i dont want to see these fake plugins"). The add-ons that come with the app
+(the kit and the example) are never listed in setup as add-ons to turn on, and the Add-ons screen shows them only once turned on
+or in a sandbox workspace (`tests/test_walkthrough.py`). The kit is offered where a person wants kinds of items of their own:
+under Ask's box, "Keep track of something of your own" opens the starting templates, each with what it adds and a button to
+use it (applying one turns the kit on and asks before a restart). Nothing is read until it is opened
+(`web/src/components/Ask.test.tsx`, `Welcome.test.tsx`). *Left:* the same offer on the record forms; today the setup guide's
+template step and Ask are the two places.
+
 **Templates.** A template is the kit's settings plus a name and a description. Starting templates ship with the core in
 `templates/`. A template is applied in the first-run wizard or later from settings; applying one to a workspace that
 already has types adds the new ones and leaves the existing ones as they are, and each template lists what it adds before it

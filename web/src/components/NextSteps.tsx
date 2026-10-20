@@ -125,6 +125,17 @@ function NewPersonFields(props: { question: string; start: S["NewPersonPrefillVi
   );
 }
 
+/** How many projects whose names look like the held one are offered by name in its menu. */
+const LIKELY_OFFERED = 3;
+const MIN_WORD = 4;
+
+/** Whether two names share a word of at least a few letters, ignoring case. */
+function sharesWord(a: string, b: string): boolean {
+  const words = (text: string) => new Set(text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= MIN_WORD));
+  const mine = words(a);
+  return [...words(b)].some((w) => mine.has(w));
+}
+
 /** A project the assistant found, held for the person: Add, "It's part of" a project picked from the list, or "Not a
  * project". Add is the row's one primary action; the other two are in its menu. */
 export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }) {
@@ -136,8 +147,10 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
   const ref = useRef<HTMLLIElement>(null);
   const [choosing, setChoosing] = useState(false);
   const [into, setInto] = useState("");
-  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects, enabled: choosing });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const choices = projectChoices(projects.data ?? [], (parent, child) => t("handin.project.path", { parent, name: child }));
+  // Projects whose names share a word with the held one are offered by name, so filing it there is one click.
+  const likely = choices.filter((c) => sharesWord(String(name), projects.data?.find((p) => p.id === c.id)?.name ?? "")).slice(0, LIKELY_OFFERED);
   const close = () => {
     setChoosing(false);
     setInto("");
@@ -149,14 +162,16 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
       () => api.release(props.changeset, op.index),
       () => ({ message: t("toast.project_added", { name }), undo: () => api.undo(props.changeset, [op.index]) }),
     );
-  const partOf = async () => {
-    if (!into) return;
-    const target = choices.find((c) => c.id === into)?.label ?? "";
-    const done = await act(
-      () => api.projectPartOf(props.changeset, op.index, into),
+  const fileUnder = async (project: string) => {
+    const target = choices.find((c) => c.id === project)?.label ?? "";
+    return act(
+      () => api.projectPartOf(props.changeset, op.index, project),
       (made) => ({ message: t("toast.project_filed", { name, project: target }), undo: () => api.undo(made.changeset) }),
     );
-    if (done) close();
+  };
+  const partOf = async () => {
+    if (!into) return;
+    if (await fileUnder(into)) close();
   };
   const notOne = () =>
     act(
@@ -173,6 +188,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
           <span className="pill k-held">{t("op.status.held")}</span>
         </div>
         <div className="title">{t("project_item.ask", { name })}</div>
+        {op.meta.note && <div className="hint">{op.meta.note}</div>}
         {op.evidence && (
           <div className="because">
             {t("op.because")} <q>{op.evidence.quote}</q>
@@ -186,6 +202,7 @@ export function ProjectProposalRow(props: { op: S["OpView"]; changeset: string }
         <RowMenu
           label={name}
           actions={[
+            ...likely.map((c) => ({ id: `part-of-${c.id}`, label: t("project_item.part_of_named", { project: c.label }), run: () => void fileUnder(c.id) })),
             { id: "part-of", label: t("project_item.part_of"), run: () => setChoosing(true) },
             { id: "not-a-project", label: t("project_item.not_a_project"), run: () => void notOne() },
           ]}

@@ -146,6 +146,8 @@ test("Ask someone else picks a person from a list and moves the question", async
   await menuOf(user, "Which cover?");
   await user.click(screen.getByRole("menuitem", { name: "Ask someone else" }));
   const pick = await screen.findByRole("combobox", { name: "Ask instead" });
+  // The form opens with the cursor in its list.
+  await waitFor(() => expect(pick).toHaveFocus());
   expect(screen.getByRole("button", { name: "Ask them" })).toBeDisabled();
   await waitFor(() => expect(within(pick).getAllByRole("option").length).toBeGreaterThan(2));
   await user.selectOptions(pick, "PER-3");

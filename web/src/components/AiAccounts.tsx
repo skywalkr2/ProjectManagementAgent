@@ -29,6 +29,7 @@ import { EVERYDAY, HARDER, modelsOf, planFor, useAccountActs, useConfirmAbove } 
 import { day, monthDay, wallWhen } from "../lib/dates";
 import { useMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
+import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
 import { asReference } from "../lib/secret-ref";
 import { useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
@@ -38,6 +39,7 @@ import { Icon } from "../ui/Icon";
 import { Pill, type PillTone } from "../ui/Pill";
 import { Row } from "../ui/Row";
 import { restoreFocus } from "./ModalPanel";
+import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./AiAccounts.module.css";
 
@@ -238,6 +240,10 @@ function AccountRow(props: {
   const [models, setModels] = useState<Record<string, string>>({});
   const [harder, setHarder] = useState("");
   const [moveHarder, setMoveHarder] = useState(true);
+  // What the form showed when it opened (or was last refreshed), so a refused save can tell which fields were touched,
+  // and what it refreshed from what is saved now.
+  const shown = useRef<{ label: string; models: Record<string, string> }>({ label: "", models: {} });
+  const [refreshed, setRefreshed] = useState<{ lines: Refreshed[]; time: string }>({ lines: [], time: "" });
   // A check that would cost more than the person asked to be asked about waits for their go, with its cost on screen.
   const [gate, setGate] = useState<{ usd: number; run: () => void } | null>(null);
   const guard = (usd: number | null | undefined, run: () => void) => {
@@ -275,6 +281,8 @@ function AccountRow(props: {
     setHarder("");
     setMoveHarder(true);
     setModels({ ...account.models });
+    shown.current = { label: account.label || name, models: { ...account.models } };
+    setRefreshed({ lines: [], time: "" });
     setMode(next);
     restoreFocus(() => firstField.current);
   };
@@ -284,14 +292,44 @@ function AccountRow(props: {
     restoreFocus(() => primaryButton.current);
   };
 
+  /** After a refusal: the fields nobody typed in take what is saved now and are listed; typed ones stay. */
+  const refreshForm = async () => {
+    try {
+      const [list, view] = await Promise.all([
+        client.fetchQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts, staleTime: 0 }),
+        client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 }),
+      ]);
+      const now = list.find((a) => a.name === account.name);
+      if (!now) return;
+      const flat = (label: string, all: Record<string, string>) => ({ label, ...Object.fromEntries(Object.entries(all).map(([k, v]) => [`model:${k}`, v])) });
+      const out = reconcile(flat(shown.current.label, shown.current.models), flat(label, models), flat(now.label || accountName(now, props.kindOf(now), t), now.models));
+      const untyped = (key: string) => out.next[key] ?? "";
+      if (mode === "name") setLabel(untyped("label"));
+      if (mode === "models") {
+        setModels(Object.fromEntries(Object.keys(now.models).map((short) => [short, untyped(`model:${short}`)])));
+      }
+      shown.current = { label: now.label || accountName(now, props.kindOf(now), t), models: { ...now.models } };
+      const wanted = mode === "name" ? ["label"] : mode === "models" ? Object.keys(now.models).map((k) => `model:${k}`) : [];
+      setRefreshed({
+        lines: out.refreshed
+          .filter((key) => wanted.includes(key))
+          .map((key) => ({ label: key === "label" ? t("ai_accounts.rename_label") : modelLabel(key.slice("model:".length)), value: now.models[key.slice("model:".length)] ?? (key === "label" ? now.label : "") })),
+        time: changedTime(view),
+      });
+    } catch {
+      // Without the current list the form can't be refreshed; the next look at the screen finds the cause.
+    }
+  };
+
   const fail = (err: unknown, fromForm = false) => {
     // A changed file means the lists are out of date: load them again, keeping what was typed.
     if (err instanceof ApiError && err.status === 409) {
       void client.invalidateQueries({ queryKey: ["settings"] });
       if (fromForm) {
-        // Said once; the next save is the person's own, on what is saved now.
+        // Said once; the next save is the person's own, on what is saved now. What they didn't touch is refreshed.
         baseline();
         setProblem(t("settings.changed_since_opened"));
+        void refreshForm();
         return;
       }
     }
@@ -652,6 +690,7 @@ function AccountRow(props: {
       menu={<RowMenu label={name} actions={actions} />}
     >
       <div className={styles.forms} hidden={!extras}>
+        <RefreshedLines lines={refreshed.lines} time={refreshed.time} />
         {mode === "name" && (
           <form
             onSubmit={(e) => {

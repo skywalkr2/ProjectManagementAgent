@@ -681,8 +681,20 @@ class ProjectAddOp(OpModel):
         default_factory=list,
         description="Ids of existing projects to move inside the new one (books into a new series), in the same op.",
     )
+    status: str | None = Field(
+        None,
+        description="Where the project stands, only when the input states it, with those words as evidence. A status "
+        'nobody stated is left out and stays unknown: never write "not started" or a guess.',
+    )
+    link: str | None = Field(
+        None,
+        description="The page the project was added from, when the input gave one. It is kept as a link on the "
+        "project; the project's details are filled from it only when something set up can read it.",
+    )
     evidence: EvidenceIn | None = Field(
-        None, description="The exact words from the input that name the project, when an input is where it came from."
+        None,
+        description="The exact words from the input that name the project, when an input is where it came from; "
+        "required when a status is given, and then the words that state the status.",
     )
 
     def describe(self) -> str | None:

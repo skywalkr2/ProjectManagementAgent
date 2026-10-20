@@ -394,8 +394,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         need(kind, id)
         record = store.read().get(kind, id)
         texts = long_text_fields(store.plugins.records[kind])
+        written = store.read().ledger(kind=kind, record_id=id)
         return GenericRecordView(
             kind=kind,
+            changed_at=datetime.fromisoformat(written[-1]["at"]) if written else None,
             id=record.id,
             version=record.version,
             fields={k: v for k, v in record.data.items() if k not in texts and k != "ext"},
@@ -2180,6 +2182,11 @@ def _op_view(
         meta["value"] = op["value"]
     if op["op"] == "project.add":
         meta["name"] = op["name"]
+        if op.get("link") and cfg is not None:
+            from engine.projects import source_for_link
+
+            if source_for_link(cfg, op["link"]) is None:
+                meta["note"] = cfg.language.messages.link_not_read
     if op["op"] == "project.role":
         meta["role"] = op["role"]
     if op["op"] == "person.stance":
