@@ -11,7 +11,10 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
-## Open: F15 to F25 (2026-10-19 and 20, phases B-6 and B-7)
+## Answered: F15 to F25 (asked 2026-10-19 and 20, answered 2026-10-20)
+
+Answered by the functional designer on 2026-10-20; the answers are in `docs/decisions.md` ("The functional designer's
+answers to F15 to F25") and are built in B-7.
 
 Each is built to its default tonight; a different answer changes the build, not the plan.
 

@@ -4,6 +4,46 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-20: The functional designer's answers to F15 to F25
+
+- **Decided (functional designer, relayed by the owner):** yes to the defaults of F15, F17, F18, F20, F21, F23 and F24
+  with additions; changes to F16 and F19; no to F25; F22 yes, with a fix to the chase clock. The questions are in
+  `docs/project/designer-questions.md`; the work is the roadmap's B-7 item "The functional designer's answers to F15 to
+  F25".
+- **F15:** blocked is a kind of on hold, never due or chased. The chase moves to the blocker: a hold waiting on a
+  person's answer or another action gives that blocker the chase clock, and Top priorities shows the blocker ("Ask Sam
+  for the floor plan: it holds up two of yours"), not the blocked item. A hold waiting on the person themselves isn't
+  blocked: it is their own to-do and shows as one.
+- **F16:** Top priorities ranks overdue, then waiting on the person (a decision or answer someone else needs), then due
+  within the follow-up window, then at risk. Blocked items appear only as their unblocking act; nothing with no act for
+  the person today appears. One line per person and the cap stay.
+- **F17:** a date move isn't news, but a second move of the same date within 14 days shows in the person's own history,
+  worded neutrally ("moved again (second time since Oct 6)"), never in anything drafted for others ("moved", not
+  "slipped").
+- **F18:** the browser and a webhook now; mail to the person themselves with S1b.
+- **F19:** approving or copying a draft the assistant made for an action doesn't mark the action done (a nudge isn't
+  done). It ends when the sent version is seen in the sent folder, or when the person marks it; with nothing matching
+  sent within 2 days, 6.35's "Did this go out another way?" asks.
+- **F20:** a plain calendar entry needs no AI run. A plain entry whose title reads as a task ("Pay the deposit") is
+  offered as a to-do with one click, by rule from the title's first word; one whose title names a known person or a
+  promise's words is linked to them by rule, so a promise due at it moves with it.
+- **F21:** a phrase the rules can't read keeps the model's date marked to check. "Once …" is on hold from the start,
+  waiting for its condition (not merely dateless); "before <a meeting>" is due at that entry when it is a known one, and
+  dateless with the words kept when it isn't.
+- **F22:** a reply that doesn't answer is news, but news mustn't silence the chase clock: a non-answer restarts it once,
+  at the dated window (7 days) for a dated promise; after a second non-answer the line comes back with the news shown
+  ("Sam replied twice without a date: ask again?"). Test: an overdue waiting-on with two non-answer replies gets its line
+  back.
+- **F23:** one follow-up line per person with every late promise they owe; no chase for someone the person reports to.
+- **F24:** Top priorities has no buttons; every line goes to the row where its act is.
+- **F25:** a new AI account reads nothing of work until the person says so: one explicit yes per account for work mail
+  and notes, asked once with the account's sign-in identity shown ("Allow <account>, signed in as <identity>, to read
+  Work?"). The default is the area the account was added from (areas carry allowed accounts, S4); personal areas may
+  keep the default. Why: an agent once ran work material on a personal account nobody chose; employers' rules on work
+  data in outside AI accounts (R9, R14).
+- **Impact:** design 6.9 (on hold and blocked), 6.33 (dates, conditions, the chase clock), 6.34, 6.35 (sent version),
+  6.16 (accounts and data), 7.6 and 7.7 (Top priorities, Today), and the records' history; each edited when built.
+
 ## 2026-10-20: The installers ship the mail and calendar add-ons, ready to sign in
 
 - **Decided (owner):** "from a user perspective anything that makes a non technical user life easier is what I would
@@ -16,7 +56,10 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   "add-ons a new workspace starts with turned on" as a setting the installer fills in. The sign-in approval research
   (I-2) covers the unverified-app warning.
 
-## 2026-10-20: A new AI account may read the person's own work material by default
+## 2026-10-20: A new AI account may read the person's own work material by default (overruled the same day, F25)
+
+- **Overruled** by the functional designer's answer to F25 (entry above): a new account reads nothing of work until the
+  person says yes for that account.
 
 - **Decided (main session, on the owner's acceptance of the reviewer's first-run feedback):** the AI account step asks
   "Can the AI service read your work mail and notes?" with "Yes, that's what it's for" chosen, which allows the open and

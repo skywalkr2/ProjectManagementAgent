@@ -517,13 +517,22 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   - **First run for a person with no IT background** (the reviewer's further feedback, `reviews/ui-ux-2026-10/first-run/`,
     recorded in `docs/project/ui-rereview-2026-10-20.md`): F2, the AI account step (one recommended service with a
     "Recommended" tag from data, numbered steps for account, credit and key, a check on paste with a reason per account
-    kind, the data question in plain words defaulting to the person's own work material, the model chosen per kind of
+    kind, the data question as one explicit yes per account for work mail and notes with its sign-in identity shown (F25: no
+    default), the model chosen per kind of
     work and its picker in Advanced, spending as a sentence, one Continue, "I'll do this later" as a secondary button);
     F4 (backups offer the cloud-drive folders found on the computer, by name, from a list in config, with "Back up now
     and continue"); F5 (the Done step as a compact list, templates in plain words, never Done for a step not done, no
     restart talk); F6 (Today's empty state by setup state; "Missed one" only after the assistant has worked); F7 and F8
     (Settings and setup words); checks N3 to N7, the wording check extended to labels from config schemas and add-on
     manifests (N5).
+  - **The functional designer's answers to F15 to F25** (2026-10-20; `docs/decisions.md`, "The functional designer's
+    answers to F15 to F25"): the chase moves to a hold's blocker and Top priorities shows the blocker; a hold waiting on
+    the person is their own to-do (F15); Top priorities' order overdue, waiting on the person, due within the window, at
+    risk, with only acts for today (F16); a second move within 14 days shown in the person's own history (F17); an
+    approved draft doesn't mark its action done (F19); a task-like plain calendar entry offered as a to-do by rule, and
+    one naming a known person or promise linked by rule (F20); "once …" on hold from the start and "before <a known
+    meeting>" due at it (F21); a non-answer restarts the chase clock once, and a second brings the line back (F22, with
+    its test); a new AI account reads nothing of work until the person allows it, with its sign-in identity shown (F25).
   - **The reviewer's further feedback** (owner, 2026-10-20: "provide the UI/UX agent the next batch when you can because
     it already has more feedback"): asked for on 2026-10-20 and folded into this batch when it arrives; when B-7 is
     pushed and green, the reviewer gets the commit, the status for C1–C53 and every place the build chose differently.
