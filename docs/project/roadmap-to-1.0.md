@@ -455,6 +455,11 @@ From the original designer's lessons of 2026-10-14:
     reads "the 25th", "by the 30th", "due Oct 22" and their kin, and words it still can't read keep the model's own
     date marked to check instead of dropping it; the case `quoted-thread-action-exists` expects the move held for Keep
     that the designer's correction set (2026-10-19), not a direct date change;
+  - **the rest of the owner's learning run (2026-10-20; 81% of 214, 79% harder, 30% pairs; one run per case):** a
+    condition ("once the keys arrive", "after the workshop") goes in the promise's due words (8 misses); a reply that
+    doesn't answer is `action.news` (7 misses); the date reader takes a leading "on" or "due" and ordinals (about 8);
+    then the owner re-runs the failed cases with `--case-failed`. When this is built is the owner's call (asked
+    2026-10-20: after the UI gate, or before the gate week).
   - `cockpit evaluate` waits for the network as the app's own runs do (a lost network uses up no try and fails no case),
     and the pair harness's practice copies never hold the main account as an unchecked backup (fixed:
     `tests/test_catch_up_learning.py::test_the_main_account_listed_again_as_its_own_backup_is_never_held_as_an_unchecked_backup`).
