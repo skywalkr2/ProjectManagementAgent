@@ -17,6 +17,17 @@ from tests import speedups
 # Faster parsing, plugin lookup, route validators and prepared workspaces; before the product's modules are imported.
 speedups.install()
 
+# CI's later-clock job: TEST_CLOCK_DAYS_AHEAD moves the date every test process sees that many days on, still ticking,
+# so a test that mixes a fixed date with the real one fails now rather than on that day. Only the date moves: the
+# clocks that time waits stay real, and programs a test starts see the real date.
+if os.environ.get("TEST_CLOCK_DAYS_AHEAD"):
+    from datetime import UTC, datetime, timedelta
+
+    import time_machine
+
+    _days = int(os.environ["TEST_CLOCK_DAYS_AHEAD"])
+    time_machine.travel(datetime.now(UTC) + timedelta(days=_days), tick=True).start()
+
 from engine.config import load_config  # noqa: E402
 from engine.selfcheck import FIXTURES  # noqa: E402
 from engine.storage import Store  # noqa: E402
