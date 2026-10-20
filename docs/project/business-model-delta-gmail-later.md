@@ -91,3 +91,31 @@ one in Google's developer console is hard for someone non-technical.
 1. Is the trigger right, or should Gmail one-click wait on one signal only?
 2. Is a weekly "Sign in again" acceptable for testers, or does it spoil the two-week check-in (`tester-feedback-form.md`)?
 3. Should the free Gmail walkthrough be in the core's setup guide or only in the add-on?
+4. Added after the technical reviewer's read (below): should the tester registration (M7) also serve the free core's
+   testers in phase I, before Plus exists?
+
+## The technical reviewer's read (2026-10-20)
+
+The technical reviewer merged this page into the working plan as a proposal, still waiting on the functional designer.
+It is placed in the Thimbleby+ phase (phase T) and doesn't touch the free core's release. Their roadmap no longer counts
+on Gmail app passwords for the installers' item, as this page says. Their answers to questions 1 to 3:
+
+1. **Whichever of the three comes first.** Each is a real reason to pay for the assessment, and waiting on one signal
+   would leave Gmail users stuck longer.
+2. **Acceptable for testers,** as long as a refused renewal is a Today line, not mail silently stopping. *Checked in the
+   code:* a refused renewal opens a question to the person, "Sign in to … again", once per sign-in and account, closed
+   by signing in again (`engine/plugin_host.py`, `tell_sign_in_refused`; tested in `tests/test_mailbox_refusal.py` and
+   `tests/test_today_dashboard.py`). The test this page adds checks the weekly case on top of that.
+3. **In the add-on, not the core.** The core names no vendor or service (CLAUDE.md, "The boundary"), and Gmail is one, so
+   this is a boundary rule rather than a choice.
+
+Their suggestion, put to the functional designer as question 4: **M7 could also serve the free core's testers before
+Thimbleby+ exists,** for example phase I's check that three people set it up alone, so early non-technical testers use
+Gmail without building their own registration. Two things to weigh:
+- **The cap is shared.** One tester registration serves phase I's testers and Plus's founding members from the same
+  list of about 100 names. Google may count everyone ever added toward the cap, not only the current list, so a name
+  removed may not free a place (checked with M7). If the cap is lifetime, phase I may need a second registration of its
+  own.
+- **What phase I's check then proves.** With M7, "set it up alone" no longer covers making a Gmail registration. Either
+  that check names M7 as given, or one of the three testers uses the free path's own-registration steps, so the
+  walkthrough is tested by someone non-technical before Plus launches.
