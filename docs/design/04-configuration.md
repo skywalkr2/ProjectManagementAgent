@@ -622,7 +622,7 @@ Built keys:
 
 `backups.encrypt` (**built**, L5; `tests/test_backup_encryption.py::test_every_file_of_an_encrypted_copy_is_sealed`): an `env:` or `file:` key reference; when set, every backup copy is sealed (AES-GCM in
 chunks, a key derived per backup, each chunk bound to its path and place), `cockpit restore --backup` asks for the key and
-refuses a wrong one before writing anything, and the backup line says the backup is encrypted. A lost key means a backup
+refuses a wrong one before writing anything, and the status popover says the backup is encrypted. A lost key means a backup
 that can't be read, and the description says so. File names and the folder layout are not hidden. The key can be typed in
 Settings (kept on this computer as `backup-key`, the setting holding only its `file:` reference) or made by the app with
 "Make one for me", which shows it once; a replaced key stays on disk beside the new one, because backups already made need it

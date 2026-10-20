@@ -5,7 +5,7 @@ import type { S } from "./api";
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
 /** How long ago the last backup was, in words; null when none has succeeded. */
-export function backupAge(b: S["BackupStatus"], t: T): string | null {
+export function backupAge(b: { age_hours: number | null }, t: T): string | null {
   if (b.age_hours === null) return null;
   const h = b.age_hours;
   const hours = Math.floor(h);
@@ -18,14 +18,6 @@ export function backupText(b: S["BackupStatus"], t: T): string {
   const age = backupAge(b, t);
   const text = age === null ? (b.last_error ? t("backup.failed") : t("backup.never")) : b.needs_attention ? t("backup.overdue", { age }) : t("backup.ok", { age });
   return b.encrypted ? `${text} · ${t("backup.encrypted")}` : text;
-}
-
-/** What Today's line says: the action first, then why. */
-export function backupLineText(b: S["BackupStatus"], t: T): string {
-  if (!b.configured) return t("backup.line.none");
-  const age = backupAge(b, t);
-  const text = age === null ? t(b.last_error ? "backup.line.failed" : "backup.line.never") : t("backup.line.overdue", { age });
-  return b.encrypted ? `${text} ${t("backup.line.encrypted")}` : text;
 }
 
 /** What the header chip adds after its word once a backup has succeeded, so the age is always in view. */

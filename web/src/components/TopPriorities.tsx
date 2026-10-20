@@ -1,24 +1,19 @@
-// Top priorities (design 7.7): a short ranked list across every project, in the rail. One row for each of the person's own
-// things, one row for everyone else however much they hold ("Robin Sample: send 1 question, follow up on 3 waiting up to 5
-// days", the items in its tooltip). The server ranks it by rules; this draws it. Its row actions are the ones the to-do
-// list has: Mark done, with Reassign and Hand to the assistant in the menu.
+// Top priorities (design 7.7): a short ranked list across every project, in the rail, as context and never as the place to
+// act. One row for each of the person's own things, one row for everyone else however much they hold ("Robin Sample: send 1
+// question, follow up on 3 waiting up to 5 days", the items in its tooltip). The server ranks it by rules; this draws it.
+// A row has no buttons and no menu: its words are a link, to its line in the queue (which opens it) or, when the queue
+// has none, to its record.
 import { useQuery } from "@tanstack/react-query";
-import { useRef } from "react";
 import { api, type S } from "../lib/api";
-import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { chooseFilters } from "../lib/open-items";
 import { revealOrKeep } from "../lib/reveal";
-import type { View } from "../lib/views";
+import { useQueue, type QueueLine } from "../lib/today";
+import { recordView, viewHref, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { Button } from "../ui/Button";
 import { Pill, type PillTone } from "../ui/Pill";
 import { Skeleton } from "../ui/Skeleton";
-import { useHandToAssistant } from "./HandToAssistant";
-import { useNoted } from "./NoteBox";
 import { Empty, Failed, RailPanel } from "./RailPanel";
-import { useReassign } from "./ReassignAction";
-import { RowMenu } from "./RowMenu";
 import styles from "./Today.module.css";
 
 type Line = S["PriorityLineView"];
@@ -73,6 +68,7 @@ function metaOf(line: Line, t: T, tn: Tn): string {
 export function TopPriorities(props: { onView: (view: View) => void }) {
   const { t, tn } = useWords();
   const found = useQuery({ queryKey: ["today", "priorities"], queryFn: api.priorities });
+  const queue = useQueue();
   const data = found.data;
   const lines = data?.lines ?? [];
   const coming = data?.coming ?? [];
@@ -97,7 +93,7 @@ export function TopPriorities(props: { onView: (view: View) => void }) {
     </>
   );
   return (
-    <RailPanel id="priorities" title={t("today.priorities.title")} count={data ? lines.length : null} countText={tn("today.priorities.count", lines.length)} footer={footer || undefined}>
+    <RailPanel id="priorities" title={t("today.priorities.title")} count={data ? lines.length : null} countText={tn("today.priorities.count", lines.length)} summary={data ? (lines.length > 0 ? String(lines.length) : t("today.rail.nothing")) : ""} footer={footer || undefined}>
       {found.isPending ? (
         <Skeleton />
       ) : found.isError ? (
@@ -109,7 +105,7 @@ export function TopPriorities(props: { onView: (view: View) => void }) {
           {lines.length > 0 ? (
             <ul className="tb-list">
               {lines.map((line) => (
-                <PriorityRow key={line.key} line={line} mixed={mixed} onView={props.onView} />
+                <PriorityRow key={line.key} line={line} mixed={mixed} queue={queue.data} />
               ))}
             </ul>
           ) : (
@@ -137,27 +133,49 @@ export function TopPriorities(props: { onView: (view: View) => void }) {
   );
 }
 
-function PriorityRow(props: { line: Line; mixed: boolean; onView: (view: View) => void }) {
-  const { line } = props;
-  if (line.kind === "action" && line.action) return <ActionRow {...props} />;
-  return <OtherRow {...props} />;
+
+/** The line of the queue a priority is about: the one that lists its to-do, asks its question, or follows up with its person. */
+export function queueLineOf(line: Line, queue: QueueLine[] | undefined): QueueLine | undefined {
+  if (!queue) return undefined;
+  if (line.kind === "action") return queue.find((l) => !!line.action && (l.actions ?? []).includes(line.action));
+  if (line.kind === "question") return queue.find((l) => !!line.question && (l.question === line.question || (l.questions ?? []).includes(line.question)));
+  const mine = queue.filter((l) => !!line.person && l.person === line.person);
+  return mine.find((l) => l.kind === "nudge") ?? mine.find((l) => l.kind === "escalate") ?? mine.find((l) => l.kind === "send");
 }
 
-/** The part every row shares: the chip, the title with its project tag, the second line and the items for the tooltip. */
-function Body(props: { line: Line; mixed: boolean }) {
+/** One row: the chip, the words as a link, the second line and the items for the tooltip. */
+function PriorityRow(props: { line: Line; mixed: boolean; queue: QueueLine[] | undefined }) {
   const { t, tn } = useWords();
   const { line } = props;
+  const target = queueLineOf(line, props.queue);
+  const record = line.kind === "action" && line.action ? recordView("action", line.action) : line.kind === "question" && line.question ? recordView("question", line.question) : line.person ? recordView("person", line.person) : null;
   const c = chip(line, t, tn);
   const title = titleOf(line, t, tn);
   const items = line.kind === "person" ? (line.things ?? []).map((x) => x.text) : [];
   const project = props.mixed && line.project_name ? <span className={styles.tag}>{line.project_name}</span> : null;
+  const words = target ? (
+    // The queue is where it is done: choosing the link opens its line there, without leaving Today.
+    <a
+      href={viewHref("today")}
+      onClick={(event) => {
+        event.preventDefault();
+        revealOrKeep("line", target.key);
+      }}
+    >
+      {title}
+    </a>
+  ) : record ? (
+    <a href={viewHref(record)}>{title}</a>
+  ) : (
+    title
+  );
   return (
-    <>
+    <li className={`tb-row ${styles.priority}`} data-row tabIndex={-1} data-priority={line.rank}>
       <Pill tone={c.tone}>{c.text}</Pill>
       <div className="tb-what">
         <div className="tb-title" title={items.length > 0 ? items.join("\n") : undefined}>
           {project}
-          {title}
+          {words}
         </div>
         <div className="tb-meta">{metaOf(line, t, tn)}</div>
         {items.length > 1 && (
@@ -168,58 +186,6 @@ function Body(props: { line: Line; mixed: boolean }) {
           </ul>
         )}
       </div>
-    </>
-  );
-}
-
-/** One of the person's own to-dos: Mark done is the row's button; Reassign and a note are in its menu. */
-function ActionRow(props: { line: Line; mixed: boolean; onView: (view: View) => void }) {
-  const { t } = useWords();
-  const act = useAct();
-  const noted = useNoted();
-  const row = useRef<HTMLLIElement>(null);
-  const { line } = props;
-  const id = line.action!;
-  const reassign = useReassign({ id, version: line.version ?? 0, owners: line.owners ?? [] }, () => row.current?.focus());
-  const hand = useHandToAssistant({ id }, () => row.current?.focus());
-  const done = (note?: string) =>
-    act(
-      () => api.actionStatus(id, "done", note),
-      (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(id, "open") }),
-    );
-  return (
-    <li className={`tb-row ${styles.priority}`} data-row tabIndex={-1} ref={row} data-priority={line.rank}>
-      <Body line={line} mixed={props.mixed} />
-      <Button size="sm" variant="primary" data-key="primary" aria-label={t("today.todo.done_named", { text: line.text })} onClick={() => void done()}>
-        {t("followups.mark_done")}
-      </Button>
-      <RowMenu label={line.text} actions={[reassign.entry, ...(hand.entry ? [hand.entry] : [])]} />
-      {reassign.form}
-      {hand.form}
-    </li>
-  );
-}
-
-/** A question for the person, or everyone else's one row: its button takes the person to where it is answered. */
-function OtherRow(props: { line: Line; mixed: boolean; onView: (view: View) => void }) {
-  const { t, tn } = useWords();
-  const { line } = props;
-  const label =
-    line.kind === "question" ? t("queue.act.answer") : line.chase > 0 ? t("queue.act.follow_up") : t("queue.act.review_copy");
-  const go = () => {
-    if (line.kind === "question" && line.question) {
-      revealOrKeep("question", line.question);
-      return;
-    }
-    props.onView("work/followups");
-    if (line.person) revealOrKeep("person", line.person);
-  };
-  return (
-    <li className={`tb-row ${styles.priority}`} data-row tabIndex={-1} data-priority={line.rank}>
-      <Body line={line} mixed={props.mixed} />
-      <Button size="sm" variant="primary" data-key="primary" aria-label={`${label}: ${titleOf(line, t, tn)}`} onClick={go}>
-        {label}
-      </Button>
     </li>
   );
 }

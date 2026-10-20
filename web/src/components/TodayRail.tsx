@@ -1,5 +1,6 @@
-// Today's rail (design 7.7): top priorities, the agenda, the person's own list and what came in, as panels sized to their content beside
-// the queue (below it under 1024px). What needs the person is the queue, not the rail.
+// Today's rail (design 7.7): top priorities, the week, the agenda, the person's own list and what came in, as panels sized to
+// their content beside the queue (below it under 1024px, and on the phone each folded to one line). What needs the person is
+// the queue, not the rail.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
@@ -19,6 +20,8 @@ import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import styles from "./Today.module.css";
 import { recordView, viewHref, type View } from "../lib/views";
+import { Button } from "../ui/Button";
+import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
 import { ThisWeekPanel } from "./ThisWeek";
@@ -36,14 +39,14 @@ function useNow(): Date {
   return now;
 }
 
-/** The rail's panels: top priorities, the week from 2560px (`week`), the agenda, the to-dos and what came in. `onAddSource` opens Sources with the add form open. */
-export function TodayRail(props: { onView: (view: View) => void; onAddSource?: () => void; week?: boolean }) {
+/** The rail's panels: top priorities, the week, the agenda, the to-dos and what came in. `onAddSource` opens Sources with the add form open. */
+export function TodayRail(props: { onView: (view: View) => void; onAddSource?: () => void }) {
   const { t } = useWords();
   const add = props.onAddSource ?? (() => props.onView("sources"));
   return (
     <div className={styles.rail} role="group" aria-label={t("today.rail.label")}>
       <TopPriorities onView={props.onView} />
-      {props.week && <ThisWeekPanel />}
+      <ThisWeekPanel />
       <AgendaPanel onAddSource={add} />
       <TodoPanel />
       <ArrivedPanel onView={props.onView} onAddSource={add} />
@@ -153,7 +156,14 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
     date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date);
 
   return (
-    <RailPanel id="agenda" title={t("today.agenda.title")} count={agenda.data ? count : null} countText={tn("today.agenda.count", count)} footer={<AddMeeting today={today} />}>
+    <RailPanel
+      id="agenda"
+      title={t("today.agenda.title")}
+      count={agenda.data ? count : null}
+      countText={tn("today.agenda.count", count)}
+      summary={agenda.data ? (count > 0 ? tn("today.agenda.count", count) : t("today.agenda.none_today")) : ""}
+      footer={<AddMeeting today={today} />}
+    >
       {agenda.isPending ? (
         <Skeleton />
       ) : agenda.isError ? (
@@ -165,7 +175,7 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
             <SourceProblems problems={sourceState.problems} />
           </div>
         ) : (
-          <Empty text={t("today.agenda.empty")} note={sourceState.note} button={sourceState.button} />
+          <Empty inline text={t("today.agenda.empty")} note={sourceState.note} button={sourceState.button} />
         )
       ) : (
         groups.map((group) => {
@@ -210,9 +220,23 @@ function AgendaPanel(props: { onAddSource?: () => void }) {
   );
 }
 
-/** A meeting added in one line (design 7.7): what, the day (today to begin with) and the time (none: all day). The server makes
- * the person's own calendar entry, or merges the meeting into one already there and says so; Undo takes an added one back. */
+/** The button that adds a meeting to the agenda, opening a drawer with one line to fill: what, the day (today to begin with)
+ * and the time (none: all day). The server makes the person's own calendar entry, or merges the meeting into one already
+ * there and says so; Undo takes an added one back. The drawer closes once it is added; a refusal leaves what was typed. */
 function AddMeeting(props: { today: string }) {
+  const { t } = useWords();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        {t("meeting.open")}
+      </Button>
+      {open && <MeetingDrawer today={props.today} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function MeetingDrawer(props: { today: string; onClose: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();
@@ -222,7 +246,7 @@ function AddMeeting(props: { today: string }) {
   const day_ = on || props.today;
   const submit = async () => {
     const title = what.trim();
-    if (!title) return;
+    if (!title || !day_) return;
     const done = await act(
       () => api.addMeeting({ what: title, day: day_, time: at || null }),
       (added) =>
@@ -230,37 +254,47 @@ function AddMeeting(props: { today: string }) {
           ? { message: t("meeting.merged", { what: added.merged_with ?? title }) }
           : { message: t("meeting.added", { what: title }), undo: () => api.undo(added.changeset ?? "") },
     );
-    if (done) {
-      setWhat("");
-      setAt("");
-    }
+    if (done) props.onClose();
   };
   return (
-    <form
-      className="meeting-line"
-      role="group"
-      aria-label={t("meeting.title")}
-      onSubmit={(e) => {
-        e.preventDefault();
-        void submit();
-      }}
+    <Drawer
+      open
+      title={t("meeting.title")}
+      onClose={props.onClose}
+      dirty={what.trim() !== ""}
+      footer={
+        <>
+          <Button onClick={props.onClose}>{t("action.cancel")}</Button>
+          <Button type="submit" form={`${base}-form`} variant="primary" disabled={!what.trim() || !day_}>
+            {t("meeting.add")}
+          </Button>
+        </>
+      }
     >
-      <div className="field">
-        <label htmlFor={`${base}-what`}>{t("meeting.what")}</label>
-        <input id={`${base}-what`} type="text" value={what} onChange={(e) => setWhat(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor={`${base}-day`}>{t("meeting.day")}</label>
-        <input id={`${base}-day`} type="date" value={day_} onChange={(e) => setOn(e.target.value)} />
-      </div>
-      <div className="field">
-        <label htmlFor={`${base}-time`}>{t("meeting.time")}</label>
-        <input id={`${base}-time`} type="time" value={at} onChange={(e) => setAt(e.target.value)} />
-      </div>
-      <button type="submit" className="btn" disabled={!what.trim() || !day_}>
-        {t("meeting.add")}
-      </button>
-    </form>
+      <form
+        id={`${base}-form`}
+        className="meeting-line"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <div className="field">
+          <label htmlFor={`${base}-what`}>{t("meeting.what")}</label>
+          <input id={`${base}-what`} type="text" value={what} onChange={(e) => setWhat(e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor={`${base}-day`}>{t("meeting.day")}</label>
+          <input id={`${base}-day`} type="date" value={day_} onChange={(e) => setOn(e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor={`${base}-time`}>{t("meeting.time")}</label>
+          <input id={`${base}-time`} type="time" value={at} onChange={(e) => setAt(e.target.value)} />
+        </div>
+        {/* The drawer's Add button is outside the form; this one lets Enter in a field add the meeting. */}
+        <button type="submit" hidden tabIndex={-1} aria-hidden="true" />
+      </form>
+    </Drawer>
   );
 }
 
@@ -328,7 +362,13 @@ function TodoPanel() {
   ].filter((g) => g.rows.length > 0);
 
   return (
-    <RailPanel id="todo" title={t("today.todo.title")} count={todo.data ? items.length : null} countText={tn("today.todo.count", items.length)}>
+    <RailPanel
+      id="todo"
+      title={t("today.todo.title")}
+      count={todo.data ? items.length : null}
+      countText={tn("today.todo.count", items.length)}
+      summary={todo.data ? (items.length > 0 ? String(items.length) : t("today.rail.nothing")) : ""}
+    >
       {todo.isPending ? (
         <Skeleton />
       ) : todo.isError ? (
@@ -504,6 +544,7 @@ function ArrivedPanel(props: { onView: (view: View) => void; onAddSource?: () =>
       title={t("today.arrived.title")}
       count={arrived.data ? items.length : null}
       countText={tn("today.arrived.count", items.length)}
+      summary={arrived.data ? (items.length > 0 ? String(items.length) : t("today.rail.nothing")) : ""}
       action={watch.data && anyReading(watch.data) ? <CheckNow /> : undefined}
       footer={
         (setAside > 0 || leftOut > 0) && (

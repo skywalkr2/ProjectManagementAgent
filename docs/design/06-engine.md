@@ -1273,9 +1273,9 @@ order, each line with a kind:
 | Group | Lines (kind) |
 |---|---|
 | **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; built, `tests/test_silent_stops.py::test_the_restart_line_comes_before_the_first_go_and_before_decisions`); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`, shaped as a question with two answers when it rests on an inference or drops something that reached someone, `engine/held_ask.py`, 7.6); the questions a follow-on run asked about one move, as one group (`moved`, `engine/move_groups.py`, 7.7; a group of one stays a `decision` or `question` carrying `after_move`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
-| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); work that has waited for the network longer than `dispatch.offline_line_after_minutes`, one line with the count and since when (`offline`, built, `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line, leaving out any on hold (`overdue`) |
+| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); work that has waited for the network longer than `dispatch.offline_line_after_minutes`, one line with the count and since when (`offline`, built, `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line, leaving out any on hold (`overdue`); no backup that works: none set up, none yet, the last one failed or the last one overdue, with the one button that mends it (`backup`, "Back up your work", 7.7; the header chip says it too; batch B-7, `tests/test_follow_up_lines.py`) |
 | **Review** | the person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`, one line (`stale`, 6.9; its action opens To-dos and questions on the stale ones); the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); what the assistant filed under no project, one line with the count while there is any (`unfiled`, `engine/unfiled.py`, 7.14); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
-| **Send** | messages to send, one line per person (`send`); something sent to a person that is due a follow-up by the rule in 6.9 (`nudge`: questions sent and actions told, 4.11); the one thing a person still hasn't answered after `ui.followups.escalate_after_chases` follow-ups, as a suggestion to ask someone else (`escalate`, 6.8; never sent; the same thing is not also in the person's nudge line) |
+| **Send** | messages to send, one line per person (`send`); one line per person who is due a follow-up (`nudge`: questions sent, actions told by the rule in 6.9, and the promises they owe that 6.33 says are late with nothing heard, with how many are overdue and the oldest date, 4.11; a promise owed by someone the person reports to keeps its own `promise` line); the one thing a person still hasn't answered after `ui.followups.escalate_after_chases` follow-ups, as a suggestion to ask someone else (`escalate`, 6.8; never sent; the same thing is not also in the person's nudge line) |
 
 Within a group, a kind has a fixed place (decisions first, then who-is, owner, held, go, refused, questions), then the line that
 has waited longest, or is due first, comes first; a nudge goes by its longest wait. A review or overdue line that covers exactly
@@ -2978,15 +2978,20 @@ is held for the person: one line, "Keep: Ana sent the floor plan", with the word
 yet. One from the person's own note or a button applies at once with Undo. `action.news` changes nothing about the
 promise and applies at once, shown on it. A held ending kept by the person counts as seen (6.32's silent closes).
 
-**No news by its date.** A promise past its date with no ending and no news is a line with its choices: for a waiting-on,
-"Chase Ana: the floor plan, due Tuesday" with a drafted follow-up, Followed up (a nudge: it stays open), New date, Done
-and Drop; for the person's own, the same choices without Chase. A waiting-on's line follows the stance of whoever owes
-it (6.34): *I manage them* and *I work alongside them* get the Chase line and its draft; *I report to them* gets no
-Chase and no draft, only "Waiting on Ana: the budget answer, due Tuesday" with New date, Done and Drop; *I only watch*
-gets no line at all, though the action still counts as covered, so no other line (the follow-up line included) picks it up. A person with no stance has the default stance. A reply owed (6.35) is the person's own and is never gated by stance. A nudge never ends it. A waiting-on is not left to go stale: with a date it
-gets its line from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
-`steward.chase_undated_days` (14) with no news since it was made or since its last news ("Chase Ana: the floor plan, no
-date, nothing heard for 14 days"). Never while it is on hold.
+**No news by its date.** A promise past its date with no ending and no news is on a line with its choices. For the person's
+own it is a line of its own with Done, New date and Drop. For a waiting-on, it is **on the follow-up line for the person who
+owes it** ("Follow up with Ana · 2 overdue, oldest Tue, Oct 13", **Draft a nudge**: one line per person however many items,
+7.7), whose message lists it with the rest the follow-up rule (6.9) says is due; each item in the open line has its own
+Followed up (a nudge: it stays open), They finished it, hold, Change this and Drop. A waiting-on's line follows the stance of whoever owes
+it (6.34): *I manage them* and *I work alongside them* get the follow-up line and its draft; *I report to them* gets no
+follow-up and no draft, only a line of its own, "Waiting on Ana: the budget answer, due Tuesday", with New date, Done and Drop; *I only watch*
+gets no line at all, though the action still counts as covered, so no other line picks it up. A person with no stance has the default stance. A reply owed (6.35) is the person's own and is never gated by stance. A nudge never ends it. A waiting-on is not left to go stale: with a date it
+is due a follow-up from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
+`steward.chase_undated_days` (14) with no news since it was made or since its last news (it joins the person's follow-up line,
+"no date, nothing heard for 14 days" in its row). One chased lately waits as long again. Never while it is on hold. *Built so far (batch B-7):* the one follow-up line per person
+(`promises.waiting_on` and `promises.is_follow_up` give the list `followups.sections` and Today's queue share, so the line and
+the message it opens cover the same items): `tests/test_follow_up_lines.py`, `tests/test_promise_lines.py`,
+`tests/test_stance_lines.py`.
 
 **Every promise shows why:** the exact words, who owes it to whom, the date and the words it came from, where it came
 from (a link to the source), and "said" or "inferred". Each of these is one click to correct, and each correction is a

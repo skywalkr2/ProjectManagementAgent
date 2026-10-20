@@ -93,8 +93,10 @@ def asks_question(store, cfg, received: datetime, title: str = "Which printer?")
 
 
 def lines(env, now, kinds=None):
+    """The queue's lines, leaving out the backup line: whether a backup works is about this computer, not about when
+    work is held."""
     ws, cfg, store = env
-    return [x for x in queue(ws, store, cfg, now) if kinds is None or x.kind in kinds]
+    return [x for x in queue(ws, store, cfg, now) if (x.kind in kinds if kinds is not None else x.kind != "backup")]
 
 
 def keys(env, now, kinds=None):

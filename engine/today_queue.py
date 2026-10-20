@@ -125,6 +125,12 @@ class Line:
     person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`: `count` of them,
     their ids in `actions`, the longest untouched in `waiting_days`, and one's own words in `subject` when there is just
     one).
+    nudge is the one follow-up line for a person the person is waiting on (`count` of their items, `overdue` how many
+    are past their date and `due` the oldest of those, `waiting_days` the longest wait), opening the one message to
+    them.
+    backup (no backup that works: `state` is unset for none set up, never for none yet, failed for a try that failed and
+    none before it, overdue for a last one older than `storage.backups.every_hours` twice over, whose age in hours is
+    `age_hours`).
     `count` is how many things the line covers; `text` the decision, question or held item in one line; `subject` the
     one thing's own words when a review or overdue line covers exactly one (the screen titles it by them); `title`
     the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as
@@ -186,6 +192,8 @@ class Line:
     sender: str | None = None
     stance: str | None = None
     sent_copy: str | None = None
+    overdue: int = 0
+    age_hours: float | None = None
     since: str = ""
 
 
@@ -622,24 +630,38 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
-    # A promise past its date with nothing heard since is a line of its own, with its choices (design 6.33). It is on no
-    # other line of the queue: not the overdue line, and not the follow-up line.
-    live = {
-        cs_id
-        for cs_id, req in by_changeset.items()
-        if cs_id in changesets and not req.data.get("dismissed") and req.id not in hidden
-    }
+    # Risk: no backup that works. One place for it besides the header chip: a line with the one button that mends it.
+    from engine import backup
 
-    def made(action_id: str) -> date | None:
-        stamp = _created(reader, "action", action_id)
-        return _aware(stamp).astimezone(zone(cfg)).date() if stamp else None
+    kept = backup.state(ws, cfg, now)
+    if kept.needs_attention:
+        lines.append(
+            Line(
+                key="backup",
+                group="risk",
+                kind="backup",
+                state="unset"
+                if not kept.configured
+                else "overdue"
+                if kept.last_success
+                else "failed"
+                if kept.last_error
+                else "never",
+                age_hours=kept.age_hours,
+                since=kept.last_success or "",
+            )
+        )
 
+    # A promise past its date with nothing heard since is a line of its own, with its choices (design 6.33), for the
+    # person's own and for one owed by someone the person reports to. One owed by anyone else is chased with the one
+    # follow-up line for that person, below. None of these is on the overdue line.
     # What each is to the person decides the line (design 6.33, 6.34): one only watched has none, but is still
     # covered, so no other line picks it up.
-    covered = promises.late(reader, cfg, people.pm, today, promises.held_endings(changesets, live), made)
+    covered = promises.waiting_on(store, cfg, today, hidden)
     on_a_line = {x.action for x in covered}
+    quiet = {x.action: x.quiet for x in covered if promises.is_follow_up(x)}
     for x in covered:
-        if x.stance == "watch":
+        if x.stance == "watch" or promises.is_follow_up(x):
             continue
         lines.append(
             Line(
@@ -937,7 +959,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         )
 
     # Send and follow up: who has something to send, then who hasn't answered for a while.
-    for s in sections(store, cfg, today):
+    for s in sections(store, cfg, today, covered):
         if s.is_pm:
             continue
         if s.to_send:
@@ -961,7 +983,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         waiting = [q for q in s.questions if q["chase_due"]]
         # Nothing is chased for someone the person reports to or only watches (design 6.34), so no follow-up is drafted.
         chased = stance_of(reader, cfg.steward, s.person) not in ("report_to", "watch")
-        told = [a for a in s.actions if chased and a["chase_due"] and a["id"] not in on_a_line]
+        told = [a for a in s.actions if chased and a["chase_due"]]
         tired = _tired_of_waiting(cfg, s, waiting, told)
         if tired is not None:
             kind, item = tired
@@ -982,7 +1004,13 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             waiting = [q for q in waiting if q is not item]
             told = [a for a in told if a is not item]
         if waiting or told:
-            longest = max([q["waiting_days"] or 0 for q in waiting] + [a["told_days"] or 0 for a in told])
+            longest = max(
+                [q["waiting_days"] or 0 for q in waiting]
+                + [a["told_days"] if a["told_days"] is not None else quiet.get(a["id"], 0) for a in told]
+            )
+            late_on = sorted(
+                date.fromisoformat(str(a["due"])) for a in told if a["due"] and str(a["due"]) < today.isoformat()
+            )
             lines.append(
                 Line(
                     key=f"nudge:{s.person}",
@@ -994,6 +1022,8 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     questions=[q["id"] for q in waiting],
                     actions=[a["id"] for a in told],
                     waiting_days=longest,
+                    due=late_on[0].isoformat() if late_on else None,
+                    overdue=len(late_on),
                     since=s.name.lower(),
                 )
             )
@@ -1139,6 +1169,7 @@ _KIND_ORDER = {
     "identity": 0,
     "credential": 1,
     "no_account": 0,
+    "backup": 1,
     "extractor": 1,
     "review": 0,
     "intake_review": 0,

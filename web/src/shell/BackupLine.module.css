@@ -1,9 +1,0 @@
-/* Today's backup line: one row, like the setup line, while a backup needs attention. */
-.line {
-  display: flex; align-items: center; gap: var(--space-3); min-width: 0;
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  font-size: var(--text-sm); line-height: var(--lh-sm);
-}
-.text { margin: 0; min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
-.actions { display: flex; align-items: center; gap: var(--space-1); flex: none; margin-left: auto; }

@@ -86,7 +86,7 @@ test("one row for a person holds everything of theirs, with the items in its too
   const title = found[4].querySelector(".tb-title") as HTMLElement;
   expect(title.getAttribute("title")).toBe("Which date?\nWhich size?\nWhich paper?\nWho prints it?");
   expect(within(found[4]).getByText("Which date? · and 3 more")).toBeInTheDocument();
-  expect(within(found[4]).getByRole("button", { name: /Draft a nudge/ })).toBeInTheDocument();
+  expect(within(found[4]).queryAllByRole("button")).toEqual([]);
 });
 
 test("a row names its project only when the list holds more than one", async () => {
@@ -101,49 +101,30 @@ test("with one project in the list the tag is left out", async () => {
   expect(screen.queryByText("Spring book")).toBeNull();
 });
 
-test("Mark done closes the to-do at once with Undo, and the menu has Reassign and Hand to the assistant", async () => {
-  const user = userEvent.setup();
-  const { calls } = open(priorities(), { "POST actions/ACT-1/status": () => ({ ok: "ACT-1" }) });
-  await user.click(await screen.findByRole("button", { name: "Mark done: Send the proofs" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/status")?.body).toEqual({ status: "done" }));
-  expect(await screen.findByText("Marked done.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "More actions for Send the proofs" }));
-  expect(await screen.findByRole("menuitem", { name: "Reassign…" })).toBeInTheDocument();
-  expect(screen.getByRole("menuitem", { name: "Hand to the assistant" })).toBeInTheDocument();
+test("an entry has no buttons and no menu, only its words as a link", async () => {
+  open();
+  const found = await rows();
+  expect(found).toHaveLength(5);
+  for (const row of found) {
+    expect(within(row).queryAllByRole("button")).toEqual([]);
+    expect(within(row).queryAllByRole("menuitem")).toEqual([]);
+    expect(within(row).getAllByRole("link")).toHaveLength(1);
+  }
 });
 
-test("Hand to the assistant asks what is wanted and hands the to-do over, leaving it the person's", async () => {
-  const user = userEvent.setup();
-  const { calls } = open(priorities(), { "POST actions/ACT-1/hand-over": () => ({ request: "R-1" }) });
-  await user.click(await screen.findByRole("button", { name: "More actions for Send the proofs" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Hand to the assistant" }));
-  const box = await screen.findByRole("textbox", { name: /What do you want from it/ });
-  await waitFor(() => expect(box).toHaveFocus());
-  await user.type(box, "A short covering note.");
-  await user.click(screen.getByRole("button", { name: "Hand it over" }));
-  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hand-over")?.body).toEqual({ note: "A short covering note." }));
-  expect(calls.some((c) => c.route === "POST actions/ACT-1/status")).toBe(false);
+test("with no line in the queue an entry links to its record", async () => {
+  open(priorities(), { "GET today/queue": () => [] });
+  const panel = await screen.findByRole("region", { name: "Top priorities" });
+  expect(await within(panel).findByRole("link", { name: "Send the proofs" })).toHaveAttribute("href", expect.stringContaining("#records/action/ACT-1"));
+  expect(within(panel).getByRole("link", { name: "Which printer?" })).toHaveAttribute("href", expect.stringContaining("#records/question/Q-1"));
+  expect(within(panel).getByRole("link", { name: /^Robin Sample: / })).toHaveAttribute("href", expect.stringContaining("#records/person/PER-5"));
 });
 
-test("Reassign asks who from a list and changes the owner as the person's own edit", async () => {
-  const user = userEvent.setup();
-  const { calls } = open(priorities(), {
-    "GET people": () => [
-      { id: "PER-1", name: "Pat Example", status: "active" },
-      { id: "PER-3", name: "Sam Twin", status: "active" },
-    ],
-    "POST records/edit": () => ({ changeset: "CS-1", request: null }),
-  });
-  await user.click(await screen.findByRole("button", { name: "More actions for Send the proofs" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Reassign…" }));
-  await user.selectOptions(await screen.findByRole("combobox", { name: "Reassign to" }), "PER-3");
-  await waitFor(() =>
-    expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "action", id: "ACT-1", read_version: 4, fields: { owners: [{ person: "PER-3" }] } }),
-  );
-});
+function queueLine(over: Partial<S["QueueLineView"]> & Pick<S["QueueLineView"], "key" | "kind">): S["QueueLineView"] {
+  return { group: "risk", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, ...over };
+}
 
-test("a question asks for the answer where Today holds it", async () => {
+test("an entry that has a line in the queue links to it, and choosing it asks Today to open that line", async () => {
   const user = userEvent.setup();
   const seen: unknown[] = [];
   const listen = (event: Event) => {
@@ -151,10 +132,24 @@ test("a question asks for the answer where Today holds it", async () => {
     event.preventDefault();
   };
   window.addEventListener("reveal-row", listen);
-  open();
-  await user.click(await screen.findByRole("button", { name: /^Answer/ }));
+  open(priorities(), {
+    "GET today/queue": () => [
+      queueLine({ key: "overdue", kind: "overdue", count: 2, actions: ["ACT-1", "ACT-9"] }),
+      queueLine({ key: "question:Q-1", kind: "question", group: "decide", question: "Q-1" }),
+      queueLine({ key: "nudge:PER-5", kind: "nudge", group: "send", person: "PER-5", count: 3, questions: ["Q-7"] }),
+    ],
+  });
+  const panel = await screen.findByRole("region", { name: "Top priorities" });
+  await waitFor(() => expect(within(panel).getByRole("link", { name: "Send the proofs" })).toHaveAttribute("href", expect.not.stringContaining("#records")));
+  await user.click(within(panel).getByRole("link", { name: "Send the proofs" }));
+  await user.click(within(panel).getByRole("link", { name: "Which printer?" }));
+  await user.click(within(panel).getByRole("link", { name: /^Robin Sample: / }));
   window.removeEventListener("reveal-row", listen);
-  expect(seen).toEqual([{ type: "question", id: "Q-1" }]);
+  expect(seen).toEqual([
+    { type: "line", id: "overdue" },
+    { type: "line", id: "question:Q-1" },
+    { type: "line", id: "nudge:PER-5" },
+  ]);
 });
 
 test("the rest are counted with a way to see them, and the blocked ones are counted too", async () => {

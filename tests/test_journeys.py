@@ -62,7 +62,8 @@ def _what_the_screens_show(client: TestClient) -> dict:
     """What the first screens are built from: what changed, and what Today asks of the person and lists for them."""
     return {
         "changes": client.get("/api/changes").json(),
-        "queue": client.get("/api/today/queue").json(),
+        # Whether a backup works is about the computer's own backups, which a restored workspace has none of yet.
+        "queue": [line for line in client.get("/api/today/queue").json() if line["kind"] != "backup"],
         "todo": client.get("/api/today/todo").json(),
         "people": client.get("/api/people").json(),
     }

@@ -1,8 +1,7 @@
 // This week (design 7.7): what is due by the end of the week, who is waiting on the person and which meetings to hold,
-// across projects. Below 2560px it is a section of Today folded to one line; from 2560px it is a panel of the rail; and it
-// is what the inspector shows when no line is selected. It is never counted in Today's heading or the menu.
+// across projects. It is a panel of the rail at every width, and it is what the inspector shows when no line is
+// selected. It is never counted in Today's heading or the menu.
 import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
 import { api, type S } from "../lib/api";
 import { day, wallTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
@@ -94,36 +93,12 @@ export function WeekBody(props: { week: Week }) {
   );
 }
 
-/** The week folded to one line below 2560px: its heading says what is in it, and a press opens it. */
-export function ThisWeekSection() {
-  const { t, tn } = useWords();
-  const week = useThisWeek();
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  const summary = week.data ? weekSummary(week.data, tn) : "";
-  return (
-    <section className={styles.week} aria-labelledby={`${id}-head`} data-week="section">
-      <h2 id={`${id}-head`} className={styles.weekHead}>
-        <button type="button" className={styles.weekToggle} aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen(!open)}>
-          <span>{t("today.week.title")}</span>
-          <span className={styles.weekSummary}>{week.isError ? t("today.week.load_failed") : summary || (week.data ? t("today.week.nothing") : "")}</span>
-        </button>
-      </h2>
-      {open && (
-        <div id={`${id}-body`}>
-          {week.isPending ? <Skeleton /> : week.isError ? <Failed text={t("today.week.load_failed")} retry={() => void week.refetch()} /> : week.data ? <WeekBody week={week.data} /> : null}
-        </div>
-      )}
-    </section>
-  );
-}
-
-/** The week as a panel of the rail, from 2560px. */
+/** The week as a panel of the rail, at every width. */
 export function ThisWeekPanel() {
   const { t, tn } = useWords();
   const week = useThisWeek();
   return (
-    <RailPanel id="week" title={t("today.week.title")} count={null} countText={week.data ? weekSummary(week.data, tn) : ""}>
+    <RailPanel id="week" title={t("today.week.title")} count={null} countText={week.data ? weekSummary(week.data, tn) : ""} summary={week.data ? weekSummary(week.data, tn) || t("today.week.nothing") : ""}>
       {week.isPending ? <Skeleton /> : week.isError ? <Failed text={t("today.week.load_failed")} retry={() => void week.refetch()} /> : week.data ? <WeekBody week={week.data} /> : null}
     </RailPanel>
   );
@@ -140,7 +115,7 @@ export function ThisWeekInspector() {
     <div data-week="inspector">
       <h3 className={styles.weekInspectorHead}>
         {t("today.week.title")}
-        {summary && <span className={styles.weekSummary}>{summary}</span>}
+        {summary && <span className={styles.foldSummary}>{summary}</span>}
       </h3>
       <WeekBody week={week.data} />
     </div>

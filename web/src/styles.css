@@ -411,7 +411,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-row .tb-title .pill { margin: 0 0 0 var(--space-2); }
 .tb-row .answer-form { flex: 1 0 100%; }
 .tb-row .struck { text-decoration: line-through; }
-/* A meeting added in one line, at the foot of the agenda: the fields share the row and wrap rather than widen it. */
+/* A meeting added in one line, in the agenda's drawer: the fields share the row and wrap rather than widen it. */
 .meeting-line { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-2); }
 .meeting-line .field { flex: 1 1 8rem; min-width: 0; margin-bottom: 0; }
 .meeting-line .field:first-child { flex-basis: 12rem; }
@@ -435,6 +435,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .now-line::before, .now-line::after { content: ""; height: 2px; background: var(--danger); flex: 1; }
 .now-line::before { flex: 0 0 var(--space-3); }
 .tb-empty { display: grid; gap: var(--space-3); justify-items: start; color: var(--text-muted); font-size: var(--text-sm); }
+.tb-empty-line { display: block; margin: 0; }
 .compact { gap: var(--space-2); }
 .compact .heading h2, .compact .heading h3 { font-size: var(--text-md); line-height: var(--lh-md); margin: 0; }
 .compact .row { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); padding: var(--space-3); }

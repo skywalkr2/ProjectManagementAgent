@@ -10,8 +10,8 @@ from engine.storage import Store
 from tests.test_setup import client, make
 from tests.test_typed_secrets import TYPED, _added_with_password, mailbox_kind, new_source, sources
 
-# The settings saves in these tests are stamped with the real clock, so the sweep's clock starts an hour after them: past
-# the Undo grace, whatever day the tests run on.
+# The settings saves in these tests are stamped with the real clock, so the sweep's clock starts an hour after them,
+# past the Undo grace, whatever day the tests run on.
 NOW = datetime.now(UTC).replace(microsecond=0) + timedelta(hours=1)
 
 

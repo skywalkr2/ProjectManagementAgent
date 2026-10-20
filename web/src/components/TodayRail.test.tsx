@@ -65,6 +65,7 @@ const inbox: S["InboxView"] = {
 
 function routes(extra: Routes = {}): Routes {
   return {
+    "GET today/week": () => ({ first: "2026-10-05", last: "2026-10-09", due: [], waiting: [], meetings: [] }),
     "GET today/agenda": () => agenda,
     "GET today/todo": () => todo,
     "GET today/arrived": () => inbox,
@@ -92,7 +93,7 @@ afterEach(() => {
   document.documentElement.removeAttribute("data-today");
 });
 
-test("four panels in reading order, each with its heading and count, and nothing about what needs you", async () => {
+test("five panels in reading order, each with its heading and count, and nothing about what needs you", async () => {
   open();
   const agendaColumn = await column("Agenda");
   expect(await within(agendaColumn).findByText("3 events today")).toBeInTheDocument();
@@ -102,7 +103,7 @@ test("four panels in reading order, each with its heading and count, and nothing
     .getAllByRole("region")
     .map((r) => r.parentElement?.getAttribute("data-col"))
     .filter(Boolean);
-  expect(names).toEqual(["priorities", "agenda", "todo", "arrived"]);
+  expect(names).toEqual(["priorities", "week", "agenda", "todo", "arrived"]);
   expect(screen.getByRole("heading", { level: 2, name: "Came in" })).toBeInTheDocument();
   await within(await column("Came in")).findByText("2 messages");
   // What needs the person is the queue, which has its own tests; the rail never draws it.
@@ -633,56 +634,75 @@ test("empty panels show no count of zero, in words or as a badge", async () => {
   }
 });
 
-// A meeting added in one line (design 7.7): what, the day and the time, at the foot of the agenda.
+// A meeting added from the agenda's drawer (design 7.7): what, the day and the time, opened by "Add to agenda".
 
 const meetingRoutes = (answer: S["MeetingAdded"] = { entry: "EVT-9", changeset: "CS-9", merged: false }): Routes => ({
   "POST calendar/meetings": () => answer,
   "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }),
 });
 
-const addLine = async () => within(await column("Agenda")).findByRole("group", { name: "Add a meeting" });
+/** Opens the drawer from the agenda's button and returns the drawer. */
+const addLine = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(await within(await column("Agenda")).findByRole("button", { name: "Add to agenda" }));
+  return screen.findByRole("dialog", { name: "Add a meeting" });
+};
 
-test("a meeting is added from one line: what, the day (today until chosen) and the time, with Undo", async () => {
+test("the agenda has no form of its own: one button opens the drawer, with the cursor in its first field", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  open(meetingRoutes());
+  const panel = await column("Agenda");
+  expect(within(panel).queryByRole("textbox", { name: "What" })).toBeNull();
+  const drawer = await addLine(user);
+  await waitFor(() => expect(within(drawer).getByRole("textbox", { name: "What" })).toHaveFocus());
+  expect(within(drawer).getByLabelText("Day")).toHaveValue(TODAY);
+  expect(within(drawer).getByRole("button", { name: "Add" })).toBeDisabled();
+});
+
+test("a meeting is added from the drawer: what, the day (today until chosen) and the time, with Undo, and the drawer closes", async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const { calls } = open(meetingRoutes());
-  const line = await addLine();
-  const add = within(line).getByRole("button", { name: "Add" });
-  expect(add).toBeDisabled();
-  expect(within(line).getByLabelText("Day")).toHaveValue(TODAY);
-  await user.type(within(line).getByRole("textbox", { name: "What" }), "Print sync");
-  fireEvent.change(within(line).getByLabelText("Day"), { target: { value: "2026-10-16" } });
-  fireEvent.change(within(line).getByLabelText("Time (optional)"), { target: { value: "15:00" } });
-  await user.click(add);
+  const drawer = await addLine(user);
+  await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Print sync");
+  fireEvent.change(within(drawer).getByLabelText("Day"), { target: { value: "2026-10-16" } });
+  fireEvent.change(within(drawer).getByLabelText("Time (optional)"), { target: { value: "15:00" } });
+  await user.click(within(drawer).getByRole("button", { name: "Add" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Print sync", day: "2026-10-16", time: "15:00" }));
   expect(await screen.findByText("Print sync added to your calendar.")).toBeInTheDocument();
-  // The line is ready for the next one.
-  expect(within(line).getByRole("textbox", { name: "What" })).toHaveValue("");
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add a meeting" })).toBeNull());
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
 });
 
-test("a meeting with no time is sent without one, and Enter in the line adds it", async () => {
+test("a meeting with no time is sent without one, and Enter in the drawer adds it", async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const { calls } = open(meetingRoutes());
-  const line = await addLine();
-  await user.type(within(line).getByRole("textbox", { name: "What" }), "Offsite{Enter}");
+  const drawer = await addLine(user);
+  await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Offsite{Enter}");
   await waitFor(() => expect(calls.find((c) => c.route === "POST calendar/meetings")?.body).toEqual({ what: "Offsite", day: TODAY, time: null }));
 });
 
 test("a meeting that is already there is merged into it and said so, with nothing to undo", async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   open(meetingRoutes({ entry: null, changeset: null, merged: true, merged_with: "Print sync", where: "calendar" }));
-  const line = await addLine();
-  await user.type(within(line).getByRole("textbox", { name: "What" }), "print sync{Enter}");
+  const drawer = await addLine(user);
+  await user.type(within(drawer).getByRole("textbox", { name: "What" }), "print sync{Enter}");
   expect(await screen.findByText("Print sync is already on your calendar, so it was not added again.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
 });
 
-test("a refusal is told in the server's words and what was typed stays", async () => {
+test("a refusal is told in the server's words and the drawer stays open with what was typed", async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   open({ "POST calendar/meetings": () => new Refuse(409, "The day isn't one I can read; choose it from the calendar.") });
-  const line = await addLine();
-  await user.type(within(line).getByRole("textbox", { name: "What" }), "Print sync{Enter}");
+  const drawer = await addLine(user);
+  await user.type(within(drawer).getByRole("textbox", { name: "What" }), "Print sync{Enter}");
   expect(await screen.findByText(/The day isn't one I can read/)).toBeInTheDocument();
-  expect(within(line).getByRole("textbox", { name: "What" })).toHaveValue("Print sync");
+  expect(within(drawer).getByRole("textbox", { name: "What" })).toHaveValue("Print sync");
+});
+
+test("an empty agenda is one line, with when it was checked and no form", async () => {
+  open({ "GET today/agenda": () => [] });
+  const line = await screen.findByText("Nothing on your calendar for the next few days.");
+  expect(line.tagName).toBe("P");
+  expect(line.closest("[data-col='agenda']")!.querySelectorAll(".tb-empty p")).toHaveLength(0);
+  expect(screen.queryByRole("textbox", { name: "What" })).toBeNull();
 });

@@ -1,9 +1,9 @@
 // Pointing at a row on another part of the same screen: a Today line asks for the assistant's answer to be looked at,
-// or a question to be answered, or a person's group in Follow-ups, or a new source's intake (the list narrows to what it found), and the list that holds it opens that row. The list says it handled the request; when
+// or a question to be answered, or a person's group in Follow-ups, or a line of Today's queue (by its key), or a new source's intake (the list narrows to what it found), and the list that holds it opens that row. The list says it handled the request; when
 // none does (its row isn't on this screen), the caller does something else.
 import { useEffect, useRef } from "react";
 
-export type Revealable = "changeset" | "question" | "person" | "intake";
+export type Revealable = "changeset" | "question" | "person" | "intake" | "line";
 const EVENT = "reveal-row";
 
 /** Ask whichever list holds this item to open it. True when one did. */

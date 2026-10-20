@@ -60,8 +60,11 @@ def lines(env, **match):
 
 
 def promise_lines(env, action_id: str):
+    """The lines that chase or wait on an action: its own promise line, or the person's one follow-up line (6.33)."""
     ws, cfg, store = env
-    return [line for line in queue(ws, store, cfg, NOW) if line.kind == "promise" and action_id in line.actions]
+    return [
+        line for line in queue(ws, store, cfg, NOW) if line.kind in ("promise", "nudge") and action_id in line.actions
+    ]
 
 
 def update(store, action_id: str, changes: dict) -> None:
@@ -72,13 +75,15 @@ def update(store, action_id: str, changes: dict) -> None:
 PAST = TODAY - timedelta(days=3)
 
 
-def test_a_promise_someone_else_owes_past_its_date_is_a_chase_line_for_one_action(env):
+def test_a_promise_someone_else_owes_past_its_date_is_on_that_persons_follow_up_line(env):
     _, cfg, store = env
     them = other(cfg)
     action = make(store, [them], due=PAST, promised_to=[me(cfg)], basis="said")
     (line,) = promise_lines(env, action)
-    assert (line.group, line.person, line.due, line.waiting_days) == ("send", them, PAST.isoformat(), 3)
-    assert line.text == "Send the floor plan" and line.count == 1 and line.key == f"promise:{action}"
+    assert (line.kind, line.group, line.person, line.key) == ("nudge", "send", them, f"nudge:{them}")
+    assert action in line.actions and line.overdue >= 1 and line.due <= PAST.isoformat()
+    # It is not a line of its own as well.
+    assert [x for x in lines(env, kind="promise") if action in x.actions] == []
 
 
 def test_any_dated_action_someone_else_owns_is_waited_on_even_with_no_promise_fields(env):
@@ -136,20 +141,18 @@ def test_a_held_ending_is_its_own_line_and_the_promise_waits_for_the_answer(env)
     assert promise_lines(env, action) == []  # the held ending is the one line for it
 
 
-def test_a_chase_hides_the_line_until_the_follow_up_wait_is_over_and_the_nudge_never_repeats_it(env):
+def test_a_chase_hides_the_action_until_the_follow_up_wait_is_over_and_it_is_then_on_one_line_only(env):
     ws, cfg, store = env
     them = other(cfg)
     wait = cfg.ui.followups.question_after_days
     action = make(store, [them], due=PAST, told={them: (TODAY - timedelta(days=wait - 1)).isoformat()})
     assert promise_lines(env, action) == []  # chased a day ago: it waits
     update(store, action, {"told": {them: (TODAY - timedelta(days=wait)).isoformat()}})
-    assert len(promise_lines(env, action)) == 1
-    # The same promise is also due a nudge, but Today carries it once, as the promise line.
-    nudged = {a for line in lines(env, kind="nudge") for a in line.actions}
-    assert action not in nudged
+    # Due a nudge and late as a promise, Today carries it once, on the person's follow-up line.
+    assert [line.kind for line in lines(env) if action in line.actions] == ["nudge"]
 
 
-def test_a_chased_promise_with_news_since_its_date_has_no_promise_line_but_keeps_its_nudge_line(env):
+def test_a_chased_promise_with_news_since_its_date_keeps_its_place_on_the_follow_up_line(env):
     _, cfg, store = env
     them = other(cfg)
     wait = cfg.ui.followups.question_after_days
@@ -160,7 +163,7 @@ def test_a_chased_promise_with_news_since_its_date_has_no_promise_line_but_keeps
         told={them: (TODAY - timedelta(days=wait)).isoformat()},
         news=[{"on": TODAY.isoformat(), "text": "Replied, no date"}],
     )
-    assert promise_lines(env, action) == []
+    assert [x for x in lines(env, kind="promise") if action in x.actions] == []
     assert action in {a for line in lines(env, kind="nudge") for a in line.actions}
 
 
@@ -175,7 +178,7 @@ def test_an_undated_waiting_on_gets_a_line_after_the_undated_days_and_not_a_day_
     due = make(store, [them], due=None, made=TODAY - timedelta(days=days))
     assert promise_lines(env, early) == []
     (line,) = promise_lines(env, due)
-    assert (line.person, line.due, line.waiting_days, line.group) == (them, None, days, "send")
+    assert (line.kind, line.person, line.group) == ("nudge", them, "send") and line.waiting_days >= days
 
 
 def test_news_or_a_chase_restarts_the_undated_clock(env):
@@ -191,8 +194,9 @@ def test_news_or_a_chase_restarts_the_undated_clock(env):
     )
     chased = make(store, [them], due=None, made=old, told={them: (TODAY - timedelta(days=days - 1)).isoformat()})
     quiet = make(store, [them], due=None, made=old)
-    assert promise_lines(env, heard) == [] and promise_lines(env, chased) == []
-    assert promise_lines(env, quiet)[0].waiting_days == days + 5
+    own = lambda action: [x for x in lines(env, kind="promise") if action in x.actions]  # noqa: E731
+    assert own(heard) == [] and own(chased) == [] and promise_lines(env, heard) == []
+    assert promise_lines(env, quiet)[0].waiting_days >= days + 5
 
 
 def test_a_dated_waiting_on_gets_a_line_only_within_the_dated_days_before_its_date(env):
@@ -203,7 +207,7 @@ def test_a_dated_waiting_on_gets_a_line_only_within_the_dated_days_before_its_da
     in_window = make(store, [them], due=TODAY + timedelta(days=days))
     assert promise_lines(env, too_far) == []
     (line,) = promise_lines(env, in_window)
-    assert (line.due, line.waiting_days) == ((TODAY + timedelta(days=days)).isoformat(), -days)
+    assert line.kind == "nudge" and in_window in line.actions
 
 
 def test_a_waiting_on_on_hold_never_gets_a_line_dated_or_not(env):

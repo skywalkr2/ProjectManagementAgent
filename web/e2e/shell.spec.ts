@@ -892,22 +892,49 @@ test.describe("AI accounts as one place, what each can do, and the follow-ups ta
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
-  test("Today: the backup line's button is at the end of the row, like the setup line's", async ({ page }) => {
-    await page.route("**/api/status", async (route) => {
-      const response = await route.fetch();
-      const body = await response.json();
-      await route.fulfill({ json: { ...body, backup: { ...body.backup, configured: true, needs_attention: true, age_hours: 100 } } });
-    });
+  test("Today: a backup that needs attention is an At risk line with its button at the end of the row, and no bar", async ({ page }) => {
+    await page.route("**/api/today/queue", (route) =>
+      route.fulfill({ json: [{ key: "backup", group: "risk", kind: "backup", count: 1, state: "overdue", age_hours: 100, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} }] }),
+    );
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page);
-    const line = page.locator("[data-backup-line]");
+    const line = page.locator('[data-queue-line="backup"]');
     await expect(line).toBeVisible();
+    await expect(line).toContainText("The last backup was 4 days ago");
+    await expect(page.getByRole("region", { name: "Backup", exact: true })).toHaveCount(0);
     const button = line.getByRole("button", { name: "Back up now" });
     const [lineBox, buttonBox] = await Promise.all([line.boundingBox(), button.boundingBox()]);
     // The button ends where the row's padding does, however long the words are.
     expect(lineBox!.x + lineBox!.width - (buttonBox!.x + buttonBox!.width)).toBeLessThan(24);
     await shoot(page, "backup-line-1440");
-    // The status route may still be answering a poll as the page closes; that is not a failure of the test.
+    // The queue route may still be answering a poll as the page closes; that is not a failure of the test.
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
+
+  // C47 (UI/UX re-review, 3.1): the work starts near the top of the first screen. At 1280x720 the first queue line is at
+  // most 260px down with setup unfinished (200px with it done), and at least six lines are in view.
+  for (const finished of [false, true]) {
+    test(`Today at 1280x720 with setup ${finished ? "done" : "unfinished"}: the first queue line is at most ${finished ? 200 : 260}px down and six lines show`, async ({ page }) => {
+      const steps = ["workspace", "ai", "mail", "backup", "people"].map((id, n) => ({ id, label: "", counted: true, done: finished || n === 0, skipped: false }));
+      await page.route("**/api/setup", async (route) => {
+        const response = await route.fetch();
+        const body = await response.json();
+        await route.fulfill({ json: { ...body, finished, steps } });
+      });
+      const lines = [
+        { key: "backup", group: "risk", kind: "backup", count: 1, state: "never" },
+        ...Array.from({ length: 8 }, (_, n) => ({ key: `question:Q-${n}`, group: "decide", kind: "question", count: 1, text: `Which option for item ${n + 1}?`, question: `Q-${n}` })),
+      ].map((l) => ({ untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, ...l }));
+      await page.route("**/api/today/queue", (route) => route.fulfill({ json: lines }));
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await signIn(page);
+      const rows = page.locator("[data-queue-line]");
+      await expect(rows.first()).toBeVisible();
+      await layoutSettled(page);
+      const boxes = await rows.evaluateAll((els) => els.map((e) => ({ top: e.getBoundingClientRect().top, bottom: e.getBoundingClientRect().bottom })));
+      expect(boxes[0].top).toBeLessThanOrEqual(finished ? 200 : 260);
+      expect(boxes.filter((b) => b.bottom <= 720).length).toBeGreaterThanOrEqual(6);
+      await page.unrouteAll({ behavior: "ignoreErrors" });
+    });
+  }
 });

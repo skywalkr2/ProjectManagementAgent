@@ -11,12 +11,13 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
-from engine import learn, sent_version
+from engine import learn, promises, sent_version
 from engine.blocked import ViewNames, blocker_of, blocker_problem
 from engine.cleaning import normalize
 from engine.config import Config
 from engine.dispatcher import signal
 from engine.names import People
+from engine.promises import Late
 from engine.scope import stance_of
 from engine.storage import Store, WriteContext
 from engine.today import zone
@@ -120,8 +121,16 @@ def actions_to_send(store: Store, cfg: Config) -> set[str]:
     return found
 
 
-def sections(store: Store, cfg: Config, today: date) -> list[Section]:
+def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None = None) -> list[Section]:
+    """Each person's questions and actions with what is due a follow-up. An action someone else owes is also due one
+    when the promise rule says it is late with nothing heard (design 6.33), so Today's one follow-up line per person and
+    the message it opens cover the same things. `waiting`: that rule's list, when the caller already has it."""
     people = People(store, cfg)
+    chase_for = {
+        x.action: x.owner
+        for x in (promises.waiting_on(store, cfg, today) if waiting is None else waiting)
+        if promises.is_follow_up(x)
+    }
     here = zone(cfg)
     projects = {p.id: p.data["name"] for p in store.read().list("project")}
     project_links = {p.id: p.data.get("links", []) for p in store.read().list("project")}
@@ -198,7 +207,8 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                     "chases": len(chases),
                     "on_hold": hold["waiting_for"] if hold else None,
                     "blocker": asdict(blocker) if blocker is not None else None,
-                    "chase_due": follow_up_due(
+                    "chase_due": (chase_for.get(a.id) == owner["person"] and not hold)
+                    or follow_up_due(
                         cfg,
                         today,
                         waiting_days=told_days,

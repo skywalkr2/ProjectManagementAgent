@@ -101,9 +101,9 @@ function Keys() {
 
 const emptyWeek: S["ThisWeekView"] = { first: "2026-10-19", last: "2026-10-23", due: [], waiting: [], meetings: [] };
 
-function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean; ultra?: boolean; unnamed?: boolean } = {}) {
+function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean; unnamed?: boolean } = {}) {
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: (!!over.wide && /min-width: 1680px/.test(query)) || (!!over.ultra && /min-width: (1680|2560)px/.test(query)),
+    matches: !!over.wide && /min-width: 1680px/.test(query),
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   }));
@@ -367,7 +367,7 @@ test("the restart and paused lines are rows of the queue, drawn with their own w
   });
   const restart = await screen.findByRole("region", { name: "Restart needed" });
   expect(restart).toHaveTextContent("Restart to resume 2 waiting tasks");
-  expect(within(restart).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+  expect(await within(restart).findByRole("button", { name: "Restart now" })).toBeInTheDocument();
   const paused = screen.getByRole("region", { name: "Paused account" });
   expect(paused).toHaveTextContent("main");
   expect(within(paused).getByRole("button", { name: "Open AI accounts" })).toBeInTheDocument();
@@ -786,33 +786,21 @@ const busyWeek: S["ThisWeekView"] = {
   meetings: [{ snapshot: "EVT-1", source: "", title: "Print sync", start: "2026-10-22T10:00:00", end: null, all_day: false, cancelled: false, own: true, open_items: 0, days: ["2026-10-22"] }],
 };
 
-test("This week is a section of Today folded to one line that says what is in it, and a press opens it", async () => {
-  const user = userEvent.setup();
+test("This week is a panel of the rail with what is due, who is waiting and which meetings", async () => {
   show([decision], { "GET today/week": () => busyWeek });
-  const toggle = await screen.findByRole("button", { name: /^This week/ });
-  await waitFor(() => expect(toggle).toHaveTextContent("1 due · 1 person waiting on you · 1 meeting"));
-  expect(toggle).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByText("Send the proofs")).toBeNull();
-  await user.click(toggle);
-  expect(toggle).toHaveAttribute("aria-expanded", "true");
-  expect(await screen.findByText("Send the proofs")).toBeInTheDocument();
-  expect(screen.getByText("Robin Sample · 2 things")).toBeInTheDocument();
-  expect(screen.getByText("Print sync")).toBeInTheDocument();
+  const panel = await screen.findByRole("region", { name: "This week" });
+  expect(panel.closest("[data-col='week']")).not.toBeNull();
+  expect(await within(panel).findByText("Send the proofs")).toBeInTheDocument();
+  expect(within(panel).getByText("Robin Sample · 2 things")).toBeInTheDocument();
+  expect(within(panel).getByText("Print sync")).toBeInTheDocument();
+  expect(document.querySelector("[data-week='section']")).toBeNull();
 });
 
 test("This week is not counted in the heading or the menu", async () => {
   show([decision], { "GET today/week": () => busyWeek });
-  await screen.findByRole("button", { name: /^This week/ });
+  await screen.findByRole("region", { name: "This week" });
   expect((await screen.findAllByText(/1 thing needs you/)).length).toBeGreaterThan(0);
   expect(screen.queryByText(/2 things need you/)).toBeNull();
-});
-
-test("from 2560px This week is a panel of the rail and not a section", async () => {
-  show([decision], { "GET today/week": () => busyWeek }, { ultra: true });
-  const panel = await screen.findByRole("region", { name: "This week" });
-  expect(panel.closest("[data-col='week']")).not.toBeNull();
-  expect(await within(panel).findByText("Send the proofs")).toBeInTheDocument();
-  expect(document.querySelector("[data-week='section']")).toBeNull();
 });
 
 test("the inspector shows the week when nothing needs the person", async () => {

@@ -1,6 +1,6 @@
 /* Today (design 7.7): the queue, the inspector from 1680px and the rail. The queue always gets the most width. */
 .today {
-  display: grid; grid-template-columns: minmax(0, 1fr) var(--rail-w); gap: var(--gutter);
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--rail-w); gap: var(--space-3) var(--gutter);
   align-items: start; align-content: start; min-width: 0;
 }
 @media (min-width: 1680px) {
@@ -36,7 +36,7 @@
 .queue { min-width: 0; }
 .group { min-width: 0; }
 .groupHead {
-  margin: 0; padding: var(--space-2) var(--row-px); font-size: var(--text-xs); line-height: var(--lh-xs);
+  margin: 0; padding: var(--space-1) var(--row-px); font-size: var(--text-xs); line-height: var(--lh-xs);
   font-weight: var(--weight-semibold); color: var(--text-subtle); background: var(--canvas);
   border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
 }
@@ -78,17 +78,18 @@
 .priority { flex-wrap: wrap; }
 .priority > :global(.tb-what) { flex: 1 1 8rem; }
 
-/* This week: a section of Today folded to one line below 2560px, the rail's panel from there, and the inspector's view. */
-.week { grid-column: 1 / -1; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
-.weekHead { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
-.weekToggle {
+/* A rail panel folded to one line on the phone, and the week's own pieces. */
+.fold { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+.foldHead { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.foldToggle {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); width: 100%; min-height: var(--tap-min, 2.75rem);
   padding: var(--space-2) var(--row-px); border: 0; background: none; color: var(--text); font: inherit; font-weight: var(--weight-semibold);
   text-align: left; cursor: pointer;
 }
-.weekToggle::before { content: "▸"; color: var(--text-subtle); }
-.weekToggle[aria-expanded="true"]::before { content: "▾"; }
-.weekSummary { color: var(--text-muted); font-weight: var(--weight-regular, 400); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.foldToggle::before { content: "▸"; color: var(--text-subtle); }
+.foldToggle[aria-expanded="true"]::before { content: "▾"; }
+.foldSummary { color: var(--text-muted); font-weight: var(--weight-regular, 400); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.foldAction { display: flex; justify-content: flex-end; padding: 0 var(--row-px) var(--space-2); }
 .weekBody { display: grid; gap: var(--space-3); padding: var(--space-2) var(--row-px) var(--space-3); min-width: 0; }
 .weekBody p { margin: 0; }
 .weekInspectorHead { margin: 0 0 var(--space-2); font-size: var(--text-md, 1rem); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }

@@ -41,17 +41,12 @@ def waiting_on(env, stance: str | None):
 
 
 @pytest.mark.parametrize("stance", ["manage", "alongside"])
-def test_someone_managed_or_worked_alongside_is_chased_as_before(env, stance):
+def test_someone_managed_or_worked_alongside_is_chased_on_their_one_follow_up_line(env, stance):
     _, cfg, _ = env
     action, found = waiting_on(env, stance)
     (line,) = found
-    assert (line.kind, line.group, line.person, line.stance) == ("promise", "send", other(cfg), stance)
-    assert (line.text, line.due, line.waiting_days, line.actions) == (
-        "Send the floor plan",
-        PAST.isoformat(),
-        3,
-        [action],
-    )
+    assert (line.kind, line.group, line.person, line.stance) == ("nudge", "send", other(cfg), None)
+    assert action in line.actions and line.due <= PAST.isoformat()
 
 
 def test_someone_the_person_reports_to_is_waited_on_with_the_same_words_and_dates(env):

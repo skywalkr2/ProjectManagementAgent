@@ -1995,7 +1995,10 @@ class QueueLineView(BaseModel):
     `ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;
     Look over opens GET /api/open-items narrowed to them); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
-    by GET /api/unfiled)."""
+    by GET /api/unfiled); `nudge` is the one follow-up line for a person the person is waiting on (`person`, `count`
+    their items, `overdue` how many are past their date with the oldest in `due`, `waiting_days` the longest wait;
+    it opens the one message to them, GET /api/followups); `backup` is no backup that works (`state`, and `age_hours`
+    since the last one that did; Back up now is POST /api/backup)."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -2028,6 +2031,7 @@ class QueueLineView(BaseModel):
         "identity",
         "credential",
         "no_account",
+        "backup",
         "extractor",
         "source_unread",
         "review",
@@ -2044,6 +2048,12 @@ class QueueLineView(BaseModel):
         "away",
     ]
     count: int
+    overdue: int | None = Field(
+        None, description="For a nudge line: how many of its items are past their date; `due` is the oldest of those."
+    )
+    age_hours: float | None = Field(
+        None, description="For a backup line: the hours since the last backup that worked; none when none has."
+    )
     text: str | None = Field(None, description="The decision, question, name or held item in one line.")
     title: ItemTitle | None = Field(None, description="The input the line is about.")
     person: str | None = Field(None, description="Whom the line is about (send, nudge).")
@@ -2090,13 +2100,17 @@ class QueueLineView(BaseModel):
         description="When the oldest request waiting for the network began waiting (offline), on the person's own "
         "clock (their time zone).",
     )
-    state: Literal["diverged", "chosen", "elsewhere", "changed", "level"] | None = Field(
+    state: (
+        Literal["diverged", "chosen", "elsewhere", "changed", "level", "unset", "never", "failed", "overdue"] | None
+    ) = Field(
         None,
         description="For a handover line: diverged (this computer and the synced folder each changed; the person "
         "chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened "
         "the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an "
         "identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in "
-        "isn't set for the level of the work waiting).",
+        "isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a "
+        "folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last "
+        "one that worked is older than it should be; `age_hours` says how old).",
     )
     rules: list[str] = Field(
         default_factory=list, description="For a rule_review line: the ids of the rules flagged, most present first."

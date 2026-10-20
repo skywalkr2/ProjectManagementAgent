@@ -40,7 +40,8 @@ const FILTERS: Filter[] = ["send", "later", "waiting"];
 const toSendQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "open");
 const toSendActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told === null);
 const waitingQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "sent");
-const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told !== null);
+// What was told to the person, and what a promise they owe says is late with nothing heard (design 6.33), told or not.
+const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told !== null || a.chase_due);
 
 /** `compact` is for a narrow column on Today: headings sit one level down, and the PM's own actions are left to the to-do list beside it. */
 export function FollowUps(props: { compact?: boolean }) {

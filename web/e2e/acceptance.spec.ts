@@ -714,7 +714,7 @@ test.describe.serial("acceptance scenario", () => {
   });
 
   test("7. With no off-device backup configured, Today and the header say so; after one succeeds, the header shows its age.", async ({ page }) => {
-    // No backup folder at all: the header chip, its popover and Today's own line each say there is none.
+    // No backup folder at all: the header chip, its popover and Today's At risk line each say there is none.
     await helperJson(page, "backup-targets?configured=0", "POST");
     await signIn(page);
     const chip = page.getByRole("button", { name: /^App status: / });
@@ -722,8 +722,8 @@ test.describe.serial("acceptance scenario", () => {
     const none = await openStatus(page);
     await expect(none).toContainText("No backup on another device");
     await page.keyboard.press("Escape");
-    const line = page.getByRole("region", { name: "Backup", exact: true });
-    await expect(line).toContainText("Choose a folder for backups on another device");
+    const line = page.getByRole("group", { name: "Back up your work", exact: true });
+    await expect(line).toContainText("No backup folder is chosen yet");
     await expect(line.getByRole("button", { name: "Set up backups" })).toBeVisible();
     await checkAccessibility(page);
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine.blocked import standing_hold
@@ -117,6 +117,38 @@ def late(
             )
         )
     return sorted(found, key=lambda x: (x.since, x.action))
+
+
+def waiting_on(store: Any, cfg: Any, today: date, hidden: frozenset[str] | set[str] = frozenset()) -> list[Late]:
+    """The open actions that need a line, read from the store the way Today reads them: with the endings that wait for
+    the person's Keep taken from the requests still open (`hidden`: requests Today holds back, which leave nothing
+    waiting) and the day each action was made from the ledger. Follow-ups use the same list for who is due a chase."""
+    from engine.names import People
+    from engine.today import zone
+
+    reader = store.read()
+    changesets = {c.id: c.data for c in reader.list("changeset")}
+    live = {
+        str(r.data["changeset"])
+        for r in reader.list("request")
+        if r.data.get("changeset") in changesets and not r.data.get("dismissed") and r.id not in hidden
+    }
+
+    def made(action_id: str) -> date | None:
+        entries = reader.ledger(kind="action", record_id=action_id)
+        stamp = str(entries[0]["at"]) if entries else ""
+        if not stamp:
+            return None
+        at = datetime.fromisoformat(stamp)
+        return (at if at.tzinfo else at.replace(tzinfo=UTC)).astimezone(zone(cfg)).date()
+
+    return late(reader, cfg, People(store, cfg).pm, today, held_endings(changesets, live), made)
+
+
+def is_follow_up(item: Late) -> bool:
+    """Whether a waiting-on is chased with the person's one follow-up message to whoever owes it (design 6.33, 6.34): it
+    is owed by someone else who is neither reported to nor only watched. The rest keep a line of their own."""
+    return item.owner is not None and item.stance not in ("report_to", "watch")
 
 
 def view(store: Any, cfg: Any, action_id: str) -> dict[str, Any] | None:

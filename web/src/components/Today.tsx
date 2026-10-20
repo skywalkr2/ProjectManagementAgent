@@ -1,5 +1,6 @@
 // The Today screen (design 7.7): what needs the person as a ranked queue, the line that has the cursor in the inspector
-// (from 1680px; below that a line's items open under it), and the rail of the agenda, the person's to-dos and what came in.
+// (from 1680px; below that a line's items open under it), and the rail of top priorities, the week, the agenda, the person's
+// to-dos and what came in.
 import { useEffect, useRef, useState } from "react";
 import { longDay } from "../lib/dates";
 import { useMediaQuery } from "../lib/media";
@@ -7,19 +8,15 @@ import { showRow, useReveal } from "../lib/reveal";
 import { useQueue, useTodayCount } from "../lib/today";
 import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
-import { BackupLine } from "../shell/BackupLine";
 import { SetupLine } from "../shell/SetupLine";
 import { CoverageLine, useNoneText } from "./Coverage";
 import { opensItems } from "./TodayDetail";
 import { TodayQueue, type QueueHandlers, type Selection } from "./TodayQueue";
 import { TodayRail } from "./TodayRail";
-import { ThisWeekSection } from "./ThisWeek";
 import styles from "./Today.module.css";
 
 /** The width from which the inspector sits beside the queue (the layout's third column). */
 const INSPECTOR_FROM = "(min-width: 1680px)";
-/** The width from which This week is a panel of the rail; below it, a section of Today folded to one line. */
-const WEEK_IN_RAIL = "(min-width: 2560px)";
 
 export function Today(props: {
   workspace: string;
@@ -34,7 +31,6 @@ export function Today(props: {
 }) {
   const { t, tn } = useWords();
   const beside = useMediaQuery(INSPECTOR_FROM);
-  const weekInRail = useMediaQuery(WEEK_IN_RAIL);
   const queue = useQueue();
   const count = useTodayCount();
   const none = useNoneText();
@@ -51,6 +47,14 @@ export function Today(props: {
   };
   useReveal("changeset", (id) => open((l) => l.changeset === id));
   useReveal("question", (id) => open((l) => l.question === id));
+  // A line named by its key (Top priorities links to the queue line of what it lists): it opens, with the cursor on it.
+  useReveal("line", (key) => {
+    const found = queue.data?.find((l) => l.key === key);
+    if (!found) return false;
+    setSelected({ key: found.key, sendBack: false });
+    setShown(found.key);
+    return true;
+  });
   const shownRow = useRef<string | null>(null);
   useEffect(() => {
     if (!shown || shownRow.current === shown) return;
@@ -79,16 +83,8 @@ export function Today(props: {
       <div className={styles.full}>
         <SetupLine workspace={props.workspace} onOpenGuide={props.onOpenGuide} />
       </div>
-      <div className={styles.full}>
-        <BackupLine onOpenGuide={props.onOpenGuide} />
-      </div>
-      {!weekInRail && (
-        <div className={styles.full}>
-          <ThisWeekSection />
-        </div>
-      )}
       <TodayQueue selected={selected} onSelect={setSelected} beside={beside} handlers={handlers} shortcuts={props.shortcuts} />
-      <TodayRail onView={props.onView} onAddSource={props.onAddSource} week={weekInRail} />
+      <TodayRail onView={props.onView} onAddSource={props.onAddSource} />
     </div>
   );
 }

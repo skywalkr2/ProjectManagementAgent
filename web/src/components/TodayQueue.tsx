@@ -9,6 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day, wallTime } from "../lib/dates";
+import { backupAge } from "../lib/backup";
 import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { chooseFilters } from "../lib/open-items";
@@ -22,6 +23,7 @@ import { HeldLine, isHeld } from "../shell/HeldLines";
 import { Button } from "../ui/Button";
 import { Panel } from "../ui/Panel";
 import { Pill, type PillTone } from "../ui/Pill";
+import { OutsideTag } from "../ui/OutsideTag";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
 import { NothingNeedsYou } from "./Coverage";
@@ -566,6 +568,8 @@ export function useLineTitle(): (line: QueueLine) => string {
       }
       case "nudge":
         return t("queue.nudge", { name });
+      case "backup":
+        return t("queue.backup");
       case "escalate":
         return t("queue.escalate", { text: (line.text ?? "").replace(/[?.!\s]+$/, "") });
       case "stale":
@@ -644,7 +648,17 @@ function QueueRow(props: {
 
   const what = titleWords(line.title);
   const title = lineTitle(line);
-  const meta = (...parts: Array<string | null | undefined | false>) => [...parts, line.untrusted ? t("queue.untrusted") : ""].filter(Boolean).join(" · ");
+  // What came from outside is tagged "Outside" at the end of the line's words; its full phrase is the tag's name.
+  const meta = (...parts: Array<string | null | undefined | false>): ReactNode => {
+    const words = parts.filter(Boolean).join(" · ");
+    if (!line.untrusted) return words;
+    return (
+      <>
+        {words && `${words} · `}
+        <OutsideTag />
+      </>
+    );
+  };
   const d: Described = (() => {
     switch (line.kind) {
       case "decision":
@@ -846,12 +860,32 @@ function QueueRow(props: {
         };
       }
       case "nudge": {
+        // One line for the person: what is past its date and since when, then whatever else waits for a reply.
         const days = line.waiting_days ?? 0;
+        const late = line.overdue ?? 0;
+        const words =
+          late > 0 && line.due
+            ? [tn("queue.nudge.overdue", late, { date: day(line.due) }), line.count > late ? tn("queue.nudge.others", line.count - late) : ""].filter(Boolean).join(" · ")
+            : tn("queue.nudge.meta", line.count, { days });
         return {
           pill: tn("queue.pill.waiting_days", days),
           tone: "warn",
-          meta: tn("queue.nudge.meta", line.count, { days }),
+          meta: meta(words),
           primary: { label: t("queue.act.follow_up") },
+          menu: [],
+        };
+      }
+      case "backup": {
+        // The one place besides the header chip: Back up now runs it, and with no folder the button opens the step that picks one.
+        const state = line.state;
+        const words =
+          state === "unset" ? t("queue.backup.unset") : state === "failed" ? t("queue.backup.failed") : state === "overdue" ? t("queue.backup.overdue", { age: backupAge({ age_hours: line.age_hours ?? null }, t) ?? "" }) : t("queue.backup.never");
+        const run = () => void act(() => api.backup(), () => ({ message: t("toast.backup_ran") }));
+        return {
+          pill: t("queue.pill.backup"),
+          tone: state === "failed" || state === "overdue" ? "danger" : "warn",
+          meta: words,
+          primary: state === "unset" ? { label: t("status.backup_set_up"), run: () => props.handlers.onOpenGuide?.("backup") } : { label: t("backup.now"), run },
           menu: [],
         };
       }
