@@ -209,7 +209,7 @@ function ActionRow(props: { action: OpenAction }) {
       </strong>
     ),
     a.due && t("op.meta.due", { date: day(a.due) }),
-    <ProjectTag key="p" name={a.project_name} parent={a.parent_name} />,
+    a.project_name && <ProjectTag key="p" name={a.project_name} parent={a.parent_name} />,
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
   ]);
@@ -311,7 +311,7 @@ function QuestionRow(props: { question: OpenQuestion }) {
     q.since && t("open.q.since", { date: monthDay(q.since) }),
     q.waiting_days != null && tn("open.q.days", q.waiting_days),
     q.chases > 0 && tn("open.q.chases", q.chases),
-    <ProjectTag key="p" name={q.project_name} parent={null} />,
+    q.project_name && <ProjectTag key="p" name={q.project_name} parent={null} />,
   ]);
   return (
     <Row

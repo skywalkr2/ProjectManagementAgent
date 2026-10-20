@@ -10,6 +10,9 @@ expect:
 - op: question.add
   to: PER-1
   kind: decision
+  # A question is asked as one: its title ends in a question mark, and what it states goes in its text.
+  text_has:
+  - '?'
 forbid:
 - op: event.add
 stub_answer:
@@ -19,5 +22,5 @@ stub_answer:
     to: me
     kind: decision
     title: 'Launch reading on Dec 1: 6 pm or 7 pm?'
-    text: Corner Lamp Books can host either.
+    text: Corner Lamp Books can host either time. Which do you prefer?
     project: PRJ-1

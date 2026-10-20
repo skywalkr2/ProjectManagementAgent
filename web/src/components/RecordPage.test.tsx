@@ -82,14 +82,14 @@ function routes(extra: Routes = {}): Routes {
   };
 }
 
-test("ordinary fields are a labelled list: readable labels, help text, names for people, one line per list item", async () => {
+test("ordinary fields are a labelled list: readable labels, names for people, one line per list item, and no help text while viewing", async () => {
   fakeApi(routes());
   renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
   expect(await screen.findByRole("heading", { level: 1, name: "The harbor" })).toBeInTheDocument();
   const details = screen.getByRole("region", { name: "Details" });
   const terms = within(details).getAllByRole("term").map((x) => x.textContent);
   expect(terms).toEqual(["Title", "Owner", "Tags"]);
-  expect(within(details).getByText("What the chapter is called.")).toBeInTheDocument();
+  expect(within(details).queryByText("What the chapter is called.")).toBeNull();
   expect(within(details).getByText("Robin Example")).toBeInTheDocument();
   expect(within(details).getByText("one")).toBeInTheDocument();
   expect(within(details).getByText("two")).toBeInTheDocument();

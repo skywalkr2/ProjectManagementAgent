@@ -6,6 +6,7 @@ import { useAct } from "../lib/act";
 import { dayAndTime, day } from "../lib/dates";
 import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
+import { useFieldLabel } from "../lib/records";
 import { useIsNarrow } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { recordView, viewHref } from "../lib/views";
@@ -543,7 +544,8 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
 
   useRowKeys(ref, { primary: op.status === "held" && !ask ? () => void release() : undefined });
 
-  const meta = metaLine(op, t);
+  const labelOf = useFieldLabel();
+  const meta = metaLine(op, t, labelOf);
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
@@ -595,7 +597,13 @@ function opLabel(op: S["OpView"], t: T): string {
   return t(`op.${op.op}`);
 }
 
-function metaLine(op: S["OpView"], t: T): string {
+/** A value an op sets, as words: a date as elsewhere in the app, never as it is stored. */
+function setValue(value: unknown): string {
+  const text = String(value ?? "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? day(text) : text;
+}
+
+function metaLine(op: S["OpView"], t: T, labelOf: (name: string) => string): string {
   const bits: string[] = [];
   const m = op.meta;
   if (m.owners?.length) bits.push(m.owners.join(", "));
@@ -603,7 +611,7 @@ function metaLine(op: S["OpView"], t: T): string {
   if (m.to) bits.push(t("op.meta.to", { name: m.to }));
   if (m.due) bits.push(t("op.meta.due", { date: day(m.due) }));
   if (m.project && op.op !== "note") bits.push(m.project);
-  if (m.field) bits.push(t("op.meta.set", { field: m.field, value: String(m.value ?? "") }));
+  if (m.field) bits.push(t("op.meta.set", { field: labelOf(m.field), value: setValue(m.value) }));
   if (m.role) bits.push(t("op.meta.role", { role: t(`role.${m.role}`) }));
   if (m.stance) bits.push(t("op.meta.stance", { stance: t(`stance.${m.stance}`) }));
   return bits.join(" · ");

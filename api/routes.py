@@ -1416,6 +1416,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                             cs.data if cs is not None else None,
                             people=people,
                             skip=list(cfg.language.title_skip),
+                            min_words=cfg.language.title_min_words,
                             head=head_of(ws.sources_dir, (source or {}).get("content_hash")),
                             watched_kind=kinds.get((watched.get("source"), watched.get("key"))),
                         ),
@@ -2147,6 +2148,24 @@ def _ask(store: Store, people: People, qid: str | None, cfg: Config | None = Non
     )
 
 
+def _named(people: People, who: str | None) -> str | None:
+    """A person an op gives by name or id, as their name; what names no one known person stays as written."""
+    if not who:
+        return who
+    found = people.resolve(who)
+    return people.name(found.person) if found.status == "ok" and found.person else who
+
+
+def _shown_value(store: Store, value: Any) -> Any:
+    """A value an op sets, with an id replaced by the name of the record it is (ids are never shown)."""
+    from engine.learn import kind_of_id
+    from engine.record_page import display_name
+
+    kind = kind_of_id(store.plugins.records, value) if isinstance(value, str) else None
+    target = store.read().get(kind, value, include_deleted=True) if kind else None
+    return display_name(target.data) or value if target is not None else value
+
+
 def _op_view(
     o: dict[str, Any],
     store: Store,
@@ -2185,7 +2204,7 @@ def _op_view(
         if kind == "note":
             meta["project"] = projects.get(d.get("project"))
     elif op["op"] == "action.add":
-        meta["owners"] = op.get("owners", [])
+        meta["owners"] = [_named(people, who) for who in op.get("owners", [])]
         meta["due"] = op.get("due")
         if cfg is not None:
             meta["to_send"] = any(
@@ -2193,12 +2212,12 @@ def _op_view(
                 for who in op.get("owners", [])
             )
     elif op["op"] == "question.add":
-        meta["to"] = op.get("to")
+        meta["to"] = _named(people, op.get("to"))
     elif op["op"] == "note":
         meta["project"] = projects.get(op.get("project"))
     if op["op"] == "record.set":
         meta["field"] = op["field"]
-        meta["value"] = op["value"]
+        meta["value"] = _shown_value(store, op["value"])
     if op["op"] == "project.add":
         meta["name"] = op["name"]
         if op.get("link") and cfg is not None:

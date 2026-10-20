@@ -17,8 +17,8 @@ alternatives (`complet|finish|done`), each a case-insensitive part of the text. 
 `reply_has` (words in the drafted reply attached to the action) or `no_reply: true` (the action carries no draft), and,
 for a promise (design 6.33), `promised_to` (the people it is owed to) and `due_words` (the words its date came from).
 An expected `action.move`, `action.part` or `action.news` names the action's `id`, and may name `due_words` (a move) or
-`text_has` (words in the op's own fields); an ending that waits only for the person's Keep counts as made, for what a
-case expects and for what it forbids.
+`text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title); an
+ending that waits only for the person's Keep counts as made, for what a case expects and for what it forbids.
 A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
 change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
 held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
@@ -718,7 +718,12 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
         return same_field and ("value" not in e or str(o["op"]["value"]) == str(e["value"]))
     if op == "question.add":
         q = _record(store, o, "question")
-        return bool(q and q["to"] == e.get("to", q["to"]) and q["kind"] == e.get("kind", q["kind"]))
+        return bool(
+            q
+            and q["to"] == e.get("to", q["to"])
+            and q["kind"] == e.get("kind", q["kind"])
+            and _has_words(q["title"], e.get("text_has", []))
+        )
     if op == "fact":
         f = _record(store, o, "fact")
         return bool(

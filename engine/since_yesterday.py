@@ -252,6 +252,7 @@ def _who(ws: Any, view: Any, cfg: Any, people: Any, request: Any, cs: Any) -> _W
         cs.data,
         people=people,
         skip=list(cfg.language.title_skip),
+        min_words=cfg.language.title_min_words,
         head=head_of(ws.sources_dir, source.data.get("content_hash") if source is not None else None),
     )
     name = people.name(title.person) if title.person else title.sender

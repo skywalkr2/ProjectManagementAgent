@@ -4,27 +4,32 @@
 // what is copied from beside it is the fact alone. In a row's meta line it is drawn inline.
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day } from "../lib/dates";
+import { monthDay } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
 import { OriginLink } from "./Origin";
 import styles from "./FactSource.module.css";
 
-/** The label's words, from who the fact rests on. */
+/** The label's words, from who the fact rests on: the person and the kind of input ("from <person>'s email, <day>"), never
+ * the input's own title. */
 export function useFactLabel(): (source: S["FactSource"]) => string {
-  const { t } = useWords();
+  const { t, has } = useWords();
   return (source) => {
-    const date = source.on ? day(source.on) : "";
-    const input = source.input ?? t("fact.src.an_input");
+    const date = source.on ? monthDay(source.on) : "";
+    const kind = source.kind && has(`fact.src.kind.${source.kind}`) ? source.kind : null;
+    // "<person>'s email", "an email", or "something that came in" when the kind was never kept.
+    const input = (name: string | null | undefined) =>
+      kind ? (name ? t("fact.src.of", { name, kind: t(`fact.src.kind.${kind}`) }) : t(`fact.src.kind_a.${kind}`)) : t("fact.src.an_input");
     switch (source.basis) {
       case "person":
         return t("fact.src.person", { date });
       case "inferred":
-        return t("fact.src.inferred", { input, date });
+        return t("fact.src.inferred", { input: input(source.sender), date });
       case "said":
-        if (source.by && source.reported_by) return t("fact.src.reported", { name: source.by, reporter: source.reported_by, date });
-        return source.by ? t("fact.src.said", { name: source.by, input, date }) : t("fact.src.said_unknown", { input, date });
+        if (source.by && source.reported_by) return t("fact.src.reported", { name: source.by, input: input(source.reported_by), date });
+        if (source.by) return t("fact.src.said", { input: input(source.by), date });
+        return t("fact.src.said_unknown", { input: input(source.sender), date });
       default:
         return t("fact.src.old", { date });
     }

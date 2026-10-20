@@ -3,7 +3,8 @@
 A title is "{kind} from {person} · {topic}": the kind of input, who it came from, and a few words on what it is about.
 Each part comes from structured fields first (a watched item's kind, author and subject; a pasted message's own header
 lines), then from the assistant's short topic for the input, and only then from the first meaningful line of the text,
-skipping greetings, quoted headers and sign-offs (`language.title_skip`). The screen puts the parts into words.
+skipping greetings, quoted headers and sign-offs (`language.title_skip`). A topic from the assistant with fewer words
+than `language.title_min_words` is passed over for the input's own words. The screen puts the parts into words.
 """
 
 from __future__ import annotations
@@ -47,30 +48,47 @@ def title_for(
     skip: list[str],
     head: str = "",
     watched_kind: str | None = None,
+    min_words: int = 1,
 ) -> Title:
     """The title of one request: `source` is its input's record (if any), `changeset` the assistant's answer (if any),
     `head` the beginning of the input's text, and `watched_kind` "email" or "calendar" when the watched item said what
-    it was."""
+    it was. A topic from the assistant with fewer than `min_words` words (a bare "Noted.") is not used while the input's
+    own words can give one."""
     skipping = [re.compile(p, re.IGNORECASE) for p in skip]
     assistant_topic = (changeset or {}).get("topic") or ""
+    short = assistant_topic and len(assistant_topic.split()) < min_words
+    held = assistant_topic if short else ""
+    if short:
+        assistant_topic = ""
     if source is None:
         note = request.get("note") or ""
         kind = "note" if request.get("origin") == "pm" else "task"
-        return Title(kind, None, None, assistant_topic or first_words(note, skipping))
+        return Title(kind, None, None, assistant_topic or first_words(note, skipping) or held)
     watched = source.get("watched")
     if watched:
         sender = watched.get("author")
         person, shown = _who(sender, people)
-        topic = _clean_subject(source.get("title") or "") or assistant_topic or first_words(head, skipping)
+        topic = _clean_subject(source.get("title") or "") or assistant_topic or first_words(head, skipping) or held
         return Title(watched_kind or "change", person, shown, topic)
     if source.get("trust") == "trusted":
-        return Title("note", None, None, assistant_topic or first_words(head, skipping))
+        return Title("note", None, None, assistant_topic or first_words(head, skipping) or held)
     headers = _headers(head)
     if "from" in headers or "subject" in headers:
         person, shown = _who(headers.get("from"), people)
-        topic = _clean_subject(headers.get("subject", "")) or assistant_topic or first_words(head, skipping)
+        topic = _clean_subject(headers.get("subject", "")) or assistant_topic or first_words(head, skipping) or held
         return Title("email", person, shown, topic)
-    return Title("pasted", None, None, assistant_topic or first_words(head, skipping))
+    return Title("pasted", None, None, assistant_topic or first_words(head, skipping) or held)
+
+
+def source_kind(source: dict[str, Any], *, watched_kind: str | None = None) -> str:
+    """What kind of input a source is, in one word: email or calendar (a watched item that said which, else change),
+    note (the person's own words), or pasted. A pasted message whose first line is a header line (From or Subject) is an
+    email."""
+    if source.get("watched"):
+        return watched_kind or "change"
+    if source.get("trust") == "trusted":
+        return "note"
+    return "email" if _HEADER.match(source.get("title") or "") else "pasted"
 
 
 def first_words(text: str, skipping: list[re.Pattern[str]]) -> str:

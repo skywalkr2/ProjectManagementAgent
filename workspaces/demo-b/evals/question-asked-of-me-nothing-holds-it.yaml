@@ -21,11 +21,16 @@ expect:
 forbid:
 - op: question.add
 - op: fact
+# The reasoning (no fact holds the date) belongs in the summary, which the person reads as the assistant's own words, never in
+# the to-do, which may be sent to someone.
+- op: action.add
+  text_has:
+  - no recorded fact|nothing recorded|not recorded|because
 stub_answer:
   summary: Reply to the shop about the paperback date; no recorded fact gives one.
   ops:
   - op: action.add
-    text: 'Reply to Corner Lamp Books about the paperback edition: no recorded fact gives its date'
+    text: Reply to Corner Lamp Books about the paperback edition
     owners:
     - Avery Lane
     project: PRJ-1

@@ -561,3 +561,21 @@ def test_a_pair_run_says_what_the_harness_kept_and_the_report_prints_it():
     assert kept and kept[0].startswith("GLOSS-1:") and "(reach:" in kept[0]
     assert any(line.strip().startswith("kept: GLOSS-1:") for line in report.text().splitlines())
     assert "GLOSS-1:" in json.loads(report.as_json())["results"][0]["kept"][0]
+
+
+def test_a_to_do_that_carries_the_assistants_reasoning_fails_the_case_and_the_ideal_answer_passes(monkeypatch):
+    case = case_of(DEMO_B, "question-asked-of-me-nothing-holds-it")
+    assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
+    [op] = case["stub_answer"]["ops"]
+    wrong = {**op, "text": f"{op['text']}: no recorded fact gives its date"}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={**case["stub_answer"], "ops": [wrong]})
+    assert not result.passed, "the reasoning belongs in the summary, never in the to-do"
+
+
+def test_a_question_whose_title_is_a_statement_fails_the_case_and_the_ideal_answer_passes(monkeypatch):
+    case = case_of(DEMO_B, "decision-for-pm")
+    assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
+    [op] = case["stub_answer"]["ops"]
+    wrong = {**op, "title": op["text"].split(".")[0]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={**case["stub_answer"], "ops": [wrong]})
+    assert not result.passed and result.missing

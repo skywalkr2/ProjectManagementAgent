@@ -500,7 +500,7 @@ test.describe.serial("acceptance scenario", () => {
     // The one filed under its project is in that project's details.
     const project = page.getByRole("row", { name: new RegExp(first.name) });
     await project.getByRole("button", { name: `Details: ${first.name}` }).click();
-    await expect(page.getByText("Noted.").first()).toBeVisible();
+    await expect(page.getByText("Kept this note for later.").first()).toBeVisible();
     await checkAccessibility(page);
   });
 

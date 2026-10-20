@@ -286,6 +286,11 @@ Built keys:
   begin a due and say only that a date follows ("by", "on", "due", "due by", "no later than"), the endings of a day of the
   month ("st", "nd", "rd", "th"), and the words that make a due a condition so it has no date ("once", "after", "before",
   "when", "until", "as soon as", "soon"). Whole words, ignoring case; demo values in both fictional workspaces.
+- `reasoning_phrases` and `question_marks`: what the `reasoning-in-title` and `question-is-statement` lints read (6.7): the
+  words that mark the assistant's reasoning ("no recorded fact", "couldn't find", …), and the characters that end a question
+  ("?", "？", "؟").
+- `title_min_words` (3, 1 to 12): the fewest words an item title's topic may have; a shorter topic from the assistant (a bare
+  "Noted.") gives way to the first meaningful line of the input (7.14).
 - `never_shown`: words that must never appear in anything people see; model names are added to it.
 - `title_skip`: regular expressions, matched at the start of a line, ignoring case, for lines an item's title never comes
   from: greetings, quoted mail headers, sign-offs. A title is taken from the first line left (7.14).
@@ -699,6 +704,9 @@ entry beside it, with `similarity` and `days` (default 14).
 **Built (B-6a):** `action-stands-alone` (default `return`; on an action only the person reads it only warns, on one with
 another owner it returns once and is then held), with `action_stands_alone.min_words` (default 2, from 1 to 20) and the words
 in `language.unanchored_words` (6.9); `tests/test_action_stands_alone.py`.
+
+**Built (B-7):** `reasoning-in-title` and `question-is-statement` (default `return` each; no tuning of their own, their
+words are `language.reasoning_phrases` and `language.question_marks`, above); `tests/test_item_text_lints.py`.
 
 **Built (L3):** `several-questions` (default `return`), a question or decision whose text holds `several_questions.minimum`
 (default 2, from 2 to 20) or more items of a numbered list that ask; and `question-without-stake` (default `return`), a

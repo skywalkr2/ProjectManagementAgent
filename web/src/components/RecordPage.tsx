@@ -7,7 +7,7 @@ import { resolveOffers, usePluginActions, useTaskKinds, type Offer } from "../li
 import { usePluginRun } from "../lib/plugin-run";
 import { problemText } from "../lib/problem";
 import { changedFields, editableFields, initialDraft, type Draft } from "../lib/record-edit";
-import { readable, readableTail, useValueLines } from "../lib/records";
+import { inReadingOrder, readable, readableTail, useDetailLines, useFieldLabel, useValueLines } from "../lib/records";
 import { reconcile, type Refreshed } from "../lib/refreshed";
 import { time } from "../lib/dates";
 import { useToasts } from "../lib/toasts";
@@ -26,6 +26,7 @@ import { ProjectPicker } from "./ProjectPicker";
 import { RecordActivity } from "./RecordActivity";
 import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { SafeLink, domainOf } from "./SafeText";
 import { StancePicker } from "./StancePicker";
 import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
@@ -62,24 +63,30 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   };
 
   const info = new Map((fields.data?.fields ?? []).map((f) => [f.name, f]));
+  // Every id the page can name: the people and projects on file, and whatever the server resolved for this record (an
+  // organization, a team, anything a field refers to). An id is never shown.
   const names = new Map<string, string>([
     ...(people.data ?? []).map((p) => [p.id, p.name] as [string, string]),
     ...(projects.data ?? []).map((p) => [p.id, p.name] as [string, string]),
+    ...(page.data?.details ?? []).flatMap((d) => (d.refs ?? []).filter((r) => r.name).map((r) => [r.id, r.name] as [string, string])),
   ]);
-  // A field that holds the id of a person or a project shows that one's name.
   const shown = (name: string, value: unknown): string[] =>
     lines(value).map((line) => (info.get(name)?.refers_to && names.has(line) ? names.get(line)! : line));
+  const detailLines = useDetailLines();
+  const labelOf = useFieldLabel();
 
   const data = record.data;
   const offered = editableFields(fields.data?.fields ?? []);
   const rows = data
-    ? Object.entries(data.fields)
-        // The id of the input an item came from is shown as its "Where it came from" link instead.
-        .filter(([name]) => name !== "id" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
-        // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
-        .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
-        .map(([name, value]) => ({ name, lines: shown(name, value) }))
-        .filter((row) => row.lines.length > 0)
+    ? inReadingOrder(
+        Object.entries(data.fields)
+          // The id of the input an item came from is shown as its "Where it came from" link instead.
+          .filter(([name]) => name !== "id" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
+          // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
+          .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
+          .map(([name, value]) => ({ name, lines: detailLines(name, value, info.get(name), names) }))
+          .filter((row) => row.lines.length > 0),
+      )
     : [];
   // The record's name, never its id: the page says it (a person is named by their full name).
   const heading = data ? (page.data?.name || shown("title", data.fields.title)[0] || shown("name", data.fields.name)[0] || data.id) : id;
@@ -162,12 +169,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
               <dl className="details-list">
                 {rows.map((row) => (
                   <div key={row.name} className="detail">
-                    <dt>{readable(row.name)}</dt>
+                    <dt>{labelOf(row.name)}</dt>
                     <dd>
                       {row.lines.map((line, i) => (
-                        <div key={i}>{line}</div>
+                        <div key={i}>{typeof line === "string" ? line : <SafeLink label={line.label || domainOf(line.url) || line.url} url={line.url} />}</div>
                       ))}
-                      {info.get(row.name)?.description && <span className="hint">{info.get(row.name)!.description}</span>}
                     </dd>
                   </div>
                 ))}

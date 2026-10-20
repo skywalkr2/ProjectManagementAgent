@@ -81,7 +81,7 @@ export function FollowUpsByProject(props: { sections: Section[]; compact: boolea
                   <div>
                     <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
                     <div className="title">{item.title}</div>
-                    <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].join(" · ")}</div>
+                    <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].filter(Boolean).join(" · ")}</div>
                     <OriginLink origin={item.origin} />
                   </div>
                   <div className="acts">

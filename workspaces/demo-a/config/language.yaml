@@ -4,6 +4,9 @@ run_on_separators: [" / ", "; "]
 # Words that point at something the reader can't see, so an action built on them can't be read on its own, and the words that may come before one ("follow up on that").
 unanchored_words: [it, this, that, them, these, those, him, her, the above, the same, as discussed, as agreed]
 unanchored_lead_words: [up, "on", to, with, about, for, back, out, "off", over, at]
+# Words that mark the assistant's reasoning, which a to-do's or a question's title never holds (it belongs in the change's summary), and the characters that end a question.
+reasoning_phrases: [no recorded fact, no fact gives, nothing recorded, not recorded, "couldn't find", could not find, not stated, not mentioned, I assume, I think]
+question_marks: ["?", "\uff1f", "\u061f"]
 # Phrases that make a draft report to the maintainers a standing rule, to be proposed as a rule instead.
 rule_report_phrases: [from now on, going forward, from here on, in future, should never, should always, "don't ask", do not ask]
 # Words in an input that look like a system name or an acronym, suggested as new glossary terms when unknown.
@@ -24,6 +27,8 @@ internal_terms: [changeset, ledger, applier, the assistant noticed]
 request_words: [can, could, will, would, please, need to, needs to, should, must]
 # Lines an item's title is never taken from: greetings, quoted headers, sign-offs.
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
+# The fewest words a title's topic may have; a shorter one is replaced by the first meaningful line of what came in.
+title_min_words: 3
 # Notes under this many words with no link are bare confirmations and stay with the change.
 bare_confirmation_words: 4
 # Words that begin a due date's words without being part of it ("due Oct 22", "on the 3rd"), the endings of a day of the month ("the 25th"), and the words that tie a due to something that happens, so it has no date ("once the keys arrive").

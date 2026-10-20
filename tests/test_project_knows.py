@@ -137,7 +137,7 @@ def test_facts_carry_who_they_rest_on_key_ones_first_and_a_replaced_one_is_not_s
     assert [f["id"] for f in facts][0] == key
     assert old not in [f["id"] for f in facts] and {new, guess} <= {f["id"] for f in facts}
     inferred = next(f for f in facts if f["id"] == guess)
-    assert inferred["source"]["basis"] == "inferred" and inferred["source"]["input"] == "Print notes"
+    assert inferred["source"]["basis"] == "inferred" and inferred["source"]["kind"] == "note"
     assert inferred["source"]["origin"] is not None and inferred["version"] == 1
     assert next(f for f in facts if f["id"] == key)["key"] is True
 
@@ -147,7 +147,7 @@ def test_a_fact_with_no_source_and_no_day_of_its_own_is_dated_by_the_day_it_was_
     prj = project(store)
     fact = make(store, "fact", {"text": "Both spines are in the folder.", "project": prj})
     [shown] = seen(store, cfg, prj)["facts"]
-    assert shown["id"] == fact and shown["source"]["input"] is None and shown["source"]["basis"] is None
+    assert shown["id"] == fact and shown["source"]["kind"] is None and shown["source"]["basis"] is None
     assert shown["source"]["on"] == str(store.read().ledger(kind="fact", record_id=fact)[0]["at"])[:10]
 
 

@@ -66,7 +66,7 @@ ideal:
     topic: the rate import defect
     ops:
     - op: action.add
-      text: Get the rate import defect fixed, because it blocks the portal launch
+      text: Get the rate import defect fixed before the portal launch
       owners: [Rafael Quist]
       project: PRJ-3
       evidence:

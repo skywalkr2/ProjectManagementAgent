@@ -1188,7 +1188,10 @@ class FactSource(BaseModel):
     basis: Literal["person", "inferred", "said"] | None = None
     by: str | None = Field(None, description="Name of the person who said it, when someone else did.")
     reported_by: str | None = Field(None, description="Name of the person whose input carried what was said.")
-    input: str | None = Field(None, description="The input it came from, by its short name.")
+    kind: Literal["email", "calendar", "change", "note", "pasted"] | None = Field(
+        None, description="The kind of input it came from, never the input's own title."
+    )
+    sender: str | None = Field(None, description="Name of the person whose input it was, when that is known.")
     on: str | None = Field(None, description="The day it was confirmed, true as of, or filed, YYYY-MM-DD.")
     origin: Origin | None = Field(None, description="Where it came from, for the link that is the label.")
 

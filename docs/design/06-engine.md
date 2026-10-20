@@ -909,6 +909,17 @@ is marked *designed*, with the phase.
 - **Every correction queues its learning:** a signal is written only through `learn.record`, which queues what the
   assistant learns from it in the same transaction. **Built:** `tests/test_hold_drop_fold.py::test_every_correction_the_person_makes_here_queues_what_the_assistant_learns_from_it`,
   `tests/test_hold_drop_fold.py::test_signals_are_written_only_through_the_one_place_that_queues_their_learning`.
+- **No bookkeeping in item text** (B-7). Two lints on the assistant's own wording of a to-do's or a question's title, both
+  default `return` and never invariants, since telling reasoning from content is fuzzy: `reasoning-in-title` fires on a
+  title that holds a phrase of `language.reasoning_phrases` ("no recorded fact", "couldn't find", …; words quoted from the
+  input don't count; ordinary connectives such as "because" or "so that" are not on the list, since a to-do may well say
+  why), and `question-is-statement` on a question whose title doesn't end in one of `language.question_marks` (a closing
+  quote or bracket may follow). As with the other wording lints, `reasoning-in-title` on a to-do the person owns only warns;
+  on one someone else owns it returns once and, still failing, is held; a still-failing question to someone else is held. The message says where the reasoning belongs: in the change's summary, which the person reads as the
+  assistant's own words ("Quill says"). Fixtures: the cases `question-asked-of-me-nothing-holds-it` (forbids a to-do that
+  carries the reasoning) and `decision-for-pm` (expects a question title with "?"). **Built:**
+  `tests/test_item_text_lints.py`, `tests/test_evaluate_harness.py` ("carries the assistant's reasoning" and "is a
+  statement").
 - **One question per id, and a stake for anyone else's.** The lint `several-questions` (default `return`, and for a
   question or decision to the person too) fires on a text that holds `tuning.several_questions.minimum` (2) or more items of
   a numbered list that ask. `question-without-stake` (default `return`) fires on a `question.add` to anyone but the person
@@ -1293,6 +1304,9 @@ the structured fields of watched items (6.2), so no AI call stands between a mes
   **changeset's `topic`**, the few words the assistant gives for what the input was about (kept to one line, cut at a word,
   at most 60 characters; for a plugin's person action, the proposal's topic); and only then the first meaningful line of the
   text, with greetings, quoted headers and sign-offs skipped (`language.title_skip`, 4.6), cut at eight words.
+  **Built (B-7):** a topic from the assistant with fewer than `language.title_min_words` words (3) is not used while the
+  input's own first meaningful line can give one, so a bare "Noted." never titles an item (`title_for(min_words=…)`;
+  `tests/test_item_titles.py`).
 A title never starts with a greeting or "From:". The same title is on Today, What changed and the review.
 
 ## 6.16 AI provider layer (any model, by configuration)
@@ -2640,7 +2654,8 @@ People tables (7.14). `engine/record_page.py` only reads; nothing calls AI. For 
 - its **name**, taken from the record (full name, name, title or text), never its id;
 - its **details**: the fields its type declares, in the order it declares them, leaving out empty values, long text, aliases and
   the core's own `id`, `stage` and `ext`; each with a type the screen uses to show it (date, number, yes or no, choice, list,
-  map or text), and every reference resolved to the referred record's name and a link;
+  map or text), and every reference resolved to the referred record's name and a link (a field that holds the id of a record
+  its type doesn't declare a reference, such as a person's team or a project's owner, is resolved the same way);
 - what is **still open with it**: for a person, the open actions they own and the open questions to them; for a project, those
   in the project; for an organization, those of its people;
 - what **happened to it**, newest first: the ledger's entries for it and for what is open with it, one entry per record and

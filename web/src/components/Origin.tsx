@@ -12,6 +12,12 @@ import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { SafeLink } from "./SafeText";
 import { SourceLimit } from "./SourceLimit";
 
+/** Whether an origin has a link to show: a line that holds it must not leave a dot beside nothing when it has none. */
+export function hasOrigin(origin?: S["Origin"] | null): boolean {
+  if (!origin) return false;
+  return (origin.kind === "link" && !!origin.url) || (origin.kind === "source" && !!origin.source) || (origin.kind === "change" && !!origin.changeset);
+}
+
 export function OriginLink(props: { origin?: S["Origin"] | null; /** The link's words, when they are more than "Where it came from". */ label?: string }) {
   const { t } = useWords();
   const origin = props.origin;

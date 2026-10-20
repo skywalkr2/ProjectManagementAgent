@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { day, monthDay } from "../lib/dates";
+import { monthDay } from "../lib/dates";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { ProjectKnows } from "./ProjectKnows";
 
@@ -30,7 +30,7 @@ const FULL = knows({
   ],
   facts: [
     { id: "FACT-1", version: 2, text: "Trim size is fixed.", key: true, source: { basis: "person", on: "2026-10-08", origin: { kind: "source", source: "SRC-1" } } },
-    { id: "FACT-2", version: 4, text: "Both spines are in the folder.", key: false, source: { basis: "inferred", input: "Robin's email", on: "2026-10-12", origin: { kind: "source", source: "SRC-2" } } },
+    { id: "FACT-2", version: 4, text: "Both spines are in the folder.", key: false, source: { basis: "inferred", kind: "email", sender: "Robin Sample", on: "2026-10-12", origin: { kind: "source", source: "SRC-2" } } },
     { id: "FACT-3", version: 1, text: "The proof is approved.", key: false, source: { basis: null, on: null, origin: null } },
   ],
   terms: [
@@ -87,11 +87,11 @@ test("a fact has its source label in the meta line, key facts are marked, and wh
   const rows = within(facts).getAllByRole("listitem");
   expect(rows).toHaveLength(3);
   expect(within(rows[0]).getByText("Key")).toBeInTheDocument();
-  expect(within(rows[0]).getByRole("button", { name: `from you, ${day("2026-10-08")}` })).toBeInTheDocument();
+  expect(within(rows[0]).getByRole("button", { name: `from you, ${monthDay("2026-10-08")}` })).toBeInTheDocument();
   expect(within(rows[0]).queryByText("Inferred")).toBeNull();
   const inferred = rows[1].querySelector("[data-fact-source]") as HTMLElement;
   expect(inferred.querySelector("[data-inferred]")).not.toBeNull();
-  expect(inferred).toHaveTextContent(`Helper inferred this from Robin's email, ${day("2026-10-12")}`);
+  expect(inferred).toHaveTextContent(`Helper inferred this from Robin Sample's email, ${monthDay("2026-10-12")}`);
   expect(within(inferred).getByText("Inferred by the assistant, not stated")).toBeInTheDocument();
   expect(getComputedStyle(inferred).fontStyle).not.toBe("italic");
   // a fact with no source and no day says it was recorded, with nothing made up

@@ -97,6 +97,8 @@ def page(
                     for v in values_at({field: value}, path)
                     if isinstance(v, str)
                 ]
+        if not found:
+            found = _ids_named(view, store, value, name_of)
         details.append({"field": field, "value": value, "type": _type_of(info.annotation), "refs": found})
 
     actions, questions = _open_with(view, kind, record_id)
@@ -142,6 +144,19 @@ def page(
         "fact_source": fact_source(view, record) if kind == "fact" else None,
         "activity": _activity(view, kind, record_id, actions, questions, name_of, pm),
     }
+
+
+def _ids_named(view: Any, store: Any, value: Any, name_of: Any) -> list[dict[str, str]]:
+    """The records a field's value names by id when the record's type doesn't declare the field a reference: a string
+    (or a list of strings) that is exactly the id of a record that exists. Ids are never shown."""
+    from engine.learn import kind_of_id
+
+    found = []
+    for item in value if isinstance(value, list) else [value]:
+        kind = kind_of_id(store.plugins.records, item) if isinstance(item, str) else None
+        if kind is not None and view.get(kind, item, include_deleted=True) is not None:
+            found.append({"kind": kind, "id": item, "name": name_of(kind, item)})
+    return found
 
 
 def _meeting(view: Any, data: dict[str, Any], today: date | None, here: ZoneInfo | None) -> dict[str, Any]:
@@ -200,9 +215,12 @@ def _completed(view: Any, kind: str, record_id: str, name_of: Any) -> list[dict[
 
 def fact_source(view: Any, record: Any) -> dict[str, Any]:
     """Who a fact rests on and where it came from, for the label in its meta line: the basis (the person, someone
-    else, or the assistant's inference), who said it and who reported it, the input and the day. The day is the one the
-    person confirmed it when they did, else the day it was true as of, else the day it was filed."""
+    else, or the assistant's inference), who said it and who reported it, the kind of input it came from and whose it
+    was (never the input's own title), and the day. The day is the one the person confirmed it when they did, else the
+    day it was true as of, else the day it was filed."""
     from engine.origin import origins
+    from engine.titles import source_kind
+    from engine.today_queue import watched_kinds
 
     data = record.data
     source = view.get("source", data["source"]) if data.get("source") else None
@@ -217,11 +235,18 @@ def fact_source(view: Any, record: Any) -> dict[str, Any]:
     filed = str(rows[0]["at"])[:10] if rows else None
     on = str(confirmed[-1]["at"])[:10] if confirmed else (str(data["as_of"]) if data.get("as_of") else filed)
     reported_by = author.data["full_name"] if author is not None and (said is None or author.id != said.id) else None
+    watched = (source.data.get("watched") or {}) if source is not None else {}
+    kind = (
+        source_kind(source.data, watched_kind=watched_kinds(view).get((watched.get("source"), watched.get("key"))))
+        if source is not None
+        else None
+    )
     return {
         "basis": data.get("basis"),
         "by": said.data["full_name"] if said is not None else None,
         "reported_by": reported_by if data.get("basis") == "said" else None,
-        "input": source.data["title"] if source is not None else None,
+        "kind": kind,
+        "sender": author.data["full_name"] if author is not None else None,
         "on": on,
         "origin": origins(view, "fact", [record.id])[record.id],
     }

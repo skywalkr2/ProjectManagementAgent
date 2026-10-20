@@ -1123,6 +1123,8 @@ def _default_lints() -> dict[str, Severity]:
         "bookkeeping": "return",
         "long-quote": "return",
         "action-stands-alone": "return",
+        "reasoning-in-title": "return",
+        "question-is-statement": "return",
     }
 
 
@@ -1560,6 +1562,28 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["up", "on", "to", "with", "about", "for", "back", "out", "off", "over", "at"],
         description="Words that may come between an action's first word and the thing it is done to, such as the "
         "'up on' of 'follow up on'.",
+    )
+    reasoning_phrases: list[str] = Field(
+        default_factory=lambda: [
+            *("no recorded fact", "no fact gives", "nothing recorded", "not recorded"),
+            *("couldn't find", "could not find", "not stated", "not mentioned"),
+            *("I assume", "I think"),
+        ],
+        description="Words and phrases that mark the assistant's reasoning, so a to-do's or a question's title that "
+        "holds one is returned: a title says what to do or ask, and the reasoning belongs in the change's summary. "
+        "Matched as whole words, ignoring case; words quoted from the input don't count.",
+    )
+    question_marks: list[str] = Field(
+        default_factory=lambda: ["?", "\uff1f", "\u061f"],
+        description="The characters that end a question in the language. A question's title that doesn't end in one "
+        "(a closing quote or bracket may follow) is a statement, and is returned to be asked as a question.",
+    )
+    title_min_words: int = Field(
+        3,
+        ge=1,
+        le=12,
+        description="The fewest words a title's topic may have: a shorter one from the assistant (a bare 'Noted.') is "
+        "replaced by the first meaningful line of what came in.",
     )
     run_on_separators: list[str] = Field(
         default_factory=lambda: [" / ", "; "],

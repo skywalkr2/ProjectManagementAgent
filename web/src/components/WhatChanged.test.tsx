@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { revealOrKeep } from "../lib/reveal";
+import { day } from "../lib/dates";
 import { fakeApi, renderApp } from "../test-utils";
 import { ChangeRow, WhatChanged } from "./WhatChanged";
 
@@ -175,6 +176,17 @@ test("an action the assistant added for someone not yet told says to send on its
   fakeApi({ "GET changes": () => [{ ...base, changeset: { ...base.changeset!, ops: [op] } }] });
   renderApp(<WhatChanged />);
   expect(await screen.findByText("Robin Sample · To send")).toBeInTheDocument();
+});
+
+test("a changed field is named by its label and its date is written as elsewhere, never as its key and an ISO date", async () => {
+  const base = change("REQ-9");
+  const set = (index: number, field: string, value: unknown): S["OpView"] => ({ ...base.changeset!.ops[0], index, op: "record.set", title: "Send two spine options", group: `op${index}`, evidence: null, meta: { owners: [], field, value } });
+  fakeApi({ "GET changes": () => [{ ...base, changeset: { ...base.changeset!, ops: [set(0, "due", "2026-10-19"), set(1, "why_they_matter", "Runs the press")] } }] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText(`Due date: ${day("2026-10-19")}`)).toBeInTheDocument();
+  expect(screen.getByText("Why they matter: Runs the press")).toBeInTheDocument();
+  expect(screen.queryByText(/2026-10-19/)).toBeNull();
+  expect(screen.queryByText(/^due:/)).toBeNull();
 });
 
 test("a filed note says which project it went under", async () => {

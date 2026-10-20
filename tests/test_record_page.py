@@ -40,6 +40,21 @@ def test_a_person_page_resolves_names_and_lists_what_is_open_with_them(api):
     assert all(d["field"] not in ("full_name", "aliases") for d in page["details"])
 
 
+def test_a_field_holding_a_records_id_shows_that_records_name_whether_or_not_it_is_declared_a_reference(api):
+    client, store = api
+    view = store.read()
+    person = next(p for p in view.list("person") if p.data.get("team"))
+    team = view.get("team", person.data["team"])
+    page = client.get(f"/api/record-pages/{person.id}", params={"kind": "person"}).json()
+    detail = next(d for d in page["details"] if d["field"] == "team")
+    assert detail["refs"] == [{"kind": "team", "id": team.id, "name": team.data["name"]}]
+    project = next(p for p in view.list("project") if p.data.get("owner"))
+    owner = view.get("person", project.data["owner"])
+    page = client.get(f"/api/record-pages/{project.id}", params={"kind": "project"}).json()
+    detail = next(d for d in page["details"] if d["field"] == "owner")
+    assert detail["refs"] == [{"kind": "person", "id": owner.id, "name": owner.data["full_name"]}]
+
+
 def test_a_project_page_shows_its_open_actions_and_activity(api):
     client, store = api
     action = next(a for a in store.read().list("action") if a.data.get("project"))
@@ -209,7 +224,11 @@ def test_a_facts_page_says_who_it_rests_on_and_where_it_came_from(api):
     def label(fact):
         return client.get(f"/api/record-pages/{fact}", params={"kind": "fact"}).json()["fact_source"]
 
-    assert label(inferred)["basis"] == "inferred" and label(inferred)["input"] == "Production check-in notes"
+    assert label(inferred)["basis"] == "inferred" and label(inferred)["kind"] == "pasted"
+    assert label(inferred)["sender"] == author.data["full_name"]
+    assert "Production check-in notes" not in json.dumps(label(inferred)), (
+        "the source's own title never reaches the label"
+    )
     said_label = label(reported)
     assert said_label["basis"] == "said" and said_label["by"] == said.data["full_name"]
     assert said_label["reported_by"] == author.data["full_name"]
@@ -217,6 +236,39 @@ def test_a_facts_page_says_who_it_rests_on_and_where_it_came_from(api):
     assert (
         client.get(f"/api/record-pages/{project_id(store)}", params={"kind": "project"}).json()["fact_source"] is None
     )
+
+
+def test_the_kind_of_a_facts_source_is_a_word_never_the_sources_own_title(api):
+    client, store = api
+    author = store.read().list("person")[0]
+    with store.transaction() as tx:
+
+        def fact(title, trust):
+            source = tx.create(
+                "source",
+                {
+                    "received_at": "2026-10-09T10:00:00+00:00",
+                    "kind": "pasted",
+                    "title": title,
+                    "content_hash": "abc",
+                    "trust": trust,
+                    "author": author.id,
+                },
+                _PM,
+            ).id
+            return tx.create("fact", {"text": f"About {title}.", "basis": "said", "source": source}, _PM).id
+
+        mail, note, pasted = (
+            fact(f"From: {author.data['full_name']}", "untrusted"),
+            fact("My own words", "trusted"),
+            fact("Notes", "untrusted"),
+        )
+
+    def label(fact_id):
+        return client.get(f"/api/record-pages/{fact_id}", params={"kind": "fact"}).json()["fact_source"]
+
+    assert [label(f)["kind"] for f in (mail, note, pasted)] == ["email", "note", "pasted"]
+    assert all("input" not in label(f) for f in (mail, note, pasted))
 
 
 def project_id(store):
@@ -255,3 +307,30 @@ def test_only_confirming_can_change_a_facts_basis(api):
         ).status_code
         == 409
     )
+
+
+def test_what_changed_names_the_people_an_op_gives_by_id_and_a_set_value_that_is_an_id(api):
+    from api.routes import _op_view
+    from engine.config import load_config
+    from engine.names import People
+
+    client, store = api
+    view = store.read()
+    cfg = None
+    people = People(store, load_config(DEMO_B / "config", env={}))
+    person = view.list("person")[1]
+    project = view.list("project")[0]
+
+    def shown(op):
+        return _op_view(
+            {"op": op, "index": 0, "status": "applied", "group": "g", "records": []}, store, people, {}, cfg
+        ).meta
+
+    assert shown({"op": "question.add", "to": person.id, "title": "Which day?"}).to == person.data["full_name"]
+    assert shown({"op": "action.add", "text": "Send the proof", "owners": [person.id]}).owners == [
+        person.data["full_name"]
+    ]
+    value = shown({"op": "record.set", "kind": "project", "id": project.id, "field": "owner", "value": person.id})
+    assert value.field == "owner" and value.value == person.data["full_name"]
+    plain = shown({"op": "record.set", "kind": "project", "id": project.id, "field": "summary", "value": "Notes"})
+    assert plain.value == "Notes"

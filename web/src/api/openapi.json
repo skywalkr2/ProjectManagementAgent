@@ -5258,17 +5258,24 @@
             "description": "Name of the person who said it, when someone else did.",
             "title": "By"
           },
-          "input": {
+          "kind": {
             "anyOf": [
               {
+                "enum": [
+                  "email",
+                  "calendar",
+                  "change",
+                  "note",
+                  "pasted"
+                ],
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "The input it came from, by its short name.",
-            "title": "Input"
+            "description": "The kind of input it came from, never the input's own title.",
+            "title": "Kind"
           },
           "on": {
             "anyOf": [
@@ -5304,6 +5311,18 @@
             ],
             "description": "Name of the person whose input carried what was said.",
             "title": "Reported By"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the person whose input it was, when that is known.",
+            "title": "Sender"
           }
         },
         "title": "FactSource",

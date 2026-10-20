@@ -210,6 +210,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             cs,
             people=people,
             skip=skip,
+            min_words=cfg.language.title_min_words,
             head=head,
             watched_kind=kinds.get((watched.get("source"), watched.get("key"))),
         )

@@ -67,9 +67,53 @@ test("a project's page shows what is open with it, what was finished and by whom
   expect(row).toHaveTextContent("reported by Robin Sample");
   expect(row).toHaveTextContent(monthDay("2026-10-12"));
   const activity = screen.getByRole("region", { name: "Activity" });
-  expect(activity).toHaveTextContent("The assistant closed");
-  expect(activity).toHaveTextContent("Book the printer");
+  expect(activity).toHaveTextContent("Helper closed Book the printer");
+  expect(activity).not.toHaveTextContent("Status");
   expect(screen.getByRole("region", { name: "Details" })).toBeInTheDocument();
+});
+
+test("activity says who changed which field of what, by the field's label and the assistant by its name", async () => {
+  const entry = (id: string, name: string, field: string, by_assistant: boolean): S["ActivityEntry"] => ({ at: "2026-10-12T09:00:00Z", kind: "action", id, name, op: "record.edit", field, actor: by_assistant ? "assistant" : "pm", by_assistant });
+  const shown = page({ activity: [entry("ACT-1", "Send two spine options", "due", true), entry("ACT-2", "Harbor", "why_they_matter", false), entry("ACT-3", "Harbor", "target", true)] });
+  api("project", "PRJ-1", { name: "Harbor" }, shown);
+  const first = renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const activity = await screen.findByRole("region", { name: "Activity" });
+  const rows = within(activity).getAllByRole("listitem");
+  expect(rows[0]).toHaveTextContent("Helper changed the due date of Send two spine options");
+  expect(within(rows[0]).getByText("Send two spine options").tagName).toBe("STRONG");
+  expect(rows[1]).toHaveTextContent("You changed the why they matter of Harbor");
+  expect(rows[2]).toHaveTextContent("Helper changed the target date of Harbor");
+  expect(activity.textContent).not.toMatch(/·\s*(due|target|Why)/i);
+  first.unmount();
+  api("project", "PRJ-1", { name: "Harbor" }, shown);
+  renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />, {}, { unnamed: true });
+  expect(within(await screen.findByRole("region", { name: "Activity" })).getAllByRole("listitem")[0]).toHaveTextContent("Your assistant changed the due date of Send two spine options");
+});
+
+test("a meta line joins only the parts it has: no dot beside nothing, no lone dot", async () => {
+  api(
+    "project",
+    "PRJ-1",
+    { name: "Harbor" },
+    page({
+      open_actions: [
+        { id: "ACT-1", text: "Send the proof", due: "2026-10-20", owners: ["Robin Sample"], project: "PRJ-1", project_name: "Harbor", origin: null, series: null, series_title: null },
+        { id: "ACT-2", text: "Check the cover", owners: ["Robin Sample"], project: "PRJ-1", origin: null },
+        { id: "ACT-3", text: "Pick a printer", owners: [], origin: null },
+      ],
+      open_questions: [{ id: "Q-1", title: "Which trim size?", to: null, to_name: null, status: "open", kind: "question", origin: null }],
+    }),
+  );
+  renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
+  const open = await screen.findByRole("region", { name: "Open with Harbor" });
+  const rows = within(open).getAllByRole("listitem");
+  expect(rows).toHaveLength(4);
+  expect(rows[0]).toHaveTextContent(`Robin Sample · due ${day("2026-10-20")}`);
+  for (const row of rows) {
+    expect(row.textContent).not.toMatch(/·\s*·/);
+    expect(row.textContent).not.toMatch(/·\s*$/);
+    expect(row.textContent).not.toMatch(/^\s*·/);
+  }
 });
 
 test("a project's page has what the assistant knows about it, and a person's page does not", async () => {
@@ -79,7 +123,7 @@ test("a project's page has what the assistant knows about it, and a person's pag
   const { unmount } = renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
   const knows = await screen.findByRole("region", { name: "What Helper knows" });
   expect(await within(knows).findByRole("link", { name: "Trim size is fixed." })).toBeInTheDocument();
-  expect(within(knows).getByText(`from you, ${day("2026-10-08")}`)).toBeInTheDocument();
+  expect(within(knows).getByText(`from you, ${monthDay("2026-10-08")}`)).toBeInTheDocument();
   unmount();
   api("person", "PER-1", { full_name: "Robin Sample" }, page({ kind: "person", id: "PER-1", name: "Robin Sample" }));
   renderApp(<RecordPage kind="person" id="PER-1" onBack={() => {}} />);
@@ -137,32 +181,36 @@ const fact = (source: S["FactSource"]) => api("fact", "FACT-1", { text: "Both sp
 test("a fact the person said is 'from you' with the day, and is a link to where it came from", async () => {
   fact({ basis: "person", on: "2026-10-08", origin: { kind: "link", url: `${WEB}example.com/notes`, source: "SRC-1" } });
   renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
-  const link = await screen.findByRole("link", { name: `from you, ${day("2026-10-08")}` });
+  const link = await screen.findByRole("link", { name: `from you, ${monthDay("2026-10-08")}` });
   expect(link.getAttribute("href")).toBe(`${WEB}example.com/notes`);
   expect(screen.queryByText("Inferred")).toBeNull();
   expect(screen.queryByRole("button", { name: "Confirm it" })).toBeNull();
 });
 
 test("what someone said is named in their own words, or as reported by another person's input", async () => {
-  fact({ basis: "said", by: "Ben Person", input: "the production check-in notes", on: "2026-10-08", origin: { kind: "source", source: "SRC-1" } });
-  const { unmount } = renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
-  expect(await screen.findByRole("button", { name: `from Ben Person, in the production check-in notes, ${day("2026-10-08")}` })).toBeInTheDocument();
-  unmount();
-  fact({ basis: "said", by: "Ana Person", reported_by: "Jordan Pike", input: "notes", on: "2026-10-11", origin: { kind: "source", source: "SRC-1" } });
+  fact({ basis: "said", by: "Ben Person", kind: "email", sender: "Ben Person", on: "2026-10-08", origin: { kind: "source", source: "SRC-1" } });
+  const first = renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
+  expect(await screen.findByRole("button", { name: `from Ben Person's email, ${monthDay("2026-10-08")}` })).toBeInTheDocument();
+  first.unmount();
+  fact({ basis: "said", by: "Ana Person", reported_by: "Jordan Pike", kind: "pasted", sender: "Jordan Pike", on: "2026-10-11", origin: { kind: "source", source: "SRC-1" } });
+  const second = renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
+  expect(await screen.findByRole("button", { name: `said by Ana Person, in Jordan Pike's pasted message, ${monthDay("2026-10-11")}` })).toBeInTheDocument();
+  second.unmount();
+  fact({ basis: "said", kind: "calendar", on: "2026-10-12", origin: { kind: "source", source: "SRC-1" } });
   renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
-  expect(await screen.findByRole("button", { name: `said by Ana Person, in Jordan Pike's notes, ${day("2026-10-11")}` })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: `from a calendar entry, ${monthDay("2026-10-12")}` })).toBeInTheDocument();
 });
 
 test("an inference has a dashed Inferred tag, says the assistant worked it out, and Confirm it makes it the person's own with Undo", async () => {
   const user = userEvent.setup();
-  const calls = api("fact", "FACT-1", { text: "Both spines are in the folder." }, page({ kind: "fact", id: "FACT-1", name: "Both spines are in the folder.", fact_source: { basis: "inferred", input: "Robin's email", on: "2026-10-12", origin: { kind: "source", source: "SRC-1" } } }), {
+  const calls = api("fact", "FACT-1", { text: "Both spines are in the folder." }, page({ kind: "fact", id: "FACT-1", name: "Both spines are in the folder.", fact_source: { basis: "inferred", kind: "email", sender: "Robin Sample", on: "2026-10-12", origin: { kind: "source", source: "SRC-1" } } }), {
     "POST records/edit": () => ({ changeset: "CS-5" }),
     "POST changesets/CS-5/undo": () => ({ restored: [0], skipped: [] }),
   });
   renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
   const line = (await screen.findByText("Inferred")).closest("[data-fact-source]") as HTMLElement;
   expect(line.querySelector("[data-inferred]")).not.toBeNull();
-  expect(line).toHaveTextContent(`Helper inferred this from Robin's email, ${day("2026-10-12")}`);
+  expect(line).toHaveTextContent(`Helper inferred this from Robin Sample's email, ${monthDay("2026-10-12")}`);
   // A screen reader hears what the tag means, not just the word.
   expect(within(line).getByText("Inferred by the assistant, not stated")).toBeInTheDocument();
   expect(getComputedStyle(line).fontStyle).not.toBe("italic");
@@ -176,7 +224,7 @@ test("an inference has a dashed Inferred tag, says the assistant worked it out, 
 test("a fact recorded before the source was kept says only when", async () => {
   fact({ basis: null, on: "2026-09-01", origin: null });
   renderApp(<RecordPage kind="fact" id="FACT-1" onBack={() => {}} />);
-  expect(await screen.findByText(`recorded ${day("2026-09-01")}`)).toBeInTheDocument();
+  expect(await screen.findByText(`recorded ${monthDay("2026-09-01")}`)).toBeInTheDocument();
 });
 
 // A calendar entry kept from a calendar: who invited, who is asked and the person's own answer (design 7.14).

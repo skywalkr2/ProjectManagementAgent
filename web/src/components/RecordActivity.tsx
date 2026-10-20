@@ -5,12 +5,12 @@ import type { ReactNode } from "react";
 import { type S } from "../lib/api";
 import { day, monthDay } from "../lib/dates";
 import { forMeeting } from "../lib/meetings";
-import { readable } from "../lib/records";
+import { useFieldLabel } from "../lib/records";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
 import { Row } from "../ui/Row";
-import { OriginLink } from "./Origin";
+import { OriginLink, hasOrigin } from "./Origin";
 
 type Page = S["RecordPageView"];
 
@@ -42,8 +42,15 @@ const joined = (parts: ReactNode[]): ReactNode =>
 export function RecordActivity(props: { page: Page }) {
   const { t, tn, has } = useWords();
   const { page } = props;
+  const labelOf = useFieldLabel();
   // What the change was, in a word, from the op that made it; one the sheet has no word for is just a change.
   const verb = (op: string) => (has(`record.op.${op.split("#")[0]}`) ? t(`record.op.${op.split("#")[0]}`) : t("record.op.other"));
+  // A change with a word of its own (added, closed, asked) says that word; any other says which field changed, by its label.
+  const did = (e: Page["activity"][number]) => {
+    const own = e.op.split("#")[0];
+    const plain = own !== "record.edit" && has(`record.op.${own}`);
+    return !plain && e.field ? t("record.did_field", { field: labelOf(e.field).toLocaleLowerCase() }) : verb(e.op);
+  };
   const completed = page.completed_actions ?? [];
   const open = page.open_actions.length + page.open_questions.length;
   return (
@@ -60,8 +67,8 @@ export function RecordActivity(props: { page: Page }) {
                   (a.owners ?? []).join(", "),
                   a.due && t("op.meta.due", { date: day(a.due) }),
                   page.kind !== "project" && a.project_name,
-                  <MeetingLabel key="m" series={a.series} title={a.series_title} on={a.meeting_on} />,
-                  <OriginLink key="o" origin={a.origin} />,
+                  a.series && a.series_title && <MeetingLabel key="m" series={a.series} title={a.series_title} on={a.meeting_on} />,
+                  hasOrigin(a.origin) && <OriginLink key="o" origin={a.origin} />,
                 ])}
               />
             ))}
@@ -72,8 +79,8 @@ export function RecordActivity(props: { page: Page }) {
                 title={<a href={viewHref(recordView("question", q.id))}>{q.title}</a>}
                 meta={joined([
                   q.to_name && t("record.asked_of", { name: q.to_name }),
-                  <MeetingLabel key="m" series={q.series} title={q.series_title} on={q.meeting_on} />,
-                  <OriginLink key="o" origin={q.origin} />,
+                  q.series && q.series_title && <MeetingLabel key="m" series={q.series} title={q.series_title} on={q.meeting_on} />,
+                  hasOrigin(q.origin) && <OriginLink key="o" origin={q.origin} />,
                 ])}
               />
             ))}
@@ -105,9 +112,8 @@ export function RecordActivity(props: { page: Page }) {
             {page.activity.map((e, i) => (
               <li key={`${e.at}-${e.id}-${e.op}-${i}`}>
                 <span className="when">{monthDay(e.at)}</span>{" "}
-                <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: verb(e.op) })}</span>{" "}
+                <span>{t("record.did", { who: e.by_assistant ? t("record.by_assistant") : t("record.by_you"), what: did(e) })}</span>{" "}
                 <strong>{e.name}</strong>
-                {e.field && <span className="hint"> · {readable(e.field)}</span>}
               </li>
             ))}
           </ol>

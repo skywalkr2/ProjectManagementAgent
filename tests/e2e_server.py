@@ -146,7 +146,11 @@ def main() -> None:
             if longest.strip() and normalize(longest) in request:
                 return json.dumps(case["stub_answer"])
         # A note that says it belongs to a project is filed under the fixture's first one; any other is filed loose.
-        note = {"op": "note", "text": "Noted.", **({"project": project} if "under the project" in request else {})}
+        note = {
+            "op": "note",
+            "text": "Kept this note for later.",
+            **({"project": project} if "under the project" in request else {}),
+        }
         if stress:
             note["text"] = stress["note"]
             return json.dumps({"summary": "Filed as a note.", "topic": stress["title"], "ops": [note]})

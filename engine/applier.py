@@ -531,6 +531,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     if not _openable(link.url):
                         refuse(i, "question-links", f"{link.url} isn't a link the recipient can open")
             _wording(i, op.title + " " + op.text, ctx, lint, _quotes_in(op, ctx))
+            _item_text(i, op.title, ctx, lint, _quotes_in(op, ctx), asks=True)
             if not to_pm:
                 _for_reader(i, op.title + " " + op.text, ctx, lint)
             minimum = ctx.cfg.checks.tuning.several_questions.minimum
@@ -562,6 +563,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 _for_reader(i, op.reply, ctx, lint)
             if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
+            _item_text(i, op.text, ctx, lint, quotes)
             if not _stands_alone(without_links(op.text), ctx):
                 lint(
                     i,
@@ -811,6 +813,35 @@ def _wording(i: int, text: str, ctx: Context, lint: Any, quotes: list[str] | Non
         if re.search(r"(?<![a-z])" + re.escape(phrase.lower()) + r"(?![a-z])", lowered):
             lint(i, "blocked-wording", f"avoid {phrase!r}: say what to do, or ask the real question")
             return
+
+
+REASONING_WHERE = (
+    "a title says what to do or what is asked; put the reasoning in the change's summary, where the person reads it as "
+    "the assistant's own"
+)
+
+
+def _item_text(i: int, title: str, ctx: Context, lint: Any, quotes: list[str], *, asks: bool = False) -> None:
+    """Checks on the words of a to-do's or a question's title (design 6.7): no reasoning clause in it, and a question is
+    asked as one. What marks reasoning and what ends a question are language settings; words quoted from the input are
+    the sender's, not the assistant's reasoning."""
+    reads = words_of(title, quotes)
+    phrase = next((p for p in ctx.cfg.language.reasoning_phrases if p.strip() and scope.has_word(reads, p)), None)
+    if phrase is not None:
+        lint(i, "reasoning-in-title", f"the title holds reasoning ({phrase!r}): {REASONING_WHERE}")
+    if asks and not _asked_as_question(title, ctx):
+        lint(
+            i,
+            "question-is-statement",
+            "the question's title is a statement: ask it as a question, and move what it states into the text",
+        )
+
+
+def _asked_as_question(title: str, ctx: Context) -> bool:
+    """Whether a title ends in one of the language's question marks, ignoring spaces and the closing quotes and
+    brackets after it."""
+    ended = title.rstrip().rstrip("\"'\u2019\u201d)]}>").rstrip()
+    return any(ended.endswith(mark) for mark in ctx.cfg.language.question_marks if mark)
 
 
 def _for_reader(i: int, text: str, ctx: Context, lint: Any) -> None:
@@ -1580,7 +1611,9 @@ def _record_changeset(
 
 WORDING_LINTS = frozenset({"blocked-wording", "run-on-list"})
 #: Wording lints on an action, which reach whoever owns it: they are told it, in a message worded from its text.
-OWNER_WORDING_LINTS = frozenset({"action-stands-alone"})
+OWNER_WORDING_LINTS = frozenset({"action-stands-alone", "reasoning-in-title"})
+#: Lints that hold a to-do after the return round when someone else owns it; on one the person owns they only warn.
+OWNER_HELD_LINTS = OWNER_WORDING_LINTS
 
 
 def _reaches_someone_else(op: OpModel, ctx: Context) -> bool:
@@ -1627,7 +1660,7 @@ def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
     scope checks or a rule's check, which hold whoever the item reaches."""
     returned = [p for p in mine if p.severity == "return"]
     holds = scope.HELD_LINTS | {RULE_CHECK}
-    owned = any(p.check in OWNER_WORDING_LINTS for p in returned) and _owned_by_someone_else(op, ctx)
+    owned = any(p.check in OWNER_HELD_LINTS for p in returned) and _owned_by_someone_else(op, ctx)
     return bool(returned) and (_reaches_someone_else(op, ctx) or owned or any(p.check in holds for p in returned))
 
 
@@ -1761,6 +1794,7 @@ def _reporter(ctx: Context) -> str | None:
         None,
         people=ctx.people,
         skip=list(ctx.cfg.language.title_skip),
+        min_words=ctx.cfg.language.title_min_words,
         head=ctx.inputs.raw_input,
     ).person
 
