@@ -16,10 +16,13 @@ Cautions that apply to many rows:
   commit `ec37749` (axe in light and dark at 390, 1024, 1440 and 1920 for every main screen, the stages board with a
   card's menu open, the hand-in drawer, Ask as a pane, the phone's review mode, the walkthrough's look). Since then B-7
   changed `a11y.spec.ts`, `shell.spec.ts`, `tables.spec.ts`, `acceptance.spec.ts` and the journeys. What B-7 added to
-  them is written and **has not been run**: the first queue line's place at 1280×720 (C47), the tables at 1440px (C49),
-  no visible control under 24×24 (C52), the header as one row at 1000, 1100 and 1200px, and two tests made robust under
-  load. A row that depends on one of those is Partial until the next full browser run; a row whose browser evidence is
-  only the run at `ec37749` says so.
+  them (the first queue line's place at 1280×720, C47; the tables at 1440px, C49; no visible control under 24×24,
+  C52; the header as one row at 800 to 1300px with no two controls overlapping) **ran and passed in the full browser
+  run at `ae035b8`** (274 passed, 2 skipped, with the fallback font CI uses). The rows below were marked before that
+  run; where one is Partial only for want of it, the run now supplies the evidence.
+- **The status chip below 1440px** shows only its word: the backup's age is in its popover and its name, as the
+  assistant's state already is. With a wider font and a long age the chip either covered Missed one or pushed the
+  buttons out of the window.
 - Test names are quoted from the files. Line numbers are left out because they move.
 
 | Item | What it asks, in a few words | Status | Evidence / what is missing |
