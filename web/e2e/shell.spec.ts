@@ -427,7 +427,7 @@ test.describe("screen use and the shell", () => {
   // Between 1024 and 1279px the header has two rows (design 7.1): the title, Ask and the buttons on top, the status chip and the
   // assistant's alive line small below, so the first row keeps its room; at about 1,000px Ask is an icon. Nothing is
   // clipped by the window, and the alive line says its words in full and opens what is behind it.
-  for (const width of [1000, 1100, 1200]) {
+  for (const width of [800, 1000, 1100, 1200]) {
     test(`at ${width}px the header is two rows, with every control inside the window and the alive line readable`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await signIn(page);
@@ -463,6 +463,14 @@ test.describe("screen use and the shell", () => {
       expect(clipped).toBe(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
       expect((await page.getByRole("main").boundingBox())!.y).toBeGreaterThanOrEqual(box.y + 88 - 1);
+      // With fonts wider than ours (letter spacing stands in for them) the first row still never wraps: the title gives way,
+      // so the status row stays inside the header and covers nothing under it.
+      await header.evaluate((h) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = "0.15em"; }));
+      for (const control of first) expect(((await control.boundingBox())!).y).toBeLessThan(box.y + 56);
+      for (const b of [await header.getByRole("button", { name: /^App status: / }).boundingBox(), await alive.boundingBox()])
+        expect(b!.y + b!.height).toBeLessThanOrEqual(box.y + 88 + 1);
+      expect(((await header.getByRole("link", { name: /^Go to Today/ }).boundingBox())!).width).toBeGreaterThanOrEqual(24);
+      await header.evaluate((h) => h.querySelectorAll<HTMLElement>("a, button, a *, button *").forEach((e) => { e.style.letterSpacing = ""; }));
       // What is behind the line: today's runs, what waits and the order the accounts are tried in.
       await alive.click();
       const popover = page.getByRole("dialog", { name: "Assistant" });

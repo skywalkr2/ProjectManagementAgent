@@ -9,7 +9,7 @@
   background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .brand {
-  display: flex; align-items: center; gap: var(--space-2); flex: none; min-width: 0; max-width: 240px;
+  display: flex; align-items: center; gap: var(--space-2); flex: none; min-width: 28px; max-width: 240px;
   color: var(--text); text-decoration: none; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold);
   border-radius: var(--radius-md);
 }
@@ -47,6 +47,9 @@
 
 @media (max-width: 1279px) {
   :global(:root:not([data-narrow])) .header { flex-wrap: wrap; align-content: flex-start; gap: 0 var(--space-3); }
-  :global(:root:not([data-narrow])) .brand { min-height: var(--header-row-h); }
+  /* The first row never wraps: the title's flex base is nothing, so the row's buttons always fit beside it; it then grows
+     to its own width when there is room and gives way (ending in an ellipsis, down to the mark) when there isn't. */
+  :global(:root:not([data-narrow])) .brand { min-height: var(--header-row-h); flex: 1 1 0; max-width: max-content; }
+  :global(:root:not([data-narrow])) .name { max-width: calc(240px - 28px - var(--space-2)); }
   :global(:root:not([data-narrow])) .status { order: 9; flex: 1 0 100%; height: var(--header-status-h); padding-bottom: var(--space-1); }
 }
