@@ -99,6 +99,9 @@ keep each item's full text.
 8. **B-7 UI/UX feedback** (1 open item, with seven of its thirteen sub-items checked off; size: about two days)
     - *Covers:* *Build the UI/UX designer's accepted feedback* (phase B, last group): the whole re-review of 2026-10-20 (`docs/project/ui-rereview-2026-10-20.md`), its demo data, and the owner's learning-run fixes from B-6b, in four briefs: records and item text (§3.2, §3.5) beside the learning fixes, then Today (§3.1, §3.4, §3.12, §3.14, §3.15) beside the rest of the P2s and tables (§3.3, §3.6–§3.11, §3.13), then the demo data.
     - *Exit:* each accepted item has its test, and the owner sees the changed screens.
+    - *Then* (owner, 2026-10-20): once B-7 is pushed and green, the UI/UX reviewer gets the next round, and the paid 1.0
+      plan on `claude/paid-1-0-plan` (`docs/project/business-model.md`, its P25) is merged into this branch and folded
+      into the roadmap as P25 says.
 
 9. **Gate week (owner)** (no items; the gate is written out in phase S; size: two measured days, then the counted week)
     - *Covers:* the owner's personal mail, at least one closed-lid night and one network drop; the owner writes down each promise they notice before looking at the assistant's list; two days are measured first and the thresholds set from what was seen, then the counted week. The testers are held to the thresholds this week sets for missed out of present, silent closes and wrong endings: those numbers come from real use, and per-tester thresholds would move the bar to fit. Counts that depend on how much mail a person gets are reported, not gated. The "Missed one" trend from week one to week two is the one measure only the testers have.
