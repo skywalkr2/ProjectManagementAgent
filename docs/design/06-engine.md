@@ -2667,6 +2667,25 @@ people and details, and never acts in their name without their yes on the exact 
 - **Not in 1.0:** a third-party push service (a companion phone app comes after 1.0), a bank or any financial account. The details of each item are designed in its own section when its wave starts; the proposal is
   `docs/project/steward-proposal.md`.
 
+### Personal life: one Personal project, with areas and projects under it (phase S4; decided 2026-10-20)
+
+Personal mail and calendar entries the person wants kept track of (an appointment, a bill, a renewal) belong to no work
+project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) means not tracked at all. So:
+- **One Personal project, made at setup**, an ordinary project the person can rename or remove; a setting names which
+  project is the personal one (`steward.personal_project`). What the assistant files there is never "unfiled".
+- **Areas and projects under it** (`Project.parent`): an **area** is ongoing and never finishes (health, money, home,
+  family, a car, pets) and has no end date, so it is never behind; a **project** has a goal and an end (moving house, a
+  renovation, a tax return) and is followed like any other. A project may sit under an area.
+- **Start flat; propose on a pattern.** Setup makes only Personal. When a number of items (a setting) share a theme, the
+  assistant proposes one new area or project for them ("File these 4 under a new area 'Health'?"), a `project.add`
+  that waits for the person's yes as every proposed project does; never a question per item. A move from Personal to an
+  area is an `edited` correction (6.20), so the next item like it is filed there. Setup offers common areas as tick
+  boxes, all unticked and skippable, from a list that is a setting.
+- **Privacy per area** with the project's content levels (3.3): an area such as health or money can be more private than
+  the rest, and its material then reaches only the accounts allowed for that level; Personal itself follows the
+  person's general setting. Personal and everything under it stay out of work reports and status pages.
+- **One Today:** a bill due Friday sits beside a work deadline, tagged by its area.
+
 ### Dependability, from the designer's answers (2026-10-19)
 
 The functional designer's answers to F1 to F14 (`docs/project/designer-answers-2026-10-19.md`), drawn from what went wrong

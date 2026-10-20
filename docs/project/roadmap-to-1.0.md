@@ -621,6 +621,10 @@ S4. **What arrives, and where it may go:**
 - [ ] [S4] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
   them, and **the separation visible:** each area says which account reads it and whether anything leaves the
   computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).
+  **Personal, decided** (owner, 2026-10-20; design 6.32 "Personal life"): setup makes one Personal project; areas (no end
+  date) and personal projects (with an end) under it, proposed by the assistant once several items share a theme and
+  confirmed by the person; a move teaches the next filing; privacy per area through content levels; Personal left out
+  of work reports. First five minutes: one Personal project and no questions until a pattern shows.
 - [ ] [S4] **Capture from anywhere:** a forward-to address or watched folder, voice notes transcribed through a new adapter
   capability, the phone page's capture box; the global shortcut with phase I's menu bar and tray app.
 

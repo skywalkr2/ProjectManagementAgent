@@ -11,7 +11,7 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
-## Open: F15 to F19 (2026-10-19, phase B-6)
+## Open: F15 to F20 (2026-10-19 and 20, phase B-6)
 
 Each is built to its default tonight; a different answer changes the build, not the plan.
 
@@ -38,6 +38,13 @@ listed as "comes with mail sending" and arrives in S1b.
 **F19. Handing an action to the assistant.** *Default:* the assistant drafts one thing the action needs (a message, a
 list or a page) as a pending draft on the action, under the usual estimate and go; the action stays the person's, and
 approving the draft doesn't close it. Should approving offer "Mark done" in the same toast?
+
+**F20. A plain calendar entry needs no AI run** (found by the owner's first calendar file, 2026-10-20). *Today:* every
+entry of a calendar file is an input the assistant reads, one run and one Review line each, even a reminder with no
+one invited and no notes ("Nothing recorded" fourteen times). *Default proposed:* an entry is filed in the calendar by
+rule (an `event.add` with no AI run and no Review line); the assistant reads only an invitation from someone else, an
+entry with a description, or one that changed a date a promise is due at. Is there a kind of plain entry the assistant
+should still read?
 
 Earlier rounds: The UI designer's round 33 to 38 (2026-10-16) is answered in
 `reviews/ui-ux-2026-10/answers-33-38.md`, with mockups in `reviews/ui-ux-2026-10/mockup-round-33-38/`, and goes into phase

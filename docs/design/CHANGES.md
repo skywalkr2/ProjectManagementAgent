@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 122. Personal life: one Personal project, with areas and projects under it (2026-10-20)
+
+| Where | Before | Now |
+|---|---|---|
+| Personal life (6.32; roadmap S4 "Areas of life") | Personal mail was set aside (not tracked) or filed under no project | *Designed, phase S4:* one Personal project made at setup; areas (no end date) and personal projects (with an end) under it, proposed once several items share a theme and confirmed by the person; a move teaches the next filing; privacy per area through content levels; left out of work reports. Decided by the owner (decisions, 2026-10-20) |
+
 ## 120. To-dos and questions cleaned up end to end, the nudge's left-out list and the escalation line (2026-10-20)
 
 | Where | Before | Now |

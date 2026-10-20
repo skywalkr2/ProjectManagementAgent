@@ -445,6 +445,13 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   person and state, with edit, reassign, merge, hold and drop on each row (Undo on each). It is the "one place for each"
   the roadmap asks for; Follow-ups stays the screen for what to send. Decided by the main session.
   **Impact:** design 7.1's screen table and 6.8 to 6.11 (CHANGES.md section 120); roadmap B-6a "cleaned up end to end".
+- **Also (2026-10-20): personal life is one Personal project, with areas and projects under it, in the daily
+  steward.** Setup makes one Personal project (renamable, removable); under it, areas (ongoing, no end date) and personal
+  projects (with an end); the assistant starts flat and proposes an area or project once several items share a theme,
+  which the person confirms; moving an item teaches where the next goes; an area can be more private through the
+  project's content levels. Proposed by the main session; **decided by the owner** ("yes needs to be part o the daily
+  steward"). A setting plus a default record, no new core concept.
+  **Impact:** design 6.32 "Personal life"; roadmap S4 "Areas of life" (extended).
 - **Impact:** open promise P17's repeat expansion has its engine (`tests/test_recurrence.py`); the calendar reader uses
   it in phase B wave 5, where a rule part it doesn't support shows the first occurrence with a note instead of
   dropping the event.
