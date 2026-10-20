@@ -394,6 +394,11 @@ From the original designer's lessons of 2026-10-14:
   with `held` ranked below open and never due); a note box on every action button (the helper and the routes are built, L0: the screens send no note yet), so a note typed on any action button reaches the assistant; each row carries its project (and
   parent project) tag, with its notes on hover; actions are worded to stand on their own (a playbook rule and a lint
   on the assistant's wording); and the follow-up rule above (built for real use; B gives the layout). Exit check: the owner works through their own open items on a laptop and a phone.
+  *Built (B-6a):* To-dos and questions under Work, with filters, edit, reassign, merge, hold and drop from the row with
+  Undo; stale and no-owner lines on Today; a note box on every action button; the action-stands-alone lint
+  (`tests/test_open_items.py`, `tests/test_action_stands_alone.py`, `web/src/components/OpenItems.test.tsx`,
+  `web/src/components/NoteBoxEverywhere.test.tsx`). *Left:* notes on hover and the parent project tag on Follow-ups and
+  Today rows, Reassign on Waiting-on-them rows, and the owner's exit check on a laptop and a phone.
 - [ ] [B-6b] **When something is due a follow-up** (built for real use at the end of L-core; B gives the layout and Top priorities' lines; the original designer's review, 2026-10-13: counting from when a notice
   was sent made an action due in a month come up three days later). One rule, used by Top priorities, Today's lines
   and the Follow-ups pills ("red past the follow-up time"), so all three agree: a notice of an action for someone is
