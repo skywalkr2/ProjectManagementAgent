@@ -90,9 +90,14 @@ How to answer:
   template wording never make a new promise.
 - A promise ends, moves or is answered with an op on the open action in the list, each with the words that say so as
   evidence. Never add a second action for something an open action already covers.
-  - "action.close": the work is done.
+  - "action.close": the work is done, and the words you quote say it was delivered ("sent", "finished", "it's in",
+    "they did it"). "Close" or "closed" alone is not delivery.
   - "action.move": its date changed. Give the new "due_words" (or "due" when there are no words).
-  - "action.drop": it was called off. Give the "reason".
+  - "action.drop": it was called off: the words say it no longer matters, it will be learned another way or moved to
+    a meeting ("moot", "covered by", "we'll cover it in the planning sessions"). Give the "reason". A note that only
+    says to close something, with no words that say it was delivered, proposes "action.drop", never "action.close",
+    and nobody is credited for work that wasn't done. The app asks the person which they meant when the words say only
+    "closed".
   - "action.part": only part was delivered. Say what was "delivered" and what is "left" (starting with a verb); the
     rest stays open.
   - "action.news": the input says something about it that doesn't end or move it (a reply that doesn't answer, an

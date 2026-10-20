@@ -3009,6 +3009,40 @@ configuration, beside `language.due_condition_words`: `language.due_hold_words` 
   gives the mechanics and the core playbook the practice. *Built so far (batch B-7):* the eight golden `no-answer`
   cases, each checked to fail on a close and on an empty answer: `tests/test_learning_run_b7.py::test_a_reply_that_does_not_answer_is_news_never_an_ending_and_never_nothing`.
 
+**Done needs delivery in the words** (the owner's lesson from running, 2026-10-20: "Mark this closed" isn't "done"). The
+engine, not the model, reads the exact words an ending quotes (`engine/endings.py`), by three language settings
+(`language.delivery_words`, `language.called_off_words`, `language.closed_words`; 4.6):
+- *delivery words alone* ("sent", "finished", "it's in", "she did it") leave `action.close` as proposed: the owners are
+  credited, and who reported it;
+- *call-off words alone* ("moot", "covered by", "no longer needed", "we'll get it in the discussion", "will cover") make a
+  proposed close an `action.drop` with the person's words as its reason: never done, nobody credited, nothing on the
+  history others read;
+- *"close" or "closed" with neither* (or delivery and call-off words together) is neither: the ending is held as **one
+  choice on the item**, "Done by Ana, or no longer needed?", even when the note is the person's own. Done by the owner
+  closes it and credits them; No longer needed drops it with the quoted words as the reason; each applies at once with
+  Undo and records an `answered_assistant` signal, so the assistant learns what that person means by "closed". The person's
+  own button on a screen is never read for words;
+- words that say nothing about an ending leave a done for the person's own action as it was, but a done that would
+  credit someone else is held as the same one choice: crediting a person for work nobody did is the costly mistake
+  (`tests/test_endings_need_delivery.py::test_a_done_that_would_credit_someone_else_with_no_word_of_delivery_asks_and_the_persons_own_does_not`).
+- **Already told:** calling off an action whose owner was told or chased drafts one line to them,
+  `language.messages.called_off_notice` ("No longer needed, thanks: <the action>"), as a question of kind `action-notice` in
+  To send for the person to copy and send; nothing goes out by itself, Undo takes the draft away with the drop, and nothing
+  is drafted to the person or to someone they only watch or report to.
+- *Not built: moved into a meeting.* Calling it off as an action and putting it on that meeting's agenda, linked to the
+  action, needs a record that holds a meeting's agenda items; the core has none (`Today`'s agenda is a view, and a
+  question's `held_for` holds a question, not an action). This is waiting for a design choice (a new record, or a field on
+  the calendar entry or the series); until then the action is called off and the words say where it went.
+- The notes prompt says a closing note proposes `action.drop` unless the words say it was delivered, and the core
+  playbook carries the practice ("done needs delivery; closed isn't done"). The endings' learning pairs are
+  `promise-pair-23-covered-elsewhere`, `-24-closed-asks` and `-25-she-sent-it`.
+
+*Built so far (B-7, "Mark this closed" isn't "done"):* `tests/test_endings_need_delivery.py` (done credits the owner, call-off
+words drop with no credit and nothing in the completed history, a bare "closed" holds one choice from the person's own note
+too, each answer applies with Undo and records its signal, a told owner gets the drafted line, the settings),
+`web/src/components/TodayPromises.test.tsx` (the choice's line and its two answers), and the three pairs through
+`tests/test_pairs.py`.
+
 **Never a silent close.** An ending (close, drop, move, part) that comes from an input or the assistant's own initiative
 is held for the person: one line, "Keep: Ana sent the floor plan", with the words it came from, and Keep, Change or Not
 yet. One from the person's own note or a button applies at once with Undo. `action.news` changes nothing about the

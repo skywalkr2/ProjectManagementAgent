@@ -13,7 +13,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from engine import entry_rules
-from engine.blocked import Blocker, blocker_of
+from engine.blocked import Blocker, blocker_of, own_wait
 from engine.connectors import moment
 from engine.names import People
 from engine.records import entry_time
@@ -314,6 +314,8 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
         blocker = blocker_of(view, hold, people, here)
         if blocker is not None and blocker.resolved:
             hold = None  # what it waited on is over: it is due again by its own date, and goes first
+        elif own_wait(view, data, people.pm):
+            hold, blocker = None, None  # it waits on the person themselves: their own to-do, not blocked
         found.append(
             Todo(
                 action=action.id,

@@ -12,14 +12,21 @@ const first = (name: string | null | undefined) => (name ?? "").trim().split(/\s
 /** An ending of an action read from an input: the line says what the input says happened, and the person keeps it, asks
  * for it later, or changes the action. Questions and every other hold keep their own words. */
 export function isEnding(held: S["HeldAsk"]): boolean {
-  return !!held.record && (held.ask === "close" || held.ask === "drop" || held.ask === "move" || held.ask === "part");
+  return !!held.record && (held.ask === "close" || held.ask === "drop" || held.ask === "move" || held.ask === "part" || held.ask === "ending");
+}
+
+/** The owners of an ending in the words of a line: their names in the owner format, or "someone" when none is named. */
+export function endingWho(held: S["HeldAsk"], t: T): string {
+  const owners = held.owners ?? [];
+  return owners.length > 0 ? owners.join(", ") : t("queue.held.e.someone");
 }
 
 function endingTitle(held: S["HeldAsk"], t: T): string {
   const item = held.item;
-  const owners = held.owners ?? [];
-  const who = owners.length > 0 ? owners.join(", ") : t("queue.held.e.someone");
+  const who = endingWho(held, t);
   switch (held.ask) {
+    case "ending":
+      return t("queue.held.e.ending", { who, item });
     case "drop":
       return t("queue.held.e.drop", { item });
     case "move":
@@ -51,6 +58,7 @@ export function heldTitle(held: S["HeldAsk"], t: T): string {
 }
 
 export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other: string } {
+  if (held.ask === "ending" && isEnding(held)) return { primary: t("queue.held.e.ending_done", { who: endingWho(held, t) }), other: t("queue.held.e.not_yet") };
   if (isEnding(held)) return { primary: t("queue.held.e.keep"), other: t("queue.held.e.not_yet") };
   switch (held.ask) {
     case "close":

@@ -1,0 +1,76 @@
+id: promise-pair-24-closed-asks
+title: '"Mark it closed" with no word of delivery is not done: the person is asked which they meant'
+skills: [use-lesson, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Prepare the display boards
+      owners:
+      - person: PER-116
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Prepare the workshop handouts
+      owners:
+      - person: PER-115
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Please mark the display boards closed.
+  wrong:
+    summary: Closed the display boards as done.
+    ops:
+    - op: action.close
+      id: ACT-101
+      evidence:
+        quote: Please mark the display boards closed
+  correction:
+    kind: declined  # the engine held it as one choice; declining takes no words, so the lesson rests on the mail
+    note: 'Nobody finished the boards. Closed isn''t done: ask whether it was done or isn''t needed any more.'
+  expect_proposal:
+  - op: lesson.add
+    text_has: [closed|close|done|needed|ask]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Mark the workshop handouts closed when you get a chance.
+  expect:
+  - op: action.drop
+    id: ACT-102
+  forbid:
+  - op: action.close
+    id: ACT-102
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: A bare "closed" is not delivery, so it never closes an action as done.
+    topic: closed is not done
+    ops:
+    - op: lesson.add
+      text: A request to mark something closed, with no words that say it was delivered, is not a completion; propose action.drop and let the person say whether it was done or is no longer needed.
+      guard: Propose action.close only with the words that say the work was delivered.
+      evidence:
+        quote: Please mark the display boards closed
+  later:
+    summary: The workshop handouts are closed, with no word of delivery.
+    ops:
+    - op: action.drop
+      id: ACT-102
+      reason: Asked to mark it closed
+      evidence:
+        quote: Mark the workshop handouts closed

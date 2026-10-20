@@ -5146,6 +5146,24 @@
         "title": "DroppedQuestionView",
         "type": "object"
       },
+      "EndingAnswer": {
+        "description": "The answer to \"Done by <owner>, or no longer needed?\": `done` closes the action and credits its owners,\n`called_off` drops it and credits nobody, with the words it quoted as the reason.",
+        "properties": {
+          "ending": {
+            "enum": [
+              "done",
+              "called_off"
+            ],
+            "title": "Ending",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ending"
+        ],
+        "title": "EndingAnswer",
+        "type": "object"
+      },
       "EndpointView": {
         "properties": {
           "adapter": {
@@ -6716,7 +6734,7 @@
         "type": "object"
       },
       "HeldAsk": {
-        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered), `item` the words of what it is about, `value` and `from_value`\nthe new and the present date, `to_name` the person it would go to, `told` the people a drop would leave out of the\nloop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action also carries what\nthe input says happened: the action's id in `record`, its `owners` in the owner format, `reporter` (who said it),\nand by ask the words of a new date (`due_words`) with the promise's own earlier words (`earlier`), what was\n`delivered` and what is `left`, or the `reason` it is called off. The screen words the title and the answers from\nthese.",
+        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered; `ending`: the words said only that it is closed, so the person\nis asked whether it is done by its owners or no longer needed), `item` the words of what it is about, `value` and\n`from_value` the new and the present date, `to_name` the person it would go to, `told` the people a drop would\nleave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action\nalso carries what the input says happened: the action's id in `record`, its `owners` in the owner format,\n`reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier words\n(`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the title\nand the answers from these.",
         "properties": {
           "ask": {
             "enum": [
@@ -6726,7 +6744,8 @@
               "routing",
               "drop",
               "move",
-              "part"
+              "part",
+              "ending"
             ],
             "title": "Ask",
             "type": "string"
@@ -22345,6 +22364,65 @@
           }
         },
         "summary": "Decline Op"
+      }
+    },
+    "/api/changesets/{cs_id}/ops/{index}/ending": {
+      "post": {
+        "description": "Answer \"Done by <owner>, or no longer needed?\" for an ending whose words only said it was closed: done\ncredits the owners, no longer needed credits nobody. Either applies at once, with Undo.",
+        "operationId": "answer_ending_api_changesets__cs_id__ops__index__ending_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndingAnswer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Answer Ending"
       }
     },
     "/api/changesets/{cs_id}/ops/{index}/fold": {

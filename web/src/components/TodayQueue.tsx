@@ -14,7 +14,7 @@ import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
-import { afterMove, heldAnswers, heldTitle, isEnding, moveTitle } from "../lib/queue-words";
+import { afterMove, endingWho, heldAnswers, heldTitle, isEnding, moveTitle } from "../lib/queue-words";
 import { revealOrKeep } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
@@ -697,7 +697,17 @@ function QueueRow(props: {
           );
         if (isEnding(ask)) {
           // An ending an input says happened reads as one line: Keep is the primary; Not yet and Change are in the menu.
+          // When its words only said "closed", the primary is Done by its owner and No longer needed is in the menu.
           const record = ask.record ?? "";
+          const choice = ask.ask === "ending";
+          const answer = (ending: "done" | "called_off") =>
+            void act(
+              () => api.endingAnswer(cs, index, ending),
+              () => ({
+                message: t(ending === "done" ? "queue.held.ending_done" : "queue.held.ending_off", { what: ask.item, who: endingWho(ask, t) }),
+                undo: () => api.undo(cs, [index]),
+              }),
+            );
           return {
             pill: t("queue.pill.waiting"),
             tone: "warn",
@@ -712,8 +722,9 @@ function QueueRow(props: {
                 )}
               </>
             ),
-            primary: { label: words.primary, run: release },
+            primary: { label: words.primary, run: choice ? () => answer("done") : release },
             menu: [
+              ...(choice ? [{ id: "called-off", label: t("queue.held.e.ending_off"), run: () => answer("called_off") }] : []),
               { id: "not-yet", label: words.other, run: decline },
               ...(props.handlers.onOpenRecord ? [{ id: "change", label: t("queue.held.e.change"), run: () => props.handlers.onOpenRecord?.("action", record) }] : []),
             ],

@@ -13,7 +13,7 @@ from datetime import UTC, date, datetime, time
 from typing import Any
 
 from engine.applier import _similar, apply_as_person
-from engine.blocked import Blocker, blocker_of
+from engine.blocked import Blocker, blocker_of, own_wait
 from engine.followups import ROUTING, actions_to_send, held_until_day
 from engine.names import People, render_owner
 from engine.origin import origins
@@ -130,6 +130,8 @@ def open_actions(
         blocker = blocker_of(view, hold, people, here)
         if blocker is not None and blocker.resolved:
             hold = None  # what it waited on is over, so it is due again by its own date
+        elif own_wait(view, d, people.pm):
+            hold, blocker = None, None  # it waits on the person themselves: their own to-do, not blocked
         due = date.fromisoformat(str(d["due"])) if d.get("due") else None
         project = projects.get(d.get("project") or "")
         parent = projects.get((project or {}).get("parent") or "")

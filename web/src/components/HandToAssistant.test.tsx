@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { person, project } from "../lib/records-fixtures";
 import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
@@ -124,4 +125,37 @@ test("a refusal from the server is told in its own words, the form stays open an
   expect(await screen.findByText(/That didn't work\. The assistant already has this action's work in hand\./)).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: /What do you want from it/ })).toBeInTheDocument();
   expect(screen.queryByText(/Handed to Helper/)).toBeNull();
+});
+
+const review = (): Routes => ({
+  "GET text-versions/TV-1/review": () => ({
+    version: { id: "TV-1", number: 1, status: "pending", source: "draft", words: 4, created_at: "2026-10-14T10:00:00Z", note: null, questions: [], unmapped: [], authorship: [], read_version: 1 },
+    current: null,
+    three_way: false,
+    regions: [],
+    pending_text: "Hello,\n\nThe proof is attached.",
+  }),
+});
+
+test("a draft ready for review has a Copy button: it copies the draft, keeps it for matching against the sent folder, and leaves the to-do open", async () => {
+  const user = userEvent.setup();
+  const calls = api({ ...review(), "POST actions/A-1/work/copied": () => ({ id: "C-1" }) }, [handed({ state: "draft", draft: "TV-1" })]);
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Copy" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/A-1/work/copied")).toBe(true));
+  expect(await navigator.clipboard.readText()).toBe("Hello,\n\nThe proof is attached.");
+  expect(await screen.findByText(/Copied\. The to-do stays open/)).toBeInTheDocument();
+  // Copying is not doing: nothing closed the action.
+  expect(calls.filter((c) => c.route.startsWith("POST") && c.route !== "POST actions/A-1/work/copied")).toHaveLength(0);
+});
+
+test("when copying the draft is blocked it says so and keeps nothing", async () => {
+  const user = userEvent.setup();
+  const calls = api({ ...review(), "POST actions/A-1/work/copied": () => ({ id: "C-1" }) }, [handed({ state: "draft", draft: "TV-1" })]);
+  renderApp(<OpenItems />);
+  vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("blocked"));
+  vi.spyOn(navigator.clipboard, "write").mockRejectedValueOnce(new Error("blocked"));
+  await user.click(await screen.findByRole("button", { name: "Copy" }));
+  expect(await screen.findByText(/Your browser blocked copying/)).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST actions/A-1/work/copied")).toBe(false);
 });

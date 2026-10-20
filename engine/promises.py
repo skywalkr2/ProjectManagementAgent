@@ -81,7 +81,7 @@ def late(
 
     for record in reader.list("action"):
         d = record.data
-        if d.get("status") != "open" or standing_hold(reader, d) or record.id in pending:
+        if d.get("status") != "open" or standing_hold(reader, d, pm=pm) or record.id in pending:
             continue
         owners = [o["person"] for o in d.get("owners") or [] if o.get("person")]
         if not owners:

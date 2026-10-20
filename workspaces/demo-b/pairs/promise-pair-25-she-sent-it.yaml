@@ -1,0 +1,77 @@
+id: promise-pair-25-she-sent-it
+title: '"She sent it" is done and credited to her, not called off, with no lesson kept'
+skills: [use-lesson, close-right-item]
+negative: true
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Send Avery the proofs
+      owners:
+      - person: PER-101
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Send Avery the measurements
+      owners:
+      - person: PER-116
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Mira sent the proofs yesterday, so that one is sorted.
+  wrong:
+    summary: Called the proofs off.
+    ops:
+    - op: action.drop
+      id: ACT-101
+      reason: Sorted
+      evidence:
+        quote: Mira sent the proofs yesterday
+  correction:
+    kind: declined  # a held ending: declining takes no words, so the lesson rests on the mail
+    note: She did send them. That is done, credited to Mira, not called off.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [sent|delivered|done|credit]
+  keep: discard
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    Tess sent the measurements this morning.
+  expect:
+  - op: action.close
+    id: ACT-102
+  forbid:
+  - op: action.drop
+    id: ACT-102
+  packet_lacks: ['# Lessons']
+ideal:
+  learn:
+    summary: Words that say it was sent close the action as done, credited to the owner.
+    topic: delivery words
+    ops:
+    - op: lesson.add
+      text: When the words say the owner sent or finished the work, close the action as done so the owner is credited; calling it off is for work that no longer matters.
+      guard: Propose action.close when the words say it was delivered, never action.drop.
+      evidence:
+        quote: Mira sent the proofs yesterday
+  later:
+    summary: The measurements were sent.
+    ops:
+    - op: action.close
+      id: ACT-102
+      evidence:
+        quote: Tess sent the measurements this morning

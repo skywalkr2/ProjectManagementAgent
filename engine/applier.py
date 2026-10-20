@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import audience, draft_checks, knowledge, learn, proposals, reply_lines, scope
+from engine import audience, draft_checks, endings, knowledge, learn, proposals, reply_lines, scope
 from engine import search as workspace_search
 from engine import series as series_module
 from engine.blocked import blocker_problem
@@ -180,7 +180,7 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
 
 
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    cs = restatements(cs, ctx)
+    cs = endings.read_endings(restatements(cs, ctx), ctx)
     problems: list[Problem] = _validate_in_order(cs, ctx)
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
@@ -376,6 +376,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", why)
             elif evidence is not None and not _shares_words(evidence.quote, view.get("action", op.id).data["text"]):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+        if endings.asks(op, ctx):
+            # Closed with no delivery words or call-off words (or both) is one choice, even in the person's own note.
+            problems.append(Problem(endings.CHOICE_CHECK, "hold", i, endings.CHOICE_WAITS))
         if isinstance(op, ENDING_OPS) and not _persons_own(view, ctx):
             # How a promise ends is the person's to keep when it was read from what came in (design 6.33).
             problems.append(Problem("ending-confirm", "hold", i, ENDING_WAITS))
@@ -1476,7 +1479,7 @@ def apply_changeset(
     """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id. With `all_or_nothing`,
     one refused op rolls everything back, and the changeset is recorded as rejected with every op refused."""
     now = now or datetime.now(UTC)
-    cs = restatements(cs, ctx)
+    cs = endings.read_endings(restatements(cs, ctx), ctx)
     # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
     problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
     today = now.date()
@@ -2269,6 +2272,9 @@ def _apply_op(
         reason = " ".join(op.reason.split())
         tx.update("action", op.id, {"status": "dropped", "dropped_reason": reason}, w, read_version=cur.version)
         made("action", op.id)
+        for draft in endings.called_off_notices(tx, ctx, cur):
+            # Whoever was already told gets one line, drafted for the person to send; nothing goes out by itself.
+            made("question", tx.create("question", draft, w).id)
         if ctx.actor == "pm":
             # Dropping a reply the assistant said was owed says none was: its own kind of correction.
             _record_dropped(
@@ -2683,8 +2689,10 @@ def release(
     person: str | None = None,
     now: datetime | None = None,
     ws: Workspace | None = None,
+    instead: OpModel | None = None,
 ) -> None:
-    """Apply a held op, optionally saying who an unresolved name is. With `ws`, the names in it are read in the
+    """Apply a held op, optionally saying who an unresolved name is. With `instead`, that op is applied in its place and
+    written into the changeset as the op that was applied. With `ws`, the names in it are read in the
     context of the input's saved text, as they were when the changeset was made. Saying who a name is also applies
     every other op of the changeset waiting on the same question, and records one signal."""
     now = now or datetime.now(UTC)
@@ -2699,7 +2707,7 @@ def release(
         others = [o["index"] for o in cs.data["ops"] if o["index"] != index and o["status"] == "held"]
         others = [i for i in others if cs.data["ops"][i].get("question") == qid]
     routed = {"question": qid, "person": person, "name": name} if person is not None and name is not None else None
-    _release_one(store, cfg, changeset_id, index, person=person, now=now, ws=ws, routed=routed)
+    _release_one(store, cfg, changeset_id, index, person=person, now=now, ws=ws, routed=routed, instead=instead)
     for other in others:
         _release_one(store, cfg, changeset_id, other, person=person, now=now, ws=ws)
 
@@ -2714,6 +2722,7 @@ def _release_one(
     now: datetime,
     ws: Workspace | None,
     routed: dict[str, Any] | None = None,
+    instead: OpModel | None = None,
 ) -> None:
     cs = store.read().get("changeset", changeset_id)
     if cs is None:
@@ -2732,6 +2741,9 @@ def _release_one(
     name = (outcome.get("question") and _question_name(store, outcome["question"])) or None
     if person is not None and name is not None:
         op = _substitute(op, name, person)
+    if instead is not None:
+        op = instead
+        outcome["op"] = op.model_dump(mode="json", exclude_none=True)
     req = store.read().get("request", cs.data["request"])
     text = source_text(ws, store, req.data.get("source")) if ws is not None and req is not None else ""
     people = People.for_input(

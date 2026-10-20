@@ -230,6 +230,8 @@ export const api = {
   projectKnows: (project: string) => call<S["ProjectKnowsView"]>("GET", `projects/${id(project)}/knows`),
   seriesPage: (series: string) => call<S["SeriesPageView"]>("GET", `series/${id(series)}/page`),
   recordPage: (kind: string, record: string) => call<S["RecordPageView"]>("GET", `record-pages/${id(record)}?kind=${id(kind)}`),
+  /** The answer to "Done by <owner>, or no longer needed?": done credits the owners, called off credits nobody. */
+  endingAnswer: (cs: string, index: number, ending: "done" | "called_off") => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/ending`, { ending }),
   declineOp: (cs: string, index: number) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/decline`),
   undeclineOp: (cs: string, index: number) => call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/undecline`),
   addPerson: (body: S["PersonIn"]) => call<S["Created"]>("POST", "people", body),

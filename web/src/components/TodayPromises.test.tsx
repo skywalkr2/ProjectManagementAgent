@@ -234,6 +234,40 @@ test.each([
   expect(within(row).getByRole("button", { name: "Keep" })).toBeInTheDocument();
 });
 
+// ---- a close whose words only say "closed" ------------------------------------------------------------------------
+
+const closed = () => ending({ ask: "ending", quote: "mark it closed" });
+
+test("a close whose words only say closed is one question on the item: done by its owner, or no longer needed", async () => {
+  show([closed()]);
+  const row = await rowOf("Done by Robin Sample, or no longer needed? 'Send the floor plan'");
+  expect(row).toHaveTextContent("“mark it closed”");
+  expect(within(row).getByRole("button", { name: "Done by Robin Sample" })).toBeInTheDocument();
+  // The other answer is in the menu, not beside it.
+  expect(within(row).queryByRole("button", { name: "No longer needed" })).toBeNull();
+});
+
+test("Done by the owner answers the choice as done and says so, with Undo", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([closed()], { "POST changesets/CS-1/ops/0/ending": () => ({ ok: "CS-1" }), "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
+  await user.click(within(await rowOf("Done by Robin Sample, or no longer needed? 'Send the floor plan'")).getByRole("button", { name: "Done by Robin Sample" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/ops/0/ending")?.body).toEqual({ ending: "done" }));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [0] }));
+});
+
+test("No longer needed answers the choice as called off, from the menu, with Undo", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([closed()], { "POST changesets/CS-1/ops/0/ending": () => ({ ok: "CS-1" }), "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }) });
+  const row = await rowOf("Done by Robin Sample, or no longer needed? 'Send the floor plan'");
+  await menuOf(user, row);
+  await user.click(screen.getByRole("menuitem", { name: "No longer needed" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/ops/0/ending")?.body).toEqual({ ending: "called_off" }));
+  expect(await screen.findByText("No longer needed: 'Send the floor plan'")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/undo")?.body).toEqual({ ops: [0] }));
+});
+
 test("a promise said again with a new date reads as a move with both quotes under it", async () => {
   show([ending({ ask: "move", due_words: "by October 30", quote: "I will send the floor plan by October 30.", earlier: "I will send the floor plan by Tuesday." })]);
   const row = await rowOf("Keep: 'Send the floor plan' is now due by October 30");

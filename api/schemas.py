@@ -39,6 +39,13 @@ class PersonChoice(BaseModel):
     person: str | None = None
 
 
+class EndingAnswer(BaseModel):
+    """The answer to "Done by <owner>, or no longer needed?": `done` closes the action and credits its owners,
+    `called_off` drops it and credits nobody, with the words it quoted as the reason."""
+
+    ending: Literal["done", "called_off"]
+
+
 class SentText(BaseModel):
     text: str | None = Field(None, description="The message as the PM sent it, to notice edits.")
 
@@ -1822,15 +1829,16 @@ class TodoView(BaseModel):
 class HeldAsk(BaseModel):
     """A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change
     its date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a
-    promise, move its date or record a part delivered), `item` the words of what it is about, `value` and `from_value`
-    the new and the present date, `to_name` the person it would go to, `told` the people a drop would leave out of the
-    loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action also carries what
-    the input says happened: the action's id in `record`, its `owners` in the owner format, `reporter` (who said it),
-    and by ask the words of a new date (`due_words`) with the promise's own earlier words (`earlier`), what was
-    `delivered` and what is `left`, or the `reason` it is called off. The screen words the title and the answers from
-    these."""
+    promise, move its date or record a part delivered; `ending`: the words said only that it is closed, so the person
+    is asked whether it is done by its owners or no longer needed), `item` the words of what it is about, `value` and
+    `from_value` the new and the present date, `to_name` the person it would go to, `told` the people a drop would
+    leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action
+    also carries what the input says happened: the action's id in `record`, its `owners` in the owner format,
+    `reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier words
+    (`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the title
+    and the answers from these."""
 
-    ask: Literal["close", "date", "owner", "routing", "drop", "move", "part"]
+    ask: Literal["close", "date", "owner", "routing", "drop", "move", "part", "ending"]
     item: str
     value: str | None = None
     from_value: str | None = None

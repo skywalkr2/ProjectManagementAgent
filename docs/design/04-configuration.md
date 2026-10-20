@@ -289,6 +289,12 @@ Built keys:
 - `due_hold_words` and `due_before_words`: which of those condition words wait for something to happen, so a promise is on hold
   from the start waiting for them ("once", "after", "when", "until", "as soon as", "of receiving", …), and which let a
   calendar entry be named, so the promise is due at it ("before the print sync"); the rest only leave the date open. (6.33.)
+- `delivery_words`, `called_off_words` and `closed_words`: how an ending is read from the words it quotes (6.33). Delivery
+  words ("sent", "finished", "it's in", "did it", "done") alone leave a close as done and credit its owners; call-off words
+  ("moot", "covered by", "no longer needed", "we'll get it in", "will cover") alone make it a drop with the person's words as the
+  reason; "closed" ("close", "closed", "close out") with neither, or both kinds together, asks "Done by <owner>, or no longer
+  needed?". Whole words, ignoring case; demo values in both fictional workspaces. `messages.called_off_notice` is the one line
+  drafted for someone who was already told about an action when it is called off.
 - `task_verbs`: the verbs a task's title starts with ("pay", "send", "book", …); a plain calendar entry whose first word is
   one is offered as a to-do with one click (6.2, 6.32).
 - `steward.second_move_days` (14): a second move of the same date within this many days is shown in the person's own

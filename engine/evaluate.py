@@ -61,6 +61,7 @@ from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.config import Config
 from engine.dispatcher import process_through_outage
+from engine.endings import CHOICE_CHECK
 from engine.followups import they_finished
 from engine.intake import hand_in, note_as_input
 from engine.names import People
@@ -648,10 +649,12 @@ def _held(e: dict[str, Any], outcomes: list[dict[str, Any]]) -> list[dict[str, A
 
 
 def _awaits_keep(o: dict[str, Any]) -> bool:
-    """Whether a held op waits only for the person to keep an ending read from an input (design 6.33): it is the op a
-    case expects, waiting for its Keep, not one the checks doubted."""
+    """Whether a held op waits only for the person to keep an ending read from an input, or to say whether a bare
+    "closed" meant done or no longer needed (design 6.33): it is the op a case expects, waiting for the person, not one
+    the checks doubted."""
     holds = [p for p in o.get("problems") or [] if p.get("severity") == "hold"]
-    return o["status"] == "held" and bool(holds) and all(p.get("check") == "ending-confirm" for p in holds)
+    waits = ("ending-confirm", CHOICE_CHECK)
+    return o["status"] == "held" and bool(holds) and all(p.get("check") in waits for p in holds)
 
 
 def _matching(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -> list[int]:

@@ -39,6 +39,10 @@ due_hold_words: [once, after, when, whenever, until, till, if, unless, upon, as 
 due_before_words: [before]
 # The verbs a task's title starts with: a plain calendar entry whose first word is one is offered as a to-do.
 task_verbs: [pay, send, call, email, text, book, buy, order, renew, submit, file, return, pick, drop, cancel, confirm, schedule, register, sign, review, write, finish, prepare, collect, fix, clean, pack, check, ask, remind, reply, print, post, pickup, organize, arrange]
+# The words that read an ending: delivered (done), learned another way or no longer matters (called off), or only closed (asks).
+delivery_words: [sent, finished, delivered, it's in, its in, did it, done, completed, handed in, turned in, submitted, shipped, attached, uploaded, published, emailed, mailed, posted, paid, booked, signed, returned, taken care of, took care of, came through, they did, she did, he did, went out, gone out, is out, handed over, shared, forwarded, got it, received, arrived]
+called_off_words: [moot, covered by, covered in, will cover, we'll cover, we will cover, will be covered, no longer needed, no longer need, not needed, isn't needed, no need, don't need, drop it, drop this, call it off, called off, cancel, canceled, cancelled, never mind, forget it, we'll get it in, we will get it in, in our discussions, in the discussions, in our discussion, in the planning sessions, in our planning, superseded, obsolete, unnecessary]
+closed_words: [close, closed, closing, close out, closed out]
 # Phrases that say the person already sent something (see the unnamed-recipient check).
 already_sent_phrases: [I sent, I've sent, I have sent, I just sent, I emailed, I've emailed, I forwarded, I've forwarded, we sent, we've sent]
 # Phrases with which a sender limits who may see a message (see the audience check).
@@ -80,6 +84,7 @@ messages:
   nudge_ask_one: "A quick yes or no, or a date, is plenty."
   nudge_overdue: "(it was due {date})"
   nudge_second_intro: "Checking in again on what I first asked on {date}:"
+  called_off_notice: "No longer needed, thanks: {item}"
   nudge_second_ask: "Is there someone else I should ask, or a date I can plan around?"
   date_format: "%a, %b %d"
   date_time_format: "%a, %b %d, %Y, %I:%M %p"

@@ -39,6 +39,11 @@ Practice for reading notes, minutes and messages (core playbook):
   - A new date given and accepted moves the action; a date only proposed ("could we do Thursday instead?") moves
     nothing. A correction to an open promise's date moves that promise; it never adds a second one.
   - A cancellation ("we no longer need it") drops the action.
+  - Done needs delivery: close an action only when the words say it was delivered ("she sent it", "it's in the
+    deck"). Words about learning it elsewhere, moving it to a meeting or it no longer mattering ("moot", "covered by
+    the planning sessions", "drop it") drop it, with the person's words as the reason and nobody credited.
+  - "Closed" isn't done: "mark it closed" with no delivery words is neither, and the person is asked whether it was
+    done by its owner or is no longer needed.
   - A partial delivery keeps what is left open and credits what arrived.
   - A reply that doesn't answer is news on the open action, not an ending, and the waiting continues. It may
     acknowledge ("thanks for checking in"), praise ("the layout looks lovely"), defer ("I'll get back to you"), share

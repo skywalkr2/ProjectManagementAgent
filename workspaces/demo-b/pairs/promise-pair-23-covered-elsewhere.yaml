@@ -1,0 +1,73 @@
+id: promise-pair-23-covered-elsewhere
+title: Work that will be covered in a meeting is called off, never marked done and never credited
+skills: [use-lesson, close-right-item]
+first:
+  received: '2026-11-02'
+  given_file: promise-people.yaml
+  given:
+  - kind: action
+    id: ACT-101
+    fields:
+      text: Send Avery the venue list
+      owners:
+      - person: PER-104
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  - kind: action
+    id: ACT-102
+    fields:
+      text: Send Avery the catering quote
+      owners:
+      - person: PER-117
+      promised_to: [PER-1]
+      basis: said
+      due: '2026-11-06'
+      due_words: by Friday
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    We'll cover the venue list in the planning sessions, so nobody needs to send it separately.
+  wrong:
+    summary: Nothing to record.
+    ops: []
+  correction:
+    kind: dropped  # the wrong answer recorded nothing, so the person calls the action off themselves
+    note: 'That is called off: the planning sessions cover it, and Oren never sent it.'
+    id: ACT-101
+  expect_proposal:
+  - op: lesson.add
+    text_has: [cover|called off|planning|drop|moot]
+  keep: true
+later:
+  received: '2026-11-09'
+  pasted: |-
+    From: Avery Lane <avery.lane@example.com>
+
+    The planning sessions will cover the catering quote, so you can drop that one.
+  expect:
+  - op: action.drop
+    id: ACT-102
+  forbid:
+  - op: action.close
+    id: ACT-102
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: Words that hand work to a meeting call it off; they never mean it was done.
+    topic: work covered elsewhere
+    ops:
+    - op: lesson.add
+      text: Work that will be covered in a planning session or learned another way is called off with the words as the reason; nobody is credited as having done it.
+      guard: When the words hand the work to a meeting or say it no longer matters, propose action.drop with those words, never action.close.
+      evidence:
+        quote: the planning sessions cover it, and Oren never sent it
+  later:
+    summary: The catering quote is called off because the planning sessions cover it.
+    ops:
+    - op: action.drop
+      id: ACT-102
+      reason: The planning sessions will cover the catering quote
+      evidence:
+        quote: The planning sessions will cover the catering quote

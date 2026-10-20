@@ -21,6 +21,7 @@ from engine.due_phrases import (
     DEFAULT_ORDINAL_SUFFIXES,
     DEFAULT_TASK_VERBS,
 )
+from engine.endings import DEFAULT_CALLED_OFF_WORDS, DEFAULT_CLOSED_WORDS, DEFAULT_DELIVERY_WORDS
 from engine.secrets import SecretHint
 
 
@@ -1340,6 +1341,11 @@ class MessageSettings(ConfigModel):
         "Is there someone else I should ask, or a date I can plan around?",
         description="The line under the list in a second or later follow-up message.",
     )
+    called_off_notice: str = Field(
+        "No longer needed, thanks: {item}",
+        description="The one line drafted for someone who was already told about an action when it is called off, for "
+        "you to send: {item} is the action. Nothing is sent by itself.",
+    )
     folded_note: str = Field(
         "Also came up: {text} (\u201c{quote}\u201d)",
         description="The line added to an action's notes when another action is added to it instead of being kept "
@@ -1681,6 +1687,25 @@ class LanguageFile(FileModel):
         description='The verbs a task\'s title starts with ("pay", "send", "book"). A plain calendar entry (nobody '
         'else invited, no description) whose first word is one of them is offered as a to-do with one click ("Pay '
         'the deposit"); other entries are just kept in the calendar. Case is ignored.',
+    )
+    delivery_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_DELIVERY_WORDS),
+        description='The words that say something was delivered ("sent", "finished", "it\'s in", "did it", "done"). '
+        "An ending the assistant reads as done stands, and credits the people who owed it, only when the words it "
+        "quotes hold one of these and none of the called-off words. Case is ignored.",
+    )
+    called_off_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_CALLED_OFF_WORDS),
+        description="The words that say something was learned another way, moved to a meeting or no longer matters "
+        '("moot", "covered by", "no longer needed", "we\'ll get it in", "will cover"). An ending whose words hold one '
+        "of these and none of the delivery words is called off instead of done: nobody is credited, and your words "
+        "are the reason. Case is ignored.",
+    )
+    closed_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_CLOSED_WORDS),
+        description='The words that only say something is closed ("close", "closed", "mark it closed"). Closed with '
+        'neither delivery words nor called-off words is neither done nor called off: you are asked "Done by the owner, '
+        'or no longer needed?", even for your own note. Case is ignored.',
     )
     limit_markings: list[str] = Field(
         default_factory=lambda: [

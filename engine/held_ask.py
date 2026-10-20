@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 CLOSE, DATE, OWNER, ROUTING, DROP, MOVE, PART = "close", "date", "owner", "routing", "drop", "move", "part"
+#: An ending whose words say only "closed": the person is asked whether it is done by its owners or no longer needed.
+ENDING = "ending"
 
 
 def _text(record: Any) -> str:
@@ -52,14 +54,27 @@ def _ending(people: Any, found: Any, op: dict[str, Any], reporter: str | None) -
     return shown
 
 
-def describe(view: Any, people: Any, op: dict[str, Any], *, reporter: str | None = None) -> dict[str, Any] | None:
+def describe(
+    view: Any, people: Any, op: dict[str, Any], *, reporter: str | None = None, choice: bool = False
+) -> dict[str, Any] | None:
     """The held op as a question, or None when it isn't one of the shaped holds: `ask` (close, date, owner, routing,
     drop, move or part), `item` (the words of what it is about), `value` (what it would change to), `from_value`
     (what it is now), `to_name`, `told` (people already reached) and `told_on`, and `quote` (the words the
     assistant rested it on). An ending of an action also says what the input says happened (see `_ending`);
-    `reporter` is who said it."""
+    `reporter` is who said it. With `choice`, a close or a drop of an action is the one question "done by its owners, or
+    no longer needed?" (`ask` is `ending`), whatever op the assistant proposed."""
     name = op.get("op", "")
     quote = (op.get("evidence") or {}).get("quote")
+    if choice and name in ("action.close", "action.drop"):
+        found = view.get("action", op.get("id", ""))
+        if found is None:
+            return None
+        return {
+            "ask": ENDING,
+            "item": _text(found),
+            "quote": quote,
+            **_ending(people, found, {"op": "action.close"}, reporter),
+        }
     if name in ("action.move", "action.part"):
         found = view.get("action", op.get("id", ""))
         if found is None:

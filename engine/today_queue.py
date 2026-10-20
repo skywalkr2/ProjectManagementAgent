@@ -14,6 +14,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine import (
+    endings,
     held_ask,
     move_groups,
     promises,
@@ -304,6 +305,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                         people,
                         outcome.get("op") or {},
                         reporter=outcome.get("reporter"),
+                        choice=any(p.get("check") == endings.CHOICE_CHECK for p in outcome.get("problems") or []),
                     ),
                     untrusted=cs.get("trust") == "untrusted",
                     since=str(req.data.get("created_at") or ""),

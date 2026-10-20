@@ -6,7 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { copyMessage } from "../lib/copy";
 import { useMoney } from "../lib/money";
+import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 import { useTextReview } from "./TextReview";
@@ -21,7 +23,19 @@ export function useHanded(): Map<string, S["HandedActionView"]> {
 function HandedLine(props: { handed: S["HandedActionView"]; onReview: (version: string) => void }) {
   const { t } = useWords();
   const money = useMoney();
+  const { push } = useToasts();
   const { handed } = props;
+  // Copying the draft keeps it exactly as copied, so the message sent from it is matched to it in the sent folder. The
+  // to-do stays open: copying is not doing.
+  const copy = async (version: string) => {
+    const review = await api.textReview(version);
+    if ((await copyMessage(review.pending_text)) === "blocked") {
+      push({ message: t("work.hand.copy_blocked") });
+      return;
+    }
+    await api.workCopied(handed.action);
+    push({ message: t("work.hand.copied") });
+  };
   if (handed.state === "draft" && handed.draft) {
     const version = handed.draft;
     return (
@@ -29,6 +43,9 @@ function HandedLine(props: { handed: S["HandedActionView"]; onReview: (version: 
         {t("work.hand.draft")}{" "}
         <button type="button" className="btn" onClick={() => props.onReview(version)}>
           {t("work.hand.review")}
+        </button>{" "}
+        <button type="button" className="btn" onClick={() => void copy(version)}>
+          {t("work.hand.copy")}
         </button>
       </p>
     );

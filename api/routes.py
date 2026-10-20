@@ -49,6 +49,7 @@ from api.schemas import (
     Created,
     DocumentBlock,
     DocumentView,
+    EndingAnswer,
     EntryTodoMade,
     FieldView,
     FileKindView,
@@ -1486,6 +1487,17 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             guard(lambda: add_held_project(store, cfg, cs_id, index, ws=ws))
         else:
             guard(lambda: release(store, cfg, cs_id, index, person=body.person, ws=ws))
+        changed()
+        return Ok(ok=cs_id)
+
+    @r.post("/changesets/{cs_id}/ops/{index}/ending")
+    def answer_ending(cs_id: str, index: int, body: EndingAnswer) -> Ok:
+        """Answer "Done by <owner>, or no longer needed?" for an ending whose words only said it was closed: done
+        credits the owners, no longer needed credits nobody. Either applies at once, with Undo."""
+        from engine import endings
+
+        need("changeset", cs_id)
+        guard(lambda: endings.answer(store, cfg, cs_id, index, body.ending))
         changed()
         return Ok(ok=cs_id)
 
