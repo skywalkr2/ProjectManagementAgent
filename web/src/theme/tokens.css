@@ -67,6 +67,9 @@
   --detail-w: clamp(420px, 26vw, 600px);   /* inspector pane (>= 1680px) and side drawers */
   --settings-nav-w: 220px;
   --field-max: 560px;          /* one text input; forms lay out in 2 columns of these when wide */
+  --field-name: 360px;         /* a field that holds a name or a short value */
+  --field-number: 120px;       /* a field that holds a number */
+  --field-date: 180px;         /* a field that holds a date */
   --measure: 72ch;             /* max line length for paragraphs, messages and pasted text */
   /* Breakpoints (media queries use the literals): phone < 640 (set by the workspace) · tablet 640-1023 ·
      laptop 1024-1439 · desktop 1440-1919 · wide 1920-2559 · ultra >= 2560 */

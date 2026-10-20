@@ -206,7 +206,7 @@ from engine.plugin_host import check_about
 from engine.promises import ENDING_NAMES
 from engine.prompts import render
 from engine.records import Scope, referrers
-from engine.stages import approve_stage_request, record_status, stage_history
+from engine.stages import approve_stage_request, card_details, record_status, stage_history
 from engine.storage import Store, StoreError, WriteContext
 from engine.texts import text_presence
 from engine.usage import spend
@@ -1190,11 +1190,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/stages/records")
     def stage_records() -> list[StageView]:
         result = []
+        people = People(store, cfg)
+        projects = {p.id: p.data["name"] for p in store.read().list("project")}
         for kind in store.plugins.stages.types:
             if "/" in kind and not store.plugins.active(kind.split("/")[0]):
                 continue
             for record in store.read().list(kind):
-                result.append(StageView(**record_status(store, record)))
+                result.append(StageView(**record_status(store, record), **card_details(record, people, projects)))
         return sorted(result, key=lambda view: (view.record.kind, view.title.casefold(), view.record.id))
 
     @r.post("/stages/move")
@@ -1203,7 +1205,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         cs = guard(lambda: move_stage(store, op))
         record = store.read().get(body.record.kind, body.record.id)
         changed()
-        return StageMoved(changeset=cs, stages=StageView(**record_status(store, record)))
+        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        card = card_details(record, People(store, cfg), projects)
+        return StageMoved(changeset=cs, stages=StageView(**record_status(store, record), **card))
 
     @r.get("/stages/requests")
     def stage_requests() -> list[StageRequestView]:

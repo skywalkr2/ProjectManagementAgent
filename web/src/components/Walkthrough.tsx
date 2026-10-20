@@ -211,10 +211,13 @@ export function Walkthrough(
                     aria-current={screen === current ? "step" : undefined}
                     onClick={() => go(screen)}
                   >
-                    <span>{t(`walkthrough.screen.${screen}`)}</span>
-                    {state && (
+                    <span className={styles.label}>
+                      <span>{t(`walkthrough.screen.${screen}`)}</span>
+                      {screen === current && <span className={styles.here}>{t("walkthrough.here")}</span>}
+                    </span>
+                    {(state === "done" || state === "skipped") && (
                       <span className={styles.mark}>
-                        <span aria-hidden="true">{state === "done" ? "✓ " : state === "skipped" ? "– " : "○ "}</span>
+                        <span aria-hidden="true">{state === "done" ? "✓ " : "– "}</span>
                         {t(`walkthrough.state.${state}`)}
                       </span>
                     )}
@@ -229,7 +232,8 @@ export function Walkthrough(
             {t(`walkthrough.screen.${current}`)}
           </h2>
           <p className={styles.why}>{t(`walkthrough.why.${current}`)}</p>
-          {current === "you" && <WorkspaceStep />}
+          <div className={styles.body}>
+          {current === "you" && <WorkspaceStep done={here !== "todo"} onContinue={next ? () => go(next) : undefined} />}
           {current === "ai" && (
             <>
               <WelcomeAi local={data.local} done={aiDone} />
@@ -246,7 +250,7 @@ export function Walkthrough(
           {current === "backup" && <WelcomeBackup local={data.local} />}
           {current === "people" && (
             <div className="row-end">
-              <button type="button" className="btn" onClick={props.onOpenPeople}>
+              <button type="button" className={here === "todo" ? "btn primary" : "btn"} onClick={props.onOpenPeople}>
                 {t("walkthrough.people.open")}
               </button>
             </div>
@@ -257,6 +261,7 @@ export function Walkthrough(
               {problem}
             </p>
           )}
+          </div>
           <div className={styles.foot} ref={foot}>
             {previous && <Button onClick={() => go(previous)}>{t("walkthrough.back")}</Button>}
             <span className={styles.grow} />
@@ -265,7 +270,7 @@ export function Walkthrough(
                 {t("walkthrough.finish")}
               </Button>
             ) : here === "todo" ? (
-              <Button disabled={busy} onClick={() => void skip()}>
+              <Button variant="ghost" className={styles.skip} disabled={busy} onClick={() => void skip()}>
                 {t("walkthrough.skip")}
               </Button>
             ) : (

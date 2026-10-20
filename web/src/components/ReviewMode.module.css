@@ -1,0 +1,15 @@
+/* One item at a time on a phone: the item in full, and its three buttons across the bottom of the screen, above the bottom
+   bar and any toasts. Nothing here is wider than the window. */
+.mode, .done { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.heading { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); }
+.heading:focus { outline: none; }
+.item { list-style: none; margin: 0; padding: 0; min-width: 0; }
+.bar {
+  position: sticky; bottom: calc(var(--bottombar-h) + var(--toast-h, 0px) + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2);
+  padding: var(--space-3) 0; background: var(--canvas); border-top: 1px solid var(--border); z-index: 5;
+}
+.bar > * { width: 100%; white-space: normal; height: auto; min-height: var(--tap-min); }
+/* The bar has Looks good, so the row's own copy of it is not shown beside it. */
+.item :global(.acts .btn.primary) { display: none; }

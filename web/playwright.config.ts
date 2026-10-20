@@ -76,6 +76,10 @@ export default defineConfig({
       return [
         { name: s.name, testMatch: /acceptance\.spec\.ts/, use },
         { name: `${s.name}-shell`, testMatch: /shell\.spec\.ts/, use, dependencies: [s.name] },
+        // The panes the shell opens (drawer, Ask pane, the stages board, review mode), and every main screen's accessibility
+        // checks in light and dark at four widths (once, at the root; the nested path changes no screen).
+        { name: `${s.name}-panes`, testMatch: /panes\.spec\.ts/, use, dependencies: [s.name] },
+        ...(s.base === "/" ? [{ name: `${s.name}-a11y`, testMatch: /a11y\.spec\.ts/, use, dependencies: [s.name] }] : []),
       ];
     }),
     { name: "layout", testMatch: /layout\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${layout.port}/` } },

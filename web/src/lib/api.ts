@@ -131,7 +131,8 @@ export const api = {
   looksGood: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/looks-good`),
   reopen: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/reopen`),
   undo: (cs: string, ops?: number[]) => call<S["UndoReport"]>("POST", `changesets/${id(cs)}/undo`, { ops: ops ?? null }),
-  sendBack: (cs: string, note: string) => call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, { note }),
+  sendBack: (cs: string, note: string, undoFirst = true) =>
+    call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, undoFirst ? { note } : { note, undo_first: false }),
   release: (cs: string, index: number, person?: string) =>
     call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/release`, { person: person ?? null }),
   newPersonForm: (q: string) => call<S["NewPersonPrefillView"]>("GET", `questions/${id(q)}/new-person`),
@@ -348,6 +349,14 @@ export const api = {
   backupKey: () => call<S["BackupKeyView"]>("GET", "backup-key"),
   /** Gives the backup key: typed, made by the app (shown once in the answer's `made`), or as where it is kept. */
   setBackupKey: (body: S["BackupKeyIn"]) => call<S["BackupKeySaved"]>("POST", "backup-key", body),
+  /** What notices that something needs the person are set to now; never the address they go to. */
+  notifications: () => call<S["NotificationsView"]>("GET", "notifications"),
+  /** What the open screen shows a browser notice for: a key for each item in Today's Decide group, and the notice's words. */
+  notificationsWaiting: () => call<S["NotifyWaiting"]>("GET", "notifications/waiting"),
+  /** Gives the person's own address for notices, typed (kept on this computer) or as where it is kept. */
+  setNotifyWebhook: (body: S["NotifyWebhookIn"]) => call<S["SettingsSaved"]>("POST", "notifications/webhook", body),
+  /** "Send me a test": the webhook gets the test note; for the browser the answer carries the words to show. */
+  testNotify: (target: S["NotifyTestIn"]["target"]) => call<S["NotifyTestResult"]>("POST", "notifications/test", { target } satisfies S["NotifyTestIn"]),
   /** Installs (or updates) an add-on from the release its catalog entry names. It isn't turned on, and it is used after a restart. */
   installPack: (name: string) => call<S["PackInstalled"]>("POST", `packs/${id(name)}/install`),
   /** Takes away an add-on the app installed from the screen; it has to be off first. Used after a restart. */

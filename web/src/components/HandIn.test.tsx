@@ -95,8 +95,8 @@ test("the choice can be made from the keyboard", async () => {
 
 test("how sensitive it is starts at the usual and sends nothing about it", async () => {
   const { user, calls } = await setup();
-  expect(screen.getByLabelText("How sensitive is this?")).toHaveValue("");
-  expect(screen.getByRole("option", { name: "The usual" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Who may see this?")).toHaveValue("");
+  expect(screen.getByRole("option", { name: "Normal" })).toBeInTheDocument();
   await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "", pasted: "Subject: dates" }));
@@ -105,9 +105,9 @@ test("how sensitive it is starts at the usual and sends nothing about it", async
 
 test("Confidential and Private are sent as the level the person chose, in plain words", async () => {
   const { user, calls } = await setup();
-  const choice = screen.getByLabelText("How sensitive is this?");
+  const choice = screen.getByLabelText("Who may see this?");
   expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual([
-    "The usual",
+    "Normal",
     "Confidential",
     "Private",
   ]);
@@ -121,7 +121,7 @@ test("Private is sent with the person's own note too", async () => {
   const { user, calls } = await setup();
   await user.click(screen.getByRole("radio", { name: "Mine" }));
   await user.type(screen.getByLabelText("Paste or type it here"), "keep this quiet");
-  await user.selectOptions(screen.getByLabelText("How sensitive is this?"), "Private");
+  await user.selectOptions(screen.getByLabelText("Who may see this?"), "Private");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "keep this quiet", pasted: "", data_level: "restricted" }));
 });

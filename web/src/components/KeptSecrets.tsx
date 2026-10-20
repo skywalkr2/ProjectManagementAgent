@@ -17,11 +17,11 @@ type How = "type" | "where" | "held";
 type Held = Pick<S["SourceSecretView"], "where" | "name">;
 
 /** How a secret is kept now, or null when it isn't set. */
-const heldOf = (state: Pick<S["AddonSecretView"], "where" | "name">): Held | null =>
+export const heldOf = (state: Pick<S["AddonSecretView"], "where" | "name">): Held | null =>
   state.where === "none" ? null : { where: state.where, name: state.name };
 
 /** One secret: its label, the box (or where it is kept), and a button that saves what was typed. */
-function KeptSecretRow(props: {
+export function KeptSecretRow(props: {
   id: string;
   label: string;
   saveLabel: string;

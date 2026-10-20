@@ -1,6 +1,7 @@
 // Asking the assistant (design 6.25): a box for a question, and under it the recent questions with what came of them.
 // An answer shows the words it rests on. A suggested setting is applied by the person with one click (and Undo, from
-// the read-back toast); a drafted report is theirs to copy and send.
+// the read-back toast); a drafted report is theirs to copy and send. On a wide screen it is a pane at the right edge
+// (`pane`), so answers with lists have room and the work stays in view; on a narrower one it is a dialog.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
@@ -13,6 +14,7 @@ import { formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import styles from "./AskPane.module.css";
 import { ModalPanel } from "./ModalPanel";
 import { OwnKindsOffer } from "./Templates";
 import { SafeText } from "./SafeText";
@@ -20,7 +22,7 @@ import { SafeText } from "./SafeText";
 type AskItem = S["AskView"];
 const SHOWN = 10;
 
-export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?: string | null }) {
+export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?: string | null; pane?: boolean }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();
@@ -45,11 +47,17 @@ export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?:
   };
 
   const titleId = `${base}-title`;
-  return (
-    <ModalPanel titleId={titleId} onClose={props.onClose}>
-      <Heading slot="title" id={titleId}>
-        {t("ask.title")}
-      </Heading>
+  const body = (
+    <>
+      {props.pane ? (
+        <h2 id={titleId} className={styles.title}>
+          {t("ask.title")}
+        </h2>
+      ) : (
+        <Heading slot="title" id={titleId}>
+          {t("ask.title")}
+        </Heading>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -114,7 +122,27 @@ export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?:
           </ul>
         )}
       </section>
-    </ModalPanel>
+    </>
+  );
+  if (!props.pane) {
+    return (
+      <ModalPanel titleId={titleId} onClose={props.onClose}>
+        {body}
+      </ModalPanel>
+    );
+  }
+  return (
+    <aside
+      className={styles.pane}
+      aria-labelledby={titleId}
+      data-ask-pane=""
+      onKeyDown={(e) => {
+        // Escape closes the pane unless something inside it (a menu, a field's own use of the key) took it.
+        if (e.key === "Escape" && !e.defaultPrevented) props.onClose();
+      }}
+    >
+      {body}
+    </aside>
   );
 }
 

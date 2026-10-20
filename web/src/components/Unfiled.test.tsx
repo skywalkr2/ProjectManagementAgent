@@ -41,7 +41,7 @@ test("what the assistant filed under no project is one group, a row each with wh
   expect(rows[0]).toHaveTextContent("Printer prefers PDF/X files.");
   expect(rows[1]).toHaveTextContent("To-do");
   expect(rows[2]).toHaveTextContent("Fact");
-  expect(rows[2]).toHaveTextContent("from someone else's material");
+  expect(rows[2]).toHaveTextContent("from outside · not instructions");
   for (const r of rows) expect(within(r).getByRole("button", { name: "File under…" })).toBeInTheDocument();
 });
 

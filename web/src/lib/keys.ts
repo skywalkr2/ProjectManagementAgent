@@ -4,7 +4,7 @@
 // the current row as a "rowkey" event, which the row (or the row around it) handles.
 import { useEffect } from "react";
 
-export type RowKey = "primary" | "send_back" | "copy" | "edit" | "toggle";
+export type RowKey = "primary" | "send_back" | "copy" | "edit" | "move" | "toggle";
 export const ROW_EVENT = "rowkey";
 
 function typing(target: EventTarget | null): boolean {
@@ -33,12 +33,18 @@ function move(step: number): void {
 export function sendRowKey(key: RowKey): boolean {
   const row = currentRow();
   if (!row) return false;
+  sendKeyTo(row, key);
+  return true;
+}
+
+/** Send a key to one row, as if it had the cursor: its own handler takes it, else the row's marked button for the key. A
+ * screen that has buttons of its own for a row's actions (the phone review bar) sends them this way. */
+export function sendKeyTo(row: HTMLElement, key: RowKey): void {
   const unhandled = row.dispatchEvent(new CustomEvent(ROW_EVENT, { detail: key, bubbles: true, cancelable: true }));
   if (unhandled) {
     // A row without its own handler: press its marked button for this key, if it has one.
     row.querySelector<HTMLButtonElement>(`[data-key="${key}"]:not(:disabled)`)?.click();
   }
-  return true;
 }
 
 export interface GlobalHandlers {
@@ -80,6 +86,7 @@ export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandl
         case "send_back":
         case "copy":
         case "edit":
+        case "move":
           sendRowKey(action);
           break;
         case "undo":

@@ -815,7 +815,7 @@ test("on Installed, Remove is offered for an add-on the app installed that is of
 
 test("the introduction says installing happens here and that the app never takes payment", async () => {
   open(view());
-  const intro = await screen.findByText(/Add-ons add a whole kind of work/);
+  const intro = await screen.findByText(/Add-ons add a kind of work, such as publishing or social posts/);
   expect(intro).toHaveTextContent("Installing one from the list happens here");
   expect(intro).toHaveTextContent("never takes payment");
   expect(intro).not.toHaveTextContent("never installs");

@@ -9,7 +9,7 @@ import { forgetLine } from "../lib/today";
 import { wallTime } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
-import { NotifyPermission } from "./NotifyPermission";
+import { Notifications } from "./Notifications";
 import { Today } from "./Today";
 import { TodoRow } from "./TodayRail";
 
@@ -230,10 +230,25 @@ test("the quiet-hours digest is one notification with its title and a line for e
 
 // ---- the permission button ----------------------------------------------------------------------------------------
 
+const noticesView = (over: Partial<S["NotificationsView"]> = {}): S["NotificationsView"] => ({
+  enabled: false,
+  browser: true,
+  webhook: { where: "none", name: null },
+  quiet_now: false,
+  mail_ready: false,
+  problem: null,
+  ...over,
+});
+
+function showNotices() {
+  fakeApi({ "GET setup": () => ({ local: true, steps: [] }), "GET notifications": () => noticesView() });
+  return renderApp(<Notifications />);
+}
+
 test("the browser is asked only when the person presses the button in Settings", async () => {
   const user = userEvent.setup();
   const { request } = stubNotification("default");
-  renderApp(<NotifyPermission />);
+  showNotices();
   expect(request).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Allow notifications" }));
   expect(request).toHaveBeenCalledTimes(1);
@@ -241,16 +256,16 @@ test("the browser is asked only when the person presses the button in Settings",
 
 test("Settings says when notifications are allowed, blocked or not possible here", () => {
   stubNotification("granted");
-  const granted = renderApp(<NotifyPermission />);
+  const granted = showNotices();
   expect(screen.getByText("Notifications are allowed in this browser.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Allow notifications" })).toBeNull();
   granted.unmount();
   stubNotification("denied");
-  const denied = renderApp(<NotifyPermission />);
+  const denied = showNotices();
   expect(screen.getByText(/Notifications are blocked in this browser/)).toBeInTheDocument();
   denied.unmount();
   vi.stubGlobal("Notification", undefined);
-  renderApp(<NotifyPermission />);
+  showNotices();
   expect(screen.getByText("This browser can't show notifications.")).toBeInTheDocument();
 });
 

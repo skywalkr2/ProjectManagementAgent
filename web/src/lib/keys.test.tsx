@@ -73,3 +73,34 @@ test("Shift+N runs the show-new action, and never while typing", async () => {
   await user.keyboard("{Shift>}N{/Shift}");
   expect(show_new).toHaveBeenCalledTimes(1);
 });
+
+test("the move key goes to the row that has the cursor, and only when it is configured", async () => {
+  const user = userEvent.setup();
+  const moved = vi.fn();
+  function Row() {
+    return (
+      <div data-testid="row" data-row tabIndex={-1} onKeyDownCapture={undefined} ref={(el) => el?.addEventListener("rowkey", (e) => moved((e as CustomEvent).detail))}>
+        a card
+      </div>
+    );
+  }
+  const { rerender } = render(
+    <>
+      <Harness keys={{ ...SHORTCUTS, move: "m" }} ask={() => {}} />
+      <Row />
+    </>,
+  );
+  screen.getByTestId("row").focus();
+  await user.keyboard("m");
+  expect(moved).toHaveBeenCalledWith("move");
+  moved.mockClear();
+  rerender(
+    <>
+      <Harness keys={SHORTCUTS} ask={() => {}} />
+      <Row />
+    </>,
+  );
+  screen.getByTestId("row").focus();
+  await user.keyboard("m");
+  expect(moved).not.toHaveBeenCalled();
+});

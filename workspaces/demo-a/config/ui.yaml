@@ -1,6 +1,6 @@
 version: 1
 wording: {}   # overrides for the wording sheet by key; plugins name their own kinds
-shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, undo: u, hand_in: n, help: "?", ask: /, next_pane: "]", previous_pane: "[", show_new: "N"}
+shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, move: m, undo: u, hand_in: n, help: "?", ask: /, next_pane: "]", previous_pane: "[", show_new: "N"}
 narrow_below_px: 700   # below this width: the phone layout, with a bottom bar
 toast_seconds: 0
 feedback_to: feedback@example.com   # where the feedback button writes
@@ -9,5 +9,6 @@ followups: {action_due_within_days: 7, undated_after_days: 14, question_after_da
 walkthrough: {first_promises: 5}   # how many promises the walkthrough's first-result screen shows
 series: {usually_with_share: 0.5, usually_with_min_meetings: 2, usually_with_max: 6}   # who a series is "usually with" on its page
 brand: {color: "#2f6f5e", logo: null}   # the accent color; a logo is an image file in this config folder
+notifications: {enabled: false, browser: true, webhook: null, webhook_format: json, quiet_hours: {start: "22:00", end: "06:30"}, retry_minutes: 15, message_one: "1 decision waiting for you", message_many: "{count} decisions waiting for you", test_message: "This is a test. You will get a note like this when something needs you."}   # notices that something needs you: off until turned on, to you only, a count and never what an item is about
 theme: system   # system, light or dark; each person can change it on their own device
 density: compact   # comfortable or compact

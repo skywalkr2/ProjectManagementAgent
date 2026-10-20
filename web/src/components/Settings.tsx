@@ -21,7 +21,7 @@ import { useFolderListing } from "./FolderPicker";
 import { JobsPanel } from "./JobsPanel";
 import { BrandContrast } from "./BrandContrast";
 import { AddonSecrets, BackupKey } from "./KeptSecrets";
-import { NotifyPermission } from "./NotifyPermission";
+import { Notifications } from "./Notifications";
 import { RefreshedLines } from "./RefreshedLines";
 import { SettingRow } from "./SettingRow";
 import { SyncPanel } from "./SyncPanel";
@@ -370,7 +370,7 @@ export function Settings(props: {
         {form(section)}
         {section === "appearance" && <BrandContrast color={brandColor} />}
         {section.startsWith("addon/") && <AddonSecrets plugin={section.slice("addon/".length)} name={label(section)} />}
-        {section === "today" && <NotifyPermission />}
+        {section === "today" && <Notifications />}
         {section === "backups" && (
           <>
             <BackupKey />

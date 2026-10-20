@@ -27,6 +27,26 @@ async function expectNoViolations(page: Page) {
   expect(found).toEqual([]);
 }
 
+/** Resolves when the page's height has stayed the same for a run of drawn frames (counted in frames, so a slow machine
+ * simply takes longer): a screen that is still loading rows keeps changing its height. */
+async function layoutSettled(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        let height = -1;
+        let same = 0;
+        const frame = () => {
+          const now = document.documentElement.scrollHeight;
+          same = now === height ? same + 1 : 0;
+          height = now;
+          if (same >= 20) resolve();
+          else requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+      }),
+  );
+}
+
 const WIDTHS = [390, 1024, 1440, 1920];
 const HEIGHT = 900;
 
@@ -271,9 +291,20 @@ test.describe("screen use and the shell", () => {
       await page.setViewportSize({ width, height });
       await signIn(page, "setup");
       await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
-      await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^Your AI account/ }).click();
+      // The walkthrough resumes at the first screen not done, which depends on what the workspace already has (the AI
+      // account's own screen may be the one it opens at, and an opening screen takes the cursor before this test moves it).
+      // So the screen under test is always opened by moving to it from another one, which is what puts the cursor in it.
+      const steps = page.getByRole("navigation", { name: "Setup steps" });
       const main = page.getByRole("main");
+      await steps.getByRole("button", { name: /^Mail and calendar/ }).click();
+      await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+      await steps.getByRole("button", { name: /^Your AI account/ }).click();
       await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+      // The screen's rows come from several requests, and its height changes as each arrives; the buttons are at its end, so
+      // it is scrolled there, and the toast made, only once it has its content and has stopped changing height.
+      await expect(main.getByRole("group", { name: /^Which AI should/ })).toBeVisible({ timeout: 15_000 });
+      await expect(main.locator("[data-skeleton]")).toHaveCount(0, { timeout: 15_000 });
+      await layoutSettled(page);
       // At the end of the screen, where its buttons are, pressing the undo key with nothing to undo says so in a toast.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       // The screen puts the cursor in its first field once its data has loaded, or on itself when it has no field;
@@ -293,6 +324,8 @@ test.describe("screen use and the shell", () => {
       await page.keyboard.press("u");
       const notices = page.getByRole("region", { name: "Notifications" });
       await expect(notices.getByText("Nothing to undo.")).toBeVisible();
+      // The page makes room for the toast and moves the buttons clear of it; look once that has stopped changing.
+      await layoutSettled(page);
       const overlap = async () => {
         const toast = (await notices.getByText("Nothing to undo.").boundingBox())!;
         for (const name of [/^Back$/, /^(Skip for now|Next)$/]) {
@@ -375,6 +408,58 @@ test.describe("screen use and the shell", () => {
     }
   });
 
+  // Between 1024 and 1279px the header has two rows (design 7.1): the title, Ask and the buttons on top, the status chip and the
+  // assistant's alive line small below, so the first row keeps its room; at about 1,000px Ask is an icon. Nothing is
+  // clipped by the window, and the alive line says its words in full and opens what is behind it.
+  for (const width of [1000, 1100, 1200]) {
+    test(`at ${width}px the header is two rows, with every control inside the window and the alive line readable`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await signIn(page);
+      const header = page.getByRole("banner");
+      const box = (await header.boundingBox())!;
+      expect(box.height).toBe(88);
+      const first = [
+        header.getByRole("link", { name: /^Go to Today/ }),
+        header.getByRole("button", { name: "Ask" }).first(),
+        header.getByRole("button", { name: "Missed one" }),
+        header.getByRole("button", { name: "Hand something in" }),
+        header.getByRole("button", { name: "Help" }),
+        header.getByRole("button", { name: /^Change appearance, / }),
+      ];
+      for (const control of first) {
+        await expect(control).toBeVisible();
+        const b = (await control.boundingBox())!;
+        // On the first row, and inside the window on both sides.
+        expect(b.y + b.height).toBeLessThanOrEqual(box.y + 56 + 1);
+        expect(b.x).toBeGreaterThanOrEqual(0);
+        expect(b.x + b.width).toBeLessThanOrEqual(width);
+      }
+      const chip = (await header.getByRole("button", { name: /^App status: / }).boundingBox())!;
+      const alive = header.getByRole("button", { name: /^Assistant/ });
+      const line = (await alive.boundingBox())!;
+      for (const b of [chip, line]) {
+        expect(b.y).toBeGreaterThanOrEqual(box.y + 56 - 1);
+        expect(b.y + b.height).toBeLessThanOrEqual(box.y + 88 + 1);
+        expect(b.x + b.width).toBeLessThanOrEqual(width);
+      }
+      // Its words fit: none is cut off with an ellipsis.
+      const clipped = await alive.evaluate((el) => Array.from(el.querySelectorAll("span")).filter((s) => s.scrollWidth > s.clientWidth + 1).length);
+      expect(clipped).toBe(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+      expect((await page.getByRole("main").boundingBox())!.y).toBeGreaterThanOrEqual(box.y + 88 - 1);
+      // What is behind the line: today's runs, what waits and the order the accounts are tried in.
+      await alive.click();
+      const popover = page.getByRole("dialog", { name: "Assistant" });
+      await expect(popover).toBeVisible();
+      await expect(popover.getByText("AI tasks today")).toBeVisible();
+      await expect(popover.getByText("Waiting for the assistant")).toBeVisible();
+      await expectNoViolations(page);
+      await page.keyboard.press("Escape");
+      await expect(popover).toHaveCount(0);
+      await expect(alive).toBeFocused();
+    });
+  }
+
   test("the sidebar is an icon rail from 1024 to 1279px, with a name for each icon, and can be pinned open", async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 800 });
     await signIn(page);
@@ -438,8 +523,10 @@ test.describe("screen use and the shell", () => {
   // The cursor starts where you type (design 7.0): in a screen's first main field, or on its heading when it has none.
   // Each main screen is opened from another by its address, as a person does by a link, and the cursor is found where it
   // belongs once the screen has loaded. A screen with a field names it here; any other must have the cursor on its heading.
-  const SCREENS: Array<{ name: string; hash: string; field?: (page: Page) => Locator }> = [
-    { name: "Today", hash: "today" },
+  // Today's keyboard also starts on its first queue line, once the queue has arrived (7.7), so there either the heading or
+  // that line is where the cursor belongs; which one it is depends on whether the queue was already loaded.
+  const SCREENS: Array<{ name: string; hash: string; field?: (page: Page) => Locator; queue?: boolean }> = [
+    { name: "Today", hash: "today", queue: true },
     { name: "What changed", hash: "work/changed" },
     { name: "Since yesterday", hash: "work/since" },
     { name: "Follow-ups", hash: "work/followups" },
@@ -477,13 +564,16 @@ test.describe("screen use and the shell", () => {
       await expect
         .poll(
           () =>
-            page.evaluate(() => {
+            page.evaluate((queue) => {
               const at = document.activeElement;
               const main = document.querySelector("main");
               if (!at || !main || !main.contains(at)) return false;
+              // The queue's first line, on a screen whose keyboard starts there.
+              const first = queue ? main.querySelector("[data-row]") : null;
+              if (first && first.contains(at)) return true;
               // On the heading, or in a field the screen put the cursor in itself.
               return at.tagName === "H1" || ["INPUT", "SELECT", "TEXTAREA"].includes(at.tagName);
-            }),
+            }, !!screen.queue),
           { timeout: 15_000 },
         )
         .toBe(true);

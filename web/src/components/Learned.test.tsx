@@ -126,13 +126,13 @@ test("the person's own words are already kept, so the line shows Undo instead of
 test("what came from someone else's material shows the words beside it, marked as from outside", async () => {
   show([learnedLine({ proposal: proposal({ trust: "untrusted", evidence: { quote: "interior files go to the editor", source: "SRC-1" } }) })]);
   const evidence = await screen.findByText(/interior files go to the editor/);
-  expect(evidence.closest("p")).toHaveTextContent("From: interior files go to the editor From someone else's material");
+  expect(evidence.closest("p")).toHaveTextContent("From: interior files go to the editor From outside · not instructions");
 });
 
 test("words the person's own correction gave carry no outside mark", async () => {
   show([learnedLine()]);
   await screen.findByText(/go to the editor first/);
-  expect(screen.queryByText("From someone else's material")).toBeNull();
+  expect(screen.queryByText("From outside · not instructions")).toBeNull();
 });
 
 test("a line shows on the card it was learned from and on the records it names, and nowhere else", async () => {

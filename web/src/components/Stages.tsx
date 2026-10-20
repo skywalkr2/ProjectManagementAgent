@@ -1,30 +1,52 @@
 // Stages (design 6.26): where each item is in its steps, and moving it. One row per item with one primary action: move
 // on when it is ready, otherwise the reasons it isn't. Moving back and the history are in the row's menu.
-import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { api } from "../lib/api";
-import { dayAndTime } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
+import { useMediaQuery } from "../lib/media";
 import {
   sameItem,
-  upperFirst,
-  useGo,
   useKindWords,
   useMove,
   useStageRecords,
   useStageRequests,
-  useTaskWords,
   waitingForGo,
   type StageRequest,
   type StageView,
 } from "../lib/stages";
-import { useEstimate } from "../lib/money";
 import { usePluginActions } from "../lib/plugin-actions";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
+import { StagesBoard } from "./StagesBoard";
+import { History, WaitingLine } from "./StageParts";
+import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
+
+type Shown = "board" | "list";
+const KEPT = "stages.view";
+
+/** How the person last chose to see the stages, kept for this device; a phone starts with the list. */
+function useShown(): [Shown, (v: Shown) => void] {
+  const phone = useMediaQuery("(max-width: 639px)");
+  const [chosen, setChosen] = useState<Shown | null>(() => {
+    try {
+      const kept = window.localStorage.getItem(KEPT);
+      return kept === "board" || kept === "list" ? kept : null;
+    } catch {
+      return null;
+    }
+  });
+  const set = (v: Shown) => {
+    setChosen(v);
+    try {
+      window.localStorage.setItem(KEPT, v);
+    } catch {
+      // The choice is just not remembered.
+    }
+  };
+  return [chosen ?? (phone ? "list" : "board"), set];
+}
 
 export function Stages() {
   const { t } = useWords();
@@ -32,12 +54,24 @@ export function Stages() {
   const records = useStageRecords();
   const requests = useStageRequests();
   const waiting = waitingForGo(requests.data);
+  const [shown, setShown] = useShown();
   const groups = new Map<string, StageView[]>();
   for (const view of records.data ?? []) groups.set(view.record.kind, [...(groups.get(view.record.kind) ?? []), view]);
   return (
     <>
       <div className="heading">
         <h1 id="stages-title">{t("stages.title")}</h1>
+        {groups.size > 0 && (
+          <SegmentedControl
+            label={t("stages.view")}
+            value={shown}
+            onChange={setShown}
+            options={[
+              { value: "board", label: t("stages.view.board") },
+              { value: "list", label: t("stages.view.list") },
+            ]}
+          />
+        )}
       </div>
       {records.isPending ? (
         <section className="panel-section" aria-labelledby="stages-title">
@@ -62,15 +96,19 @@ export function Stages() {
             <div className="heading">
               <h2 id={`stages-${kind}`}>{kindWords(kind)}</h2>
             </div>
-            <ul className="queue">
-              {views.map((view) => (
-                <StageRow
-                  key={`${view.record.kind}/${view.record.id}`}
-                  view={view}
-                  waiting={waiting.filter((r) => sameItem(view.record, r.stage_start))}
-                />
-              ))}
-            </ul>
+            {shown === "board" ? (
+              <StagesBoard kind={kindWords(kind)} views={views} waiting={waiting} />
+            ) : (
+              <ul className="queue">
+                {views.map((view) => (
+                  <StageRow
+                    key={`${view.record.kind}/${view.record.id}`}
+                    view={view}
+                    waiting={waiting.filter((r) => sameItem(view.record, r.stage_start))}
+                  />
+                ))}
+              </ul>
+            )}
           </section>
         ))
       )}
@@ -172,62 +210,5 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
       )}
       {review}
     </li>
-  );
-}
-
-function WaitingLine(props: { request: StageRequest }) {
-  const { t } = useWords();
-  const task = useTaskWords();
-  const estimate = useEstimate()(props.request.estimate_usd);
-  const { error, busy, go } = useGo();
-  const ref = useRef<HTMLLIElement>(null);
-  const run = () => void go(props.request);
-  useRowKeys(ref, { primary: run });
-  return (
-    <li className="child" data-row tabIndex={-1} ref={ref}>
-      <div>
-        <div className="title">{upperFirst(t("stages.go_here", { task: task(props.request.task) }))}</div>
-        {estimate && <div className="meta">{estimate}</div>}
-      </div>
-      <div className="acts">
-        <button type="button" className="btn primary" disabled={busy} onClick={run}>
-          {t("stages.go")}
-        </button>
-      </div>
-      {error && (
-        <p className="problem-note full" role="alert">
-          {error}
-        </p>
-      )}
-    </li>
-  );
-}
-
-function History(props: { view: StageView }) {
-  const { t } = useWords();
-  const { view } = props;
-  const entries = useQuery({
-    queryKey: ["stages", "history", view.record.kind, view.record.id],
-    queryFn: () => api.stageHistory(view.record.kind, view.record.id),
-  });
-  const label = (id: string | null) =>
-    id === null ? t("stages.not_started") : (view.stages.find((s) => s.id === id)?.label ?? t("stages.unknown_stage"));
-  const who = (op: string, actor: string) => t(op === "undo" ? "stages.by_undo" : actor === "rule" ? "stages.by_rule" : "stages.by_you");
-  if (entries.isPending) return <p className="hint">{t("loading")}</p>;
-  if (entries.isError) return <p className="hint">{t("stages.load_failed")}</p>;
-  if (entries.data.length === 0) return <p className="hint">{t("stages.history_empty")}</p>;
-  return (
-    <ul className="children" aria-label={t("stages.history_label")}>
-      {[...entries.data].reverse().map((e) => (
-        <li key={e.sequence} className="child single">
-          {t("stages.history_entry", {
-            from: label(e.from_stage),
-            to: label(e.to_stage),
-            when: dayAndTime(e.at),
-            who: who(e.op, e.actor),
-          })}
-        </li>
-      ))}
-    </ul>
   );
 }

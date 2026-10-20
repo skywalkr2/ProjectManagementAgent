@@ -8974,6 +8974,208 @@
         "title": "Noted",
         "type": "object"
       },
+      "NotificationsView": {
+        "description": "What the notices (design 7.19) are set to, and what each way of getting them can do now.",
+        "properties": {
+          "browser": {
+            "description": "The browser target is on (it also needs the browser's own permission).",
+            "title": "Browser",
+            "type": "boolean"
+          },
+          "enabled": {
+            "description": "Notices are on. They are off until the person turns them on.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "mail_ready": {
+            "description": "Mail to the person themselves can be used. False until the app can send mail: the screen says that mail comes with mail sending.",
+            "title": "Mail Ready",
+            "type": "boolean"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the last note to the address didn't arrive, in plain words; left out once one has arrived.",
+            "title": "Problem"
+          },
+          "quiet_now": {
+            "description": "The person's clock is inside quiet hours: nothing is sent until they end.",
+            "title": "Quiet Now",
+            "type": "boolean"
+          },
+          "webhook": {
+            "$ref": "#/components/schemas/NotifyWebhookView"
+          }
+        },
+        "required": [
+          "enabled",
+          "browser",
+          "webhook",
+          "quiet_now",
+          "mail_ready"
+        ],
+        "title": "NotificationsView",
+        "type": "object"
+      },
+      "NotifyTestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "Which way of getting notices to try.",
+            "enum": [
+              "browser",
+              "webhook"
+            ],
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "NotifyTestIn",
+        "type": "object"
+      },
+      "NotifyTestResult": {
+        "properties": {
+          "message": {
+            "description": "The test note's words; the browser shows them itself.",
+            "title": "Message",
+            "type": "string"
+          },
+          "ok": {
+            "description": "The note was sent (webhook) or is ready to show (browser).",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it was not sent, in plain words.",
+            "title": "Problem"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ],
+        "title": "NotifyTestResult",
+        "type": "object"
+      },
+      "NotifyWaiting": {
+        "description": "What the open screen shows a browser notice for.",
+        "properties": {
+          "browser": {
+            "description": "Show browser notices now: they are on, the browser target is on, and it is not quiet.",
+            "title": "Browser",
+            "type": "boolean"
+          },
+          "keys": {
+            "description": "One key for each item in Today's Decide group; a key not seen before is news.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "message": {
+            "description": "The notice for these items: a count and the action, never what they are about.",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "browser",
+          "keys",
+          "message"
+        ],
+        "title": "NotifyWaiting",
+        "type": "object"
+      },
+      "NotifyWebhookIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the address is kept instead: env:NAME or file:/path.",
+            "title": "Reference"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The address typed on the screen. A local app keeps it in its private folder and writes only where it is kept; a hosted app refuses it. Never stored in the settings or sent back.",
+            "title": "Value"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "NotifyWebhookIn",
+        "type": "object"
+      },
+      "NotifyWebhookView": {
+        "description": "Where the person's own address for notices is read from, never the address.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The variable's name, or the file's path; empty otherwise.",
+            "title": "Name"
+          },
+          "where": {
+            "description": "none: no address yet; kept: typed on this screen and kept by the app on this computer; env: read from a named environment variable; file: read from a file of the person's own; other: another way of keeping it.",
+            "enum": [
+              "none",
+              "kept",
+              "env",
+              "file",
+              "other"
+            ],
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "where"
+        ],
+        "title": "NotifyWebhookView",
+        "type": "object"
+      },
       "NudgeRecorded": {
         "properties": {
           "action_ids": {
@@ -17913,6 +18115,18 @@
             ],
             "title": "Current Label"
           },
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The item's due date, when it has one.",
+            "title": "Due"
+          },
           "next": {
             "anyOf": [
               {
@@ -17922,6 +18136,26 @@
                 "type": "null"
               }
             ]
+          },
+          "owners": {
+            "description": "The item's owners, in the workspace's owner format.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the item's first project, when it has one.",
+            "title": "Project"
           },
           "ready": {
             "title": "Ready",
@@ -24288,6 +24522,122 @@
           }
         },
         "summary": "Notes"
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "description": "What the notices are set to now, and why the last note to the address didn't arrive when it didn't.",
+        "operationId": "notifications_view_api_notifications_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Notifications View"
+      }
+    },
+    "/api/notifications/test": {
+      "post": {
+        "description": "\"Send me a test\": the webhook gets the test note now (even with notices off, so it can be checked first);\nfor the browser the answer carries the words, which the open screen shows itself.",
+        "operationId": "notifications_test_api_notifications_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyTestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notifications Test"
+      }
+    },
+    "/api/notifications/waiting": {
+      "get": {
+        "description": "What the open screen shows a browser notice for. Empty while notices or the browser target are off.",
+        "operationId": "notifications_waiting_api_notifications_waiting_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyWaiting"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Notifications Waiting"
+      }
+    },
+    "/api/notifications/webhook": {
+      "post": {
+        "description": "Give the person's own address for notices, with Undo: typed (kept on this computer, a local app only) or as\nwhere it is kept. The settings hold only where; the address is never sent back.",
+        "operationId": "notify_webhook_api_notifications_webhook_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyWebhookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notify Webhook"
       }
     },
     "/api/open-items": {

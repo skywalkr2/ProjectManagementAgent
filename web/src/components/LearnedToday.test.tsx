@@ -80,7 +80,7 @@ test("the list has a row per thing, tagged by where it came from, with how many 
   expect(within(rows[0]).getByText("From incoming material")).toBeInTheDocument();
   expect(within(rows[1]).getByText("From your correction")).toBeInTheDocument();
   expect(within(drawer).getByText(/2 from what came in expired before you looked/)).toBeInTheDocument();
-  expect(within(rows[0]).getByText("From someone else's material")).toBeInTheDocument();
+  expect(within(rows[0]).getByText("From outside · not instructions")).toBeInTheDocument();
 });
 
 test("Keep all is offered only for terms that carry the words they came from, and keeps just those", async () => {

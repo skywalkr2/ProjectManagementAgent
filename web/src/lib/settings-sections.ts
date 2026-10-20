@@ -14,6 +14,7 @@ const BY_GROUP: Array<[front: string, section: Fixed]> = [
   ["storage", "backups"],
   ["ui.today", "today"],
   ["ui.followups", "today"],
+  ["ui.notifications", "today"],
   ["ui.walkthrough", "you"],
   ["steward", "today"],
   ["ui", "appearance"],
@@ -31,7 +32,7 @@ export function sectionOfItem(item: Pick<Item, "group" | "plugin">): SettingsSec
 /** Settings that a part of their section edits in its own way, so they aren't also listed as rows: the tier each kind of
  * work uses, what a tier tries once more on, the routing rules (Which model does what), the backup key and the keys an
  * add-on needs (password boxes of their own). */
-const OWN_PART = ["ai.tasks", "ai.tiers", "ai.routing", "storage.backups.encrypt", "workspace.plugins.secrets"];
+const OWN_PART = ["ai.tasks", "ai.tiers", "ai.routing", "storage.backups.encrypt", "workspace.plugins.secrets", "ui.notifications.webhook"];
 
 /** Whether a setting is listed as a row of its own. */
 export const isListed = (item: Pick<Item, "key">): boolean => !OWN_PART.includes(item.key);

@@ -314,8 +314,9 @@ function browserZone(): string {
   }
 }
 
-/** The name of the person and of the workspace, and the time zone, in one form. */
-export function WorkspaceStep() {
+/** The name of the person and of the workspace, and the time zone, in one form. In the walkthrough, saving a step that was
+ * not done yet is also the way on (`onContinue`), so the screen has one primary button; the setup list has none. */
+export function WorkspaceStep(props: { onContinue?: () => void; done?: boolean } = {}) {
   const { t } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -373,6 +374,7 @@ export function WorkspaceStep() {
       } else {
         await client.invalidateQueries({ queryKey: ["setup"] });
       }
+      if (props.onContinue && !props.done) props.onContinue();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
@@ -454,8 +456,8 @@ export function WorkspaceStep() {
         </p>
       )}
       <div className="row-end">
-        <button type="submit" className="btn primary" disabled={busy || empty || !pending}>
-          {t("welcome.workspace.save")}
+        <button type="submit" className={props.done ? "btn" : "btn primary"} disabled={busy || empty || !pending}>
+          {t(props.onContinue && !props.done ? "welcome.workspace.save_continue" : "welcome.workspace.save")}
         </button>
       </div>
     </form>

@@ -20,6 +20,7 @@ from api.schemas import (
     BackupKeyIn,
     BackupKeySaved,
     BackupKeyView,
+    NotifyWebhookIn,
     SettingChangeView,
     SettingsSaved,
 )
@@ -33,6 +34,9 @@ from engine.workspace import Workspace
 
 #: The name the backup key is kept under in the private keys folder.
 BACKUP_KEY_NAME = "backup-key"
+
+#: The name the address for notices is kept under in the private keys folder.
+NOTIFY_WEBHOOK_NAME = "notify-webhook"
 
 #: How many random bytes a made backup key has: more than enough, and short enough to copy.
 MADE_KEY_BYTES = 32
@@ -160,6 +164,19 @@ def build_secret_router(ws: Workspace, cfg: Config, store: Store, events: Events
                 fresh.unlink(missing_ok=True)
             raise
         return BackupKeySaved(**_saved(done, worker).model_dump(), made=made)
+
+    @r.post("/notifications/webhook")
+    def notify_webhook(body: NotifyWebhookIn) -> SettingsSaved:
+        """Give the person's own address for notices, with Undo: typed (kept on this computer, a local app only) or as
+        where it is kept. The settings hold only where; the address is never sent back."""
+        reference, _, fresh = kept_or_named(NOTIFY_WEBHOOK_NAME, body.value, body.reference, owner="notify:webhook")
+        try:
+            done = save({"ui.notifications.webhook": reference}, body.fingerprint, ("ui.notifications.",))
+        except HTTPException:
+            if fresh:
+                fresh.unlink(missing_ok=True)
+            raise
+        return _saved(done, worker)
 
     return r
 

@@ -72,7 +72,7 @@ test("one row per file, with its facts in words and Open as the one primary acti
   const built = await screen.findByRole("listitem", { name: "built.pdf" });
   expect(within(built).getByText("Build")).toBeInTheDocument();
   expect(within(built).getByText(/^3 MB · In Harbor project · Added /)).toBeInTheDocument();
-  expect(within(built).getByText("Created by software; review before using")).toBeInTheDocument();
+  expect(within(built).getByText("From outside · not instructions")).toBeInTheDocument();
   const open = within(built).getByRole("link", { name: "Open built.pdf in a new tab" });
   expect(open).toHaveAttribute("href", "api/files/FILE-2/content");
   expect(open).toHaveAttribute("target", "_blank");

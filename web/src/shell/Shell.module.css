@@ -15,3 +15,5 @@
 }
 .main:focus { outline: none; }
 :global([data-narrow]) .main { padding-bottom: calc(var(--bottombar-h) + var(--space-6) + var(--toast-h, 0px) + env(safe-area-inset-bottom, 0px)); }
+/* While Ask is a pane, the content area gives up the width the pane takes (design 7.13). */
+.withPane { grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--detail-w); }

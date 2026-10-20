@@ -1,5 +1,7 @@
 /* The new-start walkthrough (design 7.8): the whole window, a header with the title and Finish later, the screens on the
-   left (a row across the top on a phone) and the open screen on the right. */
+   left (a row across the top on a phone), the open screen beside them and, from 1280px, why it matters in a pane of its
+   own on the right, as Settings has its help. The page uses the window's width; only running prose keeps its measure, and
+   a field is as wide as what it holds, never the whole pane. */
 .root {
   min-height: 100dvh; background: var(--canvas); color: var(--text);
   display: grid; grid-template-rows: auto minmax(0, 1fr); align-content: start;
@@ -13,7 +15,7 @@
 .title { display: grid; gap: var(--space-1); min-width: 0; flex: 1 1 auto; }
 .layout {
   display: grid; grid-template-columns: var(--settings-nav-w) minmax(0, 1fr); gap: var(--gutter);
-  padding: var(--page-pad); max-width: 1100px; width: 100%; margin: 0 auto; align-items: start;
+  padding: var(--page-pad); width: 100%; align-items: start;
 }
 .screens { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); position: sticky; top: var(--space-4); }
 .screen {
@@ -23,7 +25,11 @@
   font: inherit; font-size: var(--text-sm); line-height: var(--lh-sm); cursor: pointer;
 }
 .screen:hover { background: var(--surface-hover); }
-.screen[aria-current="step"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
+/* Where the person is: a bar down the left edge and the words "You are here", with no fill, so it never reads as a button
+   that has the cursor (the focus ring is the outline every control has). */
+.screen[aria-current="step"] { border-left: 3px solid var(--accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; font-weight: var(--weight-semibold); }
+.label { display: grid; gap: 0; min-width: 0; }
+.here { color: var(--accent-text); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-regular); }
 .mark { color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); flex: none; }
 .step {
   min-width: 0; display: grid; gap: var(--space-4); background: var(--surface); border: 1px solid var(--border);
@@ -33,6 +39,13 @@
 .step h2:focus { outline: none; }
 .step h2:focus-visible { box-shadow: none; }
 .why { margin: 0; color: var(--text-muted); max-width: var(--measure); }
+.body { display: grid; gap: var(--space-4); min-width: 0; align-content: start; }
+/* Fields hold what they hold: a name or a short value, a number, an address or a key; never the whole width of the pane. */
+.body :global(.field) :is(input, select):not([type="checkbox"], [type="radio"]) { max-width: var(--field-name); }
+.body :global(.field) :is(input[type="url"], input[type="password"], input[type="email"], input[type="search"]) { max-width: var(--field-max); }
+/* Skip is a quiet link beside the one primary button, which is the screen's own. */
+.skip { color: var(--accent-text); text-decoration: underline; }
+.skip:hover { color: var(--accent-hover); }
 .foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); }
 /* While toasts show, the screen leaves room under its buttons for them (they sit at the bottom of the window), so the
    buttons can be scrolled to just above them. */
@@ -54,3 +67,13 @@
 :global([data-narrow]) .screen { width: auto; border-color: var(--border); }
 :global([data-narrow]) .step { padding: var(--space-4); }
 :global([data-narrow]) .head { padding: var(--space-3) var(--space-4); }
+@media (min-width: 1280px) {
+  :global(:root:not([data-narrow])) .step {
+    grid-template-columns: minmax(0, 1fr) var(--rail-w); column-gap: var(--gutter); align-items: start;
+    grid-template-areas: "title help" "body help" "foot foot";
+  }
+  :global(:root:not([data-narrow])) .step h2 { grid-area: title; }
+  :global(:root:not([data-narrow])) .why { grid-area: help; padding-left: var(--space-4); border-left: 1px solid var(--border); }
+  :global(:root:not([data-narrow])) .body { grid-area: body; }
+  :global(:root:not([data-narrow])) .foot { grid-area: foot; }
+}

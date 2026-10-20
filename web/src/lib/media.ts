@@ -20,6 +20,20 @@ export function useMediaQuery(query: string): boolean {
   return on;
 }
 
+/** Whether the page is in the phone layout now (`data-narrow`, set by `useNarrow`), kept up to date, for a screen deep in the
+ * tree that has no need of the width itself. */
+export function useIsNarrow(): boolean {
+  const read = () => document.documentElement.hasAttribute("data-narrow");
+  const [narrow, setNarrow] = useState(read);
+  useEffect(() => {
+    setNarrow(read());
+    const watch = new MutationObserver(() => setNarrow(read()));
+    watch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-narrow"] });
+    return () => watch.disconnect();
+  }, []);
+  return narrow;
+}
+
 /** True below the configured width: the sidebar gives way to the bottom bar. Sets `data-narrow` on the page. */
 export function useNarrow(px: number): boolean {
   const narrow = useMediaQuery(`(max-width: ${px - 1}px)`);

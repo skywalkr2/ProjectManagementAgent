@@ -1,0 +1,35 @@
+/* The stages board (design 7.13): columns that fill the width. Up to about six columns wrap within the width, so the page
+   never scrolls sideways; more than that scroll inside the board's own frame. A phone stacks them. */
+.frame { min-width: 0; max-width: 100%; display: grid; gap: var(--space-2); }
+.frame[data-scroll] { overflow-x: auto; }
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr)); gap: var(--gutter); align-items: start; min-width: 0; }
+.frame[data-scroll] .board { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 256px; }
+:global([data-narrow]) .frame[data-scroll] .board { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); }
+:global([data-narrow]) .frame[data-scroll] { overflow-x: visible; }
+.column {
+  display: grid; gap: var(--space-2); align-content: start; min-width: 0; padding: var(--space-3);
+  background: var(--surface-sunk); border: 1px solid transparent; border-radius: var(--radius-lg);
+}
+.column[data-over] { border-color: var(--accent); background: var(--accent-soft); }
+.head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin: 0;
+  font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold);
+}
+.count { color: var(--text-muted); font-weight: var(--weight-regular); }
+.empty { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.card {
+  display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-3);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: grab;
+}
+.card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.title { min-width: 0; overflow-wrap: anywhere; font-weight: var(--weight-semibold); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.meta, .sub { margin: 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); overflow-wrap: anywhere; }
+.owners { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.avatar {
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-full);
+  background: var(--accent-soft); color: var(--accent-text); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold);
+}
+.reasons { margin: 0; padding-left: var(--space-4); font-size: var(--text-xs); line-height: var(--lh-xs); color: var(--text); overflow-wrap: anywhere; }
+.foot { display: flex; justify-content: flex-end; padding-top: var(--space-1); }

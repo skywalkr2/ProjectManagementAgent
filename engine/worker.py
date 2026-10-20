@@ -534,6 +534,24 @@ class Worker:
             cfg = self.cfg
         return kept_secrets.sweep(self.ws, self.store, cfg, now)
 
+    def notify_if_due(self) -> bool:
+        """Tell the person, outward and to them only, when something has come into Today's Decide group that they have
+        not been told about (design 7.19). Reads the settings as the files hold them now. Returns whether a notice
+        was delivered."""
+        from engine import notifications
+        from engine.config import ConfigError, load_config
+
+        try:
+            cfg = load_config(self.ws.config_dir, env=dict(os.environ))
+        except ConfigError:
+            cfg = self.cfg
+        sent = notifications.deliver_if_due(
+            self.ws, self.store, cfg, self.now(), handover=self.handover_state(), env=dict(os.environ)
+        )
+        if sent is not None:
+            self.events.changed()
+        return bool(sent and sent.ok)
+
     def roll_series_if_due(self) -> list[str]:
         """Once a day, move each open item on a series from an instance that has passed to the series' next one
         (design 6.7). Returns the ids of the items moved."""
@@ -785,6 +803,10 @@ class Worker:
                 self.roll_series_if_due()
             except Exception:  # the roll runs again the next time round; nothing here may stop the thread
                 log.exception("moving items to the next instance of a series failed")
+            try:
+                self.notify_if_due()
+            except Exception:  # the notice is tried again the next time round; nothing here may stop the thread
+                log.exception("sending a notice failed")
             self._read_now.wait(timeout=60)
             self._read_now.clear()
 

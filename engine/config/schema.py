@@ -1675,6 +1675,7 @@ DEFAULT_SHORTCUTS = {
     "send_back": "s",
     "copy": "c",
     "edit": "e",
+    "move": "m",
     "undo": "u",
     "hand_in": "n",
     "help": "?",
@@ -1814,6 +1815,96 @@ class BrandSettings(ConfigModel):
         return value
 
 
+class NotificationQuietHours(ConfigModel):
+    start: str = Field(
+        "21:00",
+        description="The time notices stop. A notice that comes up in quiet hours waits and is sent, once, when they "
+        "end.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    end: str = Field(
+        "07:00",
+        description="The time notices start again. Quiet hours may start in the evening and end the next morning.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+
+    @field_validator("start", "end", mode="before")
+    @classmethod
+    def _a_time_of_day(cls, value: Any) -> Any:
+        if isinstance(value, int) and not isinstance(value, bool) and 0 <= value < 24 * 60:
+            value = f"{value // 60:02d}:{value % 60:02d}"
+        if not isinstance(value, str) or not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", value):
+            raise ValueError("pick a time of day, such as 21:00")
+        return value
+
+    @model_validator(mode="after")
+    def _hours_differ(self) -> NotificationQuietHours:
+        if self.start == self.end:
+            raise ValueError("quiet hours must start and end at different times")
+        return self
+
+
+class NotificationsSettings(ConfigModel):
+    enabled: bool = Field(
+        False,
+        description="Tell me when something needs me. A notice goes out only for what Today's Decide group holds: a "
+        "decision waiting, work that stopped, a restart or a failing backup. Never for routine processing, and only "
+        "to you.",
+    )
+    browser: bool = Field(
+        True,
+        description="Show the notice in this browser, on the computer that runs the app, while the app is open there. "
+        "Needs the browser's permission.",
+        json_schema_extra={"enabled_by": "enabled"},
+    )
+    webhook: str | None = Field(
+        None,
+        description=SecretHint(
+            "A secret reference (env:NAME or file:/path) to your own address for notices, never the address itself."
+        ),
+        json_schema_extra={"enabled_by": "enabled"},
+    )
+    webhook_format: Literal["json", "plain"] = Field(
+        "json",
+        description="What the address expects. json: a small JSON message with the text in it, which chat apps take. "
+        "plain: the text alone as the body, which push-notification topics take.",
+        json_schema_extra={"enabled_by": "webhook"},
+    )
+    quiet_hours: NotificationQuietHours = Field(
+        default_factory=NotificationQuietHours, description="When notices wait instead of going out."
+    )
+    retry_minutes: int = Field(
+        10,
+        ge=1,
+        le=1440,
+        description="When a notice could not be delivered, how long to wait before trying again.",
+    )
+    message_one: str = Field(
+        "1 decision waiting for you",
+        min_length=1,
+        description="The notice when one thing needs you. Notices carry a count and never what an item is about.",
+    )
+    message_many: str = Field(
+        "{count} decisions waiting for you",
+        min_length=1,
+        description="The notice when several things need you; {count} is how many.",
+    )
+    test_message: str = Field(
+        "This is a test. You will get a note like this when something needs you.",
+        min_length=1,
+        description='The note "Send me a test" sends.',
+    )
+
+    @field_validator("message_one", "message_many", "test_message")
+    @classmethod
+    def _fills_in(cls, value: str) -> str:
+        try:
+            value.format(count=1)
+        except (KeyError, IndexError, ValueError):
+            raise ValueError("a notice can only use {count}") from None
+        return value
+
+
 class UiFile(FileModel):
     wording: dict[str, str] = Field(
         default_factory=dict,
@@ -1850,6 +1941,10 @@ class UiFile(FileModel):
         default_factory=SeriesSettings, description="What a series' page works out from its meetings' guest lists."
     )
     brand: BrandSettings = Field(default_factory=BrandSettings, description="The accent color and logo.")
+    notifications: NotificationsSettings = Field(
+        default_factory=NotificationsSettings,
+        description="Notices that something needs you, sent outward to you only: off until you turn them on.",
+    )
     theme: Literal["system", "light", "dark"] = Field(
         "system",
         description="Light or dark screens; system follows the computer's setting. Each person can change it for "

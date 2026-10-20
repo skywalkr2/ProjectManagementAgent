@@ -65,7 +65,7 @@ test("a change shows what was done, why, and the highlighted source", async () =
   await user.click(screen.getByRole("button", { name: "Show source" }));
   const mark = await screen.findByText((_, el) => el?.tagName === "MARK");
   expect(mark.textContent).toContain("proof copies will ship on November 5");
-  expect(screen.getByText("someone else's material")).toBeInTheDocument();
+  expect(screen.getByText("From outside · not instructions")).toBeInTheDocument();
 });
 
 test("Looks good acts at once and offers Undo", async () => {
@@ -80,6 +80,24 @@ test("Looks good acts at once and offers Undo", async () => {
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-REQ-1/looks-good"));
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-REQ-1/reopen"));
+});
+
+test("send back asks what to do differently, with Undo what it did first ticked, and unticking it keeps what it did", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [change("REQ-1")],
+    "POST changesets/CS-REQ-1/send-back": () => ({ request: "REQ-2" }),
+  });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: /More actions for Email from the printer/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Send back with a note" }));
+  expect(screen.getByLabelText("What should Helper do differently?")).toBeInTheDocument();
+  const undo = screen.getByRole("checkbox", { name: "Undo what it did first" });
+  expect(undo).toBeChecked();
+  await user.click(undo);
+  await user.type(screen.getByRole("textbox"), "Keep the dates, change the names");
+  await user.click(screen.getByRole("button", { name: "Send back" }));
+  await waitFor(() => expect(calls.find((c) => c.route.endsWith("send-back"))?.body).toEqual({ note: "Keep the dates, change the names", undo_first: false }));
 });
 
 test("send back needs a note", async () => {
@@ -136,6 +154,14 @@ test("when nothing was recorded, the assistant's summary says why", async () => 
   expect(screen.getByText(/Nothing recorded/)).toBeInTheDocument();
 });
 
+test("a change's line says what was done, as what it was, not as a count of things", async () => {
+  const item = change("REQ-8");
+  const op = (index: number, kind: string, status = "applied"): S["OpView"] => ({ ...item.changeset!.ops[0], index, op: kind, status: status as S["OpView"]["status"], group: `op${index}` });
+  item.changeset!.ops = [op(0, "action.add"), op(1, "action.add"), op(2, "action.add"), op(3, "note"), op(4, "question.add", "held"), op(5, "some.other.kind")];
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText(/Added 3 to-dos, Asked 1 question, Filed 1 note, Helper did 1 thing/)).toBeInTheDocument();
+});
 
 function noteChange(project: string | null): S["ChangeItem"] {
   const base = change("REQ-9");
@@ -486,4 +512,106 @@ test("every row that holds a question for the person starts open, whatever its s
   renderApp(<WhatChanged />);
   expect(await screen.findByRole("combobox", { name: "Who is “Robin”?" })).toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Who is “Sam”?" })).toBeInTheDocument();
+});
+
+// The phone's review mode (design 7.1): the items waiting for a look, one at a time, with Looks good, Send back and Next.
+describe("review mode on a phone", () => {
+  const routes = (items: S["ChangeItem"][], extra: Record<string, (b: unknown) => unknown> = {}) => ({
+    "GET changes": () => items,
+    "GET stages/requests": () => [],
+    "GET stages/records": () => [],
+    ...extra,
+  });
+  beforeEach(() => document.documentElement.setAttribute("data-narrow", ""));
+  afterEach(() => document.documentElement.removeAttribute("data-narrow"));
+
+  const first = () => change("A", { source_title: "First thing", changeset: { ...change("A").changeset!, summary: "Summary of the first thing." } });
+  const second = () => change("B", { source_title: "Second thing", changeset: { ...change("B").changeset!, summary: "Summary of the second thing." } });
+
+  test("is offered only on a phone and only for items waiting for a look", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes([first(), change("C", { state: "failed", source_title: "A failure", changeset: null })]));
+    renderApp(<WhatChanged />);
+    expect(await screen.findByRole("button", { name: "Review one at a time" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Review one at a time" }));
+    expect(await screen.findByRole("heading", { name: "1 of 1 to look at" })).toBeInTheDocument();
+    expect(screen.queryByText("A failure")).toBeNull();
+    document.documentElement.removeAttribute("data-narrow");
+  });
+
+  test("shows one item open with its summary, and Next goes to the following one and round again", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes([first(), second()]));
+    renderApp(<WhatChanged />);
+    await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
+    expect(await screen.findByText("Summary of the first thing.")).toBeInTheDocument();
+    expect(screen.queryByText("Summary of the second thing.")).toBeNull();
+    expect(screen.getByRole("heading", { name: "1 of 2 to look at" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Summary of the second thing.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "2 of 2 to look at" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Summary of the first thing.")).toBeInTheDocument();
+  });
+
+  test("Looks good approves the item on screen with Undo, and the next one takes its place", async () => {
+    const user = userEvent.setup();
+    let items = [first(), second()];
+    const calls = fakeApi(
+      routes(items, {
+        "GET changes": () => items,
+        "POST changesets/CS-A/looks-good": () => {
+          items = [second()];
+          return { ok: true };
+        },
+      }),
+    );
+    renderApp(<WhatChanged />);
+    await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
+    await screen.findByText("Summary of the first thing.");
+    await user.click(within(screen.getByRole("group", { name: "What to do with this one" })).getByRole("button", { name: "Looks good" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-A/looks-good")).toBe(true));
+    expect(await screen.findByText("Summary of the second thing.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "1 of 1 to look at" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  });
+
+  test("Send back opens the note for the item on screen, with no menu needed", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes([first()]));
+    renderApp(<WhatChanged />);
+    await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
+    await screen.findByText("Summary of the first thing.");
+    await user.click(within(screen.getByRole("group", { name: "What to do with this one" })).getByRole("button", { name: "Send back" }));
+    expect(await screen.findByLabelText(/^What should .* do differently\?/)).toBeInTheDocument();
+  });
+
+  test("when the last one is approved it says nothing is left, and one button goes back to the list", async () => {
+    const user = userEvent.setup();
+    let items = [first()];
+    fakeApi(
+      routes(items, {
+        "GET changes": () => items,
+        "POST changesets/CS-A/looks-good": () => {
+          items = [];
+          return { ok: true };
+        },
+      }),
+    );
+    renderApp(<WhatChanged />);
+    await user.click(await screen.findByRole("button", { name: "Review one at a time" }));
+    await screen.findByText("Summary of the first thing.");
+    await user.click(within(screen.getByRole("group", { name: "What to do with this one" })).getByRole("button", { name: "Looks good" }));
+    expect(await screen.findByRole("heading", { name: "Nothing left to look at." })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back to the list" }));
+    expect(await screen.findByRole("heading", { name: "What changed" })).toBeInTheDocument();
+  });
+
+  test("on a wide screen there is no review mode", async () => {
+    document.documentElement.removeAttribute("data-narrow");
+    fakeApi(routes([first()]));
+    renderApp(<WhatChanged />);
+    await screen.findByText("First thing");
+    expect(screen.queryByRole("button", { name: "Review one at a time" })).toBeNull();
+  });
 });

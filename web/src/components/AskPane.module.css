@@ -1,0 +1,12 @@
+/* Ask as a pane at the right edge, from the desktop width up (design 7.13): beside the content, under the header, with its
+   own scroll, so what the person is working on stays in view. */
+.pane {
+  grid-column: 3; grid-row: 2; position: sticky; top: var(--header-h); align-self: start;
+  height: calc(100dvh - var(--header-h)); overflow-y: auto; min-width: 0;
+  display: grid; gap: var(--space-3); align-content: start; padding: var(--space-4);
+  background: var(--surface); color: var(--text); border-left: 1px solid var(--border);
+}
+.title { margin: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }
+.pane:focus { outline: none; }
+.pane form { display: grid; gap: 0; }
+.pane :global(.what) { margin: 0 0 var(--space-1); }

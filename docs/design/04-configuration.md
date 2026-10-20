@@ -474,7 +474,7 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `wording`: overrides for the wording sheet, by key (the keys are in `web/src/wording/en.json`). Plugins' own wording is
   overridden the same way.
 - `shortcuts`: single keys by action, never firing while typing, no two the same: `next` j, `previous` k, `primary` a,
-  `send_back` s, `copy` c, `edit` e, `undo` u, `hand_in` n, `help` ?, `ask` /, `next_pane` ], `previous_pane` [. The last two
+  `send_back` s, `copy` c, `edit` e, `move` m (opens the stage menu of the card or row that has the cursor), `undo` u, `hand_in` n, `help` ?, `ask` /, `next_pane` ], `previous_pane` [. The last two
   move between the panes of a screen (7.7).
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
 - `toast_seconds` (7; 0 keeps toasts until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
@@ -502,15 +502,22 @@ These are all live (4.22).
 **Designed, not yet built:** tab order, hidden or reordered panels and header quick links (the sidebar of 7.1 replaced tabs;
 plugins add entries only under Work or Records); `config/status.yaml` (the status labels in use, their colors, and which count
 as open, done or at risk; a project's status is today a value list, 4.23); `config/calendar.yaml` (the week end that "this
-week" runs through, holidays, and per-team non-working days); `ui.notifications` (phase B, 7.19):
-- `enabled` (false);
-- `quiet_hours` (`{from: "20:00", to: "08:00"}`, in the person's time zone);
-- `targets`, a list, each with:
-  - `kind`: browser, mail or webhook;
-  - `to`: the person's own mail address, or the webhook address as a secret reference;
-  - for a webhook, `body`: a template of what is posted, so any chat app or push service fits without code;
-  - `detail`: count or titles, default count;
-  - `allowed_data`: the data levels whose titles may go to it, default open only.
+week" runs through, holidays, and per-team non-working days).
+
+**`ui.notifications`** (7.19; built, phase B-6b; `tests/test_notifications.py`, `web/src/components/Notifications.test.tsx`), in
+`ui.yaml`, shown in Settings under Today:
+- `enabled` (false): notices are opt-in;
+- `browser` (true): the open screen shows the notice as the browser's own notification, once the browser allows them;
+- `webhook` (none): the person's own address for notices as a secret reference, kept like a key (`POST
+  /api/notifications/webhook`; typed on a local app, or named as `env:`/`file:`); `webhook_format` (`json`, a small message
+  with the text under `text` and `content`; or `plain`, the text alone as the body, for push topics);
+- `quiet_hours` (`{start: "21:00", end: "07:00"}`, on the person's clock): nothing is sent in them, and what came up goes
+  out once when they end;
+- `retry_minutes` (10): the wait before a note that could not be delivered is tried again;
+- `message_one`, `message_many` (`{count}`) and `test_message`: the wording. A notice carries a count and never what an item
+  is about.
+Not built: `detail: titles` with `allowed_data` (titles to a target the person marks for a data level; restricted items
+never), and mail to the person themselves, which comes with mail sending (phase S1b).
 
 ## 4.12 `config/plugins/<plugin>.yaml`
 

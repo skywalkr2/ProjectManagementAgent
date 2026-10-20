@@ -62,6 +62,30 @@ def record_title(record):
     return record.id
 
 
+def card_details(record, people, project_names):
+    """What a card on the stages board shows beside the title, from the fields the record has: the name of its first
+    project, its owners as the workspace writes them, and its due date. A record without a field simply has none of it;
+    nothing here is specific to a kind of record."""
+    data = record.data
+    projects = data.get("projects")
+    first = projects[0] if isinstance(projects, list) and projects else data.get("project")
+    owners = data.get("owners")
+    if owners is None and data.get("owner"):
+        owners = [data["owner"]]
+    shown = []
+    for entry in owners if isinstance(owners, list) else []:
+        if isinstance(entry, dict) and entry.get("person"):
+            shown.append(people.owner(entry))
+        elif isinstance(entry, str) and entry:
+            shown.append(people.name(entry))
+    due = data.get("due")
+    return {
+        "project": project_names.get(first) if isinstance(first, str) else None,
+        "owners": shown,
+        "due": due if isinstance(due, str) and due else None,
+    }
+
+
 def applies(store, stage, record, view=None):
     """Whether a stage applies to this record: every one of its applies_if checks passes."""
     return all(entry_check(store, check, record, view).passed for check in stage.applies_if)

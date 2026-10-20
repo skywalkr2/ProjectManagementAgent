@@ -52,6 +52,10 @@ function request(extra: Partial<S["StageRequestView"]> = {}): S["StageRequestVie
   };
 }
 
+// These tests are about the list; the board has its own (StagesBoard.test.tsx).
+beforeEach(() => window.localStorage.setItem("stages.view", "list"));
+afterEach(() => window.localStorage.clear());
+
 const row = (title: string) => screen.getByRole("listitem", { name: title });
 
 test("a ready item shows where it is and one action to move on, and moving offers Undo", async () => {

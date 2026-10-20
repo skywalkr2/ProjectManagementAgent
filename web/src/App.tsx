@@ -6,7 +6,7 @@ import { api, type S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { showNewLines } from "./lib/queue-hold";
-import { useNarrow } from "./lib/media";
+import { useMediaQuery, useNarrow } from "./lib/media";
 import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
@@ -45,6 +45,7 @@ import { Walkthrough } from "./components/Walkthrough";
 import { BottomBar } from "./shell/BottomBar";
 import { Header } from "./shell/Header";
 import { Sidebar, useSidebarMode } from "./shell/Sidebar";
+import { useNeedsYouNotices } from "./components/NeedsYouNotices";
 import { EmptyState } from "./ui/EmptyState";
 import shell from "./shell/Shell.module.css";
 
@@ -68,12 +69,18 @@ function visible(selector: string): HTMLElement | null {
   return all.find((el) => el.getClientRects().length > 0) ?? all[0] ?? null;
 }
 
+/** The width from which Ask is a pane beside the content rather than a dialog over it. */
+const ASK_PANE_QUERY = "(min-width: 1440px)";
+
 function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive> }) {
   const { rc, live } = props;
   const { t } = useWords();
   const { undoLast, push } = useToasts();
   useSignInReturn();
+  useNeedsYouNotices();
   const narrow = useNarrow(rc.narrow_below_px);
+  // From the desktop width Ask is a pane at the right edge beside the content; below it, a dialog (design 7.13).
+  const wide = useMediaQuery(ASK_PANE_QUERY);
   const sidebar = useSidebarMode();
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
@@ -264,10 +271,11 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     }
   })();
 
+  const askPane = ask !== null && wide && !narrow && !inWalkthrough;
   const overlays = (
     <>
       <RestartAnnouncer what={what} />
-      {ask && (
+      {ask && !askPane && (
         <Ask
           initial={ask.question}
           feedbackTo={rc.feedback_to}
@@ -327,7 +335,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       <a href="#main" className="skip" onClick={skip}>
         {t("app.skip")}
       </a>
-      <div className={[shell.app, sidebar.expanded ? "" : shell.rail].filter(Boolean).join(" ")} data-nav={sidebar.expanded ? "full" : "rail"}>
+      <div className={[shell.app, sidebar.expanded ? "" : shell.rail, askPane ? shell.withPane : ""].filter(Boolean).join(" ")} data-nav={sidebar.expanded ? "full" : "rail"}>
         <Header
           rc={rc}
           live={live}
@@ -344,6 +352,17 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           {handIn && <HandIn onClose={() => setHandIn(false)} />}
           {body}
         </main>
+        {askPane && (
+          <Ask
+            pane
+            initial={ask?.question}
+            feedbackTo={rc.feedback_to}
+            onClose={() => {
+              setAsk(null);
+              restoreFocus(() => visible("[data-ask-button]"));
+            }}
+          />
+        )}
       </div>
       {narrow && (
         <BottomBar

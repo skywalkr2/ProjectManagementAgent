@@ -1,7 +1,8 @@
 // Handing something in (design 7.6): one box, and a required choice of whose words are in it. "Someone else's" (the
 // default) sends the box as pasted content (untrusted: material, never instructions) with an optional line saying what
 // to do with it, which is the PM's own note (trusted). "Mine" sends the box as the PM's note. Either way the assistant
-// always knows which words are the PM's.
+// always knows which words are the PM's. It opens as a drawer from the right (a full-screen sheet on a phone), so the screen
+// it was opened from stays in view; closing it with words in the box asks first.
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Label, Radio, RadioGroup, Text } from "react-aria-components";
@@ -9,6 +10,8 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { projectChoices } from "../lib/project-choices";
 import { useWords } from "../lib/wording";
+import { Button } from "../ui/Button";
+import { Drawer } from "../ui/Drawer";
 
 const OwnContext = createContext<{ ids: Set<string>; add: (id: string) => void }>({
   ids: new Set(),
@@ -82,15 +85,28 @@ export function HandIn(props: { onClose: () => void }) {
   };
 
   return (
-    <section className="panel" aria-labelledby="handin-title">
-      <h2 id="handin-title">{t("handin.title")}</h2>
+    <Drawer
+      open
+      wide
+      title={t("handin.title")}
+      onClose={props.onClose}
+      dirty={text.trim() !== "" || todo.trim() !== ""}
+      footer={
+        <>
+          <Button variant="ghost" onClick={props.onClose}>
+            {t("action.cancel")}
+          </Button>
+          <Button variant="primary" type="submit" form="handin-form" disabled={busy || !text.trim()}>
+            {t("handin.go")}
+          </Button>
+        </>
+      }
+    >
       <form
+        id="handin-form"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") props.onClose();
         }}
       >
         <div className="field">
@@ -178,15 +194,7 @@ export function HandIn(props: { onClose: () => void }) {
             {t("handin.project_hint")}
           </span>
         </div>
-        <div className="row-end">
-          <button type="button" className="btn quiet" onClick={props.onClose}>
-            {t("action.cancel")}
-          </button>
-          <button type="submit" className="btn primary" disabled={busy || !text.trim()}>
-            {t("handin.go")}
-          </button>
-        </div>
       </form>
-    </section>
+    </Drawer>
   );
 }

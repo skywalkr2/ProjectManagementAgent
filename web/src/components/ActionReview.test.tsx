@@ -495,3 +495,25 @@ test("five pieces of work or fewer have no Keep all and Drop all", async () => {
   const { section } = await openWith({ requests: Array.from({ length: 5 }, (_, i) => req(`r${i + 1}`)) });
   expect(within(section).queryByRole("button", { name: /More actions/ })).toBeNull();
 });
+
+test("a proposal that only adds a file has no 'what it will change' line saying it changes nothing", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    [PREVIEW_URL]: () => proposal({ ops: [], files: [{ name: "result.txt", media_type: "text/plain", size: 10, file_kind: "attachment" }] }),
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const dialog = await screen.findByRole("dialog", { name: "Make a note from notes.txt" });
+  expect(await within(dialog).findByText(/result\.txt/)).toBeInTheDocument();
+  expect(within(dialog).queryByText("What it will change")).toBeNull();
+  expect(within(dialog).queryByText("It won't change anything.")).toBeNull();
+});
+
+test("a proposal with nothing at all still says it changes nothing", async () => {
+  const user = userEvent.setup();
+  fakeApi({ [PREVIEW_URL]: () => proposal({ ops: [] }) });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const dialog = await screen.findByRole("dialog", { name: "Make a note from notes.txt" });
+  expect(await within(dialog).findByText("It won't change anything.")).toBeInTheDocument();
+});

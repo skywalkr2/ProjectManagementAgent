@@ -143,7 +143,7 @@ test("each row says where it came from, what it reaches and how much it was used
   expect(budgets).toHaveTextContent("Only First project");
   expect(budgets).toHaveTextContent("Never used");
   expect(catering).toHaveTextContent("Learned from incoming material");
-  expect(catering).toHaveTextContent("From someone else's material");
+  expect(catering).toHaveTextContent("From outside · not instructions");
   expect(catering).toHaveTextContent("All projects");
   await user.click(screen.getByRole("radio", { name: "Active (3)" }));
   const [glossary, lesson, ruleRow] = rows();

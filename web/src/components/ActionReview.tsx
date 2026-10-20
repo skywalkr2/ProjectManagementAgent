@@ -302,20 +302,24 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
               </ul>
             </div>
           )}
-          <section aria-labelledby={`${base}-changes`}>
-            <h3 id={`${base}-changes`} className="what">
-              {t("review.changes")}
-            </h3>
-            {shownOps.length > 0 ? (
-              <ul className="plain-list">
-                {shownOps.map((op, i) => (
-                  <li key={i}>{op.label.trim() || t("review.op_generic")}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="hint">{t("review.no_changes")}</p>
-            )}
-          </section>
+          {/* A proposal that only adds files or shows a preview has no changes to read back: saying "it won't change
+              anything" about something that creates a file would contradict it. */}
+          {(shownOps.length > 0 || (proposal.files.length === 0 && proposal.previews.length === 0)) && (
+            <section aria-labelledby={`${base}-changes`}>
+              <h3 id={`${base}-changes`} className="what">
+                {t("review.changes")}
+              </h3>
+              {shownOps.length > 0 ? (
+                <ul className="plain-list">
+                  {shownOps.map((op, i) => (
+                    <li key={i}>{op.label.trim() || t("review.op_generic")}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="hint">{t("review.no_changes")}</p>
+              )}
+            </section>
+          )}
           {proposal.files.length > 0 && (
             <section aria-labelledby={`${base}-files`}>
               <h3 id={`${base}-files`} className="what">

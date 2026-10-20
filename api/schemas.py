@@ -1102,6 +1102,9 @@ class StageView(BaseModel):
     stages: list[StageLabel]
     checks: list[StageCheckView]
     ready: bool
+    project: str | None = Field(None, description="The name of the item's first project, when it has one.")
+    owners: list[str] = Field(default_factory=list, description="The item's owners, in the workspace's owner format.")
+    due: str | None = Field(None, description="The item's due date, when it has one.")
 
 
 class StageHistoryEntry(BaseModel):
@@ -3785,6 +3788,68 @@ class AddonSecretIn(BaseModel):
     )
     reference: str | None = Field(None, description="Where the secret is kept instead: env:NAME or file:/path.")
     fingerprint: str
+
+
+class NotifyWebhookView(BaseModel):
+    """Where the person's own address for notices is read from, never the address."""
+
+    where: Literal["none", "kept", "env", "file", "other"] = Field(
+        description="none: no address yet; kept: typed on this screen and kept by the app on this computer; env: read "
+        "from a named environment variable; file: read from a file of the person's own; other: another way of "
+        "keeping it."
+    )
+    name: str | None = Field(None, description="The variable's name, or the file's path; empty otherwise.")
+
+
+class NotificationsView(BaseModel):
+    """What the notices (design 7.19) are set to, and what each way of getting them can do now."""
+
+    enabled: bool = Field(description="Notices are on. They are off until the person turns them on.")
+    browser: bool = Field(description="The browser target is on (it also needs the browser's own permission).")
+    webhook: NotifyWebhookView
+    quiet_now: bool = Field(description="The person's clock is inside quiet hours: nothing is sent until they end.")
+    mail_ready: bool = Field(
+        description="Mail to the person themselves can be used. False until the app can send mail: the screen says "
+        "that mail comes with mail sending."
+    )
+    problem: str | None = Field(
+        None,
+        description="Why the last note to the address didn't arrive, in plain words; left out once one has arrived.",
+    )
+
+
+class NotifyWaiting(BaseModel):
+    """What the open screen shows a browser notice for."""
+
+    browser: bool = Field(
+        description="Show browser notices now: they are on, the browser target is on, and it is not quiet."
+    )
+    keys: list[str] = Field(description="One key for each item in Today's Decide group; a key not seen before is news.")
+    message: str = Field(description="The notice for these items: a count and the action, never what they are about.")
+
+
+class NotifyWebhookIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: str | None = Field(
+        None,
+        description="The address typed on the screen. A local app keeps it in its private folder and writes only where "
+        "it is kept; a hosted app refuses it. Never stored in the settings or sent back.",
+    )
+    reference: str | None = Field(None, description="Where the address is kept instead: env:NAME or file:/path.")
+    fingerprint: str
+
+
+class NotifyTestIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target: Literal["browser", "webhook"] = Field(description="Which way of getting notices to try.")
+
+
+class NotifyTestResult(BaseModel):
+    ok: bool = Field(description="The note was sent (webhook) or is ready to show (browser).")
+    message: str = Field(description="The test note's words; the browser shows them itself.")
+    problem: str | None = Field(None, description="Why it was not sent, in plain words.")
 
 
 class BackupKeyView(BaseModel):

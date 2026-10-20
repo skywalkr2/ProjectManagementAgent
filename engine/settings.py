@@ -58,6 +58,8 @@ BASIC = frozenset(
         "ui.density",
         "ui.brand.color",
         "ui.brand.logo",
+        "ui.notifications.enabled",
+        "ui.notifications.browser",
     }
 )
 #: Keys the screens never change: a wrong value would stop the app from being reached or starting, or the setting is

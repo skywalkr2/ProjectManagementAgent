@@ -1015,3 +1015,85 @@ describe("Done", () => {
     expect(await within(extras).findByRole("heading", { name: "Connect the tidy-up tool" })).toBeInTheDocument();
   });
 });
+
+// The look (design 7.8): the list marks only what is done or skipped and where the person is; one primary button, with
+// Skip as a quiet button; and the screen's own form, as wide as what it holds.
+describe("the look", () => {
+  const primaries = (root: HTMLElement) => Array.from(root.querySelectorAll("button")).filter((b) => /primary/.test(b.className) && !b.disabled);
+
+  test("the list has no \"Not done yet\" on a row, marks done and skipped ones, and says which screen is open", async () => {
+    fakeApi(routes({}, CORE.map((id) => step(id, id === "workspace" ? { done: true } : id === "ai" ? { skipped: true } : {})), { step: "people" }));
+    open();
+    await screenTitle();
+    const list = screen.getByRole("navigation", { name: "Setup steps" });
+    expect(within(list).queryByText("Not done yet")).toBeNull();
+    const row = (id: string) => list.querySelector<HTMLElement>(`[data-screen="${id}"]`)!;
+    expect(row("you")).toHaveTextContent("Done");
+    expect(row("ai")).toHaveTextContent("Skipped");
+    const here = row("people");
+    expect(here).toHaveAttribute("aria-current", "step");
+    expect(here).toHaveTextContent("You are here");
+    expect(within(list).getAllByText("You are here")).toHaveLength(1);
+  });
+
+  test("a screen not done yet has one primary button, and Skip is the quiet one beside it", async () => {
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "people" }));
+    open();
+    await screenTitle();
+    const main = screen.getByRole("main");
+    expect(primaries(main).map((b) => b.textContent)).toEqual(["Add people"]);
+    expect(within(main).getByRole("button", { name: "Skip for now" })).toBeEnabled();
+  });
+
+  test("a screen that is done has one primary button, Next", async () => {
+    fakeApi(routes({}, CORE.map((id) => step(id, id === "people" ? { done: true } : {})), { step: "people" }));
+    open();
+    await screenTitle();
+    const main = screen.getByRole("main");
+    expect(primaries(main).map((b) => b.textContent)).toEqual(["Next"]);
+  });
+
+  test("You: the one primary button is Save and continue, which saves the form and opens the next screen", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(routes({ "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) }));
+    open();
+    const name = await screen.findByLabelText("Workspace name");
+    const main = screen.getByRole("main");
+    expect(primaries(main)).toHaveLength(0);
+    await user.clear(name);
+    await user.click(name);
+    await user.paste("Harbor work");
+    await waitFor(() => expect(primaries(main).map((b) => b.textContent)).toEqual(["Save and continue"]), { timeout: 5000 });
+    expect(within(main).queryByRole("button", { name: "Next" })).toBeNull();
+    await user.click(within(main).getByRole("button", { name: "Save and continue" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
+    expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "workspace.name": "Harbor work" } });
+  });
+
+  test("a screen that was already done saves with a plain Save and stays where it is", async () => {
+    const user = userEvent.setup();
+    let name = "Workspace";
+    fakeApi(
+      routes(
+        {
+          "GET settings": () => ({ fingerprint: "fp-1", items: SETTINGS.map((i) => (i.key === "workspace.name" ? { ...i, value: name } : i)) }),
+          "POST settings": (body) => {
+            name = String((body as { changes: Record<string, string> }).changes["workspace.name"]);
+            return { changes: [], fingerprint: "fp-2", needs_restart: false };
+          },
+        },
+        CORE.map((id) => step(id, id === "workspace" ? { done: true } : {})),
+      ),
+    );
+    open();
+    const box = await screen.findByLabelText("Workspace name");
+    await user.clear(box);
+    await user.click(box);
+    await user.paste("Harbor work");
+    const save = await screen.findByRole("button", { name: "Save" });
+    await waitFor(() => expect(save).toBeEnabled(), { timeout: 5000 });
+    await user.click(save);
+    await waitFor(() => expect(save).toBeDisabled(), { timeout: 5000 });
+    expect(screen.getByRole("heading", { level: 2, name: "You" })).toBeInTheDocument();
+  });
+});

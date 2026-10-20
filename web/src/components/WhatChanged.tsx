@@ -6,6 +6,7 @@ import { useAct } from "../lib/act";
 import { dayAndTime, day } from "../lib/dates";
 import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
+import { useIsNarrow } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { recordView, viewHref } from "../lib/views";
 import { useEstimate, useSpent } from "../lib/money";
@@ -23,6 +24,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
+import { ReviewMode } from "./ReviewMode";
 
 type Filter = "attention" | "done" | "all";
 const ATTENTION = new Set(["queued", "running", "review", "needs_you"]);
@@ -116,6 +118,10 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   );
   const stageRows = (filter === "attention" ? stageToday.count : 0) + (firstLine ? 1 : 0);
   const filters: Filter[] = ["attention", "done", "all"];
+  // On a phone the items waiting for a look can be gone through one at a time (design 7.1).
+  const phone = useIsNarrow() && !props.compact;
+  const [reviewing, setReviewing] = useState(false);
+  const reviewable = rows.filter((c) => c.state === "review" && !!c.changeset);
   // A list with nothing in it has nothing to hold still: what arrives shows at once, so the first results after a first go are
   // one list, never "5 new · Show" over an empty one.
   useEffect(() => {
@@ -168,10 +174,24 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
             {t("action.try_again")}
           </button>
         </p>
+      ) : reviewing && phone ? (
+        <ReviewMode
+          items={reviewable}
+          render={(item) => <ChangeRow key={item.id} item={item} reveal={0} onOpenGuide={props.onOpenGuide} open />}
+          canSendBack={(item) => item.state === "review" && !!item.changeset}
+          onClose={() => setReviewing(false)}
+        />
       ) : rows.length === 0 && stageRows === 0 ? (
         <p className="empty">{t(filter === "attention" ? "changes.empty_attention" : "changes.empty")}</p>
       ) : (
         <ol className="queue">
+          {phone && reviewable.length > 0 && (
+            <li className="review-start">
+              <button type="button" className="btn primary" onClick={() => setReviewing(true)}>
+                {t("review.start")}
+              </button>
+            </li>
+          )}
           {firstLine && <FirstGoRow first={first} />}
           {filter === "attention" && <StageTodayRows today={stageToday} />}
           {rows.map((item) => (
@@ -423,6 +443,42 @@ function firstLine(text: string | null): string {
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type TN = (key: string, n: number, vars?: Record<string, string | number>) => string;
 
+// What each kind of op did, in the words the screens use for it (the same grouping Today's review lines use).
+const DID: Record<string, string> = {
+  "action.add": "actions_added",
+  "action.close": "actions_closed",
+  "question.add": "questions",
+  note: "notes",
+  fact: "recorded",
+  "event.add": "recorded",
+  "event.set": "recorded",
+  "series.add": "recorded",
+  "series.link": "recorded",
+  "record.set": "recorded",
+  "record.log": "recorded",
+  "person.add": "people",
+  "project.add": "projects",
+  "text.draft": "drafts",
+  "report.draft": "drafts",
+  "text.propose": "drafts",
+};
+const DID_ORDER = ["actions_added", "actions_closed", "questions", "notes", "recorded", "people", "projects", "drafts"];
+
+/** What the changes did, said as what they were: "Added 3 to-dos, Filed 1 note". Ops of a kind with no words here are
+ * counted as "did N things", so nothing is left out. */
+function didText(ops: S["OpView"][], t: T, tn: TN): string {
+  const counts = new Map<string, number>();
+  let other = 0;
+  for (const op of ops) {
+    const group = DID[op.op];
+    if (group) counts.set(group, (counts.get(group) ?? 0) + 1);
+    else other += 1;
+  }
+  const said = DID_ORDER.filter((g) => counts.has(g)).map((g) => tn(`changes.did_what.${g}`, counts.get(g)!));
+  if (other) said.push(tn("changes.did", other));
+  return said.join(t("changes.did_what.join"));
+}
+
 function subLine(item: S["ChangeItem"], t: T, tn: TN): string {
   const when = dayAndTime(item.created_at);
   if (item.state === "queued" || item.state === "running") return t("changes.sub.waiting", { when });
@@ -430,7 +486,7 @@ function subLine(item: S["ChangeItem"], t: T, tn: TN): string {
   if (item.state === "needs_you" || item.state === "failed") return t("changes.sub.stopped", { when });
   const ops = item.changeset?.ops ?? [];
   const held = ops.filter((o) => o.status === "held" || o.ask?.status === "open").length;
-  const did = ops.length ? tn("changes.did", ops.length) : t("changes.did_nothing");
+  const did = ops.length ? didText(ops, t, tn) : t("changes.did_nothing");
   return held ? t("changes.sub.held", { did, held: tn("changes.held", held), when }) : t("changes.sub.did", { did, when });
 }
 
@@ -573,6 +629,8 @@ function SendBackForm(props: { cs: string; onDone: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const [note, setNote] = useState("");
+  // Starting again from nothing is the usual choice; keeping what it did and changing it from there is the other.
+  const [undoFirst, setUndoFirst] = useState(true);
   const area = useRef<HTMLTextAreaElement>(null);
   useEffect(() => area.current?.focus(), []);
   return (
@@ -581,7 +639,7 @@ function SendBackForm(props: { cs: string; onDone: () => void }) {
       onSubmit={(e) => {
         e.preventDefault();
         void act(
-          () => api.sendBack(props.cs, note),
+          () => api.sendBack(props.cs, note, undoFirst),
           () => ({ message: t("toast.sent_back") }),
         ).then(props.onDone);
       }}
@@ -590,6 +648,10 @@ function SendBackForm(props: { cs: string; onDone: () => void }) {
         {t("changes.send_back_label")}
       </label>
       <textarea id={`sb-${props.cs}`} ref={area} value={note} onChange={(e) => setNote(e.target.value)} required />
+      <label className="check-line">
+        <input type="checkbox" checked={undoFirst} onChange={(e) => setUndoFirst(e.target.checked)} />
+        {t("changes.send_back_undo")}
+      </label>
       <div className="row-end">
         <button type="button" className="btn quiet" onClick={props.onDone}>
           {t("action.cancel")}
