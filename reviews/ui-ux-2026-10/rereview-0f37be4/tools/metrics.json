@@ -1,0 +1,4361 @@
+{
+ "1440 today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "1440 work/changed": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Review",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "What changed"
+ },
+ "1440 work/since": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Since yesterday"
+ },
+ "1440 work/followups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "1440 work/open": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Overdue",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "To-dos and questions"
+ },
+ "1440 work/outgoing": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Waiting to go out"
+ },
+ "1440 work/stages": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "1440 records/projects": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Projects"
+ },
+ "1440 records/people": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "1440 records/files": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "14px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Files"
+ },
+ "1440 records/knowledge": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Review 3 rules Quill hasn't used.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Knowledge"
+ },
+ "1440 records/rules-review": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Rule",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Rules to look over"
+ },
+ "1440 sources": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Inbox folder",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Sources"
+ },
+ "1440 addons": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Add a catalog",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Add-ons"
+ },
+ "1440 settings": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 settings/you": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 settings/ai": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 settings/ai-compare": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Compare what accounts can do"
+ },
+ "1440 settings/backups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 settings/today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "A chat app or a push topic",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 settings/appearance": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 settings/lists": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Project group",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 settings/advanced": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440 setup": {
+  "headerH": 85,
+  "mainL": 268,
+  "mainW": 1148,
+  "contentL": 293,
+  "contentR": 1391,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 3,
+  "deepest": "Recommended",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": null
+ },
+ "1440 quality": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Quality"
+ },
+ "1440 styleguide": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px",
+   "28px"
+  ],
+  "weights": [
+   "400",
+   "500",
+   "600"
+  ],
+  "families": [
+   "system-ui",
+   "ui-monospace"
+  ],
+  "borderDepth": 2,
+  "deepest": "--canvas",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Style guide"
+ },
+ "1440 records/project/PRJ-1": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "≈",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "The Salt Orchard launch"
+ },
+ "1440 records/person/PER-2": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "To-do",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Maya Okafor"
+ },
+ "390 today": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "390 work/changed": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Review one at a time",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "What changed"
+ },
+ "390 work/since": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Since yesterday"
+ },
+ "390 work/followups": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "390 work/open": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Overdue",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "To-dos and questions"
+ },
+ "390 work/outgoing": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Waiting to go out"
+ },
+ "390 work/stages": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Not started",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "390 records/projects": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Projects"
+ },
+ "390 records/people": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "390 records/files": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "14px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Files"
+ },
+ "390 records/knowledge": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Review 3 rules Quill hasn't used.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Knowledge"
+ },
+ "390 records/rules-review": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Rule",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Rules to look over"
+ },
+ "390 sources": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Inbox folder",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Sources"
+ },
+ "390 addons": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Add a catalog",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Add-ons"
+ },
+ "390 settings": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 settings/you": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 settings/ai": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 settings/ai-compare": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Compare what accounts can do"
+ },
+ "390 settings/backups": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 settings/today": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "A chat app or a push topic",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 settings/appearance": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 settings/lists": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Project group",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 settings/advanced": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390 setup": {
+  "headerH": 125,
+  "mainL": 16,
+  "mainW": 358,
+  "contentL": 33,
+  "contentR": 357,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 3,
+  "deepest": "Recommended",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": null
+ },
+ "390 quality": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Quality"
+ },
+ "390 styleguide": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px",
+   "28px"
+  ],
+  "weights": [
+   "400",
+   "500",
+   "600"
+  ],
+  "families": [
+   "system-ui",
+   "ui-monospace"
+  ],
+  "borderDepth": 2,
+  "deepest": "--canvas",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Style guide"
+ },
+ "390 records/project/PRJ-1": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "≈",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "The Salt Orchard launch"
+ },
+ "390 records/person/PER-2": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "To-do",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Maya Okafor"
+ },
+ "1920 today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "1920 work/changed": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Review",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "What changed"
+ },
+ "1920 work/since": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Since yesterday"
+ },
+ "1920 work/followups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "1920 work/open": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Overdue",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "To-dos and questions"
+ },
+ "1920 work/outgoing": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Waiting to go out"
+ },
+ "1920 work/stages": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "1920 records/projects": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Projects"
+ },
+ "1920 records/people": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "1920 records/files": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "14px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Files"
+ },
+ "1920 records/knowledge": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Review 3 rules Quill hasn't used.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Knowledge"
+ },
+ "1920 records/rules-review": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Rule",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Rules to look over"
+ },
+ "1920 sources": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Inbox folder",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Sources"
+ },
+ "1920 addons": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Add a catalog",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Add-ons"
+ },
+ "1920 settings": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 settings/you": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 settings/ai": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 settings/ai-compare": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Compare what accounts can do"
+ },
+ "1920 settings/backups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 settings/today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "A chat app or a push topic",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 settings/appearance": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 settings/lists": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Project group",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 settings/advanced": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1920 setup": {
+  "headerH": 85,
+  "mainL": 268,
+  "mainW": 1628,
+  "contentL": 293,
+  "contentR": 1871,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 3,
+  "deepest": "Recommended",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": null
+ },
+ "1920 quality": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 0,
+  "deepest": "",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Quality"
+ },
+ "1920 styleguide": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px",
+   "28px"
+  ],
+  "weights": [
+   "400",
+   "500",
+   "600"
+  ],
+  "families": [
+   "system-ui",
+   "ui-monospace"
+  ],
+  "borderDepth": 2,
+  "deepest": "--canvas",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Style guide"
+ },
+ "1920 records/project/PRJ-1": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "≈",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "The Salt Orchard launch"
+ },
+ "1920 records/person/PER-2": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1688,
+  "contentL": 256,
+  "contentR": 1896,
+  "vw": 1920,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "To-do",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Maya Okafor"
+ },
+ "1024 today": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 960,
+  "contentL": 88,
+  "contentR": 1000,
+  "vw": 1024,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "1024 work/followups": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 960,
+  "contentL": 88,
+  "contentR": 1000,
+  "vw": 1024,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "1024 settings/ai": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 960,
+  "contentL": 88,
+  "contentR": 1000,
+  "vw": 1024,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1024 records/people": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 960,
+  "contentL": 88,
+  "contentR": 1000,
+  "vw": 1024,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "1024 work/stages": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 960,
+  "contentL": 88,
+  "contentR": 1000,
+  "vw": 1024,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "1280 today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1048,
+  "contentL": 256,
+  "contentR": 1256,
+  "vw": 1280,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "1280 work/followups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1048,
+  "contentL": 256,
+  "contentR": 1256,
+  "vw": 1280,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "1280 settings/ai": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1048,
+  "contentL": 256,
+  "contentR": 1256,
+  "vw": 1280,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1280 records/people": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1048,
+  "contentL": 256,
+  "contentR": 1256,
+  "vw": 1280,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "1280 work/stages": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1048,
+  "contentL": 256,
+  "contentR": 1256,
+  "vw": 1280,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "2560 today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 2328,
+  "contentL": 256,
+  "contentR": 2536,
+  "vw": 2560,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "2560 work/followups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 2328,
+  "contentL": 256,
+  "contentR": 2536,
+  "vw": 2560,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "2560 settings/ai": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 2328,
+  "contentL": 256,
+  "contentR": 2536,
+  "vw": 2560,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "2560 records/people": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 2328,
+  "contentL": 256,
+  "contentR": 2536,
+  "vw": 2560,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "2560 work/stages": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 2328,
+  "contentL": 256,
+  "contentR": 2536,
+  "vw": 2560,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "1440-dark today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "1440-dark work/followups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "1440-dark settings/ai": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1440-dark records/people": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "1440-dark work/stages": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1208,
+  "contentL": 256,
+  "contentR": 1416,
+  "vw": 1440,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "390-dark today": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "390-dark work/followups": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "390-dark settings/ai": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "390-dark records/people": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "390-dark work/stages": {
+  "headerH": 48,
+  "mainL": 0,
+  "mainW": 390,
+  "contentL": 16,
+  "contentR": 374,
+  "vw": 390,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Not started",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "1100 today": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 1036,
+  "contentL": 88,
+  "contentR": 1076,
+  "vw": 1100,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "1100 work/followups": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 1036,
+  "contentL": 88,
+  "contentR": 1076,
+  "vw": 1100,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "1100 settings/ai": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 1036,
+  "contentL": 88,
+  "contentR": 1076,
+  "vw": 1100,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1100 records/people": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 1036,
+  "contentL": 88,
+  "contentR": 1076,
+  "vw": 1100,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "1100 work/stages": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 1036,
+  "contentL": 88,
+  "contentR": 1076,
+  "vw": 1100,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "800 today": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 736,
+  "contentL": 88,
+  "contentR": 776,
+  "vw": 800,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "800 work/followups": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 736,
+  "contentL": 88,
+  "contentR": 776,
+  "vw": 800,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "800 settings/ai": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 736,
+  "contentL": 88,
+  "contentR": 776,
+  "vw": 800,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "800 records/people": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 736,
+  "contentL": 88,
+  "contentR": 776,
+  "vw": 800,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "800 work/stages": {
+  "headerH": 56,
+  "mainL": 64,
+  "mainW": 736,
+  "contentL": 88,
+  "contentR": 776,
+  "vw": 800,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "1300 today": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1068,
+  "contentL": 256,
+  "contentR": 1276,
+  "vw": 1300,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Setup 3 of 5",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Today"
+ },
+ "1300 work/followups": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1068,
+  "contentL": 256,
+  "contentR": 1276,
+  "vw": 1300,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "You",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Follow-ups"
+ },
+ "1300 settings/ai": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1068,
+  "contentL": 256,
+  "contentR": 1276,
+  "vw": 1300,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "Stand-in account does Quill's work.",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Settings"
+ },
+ "1300 records/people": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1068,
+  "contentL": 256,
+  "contentR": 1276,
+  "vw": 1300,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "15px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 1,
+  "deepest": "People",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "People"
+ },
+ "1300 work/stages": {
+  "headerH": 56,
+  "mainL": 232,
+  "mainW": 1068,
+  "contentL": 256,
+  "contentR": 1276,
+  "vw": 1300,
+  "hscroll": false,
+  "ids": [],
+  "enums": [],
+  "loading": 0,
+  "glyphs": "",
+  "upper": 0,
+  "fontSizes": [
+   "12px",
+   "14px",
+   "18px",
+   "22px"
+  ],
+  "weights": [
+   "400",
+   "600"
+  ],
+  "families": [
+   "system-ui"
+  ],
+  "borderDepth": 2,
+  "deepest": "Review the next project note",
+  "small": [],
+  "smallCount": 0,
+  "inner": [],
+  "h1": "Stages"
+ },
+ "today-queue 1280": {
+  "firstTop": 257,
+  "count": 30,
+  "visible": 6,
+  "titles": [
+   "Cover finish for the hardcover: matte or soft-touch?",
+   "Launch reading on Dec 1: 6 pm or 7 pm?",
+   "Identify “Maya”",
+   "Close 'Send two spine options'?",
+   "Drop 'Confirm the seating plan for the launch reading'?",
+   "Cover review moved to Thu, Oct 22 · 2 things to check",
+   "Back up your work",
+   "Approve the back-cover copy",
+   "Drop 'Settle the endpaper color'",
+   "Look over 3 questions Quill wrote",
+   "Look over 2 things Quill did",
+   "Drop 'Confirm the seating plan for the launch reading'",
+   "Look over 3 to-dos Quill added",
+   "Proof copies ship on Nov 5 by courier.",
+   "Send the guest list for the launch reading",
+   "Corner Lamp Books can host either time. Which do you prefer?",
+   "Check 1 thing Quill recorded",
+   "Kept this note for later.",
+   "Reply to Corner Lamp Books about the paperback edition",
+   "RulesReview 3 rules unused in the last 30 daysQuill received these rul",
+   "File 2 items under a project",
+   "Send 2 to-dos to Ines Duarte",
+   "Send 1 question to Jun Park",
+   "Send 2 items to Maya Okafor",
+   "Send 2 to-dos to Sam Rivera",
+   "Send 5 items to Theo Brandt",
+   "Follow up with Ines Duarte",
+   "Follow up with Sam Rivera",
+   "Follow up with Maya Okafor",
+   "Follow up with Theo Brandt"
+  ],
+  "inspector": null,
+  "todoLines": [
+   2,
+   1,
+   2,
+   3,
+   2
+  ],
+  "focused": "Decision\n\nCover finish for the hardcover: matte or soft-touc"
+ },
+ "today-queue 390": {
+  "firstTop": 261,
+  "count": 30,
+  "visible": 6,
+  "titles": [
+   "Cover finish for the hardcover: matte or soft-touch?",
+   "Launch reading on Dec 1: 6 pm or 7 pm?",
+   "Identify “Maya”",
+   "Close 'Send two spine options'?",
+   "Drop 'Confirm the seating plan for the launch reading'?",
+   "Cover review moved to Thu, Oct 22 · 2 things to check",
+   "Back up your work",
+   "Approve the back-cover copy",
+   "Drop 'Settle the endpaper color'",
+   "Look over 3 questions Quill wrote",
+   "Look over 2 things Quill did",
+   "Drop 'Confirm the seating plan for the launch reading'",
+   "Look over 3 to-dos Quill added",
+   "Proof copies ship on Nov 5 by courier.",
+   "Send the guest list for the launch reading",
+   "Corner Lamp Books can host either time. Which do you prefer?",
+   "Check 1 thing Quill recorded",
+   "Kept this note for later.",
+   "Reply to Corner Lamp Books about the paperback edition",
+   "RulesReview 3 rules unused in the last 30 daysQuill received these rul",
+   "File 2 items under a project",
+   "Send 2 to-dos to Ines Duarte",
+   "Send 1 question to Jun Park",
+   "Send 2 items to Maya Okafor",
+   "Send 2 to-dos to Sam Rivera",
+   "Send 5 items to Theo Brandt",
+   "Follow up with Ines Duarte",
+   "Follow up with Sam Rivera",
+   "Follow up with Maya Okafor",
+   "Follow up with Theo Brandt"
+  ],
+  "inspector": null,
+  "todoLines": [],
+  "focused": "Decision\n\nCover finish for the hardcover: matte or soft-touc"
+ },
+ "today-queue 1440": {
+  "firstTop": 257,
+  "count": 30,
+  "visible": 9,
+  "titles": [
+   "Cover finish for the hardcover: matte or soft-touch?",
+   "Launch reading on Dec 1: 6 pm or 7 pm?",
+   "Identify “Maya”",
+   "Close 'Send two spine options'?",
+   "Drop 'Confirm the seating plan for the launch reading'?",
+   "Cover review moved to Thu, Oct 22 · 2 things to check",
+   "Back up your work",
+   "Approve the back-cover copy",
+   "Drop 'Settle the endpaper color'",
+   "Look over 3 questions Quill wrote",
+   "Look over 2 things Quill did",
+   "Drop 'Confirm the seating plan for the launch reading'",
+   "Look over 3 to-dos Quill added",
+   "Proof copies ship on Nov 5 by courier.",
+   "Send the guest list for the launch reading",
+   "Corner Lamp Books can host either time. Which do you prefer?",
+   "Check 1 thing Quill recorded",
+   "Kept this note for later.",
+   "Reply to Corner Lamp Books about the paperback edition",
+   "RulesReview 3 rules unused in the last 30 daysQuill received these rul",
+   "File 2 items under a project",
+   "Send 2 to-dos to Ines Duarte",
+   "Send 1 question to Jun Park",
+   "Send 2 items to Maya Okafor",
+   "Send 2 to-dos to Sam Rivera",
+   "Send 5 items to Theo Brandt",
+   "Follow up with Ines Duarte",
+   "Follow up with Sam Rivera",
+   "Follow up with Maya Okafor",
+   "Follow up with Theo Brandt"
+  ],
+  "inspector": null,
+  "todoLines": [
+   2,
+   1,
+   2,
+   3,
+   2
+  ],
+  "focused": "Decision\n\nCover finish for the hardcover: matte or soft-touc"
+ },
+ "today-queue 1920": {
+  "firstTop": 257,
+  "count": 30,
+  "visible": 12,
+  "titles": [
+   "Cover finish for the hardcover: matte or soft-touch?",
+   "Launch reading on Dec 1: 6 pm or 7 pm?",
+   "Identify “Maya”",
+   "Close 'Send two spine options'?",
+   "Drop 'Confirm the seating plan for the launch reading'?",
+   "Cover review moved to Thu, Oct 22 · 2 things to check",
+   "Back up your work",
+   "Approve the back-cover copy",
+   "Drop 'Settle the endpaper color'",
+   "Look over 3 questions Quill wrote",
+   "Look over 2 things Quill did",
+   "Drop 'Confirm the seating plan for the launch reading'",
+   "Look over 3 to-dos Quill added",
+   "Proof copies ship on Nov 5 by courier.",
+   "Send the guest list for the launch reading",
+   "Corner Lamp Books can host either time. Which do you prefer?",
+   "Check 1 thing Quill recorded",
+   "Kept this note for later.",
+   "Reply to Corner Lamp Books about the paperback edition",
+   "RulesReview 3 rules unused in the last 30 daysQuill received these rul",
+   "File 2 items under a project",
+   "Send 2 to-dos to Ines Duarte",
+   "Send 1 question to Jun Park",
+   "Send 2 items to Maya Okafor",
+   "Send 2 to-dos to Sam Rivera",
+   "Send 5 items to Theo Brandt",
+   "Follow up with Ines Duarte",
+   "Follow up with Sam Rivera",
+   "Follow up with Maya Okafor",
+   "Follow up with Theo Brandt"
+  ],
+  "inspector": "Cover finish for the hardcover: matte or soft-touch?\n1 of 29 · j / k\nDecision\nCover finish for the hardcover: matte or soft-touch?\n\nSoft-touch adds about three ",
+  "todoLines": [
+   1,
+   1,
+   2,
+   2,
+   2
+  ],
+  "focused": "Decision\n\nCover finish for the hardcover: matte or soft-touc"
+ },
+ "today-j 1920": {
+  "focused": "Decision\n\nLaunch reading on Dec 1: 6 pm or 7 pm?\n\nAnswer",
+  "inspector": "Launch reading on Dec 1: 6 pm or 7 pm?\n2 of 29 · j / k\nDecision\nLaunch reading on Dec 1: 6 pm or 7 pm?\n\nCorner Lamp Book"
+ },
+ "toast-tab 1440": {
+  "covered": []
+ },
+ "sendback": {
+  "box": {
+   "x": 1216.21875,
+   "y": 630,
+   "width": 101.265625,
+   "height": 36
+  },
+  "vh": 900,
+  "inView": true
+ },
+ "copy-first-press": {
+  "clipboard": "EMPTY"
+ },
+ "handin": {
+  "w": 607,
+  "approxChars": 81
+ }
+}

@@ -672,6 +672,25 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     The job now has a time limit and prints the stack of any test past five minutes; the hanging test is found and fixed,
     and the job passes on the batch's commit.
 
+- [ ] [B-9] **Build the UI/UX designer's review of batch B-8** (received 2026-10-20 at `0f37be4`,
+  `reviews/ui-ux-2026-10/rereview-0f37be4/README.md`; R1 to R11 confirmed fixed on screen, and both of the session's
+  judgment calls accepted; the owner's standing answer: "give them what they want"). Each sub-item is done when its
+  test passes:
+  - S1: one decision is one Today line: a held op leaves its change's review line; the review line says how many wait
+    under Decide; a change holding only held ops shows no review line; approving a review never settles a held op
+    (true in the code today: `looks_good` only marks the change reviewed; a test pins it) (check C57: no item on two
+    Today lines);
+  - S2: a held line's details show only the held decision (the question, the quote and who said it, the source, why it
+    waits, the two answers); a held op's label is conditional ("Would close a to-do");
+  - S3: the pill column has one fixed width on every row, so every title starts in line;
+  - S4: What changed and Today topics come from a short topic, never a cut-off first sentence; "Work <assistant>
+    started" says what the work was;
+  - S5: under Review a change the assistant made reads in the past tense ("<assistant> dropped …"); under Decide, a
+    question;
+  - S6: with nothing connected, the mail step shows only "I'll do this later"; Continue appears once something is
+    connected;
+  - `docs/project/ui-review-status-2026-10-20.md` carries the reviewer's marks at `0f37be4` and then B-9's.
+
 ## Phase S: the daily steward (after phase B, before phase I)
 
 The owner's ask (2026-10-17): "this core needs to be full featured" as a daily assistant for anyone, not only project
