@@ -9,8 +9,12 @@ person approving everything outward. The path:
   I).
 - **The gate week** on the owner's personal mail is the first measured use of the core.
 - **Real use by the owner** starts once the writing pack is complete (phase C).
-- **Packs come after the core** (the writing pack, then the project management and publishing packs), and every pack is
-  designed before plugin API 1.0, so the API holds the base any pack could need.
+- **The free core release comes first** (owner, 2026-10-20: "core Thimbleby vs paid Thimbleby+"): after phase I, the
+  open core is published with its website update, and it waits for no pack and nothing the paid upgrade needs.
+  Thimbleby+ (phase T) follows only if the owner goes ahead with it.
+- **Packs come after the core** (the writing pack, then the project management and publishing packs). Product 1.0 ships
+  on plugin API 0.x; plugin API 1.0 keeps its own test (two packs unchanged through real use), so 1.0 doesn't wait for
+  every pack to be designed (decisions, 2026-10-20).
 - **1.0 is published** once the owner finalizes scope.
 
 **How the order was chosen:** each phase makes the next one testable by the owner. The plan holds one stream of work at
@@ -44,8 +48,8 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   (sign-off) → L-more (beside real use, after the packs) and E (the rest of version 1, ordered by what protects real data
   first) → Publish 1.0 once the owner finalizes scope.
 - **The first milestone** (owner, 2026-10-19): the core complete, with full UI and code reviews approved, and the
-  installers (phases B, S and I). 1.0 is a moving target until the owner finalizes scope: every plugin pack is designed
-  before plugin API 1.0, so the API holds the base any pack could need. There is no go/no-go date: the 2026-10-30 one was
+  installers (phases B, S and I), published as the free core release (the free core's own phase I item, I-3). 1.0 is a
+  moving target until the owner finalizes scope; it ships on plugin API 0.x. There is no go/no-go date: the 2026-10-30 one was
   set aside on 2026-10-09 and 2026-10-12, and stays set aside.
 - **When the owner uses it:** the owner tests it after phase B and starts real use once the writing pack is complete
   (owner, 2026-10-15; confirmed 2026-10-19). Phase S's gate week is the measured trial of the core on the owner's personal
@@ -195,6 +199,13 @@ blocks; everything else goes ahead without it.
 | O2 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-harder-agent.json`: 30 of 48 as scored at `feb6b3f`, 48 of 48 once six cases were corrected; every failure was an extra op the case hadn't allowed). **The harder set's "before" run** (the original designer's L1 check-in, 2026-10-14): the harder set (below, "L1b") on the owner's account, 3 runs per case, pinned to the commit that adds it, which is the last commit before any L2 code. The report records the agent's program version, and says plainly when every tier ran on the same account, so the run says nothing about a low-cost tier against a stronger one. Steps below, once the set lands. | The owner's computer, with their AI accounts | L4's comparison, which rests on this set. | L2's build: the run is pinned, so it can be made any time; L2 code only lands after the pinned commit. |
 | O3 | **First run made 2026-10-20 (the results and the fixes are under "Found by the owner's first real use", B-6b); left: the owner re-runs the failed cases with `--case-failed` after batch B-7.** **One run of the learning tests, at the end of batch S1-1:** the golden set, the harder set, the existing learning pairs and the twenty promise pairs, on the owner's account, 3 runs per case, on the commit that S1-1 pushes. Compared case by case with O1 and O2. It costs the owner's AI allowance once, and it gives the gate week a clean "before". Steps below. | The owner's computer, with the account used for O1 and O2 | The gate week's start, and real use: the comparison has to exist before either starts. | Phase B, which goes ahead meanwhile. |
 
+| M5 | **Before the free core release:** make the working repository private and publish the open core from it as a fresh public repository at each release; first, a session lists what in `docs/project/` and the design is the owner's own business, and the owner decides what the public core carries (`business-model.md`) | The owner's GitHub account | The free core release (I-3) | Everything before phase I |
+| M6 | **Before the free core release:** the website's pages for it: download, privacy policy, terms (open promise P24; I-2) | The website's session | The free core release (I-3) | Everything before phase I |
+| M0 | **Before anything is sold:** read the intellectual-property and outside-business clauses of every employment or contractor agreement, or a short consult; R9 is reopened until then | The owner's agreements | Phase T (Thimbleby+) | The free core release |
+| M1 | Ask Google whether a local app sending mail to the person's own AI account is in scope of the yearly assessment (CASA), and what its user-data policy requires for AI processing; get an assessor's quote | A Google account for the app | Phase T's one-click Gmail sign-in, and the price | The free core: it connects Gmail through the person's own registration |
+| M2 | Microsoft publisher verification for the add-on's registration | The website and its privacy policy | Phase T's one-click Outlook sign-in | The free core |
+| M3 | Signing: Apple's developer programme and Windows signing (about $219 a year) | Payment | Selling (phase T) | The free core and testers ("unsigned to start", 2026-10-17) |
+| M4 | A payment service that is the merchant of record, issuing the licences | M0 | Phase T's licence | The free core |
 
 **O3 steps** (on the commit that batch S1-1 pushes; the message that asks for the run names it). Earlier attempts at the
 "after" run, and the fixes they led to, are in `roadmap-done.md` and `decisions.md` (2026-10-15). In the owner's copy of
@@ -373,8 +384,11 @@ From the original designer's lessons of 2026-10-14:
   Microsoft 365 connects with a sign-in, with no add-on screen, restart or server setting on the person's path; "Other
   email" fills the server from the address; server, port and secret settings under Advanced in plain words; the
   unverified-app warning explained where it appears. *Decided (owner, 2026-10-20: "anything that makes a non technical
-  user life easier"):* the installer ships the mail and calendar add-ons installed and turned on, so their sign-in
-  tiles are on the setup step from the first start. To be built as a generic feature (nothing of it exists in the code yet: no bundling step or setting): the release build
+  user life easier"), narrowed the same day (core first):* the installer ships the mail and calendar add-ons installed
+  and turned on, **ready to set up**: their tiles are on the setup step from the first start, and they connect through a
+  registration the person makes with plain numbered steps (Gmail's set to "In production"), or an app password over
+  IMAP. One-click sign-in through the add-on's own registration is Thimbleby+ (phase T), since it needs Google's yearly
+  assessment. To be built as a generic feature (nothing of it exists in the code yet: no bundling step or setting): the release build
   bundles the add-on packages a repository variable lists (as the catalog and feedback addresses are filled in), installs them with the app
   and turns them on in a new workspace with no restart; this repository names none of them. The add-ons stay in their
   own repository and release there.
@@ -931,6 +945,38 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   with the data kept. Journey tests cover what CI can (launch, the server answering, the data folder), and the owner
   checks the rest by hand on both systems.
 
+- [ ] [I-3] **The free core release** (owner, 2026-10-20: "get to Thimbleby core faster and push and update the website";
+  `docs/project/business-model.md`): after phase I's exit test, the open core is published under Apache-2.0 from a fresh
+  public repository (owner action M5), with CONTRIBUTING (ideas welcome, no pull requests), SECURITY (how to report a
+  problem privately) and a trademark note (Apache-2.0 doesn't license the name); the website shows the release (M6,
+  I-2). A journey test: a free install connects an Outlook.com mailbox through a pasted registration, on the fake
+  sign-in service the tests use; and the owner's live check of the same on a real Outlook.com and a real Gmail account
+  (registration "In production"), which confirms the add-on's steps. Nothing in it waits for phase T.
+
+## Phase T: Thimbleby+ (after the free core release, and only if the owner goes ahead)
+
+The paid upgrade in `docs/project/business-model.md` (decisions, 2026-10-20): one yearly licence for one-click Gmail and
+Outlook and every pack. It is conditional (owner, 2026-10-20: "a 'maybe' Thimbleby+"; "I don't want to be beholden to
+this yearly Google assessment"), so nothing in the core depends on it. Owner actions M0 to M4 come first, M0 before
+anything else. Each item ends with its named test.
+
+- [ ] [T-1] **The Plus licence, checked offline:** a licence file signed by the owner's key, kept in the workspace's
+  private folder and checked with the public key the app ships with; no call home. Generic in the core: a catalog entry,
+  a plugin manifest or a sign-in's own registration can name an entitlement (`plus`), and the core checks it without
+  knowing what it unlocks (design 3.11).
+- [ ] [T-2] **The add-on's own registration needs the entitlement:** the core uses a sign-in's shipped registration only
+  while its entitlement is held; otherwise the Sign-ins row offers the person's own registration with the add-on's steps.
+  Test: a lapsed licence keeps packs at their version, stops the one-click sign-in with the Sign-ins row's offer and a
+  Today line, and a renewed licence brings it back.
+- [ ] [T-3] **Downloads gated by the licence:** a small download address checks the licence and returns a short-lived
+  link; Add-ons' Install sends the licence instead of a release host's read token (P15). Free add-ons download with no
+  licence.
+- [ ] [T-4] **Suggest something:** *Send feedback* and `report.draft` become one flow the person approves word for word;
+  the assistant offers it when it hits something it can't do; release notes say what came from suggestions.
+- [ ] [T-5] **The template gallery, as untrusted content** (after the paid 1.0 if time is short): templates shown in full
+  before they are added, marked by origin, "from outside" in packets. Test: a gallery template whose help text tries to
+  change routing changes nothing and reaches packets marked "from outside".
+
 ## Phase C: the writing pack in the owner's workspace
 
 Re-sequenced on 2026-10-15 (the owner: the writing pack is finished completely before any other pack starts). Phase C is
@@ -1204,8 +1250,9 @@ Order by what protects real data first, then by what the packs ask for:
 
 ## Publish 1.0
 
-1.0 is a moving target until the owner finalizes scope (owner, 2026-10-19): every plugin pack is designed before
-plugin API 1.0, so the API holds the base any pack could need. The items below are the release mechanics.
+1.0 is a moving target until the owner finalizes scope (owner, 2026-10-19). It ships on plugin API 0.x; plugin API 1.0
+keeps its own test, two packs unchanged through real use (decisions, 2026-10-20). The items below are the release
+mechanics.
 
 - [ ] [Publish 1.0] Self-check against the private workspace (`cockpit selfcheck --workspace <path>`).
 - [ ] [Publish 1.0] A fresh repository with one starting commit, under Apache-2.0; secret scanning on.
@@ -1220,7 +1267,7 @@ plugin API 1.0, so the API holds the base any pack could need. The items below a
 - Which of a pack's AI work a project allows (the writing pack's question 198, after 1.0): a project, inherited from the
   workspace and its parent, names the task kinds or groups that may run, or none; the core refuses to queue the rest from
   anywhere, says why once, and hides actions and lines that lead only to disallowed work.
-- Licensed (paid) packs: the design is accepted, but whether to charge is the owner's call, after launch.
+- A price per pack, or a marketplace: one Plus licence covers every pack instead (decisions, 2026-10-20; `business-model.md`, whose items the batches take under open promise P25).
 - The delivery chain of the end state (charter, owner 2026-10-14): a requirement carried from business analysis through
   project management and technical design to development, testing, acceptance and deployment, with a development pack
   (sprints, built-in testing, demos), a testing and acceptance pack (internal test cases, UAT) and a deployment pack.

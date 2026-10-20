@@ -148,6 +148,77 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 - **Impact:** design 6.16 (accounts and data levels) and the walkthrough's AI step; the default changes for new accounts
   only, never for accounts already saved.
 
+## 2026-10-20: The mail add-on is open source too; a lifted registration is accepted
+
+- **Decided (owner, on the functional designer's check of the revised plan):** the Gmail and Outlook add-on is published
+  under Apache-2.0 in its own public repository, from a fresh snapshot checked as the core's is (M5). Only its shipped
+  registration is gated by the licence; its repository leaves the registration empty and the release build fills it
+  in, as `catalog/product.yaml` does for the core. A registration lifted from the release build and used without a
+  licence is accepted in the same way as a patched-out licence check; if it is misused at scale, the next release
+  replaces it.
+- **Why:** the open core's case is that mail-reading code can be read, and for most people the add-on is that code.
+  Plus sells the one-click registration and the packs, not the mail code, so nothing paid is given away. A desktop
+  app's registration can't hold a secret, so saying so now makes it a decision rather than a surprise.
+- **Also:** the break-even line shows its exact totals ($1,319 to $5,319) and rounds up: 19 to 76 paying users at $75.
+- **Impact:** `docs/project/business-model.md`; design 3.11 ("Nothing to register": a registration may come from the
+  release build); the mail add-on's builder is told (open promise P26). No change to the core's code or schedule.
+
+## 2026-10-20: The free app connects Gmail and Outlook too; Plus is the one-click sign-in (the functional designer's review)
+
+- **Decided (owner, on the functional designer's review of `docs/project/business-model.md`):** the review's two changes,
+  its owner check and its five smaller points are taken in full.
+  - **The free/paid line is convenience and packs, never whether the app works.** Microsoft has turned off password and
+    app-password sign-in for its personal and work mail, so IMAP alone would leave much of the first audience unable to
+    connect. The free app keeps the person's own pasted app registration for Gmail and Outlook (already built); Plus is
+    the add-on's own registration (one-click) and every pack. The Gmail and Outlook add-on is a free download.
+  - **M1 plans on Google's yearly assessment (CASA)**, not an exemption, and asks Google whether a local app sending mail
+    to the person's own AI account is in scope and what its user-data policy requires for AI processing. The price is
+    set from a break-even line (fixed yearly costs against what each licence brings in), recorded beside it.
+  - **M0, before any sale:** the owner reads the IP and outside-business clauses of their employment or contractor
+    agreements, or has a short consult. R9 is reopened until then.
+  - **A lapsed licence** keeps packs at their version; the one-click sign-in stops, with the person's own registration
+    offered in its place and a Today line, so the owner doesn't carry Google's costs for people who stopped paying.
+  - **Gallery templates are untrusted content**: shown in full before they are added, marked by origin, "from outside"
+    in packets, never followed as instructions.
+  - **The ideas board is on the website**, fed by *Suggest something* and a form, so nobody needs a code host account.
+  - **The licence check is not hardened**; patching it out is accepted.
+  - **M5 hides plans from then on, not the past**: what is already published is assumed copied, and what the public
+    core carries is reviewed before it is cut.
+- **Added beside the review (main session):** the free Gmail path's steps tell the person to set their registration to
+  "In production", since a Google registration left in "Testing" issues sign-ins that expire after seven days; the
+  owner's live check confirms the steps before they ship.
+- **Why:** with nothing connected there is nothing to try and nothing to suggest, so the steering loop would stall; the
+  rest closes cost, legal and trust gaps the first version of the plan left open.
+- **Impact:** design 3.11 (licensed packs: a sign-in's own registration may need an entitlement; free add-ons download
+  with no licence) and 6.32's sign-in order (the add-on's default registration only while its entitlement is held);
+  `docs/project/risks.md` R9 reopened; three new tests named in the plan (the free Outlook.com journey, the lapsed
+  licence, the routing template). Folded into the roadmap under open promise P25, after batch B-7.
+
+## 2026-10-20: Thimbleby is one free app and one paid upgrade, and its users steer what is built
+
+- **Decided (owner):** "i agree with everything you have said. I really want users who will send me input on what
+  they would like to see added". The plan is `docs/project/business-model.md`. In short:
+  - **Free:** the core, open source under Apache-2.0, published from a private working repository at each release.
+    Ideas, problem reports and templates are welcome; code pull requests are not accepted.
+  - **Thimbleby Plus:** one yearly licence (the version in hand is kept if the person stops paying) for one-click Gmail
+    and Outlook, every pack and updates. No marketplace: no per-pack price or licence.
+  - **Users steer it:** *Send feedback* and `report.draft` become one *Suggest something* flow the person approves
+    word for word; the assistant offers it when it hits something it can't do; a shared template gallery; a public
+    ideas board; "You asked for" in each release's notes; founding members among the first buyers.
+  - **A base for almost anything, staged:** product 1.0 ships on plugin API 0.x and no longer waits for every pack to
+    be designed; plugin API 1.0 keeps its existing test (two packs unchanged through real use); outside builders come
+    after it.
+- **Why:** an assistant that reads mail is easier to trust when its code can be read, and companies approve Apache-2.0
+  (2026-10-09). What made the earlier plan heavy was a marketplace and a public plugin contract, not the open core, so
+  those go. Gmail and Outlook are what most people need and what costs the owner verification and fees, so they are the
+  paid line; the free app works without them.
+- **Impact:** design 3.11 ("Licensed packs" becomes one entitlement, checked offline); new build items after phase S,
+  beside phase I: the Plus licence, licence-gated downloads (replacing release-host read tokens for customers),
+  *Suggest something*, the template gallery, CONTRIBUTING, SECURITY and a trademark note. Owner actions M1 to M6 (Google
+  and Microsoft verification, signing, a payment service, the private working repository, the website) are on the
+  critical path to selling. The roadmap's batches take these items, and its "every pack designed before plugin API 1.0"
+  wording is reshaped, when the main session folds them in (open promise P25); nothing in batch B-7 changes.
+
 ## 2026-10-20: The UI/UX re-review is accepted in full, and the learning-run fixes join it (B-7)
 
 - **Decided (owner):** "give them what they want and include the ai fixes". Batch B-7 builds every finding of the

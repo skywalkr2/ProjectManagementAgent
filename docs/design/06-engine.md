@@ -2665,7 +2665,10 @@ private repository; the core signs in"). The mechanism is generic: an add-on dec
   3. **the add-on's own default**, so the person only signs in. An add-on ships one only for a registration the service issues
      to apps on a person's computer, and says what using it means. It allows certain callback addresses (loopback addresses
      match on any port); at any other address (another base path, a hosted app) the person is asked for their own, with the
-     reason.
+     reason. A default that names an entitlement (3.11) is used only while the entitlement is held; without it the row
+     says one-click sign-in needs it and offers the person's own registration with the add-on's steps, and when a held
+     entitlement lapses, a Today line says the service isn't being read until the person chooses (decisions,
+     2026-10-20). Not built yet.
 - **Signing in is the whole setup** (decisions, 2026-10-12). The add-on lists the sources its sign-in starts (the inbox, the
   main calendar), each with its connector, label, settings and interval. As soon as the person signs in, the core adds them to
   `watch.sources` (4.5) **once per sign-in, and only where the workspace reads nothing with that connector yet**, with

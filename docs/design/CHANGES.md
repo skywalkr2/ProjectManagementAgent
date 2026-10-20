@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 136. One free app, one paid upgrade, and users who steer it (2026-10-20)
+
+- **Licensed packs (3.11):** one entitlement (Thimbleby Plus) instead of a price per pack, checked offline from a signed
+  licence file; installs of an entitled pack go through a licence-checked download address. Designed, not built.
+- **How users steer the product:** *Suggest something* (feedback and `report.draft` as one approved flow), a template
+  gallery, an ideas board and release notes that say what came from suggestions. The plan is
+  `docs/project/business-model.md`.
+- **After the functional designer's review (3.11, 6.32):** the free app connects Gmail and Outlook through the person's own
+  pasted registration; Plus is the add-on's own registration (one-click) and the packs. A sign-in's default registration
+  may need an entitlement, and stops when a licence lapses; packs keep their version. Gallery templates are untrusted
+  content. Designed, not built.
+- **The mail add-on is open source (3.11):** its repository leaves the registration empty for its release build; a lifted
+  registration is accepted like a patched licence check.
 ## 134. What the full browser run of batch B-7 found (2026-10-20; batch B-7)
 
 | What | Before | Now |
