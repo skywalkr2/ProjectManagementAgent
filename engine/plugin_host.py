@@ -147,6 +147,10 @@ class PluginStatus:
     notes: list[str] = dataclass_field(default_factory=list)  # what the person should know, though it loaded
 
 
+#: Held while a plugin is loaded under its own name, so two loads in one process never interleave.
+_IMPORTING = threading.RLock()
+
+
 class PluginHost:
     def __init__(self, store: Any, cfg: Any, *, bundled: Path = BUNDLED):
         self.store, self.cfg = store, cfg
@@ -1363,8 +1367,9 @@ class PluginHost:
         try:
             schema = loader._importer(root, top)(manifest.config_schema)
         finally:
-            for name in [m for m in sys.modules if any(m == n or m.startswith(n + ".") for n in loader._modules)]:
-                sys.modules.pop(name, None)
+            with _IMPORTING:
+                for name in [m for m in sys.modules if any(m == n or m.startswith(n + ".") for n in loader._modules)]:
+                    sys.modules.pop(name, None)
         if not isinstance(schema, type) or not issubclass(schema, Settings):
             raise ValueError("this add-on's settings aren't built the way the app requires")
         return schema
@@ -1375,14 +1380,16 @@ class PluginHost:
         init = root / "__init__.py"
         if init.exists():
             # A plugin may import its own package by name, as it would when installed: it is loaded under that name,
-            # unless something else already has it.
-            if top and top not in sys.modules and importlib.util.find_spec(top) is None:
-                self._modules.append(top)
-                namespace = top
-            spec = importlib.util.spec_from_file_location(namespace, init, submodule_search_locations=[str(root)])
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[namespace] = module
-            spec.loader.exec_module(module)
+            # unless something else already has it. Two loads at once (the app's and a check's) take turns, so neither
+            # sees the other's half-run module under that name.
+            with _IMPORTING:
+                if top and top not in sys.modules and importlib.util.find_spec(top) is None:
+                    self._modules.append(top)
+                    namespace = top
+                spec = importlib.util.spec_from_file_location(namespace, init, submodule_search_locations=[str(root)])
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[namespace] = module
+                spec.loader.exec_module(module)
             prefix = top
         else:
             import types
@@ -1400,6 +1407,8 @@ class PluginHost:
                 suffix = module_name[len(prefix) :]
             else:
                 suffix = "." + module_name
+            if not suffix:
+                return getattr(module, attribute)  # this load's own module, whatever holds its name now
             return getattr(importlib.import_module(namespace + suffix), attribute)
 
         return symbol
