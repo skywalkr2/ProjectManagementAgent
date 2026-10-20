@@ -38,6 +38,37 @@ def _after(view: Any, here: ZoneInfo, request: Any, move: follow_on.Move) -> dic
     }
 
 
+def _check(view: Any, question: Any, move: follow_on.Move, after: dict[str, Any]) -> dict[str, Any] | None:
+    """The one structured answer a question after a move can have, read from the record id the question says it matters
+    for (the check on a follow-on run's question already made it name a tied action or the moved record): `date` when it
+    names an open action with a day, which the move may bring to the day it moved to (`from_day` the action's own day,
+    `to_day` the new one, with the action's `version` for the edit); `plan` when it names the moved record. None for any
+    other question, which keeps its own answer form."""
+    named = str(question.data.get("matters_for") or "")
+    if not named:
+        return None
+    if after["to"]:
+        for record in view.list("action"):
+            data = record.data
+            if (
+                data.get("status") == "open"
+                and data.get("due")
+                and str(data["due"]) != after["to"]
+                and follow_on._names(named, record.id)
+            ):
+                return {
+                    "kind": "date",
+                    "action": record.id,
+                    "version": record.version,
+                    "text": " ".join(str(data["text"]).split()),
+                    "from_day": str(data["due"]),
+                    "to_day": after["to"],
+                }
+    if follow_on._names(named, move.record):
+        return {"kind": "plan", "record": move.record}
+    return None
+
+
 def group(view: Any, people: Any, here: ZoneInfo, lines: list[Any], make_line: Any) -> list[Any]:
     """`lines` with the person's questions that a follow-on run asked grouped by move. `make_line` builds a group line
     from its keyword fields (the queue's own `Line`). Returns the new list; lines that aren't such questions are kept
@@ -77,9 +108,11 @@ def group(view: Any, people: Any, here: ZoneInfo, lines: list[Any], make_line: A
         request, move = found
         if newest[(move.kind, move.record)][1] != request.id:
             continue  # an earlier move of the same record that the latest one has replaced
+        found_after = _after(view, here, request, move)
         line.after_move = {
-            **_after(view, here, request, move),
+            **found_after,
             "others": sorted(dict.fromkeys(to_others.get(request.id, []))),
+            "check": _check(view, view.get("question", line.question), move, found_after),
         }
         members.setdefault(request.id, []).append(line)
         kept.append(line)
@@ -106,7 +139,10 @@ def group(view: Any, people: Any, here: ZoneInfo, lines: list[Any], make_line: A
                 changeset=after["changeset"],
                 questions=[m.question for m in inside],
                 project=inside[0].project,
-                after_move=after,
+                after_move={
+                    **{k: v for k, v in after.items() if k != "check"},
+                    "rows": [{"question": m.question, "check": m.after_move["check"]} for m in inside],
+                },
                 since=min(m.since for m in inside),
             )
         )

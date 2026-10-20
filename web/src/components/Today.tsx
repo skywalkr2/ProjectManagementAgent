@@ -13,10 +13,13 @@ import { CoverageLine, useNoneText } from "./Coverage";
 import { opensItems } from "./TodayDetail";
 import { TodayQueue, type QueueHandlers, type Selection } from "./TodayQueue";
 import { TodayRail } from "./TodayRail";
+import { ThisWeekSection } from "./ThisWeek";
 import styles from "./Today.module.css";
 
 /** The width from which the inspector sits beside the queue (the layout's third column). */
 const INSPECTOR_FROM = "(min-width: 1680px)";
+/** The width from which This week is a panel of the rail; below it, a section of Today folded to one line. */
+const WEEK_IN_RAIL = "(min-width: 2560px)";
 
 export function Today(props: {
   workspace: string;
@@ -31,6 +34,7 @@ export function Today(props: {
 }) {
   const { t, tn } = useWords();
   const beside = useMediaQuery(INSPECTOR_FROM);
+  const weekInRail = useMediaQuery(WEEK_IN_RAIL);
   const queue = useQueue();
   const count = useTodayCount();
   const none = useNoneText();
@@ -78,8 +82,13 @@ export function Today(props: {
       <div className={styles.full}>
         <BackupLine onOpenGuide={props.onOpenGuide} />
       </div>
+      {!weekInRail && (
+        <div className={styles.full}>
+          <ThisWeekSection />
+        </div>
+      )}
       <TodayQueue selected={selected} onSelect={setSelected} beside={beside} handlers={handlers} shortcuts={props.shortcuts} />
-      <TodayRail onView={props.onView} onAddSource={props.onAddSource} />
+      <TodayRail onView={props.onView} onAddSource={props.onAddSource} week={weekInRail} />
     </div>
   );
 }

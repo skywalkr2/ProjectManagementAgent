@@ -5,6 +5,7 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
+import { forgetMoves } from "../lib/moves";
 import { forgetLine } from "../lib/today";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { Today } from "./Today";
@@ -69,6 +70,7 @@ function show(lines: Line[], extra: Routes = {}) {
 afterEach(() => {
   vi.unstubAllGlobals();
   forgetLine();
+  forgetMoves();
 });
 
 const rowOf = async (title: string) => (await screen.findByRole("group", { name: title })) as HTMLElement;
@@ -227,4 +229,112 @@ test("with nothing unfiled there is no line and no zero", async () => {
   await new Promise((resolve) => setTimeout(resolve, 20));
   expect(screen.queryByText(/File 0 items/)).toBeNull();
   expect(screen.queryByRole("group", { name: /under a project/ })).toBeNull();
+});
+
+// ---- each row after a move has its own answers (design 7.7, answer 27) ---------------------------------------------------
+
+const dateCheck: S["AfterMoveCheck"] = { kind: "date", action: "ACT-4", version: 6, text: "Send the interior file to the printer", from_day: "2026-10-20", to_day: "2026-10-22" };
+const planCheck: S["AfterMoveCheck"] = { kind: "plan", record: "EVT-1" };
+const withRows = (over: Partial<S["AfterMove"]> = {}) => moved({ rows: [{ question: "Q-1", check: dateCheck }, { question: "Q-2", check: planCheck }], ...over });
+
+/** Today with a moved group, opened to its rows. */
+async function opened(extra: Routes = {}, group: Line = withRows()) {
+  const user = userEvent.setup();
+  const { calls } = show([group], extra);
+  const row = await rowOf(`Print sync moved to ${day("2026-10-22")} · 2 things to check`);
+  await user.click(within(row).getByRole("button", { name: "Look closer" }));
+  await within(row).findByText("Should the due day move?");
+  return { user, row, calls };
+}
+
+const body = (calls: Array<{ route: string; body: unknown }>, route: string) => calls.find((c) => c.route === route)?.body;
+
+test("a date question has Move it to the new day as its answer and Keep the old day beside it, both visible", async () => {
+  const { row } = await opened();
+  expect(within(row).getByRole("button", { name: `Move it to ${day("2026-10-22")}` })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: `Keep ${day("2026-10-20")}` })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "It holds" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "Needs a change…" })).toBeInTheDocument();
+  expect(within(row).queryByRole("textbox", { name: "Your answer" })).toBeNull();
+});
+
+test("a question with no structured answer keeps its own answer form", async () => {
+  const { row } = await opened({}, moved({ rows: [{ question: "Q-1", check: null }, { question: "Q-2", check: planCheck }] }));
+  expect(within(row).getByLabelText(/answer/i, { selector: "textarea" })).toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: /^Move it to/ })).toBeNull();
+});
+
+test("Move it changes the action's day as the person's own edit, answers the question and offers Undo", async () => {
+  const { user, row, calls } = await opened({
+    "POST records/edit": () => ({ changeset: "CS-20" }),
+    "POST questions/Q-1/answer": () => ({ ok: "Q-1", request: null }),
+    "POST changesets/CS-20/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  await user.click(within(row).getByRole("button", { name: `Move it to ${day("2026-10-22")}` }));
+  await waitFor(() => expect(body(calls, "POST records/edit")).toEqual({ kind: "action", id: "ACT-4", fields: { due: "2026-10-22", due_words: null, due_check: false }, read_version: 6 }));
+  await waitFor(() => expect(body(calls, "POST questions/Q-1/answer")).toEqual({ text: `Moved it to ${day("2026-10-22")}.` }));
+  expect(await screen.findByText(`Moved it to ${day("2026-10-22")}.`)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-20/undo")).toBe(true));
+});
+
+test("Keep answers the question and changes nothing", async () => {
+  const { user, row, calls } = await opened({ "POST questions/Q-1/answer": () => ({ ok: "Q-1", request: null }) });
+  await user.click(within(row).getByRole("button", { name: `Keep ${day("2026-10-20")}` }));
+  await waitFor(() => expect(body(calls, "POST questions/Q-1/answer")).toEqual({ text: `Kept ${day("2026-10-20")}.` }));
+  expect(calls.some((c) => c.route === "POST records/edit")).toBe(false);
+});
+
+test("It holds answers the plan question", async () => {
+  const { user, row, calls } = await opened({ "POST questions/Q-2/answer": () => ({ ok: "Q-2", request: null }) });
+  await user.click(within(row).getByRole("button", { name: "It holds" }));
+  await waitFor(() => expect(body(calls, "POST questions/Q-2/answer")).toEqual({ text: "The plan still holds." }));
+});
+
+test("Needs a change opens a note with the cursor in it and sends it as the answer", async () => {
+  const { user, row, calls } = await opened({ "POST questions/Q-2/answer": () => ({ ok: "Q-2", request: "REQ-30" }) });
+  await user.click(within(row).getByRole("button", { name: "Needs a change…" }));
+  const note = await within(row).findByRole("textbox", { name: "What should Helper change? Add a note." });
+  await waitFor(() => expect(note).toHaveFocus());
+  expect(within(row).getByRole("button", { name: "Send the note" })).toBeDisabled();
+  await user.type(note, "Proof approval needs a later day");
+  await user.click(within(row).getByRole("button", { name: "Send the note" }));
+  await waitFor(() => expect(body(calls, "POST questions/Q-2/answer")).toEqual({ text: "The plan needs a change: Proof approval needs a later day" }));
+});
+
+test("settling the last row says the move is settled in one toast", async () => {
+  // After the first answer the group is one row; answering that one settles the move.
+  let current: Line[] = [withRows()];
+  const alone = line("decision", {
+    key: "question:Q-2",
+    text: "Does the plan still hold?",
+    question: "Q-2",
+    after_move: { kind: "event", record: "EVT-1", title: "Print sync", to: "2026-10-22", earlier: false, by: "pm", replaced: false, request: "REQ-9", changeset: "CS-9", others: [], check: planCheck },
+  });
+  const user = userEvent.setup();
+  const { calls } = show(current, {
+    "GET today/queue": () => current,
+    "POST questions/Q-1/answer": () => {
+      current = [alone];
+      return { ok: "Q-1", request: null };
+    },
+    "POST questions/Q-2/answer": () => ({ ok: "Q-2", request: null }),
+  });
+  const group = await rowOf(`Print sync moved to ${day("2026-10-22")} · 2 things to check`);
+  await user.click(within(group).getByRole("button", { name: "Look closer" }));
+  await user.click(await within(group).findByRole("button", { name: `Keep ${day("2026-10-20")}` }));
+  // The row left of the group takes the group's place, still open, instead of waiting behind "1 new · Show".
+  await waitFor(() => expect(document.querySelector('[data-line-key="question:Q-2"]')).not.toBeNull());
+  expect(screen.queryByRole("button", { name: /new · Show/ })).toBeNull();
+  const single = document.querySelector('[data-line-key="question:Q-2"]') as HTMLElement;
+  await user.click(await within(single).findByRole("button", { name: "It holds" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST questions/Q-2/answer")).toBe(true));
+  expect(await screen.findByText("Everything to check after Print sync moved is settled.")).toBeInTheDocument();
+});
+
+test("an answer that isn't the last says what it did and not that the move is settled", async () => {
+  const { user, row } = await opened({ "POST questions/Q-1/answer": () => ({ ok: "Q-1", request: null }) });
+  await user.click(within(row).getByRole("button", { name: `Keep ${day("2026-10-20")}` }));
+  expect(await screen.findByText(`Kept ${day("2026-10-20")}.`)).toBeInTheDocument();
+  expect(screen.queryByText(/is settled/)).toBeNull();
 });

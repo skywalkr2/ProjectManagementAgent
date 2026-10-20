@@ -1700,6 +1700,21 @@ class TodaySettings(ConfigModel):
         description="One of the person's own to-dos with no date that nothing has changed for this many days is stale, "
         "and Today asks whether to keep it. Zero turns the line off.",
     )
+    top_priorities_lines: int = Field(
+        5,
+        ge=1,
+        le=50,
+        description="The most lines Top priorities shows on Today, across every project. It lists the most pressing "
+        "first: overdue, then due within the follow-up window, then waiting on the person, then at risk; the rest are "
+        "counted, not listed.",
+    )
+    top_priorities_ahead_days: int = Field(
+        14,
+        ge=0,
+        le=90,
+        description="Top priorities also lists the dated to-dos that fall due in the next this many days, after its "
+        "lines. Zero leaves that list out.",
+    )
 
 
 class FollowupsSettings(ConfigModel):

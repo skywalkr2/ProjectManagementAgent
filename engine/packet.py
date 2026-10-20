@@ -13,6 +13,7 @@ from datetime import date
 from html import escape
 
 from engine.ai.task import AiTask
+from engine.blocked import standing_hold
 from engine.cleaning import Cleaned, clean
 from engine.config import Config
 from engine.intake import MISSED_KIND, source_text
@@ -322,10 +323,11 @@ def _item_block(ws: Workspace, store: Store, cfg: Config, req: Stored, source: S
                 "done_by": [people.name(p) for p in d.get("done_by", [])],
                 "chased_on": sorted({str(day) for days in (d.get("followed_up") or {}).values() for day in days}),
             }
-            if d.get("on_hold"):
-                out["on_hold"] = d["on_hold"]["waiting_for"]
-                if d["on_hold"].get("on"):
-                    out["blocked_on"] = d["on_hold"]["on"]
+            hold = standing_hold(store.read(), d, people)
+            if hold:
+                out["on_hold"] = hold["waiting_for"]
+                if hold.get("on"):
+                    out["blocked_on"] = hold["on"]
         elif kind == "question":
             out |= {
                 "title": d["title"],
@@ -737,14 +739,16 @@ def _known_texts(ws: Workspace, store: Store, exclude: str | None) -> list[str]:
 
 def _open_actions(store: Store, people: People) -> str:
     lines = []
-    for a in store.read().list("action"):
+    reader = store.read()
+    for a in reader.list("action"):
         d = a.data
         if d["status"] in ("done", "dropped"):
             continue
         owners = ", ".join(people.name(o["person"]) for o in d.get("owners", [])) or "no owner yet"
         due = f"; due {d['due']}" if d.get("due") else ""
-        hold = f"; on hold, waiting for {d['on_hold']['waiting_for']}" if d.get("on_hold") else ""
-        hold += f" (blocked on {d['on_hold']['on']})" if (d.get("on_hold") or {}).get("on") else ""
+        held = standing_hold(reader, d, people)
+        hold = f"; on hold, waiting for {held['waiting_for']}" if held else ""
+        hold += f" (blocked on {held['on']})" if (held or {}).get("on") else ""
         owed = f"; reply owed to {people.name(d['asker'])}" if d.get("reply_owed") and d.get("asker") else ""
         owed = owed or ("; a reply owed" if d.get("reply_owed") else "")
         project = f"[{d['project']}] " if d.get("project") else ""

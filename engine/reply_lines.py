@@ -16,6 +16,7 @@ from email.utils import getaddresses, parseaddr, parsedate_to_datetime
 from typing import Any
 
 from engine.automatic_mail import classify_automatic
+from engine.blocked import standing_hold
 from engine.mail_threads import ThreadCandidate, normalize_subject, thread_key
 from engine.replies_owed import Address, Message, reply_owed
 from engine.reply_split import split_message
@@ -201,7 +202,7 @@ def plan(ws: Any, reader: Any) -> list[Owed]:
     found: list[Owed] = []
     for action in reader.list("action"):
         d = action.data
-        if not d.get("reply_owed") or d.get("status") != "open" or d.get("on_hold"):
+        if not d.get("reply_owed") or d.get("status") != "open" or standing_hold(reader, d):
             continue
         source = reader.get("source", d["replies_to"]) if d.get("replies_to") else None
         read = read_message(_read_source(ws, source), None) if source is not None else None

@@ -741,6 +741,17 @@
             "description": "The follow-on run's own change, which Undo takes back.",
             "title": "Changeset"
           },
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AfterMoveCheck"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a question that stands as a row of its own: its structured answer, when it has one."
+          },
           "earlier": {
             "default": false,
             "title": "Earlier",
@@ -772,6 +783,14 @@
             "title": "Request",
             "type": "string"
           },
+          "rows": {
+            "description": "For the line that groups several: each question and its structured answer.",
+            "items": {
+              "$ref": "#/components/schemas/AfterMoveRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -797,6 +816,120 @@
           "request"
         ],
         "title": "AfterMove",
+        "type": "object"
+      },
+      "AfterMoveCheck": {
+        "description": "The one structured answer a question after a move has (design 7.7). `date`: the question asks whether an\naction's day (`from_day`) should move to the day the record moved to (`to_day`); the answers are Move it (the\nperson's own edit of the action's due day, POST /api/records/edit with `version`, then the answer) and Keep it (the\nanswer alone). `plan`: it asks whether the plan for the moved record still holds; the answers are It holds and\nNeeds a change, which carries the person's note. Each is the question's answer, POST /api/questions/{id}/answer.",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a date question: the action it asks about.",
+            "title": "Action"
+          },
+          "from_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The action's own day now, YYYY-MM-DD.",
+            "title": "From Day"
+          },
+          "kind": {
+            "enum": [
+              "date",
+              "plan"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a plan question: the record that moved.",
+            "title": "Record"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The action's words.",
+            "title": "Text"
+          },
+          "to_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the record moved to, YYYY-MM-DD.",
+            "title": "To Day"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The action's version as read, to state when moving its day.",
+            "title": "Version"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "AfterMoveCheck",
+        "type": "object"
+      },
+      "AfterMoveRow": {
+        "description": "One question of a moved group, and its structured answer when it has one.",
+        "properties": {
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AfterMoveCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "AfterMoveRow",
         "type": "object"
       },
       "AgendaItemView": {
@@ -4053,6 +4186,65 @@
           "kinds"
         ],
         "title": "CloseMeasureView",
+        "type": "object"
+      },
+      "ComingView": {
+        "description": "A dated to-do due in the next days that isn't on a Top priorities line.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "due": {
+            "format": "date",
+            "title": "Due",
+            "type": "string"
+          },
+          "mine": {
+            "default": false,
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerNameView"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "text",
+          "due"
+        ],
+        "title": "ComingView",
         "type": "object"
       },
       "CompletedAction": {
@@ -11216,6 +11408,259 @@
         "title": "PluginStatusView",
         "type": "object"
       },
+      "PriorityLineView": {
+        "description": "One line of Top priorities (design 7.7). `kind` is action or question (the person's own, one thing: `action` or\n`question` is its id, and for an action `owners` and `version` are what Reassign needs) or person (everything one\nother person holds: the counts `send`, `chase`, `overdue` and `due_soon`, and `waiting_days`, the longest wait; its\nFollow-ups group is `person`). `rank` is why it is listed, `due` its day, `days` how many days past its day it is\n(none while the day is ahead) and `things` everything in it.",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "chase": {
+            "default": 0,
+            "title": "Chase",
+            "type": "integer"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "due_soon": {
+            "default": 0,
+            "title": "Due Soon",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "person",
+              "action",
+              "question"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "overdue": {
+            "default": 0,
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "owners": {
+            "description": "The action's owners, for Reassign.",
+            "items": {
+              "$ref": "#/components/schemas/OwnerNameView"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
+          "person_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person Name"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "rank": {
+            "enum": [
+              "overdue",
+              "due_soon",
+              "waiting",
+              "at_risk"
+            ],
+            "title": "Rank",
+            "type": "string"
+          },
+          "send": {
+            "default": 0,
+            "title": "Send",
+            "type": "integer"
+          },
+          "text": {
+            "description": "The one thing's own words; for a person line, the person's name.",
+            "title": "Text",
+            "type": "string"
+          },
+          "things": {
+            "items": {
+              "$ref": "#/components/schemas/PriorityThingView"
+            },
+            "title": "Things",
+            "type": "array"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The action's version, to state when reassigning it.",
+            "title": "Version"
+          },
+          "waiting_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Days"
+          }
+        },
+        "required": [
+          "key",
+          "rank",
+          "kind",
+          "text"
+        ],
+        "title": "PriorityLineView",
+        "type": "object"
+      },
+      "PriorityThingView": {
+        "description": "One thing inside a Top priorities line, for the line's tooltip: an action or a question, and why it is there.",
+        "properties": {
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "action",
+              "question"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "waiting_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For something sent, the days since the last word to them.",
+            "title": "Waiting Days"
+          },
+          "why": {
+            "enum": [
+              "overdue",
+              "due_soon",
+              "chase",
+              "send",
+              "answer",
+              "at_risk"
+            ],
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text",
+          "why"
+        ],
+        "title": "PriorityThingView",
+        "type": "object"
+      },
       "ProjectIn": {
         "properties": {
           "budget_usd": {
@@ -18198,6 +18643,51 @@
         "title": "TextVersionView",
         "type": "object"
       },
+      "ThisWeekView": {
+        "description": "This week (design 7.7): GET /api/today/week. From today (`first`) through the configured last working day\n(`last`): what is `due`, who is `waiting` on the person and the `meetings` to hold, across projects.",
+        "properties": {
+          "due": {
+            "items": {
+              "$ref": "#/components/schemas/WeekDueView"
+            },
+            "title": "Due",
+            "type": "array"
+          },
+          "first": {
+            "format": "date",
+            "title": "First",
+            "type": "string"
+          },
+          "last": {
+            "format": "date",
+            "title": "Last",
+            "type": "string"
+          },
+          "meetings": {
+            "items": {
+              "$ref": "#/components/schemas/AgendaItemView"
+            },
+            "title": "Meetings",
+            "type": "array"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/WeekWaitingView"
+            },
+            "title": "Waiting",
+            "type": "array"
+          }
+        },
+        "required": [
+          "first",
+          "last",
+          "due",
+          "waiting",
+          "meetings"
+        ],
+        "title": "ThisWeekView",
+        "type": "object"
+      },
       "TodayLineView": {
         "description": "A line a plugin adds to Today.",
         "properties": {
@@ -18389,6 +18879,41 @@
           "overdue"
         ],
         "title": "TodoView",
+        "type": "object"
+      },
+      "TopPrioritiesView": {
+        "description": "Top priorities (design 7.7): GET /api/today/priorities. `lines` are the most pressing first, `more` how many\nmore rank beyond them (the settings give the number of lines), `blocked` how many open actions wait on a person, an\naction or a question that still blocks them, and `coming` the dated to-dos of the next days after the lines.",
+        "properties": {
+          "blocked": {
+            "title": "Blocked",
+            "type": "integer"
+          },
+          "coming": {
+            "items": {
+              "$ref": "#/components/schemas/ComingView"
+            },
+            "title": "Coming",
+            "type": "array"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PriorityLineView"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "more": {
+            "title": "More",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lines",
+          "more",
+          "blocked",
+          "coming"
+        ],
+        "title": "TopPrioritiesView",
         "type": "object"
       },
       "UnconfirmIn": {
@@ -19372,6 +19897,101 @@
           "items"
         ],
         "title": "WatchSourceView",
+        "type": "object"
+      },
+      "WeekDueView": {
+        "description": "A to-do due by the week's end.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "due": {
+            "format": "date",
+            "title": "Due",
+            "type": "string"
+          },
+          "mine": {
+            "default": false,
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerNameView"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "text",
+          "due"
+        ],
+        "title": "WeekDueView",
+        "type": "object"
+      },
+      "WeekWaitingView": {
+        "description": "Someone waiting on the person: how many of their to-dos are promised or owed to them, and the earliest day.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "person_name": {
+            "title": "Person Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "person_name",
+          "count"
+        ],
+        "title": "WeekWaitingView",
         "type": "object"
       },
       "WorkingCopyFormatView": {
@@ -28592,6 +29212,25 @@
         "summary": "Today Arrived Check"
       }
     },
+    "/api/today/priorities": {
+      "get": {
+        "description": "Top priorities: a short ranked list across every project, by rules and never by an AI call. Overdue first,\nthen due within the follow-up window, waiting on the person, then at risk; one line for each other person; the\nblocked counted; and the dated to-dos of the next days after the lines.",
+        "operationId": "priorities_api_today_priorities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopPrioritiesView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Priorities"
+      }
+    },
     "/api/today/queue": {
       "get": {
         "description": "What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7).",
@@ -28636,6 +29275,25 @@
           }
         },
         "summary": "Today Todo"
+      }
+    },
+    "/api/today/week": {
+      "get": {
+        "description": "This week, from today through the configured last working day: what is due, who is waiting on the person and\nthe meetings to hold, across projects.",
+        "operationId": "week_api_today_week_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThisWeekView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Week"
       }
     },
     "/api/unfiled": {

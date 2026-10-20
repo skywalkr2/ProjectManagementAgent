@@ -1,7 +1,7 @@
-// Today's rail (design 7.7): the agenda, the person's own list and what came in, as panels sized to their content beside
+// Today's rail (design 7.7): top priorities, the agenda, the person's own list and what came in, as panels sized to their content beside
 // the queue (below it under 1024px). What needs the person is the queue, not the rail.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
@@ -19,8 +19,10 @@ import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import styles from "./Today.module.css";
 import { recordView, viewHref, type View } from "../lib/views";
-import { Panel } from "../ui/Panel";
 import { Skeleton } from "../ui/Skeleton";
+import { Empty, Failed, RailPanel } from "./RailPanel";
+import { ThisWeekPanel } from "./ThisWeek";
+import { TopPriorities } from "./TopPriorities";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -34,77 +36,18 @@ function useNow(): Date {
   return now;
 }
 
-/** The rail's three panels. `onAddSource` opens Sources with the add form open. */
-export function TodayRail(props: { onView: (view: View) => void; onAddSource?: () => void }) {
+/** The rail's panels: top priorities, the week from 2560px (`week`), the agenda, the to-dos and what came in. `onAddSource` opens Sources with the add form open. */
+export function TodayRail(props: { onView: (view: View) => void; onAddSource?: () => void; week?: boolean }) {
   const { t } = useWords();
   const add = props.onAddSource ?? (() => props.onView("sources"));
   return (
     <div className={styles.rail} role="group" aria-label={t("today.rail.label")}>
+      <TopPriorities onView={props.onView} />
+      {props.week && <ThisWeekPanel />}
       <AgendaPanel onAddSource={add} />
       <TodoPanel />
       <ArrivedPanel onView={props.onView} onAddSource={add} />
     </div>
-  );
-}
-
-/** A rail panel: a visible heading with its count (said in words for a screen reader) and a body sized to its content. */
-function RailPanel(props: {
-  id: string;
-  title: string;
-  count: number | null;
-  countText: string;
-  /** A control at the end of the heading row. */
-  action?: ReactNode;
-  footer?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div data-col={props.id}>
-      <Panel
-        small
-        flush
-        title={props.title}
-        count={
-          // A panel with nothing in it shows no count, rather than "0".
-          props.count === null || props.count === 0 ? null : (
-            <>
-              <span aria-hidden="true">{props.count}</span>
-              <span className="sr">{props.countText}</span>
-            </>
-          )
-        }
-        actions={props.action}
-      >
-        <div className={styles.railBody}>{props.children}</div>
-        {props.footer && <div className={styles.railFoot}>{props.footer}</div>}
-      </Panel>
-    </div>
-  );
-}
-
-function Empty(props: { text: string; note?: string; button?: { label: string; run: () => void } }) {
-  return (
-    <div className="tb-empty">
-      <p>{props.text}</p>
-      {props.note && <p className="hint">{props.note}</p>}
-      {props.button && (
-        <button type="button" className="btn" onClick={props.button.run}>
-          {props.button.label}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function Failed(props: { text: string; retry: () => void }) {
-  const { t } = useWords();
-  return (
-    <p className="empty">
-      {props.text}{" "}
-      <button type="button" className="btn" onClick={props.retry}>
-        {t("action.try_again")}
-      </button>
-    </p>
   );
 }
 

@@ -153,3 +153,22 @@ test("no entry names a settings file, a secret reference, a settings key, a mani
   );
   expect(leaks).toEqual([]);
 });
+
+// With the assistant's default name, a line that says "{assistant}" would read "Assistant is on it", as if it were a name.
+// Every such entry has an `.unnamed` variant that says "your assistant", and a variant never names the assistant itself.
+test("every entry that names the assistant has a variant for an assistant that was never named", () => {
+  const named = Object.entries(words).filter(([key, text]) => !key.endsWith(".unnamed") && text.includes("{assistant}"));
+  expect(named.map(([key]) => key).filter((key) => !(`${key}.unnamed` in words))).toEqual([]);
+  const variants = Object.entries(words).filter(([key]) => key.endsWith(".unnamed"));
+  expect(variants.filter(([, text]) => text.includes("{assistant}")).map(([key]) => key)).toEqual([]);
+  expect(variants.filter(([key]) => !(key.slice(0, -".unnamed".length) in words)).map(([key]) => key)).toEqual([]);
+});
+
+test("a variant keeps the placeholders of the line it stands in for", () => {
+  const holes = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((name) => name !== "assistant").sort();
+  const off = Object.entries(words)
+    .filter(([key]) => key.endsWith(".unnamed"))
+    .filter(([key, text]) => JSON.stringify(holes(text)) !== JSON.stringify(holes(words[key.slice(0, -".unnamed".length)] ?? "")))
+    .map(([key]) => key);
+  expect(off).toEqual([]);
+});

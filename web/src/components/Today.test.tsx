@@ -99,9 +99,11 @@ function Keys() {
   return null;
 }
 
-function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean } = {}) {
+const emptyWeek: S["ThisWeekView"] = { first: "2026-10-19", last: "2026-10-23", due: [], waiting: [], meetings: [] };
+
+function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean; ultra?: boolean; unnamed?: boolean } = {}) {
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: !!over.wide && /min-width: 1680px/.test(query),
+    matches: (!!over.wide && /min-width: 1680px/.test(query)) || (!!over.ultra && /min-width: (1680|2560)px/.test(query)),
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   }));
@@ -116,6 +118,8 @@ function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean } = {}) 
     "GET today/agenda": () => [],
     "GET today/todo": () => [],
     "GET today/arrived": () => ({ items: [], left_out: 0, set_aside: 0 }),
+    "GET today/priorities": () => ({ lines: [], more: 0, blocked: 0, coming: [] }),
+    "GET today/week": () => emptyWeek,
     "GET watch": () => [],
     "GET projects": () => [],
     "GET status": () => statusFixture(),
@@ -128,6 +132,8 @@ function show(lines: Line[], extra: Routes = {}, over: { wide?: boolean } = {}) 
       <Keys />
       <Today workspace="Workspace" onView={onView} onAddSource={vi.fn()} onOpenGuide={vi.fn()} onOpenRecord={vi.fn()} shortcuts={{ next: "j", previous: "k" }} />
     </RestartProvider>,
+    {},
+    { unnamed: over.unnamed },
   );
   /** What the live stream does when something changed elsewhere: the screen asks again. */
   const refresh = () => act(() => client.invalidateQueries());
@@ -750,4 +756,78 @@ test("with nothing to do the Needs you panel has no count, in words or as a badg
   const panel = screen.getByRole("heading", { level: 2, name: "Needs you" }).closest("section") as HTMLElement;
   expect(within(panel).queryByText("0")).toBeNull();
   expect(panel).not.toHaveTextContent(/\b0 things need you/);
+});
+
+
+// ---- the project tag on review and send lines, and This week -----------------------------------------------------------
+
+test("a review line and a send line carry their project's tag when the screen holds more than one project", async () => {
+  show([
+    { ...review, project: "PRJ-1", project_name: "Spring book" },
+    { ...send, project: "PRJ-2", project_name: "Autumn book" },
+  ]);
+  await screen.findByText("Look over 3 to-dos Helper added");
+  expect(within(row("review")).getByText("Spring book")).toBeInTheDocument();
+  expect(within(row("send")).getByText("Autumn book")).toBeInTheDocument();
+});
+
+test("a review line with a project alone on the screen has no tag", async () => {
+  show([{ ...review, project: "PRJ-1", project_name: "Spring book" }]);
+  await screen.findByText("Look over 3 to-dos Helper added");
+  expect(screen.queryByText("Spring book")).toBeNull();
+});
+
+const busyWeek: S["ThisWeekView"] = {
+  first: "2026-10-19",
+  last: "2026-10-23",
+  due: [{ action: "ACT-1", text: "Send the proofs", due: "2026-10-21", project: null, project_name: null, owners: [], mine: true }],
+  waiting: [{ person: "PER-5", person_name: "Robin Sample", count: 2, due: "2026-10-22" }],
+  meetings: [{ snapshot: "EVT-1", source: "", title: "Print sync", start: "2026-10-22T10:00:00", end: null, all_day: false, cancelled: false, own: true, open_items: 0, days: ["2026-10-22"] }],
+};
+
+test("This week is a section of Today folded to one line that says what is in it, and a press opens it", async () => {
+  const user = userEvent.setup();
+  show([decision], { "GET today/week": () => busyWeek });
+  const toggle = await screen.findByRole("button", { name: /^This week/ });
+  await waitFor(() => expect(toggle).toHaveTextContent("1 due · 1 person waiting on you · 1 meeting"));
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByText("Send the proofs")).toBeNull();
+  await user.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(await screen.findByText("Send the proofs")).toBeInTheDocument();
+  expect(screen.getByText("Robin Sample · 2 things")).toBeInTheDocument();
+  expect(screen.getByText("Print sync")).toBeInTheDocument();
+});
+
+test("This week is not counted in the heading or the menu", async () => {
+  show([decision], { "GET today/week": () => busyWeek });
+  await screen.findByRole("button", { name: /^This week/ });
+  expect((await screen.findAllByText(/1 thing needs you/)).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/2 things need you/)).toBeNull();
+});
+
+test("from 2560px This week is a panel of the rail and not a section", async () => {
+  show([decision], { "GET today/week": () => busyWeek }, { ultra: true });
+  const panel = await screen.findByRole("region", { name: "This week" });
+  expect(panel.closest("[data-col='week']")).not.toBeNull();
+  expect(await within(panel).findByText("Send the proofs")).toBeInTheDocument();
+  expect(document.querySelector("[data-week='section']")).toBeNull();
+});
+
+test("the inspector shows the week when nothing needs the person", async () => {
+  show([], { "GET today/week": () => busyWeek }, { wide: true });
+  const pane = await screen.findByRole("complementary", { name: "Details" });
+  expect(await within(pane).findByText("Send the proofs")).toBeInTheDocument();
+  expect(within(pane).getByRole("heading", { name: /This week/ })).toBeInTheDocument();
+});
+
+test("with the default name the lines say \"your assistant\" instead of reading it as a name", async () => {
+  show([review], {}, { unnamed: true });
+  expect(await screen.findByText("Look over 3 to-dos your assistant added")).toBeInTheDocument();
+  expect(screen.queryByText(/Helper/)).toBeNull();
+});
+
+test("a name the person chose is used as it is", async () => {
+  show([review]);
+  expect(await screen.findByText("Look over 3 to-dos Helper added")).toBeInTheDocument();
 });

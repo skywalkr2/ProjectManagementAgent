@@ -68,6 +68,7 @@ function routes(extra: Routes = {}): Routes {
     "GET today/agenda": () => agenda,
     "GET today/todo": () => todo,
     "GET today/arrived": () => inbox,
+    "GET today/priorities": () => ({ lines: [], more: 0, blocked: 0, coming: [] }),
     "GET watch": () => [],
     "GET projects": () => projects,
     ...extra,
@@ -91,7 +92,7 @@ afterEach(() => {
   document.documentElement.removeAttribute("data-today");
 });
 
-test("three panels in reading order, each with its heading and count, and nothing about what needs you", async () => {
+test("four panels in reading order, each with its heading and count, and nothing about what needs you", async () => {
   open();
   const agendaColumn = await column("Agenda");
   expect(await within(agendaColumn).findByText("3 events today")).toBeInTheDocument();
@@ -101,7 +102,7 @@ test("three panels in reading order, each with its heading and count, and nothin
     .getAllByRole("region")
     .map((r) => r.parentElement?.getAttribute("data-col"))
     .filter(Boolean);
-  expect(names).toEqual(["agenda", "todo", "arrived"]);
+  expect(names).toEqual(["priorities", "agenda", "todo", "arrived"]);
   expect(screen.getByRole("heading", { level: 2, name: "Came in" })).toBeInTheDocument();
   await within(await column("Came in")).findByText("2 messages");
   // What needs the person is the queue, which has its own tests; the rail never draws it.

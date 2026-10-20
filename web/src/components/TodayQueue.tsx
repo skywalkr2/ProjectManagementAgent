@@ -36,6 +36,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 import { MissedOneLine } from "./MissedOne";
 import { StageTodayRows, useStageToday } from "./StageToday";
+import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
 import styles from "./Today.module.css";
 
@@ -120,6 +121,14 @@ export function TodayQueue(props: {
         });
   const waiting = holding === null ? 0 : lines.filter((line) => !holding.includes(line.key)).length;
 
+  // The questions left of a move's group, once the group is down to one, stand in the group's place: answering one row of
+  // two doesn't send the other behind "1 new · Show", and the line that was open stays open.
+  const successorOf = (key: string, taken: string[]): string | null => {
+    const request = known.current.get(key)?.after_move?.request;
+    if (!request) return null;
+    return lines.find((line) => line.after_move?.request === request && line.key !== key && !taken.includes(line.key))?.key ?? null;
+  };
+
   // Before the screen is painted, so a line that should hold is never seen to move.
   useLayoutEffect(() => {
     if (!queue.data) return;
@@ -129,7 +138,11 @@ export function TodayQueue(props: {
       setFrozen(null);
     } else {
       const base = frozen ?? shownKeys.current;
-      after = base.filter((key) => keys.has(key) || ghostable(key));
+      after = base.flatMap((key) => {
+        if (keys.has(key)) return [key];
+        const next = successorOf(key, base);
+        return next ? [next] : ghostable(key) ? [key] : [];
+      });
       setFrozen(after.length === base.length && frozen && after.every((key, i) => key === frozen[i]) ? frozen : after);
       // The line that had the cursor is gone: the cursor goes to the line now in its place, not to the top of the page.
       const active = document.activeElement;
@@ -228,7 +241,10 @@ export function TodayQueue(props: {
   // Below 1680px a selected line that is gone (dealt with, or answered elsewhere) is no longer open.
   useEffect(() => {
     if (props.beside) return;
-    if (props.selected && queue.data && !queue.data.some((line) => line.key === props.selected!.key)) props.onSelect(null);
+    if (props.selected && queue.data && !queue.data.some((line) => line.key === props.selected!.key)) {
+      const next = successorOf(props.selected.key, []);
+      props.onSelect(next ? { key: next, sendBack: false } : null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue.data, props.selected, props.beside]);
 
@@ -377,10 +393,13 @@ function QueueInspector(props: {
           <div className={styles.detail}>
             {opensItems(line) ? <LineDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} /> : <p className="hint">{t("queue.inspector.nothing_more")}</p>}
           </div>
-        ) : props.empty ? (
-          <NothingNext />
         ) : (
-          <p className={styles.inspectorEmpty}>{t("queue.inspector.empty")}</p>
+          <>
+            {props.empty && <NothingNext />}
+            <div className={styles.inspectorBody}>
+              <ThisWeekInspector />
+            </div>
+          </>
         )}
       </Panel>
     </aside>

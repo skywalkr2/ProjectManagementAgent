@@ -116,6 +116,11 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   );
   const stageRows = (filter === "attention" ? stageToday.count : 0) + (firstLine ? 1 : 0);
   const filters: Filter[] = ["attention", "done", "all"];
+  // A list with nothing in it has nothing to hold still: what arrives shows at once, so the first results after a first go are
+  // one list, never "5 new · Show" over an empty one.
+  useEffect(() => {
+    if (changes.data && waiting.length > 0 && rows.length === 0 && stageRows === 0) setShown(new Set(changes.data.map((c) => c.id)));
+  }, [changes.data, waiting.length, rows.length, stageRows]);
 
   return (
     <section className={props.compact ? "panel-section compact" : "panel-section"} aria-labelledby="changes-title">
@@ -225,7 +230,9 @@ export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpen
   const { item } = props;
   const gated = waitsForGo(item);
   const cs = item.changeset;
-  const [open, setOpen] = useState(!!props.open || !!props.sendBack || item.state === "review" || (item.state === "needs_you" && !gated));
+  // Every row that holds a question for the person starts open, whatever state its request is in, so none sits closed.
+  const asks = !!cs?.ops.some((o) => o.ask?.status === "open");
+  const [open, setOpen] = useState(!!props.open || !!props.sendBack || asks || item.state === "review" || (item.state === "needs_you" && !gated));
   const [sendingBack, setSendingBack] = useState(!!props.sendBack);
   const [choosing, setChoosing] = useState(false);
   const ref = useRef<HTMLLIElement>(null);

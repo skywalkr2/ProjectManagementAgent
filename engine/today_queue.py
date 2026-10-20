@@ -25,6 +25,7 @@ from engine import (
     source_intake,
     watch,
 )
+from engine.blocked import standing_hold
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -749,7 +750,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     overdue = []
     for action in reader.list("action"):
         d = action.data
-        if d.get("status") != "open" or not d.get("due") or d.get("on_hold") or people.pm is None:
+        if d.get("status") != "open" or not d.get("due") or standing_hold(reader, d, people) or people.pm is None:
             continue
         if action.id in on_a_line:
             continue
@@ -816,6 +817,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 subject=(shown[0].get("label") or _op_text(shown[0].get("op") or {}) or None)
                 if len(shown) == 1
                 else None,
+                project=_request_project(reader, req, cs),
                 request=req.id,
                 changeset=d["changeset"],
                 outcome=outcome,
@@ -945,6 +947,11 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     kind="send",
                     count=s.to_send,
                     person=s.person,
+                    project=shared_project(
+                        reader,
+                        [q["id"] for q in s.questions if q["status"] == "open"],
+                        [a["id"] for a in s.actions if a["told"] is None],
+                    ),
                     questions=[q["id"] for q in s.questions if q["status"] == "open"],
                     actions=[a["id"] for a in s.actions if a["told"] is None],
                     since=s.name.lower(),
@@ -982,6 +989,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     kind="nudge",
                     count=len(waiting) + len(told),
                     person=s.person,
+                    project=shared_project(reader, [q["id"] for q in waiting], [a["id"] for a in told]),
                     questions=[q["id"] for q in waiting],
                     actions=[a["id"] for a in told],
                     waiting_days=longest,
@@ -1195,6 +1203,45 @@ def _op_text(op: dict[str, Any]) -> str:
 def _one_text(reader: Any, action_id: str) -> str | None:
     action = reader.get("action", action_id)
     return str(action.data["text"]) if action is not None and action.data.get("text") else None
+
+
+def _request_project(reader: Any, req: Any, changeset: dict[str, Any]) -> str | None:
+    """The one project a request's work is about, for its line's tag: the project the person named for it, else the
+    project of what it is about, else the source's only one, else the one project every change it made names. None when
+    it is about none or several."""
+    d = req.data
+    if d.get("project"):
+        return str(d["project"])
+    about = d.get("about") or {}
+    found = reader.get(about["kind"], about["id"]) if about.get("kind") and about.get("id") else None
+    if found is not None:
+        project = found.id if found.kind == "project" else found.data.get("project")
+        if project:
+            return str(project)
+    source = reader.get("source", d["source"]) if d.get("source") else None
+    projects = (source.data.get("projects") if source is not None else None) or []
+    if len(projects) == 1:
+        return str(projects[0])
+    named = {
+        (outcome.get("op") or {}).get("project")
+        for outcome in changeset.get("ops", [])
+        if (outcome.get("op") or {}).get("project")
+    }
+    return str(next(iter(named))) if len(named) == 1 else None
+
+
+def shared_project(reader: Any, questions: list[str], actions: list[str]) -> str | None:
+    """The project a line's questions and actions all belong to, for its tag; None when any of them has none or they
+    belong to different ones, so the tag never claims more than the line holds."""
+    found: set[str | None] = set()
+    for kind, ids in (("question", questions), ("action", actions)):
+        for record_id in ids:
+            record = reader.get(kind, record_id)
+            if record is None:
+                continue
+            data = record.data
+            found.add((data.get("projects") or [None])[0] if kind == "question" else data.get("project"))
+    return next(iter(found)) if len(found) == 1 and None not in found else None
 
 
 def _created(reader: Any, kind: str, record_id: str) -> str:

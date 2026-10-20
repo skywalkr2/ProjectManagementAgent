@@ -73,3 +73,22 @@
 .rail > * { min-width: 0; }
 .railBody { padding: var(--space-2) var(--space-3); display: grid; align-content: start; gap: var(--space-3); }
 .railFoot { border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); }
+
+/* Top priorities: a row may wrap so its button and menu drop under the words in a narrow rail. */
+.priority { flex-wrap: wrap; }
+.priority > :global(.tb-what) { flex: 1 1 8rem; }
+
+/* This week: a section of Today folded to one line below 2560px, the rail's panel from there, and the inspector's view. */
+.week { grid-column: 1 / -1; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+.weekHead { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); }
+.weekToggle {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); width: 100%; min-height: var(--tap-min, 2.75rem);
+  padding: var(--space-2) var(--row-px); border: 0; background: none; color: var(--text); font: inherit; font-weight: var(--weight-semibold);
+  text-align: left; cursor: pointer;
+}
+.weekToggle::before { content: "▸"; color: var(--text-subtle); }
+.weekToggle[aria-expanded="true"]::before { content: "▾"; }
+.weekSummary { color: var(--text-muted); font-weight: var(--weight-regular, 400); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.weekBody { display: grid; gap: var(--space-3); padding: var(--space-2) var(--row-px) var(--space-3); min-width: 0; }
+.weekBody p { margin: 0; }
+.weekInspectorHead { margin: 0 0 var(--space-2); font-size: var(--text-md, 1rem); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }

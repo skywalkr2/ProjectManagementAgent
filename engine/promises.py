@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
 
+from engine.blocked import standing_hold
 from engine.origin import origins
 from engine.scope import stance_of
 
@@ -75,7 +76,7 @@ def late(
 
     for record in reader.list("action"):
         d = record.data
-        if d.get("status") != "open" or d.get("on_hold") or record.id in pending:
+        if d.get("status") != "open" or standing_hold(reader, d) or record.id in pending:
             continue
         owners = [o["person"] for o in d.get("owners") or [] if o.get("person")]
         if not owners:

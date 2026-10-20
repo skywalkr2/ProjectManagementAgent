@@ -101,6 +101,18 @@ def status_rank(view: Any, name: str, value: str | None) -> int:
     return _URGENCY[describe(view, name, value).meaning]
 
 
+def value_rank(view: Any, name: str, value: str | None) -> int:
+    """Where a value stands on its list, 0 first, in the order the person keeps the list in; a value with none, or not
+    on the list, ranks after every value on it. For a list whose order says how much a value matters (project
+    priority)."""
+    record = next((r for r in view.list("value_list") if r.data["name"] == name), None)
+    values = [str(v) for v in (record.data.get("values") if record is not None else None) or []]
+    if record is None:
+        values = [str(v) for v in (core_lists().get(name) or {}).get("values") or []]
+    key = (value or "").strip().casefold()
+    return next((i for i, v in enumerate(values) if v.casefold() == key), len(values)) if key else len(values)
+
+
 def projects_at_risk(view: Any) -> list[str]:
     """The ids of the projects whose status means at risk, by the status's meaning, not its wording."""
     return [

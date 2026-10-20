@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { api } from "../lib/api";
+import { seeMove } from "../lib/moves";
 import type { QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
@@ -73,9 +74,17 @@ function QuestionDetail(props: { line: QueueLine; onOpenGuide?: (step: string) =
   if (!question) return props.line.request ? <ChangeDetail line={props.line} onOpenGuide={props.onOpenGuide} /> : <Gone />;
   return (
     <ul className="children">
-      <DecisionRow question={question} reveal={0} />
+      <DecisionRow question={question} reveal={0} check={props.line.after_move?.check} move={props.line.after_move} />
     </ul>
   );
+}
+
+/** Notes that the group of a move's questions is on screen with this many, so the toast for the last one can say it is settled. */
+function Seen(props: { move?: string; total: number }) {
+  useEffect(() => {
+    if (props.move) seeMove(props.move, props.total);
+  }, [props.move, props.total]);
+  return null;
 }
 
 /** The things to check after a move: one row for each, each with its own answer. */
@@ -85,12 +94,16 @@ function MovedDetail(props: { line: QueueLine }) {
   const mine = followups.data?.find((s) => s.is_pm)?.questions ?? [];
   const rows = (props.line.questions ?? []).map((id) => mine.find((q) => q.id === id)).filter((q) => q !== undefined);
   if (rows.length === 0) return <Gone />;
+  const checks = new Map((props.line.after_move?.rows ?? []).map((r) => [r.question, r.check]));
   return (
-    <ul className="children">
-      {rows.map((question) => (
-        <DecisionRow key={question.id} question={question} reveal={0} />
-      ))}
-    </ul>
+    <>
+      <Seen move={props.line.after_move?.request} total={(props.line.questions ?? []).length} />
+      <ul className="children">
+        {rows.map((question) => (
+          <DecisionRow key={question.id} question={question} reveal={0} check={checks.get(question.id)} move={props.line.after_move} />
+        ))}
+      </ul>
+    </>
   );
 }
 

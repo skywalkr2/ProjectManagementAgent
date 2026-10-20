@@ -97,6 +97,20 @@ def blocker_of(view: Any, hold: dict[str, Any] | None, people: People, here: Zon
     return Blocker("question", target, data["title"], state, people.name(asked) if asked else None, sent)
 
 
+def standing_hold(
+    view: Any, data: dict[str, Any], people: People | None = None, here: ZoneInfo | None = None
+) -> dict[str, Any] | None:
+    """The hold an action still stands under, or None. A hold whose blocker is over (an answered question, a finished or
+    dropped action) no longer holds: the action is due, chased, reminded and offered again by its own dates. A hold with
+    only words, or one whose blocker is gone, stands as written. Every line, list and packet that says "on hold" asks
+    this, so they agree."""
+    hold = data.get("on_hold")
+    if not hold:
+        return None
+    found = blocker_of(view, hold, people if people is not None else ViewNames(view), here)
+    return None if found is not None and found.resolved else hold
+
+
 def blocker_problem(view: Any, action_id: str, on: str) -> str | None:
     """Why `on` can't be what an action is blocked on, or None: it must be an existing person, action or question, and
     not the action itself."""

@@ -153,3 +153,52 @@ def test_a_second_move_of_the_same_entry_leaves_one_group_for_the_latest(env):
     (group,) = lines(env, "moved")
     assert group.after_move["request"] == latest.id and group.due == "2026-10-26"
     assert {q for q in group.questions} and len(group.questions) == 2
+
+
+# ---- each row's own answers (design 7.7) ----------------------------------------------------------------------
+
+
+def test_each_row_of_a_group_carries_its_structured_answer_a_date_to_move_and_a_plan_that_holds(env):
+    entry, _, action = moved_entry_with(env)
+    (group,) = lines(env, "moved")
+    rows = {r["question"]: r["check"] for r in group.after_move["rows"]}
+    assert len(rows) == 2
+    date_check = next(c for c in rows.values() if c["kind"] == "date")
+    plan_check = next(c for c in rows.values() if c["kind"] == "plan")
+    assert (date_check["action"], date_check["from_day"], date_check["to_day"]) == (action, OLD, NEW)
+    assert date_check["version"] and date_check["text"]
+    assert plan_check["record"] == entry
+
+
+def test_a_question_that_names_nothing_to_move_or_confirm_has_no_structured_answer(env):
+    _, _, store = env
+    pm = pm_of(env)
+    entry = make(store, "event")
+    action = make(store, "action", event=entry, due=OLD)
+    make(store, "action", text="Check the other item", event=entry)
+    edit(env, "event", entry, start=NEW)
+    (request,) = follow_ons(store)
+    # An action with no day of its own is not asked to move: its question is an ordinary one.
+    undated = make(store, "action", text="Plan the freight", event=entry)
+    scripted(
+        {"summary": "Asked.", "ops": [ask_date(pm, action), ask_date(pm, undated, title="Is the freight plan fine?")]}
+    )
+    run(env, request.id)
+    rows = [x.after_move for x in lines(env) if x.after_move and x.kind != "moved"]
+    group = lines(env, "moved")
+    found = [r["check"] for g in group for r in g.after_move["rows"]] + [r["check"] for r in rows]
+    assert any(c and c["kind"] == "date" and c["action"] == action for c in found)
+    assert not any(c and c.get("action") == undated for c in found)
+
+
+def test_a_group_of_one_row_carries_its_structured_answer_too(env):
+    _, _, store = env
+    pm = pm_of(env)
+    entry = make(store, "event")
+    action = make(store, "action", event=entry, due=OLD)
+    edit(env, "event", entry, start=NEW)
+    (request,) = follow_ons(store)
+    scripted({"summary": "Asked.", "ops": [ask_date(pm, action)]})
+    run(env, request.id)
+    (row,) = [x for x in lines(env) if x.kind == "decision" and x.after_move]
+    assert row.after_move["check"]["kind"] == "date" and row.after_move["check"]["to_day"] == NEW

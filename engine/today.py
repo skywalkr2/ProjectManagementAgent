@@ -61,12 +61,14 @@ def zone(cfg: Any) -> ZoneInfo:
         return ZoneInfo("UTC")
 
 
-def agenda(store: Any, cfg: Any, now: datetime) -> list[AgendaItem]:
-    """Events on today and the configured days after it, earliest first; all-day ones first on their day. The app's own
-    calendar entries follow the connected calendars' events, in start order, each on every day it covers."""
+def agenda(store: Any, cfg: Any, now: datetime, through: date | None = None) -> list[AgendaItem]:
+    """Events on today and the configured days after it (or every day through `through`), earliest first; all-day ones
+    first on their day. The app's own calendar entries follow the connected calendars' events, in start order, each on
+    every day it covers."""
     here = zone(cfg)
     first = now.astimezone(here).date()
-    days = [first + timedelta(days=n) for n in range(cfg.ui.today.agenda_days_ahead + 1)]
+    ahead = cfg.ui.today.agenda_days_ahead if through is None else max(0, (through - first).days)
+    days = [first + timedelta(days=n) for n in range(ahead + 1)]
     found = []
     view = store.read()
     kept = {

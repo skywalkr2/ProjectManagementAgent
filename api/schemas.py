@@ -1870,6 +1870,29 @@ class PromiseCorrection(BaseModel):
     due: date | None = Field(None, description="The new day; the words the old one came from are dropped.")
 
 
+class AfterMoveCheck(BaseModel):
+    """The one structured answer a question after a move has (design 7.7). `date`: the question asks whether an
+    action's day (`from_day`) should move to the day the record moved to (`to_day`); the answers are Move it (the
+    person's own edit of the action's due day, POST /api/records/edit with `version`, then the answer) and Keep it (the
+    answer alone). `plan`: it asks whether the plan for the moved record still holds; the answers are It holds and
+    Needs a change, which carries the person's note. Each is the question's answer, POST /api/questions/{id}/answer."""
+
+    kind: Literal["date", "plan"]
+    action: str | None = Field(None, description="For a date question: the action it asks about.")
+    version: int | None = Field(None, description="The action's version as read, to state when moving its day.")
+    text: str | None = Field(None, description="The action's words.")
+    from_day: str | None = Field(None, description="The action's own day now, YYYY-MM-DD.")
+    to_day: str | None = Field(None, description="The day the record moved to, YYYY-MM-DD.")
+    record: str | None = Field(None, description="For a plan question: the record that moved.")
+
+
+class AfterMoveRow(BaseModel):
+    """One question of a moved group, and its structured answer when it has one."""
+
+    question: str
+    check: AfterMoveCheck | None = None
+
+
 class AfterMove(BaseModel):
     """The move a question (or a group of them) came after (design 7.7): the record that moved, by its own name, the day
     it moved to and whether that is earlier than where it was. `others` names the people the same follow-on run asked
@@ -1885,6 +1908,12 @@ class AfterMove(BaseModel):
     request: str
     changeset: str | None = Field(None, description="The follow-on run's own change, which Undo takes back.")
     others: list[str] = Field(default_factory=list)
+    check: AfterMoveCheck | None = Field(
+        None, description="For a question that stands as a row of its own: its structured answer, when it has one."
+    )
+    rows: list[AfterMoveRow] = Field(
+        default_factory=list, description="For the line that groups several: each question and its structured answer."
+    )
 
 
 class SnoozeChoiceView(BaseModel):
@@ -4392,3 +4421,98 @@ class OpenItemsView(BaseModel):
     actions: list[OpenActionView]
     questions: list[OpenQuestionView]
     stale_days: int = Field(description="Days with no change before a person's own undated to-do is stale; 0 is off.")
+
+
+class PriorityThingView(BaseModel):
+    """One thing inside a Top priorities line, for the line's tooltip: an action or a question, and why it is there."""
+
+    kind: Literal["action", "question"]
+    id: str
+    text: str
+    why: Literal["overdue", "due_soon", "chase", "send", "answer", "at_risk"]
+    due: date | None = None
+    waiting_days: int | None = Field(None, description="For something sent, the days since the last word to them.")
+
+
+class PriorityLineView(BaseModel):
+    """One line of Top priorities (design 7.7). `kind` is action or question (the person's own, one thing: `action` or
+    `question` is its id, and for an action `owners` and `version` are what Reassign needs) or person (everything one
+    other person holds: the counts `send`, `chase`, `overdue` and `due_soon`, and `waiting_days`, the longest wait; its
+    Follow-ups group is `person`). `rank` is why it is listed, `due` its day, `days` how many days past its day it is
+    (none while the day is ahead) and `things` everything in it."""
+
+    key: str
+    rank: Literal["overdue", "due_soon", "waiting", "at_risk"]
+    kind: Literal["person", "action", "question"]
+    person: str | None = None
+    person_name: str | None = None
+    text: str = Field(description="The one thing's own words; for a person line, the person's name.")
+    project: str | None = None
+    project_name: str | None = None
+    due: date | None = None
+    days: int | None = None
+    action: str | None = None
+    question: str | None = None
+    version: int | None = Field(None, description="The action's version, to state when reassigning it.")
+    owners: list[OwnerNameView] = Field(default_factory=list, description="The action's owners, for Reassign.")
+    send: int = 0
+    chase: int = 0
+    overdue: int = 0
+    due_soon: int = 0
+    waiting_days: int | None = None
+    things: list[PriorityThingView] = Field(default_factory=list)
+
+
+class ComingView(BaseModel):
+    """A dated to-do due in the next days that isn't on a Top priorities line."""
+
+    action: str
+    text: str
+    due: date
+    project: str | None = None
+    project_name: str | None = None
+    owners: list[OwnerNameView] = Field(default_factory=list)
+    mine: bool = False
+
+
+class TopPrioritiesView(BaseModel):
+    """Top priorities (design 7.7): GET /api/today/priorities. `lines` are the most pressing first, `more` how many
+    more rank beyond them (the settings give the number of lines), `blocked` how many open actions wait on a person, an
+    action or a question that still blocks them, and `coming` the dated to-dos of the next days after the lines."""
+
+    lines: list[PriorityLineView]
+    more: int
+    blocked: int
+    coming: list[ComingView]
+
+
+class WeekDueView(BaseModel):
+    """A to-do due by the week's end."""
+
+    action: str
+    text: str
+    due: date
+    project: str | None = None
+    project_name: str | None = None
+    owners: list[OwnerNameView] = Field(default_factory=list)
+    mine: bool = False
+
+
+class WeekWaitingView(BaseModel):
+    """Someone waiting on the person: how many of their to-dos are promised or owed to them, and the earliest day."""
+
+    person: str
+    person_name: str
+    count: int
+    due: date | None = None
+
+
+class ThisWeekView(BaseModel):
+    """This week (design 7.7): GET /api/today/week. From today (`first`) through the configured last working day
+    (`last`): what is `due`, who is `waiting` on the person and the `meetings` to hold, across projects."""
+
+    first: date
+    last: date
+    due: list[WeekDueView]
+    waiting: list[WeekWaitingView]
+    meetings: list[AgendaItemView]

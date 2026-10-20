@@ -12,6 +12,7 @@ import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { AfterMoveAnswers } from "./AfterMoveAnswers";
 import { AskChooser } from "./AskChooser";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { LearnedLines } from "./Learned";
@@ -169,7 +170,9 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; r
   );
 }
 
-export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number }) {
+/** A question the person is asked. After a move, `check` gives it its own two answers in place of the answer form; `move` is
+ * what it came after. */
+export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number; check?: S["AfterMoveCheck"] | null; move?: S["AfterMove"] | null }) {
   const { t } = useWords();
   const act = useAct();
   const noted = useNoted();
@@ -205,6 +208,8 @@ export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: nu
       <div className="full">
         {who ? (
           <AskChooser ask={{ id: q.id, about: q.about ?? "other", options: q.options, name: null }} />
+        ) : props.check ? (
+          <AfterMoveAnswers question={q} check={props.check} move={props.move} />
         ) : (
           <form
             className="answer-form"

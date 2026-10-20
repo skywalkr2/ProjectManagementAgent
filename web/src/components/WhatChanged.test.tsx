@@ -440,3 +440,50 @@ test("a Today line for a new source's intake narrows the list to what that intak
   expect(await screen.findByText("A pasted note's thing")).toBeInTheDocument();
   expect(screen.getByText("Another source's thing")).toBeInTheDocument();
 });
+
+// ---- the first results are one clear list ----------------------------------------------------------------------------
+
+function asking(id: string, who: string): S["ChangeItem"] {
+  const item = change(id, { state: "done" });
+  item.changeset!.ops[0] = {
+    ...item.changeset!.ops[0],
+    op: "action.add",
+    status: "held",
+    reason: "Waiting for you to say who this is",
+    title: `Send spine options (${who})`,
+    ask: { id: `Q-${id}`, status: "open", about: "held-op", name: who, options: [{ id: "PER-2", name: "Robin Sample" }] },
+  };
+  return item;
+}
+
+test("rows that arrive while the list shows nothing appear at once, never as N new over an empty list", async () => {
+  let rows: S["ChangeItem"][] = [];
+  fakeApi({ "GET changes": () => rows, "GET people": () => [] });
+  const { client } = renderApp(<WhatChanged />);
+  expect(await screen.findByText(/Nothing needs/i)).toBeInTheDocument();
+  rows = [change("REQ-1"), change("REQ-2"), change("REQ-3")];
+  await client.invalidateQueries();
+  expect(await screen.findAllByText("Proof copies ship Nov 5")).toHaveLength(3);
+  expect(screen.queryByRole("button", { name: /Show \d+ new items?/ })).toBeNull();
+});
+
+test("rows that arrive while the list shows others still wait behind N new", async () => {
+  let rows = [change("REQ-1")];
+  fakeApi({ "GET changes": () => rows });
+  const { client } = renderApp(<WhatChanged />);
+  expect(await screen.findAllByText("Proof copies ship Nov 5")).toHaveLength(1);
+  rows = [change("REQ-1"), change("REQ-2")];
+  await client.invalidateQueries();
+  expect(await screen.findByRole("button", { name: /Show \d+ new items?/ })).toBeInTheDocument();
+  expect(screen.getAllByText("Proof copies ship Nov 5")).toHaveLength(1);
+});
+
+test("every row that holds a question for the person starts open, whatever its state", async () => {
+  fakeApi({
+    "GET changes": () => [asking("REQ-1", "Robin"), asking("REQ-2", "Sam")],
+    "GET people": () => [{ id: "PER-2", name: "Robin Sample", role: "Editor" }],
+  });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByRole("combobox", { name: "Who is “Robin”?" })).toBeInTheDocument();
+  expect(screen.getByRole("combobox", { name: "Who is “Sam”?" })).toBeInTheDocument();
+});

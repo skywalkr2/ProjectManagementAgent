@@ -43,6 +43,7 @@ from api.sent_routes import build_sent_router
 from api.setup_routes import build_setup_router
 from api.sign_in_routes import build_sign_in_router
 from api.since_routes import build_since_router
+from api.today_routes import build_today_router
 from api.watch_routes import build_watch_router
 from engine import __version__
 from engine.ai.router import Router
@@ -300,6 +301,7 @@ def create_app(
     inner.include_router(build_ask_router(ws, cfg, store, events, worker))
     inner.include_router(build_correction_router(ws, cfg, store, events, worker))
     inner.include_router(build_open_items_router(ws, cfg, store, events, worker))
+    inner.include_router(build_today_router(ws, cfg, store, events, worker))
     inner.include_router(build_promise_router(ws, cfg, store, events, worker))
     inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
     inner.include_router(build_since_router(ws, cfg, store, events, worker))

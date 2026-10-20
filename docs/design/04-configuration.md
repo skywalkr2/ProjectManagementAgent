@@ -481,8 +481,9 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   the address the app was packaged with, else feedback is drafted to copy).
 - `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only), and
   `stale_after_days` (21; 0 is off): the person's own undated to-do nothing has changed for this long is stale, and Today has one
-  line for them (6.9).
-- `followups`: when something sent to a person is due a follow-up, one rule that Today and Follow-ups both read (6.9).
+  line for them (6.9); `top_priorities_lines` (5): the most lines Top priorities lists on Today, the rest counted; and
+  `top_priorities_ahead_days` (14; 0 leaves it out): the days ahead whose dated to-dos follow its lines (7.7).
+- `followups`: when something sent to a person is due a follow-up, one rule that Today, Follow-ups and Top priorities all read (6.9).
   `question_after_days` (4): a question with no reply after this many days; `action_due_within_days` (7): a told action
   whose own due date is this near or past (an action on hold is never chased); `undated_after_days` (14): a told action with
   no due date and no word after this many days; `second_nudge_items` (2): how many items a second follow-up names; and

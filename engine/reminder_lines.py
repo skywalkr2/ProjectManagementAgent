@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, time, timedelta, tzinfo
 from typing import Any
 
+from engine.blocked import standing_hold
 from engine.config.schema import WEEKDAYS
 from engine.reminders import QuietHours, Reminder, Snooze, WorkingHours, in_quiet_hours, next_fire, snooze
 from engine.today import zone
@@ -88,7 +89,7 @@ def plan(reader: Any, cfg: Any, now: datetime) -> Plan:
     waiting: list[Due] = []
     for action in reader.list("action"):
         d = action.data
-        if d.get("status") != "open" or d.get("on_hold") or not d.get("remind_at"):
+        if d.get("status") != "open" or standing_hold(reader, d) or not d.get("remind_at"):
             continue
         due = datetime.fromisoformat(str(d["remind_at"])).astimezone(r.tz)
         at = _scheduled(due, r)

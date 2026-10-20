@@ -16,6 +16,7 @@ from datetime import date
 from typing import Any
 
 from engine import followups, promises, source_intake
+from engine.blocked import standing_hold
 from engine.connectors import CORE, declared_reads, reads
 from engine.dispatcher import waits_on_first_go
 from engine.names import People
@@ -163,7 +164,7 @@ def found(store: Any, cfg: Any, limit: int, today: date | None = None) -> FirstP
     open_promises = [
         a
         for a in reader.list("action")
-        if a.data.get("status") == "open" and not a.data.get("on_hold") and promises.is_promise(a.data)
+        if a.data.get("status") == "open" and not standing_hold(reader, a.data) and promises.is_promise(a.data)
     ]
     open_promises.sort(key=lambda a: (a.data.get("due") is None, str(a.data.get("due") or ""), a.data["text"], a.id))
     shown = open_promises[: max(0, limit)]

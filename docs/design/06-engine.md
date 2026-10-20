@@ -981,11 +981,17 @@ is marked *designed*, with the phase.
   blocker's name. The row reads "Blocked, waiting on <the person or the action>" or, for a question, "Waits on: <the
   question> (<who>, sent <date>)", each name linking to what it names; a hold with only words reads "On hold: …". It is
   still one state: never due or chased, and `blocked_actions` (`engine/blocked.py`) counts the open actions whose blocker
-  still blocks, by project and in all, for Top priorities (batch B-6b shows it; nothing on screen reads it yet). When the
+  still blocks, by project and in all, for Top priorities, which shows it under its list (7.7; B-6b). When the
   question it waits on is answered (or the action it waits on is finished or dropped), the to-do is unblocked: it is due
   again by its own date, goes to the top of the rail under Unblocked with "Unblocked: <who> answered <date>" (the UI
   designer's answer 35; the day is read from the ledger), and stays unblocked until the person takes it off hold; the
   hold is not removed for them. The tie is set by the person or by an op naming the blocker, never by matching text.
+  **One rule for "is it still on hold"** (B-6b): `standing_hold` (`engine/blocked.py`) returns the hold an action still stands
+  under, or none when its blocker is over, and the promise lines, the reminder lines, the replies owed, Today's overdue line, the
+  walkthrough's first promises, Top priorities, This week and the assistant's packet (its open actions and the item a note was
+  typed on) all ask it, as the to-do list and Follow-ups already did, so a to-do whose blocker is over is due, chased, reminded
+  and shown again everywhere by its own dates, and the assistant is no longer told it is on hold. **Built:**
+  `tests/test_unblocked_lines.py`.
   (the designer's F15: a blocked action stays not due and not chased.) **Built:**
   `tests/test_blocked_actions.py` (the blocker, its words, the count, Undo, the op, the rows, the unblocked to-do first),
   `web/src/components/OnHold.test.tsx` (the picker and the rows), `web/src/components/TodayRail.test.tsx`. Taking it off hold when an input says the wait is over is *designed, phase L3b, not built*
@@ -994,8 +1000,11 @@ is marked *designed*, with the phase.
   `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`,
   `tests/test_on_hold_and_follow_ups.py::test_the_to_do_list_view_says_what_a_held_action_waits_for`).
 - **The follow-up rule** (built). One function, `follow_up_due` in `engine/followups.py`, decides whether something sent to a
-  person is due a follow-up; Today's `nudge` lines and the Follow-ups pills both read it, so they agree
-  (`tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`). A question that went
+  person is due a follow-up; Today's `nudge` lines, the Follow-ups pills and Top priorities (7.7, through the same
+  `sections`) all read it, so they agree
+  (`tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`,
+  `tests/test_top_priorities.py::test_the_follow_up_rule_is_the_one_the_follow_ups_screen_reads`,
+  `tests/test_top_priorities.py::test_today_and_top_priorities_agree_on_who_is_due_a_follow_up`). A question that went
   out is chased after `ui.followups.question_after_days` days with no reply (default 4). A told action is chased only when
   its own due date is within `ui.followups.action_due_within_days` days (default 7) or past, and only after it has waited as
   long as a question; an action due later is left alone, so a deadline weeks away is not nagged about. An action with no
@@ -1010,7 +1019,11 @@ is marked *designed*, with the phase.
   `tests/test_on_hold_and_follow_ups.py::test_a_told_action_just_sent_is_not_chased_even_when_due_soon`, `tests/test_on_hold_and_follow_ups.py::test_an_overdue_told_action_is_chased`,
   `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_chased`, `tests/test_on_hold_and_follow_ups.py::test_an_undated_told_action_is_chased_after_the_undated_wait_and_not_before`,
   `tests/test_on_hold_and_follow_ups.py::test_a_sent_question_is_chased_after_the_question_wait_and_not_before`,
-  `tests/test_on_hold_and_follow_ups.py::test_the_rule_reads_every_threshold_from_the_settings`).
+  `tests/test_on_hold_and_follow_ups.py::test_the_rule_reads_every_threshold_from_the_settings`,
+  `tests/test_top_priorities.py::test_every_number_the_list_reads_is_a_setting`). The wait before a dated action is chased (the
+  question wait) is part of the rule as built; the roadmap item's wording leaves it out. *Not one rule yet:* the promise lines
+  (6.33) read their own pair of numbers, `steward.chase_dated_days` and `steward.chase_undated_days`, which hold the same
+  defaults (7 and 14) as `action_due_within_days` and `undated_after_days` but are separate settings.
 - **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
   other owners stay. Told dates, Followed up and They finished it are per person, so the new person has not been told and
   the action is to send to them. **Built (B-6a):** "Reassign…" in a to-do's row menu on the to-dos and questions screen (7.5)
