@@ -17,8 +17,8 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   phase S (S1-4) where the steward first files mail; the screens stay in I-0.
 - **Decided (owner):** B-11 is split so the steward starts the next day: B-11a (tiers, presets, effort, fallback,
   setup) first; B-11b (the Settings screen and "Measure") beside I-0.
-- **Impact:** design 7 (setup's order and words), design 6.32 (two sides), roadmap S1-4, B-11a/B-11b and I-0. Change
-  log: section 145.
+- **Impact:** design 7 (setup's order and words), design 6.32 (two sides), roadmap S1-4, B-11a/B-11b and I-0.
+  Change log: section 145.
 
 ## 2026-10-21: Setup is personal first with a business optional, reviewed as a non-IT person before the installers
 
