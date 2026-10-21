@@ -677,7 +677,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     the whole suite passes 40 days on locally with three workers, and the job passed on CI at `9e9c3f0` (4.5 minutes,
     run 39527996195).
 
-- [ ] [B-9] **Build the UI/UX designer's review of batch B-8** (received 2026-10-20 at `0f37be4`,
+- [x] [B-9] **Build the UI/UX designer's review of batch B-8** (received 2026-10-20 at `0f37be4`,
   `reviews/ui-ux-2026-10/rereview-0f37be4/README.md`; R1 to R11 confirmed fixed on screen, and both of the session's
   judgment calls accepted; the owner's standing answer: "give them what they want"). Each sub-item is done when its
   test passes:
@@ -711,8 +711,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     connected. **Built (B-9):** `web/src/components/Walkthrough.test.tsx` ("the mail step with nothing connected has one way
     on…", "the mail step has Continue once something is connected…");
   - `docs/project/ui-review-status-2026-10-20.md` carries the reviewer's marks at `0f37be4` and then B-9's. **Built (B-9):**
-    the file (a documentation item, so no test). **Left:** the full browser run of the three new checks, and the
-    reviewer's look at S1 to S6 on screen.
+    the file (a documentation item, so no test). The three browser checks passed in the full runs and on CI at
+    `e4d9fd7` (run 39545093376, every job green), and the reviewer marked S1 to S6 Done on screen at `9e9c3f0`
+    (`reviews/ui-ux-2026-10/rereview-9e9c3f0/README.md`) and R-0 to R-c at `149890e` (its `followup-149890e/`).
 
 - [ ] [B-10] **The owner's re-run of the failed AI cases** (2026-10-21, at `9e9c3f0`, one account, 3 runs per case:
   the golden set's 41 failing cases at 39% of runs passing, 10 cases passing every run). Each sub-item is done when its
