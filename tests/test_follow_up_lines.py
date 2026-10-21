@@ -127,3 +127,13 @@ def test_a_follow_up_line_counts_only_what_is_overdue_as_overdue(env):
     make(store, [them], due=None, promised_to=[me(cfg)], text="Undated", made=TODAY - timedelta(days=40))
     (line,) = nudges(env, them)
     assert (line.count, line.overdue, line.due) == (2, 1, PAST.isoformat())
+
+
+def test_a_promise_whose_date_is_still_ahead_has_waited_no_days_on_the_follow_up_line(env):
+    """A promise owed to the person that isn't due yet is on the follow-up line with a wait of zero days, never below
+    (its days past the date are negative until the date comes)."""
+    _, cfg, store = env
+    them = someone(env)
+    make(store, [them], due=TODAY + timedelta(days=1), promised_to=[me(cfg)], basis="said")
+    found = nudges(env, them)
+    assert found and all(line.waiting_days == 0 for line in found)

@@ -1036,9 +1036,10 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             waiting = [q for q in waiting if q is not item]
             told = [a for a in told if a is not item]
         if waiting or told:
+            # A promise whose date is still ahead (`quiet` below zero) hasn't waited yet: the wait is never below zero.
             longest = max(
                 [q["waiting_days"] or 0 for q in waiting]
-                + [a["told_days"] if a["told_days"] is not None else quiet.get(a["id"], 0) for a in told]
+                + [a["told_days"] if a["told_days"] is not None else max(0, quiet.get(a["id"], 0)) for a in told]
             )
             late_on = sorted(
                 date.fromisoformat(str(a["due"])) for a in told if a["due"] and str(a["due"]) < today.isoformat()

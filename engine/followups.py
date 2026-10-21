@@ -265,14 +265,14 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     settled: list[dict[str, str]] | None = None
     for s in by_person.values():
         if s.nudge is not None:
-            settled = _settled_since_sent(store) if settled is None else settled
+            settled = _settled_since_sent(store, here) if settled is None else settled
             s.nudge.left_out = _left_out(s, settled)
     return sorted(by_person.values(), key=lambda s: (not s.is_pm, s.name.lower()))
 
 
-def _day(stamp: str) -> str:
-    """The day part of a stored time, as an ISO date."""
-    return stamp[:10]
+def _day(stamp: str, here: tzinfo) -> str:
+    """The day a stored time falls on where the workspace is, as an ISO date (a bare day stays as it is)."""
+    return local_day(datetime.fromisoformat(stamp), here).isoformat() if "T" in stamp else stamp[:10]
 
 
 def _first_told(history: list[dict[str, Any]], person: str, told: Any) -> str | None:
@@ -282,7 +282,7 @@ def _first_told(history: list[dict[str, Any]], person: str, told: Any) -> str | 
     return str(first["after"][person]) if first else (str(told) if told else None)
 
 
-def _settled_since_sent(store: Store) -> list[dict[str, str]]:
+def _settled_since_sent(store: Store, here: tzinfo) -> list[dict[str, str]]:
     """Every question answered and every action done that had gone out to someone: for each, the person, the day it
     went to them (`sent_on`: a question's own, an action's first told day), its text and the day it was settled."""
     view = store.read()
@@ -300,8 +300,8 @@ def _settled_since_sent(store: Store) -> list[dict[str, str]]:
                     "id": q.id,
                     "person": d["to"],
                     "text": d["title"],
-                    "sent_on": _day(str(d["sent_at"])),
-                    "on": _day(closed[-1]["at"]),
+                    "sent_on": _day(str(d["sent_at"]), here),
+                    "on": _day(closed[-1]["at"], here),
                 }
             )
     finished = view.field_changes("action", ("status", "told"))
@@ -325,7 +325,7 @@ def _settled_since_sent(store: Store) -> list[dict[str, str]]:
                     "person": person,
                     "text": d["text"],
                     "sent_on": str(first["after"][person]) if first else str(d["told"][person]),
-                    "on": _day(closed[-1]["at"]),
+                    "on": _day(closed[-1]["at"], here),
                 }
             )
     return out
