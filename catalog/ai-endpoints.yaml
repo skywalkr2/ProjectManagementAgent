@@ -24,6 +24,16 @@
 #                      faster. The screen offers these three words and shows the program's own name for the choice
 #                      only in a hint, so a name the program renames is a change here and nowhere else
 #   model_optional     the program picks its own model when none is named
+#   tier_presets       the recommended setup, by tier name (routine, deep, hardest): `family`, a word matched without
+#                      regard to case against the model ids the service lists for the person's key (for a
+#                      command-line agent, against model_examples), and `effort` (low, medium or high; optional).
+#                      Adding an account with no choice of tiers fills each tier with the first model of its family
+#                      and its effort; hardest is made when the settings have no such tier. A family no model matches
+#                      leaves its tier as it would be without a preset. Names families, never ids, so a newer model of
+#                      the family is picked up with no change here. An entry with no preset gets its tiers by price.
+#   effort_param, effort_option (provider and agent settings, not set on any entry here): how a service takes an
+#                      effort. Each is set on an entry only once the service's own parameter is confirmed for it;
+#                      until then a tier's effort is recorded but never sent.
 #   note               one line shown with it
 # Model ids are never listed here: the screen asks the service for its models with the person's key.
 endpoints:
@@ -48,6 +58,10 @@ endpoints:
     needs_key: true
     settings:
       json_mode: false
+    tier_presets:
+      routine: {family: haiku}
+      deep: {family: sonnet}
+      hardest: {family: opus}
     note: Pay as you go on your own Anthropic account.
   - id: google
     name: Google AI Studio
@@ -119,8 +133,12 @@ endpoints:
     base_url: ""
     needs_key: false
     program: claude
-    model_examples: [sonnet, opus, haiku]
-    model_roles: {sonnet: recommended, opus: stronger, haiku: faster}
+    model_examples: [haiku, sonnet, opus]
+    model_roles: {haiku: recommended, sonnet: stronger, opus: stronger}
+    tier_presets:
+      routine: {family: haiku}
+      deep: {family: sonnet}
+      hardest: {family: opus}
     settings:
       agent:
         command: [claude, -p, --output-format, json, --model, "{model}", --tools, "", --strict-mcp-config, --no-session-persistence]

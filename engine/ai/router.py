@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Collection, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -38,6 +38,7 @@ class Choice:
     provider: str
     model_key: str
     model_id: str
+    effort: str | None = None  # the tier's effort, for the tier's own accounts; the adapter applies it only if told how
 
 
 class NoProvider(Exception):
@@ -143,7 +144,8 @@ def choices(
             refused.append(f"{provider_name} doesn't take {', '.join(sorted(content))} material")
             continue
         model_id = provider.models.get(model_key, model_key) if provider.adapter != "stub" else "stub"
-        picked.append(Choice(tier_name, provider_name, model_key, model_id))
+        effort = tier_cfg.effort if use is None and tier_cfg is not None else None
+        picked.append(Choice(tier_name, provider_name, model_key, model_id, effort))
     if not picked:
         if waiting_on_identity:
             raise waiting_on_identity[0]
@@ -483,7 +485,7 @@ class Router:
         for attempt in range(limits.tries if wait else 1):
             started, clock = self.now(), time.monotonic()
             try:
-                return adapter.run(task, choice.model_id)
+                return adapter.run(replace(task, effort=choice.effort) if choice.effort else task, choice.model_id)
             except AiError as err:
                 pause = err.retry_after if err.retry_after is not None else 2.0 * 2**attempt
                 if (

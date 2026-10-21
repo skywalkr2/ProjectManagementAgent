@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException
 from api.pack_routes import entry_in
 from api.schemas import (
     AiAccountAdd,
+    AiAccountAdded,
     AiAccountChange,
     AiAccountCheck,
     AiAccountChecked,
@@ -1528,8 +1529,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return saved(done, let_go(f"ai:{name}", ai.providers[name].model_dump(mode="json")))
 
     @r.post("/ai/accounts")
-    def ai_account_add(body: AiAccountAdd) -> SettingsSaved:
+    def ai_account_add(body: AiAccountAdd) -> AiAccountAdded:
         from engine.ai.adapters import ADAPTERS
+        from engine.ai.presets import TierPlan, plan_tiers
+        from engine.secrets import SecretError, resolve_secret
 
         if body.adapter not in ADAPTERS or body.adapter == "stub":
             raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.adapter}.")
@@ -1547,6 +1550,32 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
         if body.key and not local:
             raise HTTPException(status_code=400, detail=HOSTED_KEY)
+        now = current().ai
+        chosen = bool(body.use_for or body.use)
+        stand_in = {
+            name
+            for name, tier in now.tiers.items()
+            if (on := now.providers.get(tier.use.split("/", 1)[0])) is not None and on.adapter == "stub"
+        }
+
+        def listed_prices() -> dict[str, Any]:
+            """What the service says its models cost, asked with the key given here; nothing when it can't be read."""
+            address = (kind["base_url"] or body.base_url or "").strip()
+            try:
+                key = body.key.strip() if body.key else (resolve_secret(body.key_ref) if body.key_ref else None)
+                found, problem = setup.list_models(kind, address, key) if address else ([], "no address")
+            except SecretError:
+                return {}
+            return dict(found) if problem is None else {}
+
+        # Unless the person said what it is for, the service's recommended setup (or, with none, a split by price)
+        # fills the tiers still on the stand-in.
+        plan = (
+            plan_tiers(kind, models, now.tiers, stand_in, listed_prices)
+            if kind is not None and not chosen
+            else TierPlan()
+        )
+        models.update(plan.new_models)
         provider: dict[str, Any] = {
             **(kind["settings"] if kind else {}),
             **({"kind": kind["id"]} if kind else {}),
@@ -1581,13 +1610,17 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if short not in models:
                 raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
             changes[f"ai.tiers.{tier}.use"] = f"{body.name}/{short}"
+        for tier_name, short in plan.use.items():
+            changes[f"ai.tiers.{tier_name}.use"] = f"{body.name}/{short}"
+        for tier_name, effort in plan.effort.items():
+            changes[f"ai.tiers.{tier_name}.effort"] = effort
+        for tier_name, higher in plan.escalate_to.items():
+            changes[f"ai.tiers.{tier_name}.escalate_to"] = higher
         # Unless the person said what it is for, a real account takes over every tier still on the stand-in, so the
         # assistant does real work once one is added; tiers on another real account stay where the person put them.
-        now = current().ai
-        for tier_name, tier in now.tiers.items() if not (body.use_for or body.use) else ():
+        for tier_name in stand_in if not chosen else ():
             key = f"ai.tiers.{tier_name}.use"
-            on = now.providers.get(tier.use.split("/", 1)[0])
-            if key not in changes and on is not None and on.adapter == "stub":
+            if key not in changes:
                 changes[key] = f"{body.name}/{first}"
         try:
             result = save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers."))
@@ -1595,7 +1628,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if kept is not None:
                 setup.secret_path(ws, kept).unlink(missing_ok=True)
             raise
-        return saved(result)
+        return AiAccountAdded(
+            **saved(result).model_dump(), unmatched_tiers=plan.unmatched, price_filled_tiers=plan.by_price
+        )
 
     @r.post("/ai/models")
     def ai_models(body: AiModelsAsk) -> AiModelsView:

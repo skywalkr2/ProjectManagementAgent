@@ -41,6 +41,7 @@ class AiTask:
     output: Literal["json", "text"] = "json"  # text: the answer is prose (a draft), not a JSON object
     expected_output: int | None = None  # this run's likely answer size in tokens, when its packet knows better
     knowledge: dict[str, Any] | None = None  # the run's knowledge log (what it was given), written onto its record
+    effort: Literal["low", "medium", "high"] | None = None  # the tier's effort; an adapter applies it only if told how
 
     @property
     def size(self) -> int:

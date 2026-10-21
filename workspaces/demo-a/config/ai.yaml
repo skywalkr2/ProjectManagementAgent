@@ -23,6 +23,7 @@ providers:
   #   adapter: openai-compatible
   #   base_url: http://localhost:11434/v1
   #   models: {small: local-small-model}
+  #   effort_param: reasoning_effort         # the request setting this service takes a tier's effort in; empty: effort is never sent
   #   allowed_data: [open, internal, restricted]
   # coding-agent:
   #   adapter: cli-agent
@@ -48,11 +49,14 @@ providers:
   #     identity_field: account.email           # where the account is in that JSON; empty: read by identity_line (1) and identity_pattern
   #     identity_recheck_seconds: 600           # a run looks again at the sign-in after this long, so a change is found
   #     version_command: [example-agent, --version]   # prints the agent's version for evaluation reports; empty: the program with --version
+  #     effort_option: [--effort, "{effort}"]    # added to the command when the tier has an effort; empty: effort is never passed on
   #     home: fresh                          # each run starts with an empty home folder, so no memory carries over
   #     home_files: [.config/example-agent/credentials.json]   # all it needs to stay signed in
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}
+  # A tier can say how hard the model should think, passed on only to an account that takes it:
+  # deep: {use: stub/default, effort: high}
 tasks:
   notes: {tier: routine, temperature: 0, max_output: 4000, expected_output: 800}
 roles:

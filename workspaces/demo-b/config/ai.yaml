@@ -15,6 +15,7 @@ providers:
   #   base_url: https://api.deepseek.com/v1
   #   auth: env:LOWCOST_AI_KEY
   #   models: {small: deepseek-chat}
+  #   effort_param: reasoning_effort         # the request setting this service takes a tier's effort in; empty: effort is never sent
   #   credential_expires: 2027-01-31   # the day its key stops working, if the service says
   #   allowed_data: [open, internal]
   #   content_levels: []
@@ -41,11 +42,14 @@ providers:
   #     identity_pattern: 'as (\S+)'               # the account within the line (first group); empty: the whole line
   #     identity_recheck_seconds: 600           # a run looks again at the sign-in after this long, so a change is found
   #     version_command: [example-agent, --version]   # prints the agent's version for evaluation reports; empty: the program with --version
+  #     effort_option: [--effort, "{effort}"]    # added to the command when the tier has an effort; empty: effort is never passed on
   #     home: shared                         # signed in with a key, so the home folder holds nothing it needs
   #   auth: env:EXAMPLE_AGENT_KEY
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}
+  # A tier can say how hard the model should think, passed on only to an account that takes it:
+  # deep: {use: stub/default, effort: high}
 tasks:
   notes: {tier: routine, temperature: 0, max_output: 3000, expected_output: 800}
 roles:

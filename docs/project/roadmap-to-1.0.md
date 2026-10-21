@@ -792,7 +792,11 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings
-  screen with the tiers and their cost per day, and "Measure") (owner, 2026-10-21;
+  screen with the tiers and their cost per day, and "Measure"). **B-11a built:** `engine/ai/presets.py`,
+  `tests/test_tier_presets.py` (presets for the two services whose families are certain; effort reaches a service only
+  through its confirmed `effort_param` or `effort_option`, none set yet). *Left for B-11b:* the Settings screen,
+  "Measure", the model picker's role words (two examples now share "stronger"), effort in the pre-save account check,
+  and confirming each service's effort parameter (owner, 2026-10-21;
   design 6.16; placed before phase S because it decides what testers spend; the owner may move it): three tiers
   (everyday, stronger, hardest); a preset per catalog entry naming a model family and an effort per tier; effort as a
   per-model adapter capability; tiers filled by price where no preset matches, marked not checked; a measured

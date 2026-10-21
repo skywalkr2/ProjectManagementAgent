@@ -48,8 +48,9 @@ class SmokeResult:
     error_kind: str = ""  # when the call failed: the kind the call itself gave (never read from the account's words)
 
 
-def _params_for_tier(cfg: Config, tier: str) -> list[tuple[str, float, int]]:
-    """(task kind, temperature, max_output) for every task kind that runs on this tier, directly or by escalation."""
+def _params_for_tier(cfg: Config, tier: str) -> list[tuple[Any, ...]]:
+    """(task kind, temperature, max_output) for every task kind that runs on this tier, directly or by escalation,
+    with the tier's effort added as a fourth part when it has one (a tier without one keeps the three parts)."""
     uses = [(k, t.temperature, t.max_output) for k, t in cfg.ai.tasks.items() if t.tier == tier]
     if not uses:
         uses = [
@@ -57,7 +58,8 @@ def _params_for_tier(cfg: Config, tier: str) -> list[tuple[str, float, int]]:
             for k, t in cfg.ai.tasks.items()
             if cfg.ai.tiers.get(t.tier) and cfg.ai.tiers[t.tier].escalate_to == tier
         ]
-    return uses or [("smoke", 0.0, 256)]
+    effort = cfg.ai.tiers[tier].effort if tier in cfg.ai.tiers else None
+    return [(*use, effort) if effort else use for use in uses or [("smoke", 0.0, 256)]]
 
 
 def smoke_test(
@@ -79,8 +81,10 @@ def smoke_test(
             provider_name, _, model_key = ref.partition("/")
             settings = cfg.ai.providers[provider_name]
             model_id = settings.models.get(model_key, model_key)
-            for kind, temperature, max_output in _params_for_tier(cfg, tier_name):
-                task = AiTask(kind, "This is a connection test.", "", _REQUEST, {}, temperature, max_output)
+            for kind, temperature, max_output, *effort in _params_for_tier(cfg, tier_name):
+                task = AiTask(
+                    kind, "This is a connection test.", "", _REQUEST, {}, temperature, max_output, effort=tier.effort
+                )
                 start = time.monotonic()
                 key_source = None
                 answered = no_network = False
@@ -99,7 +103,8 @@ def smoke_test(
                         key_source = describe_secret(settings.auth)
                 except ValueError as err:
                     ok, detail = False, str(err)
-                label = f"{ref} ({kind}, temperature {temperature}, max output {max_output})"
+                shown_effort = f", effort {tier.effort}" if tier.effort else ""
+                label = f"{ref} ({kind}, temperature {temperature}, max output {max_output}{shown_effort})"
                 results.append(
                     SmokeResult(
                         tier_name,
@@ -114,7 +119,7 @@ def smoke_test(
                         no_network,
                         ref,
                         "call",
-                        [kind, temperature, max_output],
+                        [kind, temperature, max_output, *effort],
                         error_kind=failed_kind,
                     )
                 )

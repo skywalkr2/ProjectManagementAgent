@@ -1327,6 +1327,75 @@
         "title": "AiAccountAdd",
         "type": "object"
       },
+      "AiAccountAdded": {
+        "description": "The settings saved for a new account, and what filling its tiers on its own could not do.",
+        "properties": {
+          "changes": {
+            "description": "What changed, for the read-back and Undo.",
+            "items": {
+              "$ref": "#/components/schemas/SettingChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "kept_secrets_going": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many passwords or keys kept on this computer go with what was just removed (a source or an account). They are removed once Undo can no longer need them; left out when nothing was kept for it.",
+            "title": "Kept Secrets Going"
+          },
+          "kept_secrets_undo_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many minutes they stay so Undo can bring them back (`storage.kept_secrets.undo_grace_minutes`); left out with the count.",
+            "title": "Kept Secrets Undo Minutes"
+          },
+          "needs_restart": {
+            "description": "These settings take effect after a restart. Nothing restarts until the person chooses to: ask them first, then POST /api/restart. False when the change is in use already (AI accounts are).",
+            "title": "Needs Restart",
+            "type": "boolean"
+          },
+          "price_filled_tiers": {
+            "description": "Tiers filled by price because the service has no recommended setup: they are not checked until the connection test passes, like any account the person has not accepted unchecked.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Price Filled Tiers",
+            "type": "array"
+          },
+          "unmatched_tiers": {
+            "description": "Tiers the service's recommended setup names but none of the account's models matched: each is left as it would be with no recommendation (a tier made for the recommendation is not made).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmatched Tiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes",
+          "fingerprint",
+          "needs_restart"
+        ],
+        "title": "AiAccountAdded",
+        "type": "object"
+      },
       "AiAccountChange": {
         "additionalProperties": false,
         "description": "A change to an existing account: a new key, other models, or the work it does.",
@@ -21848,7 +21917,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SettingsSaved"
+                  "$ref": "#/components/schemas/AiAccountAdded"
                 }
               }
             },

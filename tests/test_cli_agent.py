@@ -206,8 +206,8 @@ def test_the_smoke_test_runs_the_lockdown_test_once_per_agent_account(agent_scri
         ai=SimpleNamespace(
             providers={"agent": ProviderSettings(**providers["agent"])},
             tiers={
-                "routine": SimpleNamespace(use="agent/default", fallback=[], escalate_to=None),
-                "deep": SimpleNamespace(use="agent/default", fallback=[], escalate_to=None),
+                "routine": SimpleNamespace(use="agent/default", fallback=[], escalate_to=None, effort=None),
+                "deep": SimpleNamespace(use="agent/default", fallback=[], escalate_to=None, effort=None),
             },
             tasks={},
         )
@@ -301,7 +301,7 @@ def test_an_agent_preset_shows_why_a_signed_out_test_failed_in_plain_words(agent
         agent = dict(preset["settings"]["agent"])
         agent["command"] = [sys.executable, agent_script, "reports-on-output"]
         account = ProviderSettings(adapter=CliAgentAdapter.name, models={"default": "agent-model"}, agent=agent)
-        tier = SimpleNamespace(use="agent/default", fallback=[], escalate_to=None)
+        tier = SimpleNamespace(use="agent/default", fallback=[], escalate_to=None, effort=None)
         cfg = SimpleNamespace(ai=SimpleNamespace(providers={"agent": account}, tiers={"account": tier}, tasks={}))
         first = smoke_test(cfg, {})[0]
         assert not first.ok, preset["id"]

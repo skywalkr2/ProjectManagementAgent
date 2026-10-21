@@ -3402,6 +3402,21 @@ class AiAccountAdd(BaseModel):
     fingerprint: str
 
 
+class AiAccountAdded(SettingsSaved):
+    """The settings saved for a new account, and what filling its tiers on its own could not do."""
+
+    unmatched_tiers: list[str] = Field(
+        default_factory=list,
+        description="Tiers the service's recommended setup names but none of the account's models matched: each is "
+        "left as it would be with no recommendation (a tier made for the recommendation is not made).",
+    )
+    price_filled_tiers: list[str] = Field(
+        default_factory=list,
+        description="Tiers filled by price because the service has no recommended setup: they are not checked until "
+        "the connection test passes, like any account the person has not accepted unchecked.",
+    )
+
+
 class AiTestResult(BaseModel):
     """One kind of work's account, tested: whether it answered, in plain words."""
 

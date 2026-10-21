@@ -44,6 +44,9 @@ class OpenAICompatibleAdapter:
         }
         if self.settings.json_mode and task.output == "json":
             body["response_format"] = {"type": "json_object"}
+        effort_param = getattr(self.settings, "effort_param", "")
+        if effort_param and task.effort:
+            body[effort_param] = task.effort
         started = time.monotonic()
         try:
             response = self._client.post("/chat/completions", json=body)

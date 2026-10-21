@@ -95,7 +95,7 @@ class CliAgentAdapter:
             prompt = "\n\n".join(p for p in (task.instructions, task.stable, task.request) if p)
             if self.agent.output_via == "outbox":
                 prompt += "\n\n" + render("agent-answer", {"answer": str(outbox / answer_name)})
-            done, seconds = self._start(prompt, model, scratch, outbox)
+            done, seconds = self._start(prompt, model, scratch, outbox, task.effort)
             if done.returncode != 0:
                 raise self.classify_error(done.returncode, self._error_report(done), None)
             if self.agent.output_via == "outbox":
@@ -105,7 +105,9 @@ class CliAgentAdapter:
                 return self._result(done.stdout, path.read_text(encoding="utf-8", errors="replace"), model, seconds)
             return self._result(done.stdout, None, model, seconds)
 
-    def _start(self, prompt: str, model: str, scratch: Path, outbox: Path) -> tuple[subprocess.CompletedProcess, float]:
+    def _start(
+        self, prompt: str, model: str, scratch: Path, outbox: Path, effort: str | None = None
+    ) -> tuple[subprocess.CompletedProcess, float]:
         packet = scratch / "packet.md"
         packet.write_text(prompt, encoding="utf-8")
         home = self._fresh_home(scratch) if self.agent.home == "fresh" else None
@@ -114,6 +116,8 @@ class CliAgentAdapter:
         values = {"model": model, "packet": str(packet), "outbox": str(outbox), "scratch": str(scratch)}
         values["prompt"] = prompt
         args = [_fill(part, values) for part in self.agent.command]
+        if effort and self.agent.effort_option:
+            args += [part.replace("{effort}", effort) for part in self.agent.effort_option]
         if shutil.which(args[0], path=self._env(home).get("PATH")) is None and not Path(args[0]).is_file():
             raise AiError("provider_down", f"the agent program {args[0]} isn't installed on this computer")
         started = time.monotonic()

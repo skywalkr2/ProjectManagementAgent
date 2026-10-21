@@ -547,6 +547,12 @@ class AgentSettings(ConfigModel):
     sign_in_hint: str = Field(
         "", description="What to do when the agent isn't signed in, such as its login command; shown with the question."
     )
+    effort_option: list[str] = Field(
+        default_factory=list,
+        description="The arguments added to the command when the tier's work has an effort (low, medium or high), "
+        "with {effort} replaced by it, such as an option name followed by {effort}. Empty: the program has no such "
+        "option, or it isn't confirmed for it, and the effort is never passed on.",
+    )
     home: Literal["shared", "fresh"] = Field(
         "shared",
         description="shared: the agent uses this user's home folder, where it may keep memory between runs. fresh: "
@@ -641,6 +647,12 @@ class ProviderSettings(ConfigModel):
     )
     timeout_seconds: int = Field(90, ge=5, description="How long to wait for an answer.")
     json_mode: bool = Field(True, description="Ask the provider for JSON output when it supports that.")
+    effort_param: str = Field(
+        "",
+        description="The request setting this service takes the effort of a tier's work in (low, medium or high), "
+        "such as reasoning_effort. Empty: the service has no such setting, or it isn't confirmed for it, and the "
+        "effort is never sent.",
+    )
     agent: AgentSettings | None = Field(
         None, description="For a command-line agent account: how to start it, pass the packet and read its answer."
     )
@@ -667,6 +679,11 @@ class TierSettings(ConfigModel):
         None,
         description="A stronger tier to retry on when checks keep failing.",
         json_schema_extra={"screen_edit": True},
+    )
+    effort: Literal["low", "medium", "high"] | None = Field(
+        None,
+        description="How much thinking this tier's work asks of the model (low, medium or high). It is passed on only "
+        "to an account that says how (effort_param, or the agent's effort_option); empty: the model's own default.",
     )
 
 

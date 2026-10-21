@@ -25,6 +25,7 @@ from typing import Any
 
 import yaml
 
+from engine.ai.presets import clean_presets
 from engine.connectors import CORE, declared_reads, reads
 from engine.shipped import shipped
 from engine.state_file import write_whole
@@ -349,9 +350,9 @@ def known_endpoints() -> list[dict[str, Any]]:
     """The kinds of AI account the Add account screen offers, from the product's catalog: id, name, adapter,
     base_url, key_url, signup_url, credit_url, needs_key, local, recommended, alternative, allowed_data, settings (a new
     account's starting provider settings), model_examples with model_roles (what each is for, only for an example the
-    entry lists) and a note. Entries missing an id, a name or an adapter are left out. At most
-    one entry is the recommended one and at most one the alternative: the first marked, so the guide never offers
-    two."""
+    entry lists), tier_presets (the model family and effort each tier takes, by tier name) and a note. Entries missing
+    an id, a name or an adapter are left out. At most one entry is the recommended one and at most one the alternative:
+    the first marked, so the guide never offers two."""
     try:
         data = load_yaml(CATALOG.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError):
@@ -394,6 +395,7 @@ def known_endpoints() -> list[dict[str, Any]]:
                     if str(name) in examples and str(role) in MODEL_ROLES
                 },
                 "model_optional": bool(e.get("model_optional", False)),
+                "tier_presets": clean_presets(e.get("tier_presets")),
                 "note": str(e.get("note") or ""),
             }
         )
