@@ -9,6 +9,7 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -469,3 +470,84 @@ def test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_n
     projects, lines, before = run_week(env, without(ws, "business"))
     assert set(projects.values()) == {PERSONAL_ID}
     assert [line for line in lines if line.kind == "unfiled"] == [] and before == 0
+
+
+# ---- the Personal / business filter on Today and Follow-ups (S1-4b) --------------------------------------------
+
+
+@pytest.fixture
+def anytime(tmp_path):
+    """The app with no hours held back, so a line is on Today whatever time the test runs."""
+    ws = init_workspace(tmp_path / "ws", git=False, you="Pat Example")
+    flags = {"server.base_path": "/", "storage.backups.automatic": False, "steward.hold_outside_hours": False}
+    app = create_app(ws, ws.config(env={}, flags=flags), TOKEN, ui_dist=tmp_path / "no-ui")
+    with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as client:
+        yield client, ws, app.state.store
+
+
+def seed_both_sides(client, store, cfg):
+    """One question to the person and one to someone else, and one action for them, on each side and on neither;
+    returns the ids by side (the business is made through its route)."""
+    business = client.post("/api/setup/business", json={"name": BUSINESS_NAME}).json()["project"]
+    me = cfg.workspace.user.person
+    personal_id = cfg.workspace.project.personal
+    with store.transaction() as tx:
+        other = tx.create("person", {"full_name": "Casey Example"}, _PM).id
+        homes = {"business": business, "personal": personal_id, "none": None}
+        ids = {}
+        for name, home in homes.items():
+            project = {"projects": [home]} if home else {}
+            mine = tx.create(
+                "question", {"to": me, "title": f"Decide the {name} thing?", "kind": "decision", **project}, _PM
+            )
+            theirs = tx.create("question", {"to": other, "title": f"Ask about the {name} thing?", **project}, _PM)
+            action = tx.create(
+                "action",
+                {"text": f"Do the {name} thing", "owners": [{"person": other}], **({"project": home} if home else {})},
+                _PM,
+            )
+            ids[name] = {"line": f"question:{mine.id}", "question": theirs.id, "action": action.id}
+    return ids, other
+
+
+def test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_reported(anytime):
+    client, ws, store = anytime
+    assert client.get("/api/setup/business").json() == {"business": False, "name": None}
+    ids, other = seed_both_sides(client, store, ws.config(env={}))
+    assert client.get("/api/setup/business").json() == {"business": True, "name": BUSINESS_NAME}
+    lines = {line["key"]: line for line in client.get("/api/today/queue").json()}
+    for name, side in (("business", "business"), ("personal", "personal"), ("none", None)):
+        assert lines[ids[name]["line"]]["side"] == side
+    rows = {}
+    for section in client.get("/api/followups").json():
+        for row in [*section["questions"], *section["actions"]]:
+            rows[row["id"]] = row["side"]
+    for name, side in (("business", "business"), ("personal", "personal"), ("none", None)):
+        assert rows[ids[name]["question"]] == side and rows[ids[name]["action"]] == side
+
+
+def test_with_no_business_nothing_is_on_the_business_side_and_the_route_says_so(anytime):
+    client, ws, store = anytime
+    me = ws.config(env={}).workspace.user.person
+    personal_id = ws.config(env={}).workspace.project.personal
+    with store.transaction() as tx:
+        home = tx.create("question", {"to": me, "title": "Which one?", "projects": [personal_id]}, _PM).id
+        loose = tx.create("question", {"to": me, "title": "Which other?"}, _PM).id
+    assert client.get("/api/setup/business").json() == {"business": False, "name": None}
+    lines = {line["key"]: line["side"] for line in client.get("/api/today/queue").json()}
+    assert lines[f"question:{home}"] == "personal" and lines[f"question:{loose}"] is None
+    assert "business" not in lines.values()
+
+
+def test_a_line_about_records_on_both_sides_is_on_neither_and_one_side_gives_it_that_side(env):
+    _, cfg, store = env
+    with store.transaction() as tx:
+        mine = tx.create("action", {"text": "Mine", "owners": [{"person": ME}], "project": PERSONAL_ID}, _PM).id
+        work = tx.create("action", {"text": "Work", "owners": [{"person": ME}], "project": BUSINESS_ID}, _PM).id
+    view = store.read()
+    of = lambda **line: sides.side_of_line(view, cfg, SimpleNamespace(project=None, **line))  # noqa: E731
+    assert (
+        of(actions=[mine, work]) is None and of(actions=[mine]) == "personal" and of(actions=[work, work]) == "business"
+    )
+    assert of(actions=[]) is None and of(actions=["ACT-999"]) is None
+    assert sides.side_of_line(view, cfg, SimpleNamespace(project=BUSINESS_ID, actions=[mine])) == "business"

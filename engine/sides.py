@@ -103,6 +103,23 @@ def side_of_item(view: Any, cfg: Any, record: Any) -> Side | None:
     return None
 
 
+def side_of_line(view: Any, cfg: Any, line: Any) -> Side | None:
+    """Which side a line of Today's queue is on: that of its project, else the one side every record it names (the
+    question, the actions and the questions it covers) is on. A line about records on both sides, or about none, is on
+    no side, so a side filter shows it under every choice."""
+    if side := side_of_project(view, cfg, getattr(line, "project", None)):
+        return side
+    found: set[Side] = set()
+    refs = [("question", getattr(line, "question", None))]
+    refs += [("action", i) for i in getattr(line, "actions", None) or []]
+    refs += [("question", i) for i in getattr(line, "questions", None) or []]
+    for kind, record_id in refs:
+        record = view.get(kind, record_id) if record_id else None
+        if record is not None and (side := side_of_item(view, cfg, record)):
+            found.add(side)
+    return next(iter(found)) if len(found) == 1 else None
+
+
 def side_of_person(people: Any, person_id: str | None) -> Literal["personal", "business", "both"] | None:
     """The side a person's record gives them, none when unset or when no such person is known."""
     data = people.records.get(person_id or "") if person_id else None

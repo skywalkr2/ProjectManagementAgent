@@ -3930,6 +3930,31 @@
         "title": "BusinessIn",
         "type": "object"
       },
+      "BusinessState": {
+        "description": "Whether the person has a business, for the Personal / business filter on Today and Follow-ups: `business` is\nfalse until one is set (or once its project is undone), and `name` is its project's own name, rendered.",
+        "properties": {
+          "business": {
+            "title": "Business",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "business"
+        ],
+        "title": "BusinessState",
+        "type": "object"
+      },
       "BusinessView": {
         "description": "The person's business after saying what it is called: its project, whether this call made it (a second call\nrenames it instead), and the changeset Undo takes (none when the name was already that).",
         "properties": {
@@ -6576,6 +6601,22 @@
             "title": "Project Name",
             "type": "string"
           },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which side the action is on, from its project: personal, business, or none for neither (the screen's side filter shows such rows under every choice).",
+            "title": "Side"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -6731,6 +6772,22 @@
             ],
             "description": "The day it was first sent; chases never change it.",
             "title": "Sent"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which side the question is on, from its project: personal, business, or none for neither (the screen's side filter shows such rows under every choice).",
+            "title": "Side"
           },
           "status": {
             "enum": [
@@ -15356,6 +15413,22 @@
             ],
             "description": "For a sent_check line: the id of the copy the person is asked about.",
             "title": "Sent Copy"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which side the line is on, from its project: personal, business, or none for neither (the screen's side filter shows such lines under every choice).",
+            "title": "Side"
           },
           "snoozes": {
             "description": "For a reminder line: the snooze choices that still have a time, in order, each with the moment it resolves to. A choice with no time left today is not listed.",
@@ -29468,6 +29541,23 @@
       }
     },
     "/api/setup/business": {
+      "get": {
+        "description": "Whether the person has a business and what it is called, for the Personal / business filter. A business whose\nproject was undone or removed counts as none.",
+        "operationId": "business_state_api_setup_business_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Business State"
+      },
       "post": {
         "description": "Say what the person's business is called: makes its top-level project and sets `project.business`; saying it\nagain renames that project. With Undo.",
         "operationId": "business_save_api_setup_business_post",

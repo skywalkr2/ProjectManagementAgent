@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 152. The side filter on Today and Follow-ups (2026-10-21; S1-4b, built)
+
+- "All / Personal / <business>" beside Today's and Follow-ups' headings, only when a business is set, remembered per
+  browser. Lines about the app and the Sort line show under every choice. A follow-up section for another person stays
+  whole while any of its items is on the chosen side, since it is one message with one Mark sent. Design 6.32.
+
 ## 151. The recommended service is reached through its own interface (2026-10-21; B-11c part 2a, built)
 
 - A native adapter, `anthropic-messages`, replaces the chat-format compatibility layer for the recommended service: the

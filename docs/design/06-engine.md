@@ -2899,7 +2899,8 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   tracks a business answers yes to setup's business question and can leave Personal empty; nothing asks them to use it.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
   second side, a business or a job as the person chose at setup (a top-level project, its projects under it; a
-  setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter. Filing reads the
+  setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for
+  another person stays whole while any of its items is on the chosen side, since it is one message). Filing reads the
   people first, since each person belongs to a side; only an item neither its people nor its words place is asked
   about, and those are asked together in one "Which side?" question, never one each. A person with no business is never
   asked: what the assistant can't place goes to Personal while Personal is the only top-level project (its areas and

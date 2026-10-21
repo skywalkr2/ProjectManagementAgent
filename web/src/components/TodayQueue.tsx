@@ -19,6 +19,7 @@ import { afterMove, heldMeta, heldTitle, moveTitle, titleWords } from "../lib/qu
 import { revealOrKeep, showRow } from "../lib/reveal";
 import type { View } from "../lib/views";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
+import { useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { HeldLine, isHeld } from "../shell/HeldLines";
 import { Button } from "../ui/Button";
@@ -73,13 +74,16 @@ export function TodayQueue(props: {
   shortcuts?: Record<string, string>;
 }) {
   const { t, tn } = useWords();
-  const queue = useQueue();
-  const count = useTodayCount();
+  const filter = useSideFilter();
+  const queue = useQueue(filter.choice);
+  const everything = useQueue();
+  const count = useTodayCount(filter.choice);
+  const total = useTodayCount();
   const stage = useStageToday();
   const plugins = usePluginToday(props.handlers.onOpenRecord);
   const pane = useRef<HTMLDivElement>(null);
   const lines = queue.data ?? [];
-  useReminderNotices(queue.data);
+  useReminderNotices(everything.data);
 
   // The list holds still while the person is working in it: keyboard focus or the pointer in the queue or the inspector, or
   // a line open under itself. New lines wait behind "N new · Show". A line settled somewhere else stays in place, struck
@@ -346,7 +350,12 @@ export function TodayQueue(props: {
                 </QueueGroup>
               )}
               {plugins.review}
-              {count === 0 && (
+              {count === 0 && filter.choice !== "all" && (total ?? 0) > 0 && (
+                <p className={styles.empty} data-queue-empty="side">
+                  {t("sides.empty.today", { side: filter.named })}
+                </p>
+              )}
+              {count === 0 && (filter.choice === "all" || !((total ?? 0) > 0)) && (
                 <TodayEmpty
                   className={styles.empty}
                   onContinueSetup={props.handlers.onOpenGuide ? () => props.handlers.onOpenGuide?.("ai") : undefined}

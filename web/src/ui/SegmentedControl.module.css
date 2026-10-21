@@ -4,6 +4,7 @@
   display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 0 var(--space-3);
   border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); white-space: nowrap;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; /* a long name never makes the control wider than the window */
 }
 .segment:hover { color: var(--text); }
 .segment[data-selected] { background: var(--surface); color: var(--text); box-shadow: var(--elev-1); }

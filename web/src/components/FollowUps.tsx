@@ -11,6 +11,7 @@ import { day, localDate, monthDay } from "../lib/dates";
 import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
+import { onSide, useSideFilter, type SideChoice } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AfterMoveAnswers } from "./AfterMoveAnswers";
@@ -31,6 +32,7 @@ import { Button } from "../ui/Button";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
+import { SideFilter } from "./SideFilter";
 import { FollowUpsByProject } from "./FollowUpsByProject";
 
 type Group = "person" | "project";
@@ -42,6 +44,28 @@ const toSendActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.tol
 const waitingQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "sent");
 // What was told to the person, and what a promise they owe says is late with nothing heard (design 6.33), told or not.
 const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told !== null || a.chase_due);
+
+/** The rows of a section that show under a side choice: those on that side and those on neither. */
+const rowsOnSide = (s: S["FollowupSection"], choice: SideChoice): S["FollowupSection"] => ({
+  ...s,
+  questions: s.questions.filter((q) => onSide(q.side, choice)),
+  later: (s.later ?? []).filter((q) => onSide(q.side, choice)),
+  actions: s.actions.filter((a) => onSide(a.side, choice)),
+});
+const hasRows = (s: S["FollowupSection"]) => s.questions.length + (s.later ?? []).length + s.actions.length > 0;
+
+/** What shows under a side choice. The person's own section and the by-project list are filtered row by row. Someone
+ * else's section is one message to them, so it stays whole while any of its rows shows, and goes when none does. */
+function sectionsOnSide(found: S["FollowupSection"][], choice: SideChoice, byProject: boolean): S["FollowupSection"][] {
+  if (choice === "all") return found;
+  return found.flatMap((s) => {
+    if (s.is_pm || byProject) {
+      const kept = rowsOnSide(s, choice);
+      return hasRows(kept) ? [kept] : [];
+    }
+    return hasRows(rowsOnSide(s, choice)) ? [s] : [];
+  });
+}
 
 /** `compact` is for a narrow column on Today: headings sit one level down, and the PM's own actions are left to the to-do list beside it. */
 export function FollowUps(props: { compact?: boolean }) {
@@ -82,9 +106,11 @@ export function FollowUps(props: { compact?: boolean }) {
       setSeeking(null);
     }
   }, [seeking, filter, group, followups.data]);
-  const sections = (followups.data ?? []).filter(
+  const present = (followups.data ?? []).filter(
     (s) => s.questions.length || (s.later ?? []).length || (s.actions.length && !(compact && s.is_pm)),
   );
+  const side = useSideFilter();
+  const sections = sectionsOnSide(present, side.choice, group === "project");
   const shown = sections.filter((s) =>
     filter === "send"
       ? s.is_pm || s.to_send > 0
@@ -96,6 +122,7 @@ export function FollowUps(props: { compact?: boolean }) {
     <section className={compact ? "panel-section compact" : "panel-section"} aria-labelledby="followups-title">
       <div className="heading">
         <Heading id="followups-title">{t("followups.title")}</Heading>
+        <SideFilter />
         {!compact && (
           <SegmentedControl
             label={t("followups.group")}
@@ -127,7 +154,7 @@ export function FollowUps(props: { compact?: boolean }) {
           </button>
         </p>
       ) : sections.length === 0 ? (
-        <p className="empty">{t("followups.empty")}</p>
+        <p className="empty">{present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")}</p>
       ) : group === "project" ? (
         <FollowUpsByProject sections={sections} compact={compact} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
       ) : shown.length === 0 ? (

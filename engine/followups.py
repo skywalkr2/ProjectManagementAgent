@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, tzinfo
 from typing import Any
 
-from engine import learn, outward, promises, sent_version
+from engine import learn, outward, promises, sent_version, sides
 from engine.blocked import ViewNames, blocker_of, blocker_problem, holds_up
 from engine.cleaning import normalize
 from engine.config import Config
@@ -154,8 +154,10 @@ def _pulled(view: Any, cfg: Config, today: date, held_up: dict[str, list[str]], 
 def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None = None) -> list[Section]:
     """Each person's questions and actions with what is due a follow-up. An action someone else owes is also due one
     when the promise rule says it is late with nothing heard (design 6.33), so Today's one follow-up line per person and
-    the message it opens cover the same things. `waiting`: that rule's list, when the caller already has it."""
+    the message it opens cover the same things. `waiting`: that rule's list, when the caller already has it. Each row
+    carries its `side`, from its project."""
     people = People(store, cfg)
+    reader = store.read()
     chase_for = {
         x.action: x.owner
         for x in (promises.waiting_on(store, cfg, today) if waiting is None else waiting)
@@ -179,6 +181,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
             continue
         if (d.get("resolves") or {}).get("kind") in ROUTING:
             continue  # answered where the item waits (What changed), so it isn't shown twice
+        row_side = sides.side_of_item(reader, cfg, q)
         sent = local_day(datetime.fromisoformat(d["sent_at"]), here) if d.get("sent_at") else None
         chased = sorted(str(day) for day in d.get("followed_up") or [])
         # The wait counts from the last word to the person: the message, or the latest chase after it.
@@ -191,6 +194,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                 "held_until": held_until.isoformat() if later and held_until else None,
                 "held_for_name": held_name if later else None,
                 "id": q.id,
+                "side": row_side,
                 "title": d["title"],
                 "text": d.get("text", ""),
                 "links": d.get("links", []),
@@ -214,6 +218,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     view = store.read()
     for a in open_actions:
         d = a.data
+        row_side = sides.side_of_item(view, cfg, a)
         for owner in d.get("owners", []):
             if owner["person"] != people.pm and stance_of(view, cfg.steward, owner["person"]) in UNTOLD_STANCES:
                 continue  # nothing is drafted to someone the person only watches or reports to (design 6.34)
@@ -230,6 +235,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
             section(owner["person"]).actions.append(
                 {
                     "id": a.id,
+                    "side": row_side,
                     "text": d["text"],
                     "due": d.get("due"),
                     "project": d.get("project"),

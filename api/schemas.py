@@ -796,6 +796,11 @@ class FollowupQuestion(BaseModel):
     about: str | None
     options: list[Option]
     origin: Origin | None = Field(None, description="Where the question came from, for its link.")
+    side: Literal["personal", "business"] | None = Field(
+        None,
+        description="Which side the question is on, from its project: personal, business, or none for neither "
+        "(the screen's side filter shows such rows under every choice).",
+    )
 
 
 class FollowupAction(BaseModel):
@@ -822,6 +827,11 @@ class FollowupAction(BaseModel):
         "or it has waited long enough with no word, and it is not on hold.",
     )
     origin: Origin | None = Field(None, description="Where the action came from, for its link.")
+    side: Literal["personal", "business"] | None = Field(
+        None,
+        description="Which side the action is on, from its project: personal, business, or none for neither "
+        "(the screen's side filter shows such rows under every choice).",
+    )
 
 
 class LeftOutView(BaseModel):
@@ -2154,6 +2164,11 @@ class QueueLineView(BaseModel):
     person_name: str | None = None
     project: str | None = None
     project_name: str | None = None
+    side: Literal["personal", "business"] | None = Field(
+        None,
+        description="Which side the line is on, from its project: personal, business, or none for neither "
+        "(the screen's side filter shows such lines under every choice).",
+    )
     due: date | None = None
     waiting_days: int | None = None
     waiting: ScreenText | None = Field(None, description="Why the work stopped, in plain words.")
@@ -4150,6 +4165,14 @@ class BusinessView(BaseModel):
     name: str
     created: bool
     changeset: str | None
+
+
+class BusinessState(BaseModel):
+    """Whether the person has a business, for the Personal / business filter on Today and Follow-ups: `business` is
+    false until one is set (or once its project is undone), and `name` is its project's own name, rendered."""
+
+    business: bool
+    name: str | None = None
 
 
 # ---- data-file forms -------------------------------------------------------------------------------------------------

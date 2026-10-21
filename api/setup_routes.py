@@ -45,6 +45,7 @@ from api.schemas import (
     AiWorkKindView,
     BackupFolderAdd,
     BusinessIn,
+    BusinessState,
     BusinessView,
     CatalogAddress,
     CloudFolderChoice,
@@ -330,6 +331,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             person_named()
         return MeView(person=pid, full_name=name)
 
+    @r.get("/setup/business")
+    def business_state() -> BusinessState:
+        """Whether the person has a business and what it is called, for the Personal / business filter. A business whose
+        project was undone or removed counts as none."""
+        from engine import sides
+
+        view = store.read()
+        project = sides.business_project(view, cfg)
+        return BusinessState(
+            business=project is not None, name=view.get("project", project).data["name"] if project else None
+        )
+
     @r.post("/setup/business")
     def business_save(body: BusinessIn) -> BusinessView:
         """Say what the person's business is called: makes its top-level project and sets `project.business`; saying it
@@ -342,6 +355,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=409, detail=str(err)) from None
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+        worker.apply_live()  # the business is a live setting: Today and Follow-ups read it at once
         events.changed()
         return BusinessView(
             project=made.project,

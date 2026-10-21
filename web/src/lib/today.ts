@@ -3,6 +3,7 @@
 // folded away (the week) is not counted.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "./api";
+import { onSide, type SideChoice } from "./sides";
 import { useStageToday } from "../components/StageToday";
 
 export type QueueLine = S["QueueLineView"];
@@ -38,14 +39,19 @@ const COUNTED: ReadonlySet<QueueLine["kind"]> = new Set([
 /** Whether a line has something to count: a line that counts things and holds none is left out. */
 export const hasSomething = (line: QueueLine): boolean => !COUNTED.has(line.kind) || line.count > 0;
 
-export function useQueue() {
-  return useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue, select: (lines) => lines.filter(hasSomething) });
+/** The queue's lines; with a side picked, only that side's and the lines that belong to neither (the app's own). */
+export function useQueue(side: SideChoice = "all") {
+  return useQuery({
+    queryKey: ["today", "queue"],
+    queryFn: api.todayQueue,
+    select: (lines) => lines.filter((line) => hasSomething(line) && onSide(line.side, side)),
+  });
 }
 
 /** How many lines need the person: the queue's, the plugins' and the stages'. Null until the queue has answered, so the
  * menu shows no number rather than a wrong one. */
-export function useTodayCount(): number | null {
-  const queue = useQueue();
+export function useTodayCount(side: SideChoice = "all"): number | null {
+  const queue = useQueue(side);
   const plugins = useQuery({ queryKey: ["plugin-today"], queryFn: api.pluginToday });
   const stage = useStageToday();
   if (!queue.data) return null;

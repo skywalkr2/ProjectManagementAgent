@@ -5,11 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { longDay } from "../lib/dates";
 import { useMediaQuery } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
+import { onSide, setSideChoice, useSideFilter } from "../lib/sides";
 import { useQueue, useTodayCount } from "../lib/today";
 import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { SetupLine } from "../shell/SetupLine";
 import { CoverageLine, useNoneText } from "./Coverage";
+import { SideFilter } from "./SideFilter";
 import { opensItems } from "./TodayDetail";
 import { TodayQueue, type QueueHandlers, type Selection } from "./TodayQueue";
 import { TodayRail } from "./TodayRail";
@@ -33,16 +35,22 @@ export function Today(props: {
 }) {
   const { t, tn } = useWords();
   const beside = useMediaQuery(INSPECTOR_FROM);
+  const filter = useSideFilter();
   const queue = useQueue();
-  const count = useTodayCount();
+  const count = useTodayCount(filter.choice);
   const none = useNoneText();
   const [selected, setSelected] = useState<Selection | null>(null);
 
   // Another part of the screen asks for an answer or a question to be looked at: its line opens, with the cursor on it.
   const [shown, setShown] = useState<string | null>(null);
+  // A line the side filter hides is still the one asked for, so the filter goes back to All to show it.
+  const reveal = (side: Parameters<typeof onSide>[0]) => {
+    if (!onSide(side, filter.choice)) setSideChoice("all");
+  };
   const open = (find: (l: NonNullable<typeof queue.data>[number]) => boolean) => {
     const found = queue.data?.find((l) => opensItems(l) && find(l));
     if (!found) return false;
+    reveal(found.side);
     setSelected({ key: found.key, sendBack: false });
     setShown(found.key);
     return true;
@@ -53,6 +61,7 @@ export function Today(props: {
   useReveal("line", (key) => {
     const found = queue.data?.find((l) => l.key === key);
     if (!found) return false;
+    reveal(found.side);
     setSelected({ key: found.key, sendBack: false });
     setShown(found.key);
     return true;
@@ -80,7 +89,12 @@ export function Today(props: {
     <div className={styles.today}>
       <div className={styles.head}>
         <h1>{t("nav.home")}</h1>
-        <p>{[longDay(new Date()), count === null ? "" : count === 0 ? none : tn("today.needs.count", count)].filter(Boolean).join(" · ")}</p>
+        <SideFilter />
+        <p>
+          {[longDay(new Date()), count === null ? "" : count === 0 ? (filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
         <CoverageLine />
       </div>
       <div className={styles.full}>

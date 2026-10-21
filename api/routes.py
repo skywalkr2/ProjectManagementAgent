@@ -676,11 +676,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/today/queue")
     def today_queue() -> list[QueueLineView]:
         """What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7)."""
+        from engine import sides
         from engine.today import zone
         from engine.today_queue import queue
 
         people = People(store, cfg)
-        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        view = store.read()
+        projects = {p.id: p.data["name"] for p in view.list("project")}
         here = zone(cfg)
         out = []
         for line in queue(ws, store, cfg, worker.now(), handover=worker.handover_state()):
@@ -696,6 +698,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     title=_title_view(line.title, people),
                     person_name=people.name(line.person) if line.person else None,
                     project_name=projects.get(line.project or ""),
+                    side=sides.side_of_line(view, cfg, line),
                 )
             )
         return out
@@ -2330,6 +2333,7 @@ def _section(
             blocker=BlockerView(**a["blocker"]) if a.get("blocker") else None,
             chase_due=a["chase_due"],
             origin=action_origin.get(a["id"]),
+            side=a.get("side"),
         )
         for a in s.actions
     ]
@@ -2367,4 +2371,5 @@ def _followup_question(q: dict[str, Any], people: People, question_origin: dict[
         about=resolves.get("kind"),
         options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
         origin=question_origin.get(q["id"]),
+        side=q.get("side"),
     )

@@ -56,6 +56,8 @@ export const api = {
   source: (src: string) => call<S["SourceView"]>("GET", `sources/${id(src)}`),
   widenSource: (src: string, body: S["SourceWiden"]) => call<S["Applied"]>("POST", `sources/${id(src)}/widen`, body),
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
+  /** Whether the person has a business and what it is called, for the Personal / business filter. */
+  business: () => call<S["BusinessState"]>("GET", "setup/business"),
 
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
   /** The go for a newly added source's intake: every item held for it starts. */
