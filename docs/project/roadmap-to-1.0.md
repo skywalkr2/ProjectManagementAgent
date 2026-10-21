@@ -739,9 +739,15 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   - a lesson as narrow as the person's words (F31): a named person or project, a role or plural group, or "always",
     "every", "never"; the reach stated in words; a correction never left without a lesson; done when the pairs
     `over-application`, `other-project` and `another-teams-rows-naming-ours` pass on the owner's next re-run, with a
-    unit test of the breadth rule;
+    unit test of the breadth rule. *The instructions are written* (the learning prompt and its playbook; the Learned
+    line already states the reach and picks it), with
+    `test_a_lessons_breadth_is_read_from_the_persons_words_and_a_mistake_always_teaches_the_narrow_one`; *left:* the
+    three pairs on the owner's re-run;
   - who a promise is owed to (F32): three stub cases, Cc (owed to the To recipients, the person watches), a named third
-    party, and "we'll" from the sender's team;
+    party, and "we'll" from the sender's team. **Built:** the golden cases `promise-owed-cc-team`,
+    `promise-owed-named-third-party` and `promise-owed-we-team`, the instruction in the notes prompt and playbook
+    (`test_a_promise_is_owed_to_whoever_it_is_said_to`), and a forbid that names who a promise must not be owed to
+    (`test_forbid_can_name_who_a_promise_must_not_be_owed_to`);
   - a self-check that fails while a decision entry from 2026-10-21 on names no change-log section that exists. **Built:**
     `engine/selfcheck/decisions.py`, `tests/test_selfcheck_decisions.py`;
   - the rest, case by case, through the prompt or a stronger tier: decision-for-pm, the two follow-up routing cases,

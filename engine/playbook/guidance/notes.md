@@ -18,6 +18,8 @@ Practice for reading notes, minutes and messages (core playbook):
   - Someone else's "I'll get back to you by ..." is that person's action, promised to the PM: the PM is waiting on it.
   - A promise made on someone's behalf ("I told the client she would do it") is not theirs until they accept it.
   - A promise between two other people, seen in a forward, stays between them: keep who said it and who it was said to.
+  - It is owed to whoever it is said to: with the PM only in Cc, to the people it is addressed to; a named third party
+    ("I'll send Sam the plan") is owed it; a team's "we'll" for no one named is not owed to the PM.
 - Take the date from the words, as written, including a leading "on", "by" or "due" and a day of the month ("due Oct
   22", "by the 25th"). "Early next week" or "toward the end of the month" is not a day; "once the keys arrive" or "after
   the workshop" is a condition: with no day named, its words are the due, and the promise has no date until the

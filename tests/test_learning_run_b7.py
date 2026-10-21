@@ -129,6 +129,15 @@ def test_a_condition_with_a_date_keeps_the_date_as_its_due_and_the_condition_in_
     assert "keeps the day as its due and the condition beside it" in playbook
 
 
+@pytest.mark.parametrize("case_id", ["promise-owed-cc-team", "promise-owed-named-third-party", "promise-owed-we-team"])
+def test_a_promise_is_owed_to_whoever_it_is_said_to(monkeypatch, case_id):
+    """Cc'd, a named third party, a team's "we'll": the instructions say who it is owed to, and each case holds it."""
+    prompt = resources.files("engine.prompts").joinpath("notes.md").read_text(encoding="utf-8")
+    playbook = resources.files("engine.playbook.guidance").joinpath("notes.md").read_text(encoding="utf-8")
+    assert "It is owed to whoever it is said to" in prompt and "It is owed to whoever it is said to" in playbook
+    assert run_edited(monkeypatch, DEMO_B, case_id).passed
+
+
 # ---- a moved promise from a quoted thread waits for the person's Keep --------------------------------------------
 
 
@@ -233,3 +242,13 @@ def test_the_settings_have_descriptions_and_the_defaults_the_reader_starts_from(
         assert LanguageFile.model_fields[key].description
     assert language.due_lead_words == list(DEFAULT_LEAD_WORDS)
     assert LanguageFile().due_condition_words == list(DEFAULT_CONDITION_WORDS)
+
+
+def test_a_lessons_breadth_is_read_from_the_persons_words_and_a_mistake_always_teaches_the_narrow_one():
+    """A named person or project, a role or plural group, or "always", "every" or "never" set how far a lesson reaches,
+    and a correction too small to generalize still proposes the narrow lesson (design 6.22)."""
+    prompt = resources.files("engine.prompts").joinpath("learn-correction.md").read_text(encoding="utf-8")
+    playbook = resources.files("engine.playbook.guidance").joinpath("learn-correction.md").read_text(encoding="utf-8")
+    assert "Read the breadth from the PM's words" in prompt and 'only "always", "every" or "never"' in prompt
+    assert "propose the narrow lesson" in prompt and "only about this one item" not in prompt
+    assert "The person's words set the breadth" in playbook and "still teaches the narrow lesson" in playbook

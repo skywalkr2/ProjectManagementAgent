@@ -1,0 +1,32 @@
+id: promise-owed-named-third-party
+title: 'A promise to send a named third party something is owed to that person'
+skills: [owners, evidence]
+received: '2026-11-04'
+given_file: promise-people.yaml
+# Said to the person, but what is promised goes to Soren, so it is owed to Soren (F32).
+pasted: |-
+  From: Lena Ashby <lena@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Floor plan
+
+  I'll send Soren the floor plan on Monday.
+expect:
+- op: action.add
+  owners: [PER-115]
+  promised_to: [PER-114]
+  due_words: on Monday
+forbid:
+- op: action.add
+  promised_to: [PER-1]
+stub_answer:
+  summary: 'Lena promises to send Soren the floor plan.'
+  ops:
+  - op: action.add
+    text: Send Soren the floor plan
+    owners: [Lena Ashby]
+    promised_to: [Soren Lund]
+    basis: said
+    said_by: Lena Ashby
+    due_words: on Monday
+    evidence:
+      quote: I'll send Soren the floor plan on Monday.

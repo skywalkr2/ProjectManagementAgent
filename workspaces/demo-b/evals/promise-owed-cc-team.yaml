@@ -1,0 +1,33 @@
+id: promise-owed-cc-team
+title: 'A promise to the team with the person in Cc is owed to the team'
+skills: [owners, evidence]
+received: '2026-11-04'
+given_file: promise-people.yaml
+# Said to the To recipients; the person is only copied, so it is owed to them, and the person watches it (F32).
+pasted: |-
+  From: Tess Calder <tess@example.com>
+  To: Mira Hale <mira@example.com>, Bram Foley <bram@example.com>
+  Cc: Avery Lane <avery.lane@example.com>
+  Subject: Studio schedule
+
+  Mira, Bram: I'll send you both the revised studio schedule by Thursday.
+expect:
+- op: action.add
+  owners: [PER-117]
+  promised_to: [PER-101, PER-108]
+  due_words: by Thursday
+forbid:
+- op: action.add
+  promised_to: [PER-1]
+stub_answer:
+  summary: 'Tess promises Mira and Bram the revised studio schedule.'
+  ops:
+  - op: action.add
+    text: Send Mira and Bram the revised studio schedule
+    owners: [Tess Calder]
+    promised_to: [Mira Hale, Bram Foley]
+    basis: said
+    said_by: Tess Calder
+    due_words: by Thursday
+    evidence:
+      quote: I'll send you both the revised studio schedule by Thursday.

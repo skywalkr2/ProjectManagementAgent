@@ -615,3 +615,15 @@ def test_due_words_are_compared_as_the_date_rules_read_them():
     assert ev._due_words("no later than Friday") == "friday"
     assert ev._due_words("before Friday") != ev._due_words("Friday")
     assert ev._due_words("If the committee approves") != ev._due_words("Friday")
+
+
+def test_forbid_can_name_who_a_promise_must_not_be_owed_to(monkeypatch):
+    """A forbidden "owed to" is met by any action owed to one of the listed people, whoever else it is owed to."""
+    case = case_of(DEMO_B, "promise-owed-cc-team")
+    (ideal,) = case["stub_answer"]["ops"]
+    assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
+    names = {p["id"]: p["full_name"] for p in fixture_records(DEMO_B, "person")}
+    forbidden = case["forbid"][0]["promised_to"]
+    also_owed = {**ideal, "promised_to": [*ideal["promised_to"], names[forbidden[0]]]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={**case["stub_answer"], "ops": [also_owed]})
+    assert not result.passed and result.forbidden == [f"op=action.add, promised_to={forbidden}"]

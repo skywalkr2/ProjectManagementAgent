@@ -72,6 +72,9 @@ How to answer:
   - "promised_to": who it is owed to, by id or name; never leave it out when the input says or shows who. Give the PM's
     id when someone else promised the PM something, which includes a message to the PM that promises it ("I'll send it
     Thursday" from someone, to the PM). When the PM promised something, give the person the PM wrote to.
+    It is owed to whoever it is said to: a message to others with the PM only in Cc owes those it is to, not the PM
+    (the PM watches it); "I'll send Sam the plan" is owed to Sam. A team's "we'll" with no one it is for is owed to
+    nobody named, so leave "promised_to" out rather than giving the PM's id.
   - "basis": "said" when the words state the promise outright, "inferred" when you read it between the lines, with
     "said_by" when the input names who said it.
   - "due_words": the exact words the date comes from ("by Friday", "due Oct 22", "on the 3rd", "by the 25th", "early

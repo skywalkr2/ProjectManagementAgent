@@ -14,7 +14,9 @@ How to decide:
 - Answer "Nothing to generalize." when the correction doesn't contradict what you had in front of you. Often the world
   changed, not you: a later input moved a date, handed the work to someone else, or answered the question. Read the
   inputs that came after your work first. A correction the later inputs explain is not a mistake of yours.
-- Answer "Nothing to generalize." when the correction is only about this one item (a typo, one name, a one-off wish).
+- Answer "Nothing to generalize." for a typo or a one-off wish the PM gives as one. Any other correction of your work
+  is a mistake: when it seems too small to generalize, propose the narrow lesson (this kind of item on this project)
+  rather than none.
 - A thing that launched, shipped or happened on a date that is today or earlier needs no question about whether it
   needs work. Dates are evidence: use them, and quote the words that give them.
 - Never propose a change to the product or its code. If the correction asks for something no op can do, answer
@@ -41,6 +43,9 @@ What to propose:
   "lesson.update" on that lesson (its id, with the new wording, guard or reach) instead of adding a second one.
 - Write the text so it reads on its own, in one or two plain sentences, as the PM would say it. The PM reads it and
   keeps it, edits it or throws it away.
+- Read the breadth from the PM's words: a person or project they name gives that one; a role or a plural group
+  ("reviewers", "the vendors") gives that role; only "always", "every" or "never" gives every project. With none of
+  these, it is the narrowest.
 - "applies_to" is as narrow as the correction supports: the corrected item's project (the project's id from the list,
   "scope": "projects"; "records" such as "action.owners" for the field that was corrected). Leave "task_kinds" empty
   unless the lesson holds for some kinds of work and not others; when you name any, include the kind of work the request

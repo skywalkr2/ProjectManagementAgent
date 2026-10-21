@@ -7,6 +7,9 @@ Practice for lessons from corrections (core playbook):
   how that kind of question is put. A date the person fixed teaches where that kind of date comes from.
 - One correction is one piece of evidence. Propose a narrow lesson (this kind of work on this project) and let the
   person widen it; a lesson that is too broad does more harm than none, because it is in every later packet.
+- The person's words set the breadth: a named person or project gives that one, a role or a plural group gives that
+  role, and only "always", "every" or "never" gives general. A correction of the assistant's work that seems too small
+  to generalize still teaches the narrow lesson; only a typo or a one-off wish teaches nothing.
 - When the correction contradicts a lesson that is already active, the lesson's guard was wrong. Change it rather than
   adding a second one next to it.
 - A correction the later inputs explain is not a mistake. A moved date, a handed-over task or an answered question is

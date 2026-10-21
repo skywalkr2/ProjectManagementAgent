@@ -848,6 +848,11 @@ def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, 
             q = _record(store, o, "question")
             if q and q["to"] != f["to"]:
                 continue
+        if "promised_to" in f:
+            # A forbidden "owed to" is any action owed to one of the listed people, whoever else it is owed to.
+            a = _record(store, o, "action")
+            if a is None or not set(a.get("promised_to") or []) & set(f["promised_to"]):
+                continue
         if "text_has" in f:
             text = json.dumps(o["op"])
             if not _has_words(text, f["text_has"]):
