@@ -1,0 +1,23 @@
+id: shared-first-name-named-in-full
+title: A first name two people share, answered with one of their full names
+skills: [owners]
+received: '2026-10-09'
+# The message says only "Maya", and two people go by it; an answer that picks one of them by full name is still a
+# guess, so the action waits for the person to say who.
+pasted: 'Events: Maya will send the guest list for the launch reading by Nov 20.'
+expect:
+- held: who-is
+  options: 2
+forbid:
+- op: event.add
+stub_answer:
+  summary: One action; the answer names one Maya in full.
+  ops:
+  - op: action.add
+    text: Send the guest list for the launch reading
+    owners:
+    - Maya Okafor
+    due: '2026-11-20'
+    project: PRJ-1
+    evidence:
+      quote: Maya will send the guest list for the launch reading by Nov 20

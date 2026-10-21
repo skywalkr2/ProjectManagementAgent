@@ -1696,6 +1696,25 @@ def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
     return bool(returned) and (_reaches_someone_else(op, ctx) or owned or any(p.check in holds for p in returned))
 
 
+def _as_written(person: str | None, ctx: Context) -> tuple[str, tuple[str, ...]] | None:
+    """A person the answer named in full (or by id) whom the input names only by a name others share: that name and the
+    people it could be. The input's own words decide who is meant, never the answer's choice of one of them."""
+    data = ctx.people.records.get(person or "")
+    if data is None:
+        return None
+    text = normalize(f"{ctx.inputs.raw_input} {ctx.inputs.note}").lower()
+    if data["full_name"].lower() in text:
+        return None
+    words = data["full_name"].split()
+    for form in [*data.get("aliases", []), *words[:1]]:
+        if not re.search(rf"(?<!\w){re.escape(form.lower())}(?!\w)", text):
+            continue
+        again = ctx.people.resolve(form)
+        if again.status == "ambiguous" and len(again.candidates) > 1 and person in again.candidates:
+            return form, again.candidates
+    return None
+
+
 def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
     names: list[str] = []
     if isinstance(op, ActionAddOp):
@@ -1706,6 +1725,9 @@ def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
         r = ctx.people.resolve(name)
         if r.status != "ok":
             return f"who-is:{name}:{','.join(r.candidates)}"
+        if (written := _as_written(r.person, ctx)) is not None:
+            form, candidates = written
+            return f"who-is:{form}:{','.join(candidates)}"
     if isinstance(op, PersonAddOp) and ctx.inputs.trust == "untrusted" and not ctx.confirmed_by_pm:
         return "A new person named only in outside content: add them?"
     return None
