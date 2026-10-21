@@ -11,8 +11,13 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   a normal non-it person. I want the setup to basically say here is startup, here is what you need to do, this is the
   personal side - define the people in your life/personal business and also optionally - do you have a business you
   want to track? if so here - define the business name/programs/projects/people/etc."
-- **Impact:** design 7 (the walkthrough's opening); roadmap I-0, the first item of phase I, before any installer work;
-  `docs/project/open-promises.md` P28. Change log: section 144.
+- **Also decided (owner):** "i want the personal project to be more the default project for everyone - they can use it
+  or not if they are only interested in business": the Personal project is made for every person at setup with no
+  question; a business-only person can leave it empty.
+- **Proposed, for the reviewer's I-0 pass:** the setup order in design 7, with people and the business after the first
+  result so it comes right after mail; the workspace name leaves setup.
+- **Impact:** design 7 (the walkthrough's opening and its order); design 6.32 ("Personal life"); roadmap I-0, the first
+  item of phase I, before any installer work; `docs/project/open-promises.md` P28. Change log: section 144.
 
 ## 2026-10-21: Every AI service gets a recommended setup out of the box, with measuring to keep it current
 

@@ -2871,8 +2871,10 @@ people and details, and never acts in their name without their yes on the exact 
 
 Personal mail and calendar entries the person wants kept track of (an appointment, a bill, a renewal) belong to no work
 project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) means not tracked at all. So:
-- **One Personal project, made at setup**, an ordinary project the person can rename or remove; a setting names which
-  project is the personal one (`steward.personal_project`). What the assistant files there is never "unfiled".
+- **One Personal project, made at setup, for everyone** (owner, 2026-10-21: the default project for every person, used
+  or not): an ordinary project the person can rename or remove, made with no question; a setting names which project is
+  the personal one (`steward.personal_project`). What the assistant files there is never "unfiled". A person who only
+  tracks a business answers yes to setup's business question and can leave Personal empty; nothing asks them to use it.
 - **Areas and projects under it** (`Project.parent`): an **area** is ongoing and never finishes (health, money, home,
   family, a car, pets) and has no end date, so it is never behind; a **project** has a goal and an end (moving house, a
   renovation, a tax return) and is followed like any other. A project may sit under an area.

@@ -1033,6 +1033,8 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Setup's order (7) | You, AI account, mail, promises, backups, people | What this is and what to do; the personal side first; then "Do you have a business you want to track?" |
 | The gate before installers (roadmap) | Integrity defects and the gate week | Also the UI/UX reviewer's pass as a non-IT person, personal and business |
+| The Personal project (6.32) | Made at setup | Made for everyone with no question, the default whether used or not; a business-only person leaves it empty |
+| Setup's first step (7) | Name, workspace name, time zone | Name and time zone (proposed; the workspace name leaves setup) |
 
 Why: `docs/decisions.md` (2026-10-21, "Setup is personal first with a business optional").
 
