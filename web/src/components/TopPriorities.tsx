@@ -41,7 +41,8 @@ function chip(line: Line, t: T, tn: Tn): { text: string; tone: PillTone } {
   if (line.rank === "overdue") return { text: line.due ? t("today.priorities.pill.overdue", { date: day(line.due) }) : t("queue.pill.overdue"), tone: "danger" };
   if (line.rank === "due_soon") {
     if (line.due) return { text: t("today.priorities.pill.due", { date: day(line.due) }), tone: "warn" };
-    return { text: tn("queue.pill.waiting_days", line.waiting_days ?? 0), tone: "warn" };
+    const days = line.waiting_days ?? 0;
+    return { text: days === 0 ? t("queue.pill.sent_today") : tn("queue.pill.waiting_days", days), tone: "warn" };
   }
   if (line.rank === "waiting") return { text: t("queue.pill.waiting"), tone: "need" };
   return { text: t("today.priorities.pill.at_risk"), tone: "warn" };

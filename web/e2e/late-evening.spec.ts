@@ -60,12 +60,12 @@ test.describe("Late evening", () => {
     await expect(page.getByText(`Marked as sent to ${name}`)).toBeVisible();
     await expectNoNegativeDays(page);
 
-    // Under Waiting on them it was sent today, and has waited zero days.
+    // Under Waiting on them it was sent today, and no wait shows yet.
     await page.getByRole("button", { name: "Waiting on them" }).click();
     const waiting = page.locator("li.line", { has: page.getByRole("heading", { name }) });
     const item = waiting.locator("li.child", { hasText: sent[0].text });
     await expect(item).toContainText("sent today");
-    await expect(item).toContainText("waiting 0 days");
+    await expect(item).not.toContainText(/waiting \d+ days?/);
     await expectNoNegativeDays(page);
 
     // Recording a follow-up on it starts the wait again, still without a negative count.

@@ -144,6 +144,14 @@ test("a follow-up with nothing overdue keeps the count and the longest wait", as
   expect(await screen.findByRole("group", { name: "Follow up with Robin Sample" })).toHaveTextContent("2 items awaiting a reply · waiting up to 6 days");
 });
 
+test("a follow-up that went out today says so, never a wait of zero days", async () => {
+  show([line("nudge", { key: "nudge:PER-2", person: "PER-2", person_name: "Robin Sample", count: 2, waiting_days: 0, questions: ["Q-1", "Q-2"] })]);
+  const found = await screen.findByRole("group", { name: "Follow up with Robin Sample" });
+  expect(found).toHaveTextContent("Sent today");
+  expect(found).toHaveTextContent("2 items awaiting a reply · sent today");
+  expect(found).not.toHaveTextContent(/0 days/);
+});
+
 // ---- Top priorities: context, no buttons --------------------------------------------------------------------------------
 
 const priorities = (lines: S["PriorityLineView"][]): S["TopPrioritiesView"] => ({ lines, more: 0, blocked: 0, coming: [] });

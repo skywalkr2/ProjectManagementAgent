@@ -827,10 +827,13 @@ function QueueRow(props: {
         const words =
           late > 0 && line.due
             ? [tn("queue.nudge.overdue", late, { date: day(line.due) }), line.count > late ? tn("queue.nudge.others", line.count - late) : ""].filter(Boolean).join(" · ")
-            : tn("queue.nudge.meta", line.count, { days });
+            : days === 0
+              ? tn("queue.nudge.meta_today", line.count)
+              : tn("queue.nudge.meta", line.count, { days });
         const replied = (line.replies ?? 0) > 0 ? repliedWords(line.replies ?? 0, line.person_name ?? "", t) : "";
         return {
-          pill: tn("queue.pill.waiting_days", days),
+          // Nothing has waited a day yet: it went out today.
+          pill: days === 0 ? t("queue.pill.sent_today") : tn("queue.pill.waiting_days", days),
           tone: "warn",
           meta: meta([words, replied].filter(Boolean).join(" · ")),
           primary: { label: t("queue.act.follow_up") },

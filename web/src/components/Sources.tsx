@@ -827,11 +827,13 @@ function SilentCloses() {
         <>
           {found.data.measure.total > 0 ? (
             <p className="hint" data-testid="silent-measure">
-              {t("sources.silent.measure", {
-                silent: found.data.measure.silent,
-                total: found.data.measure.total,
-                days: found.data.measure.days,
-              })}
+              {found.data.measure.silent === 0
+                ? t("sources.silent.measure_none", { days: found.data.measure.days })
+                : t("sources.silent.measure", {
+                    silent: found.data.measure.silent,
+                    total: found.data.measure.total,
+                    days: found.data.measure.days,
+                  })}
             </p>
           ) : null}
           {found.data.closes.length === 0 ? (

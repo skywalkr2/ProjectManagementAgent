@@ -331,6 +331,13 @@ describe("closes nobody has seen", () => {
     expect(screen.getByTestId("silent-measure")).toHaveTextContent("3 of 12 closes in the last 28 days weren't seen by you.");
   });
 
+  test("with nothing closed unseen the measure says the person saw everything, not a count of none", async () => {
+    open([source("a")], [], {
+      "GET silent-closes": () => ({ count: 0, closes: [], measure: measure({ total: 1, silent: 0, rate: 0 }) }),
+    });
+    expect(await screen.findByTestId("silent-measure")).toHaveTextContent("You saw everything closed in the last 28 days.");
+  });
+
   test("set-aside mail points to its folder instead of offering Looks right", async () => {
     open([source("a")], [], {
       "GET silent-closes": () => ({ count: 1, closes: [two[2]], measure: measure({ total: 1, silent: 1, rate: 1 }) }),
