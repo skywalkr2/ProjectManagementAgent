@@ -549,3 +549,43 @@ def test_the_learning_proposal_applies_on_a_command_line_agent_account(env, tmp_
     (lesson,) = store.read().list("lesson")
     assert lesson.data["status"] == "proposed" and lesson.data["signal"] == store.read().list("signal")[0].id
     assert [r.data["provider"] for r in store.read().list("run") if r.data["task"] == learn.TASK] == ["agent"]
+
+
+def second_project(store) -> tuple[str, str]:
+    """A second project beside the fictional workspace's own (which the interior work is filed to): its id and name."""
+    base = store.read().get("project", "PRJ-1").data["name"]
+    name = f"{base} follow-up"
+    with store.transaction() as tx:
+        made = tx.create("project", {"name": name}, _TEST).id
+    return made, name
+
+
+def test_a_lesson_kept_for_a_project_the_correction_never_touched_goes_back_once(env):
+    """A lesson limited to a project neither the corrected work nor the person's words name would be kept where it never
+    came from and miss the work it is about, so it goes back once; scoped to the work's own project it is kept."""
+    _, _, store = env
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Interior files go to the editor first.", now=NOW)
+    (queued,) = learning(store)
+    other, _ = second_project(store)
+    stray = lesson_answer("go to the editor first", applies_to={"scope": "projects", "projects": [other]})
+    own = lesson_answer("go to the editor first", applies_to={"scope": "projects", "projects": ["PRJ-1"]})
+    asked = scripted(stray, own)
+    run_learning(env, queued.id)
+    assert len(asked) == 2 and f"applies_to.projects names {other}" in asked[1].request, "the answer went back once"
+    (lesson,) = store.read().list("lesson")
+    assert lesson.data["applies_to"]["projects"] == ["PRJ-1"]
+
+
+def test_a_lesson_may_reach_a_project_the_persons_own_words_name(env):
+    _, _, store = env
+    other_id, other_name = second_project(store)
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, f"On {other_name} interior files go to the editor first.", now=NOW)
+    (queued,) = learning(store)
+    named = lesson_answer("go to the editor first", applies_to={"scope": "projects", "projects": [other_id]})
+    asked = scripted(named)
+    run_learning(env, queued.id)
+    assert len(asked) == 1, "accepted at once"
+    (lesson,) = store.read().list("lesson")
+    assert lesson.data["applies_to"]["projects"] == [other_id]

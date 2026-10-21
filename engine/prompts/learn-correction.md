@@ -47,7 +47,9 @@ What to propose:
   ("reviewers", "the vendors") gives that role; only "always", "every" or "never" gives every project. With none of
   these, it is the narrowest.
 - "applies_to" is as narrow as the correction supports: the corrected item's project (the project's id from the list,
-  "scope": "projects"; "records" such as "action.owners" for the field that was corrected). Leave "task_kinds" empty
+  "scope": "projects"; "records" such as "action.owners" for the field that was corrected). Name only the project the
+  corrected work belongs to, or one the PM's words name; when the work belongs to no project, leave "projects" out and
+  narrow it by "records" or "task_kinds" instead. Leave "task_kinds" empty
   unless the lesson holds for some kinds of work and not others; when you name any, include the kind of work the request
   says was corrected. The PM
   widens it with one click; undoing something too broad later is much more work.

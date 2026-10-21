@@ -2358,6 +2358,12 @@ run. **Built:** `tests/test_refusals.py::test_the_same_check_refusing_the_floor_
 A bad result can then be traced to knowledge that was missing (not in the packet) or ignored (in the packet, and the answer
 went against it). The repeat-correction signal (6.20) is computed from this log.
 
+**A lesson's projects are the correction's own** (*built, B-10:* `tests/test_learn_correction.py`
+"a_lesson_kept_for_a_project_the_correction_never_touched…", "a_lesson_may_reach_a_project_the_persons_own_words_name"):
+a learning entry limited to projects may name only those the corrected work belongs to (the project it was handed in to,
+its source's, its ops' and its records') or one the person's words name; any other goes back once. A check on a low-cost
+model found lessons about work filed nowhere kept for an unrelated project, so they never reached the next run.
+
 **Every correction proposes one piece of learning, as narrow as the person's words** (F31, *designed, B-10*): a named
 person or project gives that one, a role or a plural group gives that role, and only "always", "every" or "never" gives
 general; the proposal states its reach in words ("for reviews on <project>"), which the person widens or narrows with one

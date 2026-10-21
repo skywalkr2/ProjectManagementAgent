@@ -1060,6 +1060,7 @@ Why: `docs/decisions.md` (2026-10-21, "Every AI service gets a recommended setup
 | The person's own "Can you ...?" (6.33) | Could become the person's own to-do | Sent back once by `own-request-not-promise`; its words are `language.ask_lead_words` and `own_promise_words` (built) |
 | A phone in a known sender's signature (6.7) | Only when the model offered it | Offered by rule as a held `person.contact` (`workspace.phone_min_digits`) (built) |
 | Whether a fact already answers a question (6.22) | Every word of the question weighed, "when" and "tell" included, whole words only | The question's framing words left out (`language.asking_words`), plurals and endings folded (built) |
+| A lesson's projects (6.22) | Any project the answer named | Only the corrected work's own or one the person named; any other goes back once (built) |
 | A promise with two owners (6.33) | Refused, "add one action for each person" | Still refused; the message says shared work is one action with both owners and no one it is owed to (built) |
 
 Why: `docs/decisions.md` (2026-10-21, "Four evaluation cases follow the reply-owed rule").

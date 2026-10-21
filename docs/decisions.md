@@ -64,6 +64,9 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   "shipping"; it now leaves out `language.asking_words` and compares folded words. Work two people do together is one
   action with no one it is owed to: a promise stays one person's word, and the `one-owner` refusal, which told the
   model to split shared work, now says so instead.
+- **Also decided (main session), from the learning pairs on the low-cost model:** a lesson limited to projects may name
+  only the corrected work's own projects or one the person's words name, else it goes back once; pairs 11 and 12
+  passed end to end once it did (the lesson re-scoped by kind of work, then used on the later input).
 - **Impact:** the four cases in `workspaces/demo-b/evals/`; the notes prompt and its playbook; design 6.7, 6.8, 6.22, 6.33
   and 6.35; new settings `language.ask_lead_words`, `language.own_promise_words`, `language.asking_words` and
   `workspace.phone_min_digits` (design 4.0), with demo values in both workspaces. Change log: section 142.

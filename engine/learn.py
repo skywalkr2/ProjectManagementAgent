@@ -200,12 +200,55 @@ def corrected_task(reader: Any, signal: Mapping[str, Any]) -> str | None:
     return original.data.get("task") if original is not None else None
 
 
+def _correction_projects(reader: Any, signal: Mapping[str, Any]) -> set[str]:
+    """The projects a correction touches: those of the work corrected (the project it was handed in to, its source's,
+    its changeset's ops and the records it is about) and those the person's own words name, by id or by name."""
+    found: set[str] = set()
+    changeset, original = _original(reader, signal)
+    if changeset is not None:
+        for entry in changeset.data.get("ops", []):
+            op = entry.get("op") if isinstance(entry.get("op"), dict) else entry
+            if isinstance(op.get("project"), str):
+                found.add(op["project"])
+    if original is not None:
+        if isinstance(original.data.get("project"), str):
+            found.add(original.data["project"])
+        source = reader.get("source", original.data["source"]) if original.data.get("source") else None
+        if source is not None:
+            found |= {p for p in source.data.get("projects") or [] if isinstance(p, str)}
+    for ref in signal.get("refs") or []:
+        kind = kind_of_id(REGISTRY, ref)
+        record = reader.get(kind, ref) if kind else None
+        if record is not None and isinstance(record.data.get("project"), str):
+            found.add(record.data["project"])
+    note = (signal.get("note") or "").casefold()
+    for project in reader.list("project") if note else []:
+        names = [project.id, project.data.get("name") or "", *(project.data.get("aliases") or [])]
+        if any(n and re.search(rf"(?<!\w){re.escape(n.casefold())}(?!\w)", note) for n in names):
+            found.add(project.id)
+    return found
+
+
 def reach_misses_correction(reader: Any, request_data: Mapping[str, Any], op: Any) -> str | None:
     """Why a learning answer's entry can't stand as it reaches, or None: an entry that names kinds of work must include
-    the one corrected, or it would never reach the work it is meant to change."""
+    the one corrected, or it would never reach the work it is meant to change; and an entry limited to projects may
+    name only projects the correction touches (the work's own, or one the person named), or a lesson about something
+    filed nowhere would be kept for a project it never came from and miss the work it is about."""
     reach = getattr(op, "applies_to", None)
     signal = reader.get("signal", signal_of(request_data) or "")
-    if reach is None or not reach.task_kinds or signal is None:
+    if reach is None or signal is None:
+        return None
+    projects = list(getattr(reach, "projects", None) or [])
+    if projects:
+        allowed = _correction_projects(reader, signal.data)
+        stray = [p for p in projects if p not in allowed]
+        if stray:
+            where = ", ".join(sorted(allowed)) if allowed else "no project"
+            return (
+                f"applies_to.projects names {', '.join(stray)}, but the corrected work belongs to {where} and the "
+                "person named no other: name only those, or leave projects out so it reaches the work it came from"
+            )
+    if not reach.task_kinds:
         return None
     corrected = corrected_task(reader, signal.data)
     if corrected is None or corrected in reach.task_kinds:
