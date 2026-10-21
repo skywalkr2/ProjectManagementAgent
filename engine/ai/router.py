@@ -39,6 +39,7 @@ class Choice:
     model_key: str
     model_id: str
     effort: str | None = None  # the tier's effort, for the tier's own accounts; the adapter applies it only if told how
+    thinking: str = "default"  # the tier's wish about thinking, for the tier's own accounts; "off" only where accepted
 
 
 class NoProvider(Exception):
@@ -145,7 +146,8 @@ def choices(
             continue
         model_id = provider.models.get(model_key, model_key) if provider.adapter != "stub" else "stub"
         effort = tier_cfg.effort if use is None and tier_cfg is not None else None
-        picked.append(Choice(tier_name, provider_name, model_key, model_id, effort))
+        thinking = tier_cfg.thinking if use is None and tier_cfg is not None else "default"
+        picked.append(Choice(tier_name, provider_name, model_key, model_id, effort, thinking))
     if not picked:
         if waiting_on_identity:
             raise waiting_on_identity[0]
@@ -440,6 +442,18 @@ class Router:
             return None
         return ref
 
+    def _for_model(self, adapter: Adapter, task: AiTask, choice: Choice) -> AiTask:
+        """The task as this account's model is asked to do it: the tier's effort and thinking, and for an adapter whose
+        service lists what each model can do, the catalog's entry for the model, so it sends only what is accepted."""
+        changes: dict[str, Any] = {}
+        if choice.effort:
+            changes["effort"] = choice.effort
+        if choice.thinking != "default":
+            changes["thinking"] = choice.thinking
+        if getattr(adapter, "reads_capabilities", False):
+            changes["model_info"] = self.model_info(choice, need_limits=True)
+        return replace(task, **changes) if changes else task
+
     def _first_choice(
         self, task: AiTask, options: list[Choice], data_level: str, independent: Independence | None
     ) -> Choice:
@@ -485,7 +499,7 @@ class Router:
         for attempt in range(limits.tries if wait else 1):
             started, clock = self.now(), time.monotonic()
             try:
-                return adapter.run(replace(task, effort=choice.effort) if choice.effort else task, choice.model_id)
+                return adapter.run(self._for_model(adapter, task, choice), choice.model_id)
             except AiError as err:
                 pause = err.retry_after if err.retry_after is not None else 2.0 * 2**attempt
                 if (

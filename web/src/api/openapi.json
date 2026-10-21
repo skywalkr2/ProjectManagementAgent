@@ -2818,7 +2818,7 @@
             "type": "string"
           },
           "detail": {
-            "description": "\"answered\", or what went wrong in plain words.",
+            "description": "\"answered\", followed by any setting that was left out and why, or what went wrong in plain words.",
             "title": "Detail",
             "type": "string"
           },

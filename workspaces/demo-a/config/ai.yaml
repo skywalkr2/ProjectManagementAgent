@@ -27,6 +27,7 @@ providers:
   #   send_temperature: false                # off for a service whose models refuse a temperature they don't set
   #   max_tokens_param: max_completion_tokens   # the request setting for the most tokens an answer may have (default max_tokens)
   #   model_list_pages: 10                   # the most pages of the service's model list read when it says more follow
+  #   thinking_room: 8000                    # tokens added to a kind of work's most output for a model the service says thinks on its own; 0 adds none
   #   auth_reasons: [KEY_REFUSED]            # reason codes in an error's details that mean the key was refused; empty: the status alone says
   #   key_refused_status_on_models: [400]    # statuses on the model-list request that mean the key was refused; empty: the status alone says
   #   allowed_data: [open, internal, restricted]
@@ -62,6 +63,8 @@ tiers:
   deep: {use: stub/default}
   # A tier can say how hard the model should think, passed on only to an account that takes it:
   # deep: {use: stub/default, effort: high}
+  # A tier can ask the model not to think (thinking: off), applied only where the service says that model can:
+  # routine: {use: stub/default, thinking: off}
 tasks:
   notes: {tier: routine, temperature: 0, max_output: 4000, expected_output: 800}
 roles:

@@ -7,8 +7,10 @@ named here. Everything runs against a stubbed transport."""
 
 from __future__ import annotations
 
+import importlib
 import json
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -16,15 +18,19 @@ import pytest
 import yaml
 
 from engine.ai.adapters import ADAPTERS, make_adapter
+from engine.ai.router import Router, choices
 from engine.ai.smoke import smoke_test
-from engine.ai.task import AiError, AiTask
+from engine.ai.task import AiError, AiTask, ModelInfo
 from engine.config import load_config
-from engine.config.schema import ProviderSettings
+from engine.config.schema import ProviderSettings, TierSettings
 from engine.setup import known_endpoints
+from engine.storage import Store
 
 CLAIMS = yaml.safe_load((Path(__file__).parent / "fixtures" / "ai" / "catalog-claims.yaml").read_text("utf-8"))
 NATIVE = CLAIMS["native_adapter"]
 AI_FIXTURES = Path(__file__).parent / "fixtures" / "ai"
+ADAPTER_MODULE = importlib.import_module(ADAPTERS[NATIVE["adapter"]].__module__)
+capability_notes, request_body = ADAPTER_MODULE.capability_notes, ADAPTER_MODULE.request_body
 MODEL = "example-model"
 TASK = AiTask("notes", "Do it.", "Reference.", "Input.", {}, temperature=0.3, max_output=1234, output="json")
 
@@ -388,6 +394,8 @@ def test_the_smoke_test_passes_with_the_exact_parameters_of_each_tier():
 
     def factory(name, provider_settings, secret):
         def handler(request):
+            if request.method == "GET":
+                return httpx.Response(200, json={"data": [], "has_more": False})
             seen.append(json.loads(request.content))
             return httpx.Response(200, json=answer([{"type": "text", "text": '{"ok": true}'}]))
 
@@ -418,3 +426,283 @@ def test_the_smoke_test_reports_a_refused_key_by_its_kind():
 
     calls = [r for r in smoke_test(cfg, {"MAIN_KEY": "k", "BACKUP_KEY": "k"}, factory) if r.part == "call"]
     assert calls and all(not r.ok and r.error_kind == "auth" for r in calls)
+
+
+# ---- capabilities: effort, thinking room and turning thinking off, by what the model list says -----------------------
+
+
+def tree(efforts=("low", "medium", "high"), adaptive=True):
+    """A model's capability tree as the list gives it: an effort node with one node per level, and thinking types."""
+    effort = {"supported": bool(efforts), **{level: {"supported": True} for level in efforts}}
+    return {
+        "effort": effort,
+        "thinking": {
+            "supported": True,
+            "types": {"enabled": {"supported": False}, "adaptive": {"supported": adaptive}},
+        },
+        "image_input": {"supported": True},
+    }
+
+
+def info(**fields) -> ModelInfo:
+    return ModelInfo(max_output_tokens=128_000, **fields)
+
+
+def with_info(task=TASK, **fields) -> AiTask:
+    return replace(task, model_info=info(**fields))
+
+
+def test_capabilities_are_read_from_the_model_list_over_two_pages():
+    pages = {
+        None: {
+            "data": [
+                {**model("m-all"), "capabilities": tree(("low", "medium", "high", "extra"))},
+                {**model("m-none"), "capabilities": tree((), adaptive=False)},
+            ],
+            "has_more": True,
+            "last_id": "m-none",
+        },
+        "m-none": {"data": [model("m-silent")], "has_more": False, "last_id": "m-silent"},
+    }
+
+    def handler(request):
+        return httpx.Response(200, json=pages[request.url.params.get("after_id")])
+
+    models = adapter_with(handler).list_models()
+    assert (models["m-all"].efforts, models["m-all"].adaptive_thinking) == (["low", "medium", "high", "extra"], True)
+    # A model that says it takes no effort is an empty list; one whose entry carries no tree is unknown.
+    assert (models["m-none"].efforts, models["m-none"].adaptive_thinking) == ([], False)
+    assert (models["m-silent"].efforts, models["m-silent"].adaptive_thinking) == (None, None)
+    # Nothing the tree doesn't state is filled in.
+    assert all(m.thinking_off_efforts is None for m in models.values())
+
+
+def test_a_tree_with_an_effort_node_that_names_no_level_leaves_the_efforts_unknown():
+    pages = {None: {"data": [{**model("m-odd"), "capabilities": {"effort": {"supported": True}}}], "has_more": False}}
+    models = adapter_with(lambda request: httpx.Response(200, json=pages[None])).list_models()
+    assert models["m-odd"].efforts is None
+
+
+@pytest.mark.parametrize(
+    ("listed", "sent"),
+    [(["low", "medium", "high"], True), (["low"], False), ([], False), (None, True)],
+)
+def test_the_tiers_effort_is_sent_only_when_the_models_listed_efforts_include_it(listed, sent):
+    _, seen = run(with_info(efforts=listed, task=replace(TASK, effort="high")))
+    assert ("output_config" in json.loads(seen[0].content)) is sent
+
+
+def test_a_task_with_no_model_information_sends_its_effort_as_before():
+    _, seen = run(replace(TASK, effort="medium"))
+    assert json.loads(seen[0].content)["output_config"] == {"effort": "medium"}
+
+
+def test_a_model_that_takes_no_effort_gets_none_and_the_test_says_so_in_plain_words():
+    task = with_info(efforts=[], task=replace(TASK, effort="high"))
+    assert "output_config" not in request_body(task, MODEL, send_temperature=False)
+    assert capability_notes(task) == ["this model takes no effort setting, so high was left out"]
+    only = with_info(efforts=["low", "medium"], task=replace(TASK, effort="high"))
+    assert capability_notes(only) == [
+        "this model takes effort low, medium, so high was left out and the model uses its own"
+    ]
+    assert capability_notes(with_info(efforts=["high"], task=replace(TASK, effort="high"))) == []
+    assert capability_notes(replace(TASK, effort="high")) == []
+
+
+@pytest.mark.parametrize(
+    ("fields", "limit"),
+    [
+        ({"adaptive_thinking": True}, TASK.max_output + 5000),
+        ({"adaptive_thinking": False}, TASK.max_output),
+        ({"adaptive_thinking": None}, TASK.max_output),
+        ({"adaptive_thinking": True, "max_output_tokens": TASK.max_output + 100}, TASK.max_output + 100),
+        ({"adaptive_thinking": True, "max_output_tokens": 10}, TASK.max_output),
+    ],
+)
+def test_room_to_think_is_added_only_for_a_model_that_thinks_on_its_own_and_within_its_limit(fields, limit):
+    task = replace(TASK, model_info=ModelInfo(**{"max_output_tokens": 128_000, **fields}))
+    assert request_body(task, MODEL, send_temperature=False, thinking_room=5000)["max_tokens"] == limit
+
+
+def test_the_rooms_size_is_the_accounts_setting_and_zero_adds_none():
+    task = with_info(adaptive_thinking=True)
+    _, seen = run(task, thinking_room=700)
+    assert json.loads(seen[0].content)["max_tokens"] == TASK.max_output + 700
+    _, seen = run(task, thinking_room=0)
+    assert json.loads(seen[0].content)["max_tokens"] == TASK.max_output
+    assert ProviderSettings().thinking_room == settings().thinking_room > 0
+    assert run(replace(TASK))[1][0].content and json.loads(run()[1][0].content)["max_tokens"] == TASK.max_output
+
+
+@pytest.mark.parametrize(
+    ("off_at", "effort", "sent"),
+    [
+        (["low", "medium", "high"], "high", True),
+        (["low", "medium", "high"], "medium", True),
+        (["low", "medium"], "high", False),
+        ([], "low", False),
+        (None, "low", False),
+        (["low", "high"], None, False),
+    ],
+)
+def test_thinking_off_is_sent_only_where_the_listed_capabilities_accept_it_at_the_tiers_effort(off_at, effort, sent):
+    task = with_info(TASK, adaptive_thinking=True, efforts=["low", "medium", "high"], thinking_off_efforts=off_at)
+    task = replace(task, thinking="off", effort=effort)
+    body = request_body(task, MODEL, send_temperature=False, thinking_room=5000)
+    assert ("thinking" in body) is sent
+    if sent:
+        assert body["thinking"] == {"type": "disabled"}
+        # Nothing thinks, so nothing needs room.
+        assert body["max_tokens"] == TASK.max_output
+    else:
+        assert body["max_tokens"] == TASK.max_output + 5000
+        assert capability_notes(task), "a thinking setting that was not applied is always explained"
+
+
+def test_thinking_off_left_on_is_explained_in_plain_words_for_each_reason():
+    def notes(off_at, effort="high"):
+        return capability_notes(replace(with_info(thinking_off_efforts=off_at), thinking="off", effort=effort))
+
+    assert notes(None) == ["the service doesn't say this model's thinking can be turned off, so thinking was left on"]
+    assert notes([]) == ["this model's thinking can't be turned off, so it was left on"]
+    assert notes(["low", "medium"]) == [
+        "this model's thinking can be turned off only at effort low, medium, not high, so it was left on"
+    ]
+    assert notes(["low"], None) == [
+        "thinking can be turned off only at an effort this tier hasn't set, so it was left on"
+    ]
+    assert notes(["high"]) == []
+    assert capability_notes(replace(TASK, thinking="default")) == []
+
+
+def test_the_tiers_thinking_setting_defaults_to_default_and_takes_only_default_or_off():
+    assert TierSettings().thinking == "default"
+    assert TierSettings(thinking="off").thinking == "off"
+    with pytest.raises(ValueError):
+        TierSettings(thinking="maybe")
+
+
+def test_a_choice_carries_the_tiers_thinking_only_for_the_tiers_own_accounts():
+    cfg = native_config()
+    tiers = {**cfg.ai.tiers, "routine": cfg.ai.tiers["routine"].model_copy(update={"thinking": "off"})}
+    cfg = replace(cfg, files={**cfg.files, "ai": cfg.ai.model_copy(update={"tiers": tiers})})
+    own = choices(cfg, "notes", "open")
+    assert own and all(c.thinking == "off" and c.effort == "high" for c in own)
+    picked = choices(cfg, "notes", "open", use="main/small")
+    assert [(c.thinking, c.effort) for c in picked] == [("default", None)]
+
+
+def test_the_router_hands_the_catalogs_entry_for_the_model_to_the_adapter_and_what_it_sends_follows_it(tmp_path):
+    cfg = native_config()
+    seen: list[dict] = []
+
+    def factory(name, provider_settings, secret):
+        def handler(request):
+            seen.append(json.loads(request.content))
+            return httpx.Response(200, json=answer())
+
+        return ADAPTERS[name](provider_settings, secret, transport=httpx.MockTransport(handler))
+
+    class Catalog:
+        """The kept catalog: this model takes no effort and thinks on its own."""
+
+        def model(self, provider, model_id, fetch):
+            return ModelInfo(max_output_tokens=128_000, efforts=[], adaptive_thinking=True)
+
+    store = Store(tmp_path / "t.db")
+    try:
+        router = Router(
+            cfg,
+            store,
+            env={"MAIN_KEY": "k", "BACKUP_KEY": "k"},
+            adapter_factory=factory,
+            now=lambda: datetime(2026, 10, 9, 12, 0, tzinfo=UTC),
+            catalogs=Catalog(),
+        )
+        router.call(TASK, request_id="REQ-1")
+    finally:
+        store.close()
+    assert len(seen) == 1
+    assert "output_config" not in seen[0]
+    assert seen[0]["max_tokens"] == TASK.max_output + ProviderSettings().thinking_room
+
+
+def capability_list(models):
+    return {"data": [{**model(i), "capabilities": c} for i, c in models.items()], "has_more": False}
+
+
+def test_the_smoke_test_reads_the_list_once_per_account_and_says_what_a_model_does_not_take():
+    cfg = native_config()
+    asked: list[str] = []
+    seen: list[dict] = []
+    listing = capability_list(
+        {
+            "main-small": tree(()),
+            "backup-small": tree(("low", "medium", "high")),
+            "open-small": tree(("low", "medium", "high")),
+        }
+    )
+
+    def factory(name, provider_settings, secret):
+        def handler(request):
+            if request.method == "GET":
+                asked.append(request.url.path)
+                return httpx.Response(200, json=listing)
+            seen.append(json.loads(request.content))
+            return httpx.Response(200, json=answer([{"type": "text", "text": '{"ok": true}'}]))
+
+        return ADAPTERS[name](provider_settings, secret, transport=httpx.MockTransport(handler))
+
+    results = smoke_test(cfg, {"MAIN_KEY": "k", "BACKUP_KEY": "k"}, factory)
+    calls = [r for r in results if r.part == "call"]
+    assert calls and all(r.ok and r.answered for r in calls)
+    assert len(asked) == len({r.provider for r in calls})
+    main = [r for r in calls if r.ref == "main/small" and r.tier == "routine"]
+    assert main and all(r.detail.endswith("this model takes no effort setting, so high was left out") for r in main)
+    backup = [r for r in calls if r.ref == "backup/small"]
+    assert backup and all(r.detail == "answered" for r in backup)
+    # What was sent matches what was said: the model that takes no effort was sent none, the others got it.
+    tests = [b for b in seen if b["system"][0]["text"] == "This is a connection test."]
+    assert {b.get("output_config", {}).get("effort") for b in tests} == {"high", None}
+
+
+def test_the_smoke_test_says_why_thinking_off_was_not_applied_and_sends_the_room_instead():
+    cfg = native_config()
+    tiers = {n: t.model_copy(update={"thinking": "off"}) for n, t in cfg.ai.tiers.items()}
+    cfg = replace(cfg, files={**cfg.files, "ai": cfg.ai.model_copy(update={"tiers": tiers})})
+    seen: list[dict] = []
+    listing = capability_list({i: tree() for i in ("main-small", "backup-small", "open-small")})
+
+    def factory(name, provider_settings, secret):
+        def handler(request):
+            if request.method == "GET":
+                return httpx.Response(200, json=listing)
+            seen.append(json.loads(request.content))
+            return httpx.Response(200, json=answer([{"type": "text", "text": '{"ok": true}'}]))
+
+        return ADAPTERS[name](provider_settings, secret, transport=httpx.MockTransport(handler))
+
+    calls = [r for r in smoke_test(cfg, {"MAIN_KEY": "k", "BACKUP_KEY": "k"}, factory) if r.part == "call"]
+    assert calls and all("thinking off" in r.account for r in calls)
+    assert all("thinking was left on" in r.detail for r in calls)
+    tests = [b for b in seen if b["system"][0]["text"] == "This is a connection test."]
+    assert tests and all("thinking" not in b for b in tests)
+    assert all(b["max_tokens"] > 256 + 1000 for b in tests)
+
+
+def test_a_list_that_cannot_be_read_leaves_the_smoke_test_sending_what_it_sent_before():
+    cfg = native_config()
+    seen: list[dict] = []
+
+    def factory(name, provider_settings, secret):
+        def handler(request):
+            if request.method == "GET":
+                return httpx.Response(503, json=error_body("api_error"))
+            seen.append(json.loads(request.content))
+            return httpx.Response(200, json=answer([{"type": "text", "text": '{"ok": true}'}]))
+
+        return ADAPTERS[name](provider_settings, secret, transport=httpx.MockTransport(handler))
+
+    calls = [r for r in smoke_test(cfg, {"MAIN_KEY": "k", "BACKUP_KEY": "k"}, factory) if r.part == "call"]
+    assert calls and all(r.ok and r.detail == "answered" for r in calls)
+    assert {b.get("output_config", {}).get("effort") for b in seen} == {"high", None}

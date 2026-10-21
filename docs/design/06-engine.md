@@ -1611,7 +1611,12 @@ account's `send_temperature` is on; and reads only the text blocks of the answer
 answer and a refusal stop is the refusal outcome (never retried inside the call: the app's own fallback chain decides).
 Errors are classified from the status and the error body's structured type, never its words. The catalog entry names this
 adapter and the service's base address without a version path; an account saved earlier keeps the adapter its own settings
-name until the person re-adds it. **Built:** `tests/test_anthropic_messages.py`.
+name until the person re-adds it. *B-11c part 2c:* the model list's capability tree is read per model (the effort levels it
+takes, and whether it can think on its own; nothing is read that the tree doesn't state), so a tier's effort is sent only
+to a model whose listed efforts include it, and the connection test says in plain words when it was left out. A model
+that thinks on its own gets the provider's `thinking_room` tokens added to a task's output limit, within its own limit,
+since thinking counts toward it. A tier's `thinking: off` is applied only where the model's listed capabilities accept it at
+the tier's effort, and otherwise the test says why not. **Built:** `tests/test_anthropic_messages.py`.
 
 **A recommended setup per service, out of the box, and measured to stay current** (owner, 2026-10-21; *designed, B-11*).
 A person who adds an account gets every tier filled in, so routine work never lands on an expensive model by accident:

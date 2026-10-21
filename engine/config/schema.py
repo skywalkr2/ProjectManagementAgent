@@ -697,6 +697,14 @@ class ProviderSettings(ConfigModel):
         "such as reasoning_effort. Empty: the service has no such setting, or it isn't confirmed for it, and the "
         "effort is never sent.",
     )
+    thinking_room: int = Field(
+        8000,
+        ge=0,
+        description="Tokens added to a kind of work's most output for a model this service says thinks on its own, "
+        "because that thinking is counted in the answer's limit and can use it up before the answer starts. The limit "
+        "never goes past what the model allows. Zero adds none; it applies only to a service that lists what each "
+        "model can do.",
+    )
     agent: AgentSettings | None = Field(
         None, description="For a command-line agent account: how to start it, pass the packet and read its answer."
     )
@@ -728,6 +736,12 @@ class TierSettings(ConfigModel):
         None,
         description="How much thinking this tier's work asks of the model (low, medium or high). It is passed on only "
         "to an account that says how (effort_param, or the agent's effort_option); empty: the model's own default.",
+    )
+    thinking: Literal["default", "off"] = Field(
+        "default",
+        description="Whether this tier's work lets the model think as it would by itself (default) or asks it not to "
+        "(off). Off is applied only to a model the account's service says can do without thinking at this tier's "
+        "effort; for any other the connection test says why it wasn't.",
     )
 
 

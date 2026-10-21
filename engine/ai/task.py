@@ -42,6 +42,12 @@ class AiTask:
     expected_output: int | None = None  # this run's likely answer size in tokens, when its packet knows better
     knowledge: dict[str, Any] | None = None  # the run's knowledge log (what it was given), written onto its record
     effort: Literal["low", "medium", "high"] | None = None  # the tier's effort; an adapter applies it only if told how
+    # The tier's wish about the model's own thinking; an adapter applies "off" only where the model's listed
+    # capabilities accept it at the tier's effort.
+    thinking: Literal["default", "off"] = "default"
+    # What the provider's catalog says about the model this call runs on, for an adapter whose service lists
+    # capabilities; None when it isn't known.
+    model_info: ModelInfo | None = None
 
     @property
     def size(self) -> int:
@@ -74,6 +80,10 @@ class ModelInfo:
     input_per_million: float | None = None
     output_per_million: float | None = None
     cached_input_per_million: float | None = None
+    # Capabilities, filled only by an adapter whose service lists them per model. None means the service didn't say.
+    efforts: list[str] | None = None  # the effort levels the model takes; an empty list means it takes no effort
+    adaptive_thinking: bool | None = None  # whether the model can think on its own, where the service says so
+    thinking_off_efforts: list[str] | None = None  # the efforts at which its thinking can be turned off; [] never
 
 
 class AiError(Exception):

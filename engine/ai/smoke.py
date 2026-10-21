@@ -11,14 +11,14 @@ import ipaddress
 import json
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields, replace
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
 from engine.ai import learning_check
 from engine.ai.adapters import make_adapter
-from engine.ai.task import NO_WORK_KINDS, AiError, AiTask, IdentityUnknown, provider_reason
+from engine.ai.task import NO_WORK_KINDS, AiError, AiTask, IdentityUnknown, ModelInfo, provider_reason
 from engine.config import Config
 from engine.secrets import SecretError, describe_secret, resolve_secret
 from engine.state_file import write_whole
@@ -75,6 +75,7 @@ def smoke_test(
     results: list[SmokeResult] = []
     locked: set[str] = set()
     refused: dict[str, AiError | None] = {}  # account -> the refusal its model list gave, looked up once each
+    listed: dict[str, dict[str, ModelInfo]] = {}  # account -> what its service lists per model, read once each
     for tier_name, tier in cfg.ai.tiers.items():
         if not tier.use:
             results.append(SmokeResult(tier_name, "", True, False, "no AI account is set up for this tier"))
@@ -88,7 +89,15 @@ def smoke_test(
             refusal = refused[provider_name]
             for kind, temperature, max_output, *effort in _params_for_tier(cfg, tier_name):
                 task = AiTask(
-                    kind, "This is a connection test.", "", _REQUEST, {}, temperature, max_output, effort=tier.effort
+                    kind,
+                    "This is a connection test.",
+                    "",
+                    _REQUEST,
+                    {},
+                    temperature,
+                    max_output,
+                    effort=tier.effort,
+                    thinking=tier.thinking,
                 )
                 start = time.monotonic()
                 key_source = None
@@ -98,8 +107,16 @@ def smoke_test(
                     if refusal is not None:
                         raise refusal
                     secret = resolve_secret(settings.auth, env)
-                    reply = adapter_factory(settings.adapter, settings, secret).run(task, model_id)
+                    adapter = adapter_factory(settings.adapter, settings, secret)
+                    if getattr(adapter, "reads_capabilities", False):
+                        if provider_name not in listed:
+                            listed[provider_name] = adapter.catalog()
+                        task = replace(task, model_info=listed[provider_name].get(model_id))
+                    reply = adapter.run(task, model_id)
                     detail = "answered" if _is_ok(reply.text) else "answered, but not with the requested JSON"
+                    notes = adapter.capability_notes(task) if hasattr(adapter, "capability_notes") else []
+                    if notes:
+                        detail += "; " + "; ".join(notes)
                     ok = answered = True
                 except SecretError as err:
                     ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
@@ -112,6 +129,7 @@ def smoke_test(
                 except ValueError as err:
                     ok, detail = False, str(err)
                 shown_effort = f", effort {tier.effort}" if tier.effort else ""
+                shown_effort += ", thinking off" if tier.thinking == "off" else ""
                 label = f"{ref} ({kind}, temperature {temperature}, max output {max_output}{shown_effort})"
                 results.append(
                     SmokeResult(

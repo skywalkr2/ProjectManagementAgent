@@ -3475,7 +3475,9 @@ class AiTestResult(BaseModel):
     account: str = Field(description="The account's short name, as the person named it.")
     main: bool = Field(description="It is the tier's main account; otherwise a fallback.")
     ok: bool
-    detail: ScreenText = Field(description='"answered", or what went wrong in plain words.')
+    detail: ScreenText = Field(
+        description='"answered", followed by any setting that was left out and why, or what went wrong in plain words.'
+    )
 
 
 # ---- asking the assistant --------------------------------------------------------------------------------------------

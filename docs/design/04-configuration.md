@@ -367,6 +367,7 @@ providers:                       # every AI account the workspace may use; names
     json_mode: true
     max_tokens_param: max_tokens   # the request setting for the most tokens an answer may have; some services want max_completion_tokens
     model_list_pages: 10           # the most pages of the service's model list read when it says more follow
+    thinking_room: 8000            # tokens added to a kind of work's most output for a model the service says thinks on its own
     auth_reasons: []               # reason codes (never wording) in an error's details that mean the key was refused
     key_refused_status_on_models: []   # statuses on the model-list request that mean the key was refused (it takes no arguments)
   router:
