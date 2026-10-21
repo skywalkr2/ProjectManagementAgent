@@ -741,6 +741,10 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     stance-manage);
   - from the harder set (12 runs at 58%): `new-person-with-organization` and `project-no-record` (a project named in
     the input with no record is not held for adding).
+  - from the harder learning pairs (21 runs at 62%): a correction turned into a lesson or routing entry broader than
+    the correction (`over-application`: a reviewer for the load-test plan became "every plan review"; and
+    `another-teams-rows-naming-ours`, the kept lesson over-applied), and no lesson for a correction about another project
+    (`other-project`). With the pairs above, one piece of work on how a lesson is proposed and scoped.
 
 ## Phase S: the daily steward (after phase B, before phase I)
 
