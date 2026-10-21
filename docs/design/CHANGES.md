@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 145. The UI/UX reviewer's setup order, two sides from day one (2026-10-21; S1-4 and I-0, designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup's step 1 (7) | Name and time zone | Also "personal, or personal plus a business?" and the business's name, before mail is read |
+| Setup's words (7) | Projects for everyone | "Personal" for a person with no business; "projects" only inside a business; small-business words |
+| People on the personal side (5.1, 7) | Role, team, organization | How they relate to the person ("my sister") |
+| Sides (6.32) | Personal or unfiled | Every item on Personal or the business; a filter on Today and Follow-ups; one batched "Which side?" question |
+| Skipped mail (7) | A dead end at the promises step | "Hand something in to see what it does" |
+| Progress (7) | Welcome counted | From You, "1 of 7" |
+
+Why: `docs/decisions.md` (2026-10-21, "The UI/UX reviewer's setup order").
+
 ## 144. Setup personal first, a business optional (2026-10-21; I-0, designed)
 
 | Where | Before | Now |

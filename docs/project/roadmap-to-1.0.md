@@ -789,7 +789,10 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     the correction (`over-application`: a reviewer for the load-test plan became "every plan review"; and
     `another-teams-rows-naming-ours`, the kept lesson over-applied), and no lesson for a correction about another project
     (`other-project`). With the pairs above, one piece of work on how a lesson is proposed and scoped.
-- [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (owner, 2026-10-21;
+- [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
+  2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
+  capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings
+  screen with the tiers and their cost per day, and "Measure") (owner, 2026-10-21;
   design 6.16; placed before phase S because it decides what testers spend; the owner may move it): three tiers
   (everyday, stronger, hardest); a preset per catalog entry naming a model family and an effort per tier; effort as a
   per-model adapter capability; tiers filled by price where no preset matches, marked not checked; a measured
@@ -815,6 +818,13 @@ feature, never before, since the guide is what the assistant answers from.
 
 **From the outside design review (2026-10-21, `docs/project/reviews/steward-design-review-2026-10.md`; checked against
 the code by the main session),** for S1 before the gate week:
+- [ ] [S1-4] **Two sides from day one** (the UI/UX reviewer, 2026-10-21, design 6.32; first in phase S, because the
+  steward's first read of mail files into them): the business as a top-level project named by a setting, every item on
+  Personal or the business, filing by its people first, one batched "Which side?" question for what neither its people
+  nor its words place (never asked of a person with no business), the "All / Personal / <business>" filter on Today and
+  Follow-ups, and a relation field for people on the personal side. Done when a fictional week of mail for a person with
+  a business files each item to its side with at most one question, and a person with no business is asked nothing,
+  each with a named test.
 - [ ] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
   were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
   looks complete.
@@ -984,7 +994,9 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
 
 - [ ] [I-0] **Before any installer work: setup and the everyday screens reviewed as a normal non-IT person** (owner,
   2026-10-21, passed to the UI/UX reviewer). The reviewer walks setup and the daily screens as a personal and business
-  tool, not a project manager's. Setup is reshaped to match design 7 ("Setup for a person, with a business optional"):
+  tool, not a project manager's. Setup is reshaped to match design 7 ("Setup for a person, with a business optional", in the UI/UX
+  reviewer's order of 2026-10-21: the business question in step 1, Welcome not counted, a hand-in when mail is skipped,
+  people by relation, small-business words, Personal in place of Projects):
   what this is and what to do first; the personal side (the people in one's life, personal business); then the optional
   "Do you have a business you want to track?" (its name, programs, projects, people). The new flow is built under the
   UI rules already in force (design Part 7 and CLAUDE.md's UI rules: the wording sheet, the cursor in the first field,

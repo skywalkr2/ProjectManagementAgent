@@ -4,6 +4,22 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: The UI/UX reviewer's setup order, two sides from day one, and B-11 split
+
+- **Decided (UI/UX reviewer, passed by the owner):** keep the first result before people and the business, with five
+  adjustments: the business question and name in step 1, so the first mail read files work to it; no "project" for a
+  person with no business (the sidebar says "Personal"); small-business words ("What do you work on?", customers,
+  suppliers, staff; grouping projects optional); people by relation on the personal side, never an empty form; and two
+  sides from day one, with an "All / Personal / <business>" filter and the assistant asking when it can't tell. Also: a
+  skipped mail step makes the promises step a hand-in, and Welcome isn't counted ("1 of 7").
+- **Also decided (main session):** the "Which side?" question is batched, and filing reads people first, so a first
+  read doesn't bury a new person in questions; a person with no business is never asked. The sides are data, built in
+  phase S (S1-4) where the steward first files mail; the screens stay in I-0.
+- **Decided (owner):** B-11 is split so the steward starts the next day: B-11a (tiers, presets, effort, fallback,
+  setup) first; B-11b (the Settings screen and "Measure") beside I-0.
+- **Impact:** design 7 (setup's order and words), design 6.32 (two sides), roadmap S1-4, B-11a/B-11b and I-0. Change
+  log: section 145.
+
 ## 2026-10-21: Setup is personal first with a business optional, reviewed as a non-IT person before the installers
 
 - **Decided (owner, passed to the UI/UX reviewer):** "after this we have the everyday steward work to do before we do
