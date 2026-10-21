@@ -74,6 +74,7 @@ const KINDS: S["EndpointView"][] = ([
     program: "app-a-cli",
     installed: true,
     model_examples: ["alpha", "beta"],
+    model_roles: { alpha: "recommended", beta: "stronger" },
     model_optional: true,
     allowed_data: ["open"],
   },
@@ -88,14 +89,17 @@ const KINDS: S["EndpointView"][] = ([
     note: "Another signed-in app.",
     program: "app-b-cli",
     installed: false,
-    model_examples: ["gamma", "delta"],
+    // Listed with the fast one first: the choices are offered by role, and the recommended one is where the app starts.
+    model_examples: ["delta", "gamma"],
+    model_roles: { delta: "faster", gamma: "recommended" },
     model_optional: false,
     allowed_data: ["open", "internal"],
   },
-] as Omit<S["EndpointView"], "program" | "model_optional" | "model_examples" | "installed">[]).map((k) => ({
+] as Omit<S["EndpointView"], "program" | "model_optional" | "model_examples" | "model_roles" | "installed">[]).map((k) => ({
   program: "",
   model_optional: false,
   model_examples: [],
+  model_roles: {},
   installed: null,
   ...k,
 }));
@@ -927,7 +931,7 @@ test("an app left to choose its own model is added with no models and works thro
   open();
   await pickElse(user, "App A");
   const model = screen.getByLabelText("AI model");
-  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the app choose", "alpha", "beta", "Another AI model"]);
+  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the app choose", "Recommended", "Stronger", "Another AI model"]);
   expect(model).toHaveValue("");
   await screen.findByText("Works. Ready to use.");
   await user.click(screen.getByRole("radio", { name: /^Not now/ }));
@@ -954,6 +958,36 @@ test("an app that picks its own model and names no examples asks for no model", 
   await pickElse(user, "App A");
   expect(screen.queryByLabelText("AI model")).toBeNull();
   expect(screen.getByText("Change the model in that app's settings.")).toBeInTheDocument();
+});
+
+test("an app's example models are offered as Recommended, Stronger and Faster, and the app's own name for the choice is only in the hint", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pickElse(user, "App A");
+  const model = screen.getByLabelText("AI model");
+  // Left to the app first: no name to match, so no hint.
+  expect(screen.queryByText(/The app calls this one/)).toBeNull();
+  await user.selectOptions(model, "beta");
+  const hint = screen.getByText(/The app calls this one/);
+  expect(hint).toHaveTextContent(`The app calls this one "beta". Use that name if you need to match the app's own settings.`);
+  expect(model).toHaveAccessibleDescription(hint.textContent ?? "");
+  // The program's names are in the hint and nowhere else: not in the choices, the labels or any other line.
+  const outside = (document.body.textContent ?? "").replace(hint.textContent ?? "", "");
+  expect(outside).not.toMatch(/alpha|beta/);
+  expect(screen.queryByText("AI model: alpha")).toBeNull();
+  await user.selectOptions(model, "alpha");
+  expect(screen.getByText(/The app calls this one/)).toHaveTextContent(`"alpha"`);
+});
+
+test("an example the catalog gives no role is offered by number, never by its name", async () => {
+  const user = userEvent.setup();
+  api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-b" ? { ...k, model_examples: ["delta", "gamma", "omega"] } : k)) });
+  open();
+  await pickElse(user, "App B");
+  const model = screen.getByLabelText("AI model");
+  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Recommended", "Faster", "Choice 3", "Another AI model"]);
+  expect(model).toHaveValue("gamma");
 });
 
 test("an app's example models can be chosen, checked again, and another model can be typed", async () => {
@@ -986,13 +1020,13 @@ test("choosing another model asks for its name, and Save waits for it", async ()
   expect(save()).toBeEnabled();
 });
 
-test("an app whose model must be named starts on its first example", async () => {
+test("an app whose model must be named starts on its recommended example, whatever order the catalog lists them in", async () => {
   const user = userEvent.setup();
   const calls = api();
   open();
   await pickElse(user, "App B");
   const model = screen.getByLabelText("AI model");
-  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["gamma", "delta", "Another AI model"]);
+  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Recommended", "Faster", "Another AI model"]);
   expect(model).toHaveValue("gamma");
   expect(checks(calls)).toHaveLength(0); // not installed yet: nothing to check
 });

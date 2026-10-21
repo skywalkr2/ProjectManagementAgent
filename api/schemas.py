@@ -2961,6 +2961,10 @@ class EndpointView(BaseModel):
         None, description="Whether that program is on this computer (None when it can't be told: a hosted app)."
     )
     model_examples: list[str] = Field(default_factory=list, description="Model names the program accepts.")
+    model_roles: dict[str, Literal["recommended", "stronger", "faster"]] = Field(
+        default_factory=dict,
+        description="What each example model is for, by name: the one chosen first, a stronger one or a faster one.",
+    )
     model_optional: bool = Field(False, description="The program picks its own model when none is named.")
     note: str = ""
 

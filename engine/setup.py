@@ -341,10 +341,15 @@ def list_folders(raw: str | None, files: str | None = None) -> FolderList:
 # ---- AI accounts -----------------------------------------------------------------------------------------------------
 
 
+#: What an example model can be for, in the catalog's `model_roles`: the one chosen first, a stronger one, a faster one.
+MODEL_ROLES = ("recommended", "stronger", "faster")
+
+
 def known_endpoints() -> list[dict[str, Any]]:
     """The kinds of AI account the Add account screen offers, from the product's catalog: id, name, adapter,
     base_url, key_url, signup_url, credit_url, needs_key, local, recommended, alternative, allowed_data, settings (a new
-    account's starting provider settings) and a note. Entries missing an id, a name or an adapter are left out. At most
+    account's starting provider settings), model_examples with model_roles (what each is for, only for an example the
+    entry lists) and a note. Entries missing an id, a name or an adapter are left out. At most
     one entry is the recommended one and at most one the alternative: the first marked, so the guide never offers
     two."""
     try:
@@ -365,6 +370,7 @@ def known_endpoints() -> list[dict[str, Any]]:
         for flag, taken in picks.items():
             marked[flag] = marked[flag] or taken
         levels = [str(x) for x in e.get("allowed_data") or ["open"] if str(x) in ("open", "internal", "restricted")]
+        examples = [str(m) for m in e.get("model_examples") or []]
         found.append(
             {
                 "id": str(e["id"]),
@@ -381,7 +387,12 @@ def known_endpoints() -> list[dict[str, Any]]:
                 "allowed_data": levels or ["open"],
                 "settings": dict(e.get("settings") or {}),
                 "program": str(e.get("program") or ""),
-                "model_examples": [str(m) for m in e.get("model_examples") or []],
+                "model_examples": examples,
+                "model_roles": {
+                    str(name): str(role)
+                    for name, role in (e.get("model_roles") if isinstance(e.get("model_roles"), dict) else {}).items()
+                    if str(name) in examples and str(role) in MODEL_ROLES
+                },
                 "model_optional": bool(e.get("model_optional", False)),
                 "note": str(e.get("note") or ""),
             }

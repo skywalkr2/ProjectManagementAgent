@@ -4,6 +4,21 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: A program's example models are offered by role, never by name (re-review of B-9, R-b)
+
+**Decision:** The catalog (`catalog/ai-endpoints.yaml`) gives each example model of a command-line program a role,
+`model_roles` (example name to `recommended`, `stronger` or `faster`), served as `EndpointView.model_roles`. The
+walkthrough's AI step offers the three words from the wording sheet, starts on the recommended example, and shows the
+program's own name for the chosen one only in a hint under the choice. An example with no role is offered as "Choice N".
+
+**Decided by:** the UI/UX re-review of B-9 (R-b), built by a subagent; the main session reviewed the data shape.
+
+**Why:** Outside Advanced the model's name is never shown; the program's own names (what its settings accept) were shown
+as the choices. Which example is which is data, because the product never reads meaning from a vendor's or model's name.
+
+**Impact:** Design 7.14 (wording sheet entries `welcome.ai.role.*`, `welcome.ai.model_choice_n`,
+`welcome.ai.model_role_hint`); `EndpointView.model_roles`; the catalog's comment block. No change to scope.
+
 ## 2026-10-21: A bare weekday said on that weekday is checked, and days written are the workspace's
 
 - **Decided (main session):** "by Friday" written on a Friday keeps its reading (the Friday a week later, as every bare

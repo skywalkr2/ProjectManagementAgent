@@ -36,9 +36,14 @@ test("every literal key exists", () => {
 test("key families built at run time are complete", () => {
   const s = (
     schema as {
-      components: { schemas: Record<string, { properties: Record<string, { enum?: string[]; items?: { enum?: string[] } }> }> };
+      components: {
+        schemas: Record<string, { properties: Record<string, { enum?: string[]; items?: { enum?: string[] }; additionalProperties?: boolean | { enum?: string[] } }> }>;
+      };
     }
   ).components.schemas;
+  const roles = s.EndpointView.properties.model_roles.additionalProperties;
+  const modelRoles = typeof roles === "object" ? (roles.enum ?? []) : [];
+  expect(modelRoles.length).toBeGreaterThan(0);
   const states = s.ChangeItem.properties.state.enum ?? [];
   const opStatuses = s.OpView.properties.status.enum ?? [];
   const expected = [
@@ -61,6 +66,7 @@ test("key families built at run time are complete", () => {
     ...["done", "skipped", "todo"].map((x) => `walkthrough.done.${x}`),
     ...["not_installed", "off", "restart", "problem", "ready"].map((x) => `walkthrough.mail.state.${x}`),
     ...(s.PackSummary.properties.reads.items?.enum ?? []).map((x) => `walkthrough.mail.reads.${x}`),
+    ...modelRoles.map((x) => `welcome.ai.role.${x}`),
     ...["stdin", "file"].map((x) => `welcome.ai.packet_via.${x}`),
     ...["stdout", "outbox"].map((x) => `welcome.ai.output_via.${x}`),
     ...["open", "internal", "restricted"].map((x) => `welcome.ai.data.${x}`),

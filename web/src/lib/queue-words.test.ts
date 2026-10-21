@@ -21,7 +21,14 @@ test("a title with no topic says the topic is missing instead of using a piece o
 
 test("work the app started is named by its kind of task and what it is about", () => {
   expect(titleWords({ ...base, kind: "task", task: "notes", subject: "Launch reading" }, t, has)).toBe("Filing notes · Launch reading");
-  expect(titleWords({ ...base, kind: "task", task: "follow-on", subject: "Print sync" }, t, has)).toBe("Checking what a move changes · Print sync");
+});
+
+test("the follow-on after a move is titled by what happened to the item, never by the name of the run", () => {
+  const title = titleWords({ ...base, kind: "task", task: "follow-on", subject: "Print sync" }, t, has);
+  expect(title).toBe("After 'Print sync' moved");
+  expect(title).not.toMatch(/checking|follow-on/i);
+  // With no subject there is nothing to say moved, so it falls back to the kind of work.
+  expect(titleWords({ ...base, kind: "task", task: "follow-on" }, t, has)).toBe("Checking what a move changes");
 });
 
 test("a kind of task the sheet doesn't name reads as the assistant's work, with its subject", () => {

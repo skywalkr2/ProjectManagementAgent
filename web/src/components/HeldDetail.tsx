@@ -1,6 +1,7 @@
-// What a held line opens (design 7.6, 7.7): the one decision it asks and nothing of the change it came from: the question,
-// the words it rests on and who said them, where it came from, why it waits, and the same answers the line has. The change's
-// own card, with its Looks good, stays on What changed; a held op that isn't shaped as a question is shown as its own row.
+// What a held line opens (design 7.6, 7.7): the one decision it asks and nothing of the change it came from: the words it
+// rests on and who said them, where it came from, why it waits, and the same answers the line has. The question is the
+// heading above it (the line's own title, or the inspector's), so it is not said again here. The change's own card, with
+// its Looks good, stays on What changed; a held op that isn't shaped as a question is shown as its own row.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../lib/api";
@@ -43,7 +44,6 @@ export function HeldDetail(props: { line: QueueLine }) {
   ];
   return (
     <section className={styles.held} aria-label={heldTitle(ask, t)}>
-      <p className={styles.question}>{heldTitle(ask, t)}</p>
       <dl className={styles.facts}>
         {ask.quote && (
           <div className={styles.fact}>

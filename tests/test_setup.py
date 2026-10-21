@@ -839,6 +839,47 @@ def test_a_check_is_priced_from_its_size_and_the_models_price_and_never_guessed(
     assert usd == pytest.approx((size["input_tokens"] * 2.0 + size["output_tokens"] * 10.0) / 1e6)
 
 
+def test_a_program_names_what_each_example_model_is_for_so_the_screen_never_shows_the_model(tmp_path):
+    """Every example model of a built-in program says what it is for (recommended, stronger or faster), the
+    recommended one comes first, and a role the catalog gives to a name it doesn't list is dropped."""
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    with_examples = [k for k in c.get(f"{api}/ai/endpoints").json() if k["model_examples"]]
+    assert with_examples
+    for kind in with_examples:
+        roles = kind["model_roles"]
+        assert sorted(roles) == sorted(kind["model_examples"]), kind["id"]
+        assert set(roles.values()) <= {"recommended", "stronger", "faster"}
+        assert list(roles.values()).count("recommended") == 1
+        assert roles[kind["model_examples"][0]] == "recommended"
+    assert all(k["model_roles"] == {} for k in c.get(f"{api}/ai/endpoints").json() if not k["model_examples"])
+
+
+def test_a_catalog_role_for_an_unlisted_example_or_an_unknown_role_is_dropped(tmp_path, monkeypatch):
+    from engine import setup
+
+    catalog = tmp_path / "ai-endpoints.yaml"
+    catalog.write_text(
+        yaml.safe_dump(
+            {
+                "endpoints": [
+                    {
+                        "id": "prog",
+                        "name": "A program",
+                        "adapter": "cli-agent",
+                        "program": "prog",
+                        "model_examples": ["one", "two"],
+                        "model_roles": {"one": "recommended", "two": "cheapest", "three": "faster"},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(setup, "CATALOG", catalog)
+    assert setup.known_endpoints()[0]["model_roles"] == {"one": "recommended"}
+
+
 def test_built_in_agents_start_with_their_tools_off_and_say_if_installed(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)

@@ -16,6 +16,7 @@ import hashlib
 import json
 import os
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 import uvicorn
@@ -120,7 +121,19 @@ def main() -> None:
         help="add a second stand-in AI account whose person said Not now about reading work mail and notes, so Today "
         "has the line that offers Allow",
     )
+    parser.add_argument(
+        "--clock-at",
+        metavar="MOMENT",
+        help="start the clock at this ISO 8601 moment in UTC (for example 2026-10-21T00:30:00Z); it keeps ticking",
+    )
     args = parser.parse_args()
+    if args.clock_at:
+        import time_machine
+
+        moment = datetime.fromisoformat(args.clock_at.replace("Z", "+00:00"))
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=UTC)
+        time_machine.travel(moment, tick=True).start()
     stress = layout_strings() if args.layout_stress else {}
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))

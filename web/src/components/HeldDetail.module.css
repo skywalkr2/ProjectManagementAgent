@@ -1,6 +1,5 @@
 /* What a held line opens: only the decision it asks (design 7.6), never the change it came from. */
 .held { display: grid; gap: var(--space-3); min-width: 0; }
-.question { margin: 0; font-size: var(--text-md); line-height: var(--lh-md); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .facts { display: grid; gap: var(--space-2); margin: 0; min-width: 0; }
 .fact { min-width: 0; }
 .fact dt { margin: 0; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); color: var(--text-muted); }

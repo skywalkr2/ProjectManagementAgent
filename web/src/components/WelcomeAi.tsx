@@ -48,7 +48,23 @@ const isService = (kind: Kind) => kind.needs_key && kind.base_url !== "" && !kin
 /** A command-line program the app knows how to start: the person names no command. */
 const isBuiltin = (kind: Kind) => (kind.program ?? "") !== "" && !takesAddress(kind);
 
-/** The kind's id, or the id with -2, -3 … when an account of that name is already set up. */
+/** The three words a program's example models are offered by, in the order they are listed; the catalog says which example
+ * is which, and the program's own name for one is only ever a hint. */
+const MODEL_ROLE_ORDER = ["recommended", "stronger", "faster"] as const;
+
+/** A program's example models in the order they are offered: by role, then as the catalog lists the others. */
+function examplesOf(kind: Kind): string[] {
+  const roles = kind.model_roles ?? {};
+  const rank = (name: string) => {
+    const at = MODEL_ROLE_ORDER.indexOf(roles[name] as (typeof MODEL_ROLE_ORDER)[number]);
+    return at < 0 ? MODEL_ROLE_ORDER.length : at;
+  };
+  return [...(kind.model_examples ?? [])].sort((a, b) => rank(a) - rank(b));
+}
+
+/** The model a program starts with: its recommended example, else the first one it lists. */
+const firstExample = (kind: Kind): string => examplesOf(kind)[0] ?? "";
+
 /** An id for the settings from the name the person gave: lowercase letters, digits and dashes, free among the accounts. */
 function idFrom(label: string, fallback: string, taken: Set<string>): string {
   const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
@@ -138,7 +154,7 @@ export function WelcomeAi(props: {
   // A program the app knows picks its command for itself; any other command-line agent asks for one.
   const builtin = !!kind && isBuiltin(kind);
   const generic = agent && !builtin;
-  const examples = builtin ? (kind.model_examples ?? []) : [];
+  const examples = builtin ? examplesOf(kind) : [];
   const optional = builtin && !!kind.model_optional;
   // The program picks its own model when none is named and the person has not typed one.
   const programPicks = optional && !customModel && everyday.trim() === "";
@@ -330,7 +346,7 @@ export function WelcomeAi(props: {
     setListProblem("");
     setListing(false);
     setFilter("");
-    setEveryday(isBuiltin(picked) && !picked.model_optional ? (picked.model_examples ?? [])[0] ?? "" : "");
+    setEveryday(isBuiltin(picked) && !picked.model_optional ? firstExample(picked) : "");
     setCustomModel(false);
     setHarder(HARDER_SAME);
     // A new account reads open material only until the person says more (the question on the step, or a tick in the form).
@@ -351,7 +367,7 @@ export function WelcomeAi(props: {
     if (!drawer) {
       // The check runs by itself as soon as the kind has all it needs from the person: nothing, for a server or a program.
       if (!picked.needs_key && (picked.base_url !== "" || isBuiltin(picked))) {
-        void verify(picked, { model: isBuiltin(picked) && !picked.model_optional ? (picked.model_examples ?? [])[0] ?? "" : "" });
+        void verify(picked, { model: isBuiltin(picked) && !picked.model_optional ? firstExample(picked) : "" });
       }
       return;
     }
@@ -957,7 +973,7 @@ export function WelcomeAi(props: {
                     onClick={() =>
                       void endpoints.refetch().then((again) => {
                         const now = again.data?.find((e) => e.id === kind.id);
-                        if (guide && now?.installed) void verify(now, { model: !now.model_optional ? (now.model_examples ?? [])[0] ?? "" : "" });
+                        if (guide && now?.installed) void verify(now, { model: !now.model_optional ? firstExample(now) : "" });
                       })
                     }
                   >
@@ -1133,6 +1149,7 @@ export function WelcomeAi(props: {
                         <label htmlFor="ai-model">{t("welcome.ai.model_choice")}</label>
                         <select
                           id="ai-model"
+                          aria-describedby={!customModel && examples.includes(everyday) ? "ai-model-name-hint" : undefined}
                           value={customModel ? OTHER_MODEL : everyday}
                           onChange={(e) => {
                             const other = e.target.value === OTHER_MODEL;
@@ -1142,13 +1159,18 @@ export function WelcomeAi(props: {
                           }}
                         >
                           {optional && <option value="">{t("welcome.ai.model_program_picks")}</option>}
-                          {examples.map((m) => (
+                          {examples.map((m, i) => (
                             <option key={m} value={m}>
-                              {m}
+                              {kind.model_roles?.[m] ? t(`welcome.ai.role.${kind.model_roles[m]}`) : t("welcome.ai.model_choice_n", { n: i + 1 })}
                             </option>
                           ))}
                           <option value={OTHER_MODEL}>{t("welcome.ai.model_other")}</option>
                         </select>
+                        {!customModel && examples.includes(everyday) && (
+                          <p className="hint" id="ai-model-name-hint">
+                            {t("welcome.ai.model_role_hint", { name: everyday })}
+                          </p>
+                        )}
                       </div>
                       {customModel && (
                         <div className="field">

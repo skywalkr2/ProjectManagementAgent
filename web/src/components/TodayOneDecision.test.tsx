@@ -144,7 +144,6 @@ test("a held line opens on only its decision: the question, the words and who sa
   const row = await rowOf("Close 'Send two spine options'?");
   await user.click(within(row).getByText("Waiting for you"));
   const detail = detailOf(row);
-  expect(within(detail).getByText("Close 'Send two spine options'?")).toBeInTheDocument();
   expect(detail).toHaveTextContent("“both spines are in the shared folder” · Said by Robin Sample");
   expect(detail).toHaveTextContent("Where it came from");
   expect(detail).toHaveTextContent("Email from Pat Example · Send two spine options");
@@ -156,6 +155,19 @@ test("a held line opens on only its decision: the question, the words and who sa
   expect(detail).not.toHaveTextContent("Settle the endpaper color");
   expect(detail).not.toHaveTextContent("Dropped a to-do");
   expect(detail).not.toHaveTextContent("Closed a to-do");
+});
+
+test("a held line's details do not say the question again: it is in the line's title once", async () => {
+  const user = userEvent.setup();
+  show([heldLine(), reviewLine()]);
+  const row = await rowOf("Close 'Send two spine options'?");
+  await user.click(within(row).getByText("Waiting for you"));
+  const detail = detailOf(row);
+  expect(await within(detail).findByText("Why it waits")).toBeInTheDocument();
+  expect(within(detail).queryByText("Close 'Send two spine options'?")).toBeNull();
+  expect(within(row).getAllByText("Close 'Send two spine options'?")).toHaveLength(1);
+  // The section is still named by the question for a screen reader, without repeating it as text.
+  expect(within(detail).getByRole("region", { name: "Close 'Send two spine options'?" })).toBeInTheDocument();
 });
 
 test("the answers in the details are the line's own answers, and the first one applies the held op", async () => {

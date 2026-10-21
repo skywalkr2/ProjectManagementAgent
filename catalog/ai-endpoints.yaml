@@ -20,6 +20,9 @@
 #                      identity_line and identity_pattern) naming where the account is in its answer
 #   program            for a command-line agent: the program's name, so the screen can say whether it is installed
 #   model_examples     names the program accepts for its models, offered when it can't list them
+#   model_roles        what each example is for, by example name: recommended (the one chosen first), stronger or
+#                      faster. The screen offers these three words and shows the program's own name for the choice
+#                      only in a hint, so a name the program renames is a change here and nowhere else
 #   model_optional     the program picks its own model when none is named
 #   note               one line shown with it
 # Model ids are never listed here: the screen asks the service for its models with the person's key.
@@ -117,6 +120,7 @@ endpoints:
     needs_key: false
     program: claude
     model_examples: [sonnet, opus, haiku]
+    model_roles: {sonnet: recommended, opus: stronger, haiku: faster}
     settings:
       agent:
         command: [claude, -p, --output-format, json, --model, "{model}", --tools, "", --strict-mcp-config, --no-session-persistence]

@@ -118,14 +118,17 @@ export function afterMove(line: S["QueueLineView"], t: T): string {
 /** An item's title by the title rule ("Email from <person> · <topic>"), the same words on Today and in What changed;
  * nothing when the item has none. With no topic the title says so, never a piece of the input's first sentence. Work the
  * app started is named by its kind of task and what it is about ("Filing notes · Launch reading"); `has` tells which
- * kinds of task the wording sheet names, and the others read as the assistant's work. */
+ * kinds of task the wording sheet names, and the others read as the assistant's work; a kind with a `queue.title.task_what.<kind>`
+ * entry is titled by what happened to its subject ("After 'Print sync' moved") rather than by the name of the run. */
 export function titleWords(title: S["ItemTitle"] | null | undefined, t: T, has?: (key: string) => boolean): string {
   if (!title) return "";
   if (title.kind === "task") {
     const named = !title.task ? "" : has?.(`task.${title.task}`) === false ? t("task.other") : t(`task.${title.task}`);
     const head = named ? named.charAt(0).toUpperCase() + named.slice(1) : t("queue.title.task");
     const about = title.subject || title.topic;
-    return about ? t("queue.title.with_topic", { head, topic: about }) : head;
+    // A kind of task may be titled by what happened to its subject instead of by its own name ("After 'X' moved").
+    const byWhat = title.task && about && has?.(`queue.title.task_what.${title.task}`) ? t(`queue.title.task_what.${title.task}`, { topic: about }) : "";
+    return byWhat || (about ? t("queue.title.with_topic", { head, topic: about }) : head);
   }
   const who = title.person_name ?? title.sender ?? t("queue.title.someone");
   const head = t(`queue.title.${title.kind}`, { who });

@@ -5546,6 +5546,19 @@
             "title": "Model Optional",
             "type": "boolean"
           },
+          "model_roles": {
+            "additionalProperties": {
+              "enum": [
+                "recommended",
+                "stronger",
+                "faster"
+              ],
+              "type": "string"
+            },
+            "description": "What each example model is for, by name: the one chosen first, a stronger one or a faster one.",
+            "title": "Model Roles",
+            "type": "object"
+          },
           "name": {
             "description": "The service's name, as the person knows it.",
             "title": "Name",
