@@ -103,7 +103,8 @@ def test_a_failed_calls_report_holds_the_parameters_and_the_error_and_no_packet_
     got = client.get("/api/feedback/problems")
     assert got.status_code == 200
     lines = got.json()["problems"]
-    blob = json.dumps(lines)
+    # Every field but the time, whose digits could hold any short number by chance.
+    blob = json.dumps([{k: v for k, v in line.items() if k != "at"} for line in lines])
     for hidden in (
         KEY,
         RESOLVED,
