@@ -526,6 +526,8 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
 - `toast_seconds` (7; 0 keeps toasts until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
+- `feedback_problem_days` (3) and `feedback_problem_max` (20): how far back and how many failures Send feedback offers to add
+  (7, Help); the app keeps five times that many app errors in the workspace's private folder (`problems.jsonl`).
 - `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only), and
   `stale_after_days` (21; 0 is off): the person's own undated to-do nothing has changed for this long is stale, and Today has one
   line for them (6.9); `top_priorities_lines` (5): the most lines Top priorities lists on Today, the rest counted; and

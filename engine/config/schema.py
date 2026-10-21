@@ -2262,6 +2262,21 @@ class UiFile(FileModel):
         description="The address the feedback button writes its email to. Empty uses the address the app was "
         "packaged with, if any; with neither, feedback is drafted to copy.",
     )
+    feedback_problem_days: int = Field(
+        3,
+        ge=1,
+        le=60,
+        description="How many days back Send feedback looks for failed work to offer to add: a failed request to an "
+        "AI account, account check, source read or error in the app, with its settings and the service's error text "
+        "but never what you wrote or read.",
+    )
+    feedback_problem_max: int = Field(
+        20,
+        ge=1,
+        le=100,
+        description="The most failures Send feedback offers to add, newest first. The app also keeps five times this "
+        "many app errors on this computer.",
+    )
 
     @field_validator("links")
     @classmethod

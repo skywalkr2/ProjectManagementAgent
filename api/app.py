@@ -17,7 +17,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.routing import Mount
@@ -28,6 +28,7 @@ from api.ask_routes import build_ask_router
 from api.calendar_routes import build_calendar_router
 from api.correction_routes import build_correction_router
 from api.data_form_routes import build_data_form_router
+from api.feedback_routes import build_feedback_router
 from api.first_promises_routes import build_first_promises_router
 from api.knowledge_routes import build_knowledge_router
 from api.notification_routes import build_notification_router
@@ -48,7 +49,7 @@ from api.sign_in_routes import build_sign_in_router
 from api.since_routes import build_since_router
 from api.today_routes import build_today_router
 from api.watch_routes import build_watch_router
-from engine import __version__
+from engine import __version__, problems
 from engine.ai.router import Router
 from engine.config import Config
 from engine.config.schema import WorkspaceFile
@@ -222,6 +223,15 @@ def create_app(
             return JSONResponse({"detail": problem}, status_code=500)
         return await http_exception_handler(request, err)
 
+    @inner.exception_handler(Exception)
+    async def keep_unexpected_error(request: Request, err: Exception) -> Any:
+        """An error nothing handled: a line is kept for the person's feedback (type and masked message, no traceback),
+        and the answer is the usual plain 500."""
+        route = request.scope.get("route")
+        where = f"{request.method} {getattr(route, 'path', None) or 'unknown route'}"
+        problems.note(ws, store, cfg, where, err)
+        return PlainTextResponse("Internal Server Error", status_code=500)
+
     @inner.middleware("http")
     async def require_token(request: Request, call_next: Any) -> Any:
         path = request.url.path.removeprefix(request.scope.get("root_path", "")) or "/"
@@ -333,6 +343,7 @@ def create_app(
     inner.include_router(build_data_form_router(store))
     inner.include_router(build_knowledge_router(cfg, store, events, worker))
     inner.include_router(build_quality_router(ws, cfg, store, events, worker))
+    inner.include_router(build_feedback_router(ws, cfg, store, worker))
     inner.include_router(build_records_router(cfg, store, events, worker))
     inner.state.worker = worker
     inner.state.store = store

@@ -1,6 +1,7 @@
 // Sending feedback: the person writes what happened, sees exactly what the email will say, and either opens it in
-// their own mail program or copies it. The app sends nothing, and the only facts it adds (if the person leaves that on)
-// are the app's version and the name of the screen they were on.
+// their own mail program or copies it. The app sends nothing, and the only facts it adds (if the person leaves them on)
+// are the app's version, the name of the screen they were on and, when there were any, the last problems (each already
+// masked by the server, and shown in the preview exactly as they will be sent).
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Heading } from "react-aria-components";
@@ -9,6 +10,7 @@ import { api } from "../lib/api";
 import { copyMessage } from "../lib/copy";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { useToasts } from "../lib/toasts";
+import { problemLines } from "../lib/problem-lines";
 import { parseView, type CoreView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
@@ -53,12 +55,18 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const screen = useScreenLabel(props.view);
   const [message, setMessage] = useState("");
   const [include, setInclude] = useState(true);
+  const [withProblems, setWithProblems] = useState(true);
   const [blocked, setBlocked] = useState(false);
+
+  const recent = useQuery({ queryKey: ["feedback-problems"], queryFn: () => api.feedbackProblems(), gcTime: 0 });
+  const found = recent.data?.problems ?? [];
+  const addProblems = withProblems && found.length > 0;
 
   const subject = t("feedback.subject", { app: t("app.name") });
   const body = [
     message.trim(),
     ...(include ? ["", t("feedback.body_version", { version: props.version }), t("feedback.body_screen", { screen })] : []),
+    ...(addProblems ? ["", ...problemLines(found, t)] : []),
   ].join("\n");
   const ready = message.trim() !== "";
   const link = ready ? mailtoLink(props.to, subject, body) : null;
@@ -81,6 +89,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
   const hintId = `${base}-hint`;
   const requiredId = `${base}-required`;
   const noteId = `${base}-note`;
+  const problemsId = `${base}-problems`;
   const note = tooLong ? t("feedback.too_long") : noAddress ? t("feedback.no_address") : "";
   return (
     <ModalPanel titleId={titleId} onClose={props.onClose}>
@@ -115,6 +124,17 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
           <input type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} />
           <span>{t("feedback.include")}</span>
         </label>
+        {found.length > 0 && (
+          <>
+            <label className="check-line">
+              <input type="checkbox" checked={withProblems} aria-describedby={problemsId} onChange={(e) => setWithProblems(e.target.checked)} />
+              <span>{t("feedback.problems", { count: found.length })}</span>
+            </label>
+            <span id={problemsId} className="hint">
+              {t("feedback.problems_hint")}
+            </span>
+          </>
+        )}
         <fieldset className="details">
           <legend>{t("feedback.preview")}</legend>
           <div className="field">
@@ -123,7 +143,7 @@ export function Feedback(props: { onClose: () => void; view: View; version: stri
           </div>
           <div className="field">
             <label htmlFor={`${base}-body`}>{t("feedback.preview_body")}</label>
-            <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(8, body.split("\n").length + 1)} value={body} />
+            <textarea id={`${base}-body`} className="short" readOnly rows={Math.min(addProblems ? 14 : 8, body.split("\n").length + 1)} value={body} />
           </div>
         </fieldset>
         {note && (

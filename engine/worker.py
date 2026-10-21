@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import sys
 import threading
 import time
 from collections.abc import Callable, Collection
@@ -13,6 +14,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from engine import problems
 from engine.ai.router import Router
 from engine.config import Config
 from engine.dispatcher import needs_you, process
@@ -354,6 +356,12 @@ class Worker:
         if held:
             self.events.changed()
 
+    def _problem(self, where: str) -> None:
+        """Keep a line about the error being handled, for the person's feedback (`engine.problems`)."""
+        error = sys.exc_info()[1]
+        if error is not None:
+            problems.note(self.ws, self.store, self.cfg, where, error, now=self.now())
+
     def check_readers(self) -> None:
         """Have each reader of files read a tiny file of its own kind; one that fails is a line on Today."""
         from engine.extract import health
@@ -363,6 +371,7 @@ class Worker:
                 self.events.changed()
         except Exception:  # a check that can't run must not stop the app; the readers are used and fail on their own
             log.exception("checking the file readers failed")
+            self._problem("file readers check")
 
     def start(self) -> None:
         self.check_readers()
@@ -439,6 +448,7 @@ class Worker:
             made = queue_learning(self.ws, self.store, self.cfg, self.router_factory, self.now())
         except Exception:
             log.exception("Couldn't queue the learning for the catch-up list")
+            self._problem("catch-up list")
             return []
         if made:
             self.events.changed()
@@ -467,6 +477,7 @@ class Worker:
                 needs_you(self.store, queued[0].id, f"This couldn't be processed: {str(err).rstrip('.')}.")
             except Exception:  # a failure in one request must not stop the worker
                 log.exception("Request %s failed", queued[0].id)
+                self._problem("processing a request")
                 needs_you(
                     self.store,
                     queued[0].id,
@@ -592,6 +603,7 @@ class Worker:
                 run_backup(self.ws, fresh)
             except Exception:  # a failed backup is recorded by run_backup; nothing here may break the request
                 log.exception("the first backup failed")
+                self._problem("first backup")
             self.events.changed()
 
         thread = threading.Thread(target=run, name="cockpit-first-backup", daemon=True)
@@ -616,6 +628,7 @@ class Worker:
                     self.events.changed()
             except Exception:  # a check that can't run is kept as one that didn't finish; nothing here may stop the app
                 log.exception("the check after a switch failed")
+                self._problem("check after a switch")
                 self.events.changed()
 
         self._switching = threading.Thread(target=run, name="cockpit-switch-check", daemon=True)

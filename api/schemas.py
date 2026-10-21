@@ -311,6 +311,37 @@ class Ok(BaseModel):
     ok: str
 
 
+class FeedbackProblem(BaseModel):
+    """One recent failure as Send feedback offers it, already masked (design 7, Help). Never the packet, the request,
+    any record's text, a file's name or a name of a person or project."""
+
+    at: datetime = Field(description="When it happened, on the person's own clock.")
+    doing: Literal["task", "account_check", "source_read", "app"] = Field(
+        description="What was being done: an AI task, checking an account, reading a source, or the app itself."
+    )
+    what: str | None = Field(
+        None,
+        description="The task kind, the part of the account check, the kind of source, or where in the app.",
+    )
+    service: str | None = Field(None, description="The account's kind of service, else its adapter.")
+    adapter: str | None = Field(None, description="The adapter that talks to the account.")
+    program_version: str | None = Field(None, description="For a command-line agent: the program's own version line.")
+    params: dict[str, str] = Field(
+        default_factory=dict,
+        description="The request's settings (tier, model, temperature, output limit, effort) and the account's "
+        "request settings, by name.",
+    )
+    status: int | None = Field(None, description="The status code the service answered with, if it did.")
+    error_kind: str | None = Field(None, description="How it failed: the error kind, or the app error's type.")
+    text: str = Field("", description="The service's or error's own text, masked and cut short.")
+
+
+class FeedbackProblems(BaseModel):
+    """GET /api/feedback/problems: the last failures Send feedback may add, newest first."""
+
+    problems: list[FeedbackProblem]
+
+
 class Noted(BaseModel):
     ok: str
     request: str | None = Field(

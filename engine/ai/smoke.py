@@ -46,6 +46,7 @@ class SmokeResult:
     params: list[Any] = field(default_factory=list)  # for a call: the kind of work, temperature and most output
     identity: dict[str, str] | None = None  # for identity: {account, how_read}, or {unknown: the reason}
     error_kind: str = ""  # when the call failed: the kind the call itself gave (never read from the account's words)
+    error_detail: str = ""  # when the call failed: the service's own error text, for a report of the failure
 
 
 def _params_for_tier(cfg: Config, tier: str) -> list[tuple[Any, ...]]:
@@ -92,7 +93,7 @@ def smoke_test(
                 start = time.monotonic()
                 key_source = None
                 answered = no_network = False
-                failed_kind = ""
+                failed_kind = raw_detail = ""
                 try:
                     if refusal is not None:
                         raise refusal
@@ -104,6 +105,7 @@ def smoke_test(
                     ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
                 except AiError as err:
                     ok, detail, failed_kind = False, _problem(err, where_of(settings)), err.kind
+                    raw_detail = err.detail
                     no_network = err.kind == "offline"
                     if err.kind in ("auth", "no_key"):
                         key_source = describe_secret(settings.auth)
@@ -127,6 +129,7 @@ def smoke_test(
                         "call",
                         [kind, temperature, max_output, *effort],
                         error_kind=failed_kind,
+                        error_detail=raw_detail,
                     )
                 )
             if ref not in locked:
@@ -354,7 +357,7 @@ def _learning(
     label = f"{ref} (learning round-trip)"
     start = time.monotonic()
     answered = no_network = False
-    failed_kind = ""
+    failed_kind = raw_detail = ""
     try:
         reply = adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, env)).run(
             learning_check.task(cfg), model_id
@@ -366,6 +369,7 @@ def _learning(
         ok, detail = False, f"key not found: {err}"
     except AiError as err:
         ok, detail, failed_kind = False, _problem(err, where_of(settings)), err.kind
+        raw_detail = err.detail
         no_network = err.kind == "offline"
     except ValueError as err:
         ok, detail = False, str(err)
@@ -382,6 +386,7 @@ def _learning(
         ref=ref,
         part="learning",
         error_kind=failed_kind,
+        error_detail=raw_detail,
     )
 
 

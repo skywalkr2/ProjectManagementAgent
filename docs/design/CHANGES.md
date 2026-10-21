@@ -1055,7 +1055,7 @@ yet follow, that it is *designed*, with its phase.
   (`key_refused_status_on_models`), model lists read page by page (`model_list_pages`), Copilot's request on standard
   input, and the command-line programs' documented limit and sign-in messages. Design 4 (provider keys), 6.16.
 
-## 149. Failures captured for feedback (2026-10-21; B-11c, designed)
+## 149. Failures captured for feedback (2026-10-21; B-11c, built)
 
 - Send feedback can add the last problems: each failed AI call, account check, connector read or server error, with
   its parameters, status, error kind, the service's error text and the program version, never the person's content,

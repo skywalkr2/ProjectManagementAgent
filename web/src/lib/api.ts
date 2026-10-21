@@ -105,6 +105,8 @@ export const api = {
   ask: (question: string) => call<S["Created"]>("POST", "ask", { question }),
   asks: () => call<S["AskView"][]>("GET", "asks"),
   quality: () => call<S["QualityView"]>("GET", "quality"),
+  /** The last failures Send feedback may add to a message, already masked by the server. */
+  feedbackProblems: () => call<S["FeedbackProblems"]>("GET", "feedback/problems"),
   /** Save, or correct, the person's own count for a day: what Undo takes comes back as `previous`. */
   saveCount: (day: string, body: S["QualityCountIn"]) => call<S["QualityCountSaved"]>("PUT", `quality/counts/${id(day)}`, body),
   undoCount: (day: string, previous: S["QualityCountBefore"] | null) =>

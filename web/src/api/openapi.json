@@ -5900,6 +5900,137 @@
         "title": "FactSource",
         "type": "object"
       },
+      "FeedbackProblem": {
+        "description": "One recent failure as Send feedback offers it, already masked (design 7, Help). Never the packet, the request,\nany record's text, a file's name or a name of a person or project.",
+        "properties": {
+          "adapter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The adapter that talks to the account.",
+            "title": "Adapter"
+          },
+          "at": {
+            "description": "When it happened, on the person's own clock.",
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "doing": {
+            "description": "What was being done: an AI task, checking an account, reading a source, or the app itself.",
+            "enum": [
+              "task",
+              "account_check",
+              "source_read",
+              "app"
+            ],
+            "title": "Doing",
+            "type": "string"
+          },
+          "error_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How it failed: the error kind, or the app error's type.",
+            "title": "Error Kind"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The request's settings (tier, model, temperature, output limit, effort) and the account's request settings, by name.",
+            "title": "Params",
+            "type": "object"
+          },
+          "program_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a command-line agent: the program's own version line.",
+            "title": "Program Version"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account's kind of service, else its adapter.",
+            "title": "Service"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The status code the service answered with, if it did.",
+            "title": "Status"
+          },
+          "text": {
+            "default": "",
+            "description": "The service's or error's own text, masked and cut short.",
+            "title": "Text",
+            "type": "string"
+          },
+          "what": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The task kind, the part of the account check, the kind of source, or where in the app.",
+            "title": "What"
+          }
+        },
+        "required": [
+          "at",
+          "doing"
+        ],
+        "title": "FeedbackProblem",
+        "type": "object"
+      },
+      "FeedbackProblems": {
+        "description": "GET /api/feedback/problems: the last failures Send feedback may add, newest first.",
+        "properties": {
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          }
+        },
+        "required": [
+          "problems"
+        ],
+        "title": "FeedbackProblems",
+        "type": "object"
+      },
       "FieldView": {
         "properties": {
           "description": {
@@ -24060,6 +24191,25 @@
           }
         },
         "summary": "Entry Todo"
+      }
+    },
+    "/api/feedback/problems": {
+      "get": {
+        "description": "The failures of the last `ui.feedback_problem_days` days, newest first and at most `ui.feedback_problem_max`:\nfailed AI calls, account checks and source reads, and errors in the app. Each has when, what was being done,\nthe account's service, adapter and program version, the request's settings, the status, the error kind and the\nservice's own error text. Secrets, addresses, paths and the names of the workspace's own people, projects and\nfiles are masked; nothing the person wrote or read is in it. The app sends nothing: the person sends it.",
+        "operationId": "feedback_problems_api_feedback_problems_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackProblems"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Feedback Problems"
       }
     },
     "/api/file-kinds": {
