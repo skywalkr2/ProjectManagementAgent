@@ -1,0 +1,373 @@
+# Ways people say something repeats, written by the outside helper (round 3, prompt E). tests/test_phrase_cases.py
+# holds the rules to them.
+- phrase: "every day"
+  start: "2026-11-01"
+  rule: "FREQ=DAILY"
+  plain: "Every day, starting November 1."
+  next_three: ["2026-11-01", "2026-11-02", "2026-11-03"]
+
+- phrase: "every weekday"
+  start: "2026-11-02"
+  rule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+  plain: "Every weekday, starting Monday, November 2."
+  next_three: ["2026-11-02", "2026-11-03", "2026-11-04"]
+
+- phrase: "weekdays except Friday"
+  start: "2026-11-02"
+  rule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH"
+  plain: "Every Monday through Thursday."
+  next_three: ["2026-11-02", "2026-11-03", "2026-11-04"]
+
+- phrase: "every 3 days"
+  start: "2026-11-03"
+  rule: "FREQ=DAILY;INTERVAL=3"
+  plain: "Every three days, starting November 3."
+  next_three: ["2026-11-03", "2026-11-06", "2026-11-09"]
+
+- phrase: "Mondays and Thursdays"
+  start: "2026-11-02"
+  rule: "FREQ=WEEKLY;BYDAY=MO,TH"
+  plain: "Every Monday and Thursday."
+  next_three: ["2026-11-02", "2026-11-05", "2026-11-09"]
+
+- phrase: "water the plants every day"
+  start: "2026-12-01"
+  rule: "FREQ=DAILY"
+  plain: "Water the plants every day."
+  next_three: ["2026-12-01", "2026-12-02", "2026-12-03"]
+
+- phrase: "weekday standup"
+  start: "2026-12-07"
+  rule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+  plain: "Have the standup every weekday."
+  next_three: ["2026-12-07", "2026-12-08", "2026-12-09"]
+
+- phrase: "water plants every 2 days"
+  start: "2026-12-02"
+  rule: "FREQ=DAILY;INTERVAL=2"
+  plain: "Water the plants every two days."
+  next_three: ["2026-12-02", "2026-12-04", "2026-12-06"]
+
+- phrase: "every Monday, Wednesday, and Friday"
+  start: "2026-12-02"
+  rule: "FREQ=WEEKLY;BYDAY=MO,WE,FR"
+  plain: "Repeat every Monday, Wednesday, and Friday."
+  next_three: ["2026-12-02", "2026-12-04", "2026-12-07"]
+
+- phrase: "every 10 days"
+  start: "2026-11-10"
+  rule: "FREQ=DAILY;INTERVAL=10"
+  plain: "Repeat every ten days."
+  next_three: ["2026-11-10", "2026-11-20", "2026-11-30"]
+
+- phrase: "every Tuesday"
+  start: "2026-11-03"
+  rule: "FREQ=WEEKLY;BYDAY=TU"
+  plain: "Every Tuesday."
+  next_three: ["2026-11-03", "2026-11-10", "2026-11-17"]
+
+- phrase: "every other week on Monday"
+  start: "2026-11-02"
+  rule: "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO"
+  plain: "Every other Monday."
+  next_three: ["2026-11-02", "2026-11-16", "2026-11-30"]
+
+- phrase: "every 3 weeks"
+  start: "2026-11-05"
+  rule: "FREQ=WEEKLY;INTERVAL=3"
+  plain: "Every three weeks, starting Thursday, November 5."
+  next_three: ["2026-11-05", "2026-11-26", "2026-12-17"]
+
+- phrase: "weekly on Fri"
+  start: "2026-11-06"
+  rule: "FREQ=WEEKLY;BYDAY=FR"
+  plain: "Every Friday."
+  next_three: ["2026-11-06", "2026-11-13", "2026-11-20"]
+
+- phrase: "school pickup every Saturday"
+  start: "2026-11-07"
+  rule: "FREQ=WEEKLY;BYDAY=SA"
+  plain: "Pick up from school every Saturday."
+  next_three: ["2026-11-07", "2026-11-14", "2026-11-21"]
+
+- phrase: "every other Tuesday"
+  start: "2026-12-01"
+  rule: "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU"
+  plain: "Every other Tuesday."
+  next_three: ["2026-12-01", "2026-12-15", "2026-12-29"]
+
+- phrase: "every Sunday"
+  start: "2026-12-06"
+  rule: "FREQ=WEEKLY;BYDAY=SU"
+  plain: "Every Sunday."
+  next_three: ["2026-12-06", "2026-12-13", "2026-12-20"]
+
+- phrase: "every two weeks on Thursday"
+  start: "2026-11-12"
+  rule: "FREQ=WEEKLY;INTERVAL=2;BYDAY=TH"
+  plain: "Every other Thursday."
+  next_three: ["2026-11-12", "2026-11-26", "2026-12-10"]
+
+- phrase: "every Monday"
+  start: "2026-12-07"
+  rule: "FREQ=WEEKLY;BYDAY=MO"
+  plain: "Every Monday."
+  next_three: ["2026-12-07", "2026-12-14", "2026-12-21"]
+
+- phrase: "weekly on Wednesday"
+  start: "2026-12-02"
+  rule: "FREQ=WEEKLY;BYDAY=WE"
+  plain: "Every Wednesday."
+  next_three: ["2026-12-02", "2026-12-09", "2026-12-16"]
+
+- phrase: "on the 1st"
+  start: "2026-12-01"
+  rule: "FREQ=MONTHLY;BYMONTHDAY=1"
+  plain: "On the first day of each month."
+  next_three: ["2026-12-01", "2027-01-01", "2027-02-01"]
+
+- phrase: "the 1st and 15th"
+  start: "2026-11-01"
+  rule: "FREQ=MONTHLY;BYMONTHDAY=1,15"
+  plain: "On the first and fifteenth of each month."
+  next_three: ["2026-11-01", "2026-11-15", "2026-12-01"]
+
+- phrase: "every month on the 30th"
+  start: "2026-12-30"
+  rule: "FREQ=MONTHLY;BYMONTHDAY=30,-1;BYSETPOS=1"
+  plain: "On the 30th each month, or the month’s last day when it has fewer than 30 days."
+  next_three: ["2026-12-30", "2027-01-30", "2027-02-28"]
+
+- phrase: "every 3 months on the 15th"
+  start: "2026-11-15"
+  rule: "FREQ=MONTHLY;INTERVAL=3;BYMONTHDAY=15"
+  plain: "On the 15th every three months."
+  next_three: ["2026-11-15", "2027-02-15", "2027-05-15"]
+
+- phrase: "quarterly"
+  start: null
+  rule: "unclear"
+  why: "“Quarterly” can mean calendar-quarter dates or every three months from the starting date."
+  plain: "Do you mean once each calendar quarter, or every three months from a chosen date?"
+  next_three: []
+
+- phrase: "every month on the 31st"
+  start: "2026-12-31"
+  rule: "FREQ=MONTHLY;BYMONTHDAY=31,-1;BYSETPOS=1"
+  plain: "On the 31st each month, or the month’s last day when it has fewer than 31 days."
+  next_three: ["2026-12-31", "2027-01-31", "2027-02-28"]
+
+- phrase: "every other month on the 10th"
+  start: "2026-11-10"
+  rule: "FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=10"
+  plain: "On the 10th every other month."
+  next_three: ["2026-11-10", "2027-01-10", "2027-03-10"]
+
+- phrase: "on the last day of each month"
+  start: "2026-11-30"
+  rule: "FREQ=MONTHLY;BYMONTHDAY=-1"
+  plain: "On the last day of each month."
+  next_three: ["2026-11-30", "2026-12-31", "2027-01-31"]
+
+- phrase: "every month on the 28th"
+  start: "2026-11-28"
+  rule: "FREQ=MONTHLY;BYMONTHDAY=28"
+  plain: "On the 28th of each month."
+  next_three: ["2026-11-28", "2026-12-28", "2027-01-28"]
+
+- phrase: "every 6 months on the 5th"
+  start: "2026-12-05"
+  rule: "FREQ=MONTHLY;INTERVAL=6;BYMONTHDAY=5"
+  plain: "On the 5th every six months."
+  next_three: ["2026-12-05", "2027-06-05", "2027-12-05"]
+
+- phrase: "the first Monday of each month"
+  start: "2026-11-02"
+  rule: "FREQ=MONTHLY;BYDAY=1MO"
+  plain: "On the first Monday of each month."
+  next_three: ["2026-11-02", "2026-12-07", "2027-01-04"]
+
+- phrase: "the last Friday of the month"
+  start: "2026-11-27"
+  rule: "FREQ=MONTHLY;BYDAY=-1FR"
+  plain: "On the last Friday of each month."
+  next_three: ["2026-11-27", "2026-12-25", "2027-01-29"]
+
+- phrase: "the second and fourth Tuesday"
+  start: "2026-11-10"
+  rule: "FREQ=MONTHLY;BYDAY=2TU,4TU"
+  plain: "On the second and fourth Tuesday of each month."
+  next_three: ["2026-11-10", "2026-11-24", "2026-12-08"]
+
+- phrase: "the last weekday of the month"
+  start: "2026-11-30"
+  rule: "FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1"
+  plain: "On the last weekday of each month."
+  next_three: ["2026-11-30", "2026-12-31", "2027-01-29"]
+
+- phrase: "the first Saturday each month"
+  start: "2026-12-05"
+  rule: "FREQ=MONTHLY;BYDAY=1SA"
+  plain: "On the first Saturday of each month."
+  next_three: ["2026-12-05", "2027-01-02", "2027-02-06"]
+
+- phrase: "the third Wednesday each month"
+  start: "2026-11-18"
+  rule: "FREQ=MONTHLY;BYDAY=3WE"
+  plain: "On the third Wednesday of each month."
+  next_three: ["2026-11-18", "2026-12-16", "2027-01-20"]
+
+- phrase: "the last Monday each month"
+  start: "2026-11-30"
+  rule: "FREQ=MONTHLY;BYDAY=-1MO"
+  plain: "On the last Monday of each month."
+  next_three: ["2026-11-30", "2026-12-28", "2027-01-25"]
+
+- phrase: "the second Friday each month"
+  start: "2026-11-13"
+  rule: "FREQ=MONTHLY;BYDAY=2FR"
+  plain: "On the second Friday of each month."
+  next_three: ["2026-11-13", "2026-12-11", "2027-01-08"]
+
+- phrase: "the first weekday each month"
+  start: "2026-12-01"
+  rule: "FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=1"
+  plain: "On the first weekday of each month."
+  next_three: ["2026-12-01", "2027-01-01", "2027-02-01"]
+
+- phrase: "the last Sunday each month"
+  start: "2026-11-29"
+  rule: "FREQ=MONTHLY;BYDAY=-1SU"
+  plain: "On the last Sunday of each month."
+  next_three: ["2026-11-29", "2026-12-27", "2027-01-31"]
+
+- phrase: "every year on March 3"
+  start: "2027-03-03"
+  rule: "FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=3"
+  plain: "Every year on March 3."
+  next_three: ["2027-03-03", "2028-03-03", "2029-03-03"]
+
+- phrase: "annually"
+  start: "2026-11-15"
+  rule: "FREQ=YEARLY"
+  plain: "Once a year on November 15."
+  next_three: ["2026-11-15", "2027-11-15", "2028-11-15"]
+
+- phrase: "every February 29"
+  start: "2027-02-28"
+  rule: "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29,-1;BYSETPOS=-1"
+  plain: "On February 29 each year, or on February’s last day when it has no 29th."
+  next_three: ["2027-02-28", "2028-02-29", "2029-02-28"]
+
+- phrase: "each spring"
+  start: null
+  rule: "unclear"
+  why: "“Spring” does not identify one repeat date; people may mean a chosen date or the whole season."
+  plain: "Do you mean a particular date each spring, or any time during the season?"
+  next_three: []
+
+- phrase: "every year on December 1"
+  start: "2026-12-01"
+  rule: "FREQ=YEARLY;BYMONTH=12;BYMONTHDAY=1"
+  plain: "Every year on December 1."
+  next_three: ["2026-12-01", "2027-12-01", "2028-12-01"]
+
+- phrase: "every year on November 30"
+  start: "2026-11-30"
+  rule: "FREQ=YEARLY;BYMONTH=11;BYMONTHDAY=30"
+  plain: "Every year on November 30."
+  next_three: ["2026-11-30", "2027-11-30", "2028-11-30"]
+
+- phrase: "every year on November 5"
+  start: "2026-11-05"
+  rule: "FREQ=YEARLY;BYMONTH=11;BYMONTHDAY=5"
+  plain: "Every year on November 5."
+  next_three: ["2026-11-05", "2027-11-05", "2028-11-05"]
+
+- phrase: "every year on December 15"
+  start: "2026-12-15"
+  rule: "FREQ=YEARLY;BYMONTH=12;BYMONTHDAY=15"
+  plain: "Every year on December 15."
+  next_three: ["2026-12-15", "2027-12-15", "2028-12-15"]
+
+- phrase: "annually on the first Monday in December"
+  start: "2026-12-07"
+  rule: "FREQ=YEARLY;BYMONTH=12;BYDAY=1MO"
+  plain: "On the first Monday in December each year."
+  next_three: ["2026-12-07", "2027-12-06", "2028-12-04"]
+
+- phrase: "every year on the last Friday in November"
+  start: "2026-11-27"
+  rule: "FREQ=YEARLY;BYMONTH=11;BYDAY=-1FR"
+  plain: "On the last Friday in November each year."
+  next_three: ["2026-11-27", "2027-11-26", "2028-11-24"]
+
+- phrase: "biweekly"
+  start: null
+  rule: "unclear"
+  why: "“Biweekly” is used for both every two weeks and twice a week."
+  plain: "Do you mean every two weeks or twice a week?"
+  next_three: []
+
+- phrase: "bimonthly"
+  start: null
+  rule: "unclear"
+  why: "“Bimonthly” is used for both every two months and twice a month."
+  plain: "Do you mean every two months or twice a month?"
+  next_three: []
+
+- phrase: "every couple of weeks"
+  start: null
+  rule: "unclear"
+  why: "“A couple” usually means two but can be used less precisely."
+  plain: "Do you mean every two weeks, or a looser interval of a few weeks?"
+  next_three: []
+
+- phrase: "now and then"
+  start: null
+  rule: "unclear"
+  why: "“Now and then” does not name a repeat interval."
+  plain: "How often should this happen, and on which days?"
+  next_three: []
+
+- phrase: "a few times a month"
+  start: null
+  rule: "unclear"
+  why: "The number of repeats is approximate and the dates are not specified."
+  plain: "Which dates or weekdays should I use?"
+  next_three: []
+
+- phrase: "regularly"
+  start: null
+  rule: "unclear"
+  why: "“Regularly” does not identify an interval."
+  plain: "What repeat interval should I use?"
+  next_three: []
+
+- phrase: "every few days"
+  start: null
+  rule: "unclear"
+  why: "“A few” does not give a specific number of days."
+  plain: "How many days apart should these be?"
+  next_three: []
+
+- phrase: "twice a month"
+  start: null
+  rule: "unclear"
+  why: "The monthly count is clear, but the dates are not."
+  plain: "Which two dates should I use?"
+  next_three: []
+
+- phrase: "every so often"
+  start: null
+  rule: "unclear"
+  why: "“Every so often” does not give a repeat interval."
+  plain: "How often would you like this to repeat?"
+  next_three: []
+
+- phrase: "occasionally"
+  start: null
+  rule: "unclear"
+  why: "“Occasionally” does not name a repeat pattern."
+  plain: "What interval should I use?"
+  next_three: []

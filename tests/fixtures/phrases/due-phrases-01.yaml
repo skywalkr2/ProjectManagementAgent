@@ -1,0 +1,722 @@
+# Deadline phrases and what a person means by them, written by the outside helper (round 3, prompt D) and
+# checked by the main session. tests/test_phrase_cases.py holds the rules to them.
+- phrase: "by Friday"
+  received: "2026-11-18T09:15:00-05:00[America/New_York]"
+  received_day: Wednesday
+  meaning: date
+  start: "2026-11-20"
+  end: "2026-11-20"
+  time: null
+  exact: true
+  why: "The next Friday is two days away."
+- phrase: "by Friday"
+  received: "2026-11-20T10:00:00-06:00[America/Chicago]"
+  received_day: Friday
+  meaning: date
+  start: "2026-11-20"
+  end: "2026-11-20"
+  time: null
+  exact: true
+  why: "Friday itself is the deadline."
+- phrase: "this Friday"
+  received: "2026-11-09T08:30:00-08:00[America/Los_Angeles]"
+  received_day: Monday
+  meaning: date
+  start: "2026-11-13"
+  end: "2026-11-13"
+  time: null
+  exact: true
+  why: "This Friday is the upcoming Friday."
+- phrase: "this Friday"
+  received: "2026-11-14T14:00:00-05:00[America/New_York]"
+  received_day: Saturday
+  meaning: date
+  start: "2026-11-20"
+  end: "2026-11-20"
+  time: null
+  exact: false
+  why: "Check this: The phrase may refer to yesterday or to the coming Friday."
+- phrase: "next Friday"
+  received: "2026-11-18T11:00:00-07:00[America/Denver]"
+  received_day: Wednesday
+  meaning: date
+  start: "2026-11-27"
+  end: "2026-11-27"
+  time: null
+  exact: false
+  why: "Check this: Some readers mean this week’s Friday; others mean the following Friday."
+- phrase: "next Friday"
+  received: "2026-11-20T16:00:00-05:00[America/New_York]"
+  received_day: Friday
+  meaning: date
+  start: "2026-11-27"
+  end: "2026-11-27"
+  time: null
+  exact: false
+  why: "Check this: Some readers mean today; others mean the Friday a week later."
+- phrase: "Fri"
+  received: "2026-12-01T09:00:00-07:00[America/Phoenix]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-12-04"
+  end: "2026-12-04"
+  time: null
+  exact: true
+  why: "The next Friday is December 4."
+- phrase: "Friday"
+  received: "2026-12-10T13:30:00+00:00[Europe/London]"
+  received_day: Thursday
+  meaning: date
+  start: "2026-12-11"
+  end: "2026-12-11"
+  time: null
+  exact: true
+  why: "The next Friday is tomorrow."
+- phrase: "by Friday"
+  received: "2027-01-05T10:15:00-09:00[America/Anchorage]"
+  received_day: Tuesday
+  meaning: date
+  start: "2027-01-08"
+  end: "2027-01-08"
+  time: null
+  exact: true
+  why: "The next Friday is January 8."
+- phrase: "this Friday"
+  received: "2027-01-08T08:00:00+11:00[Australia/Sydney]"
+  received_day: Friday
+  meaning: date
+  start: "2027-01-08"
+  end: "2027-01-08"
+  time: null
+  exact: true
+  why: "The message arrived on the named Friday."
+- phrase: "tomorrow"
+  received: "2026-11-18T09:00:00-05:00[America/New_York]"
+  received_day: Wednesday
+  meaning: date
+  start: "2026-11-19"
+  end: "2026-11-19"
+  time: null
+  exact: true
+  why: "Tomorrow is the next local calendar day."
+- phrase: "tomorrow"
+  received: "2026-12-31T23:50:00-08:00[America/Los_Angeles]"
+  received_day: Thursday
+  meaning: date
+  start: "2027-01-01"
+  end: "2027-01-01"
+  time: null
+  exact: true
+  why: "Tomorrow crosses into January 1 in the sender’s zone."
+- phrase: "in two weeks"
+  received: "2026-11-10T12:00:00-06:00[America/Chicago]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-11-24"
+  end: "2026-11-24"
+  time: null
+  exact: true
+  why: "Two weeks is fourteen calendar days."
+- phrase: "in a couple of days"
+  received: "2026-11-10T10:00:00+01:00[Europe/Paris]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-11-12"
+  end: "2026-11-12"
+  time: null
+  exact: false
+  why: "Check this: A couple usually means two days but can mean a few."
+- phrase: "end of day"
+  received: "2026-11-19T11:30:00-05:00[America/New_York]"
+  received_day: Thursday
+  meaning: date
+  start: "2026-11-19"
+  end: "2026-11-19"
+  time: null
+  exact: true
+  why: "The wording points to today; it does not name a clock time."
+- phrase: "first thing Monday"
+  received: "2026-11-20T17:00:00-08:00[America/Los_Angeles]"
+  received_day: Friday
+  meaning: date
+  start: "2026-11-23"
+  end: "2026-11-23"
+  time: null
+  exact: true
+  why: "Monday is clear, but no clock time is specified."
+- phrase: "COB Thursday"
+  received: "2026-11-16T09:00:00-07:00[America/Denver]"
+  received_day: Monday
+  meaning: date
+  start: "2026-11-19"
+  end: "2026-11-19"
+  time: null
+  exact: true
+  why: "Thursday is the upcoming Thursday; no closing hour is specified."
+- phrase: "later today"
+  received: "2026-12-03T08:30:00+09:00[Asia/Tokyo]"
+  received_day: Thursday
+  meaning: date
+  start: "2026-12-03"
+  end: "2026-12-03"
+  time: null
+  exact: true
+  why: "The deadline stays on the received date, though no time is given."
+- phrase: "day after tomorrow"
+  received: "2026-12-30T20:00:00+11:00[Australia/Sydney]"
+  received_day: Wednesday
+  meaning: date
+  start: "2027-01-01"
+  end: "2027-01-01"
+  time: null
+  exact: true
+  why: "Two local calendar days after December 30 is January 1."
+- phrase: "within 48 hours"
+  received: "2026-12-04T17:00:00-05:00[America/New_York]"
+  received_day: Friday
+  meaning: range
+  start: "2026-12-04"
+  end: "2026-12-06"
+  time: null
+  exact: false
+  why: "Check this: It could mean any time in the next two days, so the date is a span."
+- phrase: "end of the week"
+  received: "2026-11-18T09:00:00-05:00[America/New_York]"
+  received_day: Wednesday
+  meaning: range
+  start: "2026-11-16"
+  end: "2026-11-22"
+  time: null
+  exact: false
+  why: "Check this: Some mean Friday’s workweek end; others mean Sunday."
+- phrase: "end of the month"
+  received: "2026-11-10T10:00:00-06:00[America/Chicago]"
+  received_day: Tuesday
+  meaning: range
+  start: "2026-11-01"
+  end: "2026-11-30"
+  time: null
+  exact: true
+  why: "The span is November, ending on November 30."
+- phrase: "end of next month"
+  received: "2026-11-12T13:00:00+00:00[Europe/London]"
+  received_day: Thursday
+  meaning: range
+  start: "2026-12-01"
+  end: "2026-12-31"
+  time: null
+  exact: true
+  why: "Next month is December, which ends on December 31."
+- phrase: "mid-November"
+  received: "2026-11-02T09:00:00-08:00[America/Los_Angeles]"
+  received_day: Monday
+  meaning: range
+  start: "2026-11-11"
+  end: "2026-11-20"
+  time: null
+  exact: false
+  why: "Check this: some mean around November 11–15; others mean November 16–20."
+- phrase: "later this week"
+  received: "2026-12-08T12:00:00-05:00[America/New_York]"
+  received_day: Tuesday
+  meaning: range
+  start: "2026-12-09"
+  end: "2026-12-13"
+  time: null
+  exact: false
+  why: "Check this: some mean the remaining workdays, December 9–11; others include the weekend through December 13."
+- phrase: "the week of the 16th"
+  received: "2026-11-12T14:00:00-07:00[America/Denver]"
+  received_day: Thursday
+  meaning: range
+  start: "2026-11-16"
+  end: "2026-11-22"
+  time: null
+  exact: false
+  why: "Check this: some mean November 16–20; others mean the full week through November 22."
+- phrase: "by the end of Q4"
+  received: "2026-12-02T10:00:00-07:00[America/Phoenix]"
+  received_day: Wednesday
+  meaning: range
+  start: "2026-10-01"
+  end: "2026-12-31"
+  time: null
+  exact: false
+  why: "Check this: Calendar Q4 ends December 31; a fiscal Q4 may end on another date."
+- phrase: "end of next week"
+  received: "2026-11-20T16:00:00-09:00[America/Anchorage]"
+  received_day: Friday
+  meaning: range
+  start: "2026-11-23"
+  end: "2026-11-29"
+  time: null
+  exact: false
+  why: "Check this: some mean Friday, November 27; others mean Sunday, November 29."
+- phrase: "first half of December"
+  received: "2026-11-28T10:00:00+01:00[Europe/Paris]"
+  received_day: Saturday
+  meaning: range
+  start: "2026-12-01"
+  end: "2026-12-15"
+  time: null
+  exact: false
+  why: "Check this: some end the first half on December 15; others include December 16."
+- phrase: "this weekend"
+  received: "2026-12-03T09:00:00+09:00[Asia/Tokyo]"
+  received_day: Thursday
+  meaning: range
+  start: "2026-12-05"
+  end: "2026-12-06"
+  time: null
+  exact: false
+  why: "Check this: Some count Friday evening as part of the weekend; others mean Saturday and Sunday."
+- phrase: "11/6"
+  received: "2026-11-03T09:00:00-05:00[America/New_York]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-11-06"
+  end: "2026-11-06"
+  time: null
+  exact: true
+  why: "In American month/day order, 11/6 is November 6."
+- phrase: "11/6"
+  received: "2026-11-05T12:00:00-06:00[America/Chicago]"
+  received_day: Thursday
+  meaning: date
+  start: "2026-11-06"
+  end: "2026-11-06"
+  time: null
+  exact: true
+  why: "The American month/day reading is November 6."
+- phrase: "Nov 6"
+  received: "2026-11-04T11:00:00-08:00[America/Los_Angeles]"
+  received_day: Wednesday
+  meaning: date
+  start: "2026-11-06"
+  end: "2026-11-06"
+  time: null
+  exact: true
+  why: "The month and day are written out."
+- phrase: "the 14th"
+  received: "2026-11-08T10:00:00-05:00[America/New_York]"
+  received_day: Sunday
+  meaning: date
+  start: "2026-11-14"
+  end: "2026-11-14"
+  time: null
+  exact: true
+  why: "The upcoming 14th is November 14."
+- phrase: "the 14th"
+  received: "2026-11-20T09:00:00-07:00[America/Denver]"
+  received_day: Friday
+  meaning: date
+  start: "2026-12-14"
+  end: "2026-12-14"
+  time: null
+  exact: false
+  why: "Check this: the sender may mean November 14, already past, or the upcoming December 14."
+- phrase: "January 5"
+  received: "2026-12-15T13:00:00+00:00[Europe/London]"
+  received_day: Tuesday
+  meaning: date
+  start: "2027-01-05"
+  end: "2027-01-05"
+  time: null
+  exact: true
+  why: "The next January 5 is in 2027."
+- phrase: "6 November"
+  received: "2026-11-03T08:00:00+01:00[Europe/Paris]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-11-06"
+  end: "2026-11-06"
+  time: null
+  exact: true
+  why: "The written month makes November 6 clear."
+- phrase: "Nov. 6"
+  received: "2026-11-01T15:00:00-07:00[America/Phoenix]"
+  received_day: Sunday
+  meaning: date
+  start: "2026-11-06"
+  end: "2026-11-06"
+  time: null
+  exact: true
+  why: "The abbreviated month and day name one date."
+- phrase: "the 1st"
+  received: "2026-12-30T10:00:00-05:00[America/New_York]"
+  received_day: Wednesday
+  meaning: date
+  start: "2027-01-01"
+  end: "2027-01-01"
+  time: null
+  exact: false
+  why: "Check this: the sender may mean December 1, already past, or the upcoming January 1."
+- phrase: "12/4"
+  received: "2026-11-30T09:00:00-09:00[America/Anchorage]"
+  received_day: Monday
+  meaning: date
+  start: "2026-12-04"
+  end: "2026-12-04"
+  time: null
+  exact: true
+  why: "In American month/day order, 12/4 is December 4."
+- phrase: "by 3pm"
+  received: "2026-11-10T10:00:00-05:00[America/New_York]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-11-10"
+  end: "2026-11-10"
+  time: "15:00"
+  exact: true
+  why: "The explicit time is 3:00 PM in the sender’s zone."
+- phrase: "by noon tomorrow"
+  received: "2026-11-10T23:50:00-08:00[America/Los_Angeles]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-11-11"
+  end: "2026-11-11"
+  time: "12:00"
+  exact: true
+  why: "Noon tomorrow is 12:00 PM on the next local day."
+- phrase: "by 5pm ET"
+  received: "2026-11-11T09:00:00-08:00[America/Los_Angeles]"
+  received_day: Wednesday
+  meaning: date
+  start: "2026-11-11"
+  end: "2026-11-11"
+  time: "14:00"
+  exact: true
+  why: "5:00 PM Eastern is 2:00 PM in the sender’s Pacific zone."
+- phrase: "by 5:30 p.m."
+  received: "2026-11-16T11:15:00+00:00[Europe/London]"
+  received_day: Monday
+  meaning: date
+  start: "2026-11-16"
+  end: "2026-11-16"
+  time: "17:30"
+  exact: true
+  why: "The time is explicit and uses the sender’s local zone."
+- phrase: "by 9 in the morning"
+  received: "2026-12-01T18:00:00+09:00[Asia/Tokyo]"
+  received_day: Tuesday
+  meaning: date
+  start: "2026-12-02"
+  end: "2026-12-02"
+  time: "09:00"
+  exact: true
+  why: "Sent at 6 pm, so nine in the morning is the next morning in the sender’s zone."
+- phrase: "by 8 tonight"
+  received: "2026-12-07T13:00:00-06:00[America/Chicago]"
+  received_day: Monday
+  meaning: date
+  start: "2026-12-07"
+  end: "2026-12-07"
+  time: "20:00"
+  exact: true
+  why: "Tonight at eight is 20:00 local time."
+- phrase: "by 2:15 pm"
+  received: "2026-12-09T10:00:00+11:00[Australia/Sydney]"
+  received_day: Wednesday
+  meaning: date
+  start: "2026-12-09"
+  end: "2026-12-09"
+  time: "14:15"
+  exact: true
+  why: "The stated afternoon time is 14:15 locally."
+- phrase: "by end of day"
+  received: "2026-11-12T09:00:00-07:00[America/Denver]"
+  received_day: Thursday
+  meaning: date
+  start: "2026-11-12"
+  end: "2026-11-12"
+  time: null
+  exact: true
+  why: "The date is today, but no clock time is stated."
+- phrase: "COB tomorrow"
+  received: "2026-12-10T12:00:00+01:00[Europe/Paris]"
+  received_day: Thursday
+  meaning: date
+  start: "2026-12-11"
+  end: "2026-12-11"
+  time: null
+  exact: true
+  why: "Tomorrow is December 11; no closing hour is supplied."
+- phrase: "at midnight Friday"
+  received: "2026-11-18T09:00:00-05:00[America/New_York]"
+  received_day: Wednesday
+  meaning: date
+  start: "2026-11-20"
+  end: "2026-11-20"
+  time: "00:00"
+  exact: false
+  why: "Check this: midnight may mean the start of Friday, November 20, or the end, November 21."
+- phrase: "before Thanksgiving"
+  received: "2026-11-23T10:00:00-05:00[America/New_York]"
+  received_day: Monday
+  meaning: date
+  start: "2026-11-25"
+  end: "2026-11-25"
+  time: null
+  exact: false
+  why: "Check this: the deadline may be November 25, the last day before Thanksgiving, or any earlier day."
+- phrase: "after the holidays"
+  received: "2026-12-18T12:00:00-06:00[America/Chicago]"
+  received_day: Friday
+  meaning: date
+  start: "2027-01-04"
+  end: "2027-01-04"
+  time: null
+  exact: false
+  why: "Check this: some mean after Christmas, December 26; others mean after New Year’s, January 2 or later."
+- phrase: "over the weekend"
+  received: "2026-11-20T15:00:00-08:00[America/Los_Angeles]"
+  received_day: Friday
+  meaning: range
+  start: "2026-11-21"
+  end: "2026-11-22"
+  time: null
+  exact: false
+  why: "Check this: Some include Friday evening; others mean Saturday and Sunday."
+- phrase: "this spring"
+  received: "2027-01-14T09:00:00-05:00[America/New_York]"
+  received_day: Thursday
+  meaning: range
+  start: "2027-03-01"
+  end: "2027-05-31"
+  time: null
+  exact: false
+  why: "Check this: some mean March through May; others mean about March 20 through June 20."
+- phrase: "before Christmas"
+  received: "2026-12-21T10:00:00-07:00[America/Denver]"
+  received_day: Monday
+  meaning: date
+  start: "2026-12-24"
+  end: "2026-12-24"
+  time: null
+  exact: false
+  why: "Check this: December 24 is the last day before Christmas, but any earlier date could fit."
+- phrase: "after New Year’s"
+  received: "2026-12-31T11:00:00+00:00[Europe/London]"
+  received_day: Thursday
+  meaning: date
+  start: "2027-01-02"
+  end: "2027-01-02"
+  time: null
+  exact: false
+  why: "Check this: some mean January 1; others mean January 2, the first full day after it."
+- phrase: "by Thanksgiving"
+  received: "2026-11-20T13:00:00-07:00[America/Phoenix]"
+  received_day: Friday
+  meaning: date
+  start: "2026-11-26"
+  end: "2026-11-26"
+  time: null
+  exact: true
+  why: "Thanksgiving falls on November 26, 2026."
+- phrase: "Christmas week"
+  received: "2026-12-10T08:00:00+01:00[Europe/Paris]"
+  received_day: Thursday
+  meaning: range
+  start: "2026-12-20"
+  end: "2026-12-26"
+  time: null
+  exact: false
+  why: "Check this: some mean December 20–26; others mean the workweek of December 21–25."
+- phrase: "next summer"
+  received: "2026-12-03T09:00:00-09:00[America/Anchorage]"
+  received_day: Thursday
+  meaning: range
+  start: "2027-06-01"
+  end: "2027-08-31"
+  time: null
+  exact: false
+  why: "Check this: some mean June through August; others mean about June 21 through September 22."
+- phrase: "over the long weekend"
+  received: "2026-11-24T14:00:00-05:00[America/New_York]"
+  received_day: Tuesday
+  meaning: range
+  start: "2026-11-26"
+  end: "2026-11-29"
+  time: null
+  exact: false
+  why: "Check this: some mean November 26–29; others start Friday, November 27, and end Sunday."
+- phrase: "once the keys arrive"
+  received: "2026-11-04T09:00:00-05:00[America/New_York]"
+  received_day: Wednesday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The deadline waits for the keys, and their arrival date is unknown."
+- phrase: "after you send the files"
+  received: "2026-11-08T13:00:00-06:00[America/Chicago]"
+  received_day: Sunday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The next step depends on when the files are sent."
+- phrase: "when the budget is approved"
+  received: "2026-11-15T10:00:00-08:00[America/Los_Angeles]"
+  received_day: Sunday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "Approval has no stated date."
+- phrase: "as soon as the permit arrives"
+  received: "2026-11-19T11:00:00-07:00[America/Denver]"
+  received_day: Thursday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The arrival date is not known."
+- phrase: "when I hear back from the committee"
+  received: "2026-11-25T09:00:00-07:00[America/Phoenix]"
+  received_day: Wednesday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The timing depends on an unstated reply."
+- phrase: "after they sign the form"
+  received: "2026-12-02T15:00:00-09:00[America/Anchorage]"
+  received_day: Wednesday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "No date is given for the signing."
+- phrase: "once the rain stops"
+  received: "2026-12-07T08:00:00+00:00[Europe/London]"
+  received_day: Monday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The weather event has no known date."
+- phrase: "when the materials come in"
+  received: "2026-12-11T12:00:00+01:00[Europe/Paris]"
+  received_day: Friday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The delivery date is not stated."
+- phrase: "once we agree on a time"
+  received: "2026-12-20T10:00:00+09:00[Asia/Tokyo]"
+  received_day: Sunday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The date depends on a future agreement."
+- phrase: "when the office opens"
+  received: "2027-01-04T09:00:00+11:00[Australia/Sydney]"
+  received_day: Monday
+  meaning: condition
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The timing depends on an event, not a named calendar date."
+- phrase: "soon"
+  received: "2026-11-05T09:00:00-05:00[America/New_York]"
+  received_day: Thursday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "Soon gives no reasonable calendar date."
+- phrase: "ASAP"
+  received: "2026-11-09T10:00:00-06:00[America/Chicago]"
+  received_day: Monday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "ASAP gives urgency but no date."
+- phrase: "when I can"
+  received: "2026-11-13T13:00:00-08:00[America/Los_Angeles]"
+  received_day: Friday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The sender gives no timing."
+- phrase: "shortly"
+  received: "2026-11-17T11:00:00-07:00[America/Denver]"
+  received_day: Tuesday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "Shortly has no fixed date."
+- phrase: "in a bit"
+  received: "2026-11-21T09:00:00-07:00[America/Phoenix]"
+  received_day: Saturday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "A bit is too imprecise to name a date."
+- phrase: "at your earliest convenience"
+  received: "2026-11-29T14:00:00-09:00[America/Anchorage]"
+  received_day: Sunday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The phrase sets a preference, not a date."
+- phrase: "before long"
+  received: "2026-12-05T10:00:00+00:00[Europe/London]"
+  received_day: Saturday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "Before long does not identify a date."
+- phrase: "one of these days"
+  received: "2026-12-13T12:00:00+01:00[Europe/Paris]"
+  received_day: Sunday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "The phrase does not narrow the date."
+- phrase: "whenever possible"
+  received: "2026-12-22T09:00:00+09:00[Asia/Tokyo]"
+  received_day: Tuesday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "No date can be read from whenever possible."
+- phrase: "in the near future"
+  received: "2027-01-07T16:00:00+11:00[Australia/Sydney]"
+  received_day: Thursday
+  meaning: unclear
+  start: null
+  end: null
+  time: null
+  exact: false
+  why: "Near future has no shared calendar meaning."

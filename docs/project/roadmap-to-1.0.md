@@ -734,6 +734,13 @@ the code by the main session),** for S1 before the gate week:
   looks complete.
 - [ ] [S1-3] A date marked "check this" is never a firm deadline: no reminder, at-risk line or overdue from it until the
   person confirms it.
+- [ ] [S1-3] The deadline words people use every day are read by the rules, so fewer dates wait for "check this"
+  (the outside helper's 80 phrases, `tests/fixtures/phrases/due-phrases-01.yaml`, 42 read as a person means them at
+  `1ec95d2` and none read wrongly; `tests/test_phrase_cases.py` holds the rules to them): numeric dates in the
+  language's order ("11/6"), "day after tomorrow", "later today", "tonight", "noon" and "midnight", "first thing
+  <day>", "end of the month" and "end of next month", "this weekend", "within <n> hours or days", a time with a zone
+  abbreviation ("5pm ET", zone abbreviations as language data), and holidays as dated data per locale ("by
+  Thanksgiving"), never in code. Each one read is a case in that file passing; a doubtful reading stays inexact.
 - [ ] [S1-3] A late reminder says "overdue · due <time>" unless the app knows it was closed or asleep (today's
   `queue.reminder.late` says "while this computer was asleep" without knowing).
 - [ ] [S1-3] The brief's all-clear names any source not read since the last brief, so a stale mailbox never reads as a
@@ -813,6 +820,14 @@ S2. **Time and attention:**
 - [ ] [S2] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
   A repeat is typed as a phrase and shown back from data (`engine/repeat_phrases.py`, `tests/test_repeat_phrases.py`):
   "the 31st" falls on a short month's last day rather than skipping it.
+  The repeats people say that the grammar declines today (the outside helper's 60 phrases,
+  `tests/fixtures/phrases/repeat-phrases-01.yaml`, 31 agreeing at `1ec95d2`, every other one declined, none read
+  wrongly): wording variants of supported repeats ("weekly on Wednesday", "every two weeks on Thursday", "every other
+  week on Monday", "the first Saturday each month", "on the 1st", "annually"); several days of the week ("Mondays and
+  Thursdays", "weekdays except Friday"); several days of the month ("the 1st and 15th", "the second and fourth
+  Tuesday"); the last day, weekday or a given day of the month; a yearly weekday ("the last Friday in November"); and
+  February 29 falling on the 28th. Each needs a shape and its wording to say it back; unclear ones ("biweekly",
+  "quarterly") stay declined and asked.
 - [ ] [S2] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
   `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
   added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed

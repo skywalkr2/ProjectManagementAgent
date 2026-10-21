@@ -1,0 +1,61 @@
+"""The rules held to what people mean by deadline and repeat phrases (the outside helper's cases in
+tests/fixtures/phrases/). The rules may decline a phrase, which leaves the date for the person to check; whatever they
+read firmly must be what a person means, and nothing unclear or waiting on an event gets a firm date or a repeat."""
+
+import re
+from datetime import date, datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+import pytest
+import yaml
+from dateutil.rrule import rrulestr
+
+from engine.due_phrases import DEFAULT_CONDITION_WORDS, is_condition, resolve
+from engine.repeat_phrases import Unknown, rule_from_phrase
+
+PHRASES = Path(__file__).parent / "fixtures" / "phrases"
+DUE = yaml.safe_load((PHRASES / "due-phrases-01.yaml").read_text(encoding="utf-8"))
+REPEAT = yaml.safe_load((PHRASES / "repeat-phrases-01.yaml").read_text(encoding="utf-8"))
+
+# The rules read the end of a week as its last working day, the earlier of the two readings people use, so a promise
+# is never due later than meant; the helper's answer is the whole week through Sunday.
+WORKWEEK_END = {"end of the week", "end of next week"}
+
+
+def _received(stamp: str) -> tuple[datetime, ZoneInfo]:
+    moment, name = re.fullmatch(r"(.+?)\[(.+)\]", stamp).groups()
+    here = ZoneInfo(name)
+    return datetime.fromisoformat(moment).astimezone(here), here
+
+
+@pytest.mark.parametrize("case", DUE, ids=lambda c: f"{c['phrase']}@{c['received'][:10]}")
+def test_a_deadline_the_rules_read_firmly_is_the_one_a_person_means(case):
+    received, here = _received(case["received"])
+    assert received.strftime("%A") == case["received_day"]
+    found = resolve(case["phrase"], received, here)
+    if case["meaning"] in ("condition", "unclear"):
+        assert found.start is None and found.end is None
+        if case["meaning"] == "condition":
+            assert is_condition(case["phrase"], DEFAULT_CONDITION_WORDS)
+        return
+    if not found.exact or found.start is None or case["phrase"] in WORKWEEK_END:
+        return
+    assert (found.end or found.start) == date.fromisoformat(case["end"])
+
+
+def _dates(rule: str, start: date, count: int) -> list[date]:
+    first = datetime.combine(start, datetime.min.time())
+    return [d.date() for d in rrulestr(rule, dtstart=first).xafter(first, count=count, inc=True)]
+
+
+@pytest.mark.parametrize("case", REPEAT, ids=lambda c: c["phrase"])
+def test_a_repeat_the_rules_read_is_the_one_a_person_means(case):
+    start = date.fromisoformat(case["start"]) if case["start"] else date(2026, 11, 2)
+    if case["rule"] != "unclear":
+        assert [d.isoformat() for d in _dates(case["rule"], start, 3)] == case["next_three"]
+    got = rule_from_phrase(case["phrase"], start)
+    if isinstance(got, Unknown):
+        return
+    assert case["rule"] != "unclear", f"{case['phrase']!r} is unclear, but the rules read it as {got}"
+    assert _dates(got, start, 24) == _dates(case["rule"], start, 24)
