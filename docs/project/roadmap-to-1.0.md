@@ -717,7 +717,15 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
 
 - [ ] [B-10] **The owner's re-run of the failed AI cases** (2026-10-21, at `9e9c3f0`, one account, 3 runs per case:
   the golden set's 41 failing cases at 39% of runs passing, 10 cases passing every run). Each sub-item is done when its
-  cases pass on the owner's next re-run and a stub or unit test pins the rule:
+  cases pass on the owner's next re-run and a stub or unit test pins the rule.
+  *The owner's re-run of 2026-10-21 evening (same account, 3 runs):* the failing cases rose from 39% to 78% of runs
+  passing (20 more cases pass every run; the three reply-owed cases 100%, 100% and 0%), demo-a cases 58%, learning pairs
+  52% (demo-b) and 57% (demo-a). Next batch, each checked on the low-cost model against the exact failing packet first:
+  who a promise is owed to (027, t25-m2, pairs 07, 11, 12, 20), a to-do or a question rather than a fact
+  (they-finished-note, follow-up-with-no-clear-owner, no-placeholders, stance-manage, injection), the person's own sent
+  promise answered with nothing (t14), "we" as shared work (promise-owed-we-team, pair 03), where a lesson reaches (19,
+  15, 20, another-teams-rows, over-application, other-project), a new project proposed for a name the workspace lacks
+  (project-no-record), and the new-person question (new-person-with-organization):
   - a promise with a condition keeps its date words apart from the condition, and the condition in its text (019, 020,
     021, 054, 055, 056, 064, t10, t12, t25-m2): the task's prompt and guidance. **Built** (instructions; a model
     behavior, so done when the owner's next re-run passes these cases): `tests/test_learning_run_b7.py`
