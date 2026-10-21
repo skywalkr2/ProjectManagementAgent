@@ -579,3 +579,22 @@ def test_a_question_whose_title_is_a_statement_fails_the_case_and_the_ideal_answ
     wrong = {**op, "title": op["text"].split(".")[0]}
     result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={**case["stub_answer"], "ops": [wrong]})
     assert not result.passed and result.missing
+
+
+def test_a_workspace_folder_that_isnt_there_says_so_in_one_line(tmp_path, capsys):
+    from engine.cli import main
+
+    missing = tmp_path / "not-a-workspace"
+    assert main(["evaluate", "--from", str(DEMO_B), "-w", str(missing), "--stub", "--runs", "1"]) == 1
+    err = capsys.readouterr().err
+    assert str(missing) in err and "Traceback" not in err
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_an_ai_setup_file_that_isnt_there_says_so_in_one_line(tmp_path, capsys):
+    from engine.cli import main
+
+    missing = tmp_path / "ai.yaml"
+    assert main(["evaluate", "--from", str(DEMO_B), "--ai-config", str(missing), "--stub", "--runs", "1"]) == 1
+    err = capsys.readouterr().err
+    assert str(missing) in err and len(err.strip().splitlines()) == 1

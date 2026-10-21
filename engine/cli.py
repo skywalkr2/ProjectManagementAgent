@@ -962,6 +962,9 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
             return 1
         args.only = list(dict.fromkeys([*(args.only or []), *failed_cases]))
     workspace = args.workspace.expanduser() if args.workspace else None
+    if workspace is not None and not workspace.is_dir():
+        print(f"cockpit: there is no workspace at {workspace}. Give -w the folder cockpit init made.", file=sys.stderr)
+        return 1
     template = args.template or workspace
     if template is None:
         print("cockpit: say which cases to run: --workspace <your workspace> or --from <a workspace>.", file=sys.stderr)
@@ -976,6 +979,9 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         return 1
     if workspace is not None and not args.ai_config:
         args.ai_config = workspace / "config" / "ai.yaml"
+    if args.ai_config and not Path(args.ai_config).is_file():
+        print(f"cockpit: {args.ai_config} isn't there, so there is no AI setup to run the cases with.", file=sys.stderr)
+        return 1
     with tempfile.TemporaryDirectory() as tmp:
         config_dir = template / "config"
         if args.ai_config:
