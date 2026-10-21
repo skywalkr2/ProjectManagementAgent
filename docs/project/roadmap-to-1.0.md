@@ -789,6 +789,13 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     the correction (`over-application`: a reviewer for the load-test plan became "every plan review"; and
     `another-teams-rows-naming-ours`, the kept lesson over-applied), and no lesson for a correction about another project
     (`other-project`). With the pairs above, one piece of work on how a lesson is proposed and scoped.
+- [ ] [B-11c] **Every kind of AI account works properly** (owner, 2026-10-21: "Most people will not use API and will
+  probably just use subscription but I want them all to work properly"; after S1-4a): (1) an audit of every catalog
+  entry against its own documentation, command-line programs first (the options each command accepts, how it takes an
+  effort, its temperature and output rules), each finding fixed as data or an adapter capability, never a vendor check
+  in code; (2) a native adapter for the recommended service's own messages interface, with effort, prompt caching and
+  refusal handling. Done when each catalog entry's settings are confirmed against its documentation with a named test
+  per finding, and the native adapter passes the smoke test's exact parameters and the lock-down rules in a named test.
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings
