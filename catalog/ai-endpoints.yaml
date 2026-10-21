@@ -161,7 +161,7 @@ endpoints:
       hardest: {family: opus}
     settings:
       agent:
-        command: [claude, -p, --output-format, json, --model, "{model}", --tools, "", --strict-mcp-config, --no-session-persistence]
+        command: [claude, -p, --output-format, json, --model, "{model}", --tools, "", --disallowedTools, "mcp__*", --strict-mcp-config, --no-session-persistence]
         packet_via: stdin
         output_via: stdout
         output_json: true
@@ -190,12 +190,12 @@ endpoints:
     model_optional: true
     settings:
       agent:
-        command: [copilot, -s]
+        command: [copilot, -s, --no-ask-user, --no-custom-instructions, --disable-builtin-mcps, "--deny-tool=shell", "--deny-tool=write", "--deny-tool=read", "--deny-tool=url", "--deny-tool=memory"]
         packet_via: stdin
         output_via: stdout
         effort_option: ["--effort", "{effort}"]
         sign_in_hint: Open a terminal, run copilot and sign in with /login, then press Test again.
-    note: Uses your Copilot plan through the Copilot CLI; it asks before using tools, so here it can't use them.
+    note: Uses your Copilot plan through the Copilot CLI, with every kind of tool it has denied.
   - id: codex
     name: Codex CLI
     adapter: cli-agent
@@ -205,12 +205,12 @@ endpoints:
     model_optional: true
     settings:
       agent:
-        command: [codex, exec, --sandbox, read-only, --skip-git-repo-check, --ephemeral]
+        command: [codex, exec, --sandbox, read-only, --skip-git-repo-check, --ephemeral, --ignore-user-config, --ignore-rules]
         packet_via: stdin
         output_via: stdout
         effort_option: ["-c", "model_reasoning_effort={effort}"]
         sign_in_hint: Open a terminal, run codex and sign in, then press Test again.
-    note: Uses your ChatGPT plan or account through the Codex CLI, in its read-only sandbox.
+    note: Uses your ChatGPT plan or account through the Codex CLI, in its read-only sandbox, without your own settings or rules.
   - id: gemini-cli
     name: Gemini CLI
     adapter: cli-agent
@@ -227,7 +227,7 @@ endpoints:
         output_fields:
           text: response
         sign_in_hint: Open a terminal, run gemini and sign in, then press Test again.
-    note: Uses your Google account through the Gemini CLI; it asks before using tools, so here it can't use them.
+    note: Uses your Google account through the Gemini CLI. Its documentation says it asks before writing files or running commands; it names no option that stops it reading files or fetching pages.
   - id: agent
     name: Another command-line agent signed in as you
     adapter: cli-agent

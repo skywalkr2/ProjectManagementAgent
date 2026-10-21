@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 153. The command-line agents locked down as their docs say (2026-10-21; B-11c part 2b, built)
+
+- Each agent's command carries the options its own docs give for denying tools (every tool, reading included, where the
+  docs name them; the person's own settings and rules ignored where documented), and each note claims only that. A
+  check of an account whose service refuses a key on its model list asks for the list first, so a refused key is told
+  as one. Design 6.16.
+
 ## 152. The side filter on Today and Follow-ups (2026-10-21; S1-4b, built)
 
 - "All / Personal / <business>" beside Today's and Follow-ups' headings, only when a business is set, remembered per

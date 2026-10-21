@@ -16,6 +16,27 @@ effort_option:
   codex: ["-c", "model_reasoning_effort={effort}"]
 effort_unset: [groq, mistral, lm-studio, gemini-cli, other, agent]
 packet_on_stdin: copilot
+# The options each program's documentation gives for denying its tools, each option as the words that follow the
+# program's name (a value stays beside its option). An entry whose program documents no option that stops its reading
+# files or fetching pages says so in its note, and the note claims no more than the command does.
+lockdown:
+  claude-code:
+    - ["--tools", ""]
+    - ["--disallowedTools", "mcp__*"]
+  copilot:
+    - ["--no-ask-user"]
+    - ["--no-custom-instructions"]
+    - ["--disable-builtin-mcps"]
+    - ["--deny-tool=shell"]
+    - ["--deny-tool=write"]
+    - ["--deny-tool=read"]
+    - ["--deny-tool=url"]
+    - ["--deny-tool=memory"]
+  codex:
+    - ["--sandbox", "read-only"]
+    - ["--ignore-user-config"]
+    - ["--ignore-rules"]
+no_tool_denial_documented: {entry: gemini-cli, claim: "can't use"}
 # Messages the program prints, with what each means.
 program_messages:
   - {entry: claude-code, kind: quota, message: "You've hit your session limit"}
@@ -55,3 +76,7 @@ native_adapter:
   version: "2023-06-01"
   path: /v1/messages
   models_path: /v1/models
+# The service that answers a refused key with a 400 on its model list, and a failure of the list for another reason.
+list_first:
+  entry: google
+  list_failure_status: 503

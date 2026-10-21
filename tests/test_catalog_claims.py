@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import httpx
@@ -183,6 +184,26 @@ def test_the_packet_goes_to_the_program_on_its_standard_input_not_on_the_command
     assert "{prompt}" not in call["args"]
 
 
+@pytest.mark.parametrize("entry_id", sorted(CLAIMS["lockdown"]))
+def test_the_command_that_runs_carries_the_options_its_programs_documentation_gives_for_denying_tools(entry_id):
+    run, _ = start(entry_id)
+    args = run.calls[0]["args"]
+    for option in CLAIMS["lockdown"][entry_id]:
+        assert any(args[i : i + len(option)] == option for i in range(len(args))), (option, args)
+
+
+def test_an_entry_whose_program_documents_no_way_to_stop_reading_makes_no_claim_that_it_cant_use_tools():
+    case = CLAIMS["no_tool_denial_documented"]
+    assert case["entry"] not in CLAIMS["lockdown"]
+    assert case["claim"] not in entry(case["entry"])["note"]
+
+
+def test_no_entry_that_leaves_its_program_able_to_read_says_its_tools_are_off():
+    for entry_id in [e["id"] for e in known_endpoints() if e["settings"].get("agent")]:
+        if entry_id not in CLAIMS["lockdown"] and entry_id != "agent":
+            assert CLAIMS["no_tool_denial_documented"]["claim"] not in entry(entry_id)["note"]
+
+
 # ---- the program's own messages ------------
 
 
@@ -313,3 +334,103 @@ def test_a_list_that_repeats_itself_stops():
     }
     found, asked = paged(pages)
     assert list(found) == ["a"] and len(asked) == 2
+
+
+# ---- a saved account's check lists the models first ------------
+
+
+class Service:
+    """A stand-in for the service: answers the model list and the chat request as told, and keeps what was asked."""
+
+    def __init__(self, listing: httpx.Response):
+        self.listing = listing
+        self.paths: list[str] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.paths.append(request.url.path)
+        if request.url.path.endswith("/models"):
+            return self.listing
+        sent = json.loads(request.content)["messages"][-1]["content"]
+        answer = connection_answer(types.SimpleNamespace(request=sent))
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer}}]})
+
+    def factory(self):
+        return lambda name, settings, secret: ADAPTERS[name](settings, secret, transport=httpx.MockTransport(self))
+
+
+def connection_answer(task) -> str:
+    from tests.conftest import connection_answer as answer
+
+    return answer(task)
+
+
+def listed_cfg(entry_id: str):
+    from engine.config import load_config
+    from tests.conftest import DEMO_B
+
+    settings = settings_of(entry_id, models={"everyday": "m"})
+    cfg = load_config(DEMO_B / "config", env={})
+    return cfg, settings
+
+
+def refused_listing() -> httpx.Response:
+    return httpx.Response(400, json=CLAIMS["refused_key"][0]["body"])
+
+
+def test_a_pasted_key_the_service_refuses_on_its_model_list_is_told_as_a_refused_key():
+    import os
+
+    from engine.ai import key_check
+
+    cfg, settings = listed_cfg(CLAIMS["list_first"]["entry"])
+    service = Service(refused_listing())
+    got = key_check.check_account(cfg, os.environ, settings, "k", adapter_factory=service.factory())
+    assert not got.ok and got.reason == "key_refused"
+    assert [p for p in service.paths if not p.endswith("/models")] == [], "no request for work was sent"
+    assert len(service.paths) == 1, "one extra request at most"
+
+
+def test_a_saved_account_whose_key_the_service_refuses_on_its_model_list_fails_as_a_refused_key():
+    from dataclasses import replace
+
+    from engine.ai.smoke import account_test
+
+    cfg, settings = listed_cfg(CLAIMS["list_first"]["entry"])
+    ai = cfg.ai.model_copy(update={"providers": {**cfg.ai.providers, "saved": settings}})
+    service = Service(refused_listing())
+    results = account_test(
+        replace(cfg, files={**cfg.files, "ai": ai}),
+        {},
+        "saved",
+        service.factory(),
+    )
+    failed = [r for r in results if not r.ok]
+    assert failed and all(r.error_kind == "auth" for r in failed)
+    assert [p for p in service.paths if not p.endswith("/models")] == []
+    assert len(service.paths) == 1
+
+
+def test_a_model_list_that_fails_for_another_reason_does_not_stop_the_check_of_work():
+    import os
+
+    from engine.ai import key_check
+
+    cfg, settings = listed_cfg(CLAIMS["list_first"]["entry"])
+    service = Service(httpx.Response(CLAIMS["list_first"]["list_failure_status"], json={"error": {}}))
+    got = key_check.check_account(cfg, os.environ, settings, "k", adapter_factory=service.factory())
+    assert got.ok and got.reason == "works"
+    assert sum(p.endswith("/models") for p in service.paths) == 1
+    assert any(not p.endswith("/models") for p in service.paths)
+
+
+def test_an_account_that_names_no_refused_status_on_its_list_is_not_listed_before_the_check():
+    import os
+
+    from engine.ai import key_check
+
+    entry_id = CLAIMS["no_key_refused_setting"][0]
+    cfg, settings = listed_cfg(entry_id)
+    service = Service(refused_listing())
+    got = key_check.check_account(cfg, os.environ, settings, "k", adapter_factory=service.factory())
+    assert got.ok
+    assert not any(p.endswith("/models") for p in service.paths)

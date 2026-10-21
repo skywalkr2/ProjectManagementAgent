@@ -73,6 +73,7 @@ def smoke_test(
     also tried against the app's own checks."""
     results: list[SmokeResult] = []
     locked: set[str] = set()
+    refused: dict[str, AiError | None] = {}  # account -> the refusal its model list gave, looked up once each
     for tier_name, tier in cfg.ai.tiers.items():
         if not tier.use:
             results.append(SmokeResult(tier_name, "", True, False, "no AI account is set up for this tier"))
@@ -81,6 +82,9 @@ def smoke_test(
             provider_name, _, model_key = ref.partition("/")
             settings = cfg.ai.providers[provider_name]
             model_id = settings.models.get(model_key, model_key)
+            if provider_name not in refused:
+                refused[provider_name] = _refused_on_listing(settings, env, adapter_factory)
+            refusal = refused[provider_name]
             for kind, temperature, max_output, *effort in _params_for_tier(cfg, tier_name):
                 task = AiTask(
                     kind, "This is a connection test.", "", _REQUEST, {}, temperature, max_output, effort=tier.effort
@@ -90,6 +94,8 @@ def smoke_test(
                 answered = no_network = False
                 failed_kind = ""
                 try:
+                    if refusal is not None:
+                        raise refusal
                     secret = resolve_secret(settings.auth, env)
                     reply = adapter_factory(settings.adapter, settings, secret).run(task, model_id)
                     detail = "answered" if _is_ok(reply.text) else "answered, but not with the requested JSON"
@@ -127,10 +133,47 @@ def smoke_test(
                 locked.add(ref)
                 results.extend(_lockdown(tier_name, ref, position == 0, settings, model_id, env, adapter_factory))
                 results.extend(_identity(tier_name, ref, position == 0, settings, env, adapter_factory))
-                results.append(
-                    _learning(tier_name, ref, position == 0, cfg, settings, model_id, env, adapter_factory, store)
-                )
+                if refusal is None:
+                    results.append(
+                        _learning(tier_name, ref, position == 0, cfg, settings, model_id, env, adapter_factory, store)
+                    )
+                else:  # no call for work is sent with a key the service refused
+                    results.append(
+                        SmokeResult(
+                            tier_name,
+                            f"{ref} (learning round-trip)",
+                            position == 0,
+                            False,
+                            _problem(refusal, where_of(settings)),
+                            provider=provider_name,
+                            ref=ref,
+                            part="learning",
+                            error_kind=refusal.kind,
+                        )
+                    )
     return results
+
+
+def _refused_on_listing(
+    settings: Any, env: Mapping[str, str], adapter_factory: Callable[[str, Any, str | None], Any]
+) -> AiError | None:
+    """For an account whose service answers a refused key with a status that means any bad request when it is sent
+    work (`key_refused_status_on_models`), the model list is asked for first, as the setup screen does: that is where
+    the status tells a refused key. Returns the refusal, or None when the key was not refused there, when the list
+    failed for any other reason (the call for work then says what is wrong) or when the account has no such setting.
+    One request at most."""
+    if not getattr(settings, "key_refused_status_on_models", None):
+        return None
+    try:
+        adapter = adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, env))
+        if not hasattr(adapter, "list_models"):
+            return None
+        adapter.list_models()
+    except AiError as err:
+        return err if err.kind == "auth" else None
+    except (SecretError, ValueError):
+        return None
+    return None
 
 
 #: What a failed test call means, in plain words, by the kind of failure.
