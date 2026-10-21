@@ -53,15 +53,14 @@ endpoints:
     note: Pay as you go on your own OpenAI account.
   - id: anthropic
     name: Anthropic
-    adapter: openai-compatible
-    base_url: https://api.anthropic.com/v1
+    adapter: anthropic-messages
+    base_url: https://api.anthropic.com
     key_url: https://console.anthropic.com/settings/keys
     signup_url: https://console.anthropic.com/login
     credit_url: https://console.anthropic.com/settings/billing
     recommended: true
     needs_key: true
     settings:
-      json_mode: false
       send_temperature: false   # its current models refuse a temperature they don't set themselves
     tier_presets:
       routine: {family: haiku}

@@ -1602,6 +1602,17 @@ A fallback is a switch nobody chose at that moment, so (6.22):
   `tests/test_quality.py::test_the_first_run_on_a_fallback_account_is_tagged_on_its_changeset_and_a_later_one_is_not`.
 When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide.
 
+**The recommended service has a native adapter** (`anthropic-messages`; *built, B-11c part 2a*). Its own messages interface
+is used instead of its chat-format compatibility layer, which the service itself calls not ready for production, ignores
+effort and has no prompt caching. The native adapter sends the instructions and then the stable part of the packet as the
+system prompt with the cache marker on the stable part, so the stable prefix is cached (cache reads are priced as the
+cached part of the prompt); sends a tier's effort in the interface's own setting; sends a temperature only when the
+account's `send_temperature` is on; and reads only the text blocks of the answer. A stop for the output limit is a cut-off
+answer and a refusal stop is the refusal outcome (never retried inside the call: the app's own fallback chain decides).
+Errors are classified from the status and the error body's structured type, never its words. The catalog entry names this
+adapter and the service's base address without a version path; an account saved earlier keeps the adapter its own settings
+name until the person re-adds it. **Built:** `tests/test_anthropic_messages.py`.
+
 **A recommended setup per service, out of the box, and measured to stay current** (owner, 2026-10-21; *designed, B-11*).
 A person who adds an account gets every tier filled in, so routine work never lands on an expensive model by accident:
 - Three tiers: everyday, stronger and hardest. Each kind of work names its tier; most work is everyday.
@@ -1610,8 +1621,8 @@ A person who adds an account gets every tier filled in, so routine work never la
   The catalog names families, never exact ids, so a newer model of the same family is picked up with no change; this
   is the one place a model's name carries meaning, and it is data, never code.
 - Effort is set per tier (low, medium or high) and reaches the service only through the account's own setting for it:
-  `effort_param` (the request field a chat-format service takes) or `effort_option` (the arguments a command-line agent
-  takes). Each is set in the catalog only on a service whose own documentation confirms the parameter, so an unconfirmed
+  `effort_param` (the request field a chat-format service takes), `effort_option` (the arguments a command-line agent
+  takes) or, for a native adapter, the setting its own interface documents. Each is set in the catalog only on a service whose own documentation confirms the parameter, so an unconfirmed
   service is never sent a field it doesn't know; a tier's effort is part of what its smoke test sends. Escalating may raise the
   effort on the same model before moving to a stronger one (with B-11b's measuring).
 - Presets are written only for services whose model families are certain; the rest are filled by price until

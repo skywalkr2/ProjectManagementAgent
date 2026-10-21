@@ -7,13 +7,14 @@ max_tokens_param:                          # the older name is deprecated and re
   openai: max_completion_tokens
 base_url: {deepseek: "https://api.deepseek.com"}
 skip_trust: {entry: gemini-cli, flag: "--skip-trust"}
-# Accounts whose service documents a reasoning effort setting, and the other entries, which must not send one.
+# Accounts whose service documents a reasoning effort setting, and the other entries, which must not send one. A
+# service reached through its own adapter takes its effort in that interface (see native_adapter).
 effort_param: [openai, google, openrouter, deepseek, xai, local]
 effort_option:
   claude-code: ["--effort", "{effort}"]
   copilot: ["--effort", "{effort}"]
   codex: ["-c", "model_reasoning_effort={effort}"]
-effort_unset: [anthropic, groq, mistral, lm-studio, gemini-cli, other, agent]
+effort_unset: [groq, mistral, lm-studio, gemini-cli, other, agent]
 packet_on_stdin: copilot
 # Messages the program prints, with what each means.
 program_messages:
@@ -43,3 +44,14 @@ refused_key:
     body: {"code": "invalid-argument", "error": "Incorrect API key provided. You can obtain an API key from https://console.x.ai."}
 # An entry that sets neither setting: a 400 on its model list stays unclassified.
 no_key_refused_setting: [openai]
+# The entry reached through its service's own messages interface: the adapter, the address without a version path, and
+# the request headers and body fields its documentation names.
+native_adapter:
+  entry: anthropic
+  adapter: anthropic-messages
+  base_url: "https://api.anthropic.com"
+  key_header: x-api-key
+  version_header: anthropic-version
+  version: "2023-06-01"
+  path: /v1/messages
+  models_path: /v1/models

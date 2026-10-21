@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 151. The recommended service is reached through its own interface (2026-10-21; B-11c part 2a, built)
+
+- A native adapter, `anthropic-messages`, replaces the chat-format compatibility layer for the recommended service: the
+  stable part of a packet is a cached prefix, a tier's effort reaches the service, a refusal is its own outcome, and
+  errors are read from the structured error type. The catalog entry names it with the service's base address; accounts
+  saved earlier keep the adapter their own settings name. Design 6.16. Built: `tests/test_anthropic_messages.py`.
+
 ## 150. Every catalog entry matches its service's own docs (2026-10-21; B-11c part 1, built)
 
 - Per-service settings confirmed against each service's documentation: no temperature where current models refuse it,

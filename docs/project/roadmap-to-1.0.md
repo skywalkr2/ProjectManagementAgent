@@ -796,6 +796,12 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   in code; (2) a native adapter for the recommended service's own messages interface, with effort, prompt caching and
   refusal handling. Done when each catalog entry's settings are confirmed against its documentation with a named test
   per finding, and the native adapter passes the smoke test's exact parameters and the lock-down rules in a named test.
+  *Part 1 built* (`tests/test_catalog_claims.py`, 46 tests, one per finding); *part 2a built*, the native adapter for
+  the recommended service (`tests/test_anthropic_messages.py::test_the_smoke_test_passes_with_the_exact_parameters_of_each_tier`
+  and the rest of that file). Left in part 2: the command-line agents' lock-downs the docs back (deny flags, ignoring the
+  user's own config) and their notes; the saved account's check listing models first, so a refused key says so; the
+  connection check's output allowance for models that always think; effort sent only to models that take it; moving a
+  saved account of the recommended service to the native adapter.
   (3) **Failures captured in detail for feedback** (owner, 2026-10-21: "We should have something in the program that
   captures failures in detail so the user can send them in the feedback"): every failed AI call, account check,
   connector read and server error keeps what a maintainer needs (when, the task kind, the account's service and
