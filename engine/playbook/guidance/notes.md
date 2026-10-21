@@ -36,7 +36,8 @@ Practice for reading notes, minutes and messages (core playbook):
   - "I'll try" or "I'll take a look" promises the attempt and the report, not the result.
   - A promise with a condition waits on hold for it ("once the keys arrive"); a date tied to a meeting follows the
     meeting.
-  - Two people who do it together are one action with both as owners; two who each owe their own part are two actions.
+  - A promise is one person's word: two who each owe their own part are two promises. Work two people do together is
+    one action with both as owners and no one it is owed to.
     "We'll send it" with no individual named leaves the owners empty so the PM picks one.
   - Two promises in one message are two actions, each with its own date.
 - A promise ends only when the input says so:

@@ -123,6 +123,29 @@ def words_of(text: str) -> set[str]:
     return {w for w in _WORD.findall(normalize(text)) if len(w) >= MIN_WORD}
 
 
+def _fold(word: str) -> str:
+    """A word with its plural folded ("proofs" to "proof", "copies" to "copy") and, on a word of at least six letters,
+    a trailing "ing" or "ed" taken off with a doubled final consonant undone ("shipping" and "shipped" to "ship")."""
+    if len(word) >= 6:
+        for ending in ("ing", "ed"):
+            if word.endswith(ending) and len(word) - len(ending) >= MIN_WORD:
+                stem = word[: -len(ending)]
+                if stem[-1] == stem[-2] and stem[-1] not in "aeiouslz" and len(stem) - 1 >= MIN_WORD:
+                    stem = stem[:-1]
+                return stem
+    if word.endswith("ies") and len(word) > 4:
+        return word[:-3] + "y"
+    if word.endswith("s") and not word.endswith(("ss", "us", "is")) and len(word) > 4:
+        return word[:-1]
+    return word
+
+
+def folded_words_of(text: str, leave_out: Iterable[str] = ()) -> set[str]:
+    """The words of a text with each folded to its plain form, leaving out the given words (compared before folding)."""
+    skip = {w.lower() for phrase in leave_out for w in phrase.split()}
+    return {_fold(w) for w in words_of(text) if w not in skip}
+
+
 def _cut(text: str, limit: int) -> str:
     text = " ".join(text.split())
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
@@ -289,13 +312,18 @@ def _weights(docs: list[_Doc], wanted: set[str]) -> dict[str, float]:
     return {word: math.log(1 + (len(docs) + 1) / (count + 1)) for word, count in held.items()}
 
 
-def _rank(docs: list[_Doc], query: Query, subject: str | None = None) -> list[Hit]:
+def _rank(
+    docs: list[_Doc],
+    query: Query,
+    subject: str | None = None,
+    words: Callable[[str], set[str]] = words_of,
+) -> list[Hit]:
     """The docs that hold some of the query's words or ids, best first. The subject, when given, replaces the query's
-    words (a question's own title)."""
-    wanted = words_of(subject if subject is not None else query.words)
+    words (a question's own title). `words` reads the words of the subject and of each doc."""
+    wanted = words(subject if subject is not None else query.words)
     ids = {i.lower() for i in query.ids}
     for doc in docs:
-        doc.words = words_of(doc.text)
+        doc.words = words(doc.text)
     weight = _weights(docs, wanted)
     total = sum(weight.values())
     hits = []
@@ -377,15 +405,27 @@ def search(
 
 
 def known_answer(
-    store: Store, subject: str, *, similarity: float, level: str = "restricted", min_words: int = 2
+    store: Store,
+    subject: str,
+    *,
+    similarity: float,
+    level: str = "restricted",
+    min_words: int = 2,
+    asking_words: Iterable[str] = (),
 ) -> Hit | None:
     """The fact or active knowledge entry that already answers a subject, if one does: it holds at least `similarity`
-    of the subject's weight, in at least `min_words` of its words. A fact that was replaced is not offered; the one that
-    replaced it is searched instead."""
-    if len(words_of(subject)) < min_words:
+    of the subject's weight, in at least `min_words` of its words. Words are compared in their folded form (plurals,
+    "ing" and "ed"), and the `asking_words` that frame a question are left out of the subject first. A fact that was
+    replaced is not offered; the one that replaced it is searched instead."""
+    leave_out = tuple(asking_words)
+
+    def words(text: str) -> set[str]:
+        return folded_words_of(text, leave_out)
+
+    if len(words(subject)) < min_words:
         return None
     docs = [d for d in _docs(None, store, ("facts", "knowledge"), level, ()) if d.replaced_by is None]
-    for hit in _rank(docs, Query(), subject=subject):
+    for hit in _rank(docs, Query(), subject=subject, words=words):
         if hit.matched >= min_words and hit.coverage >= similarity:
             return hit
     return None

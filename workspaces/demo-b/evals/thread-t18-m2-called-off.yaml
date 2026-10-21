@@ -46,7 +46,7 @@ expect:
   id: ACT-102
 - op: action.add
   owners: [PER-1]
-  promised_to: [PER-105]
+  text_has: [Thursday]
 forbid:
 - op: action.close
   id: ACT-102

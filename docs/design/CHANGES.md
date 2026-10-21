@@ -1038,6 +1038,8 @@ yet follow, that it is *designed*, with its phase.
 | A reply owed with no draft (6.35) | Accepted, even when a fact answers it | Sent back once by `already-known` to be drafted from the fact (built) |
 | The person's own "Can you ...?" (6.33) | Could become the person's own to-do | Sent back once by `own-request-not-promise`; its words are `language.ask_lead_words` and `own_promise_words` (built) |
 | A phone in a known sender's signature (6.7) | Only when the model offered it | Offered by rule as a held `person.contact` (`workspace.phone_min_digits`) (built) |
+| Whether a fact already answers a question (6.22) | Every word of the question weighed, "when" and "tell" included, whole words only | The question's framing words left out (`language.asking_words`), plurals and endings folded (built) |
+| A promise with two owners (6.33) | Refused, "add one action for each person" | Still refused; the message says shared work is one action with both owners and no one it is owed to (built) |
 
 Why: `docs/decisions.md` (2026-10-21, "Four evaluation cases follow the reply-owed rule").
 

@@ -67,9 +67,10 @@ How to answer:
   below.
 - A promise is something someone owes someone ("I'll send it Friday", "she'll get back to me Tuesday"). Record it with
   "action.add", filling in who owes it and to whom:
-  - "owners": who owes it. Two people who do it together ("<one> and <other> to agree the trim size") are one action with
-    both as owners; two who each owe their own part ("each of you send me your notes") are two actions. A team or "we"
-    with no person named leaves "owners" empty, so the PM picks one.
+  - "owners": who owes it. A promise is one person's word, so two who each owe their own part ("each of you send me
+    your notes") are two promises. Work two people do together ("<one> and <other> to agree the trim size") is one
+    action with both as owners and no "promised_to": it is shared work, not one person's promise. A team or "we" with
+    no person named leaves "owners" empty, so the PM picks one.
   - "promised_to": who it is owed to, by id or name; never leave it out when the input says or shows who. Give the PM's
     id when someone else promised the PM something, which includes a message to the PM that promises it ("I'll send it
     Thursday" from someone, to the PM). When the PM promised something, give the person the PM wrote to.

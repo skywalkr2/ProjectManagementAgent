@@ -7,11 +7,10 @@ pasted: 'From: Maya Lindqvist (Corner Lamp Books)
 
   We can host the reading at 6 pm or 7 pm on Dec 1. Which would you prefer?'
 # Asked of the PM directly, so the PM owes the answer: one action for the PM (design 6.35), never a decision question
-# beside it, and never a calendar entry for an offer not yet taken.
+# beside it, and never a calendar entry for an offer not yet taken. Who asked is read from the message by the rules.
 expect:
 - op: action.add
   owners: [PER-1]
-  promised_to: [PER-7]
   text_has: [reading]
 forbid:
 - op: event.add

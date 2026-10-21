@@ -263,8 +263,8 @@ def test_the_prompt_says_who_owns_shared_work_and_where_a_direct_choice_and_a_di
     playbook = " ".join(
         resources.files("engine.playbook.guidance").joinpath("notes.md").read_text(encoding="utf-8").split()
     )
-    assert "Two people who do it together" in prompt and "one action with both as owners" in prompt
-    assert "Two people who do it together are one action with both as owners" in playbook
+    assert "Work two people do together" in prompt and 'one action with both as owners and no "promised_to"' in prompt
+    assert "Work two people do together is one action with both as owners" in playbook
     assert "is a reply the PM owes (below), not a decision question" in prompt
     assert "a choice someone asks the PM directly, which is a reply the PM owes" in playbook
     assert "are a follow-up to the person quoted as saying it, not a question to the PM" in prompt

@@ -147,6 +147,10 @@ time. These rules hold for the main session and every subagent.
 - **After every push, check CI's result** for that commit, not only the local run. A red CI may stay red (owner,
   2026-10-19): its fix joins the next batch rather than getting its own run, unless the owner is about to test, when
   the batch they will run is made green first.
+- **Check an AI fix on a low-cost model before the owner's re-run** (owner, 2026-10-21): write each case's exact
+  packet to a file, have a Haiku subagent answer it with only that file (a few cases per subagent; a return round is the
+  packet, its answer and the message sent back), and score the answer with the case's own checks. It shows whether a fix
+  works on a real model in minutes; the owner's re-run on their own account stays the proof that ticks a box.
 - **Every push reports the suite times**; the main session checks `uv run pytest --durations=15` and fixes or flags any
   test that got slow.
   - Tests stay fast: no sleeps, no real network, shared fixtures over new workspaces, and the cheapest level that

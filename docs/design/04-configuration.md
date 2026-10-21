@@ -317,6 +317,11 @@ Built keys:
   `own-request-not-promise` lint reads (6.33): a sentence in the person's own sent mail that starts with an asking word
   or ends in a question mark, and holds no promising word, asks someone else, so an action owned by the person from it is
   sent back once. **Built (B-10):** `tests/test_own_request_lint.py`.
+- `asking_words` (when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about,
+  confirm): words that frame a question rather than say what it is about. The `already-known` check leaves them out and
+  compares the rest in folded form (plurals, "ing", "ed"), so "Can you tell me when the proofs will ship?" is answered
+  by a fact about the proofs shipping; the model's own workspace search still matches whole words. **Built (B-10):**
+  `tests/test_known_answer_words.py`.
 - `title_min_words` (3, 1 to 12): the fewest words an item title's topic may have; a shorter topic from the assistant (a bare
   "Noted.") gives way to the first meaningful line of the input only when that line fits whole; with no whole line a short
   topic of two words or more stays, and with none the title says its topic is missing (7.14).

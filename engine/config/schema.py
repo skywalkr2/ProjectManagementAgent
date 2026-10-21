@@ -1704,6 +1704,14 @@ class LanguageFile(FileModel):
         "action quoting such a sentence (or one that ends in a question mark) is the person asking someone else, not "
         "their own promise. Matched as whole words, ignoring case.",
     )
+    asking_words: list[str] = Field(
+        default_factory=lambda: [
+            *("when", "what", "which", "where", "will", "would", "could", "should"),
+            *("tell", "know", "does", "have", "there", "please", "about", "confirm"),
+        ],
+        description="Words that frame a question rather than say what it is about; they are left out when checking "
+        "whether a recorded fact already answers it.",
+    )
     own_promise_words: list[str] = Field(
         default_factory=lambda: ["I'll", "I will"],
         description="Words that make a sentence the person's own promise even when it also asks something: a request "

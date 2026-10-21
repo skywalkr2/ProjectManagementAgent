@@ -27,9 +27,15 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   "Can you ...?" goes back once (`own-request-not-promise`, a new lint, default `return`); and a phone number in a known
   sender's signature is offered by rule as a held `person.contact`. Rules before AI: each is deterministic and cheap,
   and nothing it makes applies without the person.
-- **Impact:** the four cases in `workspaces/demo-b/evals/`; the notes prompt and its playbook; design 6.7, 6.8, 6.33 and
-  6.35; new settings `language.ask_lead_words`, `language.own_promise_words` and `workspace.phone_min_digits` (design
-  4.0), with demo values in both workspaces. Change log: section 142.
+- **Also decided (main session), from a check on a low-cost model** (each case's exact packet answered by a subagent,
+  scored by the case's own checks): the `already-known` check missed a fact that answered "Can you tell me when the
+  interior proofs will ship?", because the question's framing words outweighed its topic and "ship" never matched
+  "shipping"; it now leaves out `language.asking_words` and compares folded words. Work two people do together is one
+  action with no one it is owed to: a promise stays one person's word, and the `one-owner` refusal, which told the
+  model to split shared work, now says so instead.
+- **Impact:** the four cases in `workspaces/demo-b/evals/`; the notes prompt and its playbook; design 6.7, 6.8, 6.22, 6.33
+  and 6.35; new settings `language.ask_lead_words`, `language.own_promise_words`, `language.asking_words` and
+  `workspace.phone_min_digits` (design 4.0), with demo values in both workspaces. Change log: section 142.
 
 ## 2026-10-21: The functional designer's answers to F26 to F32, and decisions are checked against the change log
 

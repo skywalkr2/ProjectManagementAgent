@@ -544,6 +544,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 ctx.store,
                 asked,
                 similarity=ctx.cfg.checks.tuning.already_known.similarity,
+                asking_words=ctx.cfg.language.asking_words,
                 level=ctx.data_level,
             )
             if known is not None:
@@ -619,7 +620,12 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     'on its own ("Send the proof to the printer", not "Send it")',
                 )
             if op.promised_to and len(op.owners) > 1:
-                refuse(i, "one-owner", "one promise per owner: add one action for each person who owes it")
+                refuse(
+                    i,
+                    "one-owner",
+                    "one promise per owner: for two people who each owe it, add one action each; for work they do "
+                    'together, keep one action with both owners and leave "promised_to" out',
+                )
             if op.due_at_event and not (op.event or op.series):
                 refuse(i, "targets", "a date at a calendar entry needs the entry: give its event or series")
             if op.reply_owed and (why := _reply_owed_problem(view, ctx, op)) is not None:
