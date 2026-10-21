@@ -725,7 +725,10 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   (they-finished-note, follow-up-with-no-clear-owner, no-placeholders, stance-manage, injection), the person's own sent
   promise answered with nothing (t14), "we" as shared work (promise-owed-we-team, pair 03), where a lesson reaches (19,
   15, 20, another-teams-rows, over-application, other-project), a new project proposed for a name the workspace lacks
-  (project-no-record), and the new-person question (new-person-with-organization):
+  (project-no-record), and the new-person question (new-person-with-organization). Found first: t14 failed because its
+  test subject named the scenario (fixed in every thread case, d3cb7af); the others are re-checked on the new subjects
+  before any instruction changes. Later: the notes packet is about 130,000 characters before the input, a lot for a
+  low-cost model to weigh and to pay for on every run; trim it with the evaluation cases as the guard:
   - a promise with a condition keeps its date words apart from the condition, and the condition in its text (019, 020,
     021, 054, 055, 056, 064, t10, t12, t25-m2): the task's prompt and guidance. **Built** (instructions; a model
     behavior, so done when the owner's next re-run passes these cases): `tests/test_learning_run_b7.py`
