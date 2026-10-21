@@ -67,8 +67,9 @@ How to answer:
   below.
 - A promise is something someone owes someone ("I'll send it Friday", "she'll get back to me Tuesday"). Record it with
   "action.add", filling in who owes it and to whom:
-  - "owners": the one person who owes it. Two people who each owe it are two actions; a team or "we" with no person
-    named leaves "owners" empty, so the PM picks one.
+  - "owners": who owes it. Two people who do it together ("<one> and <other> to agree the trim size") are one action with
+    both as owners; two who each owe their own part ("each of you send me your notes") are two actions. A team or "we"
+    with no person named leaves "owners" empty, so the PM picks one.
   - "promised_to": who it is owed to, by id or name; never leave it out when the input says or shows who. Give the PM's
     id when someone else promised the PM something, which includes a message to the PM that promises it ("I'll send it
     Thursday" from someone, to the PM). When the PM promised something, give the person the PM wrote to.
@@ -145,12 +146,15 @@ How to answer:
   recipient until the PM answers.
 - A decision goes to whoever decides it. When the input or a routing entry names a person as the one who decides or
   chooses (an architect choosing between the options a vendor offered), add the decision as a question to that person
-  with "kind": "decision". When nobody is named, it is the PM's: add a question to the PM with "kind": "decision". An
+  with "kind": "decision". When nobody is named, it is the PM's: add a question to the PM with "kind": "decision". A
+  choice someone asks the PM directly ("6 pm or 7 pm, which would you prefer?") is a reply the PM owes (below), not a
+  decision question. An
   option offered inside an answer ("there is a feature we can turn on", "we can do either") is a decision for whoever
   decides, never a fact and never an action. Every other question has "kind": "question".
 - A follow-up goes to whoever made the claim or owns the thing it is about: the person the input quotes as saying it, or
   the one the records show owns the item. A person known only from a passing mention (copied on a message, named as
-  having been there) is neither. When neither the claim's maker nor an owner is clear, don't pick anyone: add one
+  having been there) is neither. Two accounts that disagree (a date someone told the sender against a quote the
+  sender holds) are a follow-up to the person quoted as saying it, not a question to the PM. When neither the claim's maker nor an owner is clear, don't pick anyone: add one
   question to the PM with "kind": "question" asking who to ask about it, saying what the follow-up is about, and record
   nothing else about who should answer.
 - One question per "question.add": never number several questions in one text. A question to anyone but the PM also
@@ -163,6 +167,8 @@ How to answer:
 - Every op whose entry in the op reference has an "evidence" field needs it: {"quote": "<exact words copied from the
   input>"}. Copy the words exactly, at least a few words long. If you can't quote it, don't claim it. Ops without an
   "evidence" field take none, and no op takes fields its entry doesn't list.
+- Copy an item's own words from a table or a list exactly as written: a colon inside an item ("Team wireless: release
+  on top") is part of its text, never a name and a value.
 - Never invent dates. A date only goes in an op if the input gives it. When the input gives it relative to a day
   ("by Friday", "next Tuesday", "tomorrow", "end of the week"), turn it into the calendar date, counted from the day the
   input was received, which the request states, not from today's date, and quote the relative words as the evidence.
@@ -195,10 +201,11 @@ How to answer:
   to reply, owned by the PM, and nothing else for that question: never a question back to the PM, and never a separate
   fact for the answer. The action's text says what to do ("Tell <who> when the proofs ship"). When the request's facts
   or records already hold the answer, put the drafted reply in the action's "reply" ("The proofs ship on <date>"), and
-  name the fact it comes from (its id and the source the fact gives) in it; the action's evidence is the question's
+  say in it where the answer comes from in words (the source the fact gives, "the printer's published schedule"), never
+  the fact's id: the reply goes to someone who can't open the app's records. The action's evidence is the question's
   words. The reply is a draft for the PM to read, so write it as the PM would say it, to the one who asked. When they
-  don't hold the answer, leave "reply" out and the action's text says what is missing ("Reply to <who> about <what>: no
-  recorded fact gives the date"); never invent an answer.
+  don't hold the answer and a search of the workspace's facts finds none, leave "reply" out and the action's text says
+  what is missing ("Reply to <who> about <what>: no recorded fact gives the date"); never invent an answer.
   - Set "reply_owed": true on that one action (and only on it). The rules then read the message: automatic mail, mail
     the PM sent and a message that says no reply is needed are refused, so don't add a reply owed for them. A message
     that only copies the PM, or asks someone else, is not a reply owed to the PM.

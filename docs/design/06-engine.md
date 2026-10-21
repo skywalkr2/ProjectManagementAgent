@@ -884,7 +884,12 @@ is marked *designed*, with the phase.
   adds links.
 - **A decision goes to whoever decides** (owner, 2026-10-15, from the functional designer's lessons from running): the
   person the input or a routing entry names as deciding (an architect choosing between options a vendor offered), and the
-  PM when nobody is named. The assistant marks each question with a kind (question, decision, and the routing, impact and
+  PM when nobody is named. A choice someone asks the person directly is not a decision question: it is a reply the
+  person owes, one action (below). A reply owed with no drafted reply, from a run that never searched, is checked
+  like a question by `already-known`: when a fact answers it, it goes back once to be drafted from that fact
+  (*built, B-10:* `tests/test_reply_already_known.py`). The person's own request in their sent mail ("Can you send ...?")
+  is not their promise: an action owned by the person from it goes back once (`own-request-not-promise`, *built, B-10:*
+  `tests/test_own_request_lint.py`). The assistant marks each question with a kind (question, decision, and the routing, impact and
   notice kinds), and the screen follows the stored kind: a question of kind `decision` shows as a decision, and one of kind
   `question` shows as a question to answer; a decision to someone else shows in the PM's follow-ups under that person.
   Keeping the kind makes the assistant's call checkable and lets a mistaken one be corrected. An option offered inside an
@@ -1006,8 +1011,8 @@ is marked *designed*, with the phase.
 
 **From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7 (see roadmap-done.md)):
 - **A question someone asks the person** is one item: an action owned by the person ("Reply to the shop: when the cover
-  proofs ship"). When the facts hold the answer, the action carries a drafted reply, ready to copy, citing the fact and its
-  source; when they don't, it carries no draft and says what's missing. Never an action and an output for one reply.
+  proofs ship"). When the facts hold the answer, the action carries a drafted reply, ready to copy, naming the fact's
+  source in words, never its id (the reader can't open the app's records); when they don't, it carries no draft and says what's missing. Never an action and an output for one reply.
   *Built:* the draft is its own text on the action (`reply`, with `reply_reviewed`, false until the person approves it or
   writes their own, so it shows as a draft); `action.add` takes it, and the person's `action.reply` (person-only, Undo;
   `POST /api/actions/{id}/reply`: no text approves the draft, text replaces it) marks it reviewed. Rewording a draft the

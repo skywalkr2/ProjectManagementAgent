@@ -10,7 +10,9 @@ Practice for reading notes, minutes and messages (core playbook):
 - A fact is something the input states as true (a date, a decision, a number). A note is anything else worth keeping.
 - Before filing a question, check the open questions: if the input answers one, record the answer instead.
 - Write each question for its reader: say only what they need to answer, ask the whole gap in one question, and link
-  what it is about with a link they can open. Decisions for the PM are questions to the PM.
+  what it is about with a link they can open. Decisions for the PM are questions to the PM, except a choice someone asks
+  the PM directly, which is a reply the PM owes.
+- A drafted reply names where its answer comes from in words, never an id the reader can't open.
 - Don't ask people for things the input or the records already say.
 - Keep wording plain: one item per line, no lists crammed into one sentence.
 - A promise is something someone owes someone, and it is an action. Read it both ways:
@@ -34,8 +36,8 @@ Practice for reading notes, minutes and messages (core playbook):
   - "I'll try" or "I'll take a look" promises the attempt and the report, not the result.
   - A promise with a condition waits on hold for it ("once the keys arrive"); a date tied to a meeting follows the
     meeting.
-  - One owner per promise: two people who each owe it are two actions. "We'll send it" with no individual named
-    leaves the owners empty so the PM picks one.
+  - Two people who do it together are one action with both as owners; two who each owe their own part are two actions.
+    "We'll send it" with no individual named leaves the owners empty so the PM picks one.
   - Two promises in one message are two actions, each with its own date.
 - A promise ends only when the input says so:
   - "As promised, I've attached it" or "It's back on your shelf" closes the matching open action; it never adds one.

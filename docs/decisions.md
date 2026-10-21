@@ -4,6 +4,33 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: Four evaluation cases follow the reply-owed rule, and three instructions stop contradicting the checks
+
+- **Decided (main session):**
+  - A choice or request someone asks the person directly ("6 pm or 7 pm, which would you prefer?", "could the draft
+    come Thursday instead?") is a reply the person owes: one action, never a decision question beside it. This follows
+    the functional designer's answer of 2026-10-15 ("a question someone asks the person is one item"); the decision rule
+    keeps its place for a choice nobody put to the person, such as options inside a vendor's answer.
+  - Work with no clear owner may be asked of the person either way: a question to them, or the action held for "Pick an
+    owner", which is the same ask.
+  - A drafted reply names where its answer comes from in words, never a record id: it goes to someone who can't open
+    the app, and the `bookkeeping` lint already sent ids back. The instructions had said to name the id.
+  - Two people who do a task together are one action with both as owners; only two who each owe their own part are two
+    actions. The instructions had said "two people who each owe it are two actions", which the model applied to shared
+    work too.
+- **Why:** the owner's re-run (B-10): `decision-for-pm`, `thread-t18-m2-called-off` and
+  `follow-up-with-no-clear-owner-asks-who` expected what the product did before replies owed were built, and failed
+  every run on answers the later design asks for; `question-asked-of-me-facts-hold-it` and `production-checkin` failed on
+  instructions that contradicted a check or the case.
+- **Also decided (main session):** three of the misses are caught by rules, not more instructions: a reply owed with
+  no draft goes back once when a fact answers it (`already-known`); an action owned by the person from their own sent
+  "Can you ...?" goes back once (`own-request-not-promise`, a new lint, default `return`); and a phone number in a known
+  sender's signature is offered by rule as a held `person.contact`. Rules before AI: each is deterministic and cheap,
+  and nothing it makes applies without the person.
+- **Impact:** the four cases in `workspaces/demo-b/evals/`; the notes prompt and its playbook; design 6.7, 6.8, 6.33 and
+  6.35; new settings `language.ask_lead_words`, `language.own_promise_words` and `workspace.phone_min_digits` (design
+  4.0), with demo values in both workspaces. Change log: section 142.
+
 ## 2026-10-21: The functional designer's answers to F26 to F32, and decisions are checked against the change log
 
 - **Decided (functional designer, 2026-10-21):** yes to all seven defaults (`docs/project/designer-questions.md`), with:

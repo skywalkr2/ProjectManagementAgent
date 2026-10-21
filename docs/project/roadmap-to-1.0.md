@@ -754,10 +754,21 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     (`test_forbid_can_name_who_a_promise_must_not_be_owed_to`);
   - a self-check that fails while a decision entry from 2026-10-21 on names no change-log section that exists. **Built:**
     `engine/selfcheck/decisions.py`, `tests/test_selfcheck_decisions.py`;
-  - the rest, case by case, through the prompt or a stronger tier: decision-for-pm, the two follow-up routing cases,
-    production-checkin (one to-do, two owners), t18 and 078 (no new to-do on an ending), question-asked-of-me-facts-
-    hold-it, they-finished-note, signature-phone, colon-in-title; and thread-t14, whose answers are in the owner's
-    `rerun.json`, not yet seen.
+  - the rest, case by case, through the prompt or a stronger tier (`docs/decisions.md` 2026-10-21, "Four evaluation
+    cases follow the reply-owed rule"):
+    - cases brought to the reply-owed rule: `decision-for-pm`, `thread-t18-m2-called-off` and
+      `follow-up-with-no-clear-owner-asks-who` (stub cases pass);
+    - instructions that contradicted a check: a reply's source in words, never an id
+      (`question-asked-of-me-facts-hold-it`, `tests/test_obvious_steps_f.py`), and shared work as one action
+      (`production-checkin`, `test_the_prompt_says_who_owns_shared_work_and_where_a_direct_choice_and_a_disputed_claim_go`);
+    - rules: **Built:** a reply owed with no draft when a fact answers it (`tests/test_reply_already_known.py`), the
+      person's own request (`promise-078-send-bram-agenda`, `tests/test_own_request_lint.py`), a signature phone
+      (`signature-phone`, `tests/test_signature_contact.py`);
+    - instructions only, a model behavior: the disputed claim (`follow-up-goes-to-who-made-the-claim`) and the colon
+      (`colon-in-title`);
+    - *left:* `they-finished-note` and `project-no-record` (the instructions already say it; a stronger tier if the
+      re-run still misses), `new-person-with-organization`, and thread-t14, whose answers are in the owner's
+      `rerun.json`, not yet seen. All of these are done only when the owner's next re-run passes them.
   - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
     reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
     20): whether the reach the model picks should be widened or checked against the correction's own task kind;

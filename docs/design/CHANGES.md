@@ -1027,6 +1027,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 142. Replies owed over decision questions, a reply's source in words, shared work as one action (2026-10-21; B-10)
+
+| Where | Before | Now |
+|---|---|---|
+| A choice asked of the person directly (6.8, 6.35) | A decision question to the person | A reply the person owes: one action |
+| A drafted reply's source (6.35) | The fact and its source, the id included | The source in words, never an id |
+| Two people doing one task (6.33) | Read as two actions, one each | One action with both as owners; two only when each owes their own part |
+| Work with no clear owner (6.8) | A question to the person | A question to the person, or the action held for "Pick an owner" |
+| A reply owed with no draft (6.35) | Accepted, even when a fact answers it | Sent back once by `already-known` to be drafted from the fact (built) |
+| The person's own "Can you ...?" (6.33) | Could become the person's own to-do | Sent back once by `own-request-not-promise`; its words are `language.ask_lead_words` and `own_promise_words` (built) |
+| A phone in a known sender's signature (6.7) | Only when the model offered it | Offered by rule as a held `person.contact` (`workspace.phone_min_digits`) (built) |
+
+Why: `docs/decisions.md` (2026-10-21, "Four evaluation cases follow the reply-owed rule").
+
 ## 141. The functional designer's answers to F26 to F32 (2026-10-21; B-10, phases T and I)
 
 | Where | Before | Now |

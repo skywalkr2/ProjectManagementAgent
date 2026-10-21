@@ -23,9 +23,10 @@ expect:
 - op: action.add
   text_has:
   - interior proofs
+  # The reply goes to someone who can't open the app's records, so it names its source in words, never the id.
   reply_has:
   - November 3
-  - FACT-91
+  - published schedule
   owners:
   - PER-1
 # The answer is in the drafted reply the action carries: no question back to the person, and no fact made of the answer.
@@ -37,7 +38,7 @@ stub_answer:
   ops:
   - op: action.add
     text: Tell Corner Lamp Books when the interior proofs ship
-    reply: The interior proofs ship on November 3 (FACT-91, the printer's published schedule).
+    reply: The interior proofs ship on November 3 (from the printer's published schedule).
     owners:
     - Avery Lane
     project: PRJ-1

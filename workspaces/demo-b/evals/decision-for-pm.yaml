@@ -1,26 +1,29 @@
 id: decision-for-pm
-title: A choice only the PM can make
+title: A choice someone asks the PM directly is a reply the PM owes, not a decision question
 skills: [owners]
 received: '2026-10-09'
 pasted: 'From: Maya Lindqvist (Corner Lamp Books)
 
 
   We can host the reading at 6 pm or 7 pm on Dec 1. Which would you prefer?'
+# Asked of the PM directly, so the PM owes the answer: one action for the PM (design 6.35), never a decision question
+# beside it, and never a calendar entry for an offer not yet taken.
 expect:
-- op: question.add
-  to: PER-1
-  kind: decision
-  # A question is asked as one: its title ends in a question mark, and what it states goes in its text.
-  text_has:
-  - '?'
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-7]
+  text_has: [reading]
 forbid:
 - op: event.add
+- op: question.add
 stub_answer:
-  summary: 'A decision for you: the reading time.'
+  summary: 'Maya asks which time you prefer for the reading.'
   ops:
-  - op: question.add
-    to: me
-    kind: decision
-    title: 'Launch reading on Dec 1: 6 pm or 7 pm?'
-    text: Corner Lamp Books can host either time. Which do you prefer?
+  - op: action.add
+    text: Tell Maya whether the Dec 1 reading should be at 6 pm or 7 pm
+    owners: [Avery Lane]
+    promised_to: [Maya Lindqvist]
+    reply_owed: true
     project: PRJ-1
+    evidence:
+      quote: Which would you prefer?

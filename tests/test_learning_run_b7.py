@@ -252,3 +252,20 @@ def test_a_lessons_breadth_is_read_from_the_persons_words_and_a_mistake_always_t
     assert "Read the breadth from the PM's words" in prompt and 'only "always", "every" or "never"' in prompt
     assert "propose the narrow lesson" in prompt and "only about this one item" not in prompt
     assert "The person's words set the breadth" in playbook and "still teaches the narrow lesson" in playbook
+
+
+def test_the_prompt_says_who_owns_shared_work_and_where_a_direct_choice_and_a_disputed_claim_go():
+    """The owner's re-run (B-10): a task two people do together is one action with both owners
+    (production-checkin), a choice asked of the person directly is a reply they owe (decision-for-pm), two accounts that
+    disagree go to the one quoted (follow-up-goes-to-who-made-the-claim), and a colon inside an item is its text
+    (colon-in-title)."""
+    prompt = " ".join(resources.files("engine.prompts").joinpath("notes.md").read_text(encoding="utf-8").split())
+    playbook = " ".join(
+        resources.files("engine.playbook.guidance").joinpath("notes.md").read_text(encoding="utf-8").split()
+    )
+    assert "Two people who do it together" in prompt and "one action with both as owners" in prompt
+    assert "Two people who do it together are one action with both as owners" in playbook
+    assert "is a reply the PM owes (below), not a decision question" in prompt
+    assert "a choice someone asks the PM directly, which is a reply the PM owes" in playbook
+    assert "are a follow-up to the person quoted as saying it, not a question to the PM" in prompt
+    assert "a colon inside an item" in prompt

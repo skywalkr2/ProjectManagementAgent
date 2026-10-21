@@ -1,5 +1,5 @@
 id: follow-up-with-no-clear-owner-asks-who
-title: 'When neither the maker of a claim nor an owner is clear, the question goes to the PM about who to ask'
+title: 'When neither the maker of a claim nor an owner is clear, the PM is asked who takes it'
 skills: [owners, no-repeat-question]
 received: '2026-10-09'
 pasted: 'From: Maya Okafor
@@ -12,14 +12,16 @@ pasted: 'From: Maya Okafor
 
 
   Maya'
+# Either way asks the PM who takes it: a question to the PM, or the work as an action with no owner, held for "Pick an
+# owner". Ines Duarte only mentioned it in passing: no one is picked to chase it.
 expect:
-- op: question.add
-  to: PER-1
-  kind: question
-# Ines Duarte only mentioned it in passing: no one is picked to chase it.
+- op: [question.add, action.add]
+  text_has: [carrier]
 forbid:
 - op: question.add
   to: PER-5
+- op: question.add
+  to: PER-2
 - op: action.add
   owners:
   - PER-5

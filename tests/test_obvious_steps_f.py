@@ -218,7 +218,9 @@ def test_the_prompt_says_a_question_asked_of_the_pm_is_one_action_with_the_reply
     assert "add one action for the PM to reply" in instructions and "never a question back to the PM" in instructions
     assert "never a separate fact for the answer" in instructions
     assert 'put the drafted reply in the action\'s "reply"' in instructions
-    assert "name the fact it comes from (its id and the source the fact gives)" in instructions
+    # The reply goes to someone who can't open the app's records, so its source is named in words, never by id.
+    assert "say in it where the answer comes from in words" in instructions and "never the fact's id" in instructions
+    assert "a search of the workspace's facts finds none" in instructions
     assert (
         'leave "reply" out and the action\'s text says what is missing' in instructions
         and "never invent" in instructions

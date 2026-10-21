@@ -39,13 +39,19 @@ pasted: |-
   >
   > --
   > Avery
+# Liora also asks whether the draft can come Thursday: a question to the person, so the person owes an answer
+# (design 6.35). The draft's date doesn't move until the person says yes.
 expect:
 - op: action.drop
   id: ACT-102
+- op: action.add
+  owners: [PER-1]
+  promised_to: [PER-105]
 forbid:
 - op: action.close
   id: ACT-102
-- op: action.add
+- op: action.move
+  id: ACT-101
 stub_answer:
   summary: The promise is called off.
   ops:
@@ -54,3 +60,10 @@ stub_answer:
     reason: Liora asked to cancel the printed copies
     evidence:
       quote: Please cancel the printed copies
+  - op: action.add
+    text: Tell Liora whether the draft can come Thursday instead
+    owners: [Avery Lane]
+    promised_to: [Liora Marsh]
+    reply_owed: true
+    evidence:
+      quote: Could the draft come Thursday instead?
