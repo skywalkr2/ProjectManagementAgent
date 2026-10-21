@@ -18,6 +18,7 @@ from typing import Any, Literal
 
 from engine.ai.adapters import make_adapter
 from engine.ai.smoke import SmokeResult, smoke_test, where_of
+from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN
 from engine.config import Config
 from engine.config.schema import ProviderSettings, TierSettings
 
@@ -40,6 +41,7 @@ class KeyCheck:
 _KEYED = {
     "auth": ("key_refused", "The service didn't accept that key. Check that it was copied whole and is still active."),
     "no_key": ("key_missing", "Paste your key to go on."),
+    "unsupported": ("failed", f"{UNSUPPORTED_PLAIN}. {UNSUPPORTED_ADVICE}."),
     "quota": (
         "no_credit",
         "That account has no credit left. Add credit on the service's billing page, then paste the key again.",

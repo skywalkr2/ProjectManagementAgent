@@ -46,6 +46,7 @@ providers:
   #     pass_env: [EXAMPLE_AGENT_CONFIG]
   #     errors:
   #       auth: ["not signed in", "sign in again"]
+  #       unsupported: ["no longer supported for this account"]   # signing in again won't help: pick another account or use a key
   #       rate_limited: ["too many requests"]
   #       quota: ["usage limit"]
   #       reset: ["resets in ([0-9]+) seconds"]   # the first group: seconds, or an ISO date and time

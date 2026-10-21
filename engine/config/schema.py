@@ -501,6 +501,11 @@ class AgentOutputFields(ConfigModel):
 
 class AgentErrorPatterns(ConfigModel):
     auth: list[str] = Field(default_factory=list, description="Patterns in the error stream meaning: not signed in.")
+    unsupported: list[str] = Field(
+        default_factory=list,
+        description="Patterns in the error stream meaning: the service no longer lets this program be used with this "
+        "kind of account, so signing in again does not help. The account is told to pick another or use a key.",
+    )
     rate_limited: list[str] = Field(
         default_factory=list, description="Patterns in the error stream meaning: too many requests, try later."
     )
@@ -518,7 +523,7 @@ class AgentErrorPatterns(ConfigModel):
         "or a sign-in prompt, or was cut off). Such a run is no try and is never sent back as a mistake. A run that "
         "fails with nothing at all on its error stream counts the same.",
     )
-    exit_codes: dict[int, Literal["auth", "rate_limited", "quota", "provider_down", "no_work"]] = Field(
+    exit_codes: dict[int, Literal["auth", "unsupported", "rate_limited", "quota", "provider_down", "no_work"]] = Field(
         default_factory=dict, description="Exit codes the agent documents, mapped to what they mean."
     )
     report_on_output: bool = Field(

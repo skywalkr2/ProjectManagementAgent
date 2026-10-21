@@ -393,7 +393,7 @@ providers:                       # every AI account the workspace may use; names
       output_fields: {text: result, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, cost_usd: cost}
       pass_env: []               # variables it may see besides PATH, HOME and the language settings
       key_env: <variable>        # the variable it reads its key from, when the account uses a key
-      errors: {auth: ["<its not-signed-in message>"], rate_limited: [], quota: ["<its usage-limit message>"], reset: ["<its reset time: the first group is seconds or an ISO date and time>"], exit_codes: {}}
+      errors: {auth: ["<its not-signed-in message>"], unsupported: ["<its message that this kind of account can't use it any more>"], rate_limited: [], quota: ["<its usage-limit message>"], reset: ["<its reset time: the first group is seconds or an ISO date and time>"], exit_codes: {}}
       sign_in_hint: <its login command>
       version_command: []        # how to print its version; empty: the program with --version (6.16)
       home: shared               # fresh: each run gets an empty home with only home_files copied in

@@ -194,6 +194,8 @@ endpoints:
         packet_via: stdin
         output_via: stdout
         effort_option: ["--effort", "{effort}"]
+        errors:
+          quota: ["exceeded your monthly quota"]  # as it printed, out of quota
         sign_in_hint: Open a terminal, run copilot and sign in with /login, then press Test again.
     note: Uses your Copilot plan through the Copilot CLI, with every kind of tool it has denied.
   - id: codex
@@ -228,8 +230,10 @@ endpoints:
         output_json: true
         output_fields:
           text: response
+        errors:
+          unsupported: ["ineligibletiererror", "unsupported_client", "no longer supported for"]  # as it printed, on a personal account
         sign_in_hint: Open a terminal, run gemini and sign in, then press Test again.
-    note: Uses your Google account through the Gemini CLI. Its documentation says it asks before writing files or running commands; it names no option that stops it reading files or fetching pages.
+    note: Uses your Google account through the Gemini CLI. It refuses personal free Google accounts, so a key or a paid plan is needed. Its documentation says it asks before writing files or running commands; it names no option that stops it reading files or fetching pages.
   - id: agent
     name: Another command-line agent signed in as you
     adapter: cli-agent

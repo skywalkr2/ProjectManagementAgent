@@ -1562,7 +1562,7 @@ registers its own, plugins add theirs (3.3).
   access, code editing, max context, max output, streaming, prompt caching: whether a marked stable prefix is cached or
   discounted) and price per billing unit, from the provider's catalog where it has one;
 - `run(task) -> result` with output, usage and timing;
-- `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota | auth | timeout |
+- `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota | auth | unsupported | timeout |
   invalid_output | no_output | provider_down | offline | other`, with `retry_after` (seconds to the reset) when the runner gave one:
   an HTTP `Retry-After`, or, for an agent, the first group of a pattern in `errors.reset` matched in the error stream. It reads **only** the runner's own exit code, error stream and transport errors,
   never the model's output: a model writing "not logged in" in a report is text, not an auth failure. An agent that prints
@@ -1681,7 +1681,11 @@ model doesn't accept.
 
 **Errors are read in one place.** `classify_error()` in the adapter is the only code that reads a vendor's error text or exit
 output. Everything else works from its classification. A sign-in failure (`auth`) always becomes a question to the PM that
-includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path.
+includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path. A service that
+no longer lets a program be used with the person's kind of account (`unsupported`, matched by the account's `errors.unsupported`
+patterns) is a failure of the account, not of the work: it is never retried, falls to the next account in the chain like a
+refused key, shows the account as failing, and says "pick another account, or use a key instead" in place of a sign-in hint,
+since signing in again does not help.
 
 **Exit 0 with no answer is a failure** (built: `tests/test_silent_stops.py::test_a_program_that_exits_cleanly_with_nothing_on_its_output_is_no_output_never_an_empty_answer`,
 `test_an_empty_answer_file_and_a_missing_one_are_both_no_output`,

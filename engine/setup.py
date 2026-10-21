@@ -26,6 +26,7 @@ from typing import Any
 import yaml
 
 from engine.ai.presets import clean_presets
+from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN
 from engine.connectors import CORE, declared_reads, reads
 from engine.shipped import shipped
 from engine.state_file import write_whole
@@ -410,6 +411,7 @@ def endpoint(endpoint_id: str) -> dict[str, Any] | None:
 LIST_PROBLEMS = {
     "auth": "The service didn't accept the key. Check that it was copied whole and is still active.",
     "no_key": "This service needs a key.",
+    "unsupported": f"{UNSUPPORTED_PLAIN}. {UNSUPPORTED_ADVICE}.",
     "quota": "The service says the account has no credit or has reached its limit.",
     "rate_limited": "The service asked to wait a moment. Try again shortly.",
     "timeout": "The service didn't answer in time. Try again.",

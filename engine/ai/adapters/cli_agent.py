@@ -230,7 +230,7 @@ class CliAgentAdapter:
         errors = self.agent.errors
         kind = errors.exit_codes.get(exit_code) if exit_code is not None else None
         if kind is None:
-            for name in ("auth", "quota", "rate_limited"):
+            for name in ("unsupported", "auth", "quota", "rate_limited"):
                 if any(re.search(p, tail, re.I) for p in getattr(errors, name)):
                     kind = name
                     break

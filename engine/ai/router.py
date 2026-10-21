@@ -18,7 +18,17 @@ from engine.config import Config
 from engine.secrets import SecretError, resolve_secret
 from engine.storage import Store, WriteContext
 
-FALLBACK_ON = {"rate_limited", "quota", "auth", "no_key", "provider_down", "timeout", "offline", "no_work"}
+FALLBACK_ON = {
+    "rate_limited",
+    "quota",
+    "auth",
+    "unsupported",
+    "no_key",
+    "provider_down",
+    "timeout",
+    "offline",
+    "no_work",
+}
 LEVELS = ("open", "internal", "restricted")
 _SYSTEM = WriteContext(actor="engine", trust="trusted", op="run.record")
 

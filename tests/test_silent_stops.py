@@ -894,3 +894,56 @@ def test_a_pause_with_nothing_waiting_on_it_is_no_line(env):
     ws, cfg, store, clock = env
     Pauses(pauses_path(store), clock).pause(account_of(cfg), START + timedelta(hours=1))
     assert all(line.kind != "paused" for line in queue(ws, store, cfg, clock()))
+
+
+# ---- a service that no longer lets the program run with the person's kind of account ------------------
+
+
+def unsupported() -> AiError:
+    return AiError("unsupported", "IneligibleTierError: this client is no longer supported")
+
+
+def test_an_unsupported_account_is_never_retried_falls_to_the_next_one_and_shows_as_failing(env):
+    from engine.ai.smoke import ai_state
+
+    ws, cfg, store, clock = env
+    first = as_a_real_account(cfg)
+    cfg.ai.providers["second"] = cfg.ai.providers[first].model_copy(update={"accepted_unchecked": True})
+    cfg.ai.tiers["routine"].fallback = ["second/default"]
+    refused, other = Scripted(unsupported()), Scripted(ANSWER)
+    router = Router(
+        cfg, store, env={}, now=clock, adapter_factory=adapters_by_account(cfg, {first: refused, "second": other})
+    )
+    result, choice, _ = router.call(TASK, request_id="REQ-1")
+    assert choice.provider == "second" and result.text == ANSWER
+    assert refused.calls == 1, "it is tried once in the call, never again within it"
+    assert Pauses(pauses_path(store), clock).active() == {}, "no usage-limit pause: nothing says when it could work"
+    assert [r["error_kind"] for r in runs_of(env)] == ["unsupported", None]
+    # With no other account the call ends there, still after one try.
+    cfg.ai.tiers["routine"].fallback = []
+    alone = Scripted(unsupported())
+    router = Router(cfg, store, env={}, now=clock, adapter_factory=adapters_by_account(cfg, {first: alone}))
+    with pytest.raises(AiError) as stopped:
+        router.call(TASK, request_id="REQ-2")
+    assert stopped.value.kind == "unsupported" and alone.calls == 1
+    assert ai_state(ws, cfg, store)[0] == "failing", "the latest request ended with the service refusing the account"
+
+
+def test_an_unsupported_account_says_its_own_words_never_the_sign_in_hint(agent_script):
+    from engine.ai.smoke import _problem
+    from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN
+    from engine.dispatcher import RETRIED, _ai_failure, failure_in_words
+
+    hint = "Open a terminal and sign in again"
+    settings = agent(
+        agent_script,
+        "unsupported",
+        errors={"unsupported": ["no longer supported"], "auth": ["sign in"]},
+        sign_in_hint=hint,
+    )
+    caught = CliAgentAdapter(settings).classify_error(1, "This client is no longer supported. Please sign in", None)
+    assert caught.kind == "unsupported" and caught.hint is None
+    for told in (_ai_failure(caught), _problem(caught), failure_in_words(caught)):
+        assert UNSUPPORTED_PLAIN in told and hint not in told
+    assert _ai_failure(caught).endswith(f"{UNSUPPORTED_ADVICE}.") and "try again" not in _ai_failure(caught)
+    assert "unsupported" not in RETRIED

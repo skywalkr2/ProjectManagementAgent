@@ -18,7 +18,16 @@ from urllib.parse import urlsplit
 
 from engine.ai import learning_check
 from engine.ai.adapters import make_adapter
-from engine.ai.task import NO_WORK_KINDS, AiError, AiTask, IdentityUnknown, ModelInfo, provider_reason
+from engine.ai.task import (
+    NO_WORK_KINDS,
+    UNSUPPORTED_ADVICE,
+    UNSUPPORTED_PLAIN,
+    AiError,
+    AiTask,
+    IdentityUnknown,
+    ModelInfo,
+    provider_reason,
+)
 from engine.config import Config
 from engine.secrets import SecretError, describe_secret, resolve_secret
 from engine.state_file import write_whole
@@ -200,6 +209,7 @@ def _refused_on_listing(
 #: What a failed test call means, in plain words, by the kind of failure.
 PROBLEMS = {
     "auth": "It isn't signed in, or the key was refused",
+    "unsupported": UNSUPPORTED_PLAIN,
     "no_key": "The key wasn't found",
     "quota": "The account is out of credit or at its plan's limit",
     "rate_limited": "The account asked to wait; try again shortly",
@@ -280,7 +290,11 @@ def _problem(err: AiError, where: str = "local") -> str:
     reason = "" if err.kind in TRANSPORT_KINDS else provider_reason(err.detail)
     plain = PROBLEMS.get(err.kind, "It stopped with an error")
     detail = f"{plain} ({reason})" if reason else plain
-    hint = err.hint or TRANSPORT_HINTS.get(where, TRANSPORT_HINTS["local"]).get(err.kind)
+    hint = err.hint or (
+        UNSUPPORTED_ADVICE
+        if err.kind == "unsupported"
+        else TRANSPORT_HINTS.get(where, TRANSPORT_HINTS["local"]).get(err.kind)
+    )
     return f"{detail}. {hint.rstrip('.')}." if hint else f"{detail}."
 
 
@@ -506,7 +520,7 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
         (run for run in store.read().list("run") if run.data.get("error_kind") not in NO_WORK_KINDS),
         key=lambda run: run.data.get("started_at", ""),
     )
-    if runs and runs[-1].data.get("outcome") == "error" and runs[-1].data.get("error_kind") == "auth":
+    if runs and runs[-1].data.get("outcome") == "error" and runs[-1].data.get("error_kind") in ("auth", "unsupported"):
         latest = runs[-1].data
         passed_since = bool(test and can_run(test) and current and str(test.get("at", "")) >= latest["started_at"])
         if not passed_since:

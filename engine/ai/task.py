@@ -10,6 +10,7 @@ ErrorKind = Literal[
     "rate_limited",
     "quota",
     "auth",
+    "unsupported",  # the service no longer lets this program be used with this kind of account
     "no_key",
     "timeout",
     "invalid_output",
@@ -20,6 +21,12 @@ ErrorKind = Literal[
     "refused",
     "other",
 ]
+
+
+#: What the person reads when a service no longer lets a program run with their kind of account: what happened, and
+#: what to do about it. It is never a sign-in hint, because signing in again does not help.
+UNSUPPORTED_PLAIN = "The service no longer lets this program run with your kind of account"
+UNSUPPORTED_ADVICE = "Pick another account, or use a key instead"
 
 
 #: Failed runs that say nothing about an account or the model's work: no connection could be made, or the run did

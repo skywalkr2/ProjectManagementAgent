@@ -58,6 +58,11 @@ program_messages:
   - {entry: codex, kind: auth, message: "Not logged in"}
   - {entry: codex, kind: auth, message: "ERROR: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header"}
   - {entry: claude-code, kind: rate_limited, message: "Repeated 529 Overloaded"}
+  # The programs' own output, run by the owner (copilot out of quota; gemini 0.46.0 on a personal free account)
+  - {entry: copilot, kind: quota, message: "You have exceeded your monthly quota"}
+  - {entry: gemini-cli, kind: unsupported, message: "Error authenticating: IneligibleTierError: This client is no longer supported for Gemini Code Assist for individuals. To continue using Gemini, please migrate to"}
+  - {entry: gemini-cli, kind: unsupported, message: "reasonCode: 'UNSUPPORTED_CLIENT', tierId: 'free-tier'"}
+  - {entry: gemini-cli, kind: unsupported, message: "An unexpected critical error occurred: IneligibleTierError: This client is no longer supported"}
 # A refused key answered with a 400: the bodies recorded from the two services.
 refused_key:
   - entry: google

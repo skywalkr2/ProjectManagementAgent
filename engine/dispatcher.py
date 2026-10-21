@@ -30,7 +30,7 @@ from engine.ai.router import (
     escalation_tier,
     route,
 )
-from engine.ai.task import AiError, AiTask, provider_reason
+from engine.ai.task import UNSUPPORTED_ADVICE, UNSUPPORTED_PLAIN, AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
 from engine.config import Config
@@ -1103,6 +1103,7 @@ _PLAIN_FAILURE = {
     "quota": "The AI account is out of credit",
     "auth": "The AI account refused the key",
     "no_key": "The AI account's key wasn't found",
+    "unsupported": UNSUPPORTED_PLAIN,
     "timeout": "The AI account didn't answer in time",
     "provider_down": "The AI service is down",
     "offline": "There is no network connection to the AI account",
@@ -1123,6 +1124,8 @@ def _ai_failure(err: AiError) -> str:
     when = f"; it can try again in {int(err.retry_after)} seconds" if err.retry_after else ""
     reason = "" if err.kind == "no_work" else provider_reason(err.detail)
     why = f" ({reason})" if reason else ""
+    if err.kind == "unsupported":  # signing in again does not help, so there is no hint to follow and no "try again"
+        return f"{plain}{why}. {UNSUPPORTED_ADVICE}."
     if err.hint:
         signed_out = "The AI account isn't signed in" if err.kind == "auth" else plain
         return f"{signed_out}{when}{why}. {err.hint.rstrip('.')}, then try again."

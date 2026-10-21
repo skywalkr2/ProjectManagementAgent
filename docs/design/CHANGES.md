@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 155. A service that no longer lets a program be used with the person's kind of account (2026-10-21; B-11c part 2d, built)
+
+- New error kind `unsupported` (account patterns `errors.unsupported`, also an exit-code meaning): a failure of the account,
+  never retried, not escalated, falls to the next account like a refused key, shows the account as failing, and says "pick
+  another account, or use a key instead" rather than a sign-in hint. Catalog: the Copilot CLI's monthly-quota message is a
+  `quota`, and the Gemini CLI's refusal of personal free accounts is `unsupported`, each quoted from the owner's runs in
+  `tests/fixtures/ai/catalog-claims.yaml`. Design 4, 6.16.
+
 ## 154. Effort and thinking by each model's listed capabilities (2026-10-21; B-11c part 2c, built)
 
 - The native adapter reads each model's capability tree from the model list; effort is sent only where listed, room to
