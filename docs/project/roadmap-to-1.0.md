@@ -841,6 +841,12 @@ the code by the main session),** for S1 before the gate week:
   Follow-ups, and a relation field for people on the personal side. Done when a fictional week of mail for a person with
   a business files each item to its side with at most one question, and a person with no business is asked nothing,
   each with a named test.
+  *S1-4a, the data, built:* the settings `workspace.project.personal` and `workspace.project.business`, the Personal
+  project made by `cockpit init`, `POST /api/setup/business`, `Person.side` and `Person.relation`, filing by people in
+  the applier's restatements, and the one batched Today line
+  (`tests/test_sides.py::test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks_which_side_once`,
+  `::test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_nothing`). Left: S1-4b, the "All /
+  Personal / <business>" filter on Today and Follow-ups; filing by an item's words (only its people decide today).
 - [ ] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
   were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
   looks complete.

@@ -2884,11 +2884,11 @@ Personal mail and calendar entries the person wants kept track of (an appointmen
 project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) means not tracked at all. So:
 - **One Personal project, made at setup, for everyone** (owner, 2026-10-21: the default project for every person, used
   or not): an ordinary project the person can rename or remove, made with no question; a setting names which project is
-  the personal one (`steward.personal_project`). What the assistant files there is never "unfiled". A person who only
+  the personal one (`workspace.project.personal`). What the assistant files there is never "unfiled". A person who only
   tracks a business answers yes to setup's business question and can leave Personal empty; nothing asks them to use it.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
   second side, a business or a job as the person chose at setup (a top-level project, its projects under it; a
-  setting names it, beside `steward.personal_project`). Today and Follow-ups get an "All / Personal / <business>" filter. Filing reads the
+  setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter. Filing reads the
   people first, since each person belongs to a side; only an item neither its people nor its words place is asked
   about, and those are asked together in one "Which side?" question, never one each. A person with no business is never
   asked. People on the personal side record how they relate to the person (a relation, "my sister"), not a role or an

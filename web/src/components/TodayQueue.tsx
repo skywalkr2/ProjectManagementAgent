@@ -548,7 +548,7 @@ export function useLineTitle(): (line: QueueLine) => string {
       case "held":
         return line.held ? heldTitle(line.held, t) : t("queue.held");
       case "unfiled":
-        return tn("queue.unfiled", line.count);
+        return line.state === "which_side" ? tn("queue.sides", line.count, { business: line.subject ?? "" }) : tn("queue.unfiled", line.count);
       case "moved":
         return moveTitle(line, t, tn);
       case "go":
@@ -695,7 +695,7 @@ function QueueRow(props: {
         return {
           pill: t("queue.pill.unfiled"),
           tone: "neutral",
-          meta: t("queue.unfiled.meta"),
+          meta: line.state === "which_side" ? t("queue.sides.meta") : t("queue.unfiled.meta"),
           primary: { label: t("queue.act.file_them"), run: () => props.handlers.onOpenView?.("records/projects") },
           menu: [],
         };

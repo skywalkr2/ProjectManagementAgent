@@ -1140,7 +1140,7 @@ Plugins read these and refer to them with `RefTo`; they change only through core
 
 ### `person` (PER-n)
 
-Someone the workspace works with or tracks. Added by `person.add`; role, org and why_they_matter change through `record.set`; the person edits the rest in the app.
+Someone the workspace works with or tracks. Added by `person.add`; role, org, why_they_matter, side and relation change through `record.set`; the person edits the rest in the app.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1155,6 +1155,8 @@ Someone the workspace works with or tracks. Added by `person.add`; role, org and
 | `name_verified` | bool | `False` | True when the name's spelling came from the person, a signed header address or a record the person made; false when it was read from outside content and not yet confirmed. |
 | `track_only` | bool | `False` | True for someone inside the tracked area who is only observed, not given work. |
 | `stance` | Literal['manage', 'alongside', 'report_to', 'watch'] \| None | `None` | Who they are to the person (design 6.34): manage (the person manages them), alongside (they work alongside each other), report_to (the person reports to them) or watch (the person only watches). Empty means the workspace's default stance; someone marked track_only counts as watch. |
+| `side` | Literal['personal', 'business', 'both'] \| None | `None` | Which side of the person's life this person belongs to: personal (family, friends, home), business (work) or both. Empty means not known; someone on both sides, or not known, never decides where an item that names them is filed. |
+| `relation` | str \| None | `None` | How they relate to the person this app is for, in plain words ('my sister', 'our neighbor'); shown only on the personal side. |
 | `status` | Literal['active', 'left'] | `'active'` | active: still around. left: no longer part of the work. |
 
 ### `organization` (ORG-n)
@@ -2585,7 +2587,7 @@ Add a dated line to a project's update log. The line is dated the day it is appl
 
 ### `record.set`
 
-Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id); action text, due and notes; the entry (event) or series an action, question or fact belongs to (an id, or null); question title and text; person role, org and why_they_matter. The new value must be valid for the field. Evidence is required for due, status, owners, target and owner.
+Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id); action text, due and notes; the entry (event) or series an action, question or fact belongs to (an id, or null); question title and text; person role, org, why_they_matter, side (personal, business or both) and relation (how they relate to the person, such as "my sister"). The new value must be valid for the field. Evidence is required for due, status, owners, target and owner.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|

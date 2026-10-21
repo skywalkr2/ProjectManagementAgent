@@ -32,7 +32,8 @@ ADD_ONS = "add-ons"
 
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
-#: each request; where and how often backups go, for each backup; how often the readable export is written; the watched
+#: each request; which projects are the personal and business sides, for each item filed; where and how often backups
+#: go, for each backup; how often the readable export is written; the watched
 #: sources, for each read; whether and how corrections are learned from, for each correction and each learning run; the
 #: scan for new terms, for each input; the catalogs, tokens and refresh time of the Add-ons screen, for each time it
 #: reads them; whether a switch of account is offered a check, for each switch; how much of a
@@ -46,6 +47,8 @@ LIVE_KEYS = (
     "workspace.name",
     "workspace.assistant_name",
     "workspace.project.completed_status",
+    "workspace.project.personal",
+    "workspace.project.business",
     "workspace.our_accounts",
     "storage.backups.",
     "storage.export.every_minutes",

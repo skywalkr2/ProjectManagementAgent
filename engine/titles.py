@@ -159,6 +159,9 @@ def _who(sender: str | None, people: People) -> tuple[str | None, str | None]:
     if not sender:
         return None, None
     name = _ADDRESS.sub(" ", sender).strip().strip('"').strip() or sender.strip()
+    # An address a person can be reached at says who on its own, whatever title or spelling the name is written with.
+    if "@" in sender and (by_address := people.resolve(sender)).status == "ok" and by_address.person:
+        return by_address.person, None
     resolved = people.resolve(name)
     if resolved.status == "ok" and resolved.person:
         return resolved.person, None

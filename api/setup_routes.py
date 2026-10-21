@@ -44,6 +44,8 @@ from api.schemas import (
     AiTierView,
     AiWorkKindView,
     BackupFolderAdd,
+    BusinessIn,
+    BusinessView,
     CatalogAddress,
     CloudFolderChoice,
     CloudFoldersView,
@@ -235,6 +237,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         lists = {v.data["name"]: v.data["values"] for v in store.read().list("value_list")}
         return {
             "project_status": list(lists.get("project-status", [])),
+            "projects": [p.id for p in store.read().list("project")],
             # The people there are and the tiers the AI settings define: lists their own records and settings keep.
             "people": [p.id for p in store.read().list("person") if p.data.get("status", "active") != "left"],
             "tiers": list(current().ai.tiers),
@@ -326,6 +329,26 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             )
             person_named()
         return MeView(person=pid, full_name=name)
+
+    @r.post("/setup/business")
+    def business_save(body: BusinessIn) -> BusinessView:
+        """Say what the person's business is called: makes its top-level project and sets `project.business`; saying it
+        again renames that project. With Undo."""
+        from engine import sides
+
+        try:
+            made = sides.set_business(ws, store, current(), body.name, env=dict(os.environ))
+        except config_screens.SettingsConflict as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return BusinessView(
+            project=made.project,
+            name=" ".join(body.name.split()),
+            created=made.created,
+            changeset=made.changeset,
+        )
 
     # ---- setup steps ---------------------------------------------------------------------------------------------
 

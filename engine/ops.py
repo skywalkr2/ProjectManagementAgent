@@ -272,7 +272,8 @@ class RecordSetOp(OpModel):
     """Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent
     (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id);
     action text, due and notes; the entry (event) or series an action, question or fact belongs to (an id, or null);
-    question title and text; person role, org and why_they_matter. The new value must
+    question title and text; person role, org, why_they_matter, side (personal, business or both) and relation
+    (how they relate to the person, such as "my sister"). The new value must
     be valid for the field. Evidence is required for due, status, owners, target and owner."""
 
     op: Literal["record.set"]
@@ -1399,7 +1400,7 @@ SETTABLE: dict[str, set[str]] = {
     "action": {"text", "due", "notes", "event", "series"},
     "question": {"title", "text", "event", "series"},
     "fact": {"event", "series"},
-    "person": {"role", "org", "why_they_matter"},
+    "person": {"role", "org", "why_they_matter", "side", "relation"},
 }
 
 

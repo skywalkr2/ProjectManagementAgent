@@ -1,0 +1,26 @@
+# One name was changed from the helper's file (it matched a name in a demo workspace).
+# From the owner's outside helper (prompt 1, people part), relations rewritten in the person's own voice.
+people:
+  - {name: Mara Hale, address: mara.hale@example.com, side: personal, relation: my sister}
+  - {name: Elliot Hale, address: elliot.hale@example.com, side: personal, relation: my spouse}
+  - {name: Nora Hale, address: nora.hale@example.com, side: personal, relation: my daughter}
+  - {name: Sella Venn, address: sella.venn@example.org, side: personal, relation: our dentist}
+  - {name: Iris Bell, address: iris.bell@example.org, side: personal, relation: my daughter's school office}
+  - {name: Gavin Moss, address: gavin.moss@example.net, side: personal, relation: my friend}
+  - {name: Tessa Wynn, address: tessa.wynn@example.com, side: personal, relation: my friend}
+  - {name: Perry Dole, address: perry.dole@example.net, side: personal, relation: my mechanic}
+  - {name: Lena Frost, address: lena.frost@example.org, side: personal, relation: our utility company}
+  - {name: Milo Trent, address: milo.trent@example.com, side: business, relation: client}
+  - {name: Celia North, address: celia.north@example.org, side: business, relation: client}
+  - {name: Oren Vance, address: oren.vance@example.net, side: business, relation: client}
+  - {name: Della Quill, address: della.quill@example.com, side: business, relation: client}
+  - {name: Bram Alder, address: bram.alder@example.org, side: business, relation: client}
+  - {name: Soren Beck, address: soren.beck@example.net, side: business, relation: supplier}
+  - {name: Kira Moss, address: kira.moss@example.com, side: business, relation: staff}
+  - {name: Jude Fen, address: jude.fen@example.org, side: business, relation: staff}
+  - {name: Vera Lorne, address: vera.lorne@example.net, side: business, relation: prospective client}
+  - {name: Quinn Mercer, address: quinn.mercer@example.com, side: both, relation: our accountant}
+  - {name: Felix Rowan, address: felix.rowan@example.org, side: both, relation: my friend, and a client}
+  - {name: Nadia Wren, address: nadia.wren@example.net, side: both, relation: our bank contact}
+  - {name: Alden Shore, address: alden.shore@example.com, side: both, relation: our insurance agent}
+  - {name: Maeve Rill, address: maeve.rill@example.org, side: both, relation: my neighbor, sometimes a client}

@@ -1,0 +1,5 @@
+# Words the engine writes into the person's own records itself, by wording-sheet key. The screens' wording sheet carries
+# the same keys; the workspace's `ui.wording` overrides either.
+
+# The name of the project that holds the person's own life, made when a workspace is set up.
+project.personal_name: Personal

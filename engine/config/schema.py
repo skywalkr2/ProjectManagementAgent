@@ -77,6 +77,20 @@ class ProjectSettings(ConfigModel):
         "Completed at the bottom of the projects list, with everything about them kept; nothing is removed.",
         json_schema_extra={"choices": "project_status"},
     )
+    personal: str | None = Field(
+        None,
+        description="The project that holds the person's own life (family, home, friends): what names only people on "
+        "the personal side, and, while no business is set, everything filed under no project, goes there. Made when "
+        "the workspace is set up; empty means none, and items stay unfiled.",
+        json_schema_extra={"choices": "projects"},
+    )
+    business: str | None = Field(
+        None,
+        description="The top project of the person's business or job, when they have one: what names only people on "
+        "the business side is filed under it, and what can't be placed asks which side it belongs to. Empty means "
+        "no business, and everything unplaced goes to the personal project.",
+        json_schema_extra={"choices": "projects"},
+    )
 
 
 class ToolSettings(ConfigModel):

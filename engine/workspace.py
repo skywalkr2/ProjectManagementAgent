@@ -132,7 +132,7 @@ def init_workspace(
             import_data(store, ws.data_dir)
         if seed_rules(store) or imported:
             export_data(store, ws.data_dir)
-        if template is None and (you or name or assistant):
+        if template is None:
             _set_identity(ws, store, you, name, assistant)
             export_data(store, ws.data_dir)
     finally:
@@ -142,8 +142,10 @@ def init_workspace(
 
 
 def _set_identity(ws: Workspace, store: Store, you: str | None, name: str | None, assistant: str | None) -> None:
-    """Make the PM the first person and write the workspace's names into config/workspace.yaml."""
+    """For a workspace with no template: make the person's own project (Personal, design 6.32), the PM the first person
+    when named, and write the workspace's names and the personal project into config/workspace.yaml."""
     from engine.config.schema import UserSettings, WorkspaceFile
+    from engine.sides import make_personal
     from engine.storage import WriteContext
 
     settings = WorkspaceFile()
@@ -159,4 +161,5 @@ def _set_identity(ws: Workspace, store: Store, you: str | None, name: str | None
         settings.name = name.strip()
     if assistant:
         settings.assistant_name = assistant.strip()
+    settings.project.personal = make_personal(store)
     (ws.config_dir / "workspace.yaml").write_text(render_default_file("workspace", settings), encoding="utf-8")

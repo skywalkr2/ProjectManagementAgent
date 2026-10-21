@@ -2082,10 +2082,11 @@ class QueueLineView(BaseModel):
     `ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;
     Look over opens GET /api/open-items narrowed to them); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
-    by GET /api/unfiled); `nudge` is the one follow-up line for a person the person is waiting on (`person`, `count`
-    their items, `overdue` how many are past their date with the oldest in `due`, `waiting_days` the longest wait;
-    it opens the one message to them, GET /api/followups); `backup` is no backup that works (`state`, and `age_hours`
-    since the last one that did; Back up now is POST /api/backup)."""
+    by GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side
+    they belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is
+    waiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,
+    `waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup
+    that works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup)."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -2204,7 +2205,10 @@ class QueueLineView(BaseModel):
         "clock (their time zone).",
     )
     state: (
-        Literal["diverged", "chosen", "elsewhere", "changed", "level", "unset", "never", "failed", "overdue"] | None
+        Literal[
+            "diverged", "chosen", "elsewhere", "changed", "level", "unset", "never", "failed", "overdue", "which_side"
+        ]
+        | None
     ) = Field(
         None,
         description="For a handover line: diverged (this computer and the synced folder each changed; the person "
@@ -2213,7 +2217,8 @@ class QueueLineView(BaseModel):
         "identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in "
         "isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a "
         "folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last "
-        "one that worked is older than it should be; `age_hours` says how old).",
+        "one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a "
+        "business is set, so the line asks which side the items belong to, once, for all of them.",
     )
     rules: list[str] = Field(
         default_factory=list, description="For a rule_review line: the ids of the rules flagged, most present first."
@@ -4130,6 +4135,21 @@ class MeView(BaseModel):
 class MeIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     full_name: str = Field(min_length=1, max_length=200)
+
+
+class BusinessIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=200, description="What the person's business or job is called.")
+
+
+class BusinessView(BaseModel):
+    """The person's business after saying what it is called: its project, whether this call made it (a second call
+    renames it instead), and the changeset Undo takes (none when the name was already that)."""
+
+    project: str
+    name: str
+    created: bool
+    changeset: str | None
 
 
 # ---- data-file forms -------------------------------------------------------------------------------------------------

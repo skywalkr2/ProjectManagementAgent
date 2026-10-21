@@ -28,6 +28,7 @@ from engine import (
     proposals,
     reply_lines,
     scope,
+    sides,
     signature_contact,
 )
 from engine import search as workspace_search
@@ -173,8 +174,9 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
     """A promise said again with a date outside the merge window is a move of the open promise, never a second one
     (design 6.33): each such `action.add` becomes an `action.move` on the open promise, with the new words and quote.
     A phone number in a known sender's signature that the answer doesn't offer is added as a `person.contact` op (held
-    for the person like any). The same changeset always gives the same result, so a check and the apply that follows
-    see the same ops."""
+    for the person like any). An action, question, fact or note naming no project is filed under the personal or
+    business side by the people it names and the sender (`engine/sides.py`, design 6.32). The same changeset always
+    gives the same result, so a check and the apply that follows see the same ops."""
     view = ctx.store.read()
     ops = list(cs.ops)
     for i, op in enumerate(ops):
@@ -197,6 +199,8 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
         ops += signature_contact.proposals(
             ctx.inputs.raw_input, view, ctx.cfg, ctx.people, contact_kind(ctx.cfg, "phone"), ops
         )
+    if ctx.actor != "pm" and not ctx.confirmed_by_pm:
+        ops = sides.file_by_people(ops, view, ctx.cfg, ctx.people, _reporter(ctx))
     return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
 
 
@@ -2465,6 +2469,7 @@ def _apply_op(
                 "routing",
                 options=[],
                 resolves={"kind": "owner", "action": action.id, "changeset": w.changeset},
+                projects=[op.project] if op.project else None,  # the question sits where the action it asks about does
             )
             made("question", q)
             return touched, q
@@ -2857,12 +2862,22 @@ def _standing(tx: Tx, ctx: Context) -> knowledge.Standing:
 
 
 def _pm_question(
-    tx: Tx, w: WriteContext, ctx: Context, title: str, kind: str, *, options: list[str], resolves: dict[str, Any]
+    tx: Tx,
+    w: WriteContext,
+    ctx: Context,
+    title: str,
+    kind: str,
+    *,
+    options: list[str],
+    resolves: dict[str, Any],
+    projects: list[str] | None = None,
 ) -> str:
     pm = ctx.people.pm
     if pm is None:
         raise StoreError("you aren't set as a person in this workspace yet, so there is no one to ask")
     data = {"to": pm, "title": title, "kind": kind, "options": options, "resolves": resolves}
+    if projects:
+        data["projects"] = projects
     return tx.create("question", data, w).id
 
 

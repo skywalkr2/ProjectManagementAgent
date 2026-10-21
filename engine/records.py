@@ -301,8 +301,8 @@ class ActionNews(BaseModel):
 
 
 class Person(Record):
-    """Someone the workspace works with or tracks. Added by `person.add`; role, org and why_they_matter change through
-    `record.set`; the person edits the rest in the app."""
+    """Someone the workspace works with or tracks. Added by `person.add`; role, org, why_they_matter, side and relation
+    change through `record.set`; the person edits the rest in the app."""
 
     record_kind: ClassVar[str] = "person"
     prefix: ClassVar[str] = "PER"
@@ -338,6 +338,17 @@ class Person(Record):
         description="Who they are to the person (design 6.34): manage (the person manages them), alongside (they "
         "work alongside each other), report_to (the person reports to them) or watch (the person only watches). "
         "Empty means the workspace's default stance; someone marked track_only counts as watch.",
+    )
+    side: Literal["personal", "business", "both"] | None = Field(
+        None,
+        description="Which side of the person's life this person belongs to: personal (family, friends, home), "
+        "business (work) or both. Empty means not known; someone on both sides, or not known, never decides where "
+        "an item that names them is filed.",
+    )
+    relation: str | None = Field(
+        None,
+        description="How they relate to the person this app is for, in plain words ('my sister', 'our neighbor'); "
+        "shown only on the personal side.",
     )
     status: Literal["active", "left"] = Field(
         "active", description="active: still around. left: no longer part of the work."

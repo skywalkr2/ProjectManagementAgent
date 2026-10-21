@@ -3021,6 +3021,8 @@
   "organization.add_title": "Add an organization",
   "organization.rename_title": "Rename organization",
 
+  "project.personal_name": "Personal",
+
   "unfiled.title": "Unfiled",
   "unfiled.count.one": "1 item",
   "unfiled.count.other": "{n} items",
@@ -3192,6 +3194,9 @@
   "queue.unfiled.one": "File 1 item under a project",
   "queue.unfiled.other": "File {n} items under a project",
   "queue.unfiled.meta": "The assistant filed this under no project.",
+  "queue.sides.one": "Sort 1 item: Personal or {business}?",
+  "queue.sides.other": "Sort {n} items: Personal or {business}?",
+  "queue.sides.meta": "The assistant couldn't tell whether this is personal or for your business.",
   "queue.act.file_them": "File them",
   "queue.act.look_closer": "Look closer",
   "queue.held.q.close": "Close '{item}'?",

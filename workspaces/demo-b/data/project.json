@@ -12,5 +12,9 @@
     "owner": "PER-1",
     "status": "On track",
     "target": "2026-12-01"
+  },
+  {
+    "id": "PRJ-2",
+    "name": "Home and family"
   }
 ]

@@ -22,6 +22,7 @@ from engine import (
     reminder_lines,
     reply_lines,
     sent_version,
+    sides,
     since_yesterday,
     source_intake,
     watch,
@@ -96,7 +97,9 @@ class Line:
     every place the same credential is used),
     moved (the questions a follow-on run asked the person about one move, as one line: `count` of them in
     `questions`, the move in `after_move`), review, unfiled (what the assistant filed under no project: `count` of
-    them), rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
+    them, with `state` which_side when a business is set: one question, personal or the business, whose name is in
+    `subject`),
+    rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
     the always-sent section's `stable_size` against its `stable_budget`, and `moved` rules sent only with the runs they
     cover), learned (proposals of what the assistant learned from inputs and from the person's corrections, to look
     over: `count` of them, `origins` counted by where they came from and `expired` how many from inputs expired since
@@ -979,12 +982,16 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     from engine.unfiled import unfiled
 
     loose = unfiled(reader)
+    business = sides.business_project(reader, cfg)
     if loose:
         lines.append(
             Line(
                 key="unfiled",
                 group="review",
                 kind="unfiled",
+                # With a business set, the one thing to settle is which side the items belong to.
+                state="which_side" if business else None,
+                subject=reader.get("project", business).data["name"] if business else None,
                 count=len(loose),
                 since=min(i.created_at for i in loose),
             )
