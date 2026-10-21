@@ -39,9 +39,10 @@ class OpenAICompatibleAdapter:
                 {"role": "system", "content": task.instructions + "\n\n" + task.stable},
                 {"role": "user", "content": task.request},
             ],
-            "temperature": task.temperature,
             "max_tokens": task.max_output,
         }
+        if getattr(self.settings, "send_temperature", True):
+            body["temperature"] = task.temperature
         if self.settings.json_mode and task.output == "json":
             body["response_format"] = {"type": "json_object"}
         effort_param = getattr(self.settings, "effort_param", "")

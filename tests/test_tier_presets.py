@@ -447,3 +447,17 @@ def test_the_router_passes_the_tiers_effort_on_with_the_call(ai_cfg, tmp_path):
     finally:
         store.close()
     assert seen == ["high"]
+
+
+@pytest.mark.parametrize("send", [True, False])
+def test_the_chat_format_adapter_sends_a_temperature_only_when_the_account_says_to(send):
+    """A service whose current models refuse any temperature they don't set themselves is set not to be sent one."""
+    body = request_body(ProviderSettings(adapter=COMMON, base_url=HOSTED, send_temperature=send), None)
+    assert ("temperature" in body) is send
+
+
+def test_the_recommended_service_is_sent_no_temperature():
+    """The catalog's recommended service starts with temperature off, so its first connection check isn't refused."""
+    entries = yaml.safe_load(setup.CATALOG.read_text(encoding="utf-8"))["endpoints"]
+    entry = next(e for e in entries if e.get("recommended"))
+    assert entry["settings"]["send_temperature"] is False

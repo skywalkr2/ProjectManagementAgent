@@ -796,7 +796,12 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   `tests/test_tier_presets.py` (presets for the two services whose families are certain; effort reaches a service only
   through its confirmed `effort_param` or `effort_option`, none set yet). *Left for B-11b:* the Settings screen,
   "Measure", the model picker's role words (two examples now share "stronger"), effort in the pre-save account check,
-  and confirming each service's effort parameter (owner, 2026-10-21;
+  and confirming each service's effort parameter. *Found while confirming it (2026-10-21):* the recommended service is
+  reached through its chat-format compatibility endpoint, which per its own documentation ignores `reasoning_effort`,
+  supports no prompt caching, is "not considered a long-term or production-ready solution", and refuses any
+  temperature below 1 on current models; **fixed:** `send_temperature` (off for that entry,
+  `test_the_recommended_service_is_sent_no_temperature`). *Proposed:* a native adapter for that service's own
+  messages interface, for effort, prompt caching and refusal handling (owner to decide) (owner, 2026-10-21;
   design 6.16; placed before phase S because it decides what testers spend; the owner may move it): three tiers
   (everyday, stronger, hardest); a preset per catalog entry naming a model family and an effort per tier; effort as a
   per-model adapter capability; tiers filled by price where no preset matches, marked not checked; a measured

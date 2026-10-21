@@ -24,6 +24,7 @@ providers:
   #   base_url: http://localhost:11434/v1
   #   models: {small: local-small-model}
   #   effort_param: reasoning_effort         # the request setting this service takes a tier's effort in; empty: effort is never sent
+  #   send_temperature: false                # off for a service whose models refuse a temperature they don't set
   #   allowed_data: [open, internal, restricted]
   # coding-agent:
   #   adapter: cli-agent

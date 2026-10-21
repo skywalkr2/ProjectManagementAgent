@@ -647,6 +647,11 @@ class ProviderSettings(ConfigModel):
     )
     timeout_seconds: int = Field(90, ge=5, description="How long to wait for an answer.")
     json_mode: bool = Field(True, description="Ask the provider for JSON output when it supports that.")
+    send_temperature: bool = Field(
+        True,
+        description="Send each kind of work's temperature with the request. Off for a service whose current models "
+        "refuse any temperature they don't set themselves; the model then uses its own.",
+    )
     effort_param: str = Field(
         "",
         description="The request setting this service takes the effort of a tier's work in (low, medium or high), "

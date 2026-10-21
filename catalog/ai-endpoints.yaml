@@ -58,6 +58,7 @@ endpoints:
     needs_key: true
     settings:
       json_mode: false
+      send_temperature: false   # its current models refuse a temperature they don't set themselves
     tier_presets:
       routine: {family: haiku}
       deep: {family: sonnet}
