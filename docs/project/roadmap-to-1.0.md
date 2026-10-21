@@ -727,6 +727,20 @@ Guide sections for promises, the brief, reminders, bills, bookings and acting af
 (`docs/project/steward-guide-sections.md`); each moves into `engine/guide/guide.md` in the change that builds its
 feature, never before, since the guide is what the assistant answers from.
 
+**From the outside design review (2026-10-21, `docs/project/reviews/steward-design-review-2026-10.md`; checked against
+the code by the main session),** for S1 before the gate week:
+- [ ] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
+  were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
+  looks complete.
+- [ ] [S1-3] A date marked "check this" is never a firm deadline: no reminder, at-risk line or overdue from it until the
+  person confirms it.
+- [ ] [S1-3] A late reminder says "overdue · due <time>" unless the app knows it was closed or asleep (today's
+  `queue.reminder.late` says "while this computer was asleep" without knowing).
+- [ ] [S1-3] The brief's all-clear names any source not read since the last brief, so a stale mailbox never reads as a
+  quiet day.
+- [ ] [S1-3] `docs/project/steward-proposal.md`'s stale statements (phase order, the Monday briefing's phase, reminders on
+  any dated thing, approved writes as an open question) are corrected to the roadmap.
+
 **The gate (functional designer's F1 and F2, 2026-10-19; design 6.32 "Dependability").** Phase S builds a first slice,
 proves it on a week of real use, and only then goes on:
 - **The first slice (S1):** promises and how they end, reminders, replies owed, one plain "what changed since yesterday"

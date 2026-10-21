@@ -1,0 +1,47 @@
+id: thread-t26-m2-done
+title: 'Willow Ledger proposal (message m2): the promise is kept'
+skills:
+- owners
+- dates
+- close-right-item
+- new-message-only
+received: '2026-11-16'
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: Send Mira the revised Willow Ledger proposal
+    owners:
+    - person: PER-1
+    promised_to:
+    - PER-101
+    basis: said
+    due: '2026-11-13'
+    due_words: by Friday at noon
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Mira Hale <mira@example.com>
+  Subject: Willow Ledger proposal
+
+  Sent. The revised proposal is attached.
+
+  --
+  Avery
+
+  Avery Lane <avery.lane@example.com> wrote:
+  > I'll send Mira the revised Willow Ledger proposal by Friday at noon.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: The promise is kept.
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: The revised proposal is attached
