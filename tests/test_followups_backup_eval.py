@@ -433,3 +433,16 @@ def test_the_worker_makes_a_due_backup_on_its_own(env, tmp_path):
     worker = Worker(ws, store, cfg, Events())
     assert worker.backup_if_due() and list(target.iterdir())
     assert not worker.backup_if_due()
+
+
+def test_a_question_sent_late_in_the_evening_counts_from_the_persons_own_day_never_a_negative_wait(env):
+    # The workspace is a few hours behind UTC: 01:00 UTC on the 10th is still the evening of the 9th for the person.
+    _, cfg, store = env
+    editor = by_role("Editor")
+    evening = datetime(2026, 10, 10, 1, 0, tzinfo=UTC)
+    their_day = date(2026, 10, 9)
+    sec = next(s for s in sections(store, cfg, their_day) if s.person == editor["id"])
+    mark_sent(store, cfg, editor["id"], sent_text=sec.message, now=evening)
+    sent = next(s for s in sections(store, cfg, their_day) if s.person == editor["id"])
+    assert sent.questions
+    assert all(q["sent"] == their_day.isoformat() and q["waiting_days"] == 0 for q in sent.questions)

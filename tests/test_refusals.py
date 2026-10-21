@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -270,7 +271,7 @@ def test_the_floor_counts_runs_of_the_same_check_within_its_days_only(env):
     a_run(store, TASK, ["targets"])
     a_run(store, TASK, ["targets"], at=NOW - timedelta(days=2))
     a_run(store, TASK, ["evidence", "targets"], at=NOW + timedelta(days=1))  # not yet: after today
-    assert floor_counts(store.read(), TASK, settings, TODAY) == {"evidence": 2, "targets": 3}
+    assert floor_counts(store.read(), TASK, settings, TODAY, ZoneInfo("UTC")) == {"evidence": 2, "targets": 3}
     # Different checks never add up: only the one at the floor brings its lesson.
     assert seed_section(store.read(), TASK, settings, today=TODAY).ids == ["SEED-targets"]
 
@@ -280,7 +281,7 @@ def test_a_check_counts_once_per_run_for_the_floor_and_the_floor_is_a_setting(en
     a_run(store, TASK, ["evidence", "evidence"], whole=["evidence"])
     a_run(store, TASK, ["evidence"])
     view = store.read()
-    assert floor_counts(view, TASK, KnowledgeSettings(), TODAY) == {"evidence": 2}
+    assert floor_counts(view, TASK, KnowledgeSettings(), TODAY, ZoneInfo("UTC")) == {"evidence": 2}
     two = KnowledgeSettings(refusals_to_packet={"floor": 2})
     assert seed_section(view, TASK, two, today=TODAY).ids == ["SEED-evidence"]
     one_day = KnowledgeSettings(refusals_to_packet={"floor": 2, "floor_days": 1})

@@ -73,22 +73,24 @@ def refusal_shares(view: Any, task_kind: str, of_last: int) -> dict[str, float]:
     return {name: count / runs for name, count in counts.items()}
 
 
-def _in_window(stamp: Any, today: date, days: int) -> bool:
-    """Whether a run made at `stamp` falls in the `days` days that end on `today`."""
+def _in_window(stamp: Any, today: date, days: int, here: Any) -> bool:
+    """Whether a run made at `stamp` falls in the `days` days that end on `today`, both the person's own days."""
+    from engine.today import local_day
+
     try:
-        day = datetime.fromisoformat(str(stamp)).date()
+        day = local_day(datetime.fromisoformat(str(stamp)), here)
     except ValueError:
         return False
     return today - timedelta(days=days) < day <= today
 
 
-def floor_counts(view: Any, task_kind: str, settings: KnowledgeSettings, today: date) -> dict[str, int]:
+def floor_counts(view: Any, task_kind: str, settings: KnowledgeSettings, today: date, here: Any) -> dict[str, int]:
     """For each check that refused the task kind's runs in the last `floor_days` days, how many of those runs it
     refused (the runs of any age are looked at, not only the last `of_last`)."""
     limits = settings.refusals_to_packet
     counts: dict[str, int] = {}
     for request, changeset in recent_runs(view, task_kind, len(view.find("request", {"task": task_kind}))):
-        if not _in_window(changeset.data.get("created_at"), today, limits.floor_days):
+        if not _in_window(changeset.data.get("created_at"), today, limits.floor_days, here):
             continue
         for name in _refused_by(view, request, changeset):
             counts[name] = counts.get(name, 0) + 1
@@ -101,6 +103,7 @@ def seed_section(
     settings: KnowledgeSettings,
     known: dict[str, invariants.Invariant] | None = None,
     today: date | None = None,
+    here: Any = None,
 ) -> Seeded:
     """The seed lessons of the checks that refuse the task kind's runs at or above the configured share. Nothing for a
     check with no seed lesson, or that refused no run, and nothing until `min_runs` runs are counted. With `today`, a
@@ -109,7 +112,7 @@ def seed_section(
     limits = settings.refusals_to_packet
     counts, runs = counted(view, task_kind, limits.of_last)
     shares = {name: count / runs for name, count in counts.items()} if runs >= limits.min_runs else {}
-    floor = floor_counts(view, task_kind, settings, today) if today is not None else {}
+    floor = floor_counts(view, task_kind, settings, today, here) if today is not None else {}
     lessons = [
         i
         for i in (known if known is not None else invariants.load()).values()

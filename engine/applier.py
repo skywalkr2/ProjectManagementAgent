@@ -96,7 +96,7 @@ from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
 from engine.text_shape import error_problem, items_problem, text_problem
 from engine.titles import title_for
-from engine.today import zone
+from engine.today import local_day, zone
 from engine.workspace import Workspace
 
 Severity = Literal["refuse", "return", "hold", "warn"]
@@ -1260,7 +1260,7 @@ def question_correction_problem(ctx: Context, view: Any, op: OpModel) -> str | N
     if isinstance(op, QuestionMarkSentOp):
         if found.data["status"] != "open":
             return f"question {qid} is already marked as sent"
-        if op.on is not None and op.on > datetime.fromisoformat(ctx.store.clock()).date():
+        if op.on is not None and op.on > local_day(datetime.fromisoformat(ctx.store.clock()), zone(ctx.cfg)):
             return "a question can't have been sent on a day that hasn't come"
     return None
 
@@ -2122,7 +2122,7 @@ def _apply_op(
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         check_replaces(tx, op.supersedes)
         basis, said_by = fact_basis(op, ctx, tx)
-        as_of = op.as_of or received_on(tx, ctx.inputs.request, source)
+        as_of = op.as_of or received_on(tx, ctx.inputs.request, source, zone(ctx.cfg))
         data = {
             "text": op.text,
             "project": op.project,
@@ -2365,7 +2365,7 @@ def _apply_op(
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         from engine.facts import received_on
 
-        as_of = received_on(tx, ctx.inputs.request, source)
+        as_of = received_on(tx, ctx.inputs.request, source, zone(ctx.cfg))
         fact = tx.create(
             "fact",
             {

@@ -20,7 +20,7 @@ from engine.names import People
 from engine.promises import Late
 from engine.scope import stance_of
 from engine.storage import Store, WriteContext
-from engine.today import zone
+from engine.today import local_day, zone
 
 _PM = WriteContext(actor="pm", trust="trusted", op="followup")
 
@@ -175,7 +175,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
             continue
         if (d.get("resolves") or {}).get("kind") in ROUTING:
             continue  # answered where the item waits (What changed), so it isn't shown twice
-        sent = datetime.fromisoformat(d["sent_at"]).date() if d.get("sent_at") else None
+        sent = local_day(datetime.fromisoformat(d["sent_at"]), here) if d.get("sent_at") else None
         chased = sorted(str(day) for day in d.get("followed_up") or [])
         # The wait counts from the last word to the person: the message, or the latest chase after it.
         last_word = date.fromisoformat(chased[-1]) if chased else sent

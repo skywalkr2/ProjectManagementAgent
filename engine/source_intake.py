@@ -265,6 +265,7 @@ def days_taken(view: Any, source_id: str) -> int | None:
     run = intake_run(view, source_id)
     if run is None:
         return None
+    # The look-back date is a UTC day (`looked_back_to`), so the read is counted in UTC days too.
     read = datetime.fromisoformat(str(run.data["started_at"])).date()
     return (read - date.fromisoformat(str(run.data["looked_back_to"])[:10])).days
 

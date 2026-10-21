@@ -161,7 +161,7 @@ def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaIte
         except (TypeError, ValueError):
             continue
         all_day = not isinstance(start, datetime)
-        first, last = _local_day(start, here), _local_day(end, here)
+        first, last = local_day(start, here), local_day(end, here)
         on = [d for d in days if first <= d <= last]
         if not on:
             continue
@@ -206,7 +206,8 @@ def _open_on(view: Any, entry: Any, today: date, here: ZoneInfo) -> int:
     return counted
 
 
-def _local_day(value: date | datetime, here: ZoneInfo) -> date:
+def local_day(value: date | datetime, here: ZoneInfo) -> date:
+    """The person's own day for a moment (a stored time is UTC): the day it falls on where they are."""
     if isinstance(value, datetime):
         return (value if value.tzinfo else value.replace(tzinfo=here)).astimezone(here).date()
     return value

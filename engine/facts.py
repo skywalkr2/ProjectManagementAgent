@@ -31,13 +31,15 @@ def check_replaces(tx: Any, fact_id: str | None) -> None:
         raise StoreError(f"{fact_id} was already replaced by {newer}; replace that one instead")
 
 
-def received_on(tx: Any, request_id: str | None, source_id: str | None) -> date | None:
+def received_on(tx: Any, request_id: str | None, source_id: str | None, here: Any) -> date | None:
     """The day an input was received: its source's received time, else when the request was made; None when neither
     is known."""
+    from engine.today import local_day
+
     source = tx.get("source", source_id) if source_id else None
     request = tx.get("request", request_id) if request_id else None
     for stored, field in ((source, "received_at"), (request, "created_at")):
         value = stored.data.get(field) if stored is not None else None
         if value:
-            return datetime.fromisoformat(str(value)).date()
+            return local_day(datetime.fromisoformat(str(value)), here)
     return None
