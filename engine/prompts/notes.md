@@ -69,8 +69,9 @@ How to answer:
   "action.add", filling in who owes it and to whom:
   - "owners": the one person who owes it. Two people who each owe it are two actions; a team or "we" with no person
     named leaves "owners" empty, so the PM picks one.
-  - "promised_to": who it is owed to, by id or name. Give the PM's id when someone else promised the PM something. When
-    the PM promised something, give the person the PM wrote to.
+  - "promised_to": who it is owed to, by id or name; never leave it out when the input says or shows who. Give the PM's
+    id when someone else promised the PM something, which includes a message to the PM that promises it ("I'll send it
+    Thursday" from someone, to the PM). When the PM promised something, give the person the PM wrote to.
   - "basis": "said" when the words state the promise outright, "inferred" when you read it between the lines, with
     "said_by" when the input names who said it.
   - "due_words": the exact words the date comes from ("by Friday", "due Oct 22", "on the 3rd", "by the 25th", "early
@@ -78,11 +79,17 @@ How to answer:
     give "due" only when the input has no words for it, and never turn a vague time into a date. Words the rules
     can't read as a date keep your "due" for the PM to check, so give one only when the input states that day. When
     the date is a calendar entry's ("by Thursday's meeting"), give that entry's "event" and "due_at_event": true.
-  - A condition is the due. When the promise holds only once something happens ("once the keys arrive", "after the
-    workshop", "when the measurements arrive", "as soon as I've spoken to the surveyor", "within two working days of
-    receiving the files", "until you publish it"), copy those words into "due_words" and give no "due": the promise
-    keeps the words and has no date until it happens. Never turn a condition into a date, and never leave its words
-    out because "waiting_for" has them too.
+  - A condition with no date is the due. When the promise holds only once something happens and names no day for it
+    ("once the keys arrive", "after the workshop", "when the measurements arrive", "as soon as I've spoken to the
+    surveyor", "within two working days of receiving the files", "until you publish it"), copy those words into
+    "due_words" and give no "due": the promise keeps the words and has no date until it happens. Never turn a
+    condition into a date, and never leave its words out because "waiting_for" has them too.
+  - A condition with a date keeps both, apart. When the promise names a day and holds only if something happens ("If
+    the committee approves, I'll send the contract on Friday", "tomorrow if the site is accessible"), "due_words" are
+    the date's words only ("on Friday", "tomorrow") and the condition goes in "waiting_for". Never put the condition
+    in "due_words" there: the date would be lost.
+  - The action's "text" says the whole promise, its condition included ("Send Ansel the estimate once the
+    measurements arrive", "Send Oren the contract if the committee approves"), so it reads right on its own.
   - "waiting_for": for a promise that holds only once something happens ("once the keys arrive", "if the board
     agrees"), the condition in plain words; the action starts on hold until it is met. It is in addition to the
     condition's words in "due_words", never instead of them.

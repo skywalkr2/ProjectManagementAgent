@@ -20,8 +20,9 @@ Practice for reading notes, minutes and messages (core playbook):
   - A promise between two other people, seen in a forward, stays between them: keep who said it and who it was said to.
 - Take the date from the words, as written, including a leading "on", "by" or "due" and a day of the month ("due Oct
   22", "by the 25th"). "Early next week" or "toward the end of the month" is not a day; "once the keys arrive" or "after
-  the workshop" is a condition: its words are the due, and the promise has no date until the condition is met. Never
-  put a date on a condition, and never leave its words out.
+  the workshop" is a condition: with no day named, its words are the due, and the promise has no date until the
+  condition is met. Never put a date on a condition, and never leave its words out. A promise with both ("Friday, if
+  the committee approves") keeps the day as its due and the condition beside it, and its text says the condition.
 - Count only what is firmly promised. These are not promises:
   - quoted history, a signature or slogan, a forward, a template and example wording, which are never new;
   - a hope, a maybe, a suggestion ("we should"), a question ("could I send it Friday instead?"), an offer ("I can send

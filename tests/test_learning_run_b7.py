@@ -115,8 +115,18 @@ def test_the_prompt_and_the_playbook_say_a_reply_that_does_not_answer_is_news():
 def test_the_prompt_and_the_playbook_say_a_condition_is_the_due_words_with_no_date():
     prompt = resources.files("engine.prompts").joinpath("notes.md").read_text(encoding="utf-8")
     playbook = resources.files("engine.playbook.guidance").joinpath("notes.md").read_text(encoding="utf-8")
-    assert "A condition is the due" in prompt and '"due_words"' in prompt and 'no "due"' in prompt
-    assert "is a condition: its words are the due" in playbook
+    assert "A condition with no date is the due" in prompt and '"due_words"' in prompt and 'no "due"' in prompt
+    assert "is a condition: with no day named, its words are the due" in playbook
+
+
+def test_a_condition_with_a_date_keeps_the_date_as_its_due_and_the_condition_in_its_text():
+    """A promise with both a day and a condition keeps the day's words as its due words and the condition in its text
+    and its "waiting_for", so the date isn't lost (the owner's re-run, B-10: the condition replaced the date)."""
+    prompt = resources.files("engine.prompts").joinpath("notes.md").read_text(encoding="utf-8")
+    playbook = resources.files("engine.playbook.guidance").joinpath("notes.md").read_text(encoding="utf-8")
+    assert "A condition with a date keeps both, apart" in prompt and 'the condition goes in "waiting_for"' in prompt
+    assert 'The action\'s "text" says the whole promise, its condition included' in prompt
+    assert "keeps the day as its due and the condition beside it" in playbook
 
 
 # ---- a moved promise from a quoted thread waits for the person's Keep --------------------------------------------
