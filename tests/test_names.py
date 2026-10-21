@@ -388,3 +388,19 @@ def test_a_first_name_set_on_the_record_resolves_in_context_like_the_first_word(
     named = People.from_records(records, PM, context=[sam["id"]])
     assert named.resolve(goes_by).person == sam["id"]
     assert People.from_records(records, PM).resolve(goes_by).status != "ok", "out of context it is held"
+
+
+@pytest.mark.parametrize("written", ["{address}", "{name} <{address}>", "{name} ({address})", "{first} ({address})"])
+def test_a_person_written_with_their_address_is_the_person_the_address_belongs_to(written):
+    """An answer may name someone by the address they write from; the address says who, even when the first name
+    alone is shared."""
+    one = next(p for p in shared_first_name() if any("@" in v for v in p.get("how_to_reach", {}).values()))
+    address = next(v for v in one.get("how_to_reach", {}).values() if "@" in v)
+    text = written.format(address=address, name=one["full_name"], first=first(one))
+    assert people().resolve(text).person == one["id"]
+
+
+def test_an_address_nobody_has_leaves_the_name_beside_it_to_decide():
+    p = person("Editor")
+    assert people().resolve(f"{p['full_name']} (someone@example.com)").person == p["id"]
+    assert people().resolve("someone@example.com").status == "unknown"

@@ -30,6 +30,7 @@ class Resolved:
 
 
 _ID_WORDS = re.compile(r"[A-Z]+-\d+")
+_ADDRESS = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _HEADER = re.compile(r"^([A-Za-z][A-Za-z-]*):[ \t]*(.*)$")
 _PEOPLE_HEADERS = ("from", "to", "cc")
 
@@ -173,6 +174,13 @@ class People:
         text = " ".join(name.split())
         if text in self.records:
             return Resolved("ok", text)
+        if address := _ADDRESS.search(text):
+            # An address says who on its own; one nobody has leaves the name written beside it to decide.
+            found = self.match_entries([address.group(0)])
+            if len(found) == 1:
+                return Resolved("ok", next(iter(found)))
+            rest = " ".join(re.sub(r"[<>()]", " ", _ADDRESS.sub(" ", text)).split())
+            return self.resolve(rest) if rest else Resolved("unknown")
         exact = [pid for pid, d in self.records.items() if d["full_name"].lower() == text.lower()]
         if len(exact) == 1:
             return Resolved("ok", exact[0])

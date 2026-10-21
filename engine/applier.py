@@ -1705,6 +1705,10 @@ def _as_written(person: str | None, ctx: Context) -> tuple[str, tuple[str, ...]]
     text = normalize(f"{ctx.inputs.raw_input} {ctx.inputs.note}").lower()
     if data["full_name"].lower() in text:
         return None
+    # A first name inside someone else's full name names that other person, not this one.
+    for other in ctx.people.records.values():
+        if other["full_name"].strip():
+            text = text.replace(other["full_name"].lower(), " ")
     words = data["full_name"].split()
     for form in [*data.get("aliases", []), *words[:1]]:
         if not re.search(rf"(?<!\w){re.escape(form.lower())}(?!\w)", text):
