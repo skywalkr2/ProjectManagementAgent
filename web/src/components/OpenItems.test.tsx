@@ -296,7 +296,7 @@ test("a question can be answered, reworded, asked of someone else or dropped fro
   await user.click(await screen.findByRole("button", { name: /Questions/ }));
   const [waiting] = within(await screen.findByRole("list", { name: "Open questions" })).getAllByRole("listitem");
   await user.click(within(waiting).getByRole("button", { name: /More actions for Is the acknowledgments page final/ }));
-  const names = (await screen.findAllByRole("menuitem")).map((m) => m.textContent);
+  const names = (await screen.findAllByRole("menuitem")).map((m) => m.querySelector('[slot="label"]')?.textContent ?? m.textContent);
   expect(names).toEqual(expect.arrayContaining(["Reword", "Ask someone else", "Drop"]));
 });
 

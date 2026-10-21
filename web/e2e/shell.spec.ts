@@ -367,7 +367,7 @@ test.describe("screen use and the shell", () => {
       return [header, brand, nav].map((b) => [b.x, b.y, b.width, b.height]);
     };
     const first = await frame();
-    for (const label of [/^Stages/, /^People/, /^Settings/, /^Sources/]) {
+    for (const label of [/^Stages/, /^People/, /^Settings/, /^Connections/]) {
       await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: label }).click();
       await page.waitForTimeout(100);
       expect(await frame()).toEqual(first);
@@ -534,7 +534,7 @@ test.describe("screen use and the shell", () => {
       "#records/people": "People",
       "#records/files": "Files",
       "#records/knowledge": "Knowledge",
-      "#sources": "Sources",
+      "#sources": "Connections",
       "#addons": "Add-ons",
       "#settings": "Settings",
     };
@@ -559,8 +559,8 @@ test.describe("screen use and the shell", () => {
     await signIn(page);
     await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Stages/ }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Stages" })).toBeFocused();
-    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Sources/ }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Sources" })).toBeFocused();
+    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Connections/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeFocused();
   });
 
   // The cursor starts where you type (design 7.0): in a screen's first main field, or on its heading when it has none.
@@ -580,7 +580,7 @@ test.describe("screen use and the shell", () => {
     { name: "Files", hash: "records/files" },
     { name: "Knowledge", hash: "records/knowledge" },
     { name: "Rules review", hash: "records/rules-review" },
-    { name: "Sources", hash: "sources" },
+    { name: "Connections", hash: "sources" },
     { name: "Add-ons", hash: "addons" },
     { name: "Settings", hash: "settings", field: (page) => page.getByRole("textbox", { name: "Workspace name" }) },
     { name: "What each account can do", hash: "settings/ai-compare" },

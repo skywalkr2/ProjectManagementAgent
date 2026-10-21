@@ -168,14 +168,14 @@ test.describe.serial("journeys", () => {
     await page.goto(`?token=${info.token}`);
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
 
-    // Sources: add a folder, pointing at the folder the test put the file in.
-    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Sources/ }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Sources" })).toBeVisible();
-    await page.getByRole("button", { name: /Add a source/ }).first().click();
+    // Connections: add a folder, pointing at the folder the test put the file in.
+    await page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Connections/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeVisible();
+    await page.getByRole("button", { name: /Add a connection/ }).first().click();
     await page.getByLabel("A folder", { exact: true }).check();
     await page.getByLabel(/^The folder/).fill(info.source_folder);
     await visit(page);
-    await page.getByRole("button", { name: "Add source", exact: true }).click();
+    await page.getByRole("button", { name: "Add connection", exact: true }).click();
     await expect(page.getByRole("listitem", { name: "A folder" })).toBeVisible();
     await visit(page);
 

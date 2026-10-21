@@ -33,14 +33,14 @@ afterEach(() => vi.useRealTimers());
 
 test("the line says how many sources were read and when the latest read was", async () => {
   open(threeRead);
-  const line = await screen.findByText(`Read 3 sources, last at ${time(LATEST)}`);
+  const line = await screen.findByText(`Checked 3 connections, last at ${time(LATEST)}`);
   expect(line.closest("[data-coverage-line]")).not.toBeNull();
   expect(document.querySelector('[data-coverage="unread"]')).toBeNull();
 });
 
 test("a source that couldn't be read is named with since when, apart from what was read, in its own words and style", async () => {
   open([...threeRead.slice(0, 2), failing("m", "Work mail")]);
-  const read = await screen.findByText(`Read 2 sources, last at ${time(new Date(2026, 9, 19, 7, 40))}`);
+  const read = await screen.findByText(`Checked 2 connections, last at ${time(new Date(2026, 9, 19, 7, 40))}`);
   const unread = screen.getByText(`Work mail couldn't be read since yesterday ${time(YESTERDAY_EVENING)}`);
   // One line, two kinds of thing: marked apart (the style follows the mark) and worded apart, so colour is never the only difference.
   expect(read.closest("[data-coverage-line]")).toBe(unread.closest("[data-coverage-line]"));
@@ -61,14 +61,14 @@ test("with no source on, or none known yet, there is no line", async () => {
 
 test("an empty Today says nothing needs you together with what was read", async () => {
   open(threeRead, <NothingNeedsYou />);
-  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /^Nothing needs you · Read 3 sources, last at/.test(el.textContent ?? ""));
-  expect(empty).toHaveTextContent(`Nothing needs you · Read 3 sources, last at ${time(LATEST)}`);
+  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /^Nothing needs you · Checked 3 connections, last at/.test(el.textContent ?? ""));
+  expect(empty).toHaveTextContent(`Nothing needs you · Checked 3 connections, last at ${time(LATEST)}`);
 });
 
 test("an empty Today never says nothing needs you alone when a source couldn't be read", async () => {
   open([readAt("a", LATEST), failing("m", "Work mail")], <NothingNeedsYou />);
   const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /couldn't be read/.test(el.textContent ?? ""));
-  expect(empty).toHaveTextContent(`Nothing found that needs you · Read 1 source, last at ${time(LATEST)} · Work mail couldn't be read since yesterday`);
+  expect(empty).toHaveTextContent(`Nothing found that needs you · Checked 1 connection, last at ${time(LATEST)} · Work mail couldn't be read since yesterday`);
   expect(empty.textContent).not.toMatch(/^Nothing needs you/);
   expect(screen.queryByText("Nothing needs you right now.")).toBeNull();
 });

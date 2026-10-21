@@ -224,9 +224,9 @@ const watched = (id: string, over: Partial<S["WatchSourceView"]> = {}): S["Watch
 test("the heading says what was read, and an empty Today says nothing needs you together with it", async () => {
   const read = new Date().toISOString();
   show([], { "GET watch": () => [watched("a", { read_at: read, last: { outcome: "ok", started_at: read, new: 0, changed: 0, removed: 0 } })] });
-  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /Nothing needs you · Read 1 source, last at /.test(el.textContent ?? ""));
+  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /Nothing needs you · Checked 1 connection, last at /.test(el.textContent ?? ""));
   expect(empty).toBeInTheDocument();
-  expect(screen.getAllByText(/Read 1 source, last at /).length).toBeGreaterThanOrEqual(2); // the heading's line and the empty state's
+  expect(screen.getAllByText(/Checked 1 connection, last at /).length).toBeGreaterThanOrEqual(2); // the heading's line and the empty state's
   expect(screen.getByText(/Nothing needs you$/)).toBeInTheDocument();
 });
 

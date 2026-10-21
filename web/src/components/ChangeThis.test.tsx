@@ -39,7 +39,7 @@ function followups(questions: S["FollowupQuestion"][]): S["FollowupSection"][] {
 
 const menuOf = async (user: ReturnType<typeof userEvent.setup>, name: RegExp | string) => {
   await user.click(await screen.findByRole("button", { name: typeof name === "string" ? `More actions for ${name}` : name }));
-  return screen.getAllByRole("menuitem").map((m) => m.textContent);
+  return screen.getAllByRole("menuitem").map((m) => m.querySelector('[slot="label"]')?.textContent ?? m.textContent);
 };
 
 test("Change this on an action takes a note, posts it, and says the assistant will look at it", async () => {
@@ -112,6 +112,15 @@ test("a question that isn't sent yet offers reword, ask someone else, drop, alre
   fakeApi(openQuestion());
   renderApp(<RecordPage kind="question" id="Q-5" onBack={() => undefined} />);
   expect(await menuOf(user, "Which cover?")).toEqual(["Reword", "Ask someone else", "Drop", "Mark as already sent", "Change this"]);
+});
+
+test("Drop in the menu says in a second line that it is kept in history", async () => {
+  const user = userEvent.setup();
+  fakeApi(openQuestion());
+  renderApp(<RecordPage kind="question" id="Q-5" onBack={() => undefined} />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Which cover?" }));
+  const drop = screen.getByRole("menuitem", { name: "Drop" });
+  expect(within(drop).getByText("No longer needed, kept in history")).toBeInTheDocument();
 });
 
 test("a question already sent has no Mark as already sent", async () => {

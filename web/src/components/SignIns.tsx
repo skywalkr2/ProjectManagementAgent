@@ -423,8 +423,12 @@ function OwnAppForm(props: {
           value={clientId}
           autoComplete="off"
           spellCheck={false}
+          aria-describedby={`${base}-client-id-hint`}
           onChange={(e) => setClientId(e.target.value)}
         />
+        <p className="hint" id={`${base}-client-id-hint`}>
+          {t("sign_in.own.client_id_hint")}
+        </p>
       </div>
       {item.needs_secret && (
         <div className="field">

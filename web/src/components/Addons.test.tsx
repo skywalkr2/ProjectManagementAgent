@@ -244,6 +244,19 @@ test("How to get it shows the install text to copy and the demo line, and Copy p
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
+test("the demo command is under For developers and shows only once that disclosure is opened", async () => {
+  const { user } = open(view({ available: [pack("tool", { demo: true, install: "get-pack tool --yes" })] }));
+  await user.click(within(await row("Name of tool")).getByRole("button", { name: "How to get Name of tool" }));
+  const dialog = await screen.findByRole("dialog", { name: "How to get Name of tool" });
+  // The install steps are on the ordinary path; the developer's command is not.
+  expect(within(dialog).getByText("get-pack tool --yes")).toBeVisible();
+  expect(within(dialog).getByText("cockpit demo --plugin tool")).not.toBeVisible();
+  expect(within(dialog).queryByRole("button", { name: "Copy the demo command" })).not.toBeVisible();
+  await user.click(within(dialog).getByText("For developers"));
+  expect(within(dialog).getByText("cockpit demo --plugin tool")).toBeVisible();
+  expect(within(dialog).getByRole("button", { name: "Copy the demo command" })).toBeVisible();
+});
+
 test("copying that the browser blocks says so", async () => {
   const { user } = open(view({ available: [pack("tool")] }));
   await user.click(within(await row("Name of tool")).getByRole("button", { name: "How to get Name of tool" }));
@@ -933,7 +946,7 @@ describe("a read token for a private release", () => {
     const tool = await row("Name of tool");
     await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
     await user.click(await within(tool).findByRole("button", { name: "Add a download access key for Name of tool" }));
-    expect(within(tool).getByText(/private files at files\.example\.com/)).toHaveTextContent("Enter a read-only access key for the add-on's private files at files.example.com. It is sent only to files.example.com.");
+    expect(within(tool).getByText(/private files at files\.example\.com/)).toHaveTextContent("Enter a read-only access key for the add-on's private files at files.example.com (some sites call it a token). It is sent only to files.example.com.");
     const box = within(tool).getByLabelText("Download access key");
     expect(box).toHaveAttribute("type", "password");
     expect(box).toHaveFocus();

@@ -101,7 +101,7 @@ test("a refusal, such as the other computer being open, is shown in the server's
 
 test("a workspace open on another computer shows who, since when and the wait, and offers no choice", async () => {
   show(view({ state: "elsewhere", here: null, folder: null, computer: "Laptop", last_seen: "2026-10-12T16:10:00-05:00", minutes_left: 6 }));
-  expect(await screen.findByText(/Laptop opened this workspace, so this copy stopped writing to the synced folder/)).toBeInTheDocument();
+  expect(await screen.findByText(/Laptop opened your work, so this computer stopped saving to the synced folder/)).toBeInTheDocument();
   expect(screen.getByText(/Last connected \w{3}, \w{3} 12, 4:10\s?PM\./)).toBeInTheDocument();
   expect(screen.getByText("If it is off or asleep, the workspace can be opened here in about 6 minutes.")).toBeInTheDocument();
   expect(screen.getByText(/You may need to choose one to keep/)).toBeInTheDocument();

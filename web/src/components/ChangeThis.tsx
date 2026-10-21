@@ -62,7 +62,7 @@ export function useQuestionMenu(
   const entries: MenuAction[] = [
     { id: "reword", label: t("question.reword"), run: () => setMode("reword") },
     { id: "reroute", label: t("question.reroute"), run: () => setMode("reroute") },
-    { id: "drop", label: t("question.drop"), run: () => setMode("drop") },
+    { id: "drop", label: t("question.drop"), note: t("question.drop_note"), run: () => setMode("drop") },
   ];
   if (options.canMarkSent) {
     entries.push({

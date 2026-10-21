@@ -84,7 +84,7 @@ test("Discard asks why, which is optional, and keeps the proposal as discarded",
   const user = userEvent.setup();
   const calls = show([learnedLine()]);
   await user.click(await screen.findByRole("button", { name: "Discard" }));
-  const reason = await screen.findByRole("textbox", { name: "Why was it wrong? (optional)" });
+  const reason = await screen.findByRole("textbox", { name: "What should change? (optional)" });
   expect(reason).toHaveFocus();
   await user.type(reason, "It is about a different book.");
   await user.click(within(reason.closest("form")!).getByRole("button", { name: "Discard" }));
@@ -98,7 +98,7 @@ test("a discard with no reason sends none", async () => {
   const user = userEvent.setup();
   const calls = show([learnedLine()]);
   await user.click(await screen.findByRole("button", { name: "Discard" }));
-  const form = (await screen.findByRole("textbox", { name: "Why was it wrong? (optional)" })).closest("form")!;
+  const form = (await screen.findByRole("textbox", { name: "What should change? (optional)" })).closest("form")!;
   await user.click(within(form).getByRole("button", { name: "Discard" }));
   await waitFor(() => expect(posted(calls, "POST knowledge/LES-1/discard")).toEqual({ read_version: 3, reason: null }));
 });

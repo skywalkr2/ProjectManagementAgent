@@ -375,7 +375,7 @@ test("with a second source the rows say which one they came from", async () => {
   expect(within(col).getByText("Work calendar")).toBeInTheDocument();
 });
 
-test("empty agenda, list and mail each say so, and the buttons go to Sources", async () => {
+test("empty agenda, list and mail each say so, and the buttons go to Connections", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { onView } = open({
     "GET today/agenda": () => [],
@@ -415,7 +415,7 @@ const EMPTY: Routes = {
   "GET today/arrived": () => ({ items: [], left_out: 0 }),
 };
 
-test("with no source set up, the empty cards offer Connect, which opens Sources on the add form", async () => {
+test("with no source set up, the empty cards offer Connect, which opens Connections on the add form", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const onAddSource = vi.fn();
   const { onView } = open(EMPTY, vi.fn(), onAddSource);
@@ -530,7 +530,7 @@ test("Check now says when a source couldn't be read or was already being read", 
   });
   await user.click(await within(await column("Came in")).findByRole("button", { name: "Check now" }));
   expect(
-    await screen.findByText("Nothing new. 1 source couldn't be read: see Sources. 1 source was already being read."),
+    await screen.findByText("Nothing new. Couldn't read 1 connection. See Connections. Already reading 1 connection."),
   ).toBeInTheDocument();
 });
 

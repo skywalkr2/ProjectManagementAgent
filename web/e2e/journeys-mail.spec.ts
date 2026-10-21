@@ -75,7 +75,7 @@ test.describe.serial("journey: mail", () => {
     const row = main.locator('[data-service="journey-mail"]');
     await expect(row).toHaveAttribute("data-state", "ready");
     await expect(row).toContainText("Reads your mail and calendar");
-    await expect(main.getByText(/Restart to connect/)).toHaveCount(0);
+    await expect(main.getByText(/Restart to finish connecting/)).toHaveCount(0);
     await expect(main.locator("[data-reading]")).toHaveCount(0);
     // The step says, in one line, that social updates, promotions and mailing lists are set aside by themselves.
     await expect(
@@ -181,9 +181,9 @@ test.describe.serial("journey: mail", () => {
     seen = await service();
     expect(seen).toMatchObject({ mail_reads: 1, calendar_reads: 1, unauthorized: 0 });
 
-    // Sources says what is read without my having chosen it, and who is signed in.
-    await openView(page, "Sources");
-    await expect(page.getByRole("heading", { level: 1, name: "Sources" })).toBeVisible();
+    // Connections says what is read without my having chosen it, and who is signed in.
+    await openView(page, "Connections");
+    await expect(page.getByRole("heading", { level: 1, name: "Connections" })).toBeVisible();
     await expect(page.getByText(/Signed in as .+@example\.com/)).toBeVisible();
     await expect(page.getByText("Your inbox").first()).toBeVisible();
     await expect(page.getByText("Your calendar").first()).toBeVisible();
@@ -250,7 +250,7 @@ test.describe.serial("journey: mail", () => {
 
     // Confirming the social update teaches the sorting about its sender and takes it out of the folder.
     await socialRow.getByRole("button", { name: `More actions for ${social}` }).click();
-    await page.getByRole("menuitem", { name: "Confirm" }).click();
+    await page.getByRole("menuitem", { name: "Keep it set aside" }).click();
     await expect(
       page.getByText("From now on, mail from updates@network.example.com is set aside as sales mail."),
     ).toBeVisible();
@@ -268,7 +268,7 @@ test.describe.serial("journey: mail", () => {
     await cameIn.getByRole("button", { name: "Check now" }).click();
     await expect(cameIn.getByRole("button", { name: "1 set aside" })).toBeVisible({ timeout: 30_000 });
     await expect(cameIn.getByText(later.subject)).toHaveCount(0);
-    await openView(page, "Sources");
+    await openView(page, "Connections");
     await expect(page.locator("#set-aside").locator("li.line", { hasText: later.subject })).toContainText(
       `Set aside because: it is from ${later.sender}`,
     );

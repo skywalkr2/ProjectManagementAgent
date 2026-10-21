@@ -60,7 +60,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Files",
     "Knowledge",
     "Contacts",
-    "Sources",
+    "Connections",
     "Add-ons",
     "Settings",
   ]);

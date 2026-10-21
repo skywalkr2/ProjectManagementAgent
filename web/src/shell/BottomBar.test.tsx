@@ -52,13 +52,13 @@ test("Work opens a sheet with its views, as links", async () => {
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
-test("More lists Records, Sources, Add-ons and Settings, the help items, and this device's theme and density", async () => {
+test("More lists Records, Connections, Add-ons and Settings, the help items, and this device's theme and density", async () => {
   const user = userEvent.setup();
   const onHelp = vi.fn();
   show({ onHelp });
   await user.click(screen.getByRole("button", { name: "More" }));
   const sheet = await screen.findByRole("dialog", { name: "More" });
-  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Knowledge", "Sources", "Add-ons", "Settings"]);
+  expect(within(sheet).getAllByRole("link").map((a) => a.textContent)).toEqual(["Projects", "People", "Files", "Knowledge", "Connections", "Add-ons", "Settings"]);
   expect(within(sheet).getByRole("button", { name: "Show keyboard shortcuts" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Setup guide" })).toBeInTheDocument();
   expect(within(sheet).getByRole("button", { name: "Write feedback" })).toBeInTheDocument();

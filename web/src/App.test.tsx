@@ -74,22 +74,22 @@ test("Connect on Today's empty card opens Sources with the add form open, and on
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Connect a calendar" }));
-  expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
-  expect(await screen.findByRole("form", { name: "Add a source" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
+  expect(await screen.findByRole("form", { name: "Add a connection" })).toBeInTheDocument();
   // Going away and coming back by the views doesn't open it again.
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Sources" }));
-  expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
-  expect(screen.queryByRole("form", { name: "Add a source" })).toBeNull();
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Connections" }));
+  expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
+  expect(screen.queryByRole("form", { name: "Add a connection" })).toBeNull();
 });
 
 test("the workspace name goes to Today from any screen", async () => {
   fakeApi(today);
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Sources" }));
-  expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Connections" }));
+  expect(await screen.findByRole("heading", { name: "Connections" })).toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Go to Today · Workspace" }));
   expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
 });

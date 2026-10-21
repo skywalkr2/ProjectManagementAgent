@@ -17,6 +17,35 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   `tests/test_evaluate_harness.py` now passes a lead-word variant and fails other words; the new golden case
   `shared-first-name-named-in-full`. The design's `due_words` stays the exact words the date came from.
 
+## 2026-10-21: The area for what the assistant reads is called Connections; Stages, Drop and the model's name stay (wording review verdict)
+
+**Decision:** The outside plain-language review of the wording sheet (`docs/project/wording-review-2026-10.md`) is applied
+as the UI designer's verdict (`reviews/ui-ux-2026-10/rereview-9e9c3f0/wording-verdict.md`) marked it.
+- **Accepted: Sources to Connections** for the area, its entry, heading, buttons and counts (`nav.sources`, `sources.*`,
+  `today.arrived.*`, the Today coverage line, the sign-in return lines). Reason: "Connections" names what a person does
+  (connect a mailbox, a calendar or a folder). "Source" stays where it means the original text something came from ("Show
+  source", "Where it came from"); `op.source` becomes "Saved the original text", because that op saves an input's text.
+- **Accepted: Go to Start**, already done on its buttons. Reason: it matches the setup guide's "nothing is spent until you
+  press Start". The estimate stays in the line's own words rather than on the button.
+- **Refused: Stages to Steps.** Reason: "Steps" already means the setup guide's steps, an AI key's numbered steps and a
+  template's steps, so "Move to step Captured" would read as a setup step; "stage" is an everyday word.
+- **Refused: Drop to Remove.** Reason: "drop" means no longer needed, kept in history, while "Remove" already means delete;
+  one word would make a reversible act sound permanent. The menu item gets a second line, "No longer needed, kept in
+  history".
+- Also refused: replacing "model" with "AI choice", the "just this time" family and the Today waiting lines; the demo command
+  stays under "For developers".
+
+**Decided by:** the UI designer, in the re-review at `9e9c3f0`; applied by a subagent, reviewed by the main session.
+
+**Why:** One word for one thing on screen, without making two things share a word. The review's "current words" were out
+of date in places; each row was checked against the sheet, and rows already rewritten another way were left.
+
+**Impact:** Design 7.1 and 7.15 (and the mentions in 4.x, 6.x and 7.x of the Sources screen); `web/src/wording/en.json`;
+the sentences the server writes about an unreadable source (`engine/defaults/source_advice.yaml`, `engine/watch.py`);
+the unit, browser and Python tests that quote the changed words. No change to routes, config keys or scope. Left for a
+later pass: the settings descriptions in `engine/config/schema.py` and the credential places ("the source Inbox") that
+still say "source".
+
 ## 2026-10-21: A program's example models are offered by role, never by name (re-review of B-9, R-b)
 
 **Decision:** The catalog (`catalog/ai-endpoints.yaml`) gives each example model of a command-line program a role,

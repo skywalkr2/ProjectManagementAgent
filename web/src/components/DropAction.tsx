@@ -19,7 +19,7 @@ export function useDropAction(action: { id: string }, onClosed?: () => void): { 
     setReason("");
     onClosed?.();
   };
-  const entry: MenuAction = { id: "drop-action", label: t("action.drop"), run: () => setAsking(true) };
+  const entry: MenuAction = { id: "drop-action", label: t("action.drop"), note: t("action.drop_note"), run: () => setAsking(true) };
   const form = asking ? (
     <form
       className="answer-form"

@@ -610,19 +610,19 @@ const unreadSource = (over: Partial<S["QueueLineView"]> = {}) =>
     ...over,
   });
 
-test("a source that couldn't be read for too long is a line that starts with what to do, says since when and opens Sources", async () => {
+test("a source that couldn't be read for too long is a line that starts with what to do, says since when and opens Connections", async () => {
   const user = userEvent.setup();
   const { onOpenSources } = show([unreadSource()]);
-  const row = await screen.findByRole("region", { name: "Source not read" });
-  expect(row).toHaveTextContent(/^Source not readSign in to Work mail again: not read since yesterday/);
+  const row = await screen.findByRole("region", { name: "Connection not read" });
+  expect(row).toHaveTextContent(/^Connection not readSign in to Work mail again: not read since yesterday/);
   expect(row).toHaveTextContent("The sign-in was withdrawn. Sign in to it again, then it is read on its next turn.");
-  await user.click(within(row).getByRole("button", { name: "Open Sources" }));
+  await user.click(within(row).getByRole("button", { name: "Open Connections" }));
   expect(onOpenSources).toHaveBeenCalledTimes(1);
 });
 
 test("a source line for a kind of failure with no verb of its own still starts with one", async () => {
   show([unreadSource({ problem_kind: "outage" })]);
-  expect(await screen.findByRole("region", { name: "Source not read" })).toHaveTextContent(/Check Work mail: not read since/);
+  expect(await screen.findByRole("region", { name: "Connection not read" })).toHaveTextContent(/Check Work mail: not read since/);
 });
 
 const workAccess = (over: Partial<S["QueueLineView"]> = {}) => line("work_access", { key: "work_access:second", group: "decide", account: "second", ...over });

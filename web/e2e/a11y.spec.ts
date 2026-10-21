@@ -39,7 +39,7 @@ const SCREENS = [
   { name: "People", hash: "records/people" },
   { name: "Files", hash: "records/files" },
   { name: "Knowledge", hash: "records/knowledge" },
-  { name: "Sources", hash: "sources" },
+  { name: "Connections", hash: "sources" },
   { name: "Add-ons", hash: "addons" },
   { name: "Settings", hash: "settings" },
   { name: "Settings, Today", hash: "settings/today" },

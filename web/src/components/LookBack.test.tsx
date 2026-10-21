@@ -64,7 +64,7 @@ test("a mail source taken in quietly says the day before which it was not looked
 
 test("a source with no look-back date says nothing about it and offers no way to look further back", async () => {
   open([mail({ looked_back_to: null, look_back_choices: [] })]);
-  await screen.findByText(/Read 1 source/);
+  await screen.findByText(/Checked 1 connection/);
   expect(screen.queryByText(/Not looked at before/)).toBeNull();
   expect(screen.queryByRole("button", { name: /Look further back/ })).toBeNull();
 });

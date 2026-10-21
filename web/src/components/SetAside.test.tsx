@@ -138,7 +138,7 @@ test("Confirm in a row's menu writes the sender rule, reads it back and Undo bri
   });
   const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
   await user.click(within(sales).getByRole("button", { name: "More actions for Offer a" }));
-  await user.click(await screen.findByRole("menuitem", { name: "Confirm" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Keep it set aside" }));
   await waitFor(() => expect(body(calls, "POST set-aside/confirm")).toEqual({ fingerprint: "fp-1", ids: ["a"] }));
   expect(await screen.findByText(`From now on, mail from ${addr("a")} is set aside as sales mail.`)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Undo" }));
@@ -162,7 +162,7 @@ test("Confirm all confirms what the section lists in one save, and offers a rule
     "POST watch/sorting": () => SAVED,
   });
   const sales = await screen.findByRole("region", { name: /Sales and promotions/ });
-  await user.click(within(sales).getByRole("button", { name: "Confirm all in Sales and promotions" }));
+  await user.click(within(sales).getByRole("button", { name: "Keep them all set aside in Sales and promotions" }));
   await waitFor(() => expect(body(calls, "POST set-aside/confirm")).toEqual({ fingerprint: "fp-1", ids: ["a", "b"] }));
   expect(calls.filter((c) => c.route === "POST set-aside/confirm")).toHaveLength(1);
   expect(await screen.findByText("From now on, mail from 2 senders is set aside as sales mail.")).toBeInTheDocument();

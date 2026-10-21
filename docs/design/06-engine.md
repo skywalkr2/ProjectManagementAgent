@@ -47,7 +47,7 @@ service's retry-after answer and never loops).
 as a calendar file, which most services offer as a private address; events in the configured window are followed, so a moved
 meeting, a new invitation or a cancellation is handed in) and `mailbox` (a mail folder over IMAP with TLS, using an app
 password kept as a secret reference; messages are fetched without marking anything as read), and a `fake` one for tests
-(marked test-only: Add a source doesn't offer it, and a source already set up with it still reads) (decisions, 2026-10-11, "Calendars and mail are read through open protocols in the core…"). Pasting and uploading are ways to
+(marked test-only: Add a connection doesn't offer it, and a source already set up with it still reads) (decisions, 2026-10-11, "Calendars and mail are read through open protocols in the core…"). Pasting and uploading are ways to
 hand something in (6.6), not connectors. Connectors for particular products and services (wikis, trackers, a named mail or
 calendar service that needs its own sign-in) are plugins (6.27).
 
@@ -171,7 +171,7 @@ mailbox neither floods the queue nor runs up cost on day one:
   anything else by when it changed.
 - `all`: everything there is is handed in as new.
 - **On request**, after a first read that only noted what was there, the person can hand in the recent items from the
-  Sources screen ("Look at the last day"). The core hands in the items already read, in the same window, that haven't been
+  Connections screen ("Look at the last day"). The core hands in the items already read, in the same window, that haven't been
   handed in, as if the source had been set to `recent`; triage rules apply as for any change.
 
 **Sources a sign-in starts** (6.27). Signing in to a service starts the sources its add-on declares (the inbox, the main
@@ -294,7 +294,7 @@ It is sorted in this order, first match wins:
 
 Sorting corrections tune sorting only. They never become content lessons.
 
-**On screen:** the folder is a section of Sources beside Auto-closed, one row per message (subject, sender, date, why it was
+**On screen:** the folder is a section of Connections beside Auto-closed, one row per message (subject, sender, date, why it was
 set aside), grouped into Personal and Sales and promotions. Today never lists set-aside mail; Came in shows a count ("6 set
 aside") that opens the folder and counts what the folder lists, so a confirmed message is no longer in it. Set-aside mail is kept like other sources and follows retention (5.2).
 
@@ -2882,7 +2882,7 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
     saw and approved it (confirmed the set-aside mail, marked a rule's close as seen, "Looks good" on the changeset,
     released the op from held). An undone close, or one the person took a closer look at, is no longer a close. Each says
     what, when, which rule or run, and why.
-  - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on the Sources screen under "Closed
+  - The list is `GET /api/silent-closes` (and `POST /api/silent-closes/seen`), shown on the Connections screen under "Closed
     without you seeing", below the Set aside folder and the rule closes. The measure, silent closes out of all closes in
     the quality window with the counts for each kind, is `closes.measure`, shown on the Quality screen (see Measures).
   - Tests: `tests/test_silent_closes.py::test_an_assistant_drop_applied_as_data_is_a_silent_close_and_is_listed_with_what_when_by_and_why`,

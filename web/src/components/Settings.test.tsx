@@ -108,7 +108,7 @@ test("the section list sits down the side, one link for each section that has so
   expect(within(nav).getAllByRole("link").map((a) => a.textContent)).toEqual([
     "You and the workspace",
     "AI accounts",
-    "Sources",
+    "Connections",
     "Backups and sync",
     "Appearance",
     "Lists",
@@ -117,7 +117,7 @@ test("the section list sits down the side, one link for each section that has so
   expect(within(nav).getByRole("link", { name: "You and the workspace" })).toHaveAttribute("aria-current", "page");
   expect(within(nav).getByRole("link", { name: "Quality" })).toHaveAttribute("href", expect.stringMatching(/#quality$/));
   expect(within(nav).getByRole("link", { name: "Backups and sync" })).toHaveAttribute("href", expect.stringMatching(/#settings\/backups$/));
-  expect(within(nav).getByRole("link", { name: "Sources" })).toHaveAttribute("href", expect.stringMatching(/#sources$/));
+  expect(within(nav).getByRole("link", { name: "Connections" })).toHaveAttribute("href", expect.stringMatching(/#sources$/));
 });
 
 test("choosing a section shows that section's settings and no others; the choice goes to the address when the screen asks", async () => {
@@ -986,7 +986,7 @@ test("Advanced topics have plain names", async () => {
   ]);
   renderApp(<Settings section="advanced" onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
   await screen.findByRole("button", { name: "What the assistant has learned" });
-  for (const name of ["How strict the checks are", "How mail and sources are read", "Wording of quoted speech"]) {
+  for (const name of ["How strict the checks are", "How mail and connections are read", "Wording of quoted speech"]) {
     expect(screen.getByRole("button", { name })).toBeInTheDocument();
   }
   expect(screen.queryByRole("button", { name: /Dispatch|tuning|Watch|reported speech/i })).toBeNull();

@@ -635,7 +635,7 @@ describe("each screen", () => {
     fakeApi(routes({}, CORE.map((id) => step(id)), { step: "people" }));
     const { onOpenPeople } = open();
     expect(await screenTitle()).toHaveTextContent("People");
-    expect(screen.getByText(/You can skip this: names the assistant can't place become questions/)).toBeInTheDocument();
+    expect(screen.getByText(/You can skip this: it will ask about names it doesn't recognize/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add people" }));
     expect(onOpenPeople).toHaveBeenCalledTimes(1);
   });
@@ -726,7 +726,7 @@ describe("Mail and calendar", () => {
     const mine = await row();
     expect(within(mine).getByText("Reads your mail and calendar")).toBeInTheDocument();
     expect(within(mine).getByText(/Not on this computer yet/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Restart to connect/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
     await user.click(within(mine).getByRole("button", { name: "Install and connect Service mail-addon" }));
     await waitFor(() => expect(within(mine).getByText("Ready after the restart below.")).toBeInTheDocument());
     const routesCalled = calls.map((c) => c.route);
@@ -734,12 +734,12 @@ describe("Mail and calendar", () => {
     expect(calls.find((c) => c.route === "POST packs/mail-addon/on")!.body).toEqual({ fingerprint: "fp-1" });
     // Nothing restarts until the person presses the one button.
     expect(calls.some((c) => c.route === "POST restart")).toBe(false);
-    expect(screen.getAllByRole("button", { name: "Restart to connect (a few seconds)" })).toHaveLength(1);
-    await user.click(screen.getByRole("button", { name: "Restart to connect (a few seconds)" }));
+    expect(screen.getAllByRole("button", { name: "Restart to finish connecting" })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Restart to finish connecting" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
     // After the restart the next action is Sign in.
     const signInButton = await screen.findByRole("button", { name: "Sign in to The account" });
-    expect(screen.queryByRole("button", { name: /Restart to connect/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
     expect(calls.filter((c) => c.route === "POST restart")).toHaveLength(1);
     await user.click(signInButton);
     await waitFor(() => expect(assign).toHaveBeenCalledWith(login));
@@ -755,7 +755,7 @@ describe("Mail and calendar", () => {
     await waitFor(() => expect(within(mine).getByText("Ready after the restart below.")).toBeInTheDocument());
     expect(calls.some((c) => c.route === "POST packs/mail-addon/install")).toBe(false);
     expect(calls.some((c) => c.route === "POST packs/mail-addon/on")).toBe(true);
-    await user.click(screen.getByRole("button", { name: "Restart to connect (a few seconds)" }));
+    await user.click(screen.getByRole("button", { name: "Restart to finish connecting" }));
     expect(await screen.findByRole("button", { name: "Sign in to The account" })).toBeInTheDocument();
   });
 
@@ -765,7 +765,7 @@ describe("Mail and calendar", () => {
     open();
     const mine = await row();
     expect(within(mine).getByText("On. Sign in to start reading.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Restart to connect/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
     expect(within(mine).queryByRole("button", { name: /Install|Turn on/ })).toBeNull();
     await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith(login));
@@ -930,7 +930,7 @@ describe("Mail and calendar", () => {
     await user.click(await screen.findByRole("button", { name: "Turn on Service second-addon" }));
     await waitFor(() => expect(turned.size).toBe(2));
     expect(await screen.findAllByText("Ready after the restart below.")).toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: "Restart to connect (a few seconds)" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Restart to finish connecting" })).toHaveLength(1);
     expect(calls.some((c) => c.route === "POST restart")).toBe(false);
   });
 
@@ -951,7 +951,7 @@ describe("Mail and calendar", () => {
     open();
     await user.click(await screen.findByRole("button", { name: "Turn on Service mail-addon" }));
     expect(await screen.findByText(/Close and reopen the app to finish adding the add-on/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Restart to connect/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
   });
 
   test("a refusal from the install is said on the row in the server's words, and nothing is turned on", async () => {
@@ -965,7 +965,7 @@ describe("Mail and calendar", () => {
     await user.click(await screen.findByRole("button", { name: "Install and connect Service mail-addon" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("The release file could not be checked.");
     expect(calls.some((c) => c.route === "POST packs/mail-addon/on")).toBe(false);
-    expect(screen.queryByRole("button", { name: /Restart to connect/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Restart to finish connecting/ })).toBeNull();
   });
 
   test("an add-on that reads no mail or calendar is not offered, and another mail or calendar opens the core's forms", async () => {

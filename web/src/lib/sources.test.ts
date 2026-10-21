@@ -43,9 +43,9 @@ test("a try that found no network does not count as the latest read", () => {
 
 describe("why a source couldn't be read", () => {
   const words: Record<string, string> = {
-    "sources.advice.create_app_password": "This service wants an app password. Type it in the password box in this source's settings.",
+    "sources.advice.create_app_password": "This service wants an app password. Type it in the password box in this connection's settings.",
     "sources.problem_generic": "It couldn't be read.",
-    "sources.read_failed": "{label} couldn't be read. Open Sources to see why.",
+    "sources.read_failed": "{label} couldn't be read. Open Connections to see why.",
   };
   const t = (key: string, vars: Record<string, string | number> = {}) => (words[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => String(vars[k]));
   const has = (key: string) => key in words;
@@ -62,7 +62,7 @@ describe("why a source couldn't be read", () => {
 
   test("the connector's advice key is worded from the sheet, after the server's own words", () => {
     const mail = source("m", { last: failed({ error: said, error_advice: "sources.advice.create_app_password" }), problem: `${said} Sign in to it again.` });
-    expect(failureText(mail, t, has)).toBe(`${said} This service wants an app password. Type it in the password box in this source's settings.`);
+    expect(failureText(mail, t, has)).toBe(`${said} This service wants an app password. Type it in the password box in this connection's settings.`);
     expect(readProblem(mail, t, has)).toBe(failureText(mail, t, has));
   });
 

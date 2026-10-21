@@ -256,7 +256,7 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   a source with no network is not counted.
 
 Sources are also added by a sign-in (6.27): an add-on declares the inbox and the main calendar, and signing in starts them
-(`first_run: recent`, the add-on's own interval). The person narrows, adds or removes sources afterwards from the Sources
+(`first_run: recent`, the add-on's own interval). The person narrows, adds or removes sources afterwards from the Connections
 screen; those edits stand. Watch settings are live: a source added, changed or removed is read on its new terms at once.
 
 **Schedule** (*designed, not yet built*): `config/schedule.yaml` would hold jobs (core and plugin) with cron-like times,

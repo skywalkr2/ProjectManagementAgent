@@ -817,14 +817,14 @@ test.describe.serial("acceptance scenario", () => {
     }
   });
 
-  test("Sources shows how often each source is read, and adding or changing one opens a form that passes the accessibility checks", async ({ page }) => {
+  test("Connections shows how often each connection is read, and adding or changing one opens a form that passes the accessibility checks", async ({ page }) => {
     await signIn(page);
-    await go(page, "Sources");
+    await go(page, "Connections");
     const sources = page.getByRole("main").locator("ul.queue").first();
     // One row per source, each saying it reads by itself and when it last did.
     await expect(sources.getByRole("listitem").first()).toContainText(/Read every \d+ minutes · /);
-    await page.getByRole("button", { name: "Add a source" }).click();
-    const form = page.getByRole("form", { name: "Add a source" });
+    await page.getByRole("button", { name: "Add a connection" }).click();
+    const form = page.getByRole("form", { name: "Add a connection" });
     await expect(form).toBeVisible();
     // The cursor starts in the form's first field: the kind of source to add (design 7.0).
     await expect(form.getByRole("radio").first()).toBeFocused();
@@ -833,7 +833,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(form.getByLabel("How often to read")).toBeVisible();
     await checkAccessibility(page);
     await form.getByRole("button", { name: "Cancel" }).click();
-    await expect(page.getByRole("button", { name: "Add a source" })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Add a connection" })).toBeFocused();
     // A row's menu: read now, change, turn off or on, remove; Change opens the same form filled in.
     const first = sources.getByRole("listitem").first();
     await first.getByRole("button", { name: /^More actions for / }).click();
@@ -853,10 +853,10 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("button", { name: "Connect a mailbox" })).toHaveCount(0);
   });
 
-  test("Sources and the Ask box pass the accessibility checks, and the Ask box opens from the keyboard", async ({ page }) => {
+  test("Connections and the Ask box pass the accessibility checks, and the Ask box opens from the keyboard", async ({ page }) => {
     await signIn(page);
-    await go(page, "Sources");
-    await expect(page.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
+    await go(page, "Connections");
+    await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Set aside by rules" })).toBeVisible();
     await checkAccessibility(page);
     // The Ask box: focus goes to the question, Escape closes it, and focus returns to the button that opens it.

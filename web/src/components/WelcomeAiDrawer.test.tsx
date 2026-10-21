@@ -261,7 +261,7 @@ test("a check that would cost more than the amount the person set asks for a sec
   // model-a is $3 and $15 per million: 1M read and 0.2M written is $6.
   await user.click(screen.getByRole("button", { name: "Add and check (about $6.00)" }));
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
-  expect(screen.getByRole("alert")).toHaveTextContent("The check would cost about $6.00, more than the $0.10 you set for asking first.");
+  expect(screen.getByRole("alert")).toHaveTextContent("This check costs about $6.00, above your $0.10 approval limit.");
   await user.click(screen.getByRole("button", { name: "Go ahead and check (about $6.00)" }));
   await waitFor(() => expect(handlers.onAdded).toHaveBeenCalledTimes(1));
   expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(true);

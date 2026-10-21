@@ -103,7 +103,7 @@ test.describe.serial("journey: new start", () => {
     expect(await row.innerText()).not.toMatch(/Signs in to|Websites:|Access keys you provide/);
     await row.getByText("What it can access").click();
     await expect(row).toContainText("You sign in on the service's own page");
-    await expect(main.getByText(/Restart to connect/)).toHaveCount(0);
+    await expect(main.getByText(/Restart to finish connecting/)).toHaveCount(0);
     await visit(page);
     expect(existsSync(installed)).toBe(false);
     const before = await requests();
@@ -116,14 +116,14 @@ test.describe.serial("journey: new start", () => {
 
     // The one restart, which I press. The walkthrough is still at this screen when the app is back, and a page opened
     // fresh after it resumes here too.
-    const restart = main.getByRole("button", { name: "Restart to connect (a few seconds)" });
+    const restart = main.getByRole("button", { name: "Restart to finish connecting" });
     await expect(restart).toBeVisible();
     await visit(page);
     await restart.click();
     await expect(row).toHaveAttribute("data-state", "ready", { timeout: 90_000 });
     expect(restarts()).toBe(1);
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
-    await expect(main.getByText(/Restart to connect/)).toHaveCount(0);
+    await expect(main.getByText(/Restart to finish connecting/)).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();

@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 139. The UI designer's verdict on the outside wording review, at `9e9c3f0`: Sources becomes Connections, and three renames are refused (2026-10-21; batch B-10)
+
+| Where | Before | Now |
+|---|---|---|
+| The area that sets up what the assistant reads (7.1, 7.15, 6.5; the wording review) | Called Sources: the navigation entry, the heading, "Add a source", "Add source", the counts on Today ("Read 3 sources", "1 source couldn't be read: see Sources"), the sign-in return lines, the Settings link and the "Source not read" line | Called Connections everywhere a person sets one up or reads a count of them ("Add a connection", "Checked 3 connections", "Couldn't read 1 connection. See Connections"). Routes, hashes, config (`watch.yaml`) and the design's own word "source" are unchanged. "Source" keeps its other meaning, the original text something came from ("Show source", "Where it came from", a project's inputs under Knowledge). The sentences the server writes about what to do for a source that can't be read (`engine/defaults/source_advice.yaml`, `engine/watch.py`) name the new screen. Built: `web/src/components/Sources.test.tsx`, `web/src/shell/Sidebar.test.tsx`, `web/src/components/TodayRail.test.tsx`, `tests/test_mailbox_refusal.py`, `tests/test_watch.py` |
+| What the op that saves an input's text is called (6.7; `op.source`) | "Recorded a source" | "Saved the original text": the op saves text, not a connection |
+| Stages and Drop (7.5; the review's Stages to Steps and Drop to Remove) | Stages and Drop | Unchanged, refused. "Steps" already means the setup guide's, an AI key's and a template's steps; "Remove" already means delete. A menu's Drop has a second line, "No longer needed, kept in history" (`MenuEntry.note`). Built: `web/src/components/ChangeThis.test.tsx` |
+| Go (7.7) | "Go" on a few buttons | "Start" everywhere (already so); the estimate stays in the line's own words ("Start the assistant: 1 item, about $0.30"), not on the button |
+| The demo command (7.15, add-ons) | Under "For developers" in How to get an add-on | Unchanged; a unit test now checks it is hidden until that disclosure opens. Built: `web/src/components/Addons.test.tsx` |
+| The review's other rows (7.x) | Wording that had already been rewritten in earlier passes, and some that had not | The rows still true of the sheet are applied with the designer's changes (the project's history, a project or person page, "Sign-in app ID" with the hint "Some sites call it a client ID", "Keep it set aside", "Keep them all set aside", the handover lines that say "your work", a read key's hint); the rest were already done another way or refused (the model's name, the "just this time" family, the Today waiting lines). Built: `web/src/wording/wording.test.ts` |
+
 ## 138. The UI/UX designer's re-review at `0f37be4`: one decision is one line, an honest details pane, and four small fixes (2026-10-20; batch B-9)
 
 | Where | Before | Now |

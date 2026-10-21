@@ -88,7 +88,7 @@ def missing_connector(store: Any, cfg: Any, connector: str) -> str:
     installed, is turned off, or stopped; or this install has nothing by that name."""
     plugin = connector.split("/", 1)[0] if "/" in connector else ""
     if not plugin:
-        return "this install has no way to read it any more. Pick how it is read again (Change, on Sources)"
+        return "this install has no way to read it any more. Pick how it is read again (Change, on Connections)"
     host = store.plugins
     status = getattr(host, "status", {}).get(plugin)
     if plugin not in getattr(host, "candidates", {}):
@@ -97,7 +97,10 @@ def missing_connector(store: Any, cfg: Any, connector: str) -> str:
         return f'the add-on "{plugin}" that reads it is turned off. Turn it on in Add-ons'
     if status is not None and status.state == "disabled":
         return f'the add-on "{plugin}" that reads it stopped ({status.reason}). Add-ons says more'
-    return f'the add-on "{plugin}" doesn\'t read this kind of source any more. Pick how it is read (Change, on Sources)'
+    return (
+        f'the add-on "{plugin}" doesn\'t read this kind of connection any more. '
+        "Pick how it is read (Change, on Connections)"
+    )
 
 
 def last_run(store: Any, source: str) -> Any | None:
@@ -812,8 +815,8 @@ def _record(store: Any, source: str, now: datetime, clock: float, outcome: str, 
 
 WHAT_TO_DO = {
     "auth": "Sign in to it again, then it is read on its next turn.",
-    "no_access": "Check what it reads (Change, on Sources), or sign in again and allow access to it.",
-    "not_found": "Check that it is still there and that its settings on Sources name it right (Change).",
+    "no_access": "Check what it reads (Change, on Connections), or sign in again and allow access to it.",
+    "not_found": "Check that it is still there and that its settings on Connections name it right (Change).",
     "outage": "The service it is on seems to be failing; it is tried again on its schedule.",
 }
 

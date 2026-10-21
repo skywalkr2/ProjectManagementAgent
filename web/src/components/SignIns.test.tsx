@@ -274,7 +274,7 @@ describe("the app registration", () => {
     await user.click(menuOf(three));
     await user.click(await screen.findByRole("menuitem", { name: "Use your own app registration" }));
     const form = await within(three).findByRole("form", { name: "Your own app registration for Service demo/three" });
-    await waitFor(() => expect(within(form).getByLabelText("Client ID from the service")).toHaveFocus());
+    await waitFor(() => expect(within(form).getByLabelText("Sign-in app ID from the service")).toHaveFocus());
     // Cancel closes it and focus goes back to the menu button.
     await user.click(within(form).getByRole("button", { name: /^Cancel/ }));
     expect(within(three).queryByRole("form")).toBeNull();
@@ -336,9 +336,9 @@ describe("the app registration", () => {
     open();
     const save = await screen.findByRole("button", { name: "Save the app registration for Service demo/three" });
     expect(save).toBeDisabled();
-    await user.type(screen.getByLabelText("Client ID from the service"), "   ");
+    await user.type(screen.getByLabelText("Sign-in app ID from the service"), "   ");
     expect(save).toBeDisabled();
-    await user.type(screen.getByLabelText("Client ID from the service"), " abc-123 {Enter}");
+    await user.type(screen.getByLabelText("Sign-in app ID from the service"), " abc-123 {Enter}");
     await waitFor(() => expect(calls.filter((c) => c.route === "POST sign-ins/demo/three/app")).toHaveLength(1));
     expect(calls.find((c) => c.route === "POST sign-ins/demo/three/app")?.body).toEqual({ client_id: "abc-123" });
     expect(await screen.findByText("Saved your app registration for Service demo/three. Sign in to use it.")).toBeInTheDocument();
@@ -357,7 +357,7 @@ describe("the app registration", () => {
     const secret = await screen.findByLabelText("Client secret from the service");
     expect(secret).toHaveAttribute("type", "password");
     expect(secret).toHaveAttribute("autocomplete", "off");
-    await user.type(screen.getByLabelText("Client ID from the service"), "abc-123{Enter}");
+    await user.type(screen.getByLabelText("Sign-in app ID from the service"), "abc-123{Enter}");
     expect(calls.some((c) => c.route === "POST sign-ins/demo/three/app")).toBe(false);
     expect(screen.getByRole("button", { name: /^Save the app registration/ })).toBeDisabled();
     await user.type(secret, " s3cret {Enter}");
@@ -376,10 +376,10 @@ describe("the app registration", () => {
       "POST sign-ins/demo/three/app": () => new Refuse(422, "That client ID isn't valid."),
     });
     open();
-    await user.type(await screen.findByLabelText("Client ID from the service"), "nope");
+    await user.type(await screen.findByLabelText("Sign-in app ID from the service"), "nope");
     await user.click(screen.getByRole("button", { name: /^Save the app registration/ }));
     expect(await within(row("Service demo/three")).findByRole("alert")).toHaveTextContent("That client ID isn't valid.");
-    expect(screen.getByLabelText("Client ID from the service")).toHaveValue("nope");
+    expect(screen.getByLabelText("Sign-in app ID from the service")).toHaveValue("nope");
     expect(screen.getByRole("button", { name: /^Save the app registration/ })).toBeEnabled();
   });
 
@@ -499,7 +499,7 @@ describe("coming back from the service", () => {
     window.history.replaceState(null, "", "/?sign_in=failed&error=boom&detail=details");
     fakeApi({ "GET sign-ins": () => LIST });
     renderApp(<Return />);
-    await screen.findByText("The sign-in didn't finish. Try again from Sources.");
+    await screen.findByText("The sign-in didn't finish. Try again from Connections.");
     expect(screen.queryByText(/boom/)).toBeNull();
     expect(window.location.search).toBe("");
   });
@@ -512,9 +512,9 @@ describe("coming back from the service", () => {
   });
 
   test.each([
-    ["failed", "The sign-in didn't finish. Try again from Sources."],
+    ["failed", "The sign-in didn't finish. Try again from Connections."],
     ["refused", "The service didn't allow the sign-in."],
-    ["expired", "That sign-in took too long. Start it again from Sources."],
+    ["expired", "That sign-in took too long. Start it again from Connections."],
   ])("%s says so once and leaves the address clean", async (outcome, words) => {
     window.history.replaceState(null, "", `/?sign_in=${outcome}&name=demo%2Ftwo`);
     fakeApi({ "GET sign-ins": () => LIST });
@@ -528,7 +528,7 @@ describe("coming back from the service", () => {
     window.history.replaceState(null, "", "/tools/cockpit/?keep=1&sign_in=failed&name=demo%2Ftwo#/settings");
     fakeApi({ "GET sign-ins": () => LIST });
     renderApp(<Return />);
-    await screen.findByText("The sign-in didn't finish. Try again from Sources.");
+    await screen.findByText("The sign-in didn't finish. Try again from Connections.");
     expect(window.location.pathname).toBe("/tools/cockpit/");
     expect(window.location.search).toBe("?keep=1");
     expect(window.location.hash).toBe("#/settings");
@@ -569,18 +569,18 @@ test("when the add-on's own registration can't be used at this address, the row 
   const three = row("Service demo/three");
   expect(
     within(three).getByText(
-      "The add-on's own app registration doesn't work at this app's address, because the app is served under another path or is hosted. To sign in, use your own app registration.",
+      "This add-on's sign-in setup doesn't work with this app. To connect, use your own sign-in setup.",
     ),
   ).toBeInTheDocument();
   expect(within(three).getByRole("form", { name: "Your own app registration for Service demo/three" })).toBeInTheDocument();
-  expect(within(row("Service demo/one")).queryByText(/doesn't work at this app's address/)).toBeNull();
+  expect(within(row("Service demo/one")).queryByText(/doesn't work with this app/)).toBeNull();
 });
 
 test("no such hint while the add-on's own registration works", async () => {
   fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/three", { app: "add-on", app_note: "Uses the add-on's own." })] });
   open();
   await screen.findByText("Service demo/three");
-  expect(screen.queryByText(/doesn't work at this app's address/)).toBeNull();
+  expect(screen.queryByText(/doesn't work with this app/)).toBeNull();
 });
 
 const account = (address: string | null, key: string, status: "signed_in" | "expired" = "signed_in") => ({

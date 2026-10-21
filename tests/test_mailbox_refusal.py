@@ -77,7 +77,7 @@ def test_every_advice_the_classifier_can_give_has_words_on_the_screen_and_for_th
         assert sentence == ADVICE[f"sources.advice.{key}"], key  # one sentence, in both sheets
         assert not problems(sentence), key
     assert "password box" in WORDS["sources.advice.create_app_password"]
-    assert "Sources" in WORDS["sources.advice.create_app_password"]
+    assert "Connections" in WORDS["sources.advice.create_app_password"]
 
 
 def _mailbox_workspace(tmp_path, monkeypatch, reply):

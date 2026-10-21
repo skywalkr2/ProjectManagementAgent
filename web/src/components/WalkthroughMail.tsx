@@ -1,6 +1,6 @@
 // The mail and calendar screen of the walkthrough (design 7.8): the services the person can connect, each in the state it
 // is in. One not yet installed is installed and turned on with one button; one installed but off is turned on; then the
-// one restart ("Restart to connect"), never made on its own; then Sign in. Once signed in the screen says what is read now
+// one restart ("Restart to finish connecting"), never made on its own; then Sign in. Once signed in the screen says what is read now
 // and that the last day's mail waits for the first Go. The core's own mail folder and calendar address are offered as
 // "Another mail or calendar". With no service listed and nothing read yet, the step is one sentence, one button and the way
 // out the walkthrough already has (skip it).

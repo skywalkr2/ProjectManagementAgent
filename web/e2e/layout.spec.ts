@@ -54,10 +54,10 @@ const SCREENS: Array<{ name: string; hash: string; ready: (page: Page) => Promis
   { name: "Files", hash: "records/files", ready: (page) => heading(page, "Files") },
   { name: "Knowledge", hash: "records/knowledge", ready: (page) => heading(page, "Knowledge") },
   {
-    name: "Sources",
+    name: "Connections",
     hash: "sources",
     ready: async (page) => {
-      await heading(page, "Sources");
+      await heading(page, "Connections");
       await text(page, strings["mail-01"].slice(0, 12));
     },
   },

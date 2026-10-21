@@ -57,7 +57,7 @@ test("the screen is a plugin panel's title or a record page's general name", asy
 test("a record page is named in general terms, never by its record", async () => {
   const { user } = open({ view: "records/thing/abc" });
   await user.type(message(), "x");
-  expect(preview().value).toMatch(/Screen: An item page$/);
+  expect(preview().value).toMatch(/Screen: A project or person page$/);
   expect(preview().value).not.toMatch(/abc|thing/);
 });
 
