@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: Failures are captured in detail so a person can send them with feedback
+
+- **Decided (owner):** "We should have something in the program that captures failures in detail so the user can send
+  them in the feedback", since real users will hit failures the catalog check couldn't reproduce.
+- **Also decided (main session):** a core concept with one setting. Each failed AI call, account check, connector read
+  and server error keeps the details a maintainer needs (parameters, status, error kind, the service's own error text,
+  the program version), never the person's content; keys, tokens and addresses are masked. Send feedback offers to add
+  the last problems (`ui.feedback_problem_days`), shown in full before the email leaves; nothing is sent by the app.
+- **Impact:** design 7 (Help, Send feedback), roadmap B-11c (3), so it is in place before the testers. Change log:
+  section 149.
+
 ## 2026-10-21: The installers ship unsigned through 1.0, said plainly; Plus pays for signing later
 
 - **Decided (owner):** code signing waits until there are more users, possibly after 1.0: "we can clearly state it's

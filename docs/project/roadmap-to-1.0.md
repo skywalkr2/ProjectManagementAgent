@@ -796,6 +796,14 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   in code; (2) a native adapter for the recommended service's own messages interface, with effort, prompt caching and
   refusal handling. Done when each catalog entry's settings are confirmed against its documentation with a named test
   per finding, and the native adapter passes the smoke test's exact parameters and the lock-down rules in a named test.
+  (3) **Failures captured in detail for feedback** (owner, 2026-10-21: "We should have something in the program that
+  captures failures in detail so the user can send them in the feedback"): every failed AI call, account check,
+  connector read and server error keeps what a maintainer needs (when, the task kind, the account's service and
+  program version, the request's exact parameters, the status code, the error kind and the service's own error text),
+  and never the packet, mail or any of the person's content; keys, tokens and addresses are masked. Send feedback offers
+  "Add the last problems" (on by default when there were any in the last days, a setting), shown in full in the email
+  before it leaves, as today. Done when a named test shows a failed call's report holds the parameters and the error and
+  no packet text, secret or address.
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings

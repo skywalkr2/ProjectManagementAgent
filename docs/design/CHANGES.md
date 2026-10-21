@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 149. Failures captured for feedback (2026-10-21; B-11c, designed)
+
+- Send feedback can add the last problems: each failed AI call, account check, connector read or server error, with
+  its parameters, status, error kind, the service's error text and the program version, never the person's content,
+  with keys, tokens and addresses masked. Design 7 (Help).
+
 ## 148. Two sides in the data (2026-10-21; S1-4a, built)
 
 - The settings that name the two sides are `workspace.project.personal` and `workspace.project.business` (the design
