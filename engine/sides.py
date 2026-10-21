@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from engine.ops import ActionAddOp, FactOp, NoteOp, QuestionAddOp
+from engine.ops import ActionAddOp, FactOp, NoteOp, ProjectAddOp, QuestionAddOp
 from engine.storage import StoreError, WriteContext
 from engine.yaml_load import load_yaml
 
@@ -125,10 +125,13 @@ def file_by_people(ops: list[Any], view: Any, cfg: Any, people: Any, sender: str
     person; those on both sides and those not known don't decide). With no business set an unplaced item goes to the
     personal project when that is the only top-level project (a workspace tracking other work without naming a business
     keeps its unfiled items for the person to place); with one, an item whose people don't agree, or don't say, stays
-    unfiled for the person to place.
+    unfiled for the person to place. A changeset that also proposes a new project is left as it is: adding that project
+    files what the same input made with no project under it.
     The same ops always give the same result."""
     personal, business = personal_project(view, cfg), business_project(view, cfg)
     if personal is None and business is None:
+        return ops
+    if any(isinstance(op, ProjectAddOp) for op in ops):
         return ops
     only_personal = business is None and personal is not None and _only_top(view, personal)
     out: list[Any] = []

@@ -2893,7 +2893,7 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   about, and those are asked together in one "Which side?" question, never one each. A person with no business is never
   asked: what the assistant can't place goes to Personal while Personal is the only top-level project (its areas and
   projects under it); a workspace that tracks other work at the top without naming a business keeps such items unfiled
-  for the person to file, as before, and a computer joining a synced folder makes no Personal of its own. People on the personal side record how they relate to the person (a relation, "my sister"), not a role or an
+  for the person to file, as before, a computer joining a synced folder makes no Personal of its own, and an answer that proposes a new project leaves its items for that project, which Add files under it. People on the personal side record how they relate to the person (a relation, "my sister"), not a role or an
   organization.
 - **Areas and projects under it** (`Project.parent`): an **area** is ongoing and never finishes (health, money, home,
   family, a car, pets) and has no end date, so it is never behind; a **project** has a goal and an end (moving house, a

@@ -22,7 +22,7 @@ from engine.config.yaml_edit import remove_key, set_key
 from engine.dispatcher import process
 from engine.intake import hand_in
 from engine.names import People
-from engine.ops import CHANGESET, OP_MODELS
+from engine.ops import CHANGESET, OP_MODELS, ProjectAddOp
 from engine.storage import Store, WriteContext
 from engine.today_queue import queue
 from engine.unfiled import unfiled
@@ -292,7 +292,9 @@ def new_op(kind="action.add", **fields):
 def filed(env, ops, sender=None, cfg=None):
     _, found, store = env
     cfg = cfg or found
-    return [o.project for o in sides.file_by_people(ops, store.read(), cfg, People(store, cfg), sender)]
+    return [
+        getattr(o, "project", None) for o in sides.file_by_people(ops, store.read(), cfg, People(store, cfg), sender)
+    ]
 
 
 def name_of(person: dict) -> str:
@@ -349,6 +351,14 @@ def test_with_no_business_and_other_work_on_top_what_has_no_project_stays_for_th
     other = without(env[0], "business")
     a, _ = PERSONAL_PEOPLE
     assert filed(env, [new_op(owners=[name_of(a)]), new_op("fact")], cfg=other) == [None, None]
+
+
+def test_an_answer_that_proposes_a_new_project_leaves_its_items_for_that_project(env):
+    other = without(env[0], "business")
+    personal_only(env)
+    a, _ = PERSONAL_PEOPLE
+    proposed = ProjectAddOp(op="project.add", name=OTHER_BUSINESS_NAME, evidence={"quote": OTHER_BUSINESS_NAME})
+    assert filed(env, [new_op(owners=[name_of(a)]), proposed], cfg=other)[0] is None
 
 
 def test_a_project_the_answer_gave_is_kept_and_a_workspace_with_neither_side_set_files_nothing(env):
