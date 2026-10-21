@@ -1036,8 +1036,10 @@ is marked *designed*, with the phase.
   key (*designed, not yet built, not scheduled*).
 - **Mark done** for the PM's own; for others' actions **Followed up** (recorded internally, stays open, counts as told) and
   **They finished it** (credited to the owner, "reported by" the PM). Never credit the PM for someone else's work.
-  **Built:** Followed up adds the day to the action's `followed_up` for that person and sets their told day to the same
-  day, so the waiting count starts over; undo removes the day and puts the told day back (`tests/test_followups_backup_eval.py::test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told`, `tests/test_followups_backup_eval.py::test_undoing_a_chase_restores_the_told_day_and_removes_the_chase`). They finished it
+  **Built:** every day recorded here (sent, told, followed up, held, put on hold) is the workspace's own day, never the
+  UTC date, and a wait never counts below zero (batch B-10, `tests/test_followups_backup_eval.py`,
+  `web/e2e/late-evening.spec.ts`). Followed up adds the day to the action's `followed_up` for that person and sets their
+  told day to the same day, so the waiting count starts over; undo removes the day and puts the told day back (`tests/test_followups_backup_eval.py::test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told`, `tests/test_followups_backup_eval.py::test_undoing_a_chase_restores_the_told_day_and_removes_the_chase`). They finished it
   closes the action with `done_by` the person it waited on and `reported_by` the PM (`tests/test_followups_backup_eval.py::test_they_finished_credits_the_owner_and_reports_it_as_the_pm`, `tests/test_routes.py::test_they_finished_it_credits_the_owner_and_records_the_pm_as_the_reporter`); `action.close` from an
   input sets `done_by` to the owners and `reported_by` to the input's sender when that is one known person (`tests/test_pipeline.py::test_closing_an_action_from_a_message_credits_its_owners_and_names_the_sender`, `tests/test_pipeline.py::test_closing_an_action_from_the_pms_own_note_is_reported_by_the_pm`,
   `tests/test_pipeline.py::test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty`). The generic status route reopening an action clears both.
@@ -1179,6 +1181,11 @@ wherever they are shown.
   alias) becomes a person **only when that person is in the input's context**, and only if exactly one person of that first
   name is; a first name with an initial or surname fragment ("Ada L.") becomes the one person that fragment fits, and when it
   fits no one the op is held and the people who share the first name are offered, however many of them are in the thread;
+  a name written with an address ("tess@example.com", "Tess (tess@example.com)") is the one person the address belongs to,
+  and an address nobody has leaves the name beside it to decide; a person the answer names in full (or by id) whom the
+  input names only by a name more than one person has (a first name inside someone else's full name doesn't count) is
+  held for "who is it" with those people offered, because the input's words decide who is meant, not the answer's
+  choice (batch B-10: `tests/test_names.py`, the golden case `shared-first-name-named-in-full`);
   an owner written in the workspace's `owner_format` is parsed into person and team (*designed, not yet built, not
   scheduled*; the format is used for showing owners, below).
   **Names resolve on two fields only:** the owners of an action and a question's recipient, the two that hold a name
@@ -3066,7 +3073,10 @@ whether they are a **condition**: a condition (words with one of `language.due_c
 date**, whatever date the model gave (a condition is never turned into a date); any other unread words **keep the
 model's own date, marked to check** (`due_check`), where they used to drop it. The prompt says the same: a condition's
 own words go in `due_words` with no `due` ("once the keys arrive"), and `waiting_for` is in addition to them, never
-instead. The open-actions list in the packet says "promised to" for a promise, so the assistant can tell which open
+instead. A promise with both a day and a condition ("If the committee approves, I'll send it on Friday") keeps the
+day's words as its `due_words` and the condition in `waiting_for`, and its text says the condition, so the day is never
+lost (batch B-10). A bare weekday said on that weekday ("by Friday", written on a Friday) is read forward, as every bare
+weekday is, and marked to check, never firm: it may mean today or a week later (`tests/test_due_phrases.py`). The open-actions list in the packet says "promised to" for a promise, so the assistant can tell which open
 action takes `action.move`. *Built so far:* `tests/test_due_phrases.py` (a test per form, the words as settings, the
 conditions), `tests/test_promises.py::test_a_leading_on_or_due_and_an_ordinal_are_read_by_the_rules_and_win_over_the_models_date`,
 `::test_words_the_rules_cannot_read_keep_the_models_own_date_marked_to_check`,

@@ -11,6 +11,25 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
+## Queued: F30 to F32, from the owner's re-run of the failed AI cases (2026-10-21; B-10)
+
+The re-run is grouped by cause in roadmap B-10. Three choices there are product judgment, not code:
+
+**F30. How the assistant knows a reply belongs to a promise's thread.** When a reply in a promise's thread is answered
+with nothing (5 cases fail one or two runs in three), the answer should go back once to say what the reply said. An
+action keeps no record of the words it came from, so for pasted text the app can only guess the thread from shared
+words, and a wrong guess spends a paid extra call. Mail read through a connection carries the service's thread id.
+*Default:* run the check only on mail with a thread id; pasted text keeps today's behavior.
+
+**F31. How narrow a lesson from a correction should be.** In the learning re-runs a correction about one plan's
+reviewer became "every plan review goes to the chief architect", and a correction about another project proposed no
+lesson at all. *Default:* a lesson names the topic of the correction (its project and its subject words) and nothing
+wider; a broader one is proposed only when the person's own words say "always" or "every".
+
+**F32. A promise to the person in a message from someone else** ("I'll send it Thursday", from Tess to the person):
+recorded as owed to the person even when the message doesn't say "you". *Default:* yes, owed to the person the message
+was to; already in the instructions as of `b5410e5`, so this confirms it.
+
 ## Queued: F26 to F29, the Gmail-later proposal (2026-10-20; the owner asks them when ready)
 
 The proposal is `docs/project/business-model-delta-gmail-later.md`: Thimbleby+ launches with one-click Outlook and every

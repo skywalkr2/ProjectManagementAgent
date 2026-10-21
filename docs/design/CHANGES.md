@@ -1027,6 +1027,20 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 140. Days in the workspace's own day, names by address, a shared first name held, conditions apart from dates (2026-10-21; batch B-10)
+
+| Where | Before | Now |
+|---|---|---|
+| Days recorded on sent and chased items (6.33, follow-ups) | Marking sent, following up and holding wrote the UTC date; after midnight UTC in a zone behind it, Today read "waiting -1 days" | The workspace's own day everywhere, a wait never below zero, and a promise not yet due waits zero days; a browser check runs the demo at 00:30 UTC |
+| A bare weekday said on that weekday (dates) | "By Friday" on a Friday read as a week later, firm | Read forward and marked to check |
+| A name written with an address (6.11) | Read as a first name, often held as ambiguous | The person the address belongs to; an unknown address leaves the name to decide |
+| A full name the input never writes (6.11) | The answer's pick of one of two people of the same first name was applied | Held for "who is it" with those people offered |
+| A promise with a condition and a date (6.33, the notes prompt) | The instructions made the condition the due, so the date was lost | The date's words are the due, the condition goes in `waiting_for` and the text; `promised_to` is filled whenever the input shows who |
+| The scorer's due words (evaluation) | "December 2" failed against "by December 2" | Compared past a leading lead word, as the date rules read them; other words still fail |
+
+Why: the owner's re-run of the failed AI cases and the UI/UX re-review at `9e9c3f0` (R-0). Decisions in `docs/decisions.md`
+(2026-10-21). Still open in B-10: the reply check (how a reply's thread is known) and how a lesson is proposed and scoped.
+
 ## 139. The UI designer's verdict on the outside wording review, at `9e9c3f0`: Sources becomes Connections, and three renames are refused (2026-10-21; batch B-10)
 
 | Where | Before | Now |
