@@ -1609,8 +1609,13 @@ A person who adds an account gets every tier filled in, so routine work never la
   family to look for among the models the service lists for the person's key, and an effort (low, medium or high).
   The catalog names families, never exact ids, so a newer model of the same family is picked up with no change; this
   is the one place a model's name carries meaning, and it is data, never code.
-- Effort is a capability each model reports through its adapter, which turns it into that service's own setting; a model
-  without it ignores it. Escalating may raise the effort on the same model before moving to a stronger one.
+- Effort is set per tier (low, medium or high) and reaches the service only through the account's own setting for it:
+  `effort_param` (the request field a chat-format service takes) or `effort_option` (the arguments a command-line agent
+  takes). Both are left empty in the catalog until a service's real parameter is confirmed, so an unconfirmed service is
+  never sent a field it doesn't know; a tier's effort is part of what its smoke test sends. Escalating may raise the
+  effort on the same model before moving to a stronger one (with B-11b's measuring).
+- Presets are written only for services whose model families are certain; the rest are filled by price until
+  measuring, or the person, says better. *Built (B-11a):* `engine/ai/presets.py`, `tests/test_tier_presets.py`.
 - With no preset match (a local server, an aggregator, a renamed family), the tiers are filled by price from the
   service's own model list, cheapest first, and marked not checked until the smoke test confirms them.
 - Measuring keeps the defaults honest as models improve: from Settings, whenever the person asks, a small set
