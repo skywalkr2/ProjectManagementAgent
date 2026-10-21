@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: A job or a business can be the second side; the person chooses at setup
+
+- **Decided (owner):** whether someone's job sits under Personal or is a side of its own is the person's choice, asked
+  at setup, not the product's. Step 1 offers "Personal life only", "Personal life and my job" and "Personal life and my
+  business". A job or a business becomes the second side, named by the person (the employer's or the business's name);
+  someone who'd rather keep their job under Personal picks the first and can tick a "Work" area.
+- **Also decided (main session):** kind of rule: a setting. `workspace.project.business` keeps naming the second side's
+  top project whatever its kind; a new setting `workspace.project.work_kind` (`job` or `business`, set by step 1) picks
+  the words (a job: colleagues, a manager, clients; a business: customers, suppliers, staff). It is built with the setup
+  screens in I-0.
+- **Impact:** design 7 (setup step 1 and step 6), design 6.32 (two sides), roadmap I-0, `docs/project/setup-inputs/`.
+  Change log: section 146.
+
 ## 2026-10-21: The UI/UX reviewer's setup order, two sides from day one, and B-11 split
 
 - **Decided (UI/UX reviewer, passed by the owner):** keep the first result before people and the business, with five

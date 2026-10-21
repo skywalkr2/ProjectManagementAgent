@@ -28,4 +28,5 @@ areas:
     description: "Documents, memberships, forms, subscriptions and returns."
   - name: Community
     description: "Clubs, volunteering and local groups."
-  # "My job" waits on the I-0 question: is an employee's job part of Personal or their business side?
+  - name: Work
+    description: "Your job, for someone who keeps it under Personal rather than as its own side."

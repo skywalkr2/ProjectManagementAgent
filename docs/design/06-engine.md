@@ -2887,8 +2887,8 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   the personal one (`steward.personal_project`). What the assistant files there is never "unfiled". A person who only
   tracks a business answers yes to setup's business question and can leave Personal empty; nothing asks them to use it.
 - **Two sides from day one** (the UI/UX reviewer, 2026-10-21; *designed, S1-4*): every item belongs to Personal or to the
-  business (the business is a top-level project, its projects under it; a setting names it, beside
-  `steward.personal_project`). Today and Follow-ups get an "All / Personal / <business>" filter. Filing reads the
+  second side, a business or a job as the person chose at setup (a top-level project, its projects under it; a
+  setting names it, beside `steward.personal_project`). Today and Follow-ups get an "All / Personal / <business>" filter. Filing reads the
   people first, since each person belongs to a side; only an item neither its people nor its words place is asked
   about, and those are asked together in one "Which side?" question, never one each. A person with no business is never
   asked. People on the personal side record how they relate to the person (a relation, "my sister"), not a role or an

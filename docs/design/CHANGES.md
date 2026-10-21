@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 146. A job or a business as the second side, chosen at setup (2026-10-21; I-0, designed)
+
+- Setup's first step asks "Personal life only", "Personal life and my job" or "Personal life and my business"; a job or
+  a business becomes the second side, named by the person, and `workspace.project.work_kind` picks its words. Keeping
+  a job under Personal is the first choice plus a "Work" area. Design 7 ("Setup for a person"), 6.32 ("Two sides").
+
 ## 145. The UI/UX reviewer's setup order, two sides from day one (2026-10-21; S1-4 and I-0, designed)
 
 | Where | Before | Now |

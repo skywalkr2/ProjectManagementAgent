@@ -1026,7 +1026,8 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
   Inputs, reviewed against design 7 and the wording sheet (2026-10-21): `docs/project/setup-inputs/` holds the setup
   wording (`wording.yaml`), the relations list for the Personal side (`relations.yaml`, a setting's default) and the
   common Personal areas offered as unticked boxes (`areas.yaml`, a setting's default; phase S4 proposes areas from a
-  pattern). Open for the owner: is an employee's job part of Personal (a "Work" area and relations) or their business side?
+  pattern). A job or a business is the second side, the person's choice in step 1, with `workspace.project.work_kind`
+  picking its words (decisions 2026-10-21, "A job or a business can be the second side").
 
 **The tester milestone (owner, 2026-10-18; designer's F8 and plan point 5, 2026-10-19).** Measured also by how many
 items each tester brings back through "Missed one" per week, which should fall from week one to week two. The invitation
