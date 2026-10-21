@@ -978,7 +978,10 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
   2026-10-21, passed to the UI/UX reviewer). The reviewer walks setup and the daily screens as a personal and business
   tool, not a project manager's. Setup is reshaped to match design 7 ("Setup for a person, with a business optional"):
   what this is and what to do first; the personal side (the people in one's life, personal business); then the optional
-  "Do you have a business you want to track?" (its name, programs, projects, people). Done when the reviewer's findings
+  "Do you have a business you want to track?" (its name, programs, projects, people). The new flow is built under the
+  UI rules already in force (design Part 7 and CLAUDE.md's UI rules: the wording sheet, the cursor in the first field,
+  lists to pick from, one primary action, Continue and Skip as the walkthrough has them, no sideways scroll at any
+  width, WCAG 2.2 AA in light and dark, and the browser tests at every width). Done when the reviewer's findings
   are answered and a journey test walks both paths (personal only; personal and a business) with no work terms on the
   personal-only path.
 
