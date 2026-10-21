@@ -713,6 +713,21 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     the file (a documentation item, so no test). **Left:** the full browser run of the three new checks, and the
     reviewer's look at S1 to S6 on screen.
 
+- [ ] [B-10] **The owner's re-run of the failed AI cases** (2026-10-21, at `9e9c3f0`, one account, 3 runs per case:
+  the golden set's 41 failing cases at 39% of runs passing, 10 cases passing every run). Each sub-item is done when its
+  cases pass on the owner's next re-run and a stub or unit test pins the rule:
+  - a promise with a condition keeps its date words apart from the condition, and the condition in its text (019, 020,
+    021, 054, 055, 056, 064, t10, t12, t25-m2): the task's prompt and guidance;
+  - the scorer compares due words as the date rules read them, past "on" and "by" (013, 027, 112);
+  - a first name two people share is held for "who is it" even when the answer names one of them in full, when the
+    full name isn't in the input (shared-first-name);
+  - a reply in a promise's thread that the answer leaves without any op goes back once for what it said (105, 110,
+    114, 120, t21);
+  - the rest, case by case, through the prompt or a stronger tier: decision-for-pm, the two follow-up routing cases,
+    production-checkin (one to-do, two owners), t18 and 078 (no new to-do on an ending), question-asked-of-me-facts-
+    hold-it, they-finished-note, signature-phone, colon-in-title; and thread-t14, whose answers are in the owner's
+    `rerun.json`, not yet seen.
+
 ## Phase S: the daily steward (after phase B, before phase I)
 
 The owner's ask (2026-10-17): "this core needs to be full featured" as a daily assistant for anyone, not only project
