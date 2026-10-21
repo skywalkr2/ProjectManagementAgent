@@ -719,15 +719,28 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   cases pass on the owner's next re-run and a stub or unit test pins the rule:
   - a promise with a condition keeps its date words apart from the condition, and the condition in its text (019, 020,
     021, 054, 055, 056, 064, t10, t12, t25-m2): the task's prompt and guidance;
-  - the scorer compares due words as the date rules read them, past "on" and "by" (013, 027, 112);
+  - the scorer compares due words as the date rules read them, past "on" and "by" (013, 027, 112). **Built:**
+    `tests/test_evaluate_harness.py` "due_words_are_compared_as_the_date_rules_read_them" and the pinned
+    "a_promise_is_matched_on_who_it_is_owed_to…";
   - a first name two people share is held for "who is it" even when the answer names one of them in full, when the
-    full name isn't in the input (shared-first-name);
+    full name isn't in the input (shared-first-name). **Built:** the golden case `shared-first-name-named-in-full`;
+  - a person the answer writes as an address, or a name with the address beside it, is the person the address belongs
+    to (the learning pairs 07 and 20 held "tess@example.com" and "Tess (tess@example.com)" as unknown). **Built:**
+    `tests/test_names.py` "a_person_written_with_their_address…", "an_address_nobody_has…";
   - a reply in a promise's thread that the answer leaves without any op goes back once for what it said (105, 110,
     114, 120, t21);
   - the rest, case by case, through the prompt or a stronger tier: decision-for-pm, the two follow-up routing cases,
     production-checkin (one to-do, two owners), t18 and 078 (no new to-do on an ending), question-asked-of-me-facts-
     hold-it, they-finished-note, signature-phone, colon-in-title; and thread-t14, whose answers are in the owner's
     `rerun.json`, not yet seen.
+  - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
+    reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
+    20): whether the reach the model picks should be widened or checked against the correction's own task kind;
+    `promised_to` left out of a promise made to the person in a message to them (pairs 11 and 12); "we" still owned by
+    the writer (03); routing, the kept term and the fact lookup given but not followed (routing, day-30, look-it-up,
+    stance-manage);
+  - from the harder set (12 runs at 58%): `new-person-with-organization` and `project-no-record` (a project named in
+    the input with no record is not held for adding).
 
 ## Phase S: the daily steward (after phase B, before phase I)
 
