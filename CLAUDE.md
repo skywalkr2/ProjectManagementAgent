@@ -15,6 +15,7 @@ The project plan is in `docs/project/` (charter, scope, risks); the order of wor
 anything it defers stays deferred. The design (version in `docs/design/README.md`) is the scope baseline: a change to scope
 or design needs a one-line impact note in `docs/decisions.md` first. A decision isn't done until the design text says it:
 the change that records it also edits the design section it affects, and `docs/design/CHANGES.md` lists it.
+The self-check enforces it: a decision entry cites its change-log section ("Change log: section N", or "none").
 
 ## The boundary (non-negotiable)
 - Core code (`engine/`, `api/`, `web/src/`) contains **no** specific person, team, organization, product, program, system,

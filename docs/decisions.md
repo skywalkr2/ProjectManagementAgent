@@ -49,6 +49,8 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   `tests/test_evaluate_harness.py` now passes a lead-word variant and fails other words; the new golden case
   `shared-first-name-named-in-full`. The design's `due_words` stays the exact words the date came from.
 
+Change log: section 140.
+
 ## 2026-10-21: The area for what the assistant reads is called Connections; Stages, Drop and the model's name stay (wording review verdict)
 
 **Decision:** The outside plain-language review of the wording sheet (`docs/project/wording-review-2026-10.md`) is applied
@@ -78,6 +80,8 @@ the unit, browser and Python tests that quote the changed words. No change to ro
 later pass: the settings descriptions in `engine/config/schema.py` and the credential places ("the source Inbox") that
 still say "source".
 
+Change log: section 139.
+
 ## 2026-10-21: A program's example models are offered by role, never by name (re-review of B-9, R-b)
 
 **Decision:** The catalog (`catalog/ai-endpoints.yaml`) gives each example model of a command-line program a role,
@@ -93,6 +97,8 @@ as the choices. Which example is which is data, because the product never reads 
 **Impact:** Design 7.14 (wording sheet entries `welcome.ai.role.*`, `welcome.ai.model_choice_n`,
 `welcome.ai.model_role_hint`); `EndpointView.model_roles`; the catalog's comment block. No change to scope.
 
+Change log: section 140.
+
 ## 2026-10-21: A bare weekday said on that weekday is checked, and days written are the workspace's
 
 - **Decided (main session):** "by Friday" written on a Friday keeps its reading (the Friday a week later, as every bare
@@ -106,6 +112,8 @@ as the choices. Which example is which is data, because the product never reads 
   UTC dates and counted against the workspace's today.
 - **Impact:** `engine/due_phrases.py`, `engine/followups.py`, `engine/open_items.py`, `api/routes.py`;
   `tests/test_due_phrases.py`, `tests/test_followups_backup_eval.py`.
+
+Change log: section 140.
 
 ## 2026-10-20: Tests move the date with time-machine, never with faketime
 

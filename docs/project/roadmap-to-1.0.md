@@ -742,7 +742,8 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     unit test of the breadth rule;
   - who a promise is owed to (F32): three stub cases, Cc (owed to the To recipients, the person watches), a named third
     party, and "we'll" from the sender's team;
-  - a self-check that fails while a decision entry from 2026-10-21 on names no change-log section that exists;
+  - a self-check that fails while a decision entry from 2026-10-21 on names no change-log section that exists. **Built:**
+    `engine/selfcheck/decisions.py`, `tests/test_selfcheck_decisions.py`;
   - the rest, case by case, through the prompt or a stronger tier: decision-for-pm, the two follow-up routing cases,
     production-checkin (one to-do, two owners), t18 and 078 (no new to-do on an ending), question-asked-of-me-facts-
     hold-it, they-finished-note, signature-phone, colon-in-title; and thread-t14, whose answers are in the owner's

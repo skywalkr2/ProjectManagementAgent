@@ -1048,6 +1048,7 @@ Why: `docs/decisions.md` (2026-10-21, "The functional designer's answers to F26 
 | A name written with an address (6.11) | Read as a first name, often held as ambiguous | The person the address belongs to; an unknown address leaves the name to decide |
 | A full name the input never writes (6.11) | The answer's pick of one of two people of the same first name was applied | Held for "who is it" with those people offered |
 | A promise with a condition and a date (6.33, the notes prompt) | The instructions made the condition the due, so the date was lost | The date's words are the due, the condition goes in `waiting_for` and the text; `promised_to` is filled whenever the input shows who |
+| A program's example models in the walkthrough (7.14; R-b) | The program's own model names were the choices | Recommended, Stronger and Faster, from the catalog's `model_roles`; the program's own name only in the hint |
 | The scorer's due words (evaluation) | "December 2" failed against "by December 2" | Compared past a leading lead word, as the date rules read them; other words still fail |
 
 Why: the owner's re-run of the failed AI cases and the UI/UX re-review at `9e9c3f0` (R-0). Decisions in `docs/decisions.md`
