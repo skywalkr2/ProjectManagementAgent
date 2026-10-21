@@ -718,7 +718,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   the golden set's 41 failing cases at 39% of runs passing, 10 cases passing every run). Each sub-item is done when its
   cases pass on the owner's next re-run and a stub or unit test pins the rule:
   - a promise with a condition keeps its date words apart from the condition, and the condition in its text (019, 020,
-    021, 054, 055, 056, 064, t10, t12, t25-m2): the task's prompt and guidance;
+    021, 054, 055, 056, 064, t10, t12, t25-m2): the task's prompt and guidance. **Built** (instructions; a model
+    behavior, so done when the owner's next re-run passes these cases): `tests/test_learning_run_b7.py`
+    "a_condition_with_a_date_keeps_the_date…" pins the wording, and `promised_to` is required whenever the input shows who;
   - the scorer compares due words as the date rules read them, past "on" and "by" (013, 027, 112). **Built:**
     `tests/test_evaluate_harness.py` "due_words_are_compared_as_the_date_rules_read_them" and the pinned
     "a_promise_is_matched_on_who_it_is_owed_to…";
@@ -728,7 +730,10 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     to (the learning pairs 07 and 20 held "tess@example.com" and "Tess (tess@example.com)" as unknown). **Built:**
     `tests/test_names.py` "a_person_written_with_their_address…", "an_address_nobody_has…";
   - a reply in a promise's thread that the answer leaves without any op goes back once for what it said (105, 110,
-    114, 120, t21);
+    114, 120, t21). *Open, a design question first:* an action keeps no record of the words it came from, so which
+    open promise a pasted reply belongs to can only be guessed from overlapping text, and a wrong guess spends a paid
+    return round. Mail read through a connection carries the service's thread id, the reliable signal; decide whether
+    the check runs only on that, or also on pasted text, before building it;
   - the rest, case by case, through the prompt or a stronger tier: decision-for-pm, the two follow-up routing cases,
     production-checkin (one to-do, two owners), t18 and 078 (no new to-do on an ending), question-asked-of-me-facts-
     hold-it, they-finished-note, signature-phone, colon-in-title; and thread-t14, whose answers are in the owner's
