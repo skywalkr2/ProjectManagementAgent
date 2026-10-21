@@ -1,0 +1,29 @@
+# Relations a person picks from on the Personal side (Person.relation), from the outside helper's draft, reviewed.
+# A setting with a shipped default list the workspace can change; "Someone else" lets the person type their own.
+# People only: no organizations here (no utility company, no "our delivery person").
+groups:
+  - name: Family
+    relations: [my partner, my spouse, my mother, my father, my parent, my sister, my brother, my son, my daughter,
+                my child, my grandparent, my grandchild, my aunt or uncle, my niece or nephew, my cousin, my in-law,
+                my child's other parent]
+  - name: Friends
+    relations: [my friend, my best friend, my friend's partner, a family friend]
+  - name: Health
+    relations: [my doctor, my specialist, our dentist, my therapist, my pharmacist, my caregiver, our vet]
+  - name: Home
+    relations: [our landlord, our property manager, our neighbor, our plumber, our electrician, our cleaner,
+                our gardener, our repair person]
+  - name: Money and legal
+    relations: [my accountant, my financial adviser, my lawyer, our insurance agent, my contact at the bank]
+  - name: School and children
+    relations: [my child's teacher, someone at my child's school, my child's coach, my child's tutor,
+                our childcare provider]
+  - name: Services
+    relations: [my mechanic, my hairdresser]
+  - name: Work
+    relations: [my colleague, my manager, my mentor]
+  - name: Community
+    relations: [someone from my club, a fellow volunteer, someone from my place of worship]
+  - name: Other
+    relations: [someone I know]
+# "Someone else" (type your own) is the picker's last line, from the wording sheet, not a list entry.

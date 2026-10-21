@@ -1,0 +1,31 @@
+# Common Personal areas setup offers as tick boxes, all unticked and skippable (design 6.32, phase S4).
+# A setting with this default list; the workspace can change it. American English.
+# An area never finishes and has no end date; anything with a goal and an end (a trip, a move) is a project, which may
+# sit under an area. The business is the other side, never an area of Personal.
+# The helper's keyword "signals" are left out: filing reads people first, and an area is proposed from a pattern of
+# items by the assistant (a project.add the person says yes to), never from a word list in code. The examples may feed
+# the playbook guidance for that proposal when S4 is built.
+areas:
+  - name: Home
+    description: "Your home, repairs, utilities and upkeep."
+  - name: Health
+    description: "Appointments, medicines, dental care and test results."
+    private: suggested        # offered at a more private content level (design 6.32 "Privacy per area")
+  - name: Money
+    description: "Bills, banking, savings, taxes and insurance."
+    private: suggested
+  - name: Family
+    description: "Plans, dates and everyday matters with close family."
+  - name: Children
+    description: "School, childcare, activities and their schedules."
+  - name: Friends
+    description: "Invitations, plans and keeping in touch."
+  - name: Car and getting around
+    description: "Your car, its service and papers, and getting to places."
+  - name: Pets
+    description: "Vet visits, food, care and pet sitters."
+  - name: Paperwork
+    description: "Documents, memberships, forms, subscriptions and returns."
+  - name: Community
+    description: "Clubs, volunteering and local groups."
+  # "My job" waits on the I-0 question: is an employee's job part of Personal or their business side?

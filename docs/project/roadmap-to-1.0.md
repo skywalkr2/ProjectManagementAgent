@@ -1023,6 +1023,10 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
   width, WCAG 2.2 AA in light and dark, and the browser tests at every width). Done when the reviewer's findings
   are answered and a journey test walks both paths (personal only; personal and a business) with no work terms on the
   personal-only path.
+  Inputs, reviewed against design 7 and the wording sheet (2026-10-21): `docs/project/setup-inputs/` holds the setup
+  wording (`wording.yaml`), the relations list for the Personal side (`relations.yaml`, a setting's default) and the
+  common Personal areas offered as unticked boxes (`areas.yaml`, a setting's default; phase S4 proposes areas from a
+  pattern). Open for the owner: is an employee's job part of Personal (a "Work" area and relations) or their business side?
 
 **The tester milestone (owner, 2026-10-18; designer's F8 and plan point 5, 2026-10-19).** Measured also by how many
 items each tester brings back through "Missed one" per week, which should fall from week one to week two. The invitation

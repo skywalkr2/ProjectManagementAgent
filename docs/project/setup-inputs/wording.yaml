@@ -1,0 +1,74 @@
+# Setup wording for I-0, from the outside helper's draft, reviewed against design 7 and the wording sheet.
+# Keys go under the existing welcome.* namespace when built; plural keys use .one/.other and {n}.
+# {assistant} is the assistant's name (workspace.assistant_name), {business} the business project's name.
+
+welcome.intro.title: "Let's get things ready for you"
+welcome.intro.body: "A few quick steps help {assistant} learn about your life, your work and what you've promised to do."
+welcome.intro.button: "Let's begin"
+
+welcome.progress: "Step {current} of 7"
+
+welcome.you.title: "First, a little about you"
+welcome.you.name_label: "What should {assistant} call you?"
+welcome.you.name_hint: "Your first name, or the name you go by"
+welcome.you.time_zone_label: "Your time zone"            # a list to pick from, guessed from the computer
+welcome.you.time_zone_hint: "So reminders arrive at the right time."
+welcome.you.business_question: "Is this for your personal life, or for a business too?"
+welcome.you.personal_option: "Personal life only"
+welcome.you.both_option: "Personal life and a business"
+welcome.you.business_name_label: "What's your business called?"
+welcome.you.button: "Continue"
+
+welcome.account.title: "Your AI account"
+welcome.account.intro: "Pick the AI service you use. We fill in the recommended settings for it and check they work."
+welcome.account.button: "Continue"                       # the existing welcome.ai.* steps carry the rest
+
+welcome.mail.title: "Mail and calendar"
+welcome.mail.intro: "{assistant} reads your mail and calendar to keep track of messages, plans and promises. It never sends anything without you."
+welcome.mail.button: "Connect"
+welcome.mail.skip: "I'll do this later"
+
+welcome.promises.title: "Your promises"
+welcome.promises.intro: "{assistant} looks for what you've said you'd do, and what others said they'd do for you."
+welcome.promises.empty_title: "Let's find your first promise"
+welcome.promises.empty_body: "Paste a message or a note, and see what {assistant} finds in it."
+welcome.promises.button: "Continue"
+welcome.promises.skip: "I'll do this later"
+
+welcome.people.title: "The people in your life"
+welcome.people.intro: "Tell {assistant} who people are to you, so it understands your messages."
+welcome.people.name_label: "Name"
+welcome.people.relation_label: "Who are they to you?"     # a list to pick from (prompt 3), with "Someone else" to type
+welcome.people.button: "Save and continue"
+welcome.people.skip: "I'll do this later"
+
+welcome.business.title: "{business}"
+welcome.business.work_question: "What do you work on?"
+welcome.business.work_hint: "Your main services or the work you do."
+welcome.business.people_label: "People you work with"
+welcome.business.people_hint: "Customers, suppliers, staff: pick who each one is to {business}."
+welcome.business.grouping_label: "Group your work (optional)"
+welcome.business.grouping_hint: "Put related work together if that helps you keep track."
+welcome.business.button: "Save and continue"
+welcome.business.skip: "I'll do this later"
+
+welcome.backups.title: "Keep a safe copy"
+welcome.backups.intro: "A copy keeps what {assistant} tracks safe if this computer fails."
+welcome.backups.location_label: "Where to keep the copy"   # a folder picker
+welcome.backups.location_hint: "Another drive, or a folder that syncs to the cloud, is safest."
+welcome.backups.schedule_label: "How often"                # a list to pick from
+welcome.backups.button: "Finish"
+welcome.backups.skip: "I'll do this later"
+
+welcome.done.title: "You're all set"
+welcome.done.body: "You can change any of these later in Settings."
+welcome.done.button: "Go to Today"
+
+# Today line for items no rule could put on a side (S1-4a); starts with its verb.
+queue.sides.one: "Sort 1 item: Personal or {business}?"
+queue.sides.other: "Sort {n} items: Personal or {business}?"
+sides.personal: "Personal"
+sides.business: "{business}"
+sides.unclear_hint: "Pick the side it belongs to, or leave it for now."
+
+sidebar.personal: "Personal"
