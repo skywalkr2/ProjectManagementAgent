@@ -61,6 +61,7 @@ from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.config import Config
 from engine.dispatcher import process_through_outage
+from engine.due_phrases import DEFAULT_LEAD_WORDS
 from engine.endings import CHOICE_CHECK
 from engine.followups import they_finished
 from engine.intake import hand_in, note_as_input
@@ -674,6 +675,16 @@ def _squeezed(words: Any) -> str:
     return " ".join(str(words or "").split()).lower()
 
 
+def _due_words(words: Any) -> str:
+    """Due words as the date rules read them: squeezed, and past a leading lead word ("on", "by"), which the rules read
+    past too, so "on November 26" and "November 26" are the same answer. Other words, a condition among them, count."""
+    text = _squeezed(words)
+    for lead in sorted(DEFAULT_LEAD_WORDS, key=len, reverse=True):
+        if text.startswith(lead + " "):
+            return text[len(lead) + 1 :]
+    return text
+
+
 def _same_time(found: Any, wanted: Any) -> bool:
     """Whether two days or date-times are the same, however each was written."""
     if found is None or wanted is None:
@@ -705,7 +716,7 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             return False
         if "promised_to" in e and sorted(a.get("promised_to") or []) != sorted(e["promised_to"]):
             return False
-        if "due_words" in e and _squeezed(a.get("due_words")) != _squeezed(e["due_words"]):
+        if "due_words" in e and _due_words(a.get("due_words")) != _due_words(e["due_words"]):
             return False
         if "on_hold" in e and bool(a.get("on_hold")) != bool(e["on_hold"]):
             return False
@@ -717,7 +728,7 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
         own = json.dumps({k: v for k, v in o["op"].items() if k != "evidence"})
         return (
             o["op"]["id"] == e["id"]
-            and ("due_words" not in e or _squeezed(o["op"].get("due_words")) == _squeezed(e["due_words"]))
+            and ("due_words" not in e or _due_words(o["op"].get("due_words")) == _due_words(e["due_words"]))
             and ("text_has" not in e or _has_words(own, e["text_has"]))
         )
     if op == "record.set":

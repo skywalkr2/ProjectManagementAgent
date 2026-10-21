@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: The scorer reads a promise's date words past "on" and "by", and a shared first name waits for "who is it"
+
+- **Decided (main session):** an evaluation case's `due_words` match when they are the same after a leading lead word
+  ("on", "by", "due", "no later than": the date rules' own list), which the rules read past; any other difference, a
+  condition among them, is still a miss. The applier holds an action for "who is it" when the answer names a person in
+  full (or by id) whom the input names only by a name that fits more than one person.
+- **Why:** the owner's re-run of the failed cases (B-10) counted "December 2, 2026" against "by December 2, 2026" as a
+  failure, though the date, the record and the screen are the same; the scorer measured wording, not understanding.
+  The same run showed the model picking one of two people called Maya by full name: a guess the input doesn't support.
+- **Impact:** `engine/evaluate.py` (`_due_words`), `engine/applier.py` (`_as_written`); the pinned test in
+  `tests/test_evaluate_harness.py` now passes a lead-word variant and fails other words; the new golden case
+  `shared-first-name-named-in-full`. The design's `due_words` stays the exact words the date came from.
+
 ## 2026-10-21: A program's example models are offered by role, never by name (re-review of B-9, R-b)
 
 **Decision:** The catalog (`catalog/ai-endpoints.yaml`) gives each example model of a command-line program a role,

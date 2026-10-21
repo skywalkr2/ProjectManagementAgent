@@ -274,10 +274,17 @@ def test_a_promise_is_matched_on_who_it_is_owed_to_and_the_words_its_date_came_f
     wrong_to = {**case["stub_answer"], "ops": [{**ideal, "promised_to": [other]}]}
     result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=wrong_to)
     assert not result.passed and any("promised_to" in m for m in result.missing)
-    # Other words give the same day, so the date matches; the words themselves are still checked.
+    # A leading "by" or "on" is read past, as the date rules read past it, so it is the same answer (the scorer relaxes
+    # the exact words here on purpose, see docs/decisions.md); other words for the same day are still a miss.
     words = ideal["due_words"]
-    same_day = words[3:] if words.startswith("by ") else f"by {words}"
-    wrong_words = {**case["stub_answer"], "ops": [{**ideal, "due_words": same_day}]}
+    lead = words[3:] if words.startswith("by ") else f"by {words}"
+    assert run_edited(
+        monkeypatch, DEMO_B, case["id"], stub_answer={**case["stub_answer"], "ops": [{**ideal, "due_words": lead}]}
+    ).passed
+    wrong_words = {
+        **case["stub_answer"],
+        "ops": [{**ideal, "due_words": f"no later than the {ideal['due_words']} deadline"}],
+    }
     result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=wrong_words)
     assert not result.passed and any("due_words" in m for m in result.missing)
     spaced = {**case["stub_answer"], "ops": [{**ideal, "due_words": "  " + ideal["due_words"].upper() + " "}]}
@@ -598,3 +605,13 @@ def test_an_ai_setup_file_that_isnt_there_says_so_in_one_line(tmp_path, capsys):
     assert main(["evaluate", "--from", str(DEMO_B), "--ai-config", str(missing), "--stub", "--runs", "1"]) == 1
     err = capsys.readouterr().err
     assert str(missing) in err and len(err.strip().splitlines()) == 1
+
+
+def test_due_words_are_compared_as_the_date_rules_read_them():
+    """A leading "on" or "by" is read past, as the date rules do; any other difference, a condition among them,
+    counts."""
+    assert ev._due_words("on November 26, 2026") == ev._due_words("November 26, 2026")
+    assert ev._due_words("By  December 2, 2026") == ev._due_words("by december 2, 2026") == "december 2, 2026"
+    assert ev._due_words("no later than Friday") == "friday"
+    assert ev._due_words("before Friday") != ev._due_words("Friday")
+    assert ev._due_words("If the committee approves") != ev._due_words("Friday")
