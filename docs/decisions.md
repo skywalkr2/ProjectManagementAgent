@@ -4,6 +4,38 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: The functional designer's answers to F26 to F32, and decisions are checked against the change log
+
+- **Decided (functional designer, 2026-10-21):** yes to all seven defaults (`docs/project/designer-questions.md`), with:
+  - **F26:** Gmail's one-click sign-in ships on whichever of the three signals comes first, or, if none has fired six
+    months after launch, the owner decides anyway with the Gmail drop-out count in hand.
+  - **F27:** a weekly "Sign in again" is acceptable for testers, with a Today line the day before a known expiry
+    ("Gmail needs signing in again tomorrow"); mail not read because a sign-in lapsed is a coverage gap, counted apart
+    from missed promises when the independent list is compared (as an outage is); and one question about it in the
+    two-week check-in form.
+  - **F28:** the walkthrough lives in the add-on; with no mail connected, the core's setup guide and coverage line point
+    to "the mail add-on's steps" without naming a service.
+  - **F29:** one of the three testers takes the free own-registration path; a dated list of everyone added to and
+    removed from the tester registration is kept before anyone is added.
+  - **F30:** an answer that leaves a reply in a promise's thread without any op goes back once. The thread is the
+    conversation the rules join (`engine/mail_threads.py`); for pasted text, a reply whose quoted history holds an open
+    promise's evidence quote is linked to that promise by rule, with no guess and no paid call. Pasted text with no
+    such match keeps today's behavior.
+  - **F31:** a lesson's breadth is read from the person's words: a named person or project gives that one, a role or a
+    plural group gives that role, "always", "every" or "never" gives general. The proposal states its reach in words,
+    which the person widens or narrows with one click on the Learned line. A correction that proposed no lesson still
+    proposes the narrow one.
+  - **F32:** a promise is owed to the person it is said to: with the person in Cc and the promise said to the To
+    recipients, it is owed to them and the person watches it; "I'll send Sam the plan" is owed to Sam; "we'll" from the
+    sender's team is not owed to the person unless the words say so.
+- **Decided (functional designer):** "a decision isn't done until the design section says so" is checked, not
+  remembered: a self-check fails while a decision entry from 2026-10-21 on names no change-log section that exists.
+- **Checked, not changed:** the break-even line stays "19 to 76 paying users". The total is $5,319, not $5,300, and
+  $5,319 ÷ $70.75 ≈ 75.2, rounded up because a part of a user doesn't pay.
+- **Impact:** design 6.22 (F31), 6.33 (F30, F32), the sign-in paragraph of 6.32 (F27, F28); roadmap B-10, phase T and
+  phase I items; the self-check `decisions`; `docs/project/business-model-delta-gmail-later.md` (F26). Change log:
+  section 141.
+
 ## 2026-10-21: The scorer reads a promise's date words past "on" and "by", and a shared first name waits for "who is it"
 
 - **Decided (main session):** an evaluation case's `due_words` match when they are the same after a leading lead word

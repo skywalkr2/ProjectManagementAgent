@@ -733,8 +733,16 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   - a reply in a promise's thread that the answer leaves without any op goes back once for what it said (105, 110,
     114, 120, t21). *Open, a design question first:* an action keeps no record of the words it came from, so which
     open promise a pasted reply belongs to can only be guessed from overlapping text, and a wrong guess spends a paid
-    return round. Mail read through a connection carries the service's thread id, the reliable signal; decide whether
-    the check runs only on that, or also on pasted text, before building it;
+    return round. *Decided (F30):* the thread is the conversation the rules join, and pasted text joins a promise's
+    thread by rule when its quoted history holds that promise's evidence quote; done when a stub case shows a pasted
+    reply that quotes the promise's sentence linked to it by rule, and an empty answer to it sent back once;
+  - a lesson as narrow as the person's words (F31): a named person or project, a role or plural group, or "always",
+    "every", "never"; the reach stated in words; a correction never left without a lesson; done when the pairs
+    `over-application`, `other-project` and `another-teams-rows-naming-ours` pass on the owner's next re-run, with a
+    unit test of the breadth rule;
+  - who a promise is owed to (F32): three stub cases, Cc (owed to the To recipients, the person watches), a named third
+    party, and "we'll" from the sender's team;
+  - a self-check that fails while a decision entry from 2026-10-21 on names no change-log section that exists;
   - the rest, case by case, through the prompt or a stronger tier: decision-for-pm, the two follow-up routing cases,
     production-checkin (one to-do, two owners), t18 and 078 (no new to-do on an ending), question-asked-of-me-facts-
     hold-it, they-finished-note, signature-phone, colon-in-title; and thread-t14, whose answers are in the owner's
@@ -1108,6 +1116,14 @@ anything else. Each item ends with its named test. **Proposed, awaiting the func
 (`docs/project/business-model-delta-gmail-later.md`): Plus launches with one-click Outlook and every pack, and Gmail's
 one-click sign-in (with Google's yearly assessment, M1b) waits for a trigger; a tester registration the owner keeps in
 Google's Testing status (M7) serves testers and founding members. The items below take it once it is accepted.
+
+- [ ] [T-6] **Testers and the weekly sign-in** (functional designer, F27 and F29, 2026-10-21): a Today line the day
+  before a known sign-in expiry ("<service> needs signing in again tomorrow"); mail unread while a sign-in lapsed shown
+  as a coverage gap and counted apart from missed promises in the independent-list comparison; one question about it in
+  the two-week check-in form; a dated list of everyone added to and removed from the tester registration, kept before
+  anyone is added; and one of phase I's three testers on the free own-registration path.
+- [ ] [T-7] **No dead end without mail** (F28): with no mail connected, the setup guide and the coverage line point to
+  the mail add-on's steps, naming no service.
 
 - [ ] [T-1] **The Plus licence, checked offline:** a licence file signed by the owner's key, kept in the workspace's
   private folder and checked with the public key the app ships with; no call home. Generic in the core: a catalog entry,

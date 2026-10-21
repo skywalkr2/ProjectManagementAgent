@@ -2331,7 +2331,10 @@ run. **Built:** `tests/test_refusals.py::test_the_same_check_refusing_the_floor_
 A bad result can then be traced to knowledge that was missing (not in the packet) or ignored (in the packet, and the answer
 went against it). The repeat-correction signal (6.20) is computed from this log.
 
-**Every correction proposes one piece of learning.** When a signal is recorded (sent back, undone, dropped, reworded, pulled
+**Every correction proposes one piece of learning, as narrow as the person's words** (F31, *designed, B-10*): a named
+person or project gives that one, a role or a plural group gives that role, and only "always", "every" or "never" gives
+general; the proposal states its reach in words ("for reviews on <project>"), which the person widens or narrows with one
+click, and a correction that would propose nothing proposes the narrow one. When a signal is recorded (sent back, undone, dropped, reworded, pulled
 back, draft edited, held op declined, or the person's answer to a question the assistant asked them), a small `learn` task runs, unless the person's own answer already recorded what it teaches ("Not a project" and "It's part of" keep their glossary entry, which the correction names as `learned`). Its packet holds:
 - the item, and which kind of work was corrected (an entry that names kinds of work must include it, or it goes back
   once with that reason; built: `test_a_lesson_naming_kinds_of_work_must_include_the_one_corrected_and_the_packet_says_which_it_was`);
@@ -2682,7 +2685,10 @@ private repository; the core signs in"). The mechanism is generic: an add-on dec
   connector asks the core for a current access token (`context.access_token(name)`); the core renews it when it is about to run
   out. A sign-in that can't be renewed reads as an `auth` failure, so the person is asked to sign in again. When the service
   refuses a renewal, the row says "Sign in again" at once and later reads get `auth` without asking the service again; a
-  service that is down or out of reach is not a refusal and the sign-in stands. Signing out withdraws the access at the service
+  service that is down or out of reach is not a refusal and the sign-in stands. A sign-in with a known expiry gets a
+  Today line the day before ("<service> needs signing in again tomorrow"), and mail left unread while a sign-in lapsed
+  is a coverage gap on the coverage line, counted apart from missed promises (F27, *designed, phase T*). With no mail
+  connected, the setup guide and the coverage line point to the mail add-on's steps, naming no service (F28). Signing out withdraws the access at the service
   when it offers a way (RFC 7009, best effort) and forgets the tokens. The row shows the scopes asked for that the service did
   not grant.
 - **Whose app registration is used**, in this order (decisions, 2026-10-11, "Signing in needs no app registration from the
@@ -3051,7 +3057,9 @@ the person, the person is waiting on it.
 
 **What an action gains.**
 - `promised_to`: the people it was promised to, by id (the person, for a waiting-on; the other party, for the person's
-  own promise). Empty for a plain to-do.
+  own promise). Empty for a plain to-do. A promise is owed to whoever it is said to (F32): said to the To recipients
+  with the person in Cc, it is owed to them and the person only watches it; "I'll send Sam the plan" is owed to Sam;
+  "we'll" from the sender's team is not owed to the person unless the words say so.
 - `basis`: said (someone said it outright) or inferred (the assistant read it between the lines), as facts carry it
   (6.7), with `said_by` when the input names the speaker. Never a model's confidence.
 - `due_words`: the exact words the date came from ("by Friday", "early next week"), and `due_check` when the rules'
@@ -3202,7 +3210,10 @@ signal (6.22).
 its sent folder is offered as a second source, taken in quietly like any new source (6.32). A message's new text is
 split from its quoted history and signature first (`engine/reply_split.py`), so a promise quoted again is never found
 twice, and automatic mail never ends a promise (`engine/automatic_mail.py`). Messages join their conversation by rules
-(`engine/mail_threads.py`), so a reply is read against the promises of its thread.
+(`engine/mail_threads.py`), so a reply is read against the promises of its thread. An answer that leaves a reply in a
+promise's thread without any op on that promise goes back once to say what the reply said (F30); pasted text joins a
+promise's thread by rule when its quoted history holds that promise's evidence quote, and otherwise is read as before
+(*designed, B-10*).
 
 **Evaluation:** the 120 single examples and 25 whole threads (`docs/project/steward-promise-*.yaml`) become golden cases,
 and the twenty learning pairs become harness pairs in a workspace's `pairs/` folder.

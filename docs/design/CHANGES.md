@@ -1027,6 +1027,18 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 141. The functional designer's answers to F26 to F32 (2026-10-21; B-10, phases T and I)
+
+| Where | Before | Now |
+|---|---|---|
+| A reply in a promise's thread (6.33) | An empty answer to it was accepted | It goes back once; pasted text joins the thread by rule when its quoted history holds the promise's evidence quote (designed) |
+| A lesson's breadth (6.22) | Whatever the model proposed, or nothing | Read from the person's words (named, a role, or "always"), the reach stated in words, never nothing (designed) |
+| Who a promise is owed to (6.33) | The person, by default | Whoever it is said to: Cc watches, a named third party is owed, "we'll" stays the team's |
+| A sign-in about to lapse (6.32) | Asked again once it had lapsed | A Today line the day before; lapsed mail is a coverage gap, counted apart (designed, phase T) |
+| Decisions and the design text | Kept by memory | A self-check fails while a decision entry names no change-log section |
+
+Why: `docs/decisions.md` (2026-10-21, "The functional designer's answers to F26 to F32").
+
 ## 140. Days in the workspace's own day, names by address, a shared first name held, conditions apart from dates (2026-10-21; batch B-10)
 
 | Where | Before | Now |

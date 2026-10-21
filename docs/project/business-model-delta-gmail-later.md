@@ -34,6 +34,8 @@ support it.**
   in scope, and what its user-data policy requires for AI processing), and get an assessor's quote. The real cost is
   then known.
 - **M1b, at the trigger:** run the assessment and ship the add-on's Gmail registration.
+- **The trigger has a date** (functional designer, F26, 2026-10-21): whichever of the three signals fires first, or,
+  if none has fired six months after launch, the owner decides anyway, with the Gmail drop-out count in hand.
 - **The trigger:** whichever comes first:
   - Plus revenue covers a year of the assessment;
   - the tester registration (below) nears its user cap with people still asking for Gmail;

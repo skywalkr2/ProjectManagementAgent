@@ -11,7 +11,12 @@ F4 a coverage line on Today; F5 adding a missed promise; F6 older mail at first 
 F8 the tester milestone's exit; F9 Today judged by the next action; F10 the risks register; F11 bundling the mail and
 calendar add-on for testers; F12 what a refused form save does next; F13 old kept passwords; F14 what a go on spending covers.
 
-## Queued: F30 to F32, from the owner's re-run of the failed AI cases (2026-10-21; B-10)
+## Answered: F30 to F32, from the owner's re-run of the failed AI cases (asked and answered 2026-10-21; B-10)
+
+Answered by the functional designer on 2026-10-21: yes to each default, with the additions in `docs/decisions.md`
+("The functional designer's answers to F26 to F32"): F30 links a pasted reply to its promise by rule when its quoted
+history holds the promise's evidence quote; F31 reads a lesson's breadth from the person's words and always states its
+reach; F32 pins three cases (Cc, a named third party, "we'll").
 
 The re-run is grouped by cause in roadmap B-10. Three choices there are product judgment, not code:
 
@@ -30,7 +35,10 @@ wider; a broader one is proposed only when the person's own words say "always" o
 recorded as owed to the person even when the message doesn't say "you". *Default:* yes, owed to the person the message
 was to; already in the instructions as of `b5410e5`, so this confirms it.
 
-## Queued: F26 to F29, the Gmail-later proposal (2026-10-20; the owner asks them when ready)
+## Answered: F26 to F29, the Gmail-later proposal (asked 2026-10-20, answered 2026-10-21)
+
+Answered by the functional designer on 2026-10-21: yes to each default, with a review date on F26 (six months after
+launch), three additions on F27, a generic pointer on F28 and a dated tester list on F29 (`docs/decisions.md`).
 
 The proposal is `docs/project/business-model-delta-gmail-later.md`: Thimbleby+ launches with one-click Outlook and every
 pack, and Gmail's one-click sign-in waits for a trigger. Its questions 1 to 4, with the technical reviewer's read, are
