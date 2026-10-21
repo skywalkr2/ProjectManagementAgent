@@ -803,8 +803,11 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   (`tests/test_catalog_claims.py::test_the_command_that_runs_carries_the_options_its_programs_documentation_gives_for_denying_tools`,
   `::test_a_saved_account_whose_key_the_service_refuses_on_its_model_list_fails_as_a_refused_key`). Left in part 2:
   effort sent only to models whose listed capabilities take it (the native model list documents an effort capability per
-  model); output room for models that always think; moving a saved account of the recommended service to the native
-  adapter.
+  model); output room for models that think by default (the current small, middle and large models of the recommended
+  service all do, so every tier's output limit has to leave room for thinking, or thinking is turned off where the
+  model's listed capabilities accept that, never by its name); estimates that follow a model's own token counting;
+  the preset picking the newest model of each family (checked against the service's list order); moving a saved account
+  of the recommended service to the native adapter.
   (3) **Failures captured in detail for feedback** (owner, 2026-10-21: "We should have something in the program that
   captures failures in detail so the user can send them in the feedback"): every failed AI call, account check,
   connector read and server error keeps what a maintainer needs (when, the task kind, the account's service and
