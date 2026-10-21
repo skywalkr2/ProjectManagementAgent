@@ -735,7 +735,11 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     open promise a pasted reply belongs to can only be guessed from overlapping text, and a wrong guess spends a paid
     return round. *Decided (F30):* the thread is the conversation the rules join, and pasted text joins a promise's
     thread by rule when its quoted history holds that promise's evidence quote; done when a stub case shows a pasted
-    reply that quotes the promise's sentence linked to it by rule, and an empty answer to it sent back once;
+    reply that quotes the promise's sentence linked to it by rule, and an empty answer to it sent back once. **Built:**
+    `tests/test_thread_promise_lint.py::test_through_a_hand_in_an_empty_answer_is_sent_back_once` and
+    `::test_news_from_a_reply_that_quotes_the_promise_is_about_it_whatever_its_own_words` (the lint
+    `thread-promise-unanswered`). *Left:* the five cases pass only when the reply quotes the promise, so they are
+    checked again on the owner's re-run; watched mail joined by conversation alone is not built;
   - a lesson as narrow as the person's words (F31): a named person or project, a role or plural group, or "always",
     "every", "never"; the reach stated in words; a correction never left without a lesson; done when the pairs
     `over-application`, `other-project` and `another-teams-rows-naming-ours` pass on the owner's next re-run, with a

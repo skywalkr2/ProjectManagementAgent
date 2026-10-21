@@ -3211,9 +3211,12 @@ its sent folder is offered as a second source, taken in quietly like any new sou
 split from its quoted history and signature first (`engine/reply_split.py`), so a promise quoted again is never found
 twice, and automatic mail never ends a promise (`engine/automatic_mail.py`). Messages join their conversation by rules
 (`engine/mail_threads.py`), so a reply is read against the promises of its thread. An answer that leaves a reply in a
-promise's thread without any op on that promise goes back once to say what the reply said (F30); pasted text joins a
-promise's thread by rule when its quoted history holds that promise's evidence quote, and otherwise is read as before
-(*designed, B-10*).
+promise's thread without any op on that promise goes back once to say what the reply said (F30): a reply joins a
+promise's thread by rule when its quoted history holds words the promise was recorded with (a quote of at least four
+words, from the ledger), and otherwise is read as before. Such a reply is about that promise, so news, a new date or a
+part from it fits the promise whatever its own words (the `evidence-fit` lint accepts it). *Built:* the lint
+`thread-promise-unanswered`, `tests/test_thread_promise_lint.py`; joining watched mail by the conversation the rules
+join (`engine/mail_threads.py`) when its history quotes none of the promise's words is not built.
 
 **Evaluation:** the 120 single examples and 25 whole threads (`docs/project/steward-promise-*.yaml`) become golden cases,
 and the twenty learning pairs become harness pairs in a workspace's `pairs/` folder.

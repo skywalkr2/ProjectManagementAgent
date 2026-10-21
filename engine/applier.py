@@ -91,6 +91,7 @@ from engine.ops import (
 )
 from engine.plugin_api import NeedsPerson
 from engine.records import REGISTRY, entry_problem, model_for
+from engine.reply_split import split_message
 from engine.rule_use import RULE_CHECK, failing_rules
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
@@ -188,6 +189,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _too_many_ops(cs, ctx)
     problems += _learning_reach(cs, ctx)
     problems += _follow_on_reach(cs, ctx)
+    problems += _thread_promise_unanswered(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -382,13 +384,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"action {op.id} is already done")
             elif target.data["status"] == "dropped":
                 refuse(i, "targets", f"action {op.id} was dropped, so it can't be closed")
-            elif evidence is not None and not _shares_words(evidence.quote, target.data["text"]):
+            elif evidence is not None and not _about_action(evidence.quote, target, view, ctx):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
         if isinstance(op, (ActionMoveOp, ActionPartOp, ActionNewsOp)):
             why = action_hold_problem(view, op)
             if why:
                 refuse(i, "targets", why)
-            elif evidence is not None and not _shares_words(evidence.quote, view.get("action", op.id).data["text"]):
+            elif evidence is not None and not _about_action(evidence.quote, view.get("action", op.id), view, ctx):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
         if endings.asks(op, ctx):
             # Closed with no delivery words or call-off words (or both) is one choice, even in the person's own note.
@@ -1806,6 +1808,89 @@ def _follow_on_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         for i, op in enumerate(cs.ops)
         if (why := follow_on.reach_problem(view, ctx.cfg, request.data, op, ctx.people)) is not None
     ]
+
+
+#: The fewest words an action's evidence quote must have to count as the promise's words in a reply's history: a
+#: shorter quote ("on it", "Friday") turns up in unrelated history and would link the wrong promise.
+THREAD_PROMISE_MIN_WORDS = 4
+
+
+def _quoted_history(raw_input: str) -> str:
+    """The input's quoted earlier messages as comparable text: line marks (">") removed, case, quotes and spacing
+    normalized, so a quote matches however a mail program wrapped or marked it."""
+    quoted = split_message(raw_input).quoted
+    lines = (re.sub(r"^[\s>]+", "", line) for line in quoted.splitlines())
+    return normalize(" ".join(line for line in lines if line))
+
+
+def _about_action(quote: str, action: Any, view: Any, ctx: Context) -> bool:
+    """Whether a quote reads as being about the action: it shares words with the action's text, or it comes from a
+    reply whose quoted history holds the action's own recorded words, which makes the whole reply about it."""
+    return _shares_words(quote, action.data["text"]) or action.id in _thread_linked(view, ctx, {action.id})
+
+
+def _thread_linked(view: Any, ctx: Context, among: set[str] | None = None) -> dict[str, str]:
+    """The open actions a reply's quoted history links by rule, each with its quote that the history holds: a
+    quote the action was recorded with, at least `THREAD_PROMISE_MIN_WORDS` long. Empty for input with no quoted
+    history. `among` limits it to those action ids."""
+    if not ctx.inputs.raw_input.strip():
+        return {}
+    history = _quoted_history(ctx.inputs.raw_input)
+    if not history:
+        return {}
+    open_ids = {a.id for a in view.list("action") if a.data["status"] == "open" and (among is None or a.id in among)}
+    linked: dict[str, str] = {}
+    for entry in view.ledger(kind="action"):
+        quote = (entry.get("evidence") or {}).get("quote")
+        action_id = entry["record_id"]
+        if action_id not in open_ids or action_id in linked or not isinstance(quote, str):
+            continue
+        if len(quote.split()) >= THREAD_PROMISE_MIN_WORDS and normalize(quote) in history:
+            linked[action_id] = quote
+    return linked
+
+
+def _thread_promise_unanswered(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A reply that quotes an open promise's words in its history, answered with no op on that promise, is sent back
+    once (design 6.33): the answer says what the reply means for the promise. A rule on the words: the history must hold
+    a quote the promise was recorded with. Input with no quoted history, the person's own note and the person's own
+    changes are left alone."""
+    # A task that may not write news on an action can't be asked to answer the promise.
+    if ctx.actor == "pm" or "action.news" not in ctx.allowed_ops:
+        return []
+    name = "thread-promise-unanswered"
+    lints = ctx.cfg.checks.lints
+    if lints.get(name, "off") == "off":
+        return []
+    view = ctx.store.read()
+    if _from_pm(view, ctx):
+        return []
+    named = {
+        ref
+        for op in cs.ops
+        for ref in (getattr(op, "id", None), getattr(getattr(op, "record", None), "id", None))
+        if isinstance(ref, str)
+    }
+    problems: list[Problem] = []
+    for action_id, found in _thread_linked(view, ctx).items():
+        if action_id in named:
+            continue
+        action = view.get("action", action_id)
+        level = ctx.cfg.checks.projects.get(action.data.get("project") or "", {}).get(name) or lints.get(name, "off")
+        if level == "off":
+            continue
+        problems.append(
+            Problem(
+                name,
+                level,
+                None,
+                f"the reply quotes the promise {action_id} ({action.data['text']!r}) in its history, and the answer "
+                "has no op on it: say what the reply means for it (news, a new date, a part done, or done), or give "
+                "it action.news saying the reply doesn't answer it",
+                found,
+            )
+        )
+    return problems
 
 
 def _rejects_asking(ctx: Context) -> bool:

@@ -734,6 +734,10 @@ in `language.unanchored_words` (6.9); `tests/test_action_stands_alone.py`.
 **Built (B-7):** `reasoning-in-title` and `question-is-statement` (default `return` each; no tuning of their own, their
 words are `language.reasoning_phrases` and `language.question_marks`, above); `tests/test_item_text_lints.py`.
 
+**Built (B-10):** `thread-promise-unanswered` (default `return`; per project like any lint), a reply whose quoted history
+holds an open promise's recorded words (a quote of at least four words), answered with no op on that promise (6.33);
+`tests/test_thread_promise_lint.py`.
+
 **Built (L3):** `several-questions` (default `return`), a question or decision whose text holds `several_questions.minimum`
 (default 2, from 2 to 20) or more items of a numbered list that ask; and `question-without-stake` (default `return`), a
 `question.add` to anyone but the person with no `matters_for` (6.8). `owner_suggestion.match` (default 0.5, above 0 and at

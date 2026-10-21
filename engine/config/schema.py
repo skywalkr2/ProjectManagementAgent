@@ -1191,6 +1191,7 @@ def _default_lints() -> dict[str, Severity]:
         "action-stands-alone": "return",
         "reasoning-in-title": "return",
         "question-is-statement": "return",
+        "thread-promise-unanswered": "return",
     }
 
 

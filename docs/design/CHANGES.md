@@ -1031,7 +1031,7 @@ yet follow, that it is *designed*, with its phase.
 
 | Where | Before | Now |
 |---|---|---|
-| A reply in a promise's thread (6.33) | An empty answer to it was accepted | It goes back once; pasted text joins the thread by rule when its quoted history holds the promise's evidence quote (designed) |
+| A reply in a promise's thread (6.33) | An empty answer to it was accepted | It goes back once; a reply joins the thread by rule when its quoted history holds the promise's recorded words, and its news fits the promise whatever its own words (built: the `thread-promise-unanswered` lint; joining by conversation alone not yet) |
 | A lesson's breadth (6.22) | Whatever the model proposed, or nothing | Read from the person's words (named, a role, or "always"), the reach stated in words, never nothing (designed) |
 | Who a promise is owed to (6.33) | The person, by default | Whoever it is said to: Cc watches, a named third party is owed, "we'll" stays the team's |
 | A sign-in about to lapse (6.32) | Asked again once it had lapsed | A Today line the day before; lapsed mail is a coverage gap, counted apart (designed, phase T) |
