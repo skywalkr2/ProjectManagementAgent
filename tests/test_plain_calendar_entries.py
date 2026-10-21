@@ -10,6 +10,7 @@ come from the fixtures; the calendar is a file."""
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 import yaml
@@ -253,7 +254,10 @@ def test_changing_the_verbs_changes_what_is_offered(cal):
 
 
 REAL = datetime.now(UTC)
-TOMORROW = (REAL + timedelta(days=1)).date()
+# Tomorrow where the workspace is, as the agenda counts days: in UTC it is already the next day for a few hours each
+# evening there.
+_HERE = ZoneInfo(yaml.safe_load((DEMO_B / "config" / "workspace.yaml").read_text())["user"]["timezone"])
+TOMORROW = (REAL.astimezone(_HERE) + timedelta(days=1)).date()
 THEN = TOMORROW.strftime("%Y%m%d")
 
 
