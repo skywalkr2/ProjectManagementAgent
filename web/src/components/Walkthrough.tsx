@@ -104,13 +104,16 @@ export function Walkthrough(
   }, [props.at?.n]);
 
   // On opening and on every move, the cursor goes to the screen's first field, so the person can start typing; a screen
-  // with no field puts it on its heading instead. A screen's fields can arrive a moment later, so it waits briefly.
+  // with no field puts it on its heading instead. A screen's fields can arrive a moment later, so it waits briefly; a
+  // person who already put the cursor in a field meanwhile keeps it there.
   useEffect(() => {
     if (!current) return;
     let tries = 0;
     let timer = 0;
     const place = () => {
       const main = heading.current?.closest("main");
+      const active = document.activeElement;
+      if (active && main?.contains(active) && active.matches("input, select, textarea")) return;
       const field = main?.querySelector<HTMLElement>(
         "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
       );
