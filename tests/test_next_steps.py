@@ -611,17 +611,23 @@ def test_a_golden_case_for_each_next_step_passes_with_the_ideal_answer_and_score
     case = case_of(template, case_id)
     assert any("held" in e for e in case["expect"])
     assert run_edited(monkeypatch, template, case_id).passed
-    # Leaving the held item out fails the case.
+    # Leaving the held item out fails the case, except a signature's phone: the rules offer it when the answer doesn't.
     held = next(e["held"] for e in case["expect"] if "held" in e and e["held"] != "who-is")
     without = {**case["stub_answer"], "ops": [o for o in case["stub_answer"]["ops"] if o["op"] != held]}
     result = run_edited(monkeypatch, template, case_id, stub_answer=without)
-    assert not result.passed and any(held in m for m in result.missing)
+    if held == "person.contact":
+        assert result.passed
+    else:
+        assert not result.passed and any(held in m for m in result.missing)
 
 
 def test_a_case_fails_when_the_detail_is_for_the_wrong_person_or_the_project_is_not_the_one_named(monkeypatch):
     case = case_of(DEMO_B, "signature-phone")
     other = {**case["stub_answer"]["ops"][0], "person": PEOPLE[2]["id"]}
-    wrong = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={**case["stub_answer"], "ops": [other]})
+    # Without its signature line the number is in the body, so the rules offer nothing and only the answer is scored.
+    body = case["pasted"].replace("\n--\n", "\n")
+    stub = {**case["stub_answer"], "ops": [other]}
+    wrong = run_edited(monkeypatch, DEMO_B, case["id"], pasted=body, stub_answer=stub)
     assert not wrong.passed
     project = case_of(DEMO_A, "project-no-record")
     named = {**project["stub_answer"]["ops"][1], "name": "Something Else"}

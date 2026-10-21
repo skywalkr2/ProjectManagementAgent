@@ -580,7 +580,12 @@ def test_a_to_do_that_carries_the_assistants_reasoning_fails_the_case_and_the_id
 
 
 def test_a_question_whose_title_is_a_statement_fails_the_case_and_the_ideal_answer_passes(monkeypatch):
-    case = case_of(DEMO_B, "decision-for-pm")
+    case = next(
+        c
+        for c in load_cases(DEMO_B)
+        if [o["op"] for o in c["stub_answer"]["ops"]] == ["question.add"]
+        and "." in c["stub_answer"]["ops"][0].get("text", "")
+    )
     assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
     [op] = case["stub_answer"]["ops"]
     wrong = {**op, "title": op["text"].split(".")[0]}
