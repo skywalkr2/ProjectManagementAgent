@@ -727,7 +727,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   15, 20, another-teams-rows, over-application, other-project), a new project proposed for a name the workspace lacks
   (project-no-record), and the new-person question (new-person-with-organization). Found first: t14 failed because its
   test subject named the scenario (fixed in every thread case, d3cb7af); the others are re-checked on the new subjects
-  before any instruction changes. Later: the notes packet is about 130,000 characters before the input, a lot for a
+  before any instruction changes. Re-checked on the low-cost model with natural subjects (one answer per case): 10 of the 14 still-failing cases pass (first-name-in-thread, follow-up-goes-to-who-made-the-claim, follow-up-with-no-clear-owner, 027, 056, 078, 119, t21, new-person-with-organization, project-no-record); still failing: t16-m3 (a thanks-only reply gets nothing, not news), t25-m2 (the PM's own "I'll review it Monday" becomes news on the other's action), promise-owed-we-team (owed to the PM although the PM is in the team's "we") and they-finished-note ("my approval can wait until Oct 20" becomes facts, not a moved date). The instructions already say each, so these get deterministic checks that send the answer back, not more words. Later: the notes packet is about 130,000 characters before the input, a lot for a
   low-cost model to weigh and to pay for on every run; trim it with the evaluation cases as the guard:
   - a promise with a condition keeps its date words apart from the condition, and the condition in its text (019, 020,
     021, 054, 055, 056, 064, t10, t12, t25-m2): the task's prompt and guidance. **Built** (instructions; a model
