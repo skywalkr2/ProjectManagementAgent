@@ -1008,6 +1008,9 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S)
 
+- [ ] [I-0a] **Before any installer work: every kind of AI account hardened** (owner, 2026-10-21: "I want this hardened
+  across the board before we get to the installer"): B-11c done (each catalog entry confirmed against its own
+  documentation with a named test per finding, and the native adapter in), subscription programs first.
 - [ ] [I-0] **Before any installer work: setup and the everyday screens reviewed as a normal non-IT person** (owner,
   2026-10-21, passed to the UI/UX reviewer). The reviewer walks setup and the daily screens as a personal and business
   tool, not a project manager's. Setup is reshaped to match design 7 ("Setup for a person, with a business optional", in the UI/UX
