@@ -1,7 +1,8 @@
 """Resolve a small, explicit vocabulary of due phrases without inferring context.
 
 Date ranges are inclusive. Weeks run Monday through Sunday. A bare weekday is
-strictly future; past this-week dates are read forward and marked inexact.
+strictly future, and inexact when said on that weekday; past this-week dates are read forward and marked
+inexact.
 Early next week means its first three configured working days. Part-of-day
 phrases identify a date but leave the time unset. Explicit times are local wall
 times. A leading lead word ("on", "due", "due by") is read past, and an ordinal day ("the 25th") is the next day of the
@@ -293,6 +294,8 @@ def resolve(
             else:
                 day = today + timedelta(days=(weekday - today.weekday()) % 7 or 7)
                 note = "A bare weekday means its strictly next occurrence, not today."
+                if weekday == today.weekday():
+                    return single(day, note + " It was said on that weekday, so it may mean today.", exact=False)
             return single(day, note)
 
     if value in {"this week", "next week"}:

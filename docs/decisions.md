@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: A bare weekday said on that weekday is checked, and days written are the workspace's
+
+- **Decided (main session):** "by Friday" written on a Friday keeps its reading (the Friday a week later, as every bare
+  weekday reads forward) but is never firm: the date is marked for the person to check. Marking sent, following up,
+  holding a question and putting an action on hold record the day where the workspace is, and a wait never counts
+  below zero.
+- **Why:** the outside helper's deadline phrases (`docs/project/outside-work/round-3-prompts.md`, prompt D) found the
+  one firm wrong date the rules gave: "by Friday" said on a Friday morning most likely means today, said late it means
+  next week, so neither reading may be firm. Reading it as today would make a promise recorded late on a Friday overdue
+  at once. The UI/UX reviewer's R-0 at `9e9c3f0` showed "waiting -1 days" after midnight UTC: the days were written as
+  UTC dates and counted against the workspace's today.
+- **Impact:** `engine/due_phrases.py`, `engine/followups.py`, `engine/open_items.py`, `api/routes.py`;
+  `tests/test_due_phrases.py`, `tests/test_followups_backup_eval.py`.
+
 ## 2026-10-20: Tests move the date with time-machine, never with faketime
 
 - **Decided (owner):** "lets document no use of faketime so we dont do that again". CI's later-date job (the suite with

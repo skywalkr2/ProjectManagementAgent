@@ -25,7 +25,8 @@ RECEIVED = datetime(2026, 11, 4, 14, 30, tzinfo=ZONE)
         ("by the end of the day", date(2026, 11, 4), date(2026, 11, 4), time(17), True),
         ("Monday", date(2026, 11, 9), date(2026, 11, 9), None, True),
         ("Tuesday", date(2026, 11, 10), date(2026, 11, 10), None, True),
-        ("Wednesday", date(2026, 11, 11), date(2026, 11, 11), None, True),
+        # Said on a Wednesday, so it may mean today: read forward and checked.
+        ("Wednesday", date(2026, 11, 11), date(2026, 11, 11), None, False),
         ("Thursday", date(2026, 11, 5), date(2026, 11, 5), None, True),
         ("Friday", date(2026, 11, 6), date(2026, 11, 6), None, True),
         ("Saturday", date(2026, 11, 7), date(2026, 11, 7), None, True),
@@ -534,3 +535,16 @@ def test_condition_words_are_whole_words_and_come_from_the_setting():
     assert not is_condition("by Whenham", ("when",)) and not is_condition("afternoon", ("after",))
     assert is_condition("AFTER the workshop", ("after",))
     assert not is_condition("after the workshop", ())
+
+
+@pytest.mark.parametrize("hour", [9, 22])
+def test_a_bare_weekday_said_on_that_weekday_is_read_forward_and_checked(hour):
+    """ "By Friday" written on a Friday may mean today or a week later: it is read forward, as every bare weekday is,
+    and never firm, so the person is asked to check it."""
+    found = resolve("by Friday", datetime(2026, 11, 6, hour, tzinfo=ZONE), ZONE)
+    assert (found.start, found.end, found.exact) == (date(2026, 11, 13), date(2026, 11, 13), False)
+
+
+def test_a_bare_weekday_said_on_another_day_stays_firm():
+    found = resolve("by Friday", datetime(2026, 11, 4, 9, tzinfo=ZONE), ZONE)
+    assert (found.start, found.exact) == (date(2026, 11, 6), True)
