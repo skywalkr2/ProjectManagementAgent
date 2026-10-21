@@ -54,6 +54,9 @@ program_messages:
   - {entry: claude-code, kind: auth, message: "Not logged in · Please run /login"}
   - {entry: claude-code, kind: rate_limited, message: "Server is temporarily limiting requests"}
   - {entry: claude-code, kind: rate_limited, message: "Request rejected (429)"}
+  # The program's own output, signed out (the owner's run of version 0.163.0)
+  - {entry: codex, kind: auth, message: "Not logged in"}
+  - {entry: codex, kind: auth, message: "ERROR: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header"}
   - {entry: claude-code, kind: rate_limited, message: "Repeated 529 Overloaded"}
 # A refused key answered with a 400: the bodies recorded from the two services.
 refused_key:

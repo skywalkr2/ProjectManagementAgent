@@ -209,6 +209,8 @@ endpoints:
         packet_via: stdin
         output_via: stdout
         effort_option: ["-c", "model_reasoning_effort={effort}"]
+        errors:
+          auth: ["not logged in", "401 unauthorized", "missing bearer or basic authentication"]  # as it printed, signed out
         sign_in_hint: Open a terminal, run codex and sign in, then press Test again.
     note: Uses your ChatGPT plan or account through the Codex CLI, in its read-only sandbox, without your own settings or rules.
   - id: gemini-cli

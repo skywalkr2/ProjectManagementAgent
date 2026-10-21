@@ -809,7 +809,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   Left in part 2: the service's listing names no "thinking can be turned off" capability, so `off` is never sent yet;
   the preset's newest-of-family pick rests on the list's order, which the reference doesn't document (no date field);
   estimates by the model's own token count (the reference's exact route is a count request per model; character
-  estimates undercount on the current models by about a third); moving a saved account of the recommended service to
+  estimates undercount on the current models by about a third), plus a command-line agent's own overhead per request (the owner's Codex run counted 12,039 tokens for a two-word request); moving a saved account of the recommended service to
   the native adapter (with B-11b's Settings screen).
   (3) **Failures captured in detail for feedback** (owner, 2026-10-21: "We should have something in the program that
   captures failures in detail so the user can send them in the feedback"): every failed AI call, account check,
