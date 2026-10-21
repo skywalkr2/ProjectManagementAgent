@@ -6,7 +6,7 @@ given_file: promise-people.yaml
 pasted: |-
   From: Soren Lund <soren@example.com>
   To: Avery Lane <avery.lane@example.com>
-  Subject: Inline answers on the handover
+  Subject: Handover checklist
 
   I'll confirm the handover date and send the checklist by Friday.
 

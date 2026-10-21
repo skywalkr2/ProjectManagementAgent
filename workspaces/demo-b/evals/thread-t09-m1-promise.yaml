@@ -6,7 +6,7 @@ given_file: promise-people.yaml
 pasted: |-
   From: Avery Lane <avery.lane@example.com>
   To: Iona Crane <iona@example.com>
-  Subject: A flexible review date
+  Subject: Review
 
   I'll send the review early next week.
 

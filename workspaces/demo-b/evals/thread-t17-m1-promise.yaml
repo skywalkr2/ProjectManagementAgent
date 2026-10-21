@@ -6,7 +6,7 @@ given_file: promise-people.yaml
 pasted: |-
   From: Avery Lane <avery.lane@example.com>
   To: Oren Pike <oren@example.com>
-  Subject: A proposed move is not accepted
+  Subject: Audit delivery
 
   I'll deliver the audit Friday.
 

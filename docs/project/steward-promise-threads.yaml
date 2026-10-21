@@ -289,7 +289,7 @@
     type: done
     why: The final outstanding receipt arrives.
 - id: t09
-  subject: A flexible review date
+  subject: Review
   messages:
   - id: m1
     from: rowan@example.com
@@ -359,7 +359,7 @@
     type: condition_met
     why: Approval activates the existing conditional promise; it does not complete it.
 - id: t11
-  subject: A condition that never happens
+  subject: Venue measurements
   messages:
   - id: m1
     from: edda@example.com
@@ -422,7 +422,7 @@
     condition_state: not_met
   resolutions: []
 - id: t13
-  subject: Inline answers on the handover
+  subject: Handover checklist
   messages:
   - id: m1
     from: soren@example.com
@@ -459,7 +459,7 @@
     type: partial
     why: The date is supplied inline, but the checklist remains outstanding.
 - id: t14
-  subject: An old promise quoted twice
+  subject: Risk summary
   messages:
   - id: m1
     from: rowan@example.com
@@ -496,7 +496,7 @@
     type: done
     why: Delivery completes the single promise; nested quotes must not reopen it.
 - id: t15
-  subject: A promise-like signature
+  subject: Access code
   messages:
   - id: m1
     from: rowan@example.com
@@ -520,7 +520,7 @@
     type: done
     why: Recipient confirms receipt; signature marketing is not another promise.
 - id: t16
-  subject: A mobile reply is not the answer
+  subject: Delivery address
   messages:
   - id: m1
     from: nessa@example.com
@@ -554,7 +554,7 @@
     type: non_answer
     why: Polite acknowledgment and mobile signature do not provide the address.
 - id: t17
-  subject: A proposed move is not accepted
+  subject: Audit delivery
   messages:
   - id: m1
     from: rowan@example.com
@@ -584,7 +584,7 @@
     due: Friday
   resolutions: []
 - id: t18
-  subject: One delivery moves, another is waived
+  subject: Draft and printed copies
   messages:
   - id: m1
     from: rowan@example.com
@@ -627,7 +627,7 @@
     type: date_changed
     why: Rowan accepts Thursday for the draft.
 - id: t19
-  subject: Friendship and a library book
+  subject: Library book
   messages:
   - id: m1
     from: rowan@example.com
@@ -666,7 +666,7 @@
     type: cancelled
     why: The planned call is explicitly dropped, not rescheduled.
 - id: t20
-  subject: A boundary into January
+  subject: Signed form
   messages:
   - id: m1
     from: zella@example.com
@@ -707,7 +707,7 @@
     type: done
     why: Signed form delivered.
 - id: t21
-  subject: The quote and its missing detail
+  subject: Quote and warranty terms
   messages:
   - id: m1
     from: bram@example.com
@@ -756,7 +756,7 @@
     type: non_answer
     why: A quality claim does not provide warranty terms.
 - id: t22
-  subject: A corrected file still has work left
+  subject: Corrected report
   messages:
   - id: m1
     from: rowan@example.com
@@ -790,7 +790,7 @@
     type: partial
     why: Attachment is explicitly incomplete despite being described as revised.
 - id: t23
-  subject: A deadline hidden behind enthusiasm
+  subject: Room booking
   messages:
   - id: m1
     from: pella@example.com
@@ -831,7 +831,7 @@
     type: done
     why: An explicit booking confirmation answers the question.
 - id: t24
-  subject: A sarcastic line and a real date
+  subject: First ten pages
   messages:
   - id: m1
     from: rowan@example.com
@@ -863,7 +863,7 @@
     type: done
     why: The sincere ten-page promise is kept; the cloning remark never counted.
 - id: t25
-  subject: A forward with a new promise on top
+  subject: Venue checklist
   messages:
   - id: m1
     from: edda@example.com

@@ -6,7 +6,7 @@ given_file: promise-people.yaml
 pasted: |-
   From: Bram Foley <bram@example.com>
   To: Avery Lane <avery.lane@example.com>
-  Subject: The quote and its missing detail
+  Subject: Quote and warranty terms
 
   I'll send the quote and warranty terms within two working days.
 
