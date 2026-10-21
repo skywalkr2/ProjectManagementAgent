@@ -5,6 +5,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
+import { useFocusAfterRender } from "../lib/focus-after-render";
 
 /** The choice that opens the add field; no organization id can look like it. */
 const ADD = "\u0001add";
@@ -31,10 +32,11 @@ export function OrgSelect(props: {
   // A choice the list no longer holds is not offered, so the select shows "Not set" rather than a stray id.
   const held = rows.some((o) => o.id === props.value) ? props.value : "";
 
+  const focusAfterRender = useFocusAfterRender();
   const stop = () => {
     setAdding(false);
     setText("");
-    window.requestAnimationFrame(() => select.current?.focus());
+    focusAfterRender(() => select.current);
   };
 
   const add = async () => {

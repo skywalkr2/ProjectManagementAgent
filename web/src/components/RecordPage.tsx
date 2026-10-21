@@ -33,6 +33,7 @@ import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
 import { Skeleton } from "../ui/Skeleton";
+import { useFocusAfterRender } from "../lib/focus-after-render";
 
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t } = useWords();
@@ -58,9 +59,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   // A person and a project are edited in the same drawer as on their own screens.
   const drawer = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : kind === "project" ? (projects.data ?? []).find((p) => p.id === id) : undefined;
   const editButton = useRef<HTMLButtonElement>(null);
+  const focusAfterRender = useFocusAfterRender();
   const stopEditing = () => {
     setEditing(false);
-    window.requestAnimationFrame(() => editButton.current?.focus());
+    focusAfterRender(() => editButton.current);
   };
 
   const info = new Map((fields.data?.fields ?? []).map((f) => [f.name, f]));

@@ -12,6 +12,7 @@ import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
+import { useFocusAfterRender } from "../lib/focus-after-render";
 
 type SignIn = S["SignInView"];
 type Account = S["SignInAccount"];
@@ -130,14 +131,15 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
     .join(" ");
   const menuId = `${base}-menu`;
 
+  const focusAfterRender = useFocusAfterRender();
   const openForm = () => {
     setFormChoice(true);
-    window.requestAnimationFrame(() => document.getElementById(`${base}-client-id`)?.focus());
+    focusAfterRender(() => document.getElementById(`${base}-client-id`));
   };
   const closeForm = () => {
     setFormChoice(false);
     setOutProblem("");
-    window.requestAnimationFrame(() => (document.getElementById(menuId) ?? document.getElementById(`${base}-title`))?.focus());
+    focusAfterRender(() => document.getElementById(menuId) ?? document.getElementById(`${base}-title`));
   };
 
   const stopUsing = () =>

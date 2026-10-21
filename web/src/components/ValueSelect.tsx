@@ -5,6 +5,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { offers, useListChange, useValueLists } from "../lib/lists";
 import { useWords } from "../lib/wording";
+import { useFocusAfterRender } from "../lib/focus-after-render";
 
 /** The choice that opens the add field; no list value can look like it. */
 const ADD = "\u0001add";
@@ -41,11 +42,12 @@ export function ValueSelect(props: {
   const extra = value !== "" && !values.includes(value) ? value : null;
   const help = props.note ? `${id}-help` : undefined;
 
+  const focusAfterRender = useFocusAfterRender();
   const stop = () => {
     setAdding(false);
     setText("");
     setProblem("");
-    window.requestAnimationFrame(() => select.current?.focus());
+    focusAfterRender(() => select.current);
   };
 
   const add = async () => {
