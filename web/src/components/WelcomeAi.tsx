@@ -195,7 +195,7 @@ export function WelcomeAi(props: {
   useEffect(() => {
     if (!drawer || !kindsShown) return;
     // After the drawer has taken focus itself, which it does as it opens.
-    const frame = window.requestAnimationFrame(() => firstKind.current?.querySelector<HTMLInputElement>('input[name="ai-kind"]')?.focus());
+    const frame = window.requestAnimationFrame(() => firstKind.current?.querySelector<HTMLInputElement>('input[name^="ai-kind"]')?.focus());
     return () => window.cancelAnimationFrame(frame);
     // Only when the choices first appear.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -612,9 +612,11 @@ export function WelcomeAi(props: {
   };
   useContinue(guide ? { run: carryOn, disabled: !!(missing || spendWhy), why: missing || spendWhy } : null);
 
-  const kindChoice = (e: Kind) => (
+  // The kinds under Something else are a group of their own: one group holding both would have two radios checked at once.
+  const underElse = (e: Kind) => kindChoice(e, gated ? "ai-kind-else" : "ai-kind");
+  const kindChoice = (e: Kind, group = "ai-kind") => (
     <label key={e.id} className={`radio kind-choice kind-card${e.recommended && guide ? " recommended" : ""}`}>
-      <input type="radio" name="ai-kind" value={e.id} checked={kindId === e.id && !usingFound} onChange={() => choose(e.id)} />
+      <input type="radio" name={group} value={e.id} checked={kindId === e.id && !usingFound} onChange={() => choose(e.id)} />
       <span>
         {e.recommended && guide && <span className="pill tag-recommended">{t("welcome.ai.recommended")}</span>}
         <strong>{e.name}</strong>
@@ -850,7 +852,7 @@ export function WelcomeAi(props: {
             {guide && <p className="hint">{t("welcome.ai.intro", { amount: credit ?? "" })}</p>}
             {gated && (
               <div className="kinds kind-grid" ref={firstKind}>
-                {featured.map(kindChoice)}
+                {featured.map((e) => kindChoice(e))}
                 <label className="radio kind-choice kind-card">
                   <input type="radio" name="ai-kind" value="" checked={elseShown} onChange={() => setElseOpen(true)} />
                   <span>
@@ -892,13 +894,13 @@ export function WelcomeAi(props: {
                 })}
                 {(gated ? restServices : services).length > 0 && (
                   <div className="kinds kind-grid" ref={gated ? undefined : firstKind}>
-                    {(gated ? restServices : services).map(kindChoice)}
+                    {(gated ? restServices : services).map(underElse)}
                   </div>
                 )}
                 {apps.length > 0 && (
                   <div role="group" className="kind-group" aria-labelledby="ai-apps-title">
                     <h4 id="ai-apps-title">{t("welcome.ai.apps")}</h4>
-                    <div className="kinds kind-grid">{apps.map(kindChoice)}</div>
+                    <div className="kinds kind-grid">{apps.map(underElse)}</div>
                   </div>
                 )}
                 {more.length > 0 && (
@@ -908,7 +910,7 @@ export function WelcomeAi(props: {
                     onToggle={(e) => setMoreOpen((e.currentTarget as HTMLDetailsElement).open)}
                   >
                     <summary>{t("welcome.ai.more")}</summary>
-                    <div className="kinds">{more.map(kindChoice)}</div>
+                    <div className="kinds">{more.map(underElse)}</div>
                   </details>
                 )}
               </div>

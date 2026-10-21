@@ -208,7 +208,7 @@ test("the service the data recommends has the tag, the alternative is beside it,
   const more = screen.getByRole("radio", { name: /Something else/ });
   expect(more).not.toBeChecked();
   for (const value of ["service-c", "local-box", "runner", "app-a", "other"]) {
-    expect(document.querySelector(`input[name="ai-kind"][value="${value}"]`)).toBeNull();
+    expect(document.querySelector(`input[name^="ai-kind"][value="${value}"]`)).toBeNull();
   }
   expect(screen.queryByText(/need a technical setup/)).toBeNull();
 });
@@ -771,7 +771,7 @@ test("a server found on this computer is offered first, checked at once with no 
   open();
   await user.click(await screen.findByRole("radio", { name: /Something else/ }));
   expect(await screen.findByText("Found A server on this computer on this computer with 2 models. Nothing leaves this computer.")).toBeInTheDocument();
-  expect(document.querySelector('input[name="ai-kind"][value="local-box"]')).toBeNull();
+  expect(document.querySelector('input[name^="ai-kind"][value="local-box"]')).toBeNull();
   const use = screen.getByRole("button", { name: "Use it" });
   expect(use).toHaveAttribute("aria-pressed", "false");
   await user.click(use);
@@ -833,6 +833,17 @@ test("another service asks for its address, checks it when the cursor leaves, an
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toMatchObject({ name: "other", endpoint: "other", base_url: "http://model-host:8080/v1" });
   expect(body(calls).key).toBeUndefined();
+});
+
+test("a kind chosen under Something else stays chosen, and Something else with it: they are separate choices", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pickElse(user, "Another service");
+  expect(screen.getByRole("radio", { name: /^Another service/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Something else/ })).toBeChecked();
+  const group = (name: RegExp) => screen.getByRole("radio", { name }).getAttribute("name");
+  expect(group(/^Another service/)).not.toBe(group(/Something else/));
 });
 
 test("a program started by a command asks for it and how it is fed, checks it with the command, and sends its own adapter", async () => {
