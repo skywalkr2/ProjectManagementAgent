@@ -94,11 +94,14 @@ async function signIn(page: Page) {
 async function handIn(page: Page, c: Case) {
   // The result is a line of Today's queue as soon as the assistant has made it; the card itself is read on What changed.
   await go(page, "Today");
-  const reviews = page.locator('[data-queue-line="review"]');
+  // What a hand-in makes shows as a review line, or, when all of it waits for the person, as its decisions alone (one
+  // decision is one line), so the helper waits for any new one of those lines.
+  const made = page.locator('[data-queue-line="review"], [data-queue-line="who_is"], [data-queue-line="held"]');
   // Count only once the screen shows what the server holds: right after opening Today the list may not have loaded yet.
   const lines: Array<{ kind: string }> = await (await page.request.get("api/today/queue")).json();
-  const before = lines.filter((line) => line.kind === "review").length;
-  await expect(reviews).toHaveCount(before, { timeout: 20_000 });
+  const count = lines.filter((line) => ["review", "who_is", "held"].includes(line.kind)).length;
+  await expect(made).toHaveCount(count, { timeout: 20_000 });
+  const before = await made.allInnerTexts();
   await page.getByRole("button", { name: "Hand something in" }).first().click();
   const box = page.getByLabel("Paste or type it here");
   if (c.pasted) {
@@ -110,7 +113,9 @@ async function handIn(page: Page, c: Case) {
     await box.fill(c.note ?? "");
   }
   await page.getByRole("button", { name: "Hand in", exact: true }).click();
-  await expect(reviews).toHaveCount(before + 1, { timeout: 20_000 });
+  await expect
+    .poll(async () => (await made.allInnerTexts()).some((line) => !before.includes(line)), { timeout: 20_000 })
+    .toBe(true);
   await go(page, "What changed");
   // What changed is newest first and titles a change as Today does, so the change just handed in is the top row.
   const row = page.getByRole("main").locator("li.line").first();

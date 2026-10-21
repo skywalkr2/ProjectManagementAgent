@@ -229,7 +229,8 @@ test.describe.serial("journeys", () => {
     // I hand in someone else's words; the result is a line on Today, and its card is read on What changed.
     const handIn = async (text: string) => {
       await page.getByRole("link", { name: /^Today/ }).first().click();
-      const lines = page.locator('[data-queue-line="review"], [data-queue-line="who_is"]');
+      // A hand-in shows as a review line, or, when all of it waits for the person, as its decisions alone.
+      const lines = page.locator('[data-queue-line="review"], [data-queue-line="who_is"], [data-queue-line="held"]');
       // A new line, not a higher count: a line whose work was all undone leaves Today at the same time.
       const before = await lines.allInnerTexts();
       await page.getByRole("button", { name: "Hand something in" }).first().click();

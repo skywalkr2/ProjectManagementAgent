@@ -86,7 +86,9 @@ def test_a_sent_back_attempt_with_a_held_item_is_retired_when_the_next_one_appli
     first, first_cs = run(env, f"{stranger} will book the venue.")
     (held,) = outcomes(store, first_cs)
     assert held["status"] == "held"
-    assert {line.kind for line in lines_of(env, {first.request})} == {"who_is", "review"}
+    # Its only item waits for the person, so Today shows that decision alone, not a review line as well (one decision is
+    # one line).
+    assert {line.kind for line in lines_of(env, {first.request})} == {"who_is"}
     second = send_back(store, first_cs, "Make it a note instead.")
     answers(APPLYING)
     assert process_again(env, second) is not None
