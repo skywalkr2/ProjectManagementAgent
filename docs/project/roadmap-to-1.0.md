@@ -785,9 +785,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   design 6.16; placed before phase S because it decides what testers spend; the owner may move it): three tiers
   (everyday, stronger, hardest); a preset per catalog entry naming a model family and an effort per tier; effort as a
   per-model adapter capability; tiers filled by price where no preset matches, marked not checked; a measured
-  recommendation from a few evaluation cases on adding an account or on request, comparing model and effort pairs by
-  measured cost per passing answer (a low-cost model at high effort against a stronger one at low effort); the setup screen showing the three
-  tiers with a cost per day. Done when a new account of each preset service gets its tiers filled with no choice made,
+  recommendation from a few evaluation cases on request, comparing model and effort pairs by measured cost per passing
+  answer (a low-cost model at high effort against a stronger one at low effort); setup loads the preset with no
+  question, and Settings shows the three tiers with a cost per day, changes them and measures. Done when a new account of each preset service gets its tiers filled with no choice made,
   a service with no preset gets them by price, and a measurement test picks the cheapest passing model, each with a
   named test.
 

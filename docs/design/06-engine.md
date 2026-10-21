@@ -1613,14 +1613,16 @@ A person who adds an account gets every tier filled in, so routine work never la
   without it ignores it. Escalating may raise the effort on the same model before moving to a stronger one.
 - With no preset match (a local server, an aggregator, a renamed family), the tiers are filled by price from the
   service's own model list, cheapest first, and marked not checked until the smoke test confirms them.
-- Measuring keeps the defaults honest as models improve: on adding an account, and whenever the person asks, a small set
+- Measuring keeps the defaults honest as models improve: from Settings, whenever the person asks, a small set
   of evaluation cases runs on the service's cheaper models at each effort (estimated first, a few cents), and the
   pair that passes for each tier at the lowest measured cost per passing answer becomes the recommendation, which the
   person accepts or not. Cost is measured, not read from the price list, because a higher effort writes more tokens: a
   low-cost model at high effort may or may not beat a stronger one at low effort, and only the run says which. A measurement older than
   the service's newest listed model is offered again.
-- On screen: the three tiers in plain words with an estimated cost per day, already filled in, each changeable; the
-  model's name shows only in Advanced.
+- Where it shows (owner, 2026-10-21): setup asks nothing about tiers; adding an account loads its preset silently and
+  setup says only that it is ready. Settings holds the rest: the three tiers in plain words with an estimated cost per
+  day, each changeable, and "Measure", which offers the measured recommendation. The model's name shows only in
+  Advanced.
 
 **Escalate on failure, not on price.** Cheap models do most of the work; a tier can name `escalate_to` (another tier). When a
 run's changeset still fails an invariant after its one fix round, or would be held for a lint, the request is re-run once on the

@@ -13,6 +13,8 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   model family and an effort per tier; effort is a per-model adapter capability; a service with no preset is filled by
   price and marked not checked; a measured recommendation from a few evaluation cases replaces the preset when the
   person accepts it.
+- **Also decided (owner):** "the default should load in setup and only the customizations/measurement bits shoudl be in
+  settings": setup asks nothing about tiers; Settings changes them and measures.
 - **Why:** a new account today runs everything on its recommended model, which for one program is a mid-priced one; the
   person shouldn't need to know which model suits routine work.
 - **Impact:** design 6.16; the catalog's format (it names model families, the one place a model's name carries meaning,
