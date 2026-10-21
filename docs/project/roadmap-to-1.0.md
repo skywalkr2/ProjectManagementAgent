@@ -674,7 +674,8 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     (`tests/test_events.py::test_wait_returns_when_the_counter_moves` waited for a deadline faketime had moved 40 days
     out), and keeping its timing clock real broke short sleeps instead (33 failures at `0f37be4`), so the job moves the
     date inside each test process with the time-machine test library (`TEST_CLOCK_DAYS_AHEAD`, `tests/conftest.py`):
-    the whole suite passes 40 days on locally with three workers. *Left:* the job green on CI.
+    the whole suite passes 40 days on locally with three workers, and the job passed on CI at `9e9c3f0` (4.5 minutes,
+    run 39527996195).
 
 - [ ] [B-9] **Build the UI/UX designer's review of batch B-8** (received 2026-10-20 at `0f37be4`,
   `reviews/ui-ux-2026-10/rereview-0f37be4/README.md`; R1 to R11 confirmed fixed on screen, and both of the session's

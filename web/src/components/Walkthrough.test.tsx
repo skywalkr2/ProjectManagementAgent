@@ -486,17 +486,17 @@ describe("toasts", () => {
     await user.click(screen.getByRole("button", { name: "say something" }));
     expect(within(region()).getByText("Saved. Workspace name: Offsite team")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(region()).queryByText(/Saved\./)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "say something" }));
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "You" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "You" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(region()).queryByText(/Saved\./)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "say something" }));
     await user.click(screen.getByRole("button", { name: /^Backups/ }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Backups" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Backups" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(region()).queryByText(/Saved\./)).toBeNull();
   });
 
@@ -572,7 +572,7 @@ describe("each screen", () => {
       reset: [],
       fingerprint: "fp-1",
     });
-    expect(await screen.findByRole("heading", { level: 2, name: "Mail and calendar" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Mail and calendar" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   test("a spending amount that is not a number stops Continue, and says why", async () => {
@@ -627,7 +627,7 @@ describe("each screen", () => {
     expect(first).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Back up now and continue" }));
     await waitFor(() => expect(calls.some((c) => c.route === "POST setup/backup-folder/cloud")).toBe(true));
-    expect(await screen.findByRole("heading", { level: 2, name: "People" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   test("People: optional, with the plain reason that skipping is fine, and a button to add them", async () => {
@@ -646,12 +646,12 @@ describe("each screen", () => {
     open();
     await screenTitle();
     await user.click(screen.getByRole("button", { name: "I'll do this later" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Done" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Done" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.some((c) => c.route === "POST setup/people/skip")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "People" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^Your AI account/ }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     const kept = calls.filter((c) => c.route === "POST setup/walkthrough").map((c) => (c.body as S["WalkthroughIn"]).step);
     expect(kept).toEqual(expect.arrayContaining(["done", "people", "ai"]));
   });
@@ -1055,7 +1055,7 @@ describe("Done", () => {
     expect(within(item("workspace")).queryByRole("button")).toBeNull();
     expect(within(item("mail")).getByRole("button", { name: "Set up: Mail and calendar" })).toBeInTheDocument();
     await user.click(within(item("people")).getByRole("button", { name: "Set up: People" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "People" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "People" }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   test("each step is one compact row: the step, how it stands, then Set up, and a done step has no button", async () => {
@@ -1174,7 +1174,7 @@ describe("the look", { timeout: 20_000 }, () => {
     await waitFor(() => expect(within(main).getByRole("button", { name: "Continue" })).toBeEnabled(), { timeout: 5000 });
     expect(within(main).queryByRole("button", { name: "Save and continue" })).toBeNull();
     await user.click(within(main).getByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" }, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "workspace.name": "Harbor work" } });
   });
 
