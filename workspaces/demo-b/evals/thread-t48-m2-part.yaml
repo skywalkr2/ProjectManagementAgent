@@ -1,0 +1,42 @@
+id: thread-t48-m2-part
+title: "Mossbank receipts (message m2): partly delivered"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-26"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Upload the October and November receipts for Varo"
+    owners:
+    - person: PER-1
+    promised_to: [PER-111]
+    basis: said
+    due: "2026-11-25"
+    due_words: "by Tuesday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Varo Stone <varo@example.com>
+  Date: 2026-11-26
+  Subject: Mossbank receipts
+  
+  I have uploaded the October receipts; November’s are still in the folder at home.
+  
+  On 2026-11-23, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Mossbank receipts by Tuesday.
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "Part of the promise is complete."
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: "Upload the October receipts"
+    left: "Upload the November receipts"
+    evidence:
+      quote: "I have uploaded the October receipts; November’s are still in the folder at home"

@@ -1,0 +1,44 @@
+id: thread-t45-m2-moved
+title: "Tess’s quilt pickup (message m2): moved"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-06"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Bring Tess the quilt"
+    owners:
+    - person: PER-1
+    promised_to: [PER-117]
+    basis: said
+    due: "2026-12-05"
+    due_words: "by Saturday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Tess Calder <tess@example.com>
+  Date: 2026-12-06
+  Subject: Tess’s quilt pickup
+  
+  I can’t get your quilt across town today; I’ll bring it on the 18th, if that still works.
+  
+  On 2026-12-03, Avery Lane <avery.lane@example.com> wrote:
+  > I will bring Tess the quilt by Saturday.
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: "on the 18th"
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The due date moves."
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: "on the 18th"
+    evidence:
+      quote: "I’ll bring it on the 18th"

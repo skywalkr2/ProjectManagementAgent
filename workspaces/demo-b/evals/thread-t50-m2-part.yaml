@@ -1,0 +1,42 @@
+id: thread-t50-m2-part
+title: "Tavish’s winter coat (message m2): partly delivered"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-10"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Take Tavish’s winter coat to the tailor and have the new buttons sewn on"
+    owners:
+    - person: PER-1
+    promised_to: [PER-102]
+    basis: said
+    due: "2026-12-09"
+    due_words: "by Wednesday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Tavish Reeve <tavish@example.com>
+  Date: 2026-12-10
+  Subject: Tavish’s winter coat
+  
+  I took the coat to the tailor. The new buttons are not sewn on yet.
+  
+  On 2026-12-07, Avery Lane <avery.lane@example.com> wrote:
+  > I will take Tavish’s winter coat to the tailor and have the new buttons sewn on by Wednesday.
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "Part of the promise is complete."
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: "Take the coat to the tailor"
+    left: "Have the new buttons sewn on"
+    evidence:
+      quote: "I took the coat to the tailor. The new buttons are not sewn on yet"

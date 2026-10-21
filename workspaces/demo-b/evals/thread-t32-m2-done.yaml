@@ -1,0 +1,46 @@
+id: thread-t32-m2-done
+title: "Fern Hollow photo selects (message m2): kept on Avery’s behalf"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-25"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Mira the Fern Hollow photo selects"
+    owners:
+    - person: PER-1
+    promised_to: [PER-101]
+    basis: said
+    due: "2026-11-24"
+    due_words: "by Tuesday at noon"
+pasted: |-
+  From: Soren Lund <soren@example.com>
+  To: Mira Hale <mira@example.com>
+  Date: 2026-11-25
+  Subject: Fern Hollow photo selects
+  
+  Avery asked me to step in while they were at the clinic. I sent you the selected photos from Avery's folder.
+  
+  Forwarded note from Avery: “I’ll send the selected photos by Tuesday at noon.”
+  
+  On 2026-11-22, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Fern Hollow photo selects by Tuesday at noon.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.part
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "A colleague kept Avery’s promise."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "I sent you the selected photos from Avery's folder"

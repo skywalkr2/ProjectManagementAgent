@@ -1,0 +1,40 @@
+id: thread-t30-m2-done
+title: "Garden gate repair (message m2): kept"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-19"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Repair the garden gate latch and leave the spare key for Avery"
+    owners:
+    - person: PER-105
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-18"
+    due_words: "by Wednesday evening"
+pasted: |-
+  From: Liora Marsh <liora@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-19
+  Subject: Garden gate repair
+  
+  All set at the garden gate; the latch is fixed and the spare key is under the blue pot.
+  
+  On 2026-11-16, Liora Marsh <liora@example.com> wrote:
+  > I will repair the garden gate latch and leave the spare key for Avery by Wednesday evening.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is kept."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "the latch is fixed"

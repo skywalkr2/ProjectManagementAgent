@@ -1,0 +1,43 @@
+id: thread-t36-m2-called-off
+title: "Porch flyer (message m2): called off"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-06"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Avery the Porch flyer"
+    owners:
+    - person: PER-103
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-05"
+    due_words: "by November 5"
+pasted: |-
+  From: Nessa Ford <nessa@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-06
+  Subject: Porch flyer
+  
+  Please leave the flyer; we decided not to hold the porch sale after all.
+  
+  On 2026-11-03, Nessa Ford <nessa@example.com> wrote:
+  > I will send Avery the Porch flyer by November 5.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is called off."
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: "Nessa cancelled the porch sale, so the flyer is no longer needed"
+    evidence:
+      quote: "we decided not to hold the porch sale after all"

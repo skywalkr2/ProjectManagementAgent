@@ -1,0 +1,45 @@
+id: thread-t52-m2-no-answer
+title: "Meadow kitchen tiles (message m2): not an ending"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-18"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Avery the Meadow kitchen tile samples"
+    owners:
+    - person: PER-113
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-17"
+    due_words: "by Tuesday"
+pasted: |-
+  From: Jori Frame <jori@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-18
+  Subject: Meadow kitchen tiles
+  
+  I’ll look at the tile samples tonight and get back to you.
+  
+  On 2026-11-15, Jori Frame <jori@example.com> wrote:
+  > I will send Avery the Meadow kitchen tiles by Tuesday.
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The reply does not end the promise."
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: "Jori says the samples will be reviewed but does not say the kitchen layout is sent"
+    evidence:
+      quote: "I’ll look at the tile samples tonight and get back to you"

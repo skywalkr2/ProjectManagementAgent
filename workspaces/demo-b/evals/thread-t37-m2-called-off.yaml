@@ -1,0 +1,43 @@
+id: thread-t37-m2-called-off
+title: "Pondside draft (message m2): called off"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-13"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Ansel the Pondside draft"
+    owners:
+    - person: PER-1
+    promised_to: [PER-106]
+    basis: said
+    due: "2026-11-12"
+    due_words: "by Thursday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Ansel Wick <ansel@example.com>
+  Date: 2026-11-13
+  Subject: Pondside draft
+  
+  No need to finish the draft now—the committee picked another plan this morning.
+  
+  On 2026-11-10, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Pondside draft by Thursday.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is called off."
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: "The committee chose another plan and no longer needs Avery’s draft"
+    evidence:
+      quote: "the committee picked another plan this morning"

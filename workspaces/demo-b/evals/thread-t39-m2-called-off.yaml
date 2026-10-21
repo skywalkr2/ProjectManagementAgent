@@ -1,0 +1,43 @@
+id: thread-t39-m2-called-off
+title: "Orchard invoice (message m2): called off"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-28"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Avery the Orchard invoice"
+    owners:
+    - person: PER-110
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-27"
+    due_words: "by Friday"
+pasted: |-
+  From: Pella Dunn <pella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-28
+  Subject: Orchard invoice
+  
+  We are closing this request; the repair is postponed until spring, and there is no invoice to send now.
+  
+  On 2026-11-25, Pella Dunn <pella@example.com> wrote:
+  > I will send Avery the Orchard invoice by Friday.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is called off."
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: "Pella postponed the repair until spring and cancelled the current invoice request"
+    evidence:
+      quote: "the repair is postponed until spring, and there is no invoice to send now"

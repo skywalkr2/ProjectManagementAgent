@@ -1,0 +1,45 @@
+id: thread-t53-m2-no-answer
+title: "Winter recital ride (message m2): not an ending"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-27"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Arrange Pella’s ride to the winter recital"
+    owners:
+    - person: PER-1
+    promised_to: [PER-110]
+    basis: said
+    due: "2026-11-26"
+    due_words: "by Thursday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Pella Dunn <pella@example.com>
+  Date: 2026-11-27
+  Subject: Winter recital ride
+  
+  Could you tell me whether the recital starts at six or half past? I can plan the pickup once I know.
+  
+  On 2026-11-24, Avery Lane <avery.lane@example.com> wrote:
+  > I will arrange Pella’s ride to the winter recital by Thursday.
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The reply does not end the promise."
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: "Avery asks when the recital starts but does not say the ride is arranged"
+    evidence:
+      quote: "Could you tell me whether the recital starts at six or half past"

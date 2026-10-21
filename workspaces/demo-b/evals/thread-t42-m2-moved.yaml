@@ -1,0 +1,44 @@
+id: thread-t42-m2-moved
+title: "Lantern walk permit (message m2): moved"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-13"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Bring Avery the Lantern walk permit papers"
+    owners:
+    - person: PER-104
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-12"
+    due_words: "by Thursday"
+pasted: |-
+  From: Oren Pike <oren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-13
+  Subject: Lantern walk permit
+  
+  The clerk moved our appointment. I can bring the permit papers next Tuesday instead of tomorrow.
+  
+  On 2026-11-10, Oren Pike <oren@example.com> wrote:
+  > I will bring Avery the Lantern walk permit papers by Thursday.
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: "next Tuesday"
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The due date moves."
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: "next Tuesday"
+    evidence:
+      quote: "I can bring the permit papers next Tuesday instead of tomorrow"

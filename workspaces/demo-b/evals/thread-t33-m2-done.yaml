@@ -1,0 +1,44 @@
+id: thread-t33-m2-done
+title: "Birch Loop measurements (message m2): kept on Avery’s behalf"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-01"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Tavish the Birch Loop measurements"
+    owners:
+    - person: PER-1
+    promised_to: [PER-102]
+    basis: said
+    due: "2026-11-30"
+    due_words: "by the end of November"
+pasted: |-
+  From: Dev Maran <dev@example.com>
+  To: Tavish Reeve <tavish@example.com>
+  Date: 2026-12-01
+  Subject: Birch Loop measurements
+  
+  I sent Tavish the measurements on Avery’s behalf; the carpenter has the full set now.
+  
+  On 2026-11-28, Avery Lane <avery.lane@example.com> wrote:
+  > I will send Tavish the Birch Loop measurements by the end of November.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.part
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "A colleague kept Avery’s promise."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "I sent Tavish the measurements on Avery’s behalf"

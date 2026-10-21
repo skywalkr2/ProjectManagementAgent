@@ -1,0 +1,44 @@
+id: thread-t31-m2-done
+title: "Maple Row lease copy (message m2): kept on Avery’s behalf"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-21"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Oren the signed Maple Row lease copy"
+    owners:
+    - person: PER-1
+    promised_to: [PER-104]
+    basis: said
+    due: "2026-11-20"
+    due_words: "by Friday"
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Oren Pike <oren@example.com>
+  Date: 2026-11-21
+  Subject: Maple Row lease copy
+  
+  I scanned the signed lease for Avery this morning and sent Oren a copy.
+  
+  On 2026-11-18, Avery Lane <avery.lane@example.com> wrote:
+  > I will send Oren the signed Maple Row lease copy by Friday.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.part
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "A colleague kept Avery’s promise."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "I scanned the signed lease for Avery this morning and sent Oren a copy"

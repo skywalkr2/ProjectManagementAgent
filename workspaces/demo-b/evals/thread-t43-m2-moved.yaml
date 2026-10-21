@@ -1,0 +1,44 @@
+id: thread-t43-m2-moved
+title: "Rillstone budget (message m2): moved"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-21"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Pella the Rillstone budget"
+    owners:
+    - person: PER-1
+    promised_to: [PER-110]
+    basis: said
+    due: "2026-11-20"
+    due_words: "by Friday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Pella Dunn <pella@example.com>
+  Date: 2026-11-21
+  Subject: Rillstone budget
+  
+  I’m waiting on the revised figures, so I’ll send the budget after the holidays.
+  
+  On 2026-11-18, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Rillstone budget by Friday.
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: "after the holidays"
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The due date moves."
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: "after the holidays"
+    evidence:
+      quote: "I’ll send the budget after the holidays"

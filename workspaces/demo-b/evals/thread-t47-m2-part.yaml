@@ -1,0 +1,42 @@
+id: thread-t47-m2-part
+title: "Bluebell shed repair (message m2): partly delivered"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-17"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Install the Bluebell shed roof panels and paint the trim"
+    owners:
+    - person: PER-109
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-16"
+    due_words: "by Monday"
+pasted: |-
+  From: Iona Crane <iona@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-17
+  Subject: Bluebell shed repair
+  
+  The roof panels are up, but I haven’t painted the trim yet.
+  
+  On 2026-11-14, Iona Crane <iona@example.com> wrote:
+  > I will install the Bluebell shed roof panels and paint the trim for Avery by Monday.
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "Part of the promise is complete."
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: "Install the roof panels"
+    left: "Paint the shed trim"
+    evidence:
+      quote: "The roof panels are up, but I haven’t painted the trim yet"

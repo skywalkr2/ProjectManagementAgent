@@ -1,0 +1,44 @@
+id: thread-t35-m2-done
+title: "Winter pantry list (message m2): kept on Avery’s behalf"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-09"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Email Iona the Winter pantry list"
+    owners:
+    - person: PER-1
+    promised_to: [PER-109]
+    basis: said
+    due: "2026-12-08"
+    due_words: "by Tuesday"
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Iona Crane <iona@example.com>
+  Date: 2026-12-09
+  Subject: Winter pantry list
+  
+  Avery is tied up today, so I emailed you the pantry list Avery promised.
+  
+  On 2026-12-06, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Winter pantry list by Tuesday.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.part
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "A colleague kept Avery’s promise."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "I emailed you the pantry list Avery promised"

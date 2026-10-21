@@ -1,0 +1,43 @@
+id: thread-t38-m2-called-off
+title: "Studio key copy (message m2): called off"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-20"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Make a spare studio key for Avery"
+    owners:
+    - person: PER-107
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-19"
+    due_words: "by next Thursday"
+pasted: |-
+  From: Zella Brook <zella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-20
+  Subject: Studio key copy
+  
+  You can stop looking for the spare key; I found it in the tool drawer.
+  
+  On 2026-11-17, Zella Brook <zella@example.com> wrote:
+  > I will make a spare studio key for Avery by next Thursday.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is called off."
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: "Zella found the spare key, so the promised copy is no longer needed"
+    evidence:
+      quote: "I found it in the tool drawer"

@@ -1,0 +1,48 @@
+id: thread-t54-m2-no-answer
+title: "Quarry Lane receipt (message m2): not an ending"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-05"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Avery the Quarry Lane receipt"
+    owners:
+    - person: PER-115
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-12-04"
+    due_words: "by Friday"
+pasted: |-
+  From: Lena Ashby <lena@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-12-05
+  Subject: Quarry Lane receipt
+  
+  The heater is working again, thankfully. Would you happen to know when the room will be free next week?
+  
+  Regards,
+  Lena
+  
+  On 2026-12-02, Lena Ashby <lena@example.com> wrote:
+  > I will send Avery the Quarry Lane receipt by Friday.
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The reply does not end the promise."
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: "Lena reports the heater is working and asks about the room schedule, but does not send the receipt"
+    evidence:
+      quote: "The heater is working again, thankfully"

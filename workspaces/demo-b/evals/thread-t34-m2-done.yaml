@@ -1,0 +1,44 @@
+id: thread-t34-m2-done
+title: "Cedarfield school form (message m2): kept on Avery’s behalf"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-04"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Drop the signed Cedarfield school form at the school office"
+    owners:
+    - person: PER-1
+    promised_to: [PER-107]
+    basis: said
+    due: "2026-12-03"
+    due_words: "by Thursday"
+pasted: |-
+  From: Jori Frame <jori@example.com>
+  To: Zella Brook <zella@example.com>
+  Date: 2026-12-04
+  Subject: Cedarfield school form
+  
+  I dropped the signed Cedarfield form at the school office for Avery this afternoon.
+  
+  On 2026-12-01, Avery Lane <avery.lane@example.com> wrote:
+  > I will drop the signed Cedarfield school form at the school office by Thursday.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.part
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "A colleague kept Avery’s promise."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "I dropped the signed Cedarfield form at the school office for Avery this afternoon"

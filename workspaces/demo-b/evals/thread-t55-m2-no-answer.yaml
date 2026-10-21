@@ -1,0 +1,45 @@
+id: thread-t55-m2-no-answer
+title: "Pinecone donation note (message m2): not an ending"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-12"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Dev the Pinecone donation thank-you note"
+    owners:
+    - person: PER-1
+    promised_to: [PER-116]
+    basis: said
+    due: "2026-12-11"
+    due_words: "by Friday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Dev Maran <dev@example.com>
+  Date: 2026-12-12
+  Subject: Pinecone donation note
+  
+  The bake sale raised enough for the new shelves. I’ll send the thank-you note after I sort the names.
+  
+  On 2026-12-09, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Pinecone donation note by Friday.
+expect:
+- op: action.news
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The reply does not end the promise."
+  ops:
+  - op: action.news
+    id: ACT-101
+    text: "Avery gives a bake-sale update but does not send the promised donation note"
+    evidence:
+      quote: "The bake sale raised enough for the new shelves"

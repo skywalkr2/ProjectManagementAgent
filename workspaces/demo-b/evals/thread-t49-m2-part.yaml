@@ -1,0 +1,42 @@
+id: thread-t49-m2-part
+title: "Market stall labels (message m2): partly delivered"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-03"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Print and pack the market stall labels"
+    owners:
+    - person: PER-112
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-12-02"
+    due_words: "by Wednesday"
+pasted: |-
+  From: Edda Moss <edda@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-12-03
+  Subject: Market stall labels
+  
+  Half the labels are printed and packed. The labels for the jars are left; the ink ran out.
+  
+  On 2026-11-30, Edda Moss <edda@example.com> wrote:
+  > I will print and pack the market stall labels by Wednesday.
+expect:
+- op: action.part
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "Part of the promise is complete."
+  ops:
+  - op: action.part
+    id: ACT-101
+    delivered: "Print and pack the labels for the boxes"
+    left: "Print the jar labels"
+    evidence:
+      quote: "Half the labels are printed and packed. The labels for the jars are left"

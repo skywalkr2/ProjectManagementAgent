@@ -1,0 +1,44 @@
+id: thread-t41-m2-moved
+title: "Willow desk sketch (message m2): moved"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-07"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Tavish the Willow desk sketch"
+    owners:
+    - person: PER-1
+    promised_to: [PER-102]
+    basis: said
+    due: "2026-11-06"
+    due_words: "by Friday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Tavish Reeve <tavish@example.com>
+  Date: 2026-11-07
+  Subject: Willow desk sketch
+  
+  The joiner needs another measurement. Let’s say the 14th instead for the desk sketch.
+  
+  On 2026-11-04, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Willow desk sketch by Friday.
+expect:
+- op: action.move
+  id: ACT-101
+  due_words: "the 14th"
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The due date moves."
+  ops:
+  - op: action.move
+    id: ACT-101
+    due_words: "the 14th"
+    evidence:
+      quote: "Let’s say the 14th instead"

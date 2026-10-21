@@ -1,0 +1,46 @@
+id: thread-t40-m2-called-off
+title: "Candlewick schedule (message m2): called off"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-12-03"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Liora the Candlewick visit schedule"
+    owners:
+    - person: PER-1
+    promised_to: [PER-105]
+    basis: said
+    due: "2026-12-02"
+    due_words: "by Wednesday"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Liora Marsh <liora@example.com>
+  Date: 2026-12-03
+  Subject: Candlewick schedule
+  
+  The visit is off, so I won’t send the schedule. The family asked us to wait.
+  
+  --
+  Avery
+  
+  On 2026-11-30, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Candlewick schedule by Wednesday.
+expect:
+- op: action.drop
+  id: ACT-101
+forbid:
+- op: action.close
+  id: ACT-101
+- op: action.move
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is called off."
+  ops:
+  - op: action.drop
+    id: ACT-101
+    reason: "The visit was cancelled, so Avery no longer needs to send its schedule"
+    evidence:
+      quote: "The visit is off, so I won’t send the schedule"

@@ -1,0 +1,40 @@
+id: thread-t27-m2-done
+title: "Pineglass estimate (message m2): kept"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-07"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send the Pineglass estimate to Mira Hale"
+    owners:
+    - person: PER-1
+    promised_to: [PER-101]
+    basis: said
+    due: "2026-11-06"
+    due_words: "by Friday afternoon"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Mira Hale <mira@example.com>
+  Date: 2026-11-07
+  Subject: Pineglass estimate
+  
+  The estimate went out this morning, with the two material options on page three.
+  
+  On 2026-11-04, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Pineglass estimate by Friday afternoon.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is kept."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "The estimate went out this morning"

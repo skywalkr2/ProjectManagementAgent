@@ -1,0 +1,40 @@
+id: thread-t29-m2-done
+title: "Winter market poster (message m2): kept"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-14"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send the Winter market poster to Nessa Ford"
+    owners:
+    - person: PER-1
+    promised_to: [PER-103]
+    basis: said
+    due: "2026-11-13"
+    due_words: "by the 13th"
+pasted: |-
+  From: Avery Lane <avery.lane@example.com>
+  To: Nessa Ford <nessa@example.com>
+  Date: 2026-11-14
+  Subject: Winter market poster
+  
+  Attached is the final poster. I added the smaller print version too.
+  
+  On 2026-11-11, Avery Lane <avery.lane@example.com> wrote:
+  > I will send you the Winter market poster by the 13th.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is kept."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "Attached is the final poster"

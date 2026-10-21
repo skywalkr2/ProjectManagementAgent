@@ -1,0 +1,40 @@
+id: thread-t28-m2-done
+title: "Hearthside room list (message m2): kept"
+skills: [owners, dates, close-right-item, new-message-only]
+received: "2026-11-11"
+given_file: promise-people.yaml
+given:
+- kind: action
+  id: ACT-101
+  fields:
+    text: "Send Avery the Hearthside room list"
+    owners:
+    - person: PER-102
+    promised_to: [PER-1]
+    basis: said
+    due: "2026-11-10"
+    due_words: "by Tuesday"
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Date: 2026-11-11
+  Subject: Hearthside room list
+  
+  You should have the room list now; I sent the corrected copy just after lunch.
+  
+  On 2026-11-08, Tavish Reeve <tavish@example.com> wrote:
+  > I will send Avery the Hearthside room list by Tuesday.
+expect:
+- op: action.close
+  id: ACT-101
+forbid:
+- op: action.drop
+  id: ACT-101
+- op: action.add
+stub_answer:
+  summary: "The promise is kept."
+  ops:
+  - op: action.close
+    id: ACT-101
+    evidence:
+      quote: "You should have the room list now"
