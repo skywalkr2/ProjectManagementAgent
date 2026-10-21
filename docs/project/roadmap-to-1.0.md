@@ -1102,7 +1102,9 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   every stop or question becomes a finding. The exit test of the tester milestone.
 - [ ] [I-2] **The release build fills in its catalog and feedback addresses** from repository variables, as the package build
   already does, so a tester's Add-ons lists packs with nothing to type.
-- [ ] [I-1] **Signed so the systems let it open** (the owner's decision, open: costs money): without signing, macOS refuses
+- [ ] [I-1] **Signed so the systems let it open** (owner, 2026-10-21: decided, not before 1.0: "we can clearly state
+  it's currently unsigned on the webpage. When we get more users I'll look at that again", paid for by Thimbleby Plus;
+  1.0 ships unsigned, and the item below says how). Without signing, macOS refuses
   to open a downloaded app until the person allows it in Privacy & Security, and Windows SmartScreen warns before it
   runs. Signing needs an Apple Developer account (yearly fee) with notarization for macOS, and a code-signing
   certificate or signing service for Windows; the secrets live only in the repository's CI secrets. Until the owner
@@ -1150,7 +1152,9 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
 - [ ] [I-1] **Signing: unsigned to start** (owner, 2026-10-17: "i will just use unsigned to start"). The macOS build is
   only ad-hoc signed (Apple silicon needs that much, and PyInstaller does it), so a tester opens it once through
   System Settings, Privacy & Security, "Open Anyway"; on Windows, SmartScreen's "More info", then "Run anyway". The
-  release notes and the download page show both, with pictures. Unsigned builds don't enforce library validation, so
+  release notes and the download page show both, with pictures, and the download page says plainly, before the
+  button, that the app is not yet signed, what the warning means and that signing comes later; each download's SHA-256
+  checksum is shown beside it so a person can check the file is the one released. Unsigned builds don't enforce library validation, so
   compiled add-ons load without the entitlement for now; the trial above still decides the signed setup. Signing is
   added later without other changes. **Costs when it is (prices advertised 2026-10-17, before tax):** Apple Developer Program $99 a
   year (signing and notarization for direct downloads); Windows: Azure Artifact Signing Basic $9.99 a month with 5,000

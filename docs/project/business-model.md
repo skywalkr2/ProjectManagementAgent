@@ -10,7 +10,7 @@ them in (open promise P25).
 |---|---|---|
 | What it is | The core: the daily steward, hand-in, the define-your-own kit and its templates, the person's own AI accounts, everything kept on the person's computer. Mail and calendars from any service: IMAP and calendar links, and **Gmail and Outlook through the person's own app registration**, pasted on the Sign-ins row beside the add-on's numbered steps | Everything in the free app, plus **one-click** Gmail and Outlook sign-in (the add-on's own registration), every pack (writing first, then project management, publishing and the ones that follow) and updates |
 | Where it lives | Open source under Apache-2.0, published from the private working repository at each release. The Gmail and Outlook add-on is open source under Apache-2.0 too, in its own public repository, and a free download from the catalog | The packs' private repositories, as today; the add-on's own registration, which only its release build carries |
-| Installers | Signed installers, free to download | The same installers; the licence turns on the add-on's own registration and the packs |
+| Installers | Installers, free to download; unsigned at 1.0, and the download page says so (owner, 2026-10-21) | The same installers; the licence turns on the add-on's own registration and the packs. Plus revenue pays for signing once there are more users |
 | Price | Free | A yearly licence; what a lapse keeps is below. The amount follows from the break-even line below |
 
 **The line is convenience and packs, never whether the app works.** Basic sign-in with a password, app passwords

@@ -150,7 +150,8 @@ packs of pure Python whose needs the app already has are installed this way unti
 before install, conflicts refused, Remove taking out only what the pack needed). The server side is built; the button is not
 yet (7.15). This replaces "the app never installs code into itself" in 3.11.
 
-**The desktop installer (M0).** Signed installers for macOS and Windows that carry everything the app needs (no Python, uv, Node
+**The desktop installer (M0).** Installers for macOS and Windows (unsigned at 1.0, said plainly on the download page;
+signing follows once there are more users, paid for by Thimbleby Plus; owner, 2026-10-21) that carry everything the app needs (no Python, uv, Node
 or terminal), run it in the background, open the setup guide on first run and update themselves. The decision of 2026-10-11
 made it the first item after the launch; the later go-forward plan (2026-10-12) places it in phase E, after the packs, and
 that plan holds. Not built.

@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 147. Unsigned installers through 1.0, said plainly (2026-10-21; phase I, decided)
+
+- 1.0's installers are unsigned; the download page says so before the button, shows how to open the app past the
+  system's warning and gives each file's SHA-256 checksum. Signing follows once there are more users, paid for by
+  Thimbleby Plus. Design 11 ("The desktop installer"), roadmap I-1, the business model's installers row.
+
 ## 146. A job or a business as the second side, chosen at setup (2026-10-21; I-0, designed)
 
 - Setup's first step asks "Personal life only", "Personal life and my job" or "Personal life and my business"; a job or

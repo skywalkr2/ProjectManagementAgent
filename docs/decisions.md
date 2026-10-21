@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: The installers ship unsigned through 1.0, said plainly; Plus pays for signing later
+
+- **Decided (owner):** code signing waits until there are more users, possibly after 1.0: "we can clearly state it's
+  currently unsigned on the webpage. When we get more users I'll look at that again", and Thimbleby Plus covers its cost.
+  This extends the 2026-10-17 "unsigned to start" to the 1.0 release.
+- **Also decided (main session):** the download page says before the button that the app isn't signed yet, what the
+  system's warning means and how to open it (with pictures), and shows each file's SHA-256 checksum, so a person can
+  check the file is the one released.
+- **Impact:** roadmap I-1 (signing, unsigned builds), design 11 (the desktop installer), `docs/project/business-model.md`
+  (installers row). No cost before 1.0. Change log: section 147.
+
 ## 2026-10-21: A job or a business can be the second side; the person chooses at setup
 
 - **Decided (owner):** whether someone's job sits under Personal or is a side of its own is the person's choice, asked
