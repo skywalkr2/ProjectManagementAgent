@@ -8,7 +8,7 @@ line; its wording comes from config/language.yaml.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, tzinfo
 from typing import Any
 
 from engine import learn, outward, promises, sent_version
@@ -140,7 +140,11 @@ def _pulled(view: Any, cfg: Config, today: date, held_up: dict[str, list[str]], 
                     would = would or (due is not None and (due - today).days <= rule.action_due_within_days)
                 elif told:
                     would = would or follow_up_due(
-                        cfg, today, waiting_days=(today - date.fromisoformat(str(told))).days, action=True, due=due
+                        cfg,
+                        today,
+                        waiting_days=max(0, (today - date.fromisoformat(str(told))).days),
+                        action=True,
+                        due=due,
                     )
             if would:
                 found[blocker] = found.get(blocker, 0) + int(due is not None and due < today)
@@ -179,7 +183,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
         chased = sorted(str(day) for day in d.get("followed_up") or [])
         # The wait counts from the last word to the person: the message, or the latest chase after it.
         last_word = date.fromisoformat(chased[-1]) if chased else sent
-        waiting = (today - last_word).days if last_word else None
+        waiting = max(0, (today - last_word).days) if last_word else None
         held_until, held_name = held_until_day(store.read(), d.get("held_for"), today, here)
         later = d["status"] == "open" and held_until is not None and held_until > today
         (section(d["to"]).later if later else section(d["to"]).questions).append(
@@ -218,7 +222,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                 told = None  # what they were told is out of date, so they need telling again
             chases = (d.get("followed_up") or {}).get(owner["person"]) or []
             last_chase = str(max(chases)) if chases else None
-            told_days = (today - date.fromisoformat(told)).days if told else None
+            told_days = max(0, (today - date.fromisoformat(told)).days) if told else None
             hold = d.get("on_hold")
             blocker = blocker_of(view, hold, people, here)
             if blocker is not None and blocker.resolved:
@@ -451,7 +455,7 @@ def mark_sent(
     """Record that the person's open questions and untold actions went out. If the PM edited the message before
     sending, that is recorded as a quality signal. Returns the counts and the ids, which `unmark_sent` takes."""
     now = now or datetime.now(UTC)
-    today = now.date()
+    today = local_day(now, zone(cfg))
     _guard_sent_text(store, cfg, person, sent_text)
     current = next((s for s in sections(store, cfg, today) if s.person == person), None)
     if current is None:
@@ -558,9 +562,10 @@ def mark_followed_up(
     for an answer starts again while a question keeps when it was first sent. Edited before sending, the message is
     recorded as a quality signal, as an edited first message is. Returns what `unmark_followed_up` takes."""
     now = now or datetime.now(UTC)
-    today = now.date().isoformat()
+    day = local_day(now, zone(cfg))
+    today = day.isoformat()
     _guard_sent_text(store, cfg, person, sent_text)
-    current = next((s for s in sections(store, cfg, now.date()) if s.person == person), None)
+    current = next((s for s in sections(store, cfg, day) if s.person == person), None)
     drafted = current.nudge.text if current is not None and current.nudge is not None else None
     previous: dict[str, str | None] = {}
     with store.transaction() as tx:
@@ -634,11 +639,13 @@ def _owned_open_action(tx: Any, action_id: str, person: str) -> Any:
     return rec
 
 
-def follow_up(store: Store, action_id: str, person: str, *, now: datetime | None = None) -> dict[str, str | None]:
+def follow_up(
+    store: Store, action_id: str, person: str, *, now: datetime | None = None, here: tzinfo = UTC
+) -> dict[str, str | None]:
     """Record that the PM chased `person` about an open action: today is added to the action's chases and counts as
     told again, so the waiting count starts over. The action stays open. Returns the day recorded and the told day it
-    replaced, which `undo_follow_up` takes."""
-    today = (now or datetime.now(UTC)).date().isoformat()
+    replaced, which `undo_follow_up` takes. The day is the one where the person is (`here`)."""
+    today = local_day(now or datetime.now(UTC), here).isoformat()
     with store.transaction() as tx:
         rec = _owned_open_action(tx, action_id, person)
         previous = rec.data.get("told", {}).get(person)
@@ -717,11 +724,11 @@ def held_until_day(
 
 
 def hold_question(
-    store: Store, question_id: str, held_for: dict[str, Any] | None, *, today: date | None = None
+    store: Store, question_id: str, held_for: dict[str, Any] | None, *, today: date | None = None, here: tzinfo = UTC
 ) -> dict[str, Any] | None:
     """Hold an open question for a meeting or a day, or (with None) send it now. A meeting must be dated, and a day
     must be after today. Returns what it was held for before (or None), which putting it back takes."""
-    today = today or datetime.now(UTC).date()
+    today = today or local_day(datetime.now(UTC), here)
     with store.transaction() as tx:
         rec = tx.get("question", question_id)
         if rec is None or rec.data["status"] != "open":
@@ -742,7 +749,13 @@ def hold_question(
 
 
 def put_on_hold(
-    store: Store, action_id: str, waiting_for: str = "", *, on: str | None = None, now: datetime | None = None
+    store: Store,
+    action_id: str,
+    waiting_for: str = "",
+    *,
+    on: str | None = None,
+    now: datetime | None = None,
+    here: tzinfo = UTC,
 ) -> dict[str, Any] | None:
     """Put an open action on hold, waiting for `waiting_for` (plain words), starting today. With `on` (a person, an
     action or a question) the hold names its blocker, the action is blocked, and the words, when none are given, are
@@ -761,7 +774,7 @@ def put_on_hold(
                 named = blocker_of(tx, {"on": on}, ViewNames(tx))
                 waiting_for = named.name if named is not None and named.name else on
         previous = rec.data.get("on_hold")
-        hold = {"waiting_for": waiting_for, "since": now.date().isoformat()}
+        hold = {"waiting_for": waiting_for, "since": local_day(now, here).isoformat()}
         if on is not None:
             hold["on"] = on
         tx.update("action", action_id, {"on_hold": hold}, _PM, read_version=rec.version)

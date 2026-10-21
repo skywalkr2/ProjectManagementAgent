@@ -265,7 +265,7 @@ def open_questions(store: Any, cfg: Any, today: date) -> list[OpenQuestion]:
                 project_name=", ".join(projects[p] for p in d.get("projects", []) if p in projects),
                 projects=[p for p in d.get("projects", []) if p in projects],
                 since=began.isoformat() if began else "",
-                waiting_days=(today - last_word).days if last_word and state == "waiting" else None,
+                waiting_days=max(0, (today - last_word).days) if last_word and state == "waiting" else None,
                 chases=len(chased),
                 held_until=held_until.isoformat() if state == "later" and held_until else None,
             )

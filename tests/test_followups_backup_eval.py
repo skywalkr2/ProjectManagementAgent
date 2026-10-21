@@ -446,3 +446,37 @@ def test_a_question_sent_late_in_the_evening_counts_from_the_persons_own_day_nev
     sent = next(s for s in sections(store, cfg, their_day) if s.person == editor["id"])
     assert sent.questions
     assert all(q["sent"] == their_day.isoformat() and q["waiting_days"] == 0 for q in sent.questions)
+
+
+def test_sent_and_chased_just_after_midnight_utc_count_in_the_workspaces_day(env):
+    """Marked sent and chased in the workspace's evening, which is already tomorrow in UTC: each day recorded is the
+    workspace's own, so the wait reads 0 days that evening and never below zero."""
+    from engine.today import zone
+
+    _, cfg, store = env
+    here = zone(cfg)
+    late = datetime(2026, 10, 21, 0, 30, tzinfo=UTC)
+    if late.astimezone(here).date() == late.date():
+        late = datetime(2026, 10, 20, 23, 30, tzinfo=UTC)
+    local = late.astimezone(here).date()
+    assert local != late.date(), "the moment must fall on another day in the workspace's zone"
+    editor = by_role("Editor")
+    mark_sent(store, cfg, editor["id"], now=late)
+    sec = next(s for s in sections(store, cfg, local) if s.person == editor["id"])
+    assert sec.questions and all(q["waiting_days"] == 0 for q in sec.questions)
+    assert sec.actions and all(a["told"] == local.isoformat() and a["told_days"] == 0 for a in sec.actions)
+    action_id = sec.actions[0]["id"]
+    done = follow_up(store, action_id, editor["id"], now=late, here=here)
+    assert done["on"] == local.isoformat()
+    row = next(a for a in next(s for s in sections(store, cfg, local) if s.person == editor["id"]).actions)
+    assert row["told_days"] == 0
+
+
+def test_a_day_recorded_after_the_workspaces_today_never_counts_below_zero(env):
+    _, cfg, store = env
+    editor = by_role("Editor")
+    mark_sent(store, cfg, editor["id"], now=NOW)
+    before = NOW.date() - timedelta(days=1)
+    sec = next(s for s in sections(store, cfg, before) if s.person == editor["id"])
+    assert all(q["waiting_days"] == 0 for q in sec.questions)
+    assert all(a["told_days"] == 0 for a in sec.actions)

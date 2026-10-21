@@ -1617,7 +1617,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def action_put_on_hold(action_id: str, body: HoldIn) -> HoldChanged:
         """Put an open action on hold, waiting for something. It is never due, overdue or chased while it is."""
         need("action", action_id)
-        previous = guard(lambda: put_on_hold(store, action_id, body.waiting_for, on=body.on))
+        from engine.today import zone
+
+        previous = guard(lambda: put_on_hold(store, action_id, body.waiting_for, on=body.on, here=zone(cfg)))
         changed()
         return HoldChanged(ok=action_id, previous=previous)
 
@@ -1643,7 +1645,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         day), or send it now (no hold). Undo puts back what `previous` says."""
         need("question", question_id)
         held = body.held_for.model_dump(exclude_none=True) if body.held_for else None
-        previous = guard(lambda: hold_question(store, question_id, held))
+        from engine.today import zone
+
+        previous = guard(lambda: hold_question(store, question_id, held, here=zone(cfg)))
         changed()
         return HeldChanged(ok=question_id, previous=previous)
 
@@ -1653,7 +1657,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         typed with it goes to the assistant."""
         need("person", person)
         need("action", action_id)
-        done = guard(lambda: follow_up(store, action_id, person))
+        from engine.today import zone
+
+        done = guard(lambda: follow_up(store, action_id, person, here=zone(cfg)))
         request = hand_note(("action", action_id), body.note if body else "", "followed_up", person)
         changed()
         return FollowedUp(**done, request=request)
