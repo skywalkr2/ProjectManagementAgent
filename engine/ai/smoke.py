@@ -97,7 +97,7 @@ def smoke_test(
                     temperature,
                     max_output,
                     effort=tier.effort,
-                    thinking=tier.thinking,
+                    thinking=getattr(tier, "thinking", "default"),
                 )
                 start = time.monotonic()
                 key_source = None
@@ -129,7 +129,7 @@ def smoke_test(
                 except ValueError as err:
                     ok, detail = False, str(err)
                 shown_effort = f", effort {tier.effort}" if tier.effort else ""
-                shown_effort += ", thinking off" if tier.thinking == "off" else ""
+                shown_effort += ", thinking off" if getattr(tier, "thinking", "default") == "off" else ""
                 label = f"{ref} ({kind}, temperature {temperature}, max output {max_output}{shown_effort})"
                 results.append(
                     SmokeResult(
