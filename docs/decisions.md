@@ -4,6 +4,20 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: Every AI service gets a recommended setup out of the box, with measuring to keep it current
+
+- **Decided (owner):** "the system should have the ability to measure because models are always improving, but i would
+  like us to set defaults out of the box if we can for the less knoweledgable folks"; effort is a setting on both
+  kinds of service and is part of the setup.
+- **What it means:** three tiers (everyday, stronger, hardest); each service in the catalog carries a preset naming a
+  model family and an effort per tier; effort is a per-model adapter capability; a service with no preset is filled by
+  price and marked not checked; a measured recommendation from a few evaluation cases replaces the preset when the
+  person accepts it.
+- **Why:** a new account today runs everything on its recommended model, which for one program is a mid-priced one; the
+  person shouldn't need to know which model suits routine work.
+- **Impact:** design 6.16; the catalog's format (it names model families, the one place a model's name carries meaning,
+  as data); `ai.yaml`'s tiers gain a third and an effort; roadmap B-11, before phase S. Change log: section 143.
+
 ## 2026-10-21: Four evaluation cases follow the reply-owed rule, and three instructions stop contradicting the checks
 
 - **Decided (main session):**

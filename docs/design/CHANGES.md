@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 143. A recommended setup per AI service, measured to stay current (2026-10-21; B-11, designed)
+
+| Where | Before | Now |
+|---|---|---|
+| A new account's tiers (6.16) | One recommended model for everything | Three tiers filled from the service's preset (a model family and an effort each), by price where there is none |
+| Effort (6.16) | Not a setting | A per-model adapter capability, set per tier; escalation may raise it first |
+| Keeping defaults current (6.16) | By hand | A few evaluation cases on the service's cheaper models recommend the cheapest that passes |
+
+Why: `docs/decisions.md` (2026-10-21, "Every AI service gets a recommended setup out of the box").
+
 ## 142. Replies owed over decision questions, a reply's source in words, shared work as one action (2026-10-21; B-10)
 
 | Where | Before | Now |

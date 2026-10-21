@@ -1602,6 +1602,26 @@ A fallback is a switch nobody chose at that moment, so (6.22):
   `tests/test_quality.py::test_the_first_run_on_a_fallback_account_is_tagged_on_its_changeset_and_a_later_one_is_not`.
 When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide.
 
+**A recommended setup per service, out of the box, and measured to stay current** (owner, 2026-10-21; *designed, B-11*).
+A person who adds an account gets every tier filled in, so routine work never lands on an expensive model by accident:
+- Three tiers: everyday, stronger and hardest. Each kind of work names its tier; most work is everyday.
+- Each entry in the catalog of AI services (`catalog/ai-endpoints.yaml`, data) carries its preset: for each tier, a model
+  family to look for among the models the service lists for the person's key, and an effort (low, medium or high).
+  The catalog names families, never exact ids, so a newer model of the same family is picked up with no change; this
+  is the one place a model's name carries meaning, and it is data, never code.
+- Effort is a capability each model reports through its adapter, which turns it into that service's own setting; a model
+  without it ignores it. Escalating may raise the effort on the same model before moving to a stronger one.
+- With no preset match (a local server, an aggregator, a renamed family), the tiers are filled by price from the
+  service's own model list, cheapest first, and marked not checked until the smoke test confirms them.
+- Measuring keeps the defaults honest as models improve: on adding an account, and whenever the person asks, a small set
+  of evaluation cases runs on the service's cheaper models at each effort (estimated first, a few cents), and the
+  pair that passes for each tier at the lowest measured cost per passing answer becomes the recommendation, which the
+  person accepts or not. Cost is measured, not read from the price list, because a higher effort writes more tokens: a
+  low-cost model at high effort may or may not beat a stronger one at low effort, and only the run says which. A measurement older than
+  the service's newest listed model is offered again.
+- On screen: the three tiers in plain words with an estimated cost per day, already filled in, each changeable; the
+  model's name shows only in Advanced.
+
 **Escalate on failure, not on price.** Cheap models do most of the work; a tier can name `escalate_to` (another tier). When a
 run's changeset still fails an invariant after its one fix round, or would be held for a lint, the request is re-run once on the
 escalation tier before the PM sees it. A refusal from an op validator (3.3), core or plugin, counts as an invariant failure here, with the
