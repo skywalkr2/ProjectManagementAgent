@@ -25,7 +25,7 @@ def two(tmp_path):
     folder = tmp_path / "synced"
     folder.mkdir()
     a = init_workspace(tmp_path / "a", template=DEMO_B, git=False)
-    b = init_workspace(tmp_path / "b", git=False)
+    b = init_workspace(tmp_path / "b", git=False, personal=False)  # a computer joining the folder, as `--sync` makes it
     return a, set_folder(a, folder), b, set_folder(b, folder), folder
 
 
@@ -200,3 +200,18 @@ def test_closing_releases_the_lease(two):
         assert read_lease(folder).released
     finally:
         store.close()
+
+
+def test_a_new_computer_set_up_on_the_synced_folder_loads_it_and_makes_no_personal_project_of_its_own(two, tmp_path):
+    """`cockpit init --sync` takes the folder's workspace whole; a Personal project made here would diverge from it."""
+    from engine.cli import main
+    from engine.handover import open_workspace, release
+    from engine.workspace import Workspace
+
+    a, cfg_a, _, _, folder = two
+    open_workspace(a, cfg_a)
+    write(a, cfg_a)
+    release(a, cfg_a)
+    assert main(["init", str(tmp_path / "c"), "--sync", str(folder), "--no-git"]) == 0
+    c = Workspace(tmp_path / "c")
+    assert projects(c, load_config(c.config_dir, env={})) == projects(a, cfg_a)

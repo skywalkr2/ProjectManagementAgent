@@ -39,7 +39,7 @@ class OpenAICompatibleAdapter:
                 {"role": "system", "content": task.instructions + "\n\n" + task.stable},
                 {"role": "user", "content": task.request},
             ],
-            "max_tokens": task.max_output,
+            getattr(self.settings, "max_tokens_param", "max_tokens"): task.max_output,
         }
         if getattr(self.settings, "send_temperature", True):
             body["temperature"] = task.temperature
@@ -57,7 +57,7 @@ class OpenAICompatibleAdapter:
             raise transport_error(err, self.settings.base_url) from None
         seconds = time.monotonic() - started
         if response.status_code >= 400:
-            raise classify_http_error(response)
+            raise classify_http_error(response, self.settings)
         try:
             data = response.json()
             message = data["choices"][0]["message"]
@@ -100,32 +100,46 @@ class OpenAICompatibleAdapter:
     def list_models(self) -> dict[str, ModelInfo]:
         """The model list, raising `AiError` with the kind of failure (a key not accepted, the service down or not
         there) instead of returning nothing, so a setup screen can say what went wrong."""
+        out: dict[str, ModelInfo] = {}
+        after: str | None = None
+        for _ in range(max(1, getattr(self.settings, "model_list_pages", 10))):
+            items, more = self._model_page(after)
+            before = len(out)
+            for item in items:
+                if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+                    continue
+                pricing = item.get("pricing") if isinstance(item.get("pricing"), dict) else {}
+                top = item.get("top_provider") if isinstance(item.get("top_provider"), dict) else {}
+                out[item["id"]] = ModelInfo(
+                    context_tokens=_int(item.get("context_length")),
+                    max_output_tokens=_int(top.get("max_completion_tokens")),
+                    input_per_million=_per_million(pricing.get("prompt")),
+                    output_per_million=_per_million(pricing.get("completion")),
+                    cached_input_per_million=_per_million(pricing.get("input_cache_read")),
+                )
+            if more is None or more == after or len(out) == before:
+                break
+            after = more
+        return out
+
+    def _model_page(self, after: str | None) -> tuple[list[Any], str | None]:
+        """One page of the model list and, when the service says more follow, the id to ask for the page after."""
         try:
-            response = self._client.get("/models")
+            response = self._client.get("/models", params={"after_id": after} if after else None)
         except httpx.TimeoutException as err:
             raise AiError("timeout", str(err)) from None
         except httpx.TransportError as err:
             raise transport_error(err, self.settings.base_url) from None
         if response.status_code >= 400:
-            raise classify_http_error(response)
+            raise classify_http_error(response, self.settings, listing=True)
         try:
-            items = response.json().get("data") or []
+            body = response.json()
+            items = body.get("data") or []
+            last = body.get("last_id")
+            more = last if body.get("has_more") is True and isinstance(last, str) and last else None
         except (ValueError, AttributeError):
             raise AiError("invalid_output", "the model list wasn't in the expected format") from None
-        out: dict[str, ModelInfo] = {}
-        for item in items if isinstance(items, list) else []:
-            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
-                continue
-            pricing = item.get("pricing") if isinstance(item.get("pricing"), dict) else {}
-            top = item.get("top_provider") if isinstance(item.get("top_provider"), dict) else {}
-            out[item["id"]] = ModelInfo(
-                context_tokens=_int(item.get("context_length")),
-                max_output_tokens=_int(top.get("max_completion_tokens")),
-                input_per_million=_per_million(pricing.get("prompt")),
-                output_per_million=_per_million(pricing.get("completion")),
-                cached_input_per_million=_per_million(pricing.get("input_cache_read")),
-            )
-        return out
+        return (items if isinstance(items, list) else []), more
 
 
 def _int(value: Any) -> int | None:
@@ -155,20 +169,35 @@ REFUSAL_CODES = {
 }
 
 
-def _refusal_code(response: httpx.Response) -> bool:
+def _error_body(response: httpx.Response) -> dict[str, Any]:
     try:
         body = response.json()
     except ValueError:
-        return False
+        return {}
     error = body.get("error") if isinstance(body, dict) else None
-    if not isinstance(error, dict):
-        return False
+    return error if isinstance(error, dict) else {}
+
+
+def _refusal_code(response: httpx.Response) -> bool:
+    error = _error_body(response)
     return any(str(error.get(key, "")).lower() in REFUSAL_CODES for key in ("code", "type"))
 
 
-def classify_http_error(response: httpx.Response) -> AiError:
+def _key_refused_by_reason(response: httpx.Response, reasons: list[str]) -> bool:
+    """Whether an error body's details carry one of the account's reason codes for a refused key. Only the structured
+    `reason` of each detail is read, never the message and never the general status text."""
+    details = _error_body(response).get("details")
+    wanted = {r.lower() for r in reasons}
+    return isinstance(details, list) and any(
+        isinstance(d, dict) and str(d.get("reason", "")).lower() in wanted for d in details
+    )
+
+
+def classify_http_error(response: httpx.Response, settings: Any = None, *, listing: bool = False) -> AiError:
     """Turn an HTTP error into an error kind from the status code, headers and the error body's own code, never from
-    its wording."""
+    its wording. `listing` says it answered the request for the model list, which takes no arguments; with the
+    account's settings, a service that answers a refused key with a status that also means any other bad request is
+    read by the account's reason codes, or by the status alone on the model list."""
     status = response.status_code
     detail = f"HTTP {status}: {response.text[:500]}"
     retry_after = _retry_after(response)
@@ -176,6 +205,11 @@ def classify_http_error(response: httpx.Response) -> AiError:
         return AiError("refused", detail)
     if status in (401, 403):
         return AiError("auth", detail)
+    if settings is not None:
+        if listing and status in getattr(settings, "key_refused_status_on_models", []):
+            return AiError("auth", detail)
+        if status == 400 and _key_refused_by_reason(response, getattr(settings, "auth_reasons", [])):
+            return AiError("auth", detail)
     if status == 402:
         return AiError("quota", detail, retry_after=retry_after)
     if status == 429:

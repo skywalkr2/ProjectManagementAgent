@@ -53,7 +53,7 @@ SIDES = {
 }
 PROJECTS = fixture_records(DEMO_B, "project")
 DEMO_CONFIG = load_yaml((DEMO_B / "config" / "workspace.yaml").read_text(encoding="utf-8"))["project"]
-BUSINESS_ID, PERSONAL_ID = DEMO_CONFIG["business"], DEMO_CONFIG["personal"]
+BUSINESS_ID, PERSONAL_ID = PROJECTS[0]["id"], DEMO_CONFIG["personal"]  # the fixture names no business; tests set one
 BUSINESS_NAME = fixture_records(DEMO_B, "organization")[0]["name"]
 OTHER_BUSINESS_NAME = fixture_records(DEMO_B, "organization")[1]["name"]
 
@@ -97,7 +97,8 @@ def base(tmp_path_factory):
         )
     store.close()
     settings = root / "config" / "workspace.yaml"
-    settings.write_text(set_key(settings.read_text(encoding="utf-8"), ["user", "person"], owner.id), encoding="utf-8")
+    text = set_key(settings.read_text(encoding="utf-8"), ["user", "person"], owner.id)
+    settings.write_text(set_key(text, ["project", "business"], BUSINESS_ID), encoding="utf-8")
     return root
 
 
@@ -228,6 +229,16 @@ def test_an_item_is_on_the_side_of_the_project_it_is_filed_under(env):
     assert sides.side_of_item(view, cfg, view.get("note", loose.id)) is None
 
 
+def personal_only(env):
+    """Shape the workspace as a person with no business keeps it: every other project under Personal (its areas and
+    projects), so Personal is the only top-level project."""
+    _, _, store = env
+    with store.transaction() as tx:
+        for project in tx.list("project"):
+            if project.id != PERSONAL_ID and not project.data.get("parent"):
+                tx.update("project", project.id, {"parent": PERSONAL_ID}, _PM, read_version=project.version)
+
+
 def without(ws, *keys):
     """The workspace's settings with these project keys (business, personal) taken out, as the app would read them."""
     path = ws.config_dir / "workspace.yaml"
@@ -327,10 +338,17 @@ def test_people_who_disagree_leave_it_unfiled_and_people_on_both_sides_or_not_kn
 
 def test_with_no_business_set_what_has_no_project_goes_to_personal_whoever_it_names(env):
     other = without(env[0], "business")
+    personal_only(env)
     a, _ = PERSONAL_PEOPLE
     x, _ = BUSINESS_PEOPLE
     ops = [new_op(owners=[name_of(a), name_of(x)]), new_op(owners=[name_of(BOTH_PERSON)]), new_op("fact")]
     assert filed(env, ops, cfg=other) == [PERSONAL_ID] * 3
+
+
+def test_with_no_business_and_other_work_on_top_what_has_no_project_stays_for_the_person_to_file(env):
+    other = without(env[0], "business")
+    a, _ = PERSONAL_PEOPLE
+    assert filed(env, [new_op(owners=[name_of(a)]), new_op("fact")], cfg=other) == [None, None]
 
 
 def test_a_project_the_answer_gave_is_kept_and_a_workspace_with_neither_side_set_files_nothing(env):
@@ -437,6 +455,7 @@ def test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks
 
 def test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_nothing(env):
     ws, _, _ = env
+    personal_only(env)
     projects, lines, before = run_week(env, without(ws, "business"))
     assert set(projects.values()) == {PERSONAL_ID}
     assert [line for line in lines if line.kind == "unfiled"] == [] and before == 0

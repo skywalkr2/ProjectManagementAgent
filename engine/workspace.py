@@ -89,12 +89,14 @@ def init_workspace(
     name: str | None = None,
     assistant: str | None = None,
     history: bool = False,
+    personal: bool = True,
 ) -> Workspace:
     """Create a workspace folder and its database. With a template, copy its config and data and load the data (with
     `history`, and a template that has one, its history instead of its starting records alone, for a demo);
     otherwise write default config files. Without a template, `you` (the PM's full name) becomes the first person and
-    the workspace's user, and `name` and `assistant` set the display names. The new workspace is committed to its own
-    git repository."""
+    the workspace's user, `name` and `assistant` set the display names, and the Personal project is made unless
+    `personal` is off (a computer joining a synced folder takes the folder's own). The new workspace is committed to its
+    own git repository."""
     if template is not None and (you or name or assistant):
         raise WorkspaceError("Your name and the workspace's names come from the template; leave them out with --from.")
     root = path.expanduser().resolve()
@@ -132,8 +134,8 @@ def init_workspace(
             import_data(store, ws.data_dir)
         if seed_rules(store) or imported:
             export_data(store, ws.data_dir)
-        if template is None:
-            _set_identity(ws, store, you, name, assistant)
+        if template is None and (personal or you or name or assistant):
+            _set_identity(ws, store, you, name, assistant, personal=personal)
             export_data(store, ws.data_dir)
     finally:
         store.close()
@@ -141,9 +143,12 @@ def init_workspace(
     return ws
 
 
-def _set_identity(ws: Workspace, store: Store, you: str | None, name: str | None, assistant: str | None) -> None:
-    """For a workspace with no template: make the person's own project (Personal, design 6.32), the PM the first person
-    when named, and write the workspace's names and the personal project into config/workspace.yaml."""
+def _set_identity(
+    ws: Workspace, store: Store, you: str | None, name: str | None, assistant: str | None, *, personal: bool = True
+) -> None:
+    """For a workspace with no template: make the person's own project (Personal, design 6.32) unless `personal` is
+    off, the PM the first person when named, and write the workspace's names and the personal project into
+    config/workspace.yaml."""
     from engine.config.schema import UserSettings, WorkspaceFile
     from engine.sides import make_personal
     from engine.storage import WriteContext
@@ -161,5 +166,6 @@ def _set_identity(ws: Workspace, store: Store, you: str | None, name: str | None
         settings.name = name.strip()
     if assistant:
         settings.assistant_name = assistant.strip()
-    settings.project.personal = make_personal(store)
+    if personal:
+        settings.project.personal = make_personal(store)
     (ws.config_dir / "workspace.yaml").write_text(render_default_file("workspace", settings), encoding="utf-8")

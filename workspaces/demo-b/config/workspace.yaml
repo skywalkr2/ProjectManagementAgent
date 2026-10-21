@@ -15,8 +15,8 @@ phone_min_digits: 7
 project:
   summary_max_lines: 3   # the most lines a project's summary may have; what was found goes to facts
   completed_status: Done   # the status that means a project is finished, listed under Completed
-  personal: PRJ-2   # the project that holds the person's own life; unplaced items go there while no business is set
-  business: PRJ-1   # the top project of the person's business, when they have one
+  personal: PRJ-2   # the project that holds the person's own life
+  # business: PRJ-1  # the top project of the person's business or job, when they have one (none here: these workspaces track several projects)
 plugins:
   enabled: [example, kit]
   actions:

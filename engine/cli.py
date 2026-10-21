@@ -355,7 +355,13 @@ def cmd_init(args: argparse.Namespace) -> int:
         )
         return 1
     ws = init_workspace(
-        args.path, template=args.template, git=not args.no_git, you=args.you, name=args.name, assistant=args.assistant
+        args.path,
+        template=args.template,
+        git=not args.no_git,
+        you=args.you,
+        name=args.name,
+        assistant=args.assistant,
+        personal=args.sync is None,
     )
     if args.sync is not None:
         from engine.handover import Refused, open_workspace

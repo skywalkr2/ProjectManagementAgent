@@ -1,0 +1,45 @@
+# What each catalog entry must produce, from the services' and programs' own documentation, as of the audit. Names and
+# ids live here, in data, so the test code names no service. A change to an entry's claim is a change here with its
+# source. Messages and bodies are quoted as the programs and services gave them.
+no_temperature: [openai, google]          # their current models are documented to refuse or mishandle a temperature
+no_json_mode: [lm-studio]                  # no JSON-object mode among its documented request fields
+max_tokens_param:                          # the older name is deprecated and refused by reasoning models
+  openai: max_completion_tokens
+base_url: {deepseek: "https://api.deepseek.com"}
+skip_trust: {entry: gemini-cli, flag: "--skip-trust"}
+# Accounts whose service documents a reasoning effort setting, and the other entries, which must not send one.
+effort_param: [openai, google, openrouter, deepseek, xai, local]
+effort_option:
+  claude-code: ["--effort", "{effort}"]
+  copilot: ["--effort", "{effort}"]
+  codex: ["-c", "model_reasoning_effort={effort}"]
+effort_unset: [anthropic, groq, mistral, lm-studio, gemini-cli, other, agent]
+packet_on_stdin: copilot
+# Messages the program prints, with what each means.
+program_messages:
+  - {entry: claude-code, kind: quota, message: "You've hit your session limit"}
+  - {entry: claude-code, kind: quota, message: "You've hit your weekly limit"}
+  - {entry: claude-code, kind: quota, message: "You've hit your Opus limit"}
+  - {entry: claude-code, kind: quota, message: "You've hit your monthly spend limit"}
+  - {entry: claude-code, kind: quota, message: "Credit balance is too low"}
+  - {entry: claude-code, kind: quota, message: "You've hit your limit"}
+  - {entry: claude-code, kind: auth, message: "OAuth token revoked"}
+  - {entry: claude-code, kind: auth, message: "Failed to authenticate: OAuth token revoked"}
+  - {entry: claude-code, kind: auth, message: "OAuth token has expired"}
+  - {entry: claude-code, kind: auth, message: "Authentication required · Sign in again to continue"}
+  - {entry: claude-code, kind: auth, message: "Login expired · Please run /login"}
+  - {entry: claude-code, kind: auth, message: "Invalid API key · Fix external API key"}
+  - {entry: claude-code, kind: auth, message: "Not logged in · Please run /login"}
+  - {entry: claude-code, kind: rate_limited, message: "Server is temporarily limiting requests"}
+  - {entry: claude-code, kind: rate_limited, message: "Request rejected (429)"}
+  - {entry: claude-code, kind: rate_limited, message: "Repeated 529 Overloaded"}
+# A refused key answered with a 400: the bodies recorded from the two services.
+refused_key:
+  - entry: google
+    body: {"error": {"code": 400, "message": "Please pass a valid API key", "status": "INVALID_ARGUMENT"}}
+    reason_body: {"error": {"code": 400, "message": "x", "status": "INVALID_ARGUMENT", "details": [{"@type": "type.example.com/ErrorInfo", "reason": "API_KEY_INVALID"}]}}
+    other_reason_body: {"error": {"code": 400, "message": "x", "status": "INVALID_ARGUMENT", "details": [{"reason": "SOMETHING_ELSE"}]}}
+  - entry: xai
+    body: {"code": "invalid-argument", "error": "Incorrect API key provided. You can obtain an API key from https://console.x.ai."}
+# An entry that sets neither setting: a 400 on its model list stays unclassified.
+no_key_refused_setting: [openai]

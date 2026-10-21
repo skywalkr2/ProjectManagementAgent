@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 150. Every catalog entry matches its service's own docs (2026-10-21; B-11c part 1, built)
+
+- Per-service settings confirmed against each service's documentation: no temperature where current models refuse it,
+  the output-limit name a service takes (`max_tokens_param`), effort only where documented (`effort_param`,
+  `effort_option`), a refused key read from a structured reason (`auth_reasons`) or a status on the model list
+  (`key_refused_status_on_models`), model lists read page by page (`model_list_pages`), Copilot's request on standard
+  input, and the command-line programs' documented limit and sign-in messages. Design 4 (provider keys), 6.16.
+
 ## 149. Failures captured for feedback (2026-10-21; B-11c, designed)
 
 - Send feedback can add the last problems: each failed AI call, account check, connector read or server error, with
@@ -1038,7 +1046,9 @@ yet follow, that it is *designed*, with its phase.
 - The settings that name the two sides are `workspace.project.personal` and `workspace.project.business` (the design
   had said `steward.personal_project`); a new workspace gets its Personal project at `cockpit init`; people carry a
   `side` and a `relation`; the applier files an item with no project by its people; the items its people don't place
-  make one "Sort N items" line on Today. Design 6.32 ("Two sides from day one").
+  make one "Sort N items" line on Today. With no business, items go to Personal only while it is the only top-level
+  project; `cockpit init --sync` makes no Personal of its own, so a joining computer never diverges from the folder.
+  Design 6.32 ("Two sides from day one").
 
 ## 147. Unsigned installers through 1.0, said plainly (2026-10-21; phase I, decided)
 

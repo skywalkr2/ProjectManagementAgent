@@ -31,9 +31,9 @@
 #                      and its effort; hardest is made when the settings have no such tier. A family no model matches
 #                      leaves its tier as it would be without a preset. Names families, never ids, so a newer model of
 #                      the family is picked up with no change here. An entry with no preset gets its tiers by price.
-#   effort_param, effort_option (provider and agent settings, not set on any entry here): how a service takes an
-#                      effort. Each is set on an entry only once the service's own parameter is confirmed for it;
-#                      until then a tier's effort is recorded but never sent.
+#   effort_param, effort_option (provider and agent settings): how a service takes an effort. Each is set on an
+#                      entry only once the service's own documentation confirms the parameter for it; an entry
+#                      without one records a tier's effort but never sends it.
 #   note               one line shown with it
 # Model ids are never listed here: the screen asks the service for its models with the person's key.
 endpoints:
@@ -46,6 +46,10 @@ endpoints:
     credit_url: https://platform.openai.com/settings/organization/billing/overview
     alternative: true
     needs_key: true
+    settings:
+      max_tokens_param: max_completion_tokens   # the older name is deprecated and refused by its reasoning models
+      send_temperature: false   # its current models take none once they reason, and they reason by default
+      effort_param: reasoning_effort
     note: Pay as you go on your own OpenAI account.
   - id: anthropic
     name: Anthropic
@@ -70,6 +74,11 @@ endpoints:
     base_url: https://generativelanguage.googleapis.com/v1beta/openai
     key_url: https://aistudio.google.com/apikey
     needs_key: true
+    settings:
+      send_temperature: false   # its current models are documented to behave badly with any value but their own
+      effort_param: reasoning_effort
+      auth_reasons: [API_KEY_INVALID]   # the reason code in an error body that says the key was refused
+      key_refused_status_on_models: [400]   # it answers a refused key with a 400, never a 401
     note: Has a free tier with lower limits; check what it allows the service to keep.
   - id: openrouter
     name: OpenRouter
@@ -77,6 +86,8 @@ endpoints:
     base_url: https://openrouter.ai/api/v1
     key_url: https://openrouter.ai/settings/keys
     needs_key: true
+    settings:
+      effort_param: reasoning_effort
     note: One key for models from many companies, with prices listed per model.
   - id: mistral
     name: Mistral
@@ -95,9 +106,11 @@ endpoints:
   - id: deepseek
     name: DeepSeek
     adapter: openai-compatible
-    base_url: https://api.deepseek.com/v1
+    base_url: https://api.deepseek.com
     key_url: https://platform.deepseek.com/api_keys
     needs_key: true
+    settings:
+      effort_param: reasoning_effort
     note: Low prices; check where it keeps what you send.
   - id: xai
     name: xAI
@@ -105,6 +118,9 @@ endpoints:
     base_url: https://api.x.ai/v1
     key_url: https://console.x.ai
     needs_key: true
+    settings:
+      effort_param: reasoning_effort
+      key_refused_status_on_models: [400]   # it answers a refused key with a 400, never a 401
     note: Pay as you go on your own xAI account.
   - id: local
     name: Ollama on this computer
@@ -112,6 +128,8 @@ endpoints:
     base_url: http://localhost:11434/v1
     needs_key: false
     local: true
+    settings:
+      effort_param: reasoning_effort
     allowed_data: [open, internal, restricted]
     note: Nothing leaves this computer. Start Ollama first.
   - id: lm-studio
@@ -120,6 +138,8 @@ endpoints:
     base_url: http://localhost:1234/v1
     needs_key: false
     local: true
+    settings:
+      json_mode: false   # its documented request fields have no JSON-object mode
     allowed_data: [open, internal, restricted]
     note: Nothing leaves this computer. Start LM Studio's server first.
   - id: other
@@ -154,9 +174,10 @@ endpoints:
           cost_usd: total_cost_usd
         errors:
           report_on_output: true
-          auth: ["not logged in", "please run /login", "invalid api key", "oauth token (has expired|has been revoked)"]
-          quota: ["usage limit reached", "hit your limit"]
-          rate_limited: ["rate limit", "overloaded"]
+          auth: ["not logged in", "please run /login", "invalid api key", "oauth token (?:has )?(?:expired|revoked)", "authentication required", "login expired"]
+          quota: ["usage limit reached", "hit your [a-z ]{0,30}limit", "credit balance is too low"]
+          rate_limited: ["rate limit", "overloaded", "temporarily limiting requests"]
+        effort_option: ["--effort", "{effort}"]
         sign_in_hint: Open a terminal, run claude and sign in, then press Test again.
         identity_command: [claude, auth, status]
         identity_field: email
@@ -170,9 +191,10 @@ endpoints:
     model_optional: true
     settings:
       agent:
-        command: [copilot, -p, "{prompt}", -s]
-        packet_via: argument
+        command: [copilot, -s]
+        packet_via: stdin
         output_via: stdout
+        effort_option: ["--effort", "{effort}"]
         sign_in_hint: Open a terminal, run copilot and sign in with /login, then press Test again.
     note: Uses your Copilot plan through the Copilot CLI; it asks before using tools, so here it can't use them.
   - id: codex
@@ -187,6 +209,7 @@ endpoints:
         command: [codex, exec, --sandbox, read-only, --skip-git-repo-check, --ephemeral]
         packet_via: stdin
         output_via: stdout
+        effort_option: ["-c", "model_reasoning_effort={effort}"]
         sign_in_hint: Open a terminal, run codex and sign in, then press Test again.
     note: Uses your ChatGPT plan or account through the Codex CLI, in its read-only sandbox.
   - id: gemini-cli
@@ -198,7 +221,7 @@ endpoints:
     model_optional: true
     settings:
       agent:
-        command: [gemini, --output-format, json]
+        command: [gemini, --skip-trust, --output-format, json]
         packet_via: stdin
         output_via: stdout
         output_json: true

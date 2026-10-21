@@ -666,6 +666,31 @@ class ProviderSettings(ConfigModel):
         description="Send each kind of work's temperature with the request. Off for a service whose current models "
         "refuse any temperature they don't set themselves; the model then uses its own.",
     )
+    max_tokens_param: str = Field(
+        "max_tokens",
+        description="The request setting this service takes the most tokens an answer may have in. Some services "
+        "refuse the older name on their newer models and want max_completion_tokens instead.",
+    )
+    auth_reasons: list[str] = Field(
+        default_factory=list,
+        description="Reason codes in an error answer's details (never its wording) that mean the service refused the "
+        "key, for a service that answers a refused key with a status that also means any other bad request. Empty: "
+        "the status alone says whether the key was refused.",
+    )
+    key_refused_status_on_models: list[int] = Field(
+        default_factory=list,
+        description="Statuses that, on the request for the service's model list (which takes no arguments, so it can "
+        "only be about the key), mean the key was refused, for a service that answers a refused key with a status "
+        "that also means any other bad request. The same status on a request for work is not read this way. Empty: "
+        "the status alone says whether the key was refused.",
+    )
+    model_list_pages: int = Field(
+        10,
+        ge=1,
+        le=100,
+        description="The most pages of a service's model list that are read when it says there are more, so a long "
+        "list is read in full but a service that never stops paging can't keep the request going.",
+    )
     effort_param: str = Field(
         "",
         description="The request setting this service takes the effort of a tier's work in (low, medium or high), "

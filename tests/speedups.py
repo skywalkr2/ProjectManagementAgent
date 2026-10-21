@@ -132,9 +132,20 @@ def _copy_prepared_workspaces() -> None:
             if path.is_file()
         )
 
-    def init_workspace(path, *, template=None, git=True, you=None, name=None, assistant=None, history=False):
+    def init_workspace(
+        path, *, template=None, git=True, you=None, name=None, assistant=None, history=False, personal=True
+    ):
         if template is None or you or name or assistant:
-            return original(path, template=template, git=git, you=you, name=name, assistant=assistant, history=history)
+            return original(
+                path,
+                template=template,
+                git=git,
+                you=you,
+                name=name,
+                assistant=assistant,
+                history=history,
+                personal=personal,
+            )
         root = Path(path).expanduser().resolve()
         if root.exists() and any(root.iterdir()):
             return original(path, template=template, git=git, history=history)

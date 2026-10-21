@@ -154,7 +154,8 @@ test.describe.serial("journeys", () => {
     await page.getByRole("menuitem", { name: "Look closer" }).click();
     await expect(review.getByText("Added a to-do").first()).toBeVisible();
     // My name and the due day show on the item's own line, and again in the line that says why it is here (each part editable there).
-    await expect(review.getByText(new RegExp(`^${info.people[0]} · due [^·]+$`))).toBeVisible();
+    // A new workspace files what it can't place under Personal, so the line ends with that side's name.
+    await expect(review.getByText(new RegExp(`^${info.people[0]} · due [^·]+ · Personal$`))).toBeVisible();
     await expect(review.locator("[data-promise-line]").first()).toContainText(new RegExp(`${info.people[0]} · due`));
     await expect(review.getByText("Who owns this?")).toBeVisible();
     await visit(page);

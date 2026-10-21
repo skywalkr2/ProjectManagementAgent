@@ -38,6 +38,11 @@ def _live(view: Any, project_id: str | None) -> str | None:
     return project_id if project_id and view.get("project", project_id) is not None else None
 
 
+def _only_top(view: Any, project_id: str) -> bool:
+    """Whether the project is the only top-level project in the workspace."""
+    return all(p.id == project_id or p.data.get("parent") for p in view.list("project"))
+
+
 def personal_project(view: Any, cfg: Any) -> str | None:
     """The project of the personal side, when one is set and still there."""
     return _live(view, cfg.workspace.project.personal)
@@ -118,11 +123,14 @@ def file_by_people(ops: list[Any], view: Any, cfg: Any, people: Any, sender: str
     """The ops with every new action, question, fact or note that names no project filed under a side's top project.
     The side is the one every deciding person is on (the people the op names and the input's sender, when a known
     person; those on both sides and those not known don't decide). With no business set an unplaced item goes to the
-    personal project; with one, an item whose people don't agree, or don't say, stays unfiled for the person to place.
+    personal project when that is the only top-level project (a workspace tracking other work without naming a business
+    keeps its unfiled items for the person to place); with one, an item whose people don't agree, or don't say, stays
+    unfiled for the person to place.
     The same ops always give the same result."""
     personal, business = personal_project(view, cfg), business_project(view, cfg)
     if personal is None and business is None:
         return ops
+    only_personal = business is None and personal is not None and _only_top(view, personal)
     out: list[Any] = []
     for op in ops:
         if not isinstance(op, (ActionAddOp, QuestionAddOp, FactOp, NoteOp)) or op.project:
@@ -132,7 +140,7 @@ def file_by_people(ops: list[Any], view: Any, cfg: Any, people: Any, sender: str
         persons = [r.person for r in who if r.status == "ok" and r.person] + ([sender] if sender else [])
         decided = {s for p in persons if (s := side_of_person(people, p)) in ("personal", "business")}
         if business is None:
-            target = personal
+            target = personal if only_personal else None
         elif len(decided) == 1:
             target = business if decided == {"business"} else personal
         else:

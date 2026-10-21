@@ -12,6 +12,7 @@ import subprocess
 import sys
 from dataclasses import replace
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -92,10 +93,14 @@ def test_presets_name_families_and_never_ids():
     assert [k["id"] for k in known_endpoints() if k["tier_presets"]]
 
 
-def test_the_catalog_sets_neither_effort_setting_until_a_services_parameter_is_confirmed():
+def test_the_catalog_sets_an_effort_setting_only_where_the_services_documentation_confirms_it():
+    """Which entries those are is in tests/test_catalog_claims.py, with the documentation's wording in its fixture;
+    here only that an entry without a confirmed parameter sends nothing."""
+    claims = yaml.safe_load((Path(__file__).parent / "fixtures" / "ai" / "catalog-claims.yaml").read_text("utf-8"))
     for kind in known_endpoints():
-        assert "effort_param" not in kind["settings"], kind["id"]
-        assert "effort_option" not in (kind["settings"].get("agent") or {}), kind["id"]
+        confirmed = kind["id"] in {*claims["effort_param"], *claims["effort_option"]}
+        has = "effort_param" in kind["settings"] or "effort_option" in (kind["settings"].get("agent") or {})
+        assert has is confirmed, kind["id"]
 
 
 def test_a_family_matches_without_regard_to_case_and_the_first_listed_wins():

@@ -1611,8 +1611,8 @@ A person who adds an account gets every tier filled in, so routine work never la
   is the one place a model's name carries meaning, and it is data, never code.
 - Effort is set per tier (low, medium or high) and reaches the service only through the account's own setting for it:
   `effort_param` (the request field a chat-format service takes) or `effort_option` (the arguments a command-line agent
-  takes). Both are left empty in the catalog until a service's real parameter is confirmed, so an unconfirmed service is
-  never sent a field it doesn't know; a tier's effort is part of what its smoke test sends. Escalating may raise the
+  takes). Each is set in the catalog only on a service whose own documentation confirms the parameter, so an unconfirmed
+  service is never sent a field it doesn't know; a tier's effort is part of what its smoke test sends. Escalating may raise the
   effort on the same model before moving to a stronger one (with B-11b's measuring).
 - Presets are written only for services whose model families are certain; the rest are filled by price until
   measuring, or the person, says better. *Built (B-11a):* `engine/ai/presets.py`, `tests/test_tier_presets.py`.
@@ -2891,7 +2891,9 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter. Filing reads the
   people first, since each person belongs to a side; only an item neither its people nor its words place is asked
   about, and those are asked together in one "Which side?" question, never one each. A person with no business is never
-  asked. People on the personal side record how they relate to the person (a relation, "my sister"), not a role or an
+  asked: what the assistant can't place goes to Personal while Personal is the only top-level project (its areas and
+  projects under it); a workspace that tracks other work at the top without naming a business keeps such items unfiled
+  for the person to file, as before, and a computer joining a synced folder makes no Personal of its own. People on the personal side record how they relate to the person (a relation, "my sister"), not a role or an
   organization.
 - **Areas and projects under it** (`Project.parent`): an **area** is ongoing and never finishes (health, money, home,
   family, a car, pets) and has no end date, so it is never behind; a **project** has a goal and an end (moving house, a
