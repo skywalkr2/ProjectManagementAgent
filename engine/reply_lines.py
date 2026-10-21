@@ -59,9 +59,9 @@ def _body_of(text: str) -> str:
     return text
 
 
-def read_message(text: str, received: datetime | None = None) -> Read | None:
-    """The message a text is, when it starts with mail header lines (From and To at least); None for anything else.
-    `received` is when it came, used when the headers give no readable date."""
+def leading_headers(text: str) -> tuple[dict[str, str], str] | None:
+    """The mail header lines a text starts with (lowercased names, folded lines joined) and the body after them; None
+    when its first lines are not header lines."""
     lines = _body_of(text).lstrip("\n").splitlines()
     headers: dict[str, str] = {}
     current: str | None = None
@@ -79,9 +79,18 @@ def read_message(text: str, received: datetime | None = None) -> Read | None:
             return None
         current = found.group(1).lower()
         headers[current] = (headers.get(current, "") + " " + found.group(2).strip()).strip()
+    return headers, "\n".join(lines[used:])
+
+
+def read_message(text: str, received: datetime | None = None) -> Read | None:
+    """The message a text is, when it starts with mail header lines (From and To at least); None for anything else.
+    `received` is when it came, used when the headers give no readable date."""
+    head = leading_headers(text)
+    if head is None:
+        return None
+    headers, body = head
     if not headers.get("from") or not headers.get("to"):
         return None
-    body = "\n".join(lines[used:])
     when = received
     if headers.get("date"):
         try:
@@ -99,6 +108,12 @@ def read_message(text: str, received: datetime | None = None) -> Read | None:
         body=body,
         new_text=split_message(body).new,
     )
+
+
+def sent_by_me(view: Any, cfg: Any, sender: str) -> bool:
+    """Whether a From entry is one of the person's own addresses."""
+    parsed = _address(sender)
+    return parsed is not None and parsed.email.casefold() in {a.email.casefold() for a in my_addresses(view, cfg)}
 
 
 def _entries(value: str) -> tuple[str, ...]:

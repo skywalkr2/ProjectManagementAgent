@@ -95,6 +95,9 @@ Built keys, with defaults:
 - `language`: the language and variety work is written in, as a tag (default `en-US`). A project may set its own (5.1).
 - `contact_kinds`: the kinds of contact detail a person record keeps and the assistant may propose from a signature
   (`person.contact`), picked from a list on screen. Default `email`, `phone`, `address`.
+- `phone_min_digits` (7, 3 to 15): the fewest digits a run in a known sender's signature needs to be read as a phone
+  number, which the rules then offer for that person's record as a held `person.contact` when the answer didn't (6.7).
+  **Built (B-10):** `tests/test_signature_contact.py`.
 - `project.completed_status`: the project status that means a project is finished (default `Done`), picked from the project status list on screen. Projects with it are listed under Completed at the end of the Projects table and count as completed in the project record; nothing is removed (7.13). Live.
 - `our_accounts`: the names this app uses on watched sources (its own publishes). A watched change by one of them is
   marked `by_us` (6.4, 6.5). Live.
@@ -310,6 +313,10 @@ Built keys:
 - `reasoning_phrases` and `question_marks`: what the `reasoning-in-title` and `question-is-statement` lints read (6.7): the
   words that mark the assistant's reasoning ("no recorded fact", "couldn't find", …), and the characters that end a question
   ("?", "？", "؟").
+- `ask_lead_words` (Can you, Could you, Would you, Please) and `own_promise_words` (I'll, I will): what the
+  `own-request-not-promise` lint reads (6.33): a sentence in the person's own sent mail that starts with an asking word
+  or ends in a question mark, and holds no promising word, asks someone else, so an action owned by the person from it is
+  sent back once. **Built (B-10):** `tests/test_own_request_lint.py`.
 - `title_min_words` (3, 1 to 12): the fewest words an item title's topic may have; a shorter topic from the assistant (a bare
   "Noted.") gives way to the first meaningful line of the input only when that line fits whole; with no whole line a short
   topic of two words or more stays, and with none the title says its topic is missing (7.14).

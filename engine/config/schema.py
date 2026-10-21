@@ -208,6 +208,14 @@ class WorkspaceFile(FileModel):
         "assistant finds in a signature is offered under one of these, and the person picks from them when adding "
         "someone.",
     )
+    phone_min_digits: int = Field(
+        7,
+        ge=3,
+        le=15,
+        description="The fewest digits a run of digits, spaces, dashes, dots and brackets in a mail signature needs to "
+        "be offered as the sender's phone number (a leading plus sign is allowed). A shorter run is a year, a room or "
+        "a house number, not a number to call.",
+    )
     our_accounts: list[str] = Field(
         default_factory=list,
         description="The names this app uses on watched sources, so changes the app published read as ours. Your own "
@@ -1192,6 +1200,7 @@ def _default_lints() -> dict[str, Severity]:
         "reasoning-in-title": "return",
         "question-is-statement": "return",
         "thread-promise-unanswered": "return",
+        "own-request-not-promise": "return",
     }
 
 
@@ -1688,6 +1697,17 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["?", "\uff1f", "\u061f"],
         description="The characters that end a question in the language. A question's title that doesn't end in one "
         "(a closing quote or bracket may follow) is a statement, and is returned to be asked as a question.",
+    )
+    ask_lead_words: list[str] = Field(
+        default_factory=lambda: ["Can you", "Could you", "Would you", "Please"],
+        description="Words a sentence starts with when it asks someone to do something. In mail the person sent, an "
+        "action quoting such a sentence (or one that ends in a question mark) is the person asking someone else, not "
+        "their own promise. Matched as whole words, ignoring case.",
+    )
+    own_promise_words: list[str] = Field(
+        default_factory=lambda: ["I'll", "I will"],
+        description="Words that make a sentence the person's own promise even when it also asks something: a request "
+        "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
     )
     title_min_words: int = Field(
         3,

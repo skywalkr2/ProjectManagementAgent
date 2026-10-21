@@ -10,6 +10,8 @@ owner_format: "{team} ({full_name})"
 language: en-US
 # The kinds of contact detail a person's record can hold.
 contact_kinds: [email, phone, address]
+# The fewest digits a run in a signature needs to be offered as a phone number.
+phone_min_digits: 7
 project:
   summary_max_lines: 3   # the most lines a project's summary may have; what was found goes to facts
   completed_status: Done   # the status that means a project is finished, listed under Completed

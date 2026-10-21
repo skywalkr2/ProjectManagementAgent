@@ -17,7 +17,19 @@ from typing import Any, Literal
 from pydantic import ValidationError
 
 from engine import agenda as agenda_module
-from engine import audience, draft_checks, endings, id_words, knowledge, learn, outward, proposals, reply_lines, scope
+from engine import (
+    audience,
+    draft_checks,
+    endings,
+    id_words,
+    knowledge,
+    learn,
+    outward,
+    proposals,
+    reply_lines,
+    scope,
+    signature_contact,
+)
 from engine import search as workspace_search
 from engine import series as series_module
 from engine.blocked import blocker_problem
@@ -160,7 +172,9 @@ class Context:
 def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
     """A promise said again with a date outside the merge window is a move of the open promise, never a second one
     (design 6.33): each such `action.add` becomes an `action.move` on the open promise, with the new words and quote.
-    The same changeset always gives the same result, so a check and the apply that follows see the same ops."""
+    A phone number in a known sender's signature that the answer doesn't offer is added as a `person.contact` op (held
+    for the person like any). The same changeset always gives the same result, so a check and the apply that follows
+    see the same ops."""
     view = ctx.store.read()
     ops = list(cs.ops)
     for i, op in enumerate(ops):
@@ -178,6 +192,10 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
             due=None if (op.due_words or "").strip() else op.due,
             evidence=op.evidence,
             group=op.group,
+        )
+    if ctx.actor != "pm" and not ctx.confirmed_by_pm and "person.contact" in ctx.allowed_ops:
+        ops += signature_contact.proposals(
+            ctx.inputs.raw_input, view, ctx.cfg, ctx.people, contact_kind(ctx.cfg, "phone"), ops
         )
     return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
 
@@ -515,15 +533,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             if who.status != "ok":
                 refuse(i, "targets", f"{op.person} isn't one known person, so a role can't be set for them")
         # a question or report from a run that never searched: is it already answered by what the workspace knows?
+        asked = _asked_subject(op, name)
         if (
-            name in workspace_search.ASKING_OPS
+            asked is not None
             and ctx.actor != "pm"
             and ctx.searched is False
             and lints.get("already-known", "off") != "off"
         ):
             known = workspace_search.known_answer(
                 ctx.store,
-                workspace_search.ASKING_OPS[name](op),
+                asked,
                 similarity=ctx.cfg.checks.tuning.already_known.similarity,
                 level=ctx.data_level,
             )
@@ -531,8 +550,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 lint(
                     i,
                     "already-known",
-                    f"this looks answered by {known.id}: {known.text} If it doesn't answer this, search for what is "
-                    "missing before asking.",
+                    (
+                        f"{known.id} looks like the answer: {known.text} Draft the reply from it, naming where it "
+                        "comes from in words (never the id)."
+                        if isinstance(op, ActionAddOp)
+                        else f"this looks answered by {known.id}: {known.text} If it doesn't answer this, search for "
+                        "what is missing before asking."
+                    ),
                 )
         # a draft to someone goes only to people a limited message it draws on may go to (design 6.35)
         if (isinstance(op, (QuestionAddOp, QuestionMoveOp)) or (isinstance(op, ActionAddOp) and op.reply)) and (
@@ -600,6 +624,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", "a date at a calendar entry needs the entry: give its event or series")
             if op.reply_owed and (why := _reply_owed_problem(view, ctx, op)) is not None:
                 refuse(i, "reply-not-owed", why)
+            if (level := _own_request_level(op, ctx, view)) != "off":
+                problems.append(
+                    Problem(
+                        "own-request-not-promise",
+                        level,
+                        i,
+                        "the person asked someone else to do this, so it isn't their promise: a request nobody has "
+                        "accepted is no action",
+                    )
+                )
             for existing in [] if _same_promise(view, ctx, op) is not None else known_actions:
                 if _similar(op.text, existing.data["text"]) >= similarity:
                     state = {"done": "done action", "dropped": "dropped action"}.get(
@@ -1891,6 +1925,51 @@ def _thread_promise_unanswered(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             )
         )
     return problems
+
+
+def _asked_subject(op: OpModel, name: str) -> str | None:
+    """What an op asks for, as the words to look up among what the workspace knows: a question's or report's subject, or
+    the words a reply owed answers (its evidence quote, else its text) when the reply has no draft yet. None for any
+    other op."""
+    if name in workspace_search.ASKING_OPS:
+        return workspace_search.ASKING_OPS[name](op)
+    if isinstance(op, ActionAddOp) and op.reply_owed and not (op.reply or "").strip():
+        evidence = _evidence(op)
+        return evidence.quote if evidence is not None else op.text
+    return None
+
+
+def _asks_someone(quote: str, ctx: Context) -> bool:
+    """Whether a quoted sentence asks someone to do something and doesn't say the speaker will: it ends in one of the
+    language's question marks or starts with one of its asking words, and holds none of its promising words."""
+    language = ctx.cfg.language
+    if any(scope.has_word(quote, word) for word in language.own_promise_words if word.strip()):
+        return False
+    text = quote.strip()
+    leads = any(
+        re.match(re.escape(word.strip()) + r"(?!\w)", text, re.IGNORECASE)
+        for word in language.ask_lead_words
+        if word.strip()
+    )
+    return leads or _asked_as_question(text, ctx)
+
+
+def _own_request_level(op: ActionAddOp, ctx: Context, view: Any) -> str:
+    """The severity of the `own-request-not-promise` lint for an action, or "off" when it doesn't apply: it is owned by
+    the person alone, comes from mail the person sent (its From line is one of their own addresses), and quotes a
+    request to someone as its evidence. The person's own note and changes are left alone."""
+    name = "own-request-not-promise"
+    level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or ctx.cfg.checks.lints.get(name, "off")
+    evidence = _evidence(op)
+    if level == "off" or evidence is None or ctx.actor == "pm" or ctx.confirmed_by_pm or not ctx.people.pm:
+        return "off"
+    if not op.owners or {ctx.people.resolve(owner).person for owner in op.owners} != {ctx.people.pm}:
+        return "off"
+    head = reply_lines.leading_headers(ctx.inputs.raw_input)
+    sender = head[0].get("from") if head else None
+    if not sender or not reply_lines.sent_by_me(view, ctx.cfg, sender):
+        return "off"
+    return level if _asks_someone(evidence.quote, ctx) else "off"
 
 
 def _rejects_asking(ctx: Context) -> bool:
