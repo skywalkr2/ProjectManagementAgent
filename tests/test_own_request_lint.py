@@ -123,3 +123,34 @@ def test_the_asking_words_are_config(env):
     assert found(env, action(ASK), mail(FROM_ME, ASK)) == []
     kindly = f"Kindly send {RECIPIENT['full_name']} the agenda Monday."
     assert found(env, action(kindly), mail(FROM_ME, kindly))
+
+
+# ---- own-promise-missed: the person's own promise in mail they sent is their to-do ---------------------------------
+
+
+def missed(env, ops: list[dict], raw: str, *, actor: str = "assistant") -> list:
+    _, cfg, store = env
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        tuple(store.plugins.ops),
+        Inputs("REQ-1", "SRC-1", raw, "", "untrusted"),
+        actor=actor,
+    )
+    return [p for p in check(cs, ctx) if p.check == "own-promise-missed"]
+
+
+def test_the_persons_own_promise_in_mail_they_sent_answered_without_their_action_is_sent_back(env):
+    (problem,) = missed(env, [], mail(FROM_ME, PROMISE))
+    assert problem.severity == "return" and PROMISE.rstrip(".") in problem.message
+    news = {"op": "action.news", "id": "ACT-1", "text": "They will look at it", "evidence": {"quote": PROMISE}}
+    assert missed(env, [news], mail(FROM_ME, PROMISE)) != []  # news on someone else's action doesn't record it
+
+
+def test_an_action_of_the_persons_quoting_the_promise_settles_it_and_others_mail_and_their_own_note_are_left(env):
+    assert missed(env, [action(PROMISE)], mail(FROM_ME, PROMISE)) == []
+    assert missed(env, [], mail(FROM_OTHER, PROMISE)) == []
+    assert missed(env, [], mail(FROM_ME, ASK)) == []
+    assert missed(env, [], mail(FROM_ME, PROMISE), actor="pm") == []

@@ -212,6 +212,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _learning_reach(cs, ctx)
     problems += _follow_on_reach(cs, ctx)
     problems += _thread_promise_unanswered(cs, ctx)
+    problems += _own_promise_missed(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -1935,6 +1936,54 @@ def _thread_promise_unanswered(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             )
         )
     return problems
+
+
+def _own_promises(text: str, ctx: Context) -> list[str]:
+    """The sentences of a message's new text that hold one of the language's own-promise words ("I'll"), as said."""
+    words = [w for w in ctx.cfg.language.own_promise_words if w.strip()]
+    sentences = (s.strip() for s in re.split(r"(?<=[.!?\u3002\uff01\uff1f])\s+|\n+", text))
+    return [s for s in sentences if s and any(scope.has_word(s, w) for w in words)]
+
+
+def _own_promise_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """Mail the person sent that promises something in their own words ("I'll review it Monday"), answered with no op
+    whose evidence quotes that promise for an action the person owns, is sent back once: the person's own promise is
+    their to-do. A rule on the From line and the words, with no AI; the person's own note and changes, and mail from
+    anyone else, are left alone."""
+    name = "own-promise-missed"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm or not ctx.people.pm:
+        return []
+    if "action.add" not in ctx.allowed_ops:
+        return []
+    view = ctx.store.read()
+    message = reply_lines.read_message(ctx.inputs.raw_input)
+    if message is None or not reply_lines.sent_by_me(view, ctx.cfg, message.sender):
+        return []
+    promised = _own_promises(message.new_text, ctx)
+    if not promised:
+        return []
+    pm = ctx.people.pm
+
+    def owned_by_pm(op: OpModel) -> bool:
+        if isinstance(op, ActionAddOp):
+            return {ctx.people.resolve(owner).person for owner in op.owners} == {pm}
+        record = view.get("action", getattr(op, "id", None) or "") if isinstance(getattr(op, "id", None), str) else None
+        return record is not None and pm in (record.data.get("owners") or [])
+
+    quoted = [normalize(e.quote) for op in cs.ops if owned_by_pm(op) and (e := _evidence(op)) is not None]
+    missed = [s for s in promised if not any(q and (q in normalize(s) or normalize(s) in q) for q in quoted)]
+    if not missed:
+        return []
+    return [
+        Problem(
+            name,
+            level,
+            None,
+            f"the person promised {missed[0]!r} in mail they sent, and the answer has no action of theirs quoting it: "
+            "record it as the person's own action, owed to whoever they wrote to",
+        )
+    ]
 
 
 def _asked_subject(op: OpModel, name: str) -> str | None:

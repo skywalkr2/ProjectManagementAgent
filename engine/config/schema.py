@@ -1281,6 +1281,7 @@ def _default_lints() -> dict[str, Severity]:
         "question-is-statement": "return",
         "thread-promise-unanswered": "return",
         "own-request-not-promise": "return",
+        "own-promise-missed": "return",
     }
 
 

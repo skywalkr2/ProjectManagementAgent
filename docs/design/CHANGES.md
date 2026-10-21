@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 156. The person's own promise in sent mail is checked (2026-10-21; B-10, built)
+
+- `own-promise-missed`: mail the person sent with their own "I'll ..." answered with no action of theirs quoting it
+  goes back once. The fictional demo person's record now holds the address their test mail comes from, so the checks
+  that read the person's own mail run in the evaluation cases. A team's "we'll" said to the person is no longer scored
+  on who it is owed to. Design 6.33.
+
 ## 155. A service that no longer lets a program be used with the person's kind of account (2026-10-21; B-11c part 2d, built)
 
 - New error kind `unsupported` (account patterns `errors.unsupported`, also an exit-code meaning): a failure of the account,

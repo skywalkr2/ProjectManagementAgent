@@ -10,13 +10,12 @@ pasted: |-
   Subject: Workshop notes
 
   We'll circulate the workshop notes on Friday.
+# Said to the person, the team's word can also be read as owed to them (they wait on the notes), so the case checks
+# only what matters here: no one person is made the owner of a team's "we'll". Owed-to is not scored either way.
 expect:
 - op: action.add
   owners: []
   due_words: on Friday
-forbid:
-- op: action.add
-  promised_to: [PER-1]
 stub_answer:
   summary: 'The sender''s team will circulate the workshop notes; no one is named.'
   ops:
