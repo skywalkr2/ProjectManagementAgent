@@ -4,6 +4,16 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-21: Setup is personal first with a business optional, reviewed as a non-IT person before the installers
+
+- **Decided (owner, passed to the UI/UX reviewer):** "after this we have the everyday steward work to do before we do
+  the installers ... next time you check before we go to installers ... review the work as a personal/business tool as
+  a normal non-it person. I want the setup to basically say here is startup, here is what you need to do, this is the
+  personal side - define the people in your life/personal business and also optionally - do you have a business you
+  want to track? if so here - define the business name/programs/projects/people/etc."
+- **Impact:** design 7 (the walkthrough's opening); roadmap I-0, the first item of phase I, before any installer work;
+  `docs/project/open-promises.md` P28. Change log: section 144.
+
 ## 2026-10-21: Every AI service gets a recommended setup out of the box, with measuring to keep it current
 
 - **Decided (owner):** "the system should have the ability to measure because models are always improving, but i would

@@ -974,6 +974,14 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S)
 
+- [ ] [I-0] **Before any installer work: setup and the everyday screens reviewed as a normal non-IT person** (owner,
+  2026-10-21, passed to the UI/UX reviewer). The reviewer walks setup and the daily screens as a personal and business
+  tool, not a project manager's. Setup is reshaped to match design 7 ("Setup for a person, with a business optional"):
+  what this is and what to do first; the personal side (the people in one's life, personal business); then the optional
+  "Do you have a business you want to track?" (its name, programs, projects, people). Done when the reviewer's findings
+  are answered and a journey test walks both paths (personal only; personal and a business) with no work terms on the
+  personal-only path.
+
 **The tester milestone (owner, 2026-10-18; designer's F8 and plan point 5, 2026-10-19).** Measured also by how many
 items each tester brings back through "Missed one" per week, which should fall from week one to week two. The invitation
 says personal mail, or work mail only with the employer's OK (risk R14). A small invited group tests the installers with the mail and calendar

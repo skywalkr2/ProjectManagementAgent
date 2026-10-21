@@ -1027,6 +1027,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 144. Setup personal first, a business optional (2026-10-21; I-0, designed)
+
+| Where | Before | Now |
+|---|---|---|
+| Setup's order (7) | You, AI account, mail, promises, backups, people | What this is and what to do; the personal side first; then "Do you have a business you want to track?" |
+| The gate before installers (roadmap) | Integrity defects and the gate week | Also the UI/UX reviewer's pass as a non-IT person, personal and business |
+
+Why: `docs/decisions.md` (2026-10-21, "Setup is personal first with a business optional").
+
 ## 143. A recommended setup per AI service, measured to stay current (2026-10-21; B-11, designed)
 
 | Where | Before | Now |
