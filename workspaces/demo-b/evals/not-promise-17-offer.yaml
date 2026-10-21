@@ -1,0 +1,16 @@
+id: not-promise-17-offer
+title: "No promise: Train tickets"
+skills: [owners, evidence]
+received: "2026-11-20"
+given_file: promise-people.yaml
+pasted: |-
+  From: Dev Maran <dev@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Train tickets
+
+  Want me to book the train tickets once you pick a time?
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Dev asks whether Avery wants the tickets booked."
+  ops: []

@@ -1,0 +1,16 @@
+id: not-promise-08-marketing
+title: "No promise: A note from Field Finch"
+skills: [owners, evidence]
+received: "2026-11-11"
+given_file: promise-people.yaml
+pasted: |-
+  From: Field Finch Notes <letters@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: A note from Field Finch
+
+  We’ll send you a welcome guide soon. Browse the new collection while you wait.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "The promotional mailing is generic marketing, not a personal commitment."
+  ops: []

@@ -1,0 +1,16 @@
+id: not-promise-14-reported
+title: "No promise: Room plan"
+skills: [owners, evidence]
+received: "2026-11-17"
+given_file: promise-people.yaml
+pasted: |-
+  From: Jori Frame <jori@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Room plan
+
+  Lena told me Dev was thinking of checking the room plan. I don’t know if Dev agreed to do it.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Jori reports another person’s tentative thought, not a promise."
+  ops: []

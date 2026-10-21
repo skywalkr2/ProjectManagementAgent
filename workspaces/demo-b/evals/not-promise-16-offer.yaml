@@ -1,0 +1,16 @@
+id: not-promise-16-offer
+title: "No promise: Chairs for Saturday"
+skills: [owners, evidence]
+received: "2026-11-19"
+given_file: promise-people.yaml
+pasted: |-
+  From: Lena Ashby <lena@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Chairs for Saturday
+
+  I can bring the chairs if you like, but let me know first so I can borrow the van.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Lena offers conditionally and waits for Avery’s approval."
+  ops: []

@@ -1,0 +1,16 @@
+id: not-promise-13-reported
+title: "No promise: Shelf sketch"
+skills: [owners, evidence]
+received: "2026-11-16"
+given_file: promise-people.yaml
+pasted: |-
+  From: Edda Moss <edda@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Shelf sketch
+
+  I heard Oren might send over a shelf sketch, though that was only Bram’s impression.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Edda passes along uncertain hearsay rather than a commitment."
+  ops: []

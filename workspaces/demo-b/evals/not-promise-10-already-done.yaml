@@ -1,0 +1,16 @@
+id: not-promise-10-already-done
+title: "No promise: The finished layout"
+skills: [owners, evidence]
+received: "2026-11-13"
+given_file: promise-people.yaml
+pasted: |-
+  From: Iona Crane <iona@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: The finished layout
+
+  As I promised last week, here is the finished layout.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Iona delivers the layout; the promise was already kept."
+  ops: []

@@ -1,0 +1,16 @@
+id: not-promise-19-conditional
+title: "No promise: Garden plans"
+skills: [owners, evidence]
+received: "2026-11-22"
+given_file: promise-people.yaml
+pasted: |-
+  From: Mira Hale <mira@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Garden plans
+
+  If the landlord approves the changes, we could ask someone to repaint the back room.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Mira describes a possible action that depends on approval and does not commit to doing it."
+  ops: []

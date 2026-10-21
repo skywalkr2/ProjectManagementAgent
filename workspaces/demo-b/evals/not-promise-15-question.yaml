@@ -1,0 +1,16 @@
+id: not-promise-15-question
+title: "No promise: Draft for the hall"
+skills: [owners, evidence]
+received: "2026-11-18"
+given_file: promise-people.yaml
+pasted: |-
+  From: Soren Lund <soren@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Draft for the hall
+
+  Shall I send the draft over, or would you rather wait until the measurements are final?
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Soren asks for permission before deciding whether to send the draft."
+  ops: []

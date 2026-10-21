@@ -1,0 +1,16 @@
+id: not-promise-20-conditional
+title: "No promise: Print run"
+skills: [owners, evidence]
+received: "2026-11-23"
+given_file: promise-people.yaml
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Print run
+
+  Should the grant arrive, we might consider a second print run; nothing is decided yet.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Ansel explicitly says the conditional possibility is undecided."
+  ops: []

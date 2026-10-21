@@ -1,0 +1,16 @@
+id: not-promise-11-past
+title: "No promise: November receipt"
+skills: [owners, evidence]
+received: "2026-11-14"
+given_file: promise-people.yaml
+pasted: |-
+  From: Pella Dunn <pella@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: November receipt
+
+  That receipt went to the office on Monday. I found the copy in my sent folder.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Pella reports a past completed action."
+  ops: []

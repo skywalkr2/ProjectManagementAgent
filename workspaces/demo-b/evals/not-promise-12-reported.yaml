@@ -1,0 +1,16 @@
+id: not-promise-12-reported
+title: "No promise: Permit question"
+skills: [owners, evidence]
+received: "2026-11-15"
+given_file: promise-people.yaml
+pasted: |-
+  From: Varo Stone <varo@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Permit question
+
+  Mira mentioned looking at the permit, but I haven’t heard anything from Mira directly.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Varo reports Mira’s statement second-hand; nobody in this message commits."
+  ops: []

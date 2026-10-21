@@ -1,0 +1,16 @@
+id: not-promise-05-automatic
+title: "No promise: Your sign-in code"
+skills: [owners, evidence]
+received: "2026-11-08"
+given_file: promise-people.yaml
+pasted: |-
+  From: Birch Thread Account Desk <notices@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Your sign-in code
+
+  We’ll send you a code if you asked for one. This is an automatic security notice; do not reply.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "An automatic notice describes a system message, not a personal commitment."
+  ops: []

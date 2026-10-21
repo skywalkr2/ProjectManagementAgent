@@ -1,0 +1,16 @@
+id: not-promise-18-conditional
+title: "No promise: Website refresh"
+skills: [owners, evidence]
+received: "2026-11-21"
+given_file: promise-people.yaml
+pasted: |-
+  From: Tess Calder <tess@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Website refresh
+
+  If the budget comes through, maybe we’ll redo the site next spring.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Tess describes a possibility dependent on an unknown budget and makes no commitment."
+  ops: []

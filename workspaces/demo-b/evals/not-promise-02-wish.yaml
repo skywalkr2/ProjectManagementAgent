@@ -1,0 +1,16 @@
+id: not-promise-02-wish
+title: "No promise: Studio review"
+skills: [owners, evidence]
+received: "2026-11-05"
+given_file: promise-people.yaml
+pasted: |-
+  From: Mira Hale <mira@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Studio review
+
+  Hopefully I can send you the studio review by Friday; I still need to see whether I can make room for it.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Mira expressed hope, not a commitment."
+  ops: []

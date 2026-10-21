@@ -1,0 +1,16 @@
+id: not-promise-09-already-done
+title: "No promise: Gate measurements"
+skills: [owners, evidence]
+received: "2026-11-12"
+given_file: promise-people.yaml
+pasted: |-
+  From: Bram Foley <bram@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Gate measurements
+
+  I sent the gate measurements yesterday; attaching them again here in case the first note got buried.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Bram says the measurements were already sent."
+  ops: []

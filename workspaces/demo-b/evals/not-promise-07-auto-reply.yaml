@@ -1,0 +1,16 @@
+id: not-promise-07-auto-reply
+title: "No promise: Out of office"
+skills: [owners, evidence]
+received: "2026-11-10"
+given_file: promise-people.yaml
+pasted: |-
+  From: Ansel Wick <ansel@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Out of office
+
+  I’m away from email. I’ll respond when I’m back on the 12th. This message was sent automatically.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Ansel’s automatic out-of-office reply is not a promise to Avery."
+  ops: []

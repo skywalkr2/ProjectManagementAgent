@@ -1,0 +1,16 @@
+id: not-promise-01-hedge
+title: "No promise: Site photos"
+skills: [owners, evidence]
+received: "2026-11-04"
+given_file: promise-people.yaml
+pasted: |-
+  From: Tavish Reeve <tavish@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Site photos
+
+  I’ll try to dig out the site photos at some point, but no promises — this week is chaos.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Tavish only offered to try, with no promise."
+  ops: []

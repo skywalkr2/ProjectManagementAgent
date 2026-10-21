@@ -1,0 +1,16 @@
+id: not-promise-03-vague-wish
+title: "No promise: Coffee soon"
+skills: [owners, evidence]
+received: "2026-11-06"
+given_file: promise-people.yaml
+pasted: |-
+  From: Nessa Ford <nessa@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Coffee soon
+
+  We should catch up sometime when things calm down.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "Nessa suggested a possible future catch-up without committing to a task or date."
+  ops: []

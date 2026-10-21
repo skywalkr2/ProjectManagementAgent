@@ -1,0 +1,16 @@
+id: not-promise-06-marketing
+title: "No promise: Order received"
+skills: [owners, evidence]
+received: "2026-11-09"
+given_file: promise-people.yaml
+pasted: |-
+  From: Hearthside Goods Orders <orders@example.com>
+  To: Avery Lane <avery.lane@example.com>
+  Subject: Order received
+
+  Your order will ship in 3–5 days. We’ll email tracking details when they are available.
+forbid:
+- op: action.add
+stub_answer:
+  summary: "An order notice gives automated fulfillment information, not a personal promise."
+  ops: []
