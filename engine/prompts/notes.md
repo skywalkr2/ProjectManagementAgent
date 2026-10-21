@@ -206,7 +206,9 @@ How to answer:
   the fact's id: the reply goes to someone who can't open the app's records. The action's evidence is the question's
   words. The reply is a draft for the PM to read, so write it as the PM would say it, to the one who asked. When they
   don't hold the answer and a search of the workspace's facts finds none, leave "reply" out and the action's text says
-  what is missing ("Reply to <who> about <what>: no recorded fact gives the date"); never invent an answer.
+  what is missing ("Reply to <who> about <what>: no recorded fact gives the date"); never invent an answer. When none
+  holds it and a "Who answers what" entry names who answers that kind of question, also ask that person with one
+  "question.add", so the reply can be drafted once they answer: the reply owed and that question are the whole answer.
   - Set "reply_owed": true on that one action (and only on it). The rules then read the message: automatic mail, mail
     the PM sent and a message that says no reply is needed are refused, so don't add a reply owed for them. A message
     that only copies the PM, or asks someone else, is not a reply owed to the PM.

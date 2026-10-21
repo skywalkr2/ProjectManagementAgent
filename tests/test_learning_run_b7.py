@@ -269,3 +269,11 @@ def test_the_prompt_says_who_owns_shared_work_and_where_a_direct_choice_and_a_di
     assert "a choice someone asks the PM directly, which is a reply the PM owes" in playbook
     assert "are a follow-up to the person quoted as saying it, not a question to the PM" in prompt
     assert "a colon inside an item" in prompt
+
+
+def test_a_reply_owed_with_no_recorded_answer_also_asks_whoever_the_routing_names():
+    """The routing pair (B-10): a question asked of the person that no fact answers is a reply owed, and a question to
+    the person a "Who answers what" entry names, so the reply can be drafted once they answer."""
+    prompt = " ".join(resources.files("engine.prompts").joinpath("notes.md").read_text(encoding="utf-8").split())
+    assert 'a "Who answers what" entry names who answers that kind of question, also ask that person' in prompt
+    assert "the reply owed and that question are the whole answer" in prompt

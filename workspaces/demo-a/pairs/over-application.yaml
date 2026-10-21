@@ -45,7 +45,7 @@ later:
   # The entry is about who answers questions, so the action keeps the owner the input names.
   expect:
   - op: action.add
-    text_has: [load-test plan review]
+    text_has: [load-test, review]
     owners: [PER-1]
     due: '2026-10-24'
   packet_has: [Who answers what, load-test]

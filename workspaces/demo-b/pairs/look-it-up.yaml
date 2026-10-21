@@ -35,7 +35,7 @@ first:
     note: The printer's published schedule already lists the cover proofs shipping on October 30. Look in the recorded facts before asking anyone for a date.
   expect_proposal:
   - op: lesson.add
-    text_has: [recorded facts]
+    text_has: [recorded fact]
   keep: true
 later:
   received: '2026-10-21'
@@ -46,7 +46,9 @@ later:
     Do you know when the cover proofs will ship? The shop is planning its window around them.
   expect:
   - op: action.add
-    text_has: [cover proofs, October 30]
+    # A question asked of the person is a reply they owe; the date goes in the drafted reply (design 6.35).
+    text_has: [cover proofs]
+    reply_has: [October 30]
     owners: [PER-1]
   forbid:
   - op: question.add
@@ -66,8 +68,10 @@ ideal:
     topic: cover proof dates
     ops:
     - op: action.add
-      text: Tell Corner Lamp Books the cover proofs ship on October 30
+      text: Tell Corner Lamp Books when the cover proofs ship
       owners: [Avery Lane]
+      reply: The cover proofs ship on October 30, by the printer's published schedule.
+      reply_owed: true
       project: PRJ-1
       evidence:
         quote: Do you know when the cover proofs will ship

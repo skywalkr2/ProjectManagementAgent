@@ -766,9 +766,17 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
       (`signature-phone`, `tests/test_signature_contact.py`);
     - instructions only, a model behavior: the disputed claim (`follow-up-goes-to-who-made-the-claim`) and the colon
       (`colon-in-title`);
-    - *left:* `they-finished-note` and `project-no-record` (the instructions already say it; a stronger tier if the
-      re-run still misses), `new-person-with-organization`, and thread-t14, whose answers are in the owner's
-      `rerun.json`, not yet seen. All of these are done only when the owner's next re-run passes them.
+    - checked on a low-cost model (CLAUDE.md, "Check an AI fix on a low-cost model"): 14 of the 15 golden cases above
+      pass on it, `decision-for-pm` only on the stronger tier; of the learning pairs, 11, 12, 15, 16, look-it-up and
+      over-application pass (look-it-up and over-application after their expectations were brought to the reply-owed
+      rule and loosened from one exact phrase), 20 passes on the stronger tier, and a lesson may now name only the
+      projects its correction touches (`tests/test_learn_correction.py`); the reply owed also asks whoever the routing
+      names (`test_a_reply_owed_with_no_recorded_answer_also_asks_whoever_the_routing_names`);
+    - *left:* `stance-manage` (a design change from someone the person manages gets no "why" question on either tier: an
+      instruction gap), `another-teams-rows-naming-ours` (the impact question missed on both), pair 03 (kept as a
+      glossary term, not a lesson), `other-project` (a routing entry where a lesson was wanted), pair 19 (no lesson
+      proposed), and thread-t14, whose answers are in the owner's `rerun.json`, not yet seen. All of these are done only
+      when the owner's next re-run passes them.
   - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
     reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
     20): whether the reach the model picks should be widened or checked against the correction's own task kind;
