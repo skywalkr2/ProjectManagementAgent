@@ -635,6 +635,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", "a date at a calendar entry needs the entry: give its event or series")
             if op.reply_owed and (why := _reply_owed_problem(view, ctx, op)) is not None:
                 refuse(i, "reply-not-owed", why)
+            if (level := _team_word_one_owner_level(op, ctx)) != "off":
+                problems.append(
+                    Problem(
+                        "team-we-one-owner",
+                        level,
+                        i,
+                        'the words say "we", not who: leave "owners" empty so the person picks one, unless the '
+                        "words name who does it",
+                    )
+                )
             if (level := _own_request_level(op, ctx, view)) != "off":
                 problems.append(
                     Problem(
@@ -2011,6 +2021,37 @@ def _asks_someone(quote: str, ctx: Context) -> bool:
         if word.strip()
     )
     return leads or _asked_as_question(text, ctx)
+
+
+def _team_word_one_owner_level(op: ActionAddOp, ctx: Context) -> str:
+    """The severity of the `team-we-one-owner` lint for an action, or "off" when it doesn't apply: its evidence quote
+    promises for a team (one of the language's team-promise words, "we'll", and none of its own-promise words) and its
+    one owner is the message's sender, whom the quote doesn't name. The person's own note and changes are left alone."""
+    name = "team-we-one-owner"
+    level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or ctx.cfg.checks.lints.get(name, "off")
+    evidence = _evidence(op)
+    if level == "off" or evidence is None or ctx.actor == "pm" or ctx.confirmed_by_pm or len(op.owners) != 1:
+        return "off"
+    language = ctx.cfg.language
+    quote = evidence.quote
+    if not any(scope.has_word(quote, w) for w in language.team_promise_words if w.strip()):
+        return "off"
+    if any(scope.has_word(quote, w) for w in language.own_promise_words if w.strip()):
+        return "off"
+    message = reply_lines.read_message(ctx.inputs.raw_input)
+    if message is None:
+        return "off"
+    sender = ctx.people.resolve(message.sender)
+    owner = ctx.people.resolve(op.owners[0])
+    if sender.status != "ok" or owner.status != "ok" or sender.person != owner.person:
+        return "off"
+    record = ctx.store.read().get("person", owner.person)
+    if record is None:
+        return "off"
+    names = [n for n in (record.data.get("first_name") or "", *(record.data.get("full_name") or "").split()) if n]
+    if any(scope.has_word(quote, n) for n in names):
+        return "off"
+    return level
 
 
 def _own_request_level(op: ActionAddOp, ctx: Context, view: Any) -> str:

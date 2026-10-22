@@ -900,7 +900,9 @@ is marked *designed*, with the phase.
   `tests/test_corrections.py::test_moving_a_decision_to_someone_else_keeps_it_a_decision_records_routed_and_undo_sends_it_back`,
   and the prompt and golden cases below.
 - The person's own promise in mail they sent ("I'll review it Monday") is their to-do: an answer with no action of
-  theirs quoting it goes back once (`own-promise-missed`, *built*; the words are `language.own_promise_words`).
+  theirs quoting it goes back once (`own-promise-missed`, *built*; the words are `language.own_promise_words`). A
+  team's "we'll" made the sender's alone, when the words don't name the sender, goes back once to leave the owners
+  empty (`team-we-one-owner`, *built*; `language.team_promise_words`).
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.

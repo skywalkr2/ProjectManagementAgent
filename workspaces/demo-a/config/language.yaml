@@ -10,6 +10,7 @@ question_marks: ["?", "\uff1f", "\u061f"]
 # Words a sentence starts with when it asks someone to do something, and the words that make a sentence the person's own promise instead.
 ask_lead_words: [Can you, Could you, Would you, Please]
 own_promise_words: [I'll, I will]
+team_promise_words: [we'll, we will, we're going to]
 # Words that frame a question rather than say what it is about; left out when checking whether a recorded fact already answers it.
 asking_words: [when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about, confirm]
 # Phrases that make a draft report to the maintainers a standing rule, to be proposed as a rule instead.

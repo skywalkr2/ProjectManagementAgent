@@ -1282,6 +1282,7 @@ def _default_lints() -> dict[str, Severity]:
         "thread-promise-unanswered": "return",
         "own-request-not-promise": "return",
         "own-promise-missed": "return",
+        "team-we-one-owner": "return",
     }
 
 
@@ -1797,6 +1798,12 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["I'll", "I will"],
         description="Words that make a sentence the person's own promise even when it also asks something: a request "
         "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
+    )
+    team_promise_words: list[str] = Field(
+        default_factory=lambda: ["we'll", "we will", "we're going to"],
+        description="Words that make a promise a team's rather than one person's. An action quoting one of them, owned "
+        "by the message's sender alone though the words don't name them, is sent back to leave its owners empty. "
+        "Matched as whole words, ignoring case.",
     )
     title_min_words: int = Field(
         3,

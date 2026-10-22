@@ -317,6 +317,8 @@ Built keys:
   `own-request-not-promise` lint reads (6.33): a sentence in the person's own sent mail that starts with an asking word
   or ends in a question mark, and holds no promising word, asks someone else, so an action owned by the person from it is
   sent back once. **Built (B-10):** `tests/test_own_request_lint.py`.
+- `team_promise_words` (we'll, we will, we're going to): what the `team-we-one-owner` lint reads (6.33): an action
+  quoting one, owned by the message's sender alone when the words don't name them, goes back to leave its owners empty.
 - `asking_words` (when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about,
   confirm): words that frame a question rather than say what it is about. The `already-known` check leaves them out and
   compares the rest in folded form (plurals, "ing", "ed"), so "Can you tell me when the proofs will ship?" is answered

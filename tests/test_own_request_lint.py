@@ -154,3 +154,31 @@ def test_an_action_of_the_persons_quoting_the_promise_settles_it_and_others_mail
     assert missed(env, [], mail(FROM_OTHER, PROMISE)) == []
     assert missed(env, [], mail(FROM_ME, ASK)) == []
     assert missed(env, [], mail(FROM_ME, PROMISE), actor="pm") == []
+
+
+# ---- team-we-one-owner: a team's "we'll" is not the sender's own promise ---------------------------------------------
+
+
+def team_lint(env, op: dict, raw: str) -> list:
+    _, cfg, store = env
+    cs = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", "SRC-1", raw, "", "untrusted")
+    )
+    return [p for p in check(cs, ctx) if p.check == "team-we-one-owner"]
+
+
+TEAM = "We'll circulate the workshop notes on Friday."
+
+
+def test_a_teams_we_given_to_the_sender_alone_is_sent_back_to_leave_the_owners_empty(env):
+    (problem,) = team_lint(env, action(TEAM, owner=OTHER["id"]), mail(FROM_OTHER, TEAM))
+    assert (problem.severity, problem.op) == ("return", 0) and '"we"' in problem.message
+
+
+def test_a_we_that_names_its_doer_an_own_promise_or_no_owner_is_left_alone(env):
+    named = f"We'll circulate the notes on Friday; {OTHER['full_name'].split()[0]} is on it."
+    assert team_lint(env, action(named, owner=OTHER["id"]), mail(FROM_OTHER, named)) == []
+    own = "I'll circulate the notes, we'll meet Friday."
+    assert team_lint(env, action(own, owner=OTHER["id"]), mail(FROM_OTHER, own)) == []
+    assert team_lint(env, action(TEAM, owner=OTHER["id"], owners=[]) | {"owners": []}, mail(FROM_OTHER, TEAM)) == []
