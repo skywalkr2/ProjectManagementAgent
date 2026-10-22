@@ -1292,6 +1292,7 @@ def _default_lints() -> dict[str, Severity]:
         "team-we-one-owner": "return",
         "promise-as-fact": "return",
         "someone-given-owner": "return",
+        "due-move-missed": "return",
     }
 
 
@@ -1807,6 +1808,12 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["I'll", "I will"],
         description="Words that make a sentence the person's own promise even when it also asks something: a request "
         "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
+    )
+    due_move_words: list[str] = Field(
+        default_factory=lambda: ["is now due", "can wait until", "moved to", "pushed to", "postponed to", "push it to"],
+        description='Words that give an open action a new day ("my approval can wait until Oct 20"). Followed by a '
+        "date and answered with only a fact or a note, they are sent back once to move the action's date. Matched as "
+        "whole words, ignoring case.",
     )
     unassigned_words: list[str] = Field(
         default_factory=lambda: ["someone", "somebody", "anyone", "anybody", "nobody", "no one"],

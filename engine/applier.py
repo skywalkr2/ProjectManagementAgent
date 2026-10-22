@@ -214,6 +214,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _thread_promise_unanswered(cs, ctx)
     problems += _own_promise_missed(cs, ctx)
     problems += _promise_as_fact(cs, ctx)
+    problems += _due_move_missed(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -2012,7 +2013,8 @@ _ANY_DAY = datetime(2000, 1, 3, 12, tzinfo=UTC)
 
 
 def _names_a_date(text: str, ctx: Context) -> bool:
-    """Whether words after one of the language's due lead words ("by", "on") read as a date by the rules."""
+    """Whether the words read as a date by the rules, from their start or after one of the language's due lead words
+    ("by", "on")."""
     from engine.due_phrases import resolve
 
     language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
@@ -2023,7 +2025,7 @@ def _names_a_date(text: str, ctx: Context) -> bool:
     words = text.split()
     leads = {w.strip().lower() for w in settings.due_lead_words if w.strip() and " " not in w.strip()}
     for i, word in enumerate(words):
-        if word.lower().strip(",.;:") not in leads:
+        if i > 0 and word.lower().strip(",.;:") not in leads:
             continue
         for size in range(1, 5):
             phrase = " ".join(words[i : i + 1 + size]).strip(",.;:!?")
@@ -2123,6 +2125,49 @@ def _promise_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             )
             break
     return problems
+
+
+def _due_move_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """Words that give an open action a new day ("my approval can wait until Oct 20"), answered with no op but a fact
+    or a note quoting them, are sent back once: the date moves on the action. A rule on the words with no AI: one of
+    the language's due-move words before a date the rules read, in the input or the person's note, while an action is
+    open. Any other op quoting the words (a moved date, a moved calendar entry) settles it."""
+    name = "due-move-missed"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm or "record.set" not in ctx.allowed_ops:
+        return []
+    words = [w.strip() for w in ctx.cfg.language.due_move_words if w.strip()]
+    if not words:
+        return []
+    text = "\n".join(t for t in (ctx.inputs.note, ctx.inputs.raw_input) if t.strip())
+    sentences = (s.strip() for s in re.split(r"(?<=[.!?\u3002\uff01\uff1f])\s+|\n+", text))
+    moves = []
+    for sentence in sentences:
+        for word in words:
+            found = re.search(rf"(?<!\w){re.escape(word)}(?!\w)", sentence, re.IGNORECASE)
+            if found and _names_a_date(sentence[found.end() :], ctx):
+                moves.append(sentence)
+                break
+    if not moves or not any(a.data["status"] == "open" for a in ctx.store.read().list("action")):
+        return []
+    quoted = [
+        normalize(e.quote)
+        for op in cs.ops
+        if not isinstance(op, (FactOp, NoteOp)) and (e := _evidence(op)) is not None and e.quote.strip()
+    ]
+    missed = [m for m in moves if not any(q in normalize(m) or normalize(m) in q for q in quoted)]
+    if not missed:
+        return []
+    return [
+        Problem(
+            name,
+            level,
+            None,
+            f"the words {missed[0]!r} give a new day for an open action: change that action's due with record.set "
+            '(kind "action", field "due") quoting these words, not a fact or a note',
+            missed[0],
+        )
+    ]
 
 
 def _asked_subject(op: OpModel, name: str) -> str | None:

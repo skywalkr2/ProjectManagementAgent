@@ -911,6 +911,9 @@ is marked *designed*, with the phase.
 - Work the words leave open ("someone should find out"), given owners the words don't name, goes back once to leave
   the owners empty so the person picks one or is asked (`someone-given-owner`, *built*; `language.unassigned_words`).
   A request to the reader ("can you ask someone") and the speaker's own promise are left alone.
+- Words that give an open action a new day ("my approval can wait until Oct 20"), answered only with a fact or a note,
+  go back once to move the action's date (`due-move-missed`, *built*; `language.due_move_words`). Any other op quoting
+  the words, such as a moved calendar entry, settles it.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.

@@ -104,3 +104,42 @@ def test_severity_off_turns_it_off(env):
     _, cfg, _ = env
     cfg.checks.lints[LINT] = "off"
     assert found(env, [fact(f"{first(TEAMMATE)} will draft the pilot plan by the 30th.")]) == []
+
+
+# ---- due-move-missed: a new day for an open action, answered only with a fact or a note ------------------------------
+
+
+def moved(env, ops: list[dict], note: str, *, actor: str = "assistant") -> list:
+    _, cfg, store = env
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        tuple(store.plugins.ops),
+        Inputs("REQ-1", None, note, "", "trusted"),
+        actor=actor,
+    )
+    return [p for p in check(cs, ctx) if p.check == "due-move-missed"]
+
+
+MOVE = "Done, and my review can wait until Oct 20."
+
+
+def open_action(env) -> str:
+    _, _, store = env
+    return next(a.id for a in store.read().list("action") if a.data["status"] == "open")
+
+
+def test_a_new_day_for_an_open_action_answered_only_with_a_fact_is_sent_back(env):
+    note = {"op": "fact", "text": "Review can wait", "evidence": {"quote": "my review can wait until Oct 20"}}
+    (problem,) = moved(env, [note], MOVE)
+    assert problem.severity == "return" and "record.set" in problem.message
+
+
+def test_a_moved_due_quoting_the_words_a_day_no_rule_reads_or_the_persons_own_change_is_left_alone(env):
+    quote = "my review can wait until Oct 20"
+    move = {"op": "record.set", "kind": "action", "id": open_action(env), "field": "due", "value": "2026-10-20"}
+    assert moved(env, [move | {"evidence": {"quote": quote}}], MOVE) == []
+    assert moved(env, [], "My review can wait until later.") == []
+    assert moved(env, [], MOVE, actor="pm") == []

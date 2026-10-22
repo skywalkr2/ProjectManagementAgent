@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 160. A new day for an open action answered only with a fact or a note goes back (2026-10-22; B-10, built)
+
+- `due-move-missed`: words that give an open action a new day ("can wait until Oct 20"), with a date the rules read,
+  answered with no op but a fact or a note quoting them, go back once to move the action's date. Setting
+  `language.due_move_words`. Design 4 (language settings) and 6.33. Built:
+  `tests/test_promise_as_fact.py::test_a_new_day_for_an_open_action_answered_only_with_a_fact_is_sent_back`
+
 ## 159. "Someone should" given an owner goes back to leave the owners empty (2026-10-22; B-10, built)
 
 - `someone-given-owner`: an action quoting words that leave the doer open ("someone should find out"), with owners
