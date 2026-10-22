@@ -334,3 +334,42 @@ def test_what_changed_names_the_people_an_op_gives_by_id_and_a_set_value_that_is
     assert value.field == "owner" and value.value == person.data["full_name"]
     plain = shown({"op": "record.set", "kind": "project", "id": project.id, "field": "summary", "value": "Notes"})
     assert plain.value == "Notes"
+
+
+def test_a_saved_messages_page_loads_read_only_and_a_calendar_entrys_page_loads_as_before(api):
+    client, store = api
+    engine = WriteContext(actor="engine", trust="trusted", op="test.read-only")
+    with store.transaction() as tx:
+        mail = tx.create(
+            "source",
+            {
+                "received_at": "2026-10-22T09:00:00+00:00",
+                "kind": "watched:mailbox",
+                "title": "Interior proofs",
+                "content_hash": "0" * 64,
+                "trust": "untrusted",
+            },
+            engine,
+        ).id
+        entry = tx.create(
+            "event",
+            {"title": "Planning session", "start": "2026-11-03T14:00:00+00:00", "end": "2026-11-03T15:00:00+00:00"},
+            engine,
+        ).id
+    # A saved message's page loads and offers no Edit; an edit through the generic form is refused.
+    shown = client.get("/api/record", params={"kind": "source", "id": mail})
+    assert shown.status_code == 200, shown.text
+    assert shown.json()["fields"]["title"] == "Interior proofs"
+    fields = client.get("/api/kinds/source")
+    assert fields.status_code == 200, fields.text
+    assert not any(f["editable"] for f in fields.json()["fields"])
+    before = store.read().get("source", mail)
+    edit = client.post(
+        "/api/records/edit",
+        json={"kind": "source", "id": mail, "fields": {"title": "Changed"}, "read_version": before.version},
+    )
+    assert edit.status_code == 409, edit.text
+    assert store.read().get("source", mail).data["title"] == "Interior proofs"
+    # A calendar entry's page loads as before, and keeps the fields it could already edit.
+    assert client.get("/api/record", params={"kind": "event", "id": entry}).status_code == 200
+    assert any(f["editable"] for f in client.get("/api/kinds/event").json()["fields"])

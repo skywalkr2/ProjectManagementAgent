@@ -351,10 +351,15 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         run = store.read().get("run", cs.data["run"]) if cs.data.get("run") else None
         return run.data.get("independence") if run is not None else None
 
+    #: Kinds whose pages are shown but never edited through the generic form: what came in (a saved message) stays as it
+    #: was read.
+    read_only = {"source"}
+
     def shown_kinds() -> set[str]:
-        """Kinds a screen may show any record of: those written to the synced folder, running plugins' own, and
-        the kinds of their panels."""
+        """Kinds a screen may show any record of: those written to the synced folder, running plugins' own, the kinds
+        of their panels, and the read-only ones."""
         kinds = {k for k, m in store.plugins.records.items() if getattr(m, "layout", None) or k == "project"}
+        kinds |= read_only & set(store.plugins.records)
         for plugin, registrar in store.plugins.registrars.items():
             if store.plugins.active(plugin):
                 kinds |= set(registrar.records) | {p.kind for p in registrar.panels.values()}
@@ -393,7 +398,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     options=options,
                     value_list=bound.get(name),
                     required=info.is_required(),
-                    editable=name not in ("id", "stage") and name not in texts and name not in fixed,
+                    editable=kind not in read_only
+                    and name not in ("id", "stage")
+                    and name not in texts
+                    and name not in fixed,
                 )
             )
         return KindView(kind=kind, fields=fields)
@@ -483,6 +491,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         if body.kind not in shown_kinds():
             raise HTTPException(status_code=404, detail="not found")
+        if body.kind in read_only:
+            raise HTTPException(status_code=409, detail="That can't be edited here.")
         op = {
             "op": "record.edit",
             "record": {"kind": body.kind, "id": body.id},
