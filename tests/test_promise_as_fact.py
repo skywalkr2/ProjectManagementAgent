@@ -143,3 +143,77 @@ def test_a_moved_due_quoting_the_words_a_day_no_rule_reads_or_the_persons_own_ch
     assert moved(env, [move | {"evidence": {"quote": quote}}], MOVE) == []
     assert moved(env, [], "My review can wait until later.") == []
     assert moved(env, [], MOVE, actor="pm") == []
+
+
+# ---- record.set due on an action that is no longer open -----------------------------------------------------------
+
+
+def test_a_new_day_on_a_finished_action_is_refused(env):
+    _, _, store = env
+    action = open_action(env)
+    with store.transaction() as tx:
+        found_action = tx.get("action", action)
+        tx.update("action", action, {"status": "done"}, _PM, read_version=found_action.version)
+    move = {"op": "record.set", "kind": "action", "id": action, "field": "due", "value": "2026-10-20"}
+    _, cfg, _ = env
+    cs = CHANGESET.validate_python({"ops": [move | {"evidence": {"quote": "can wait until Oct 20"}}]})
+    ctx = Context(store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", None, MOVE, "", "trusted"))
+    (problem,) = [p for p in check(cs, ctx) if p.check == "targets"]
+    assert problem.severity == "refuse" and "done" in problem.message
+
+
+# ---- owed-to-missing: the person's own action for something another person has ---------------------------------------
+
+
+def owed(env, op: dict) -> list:
+    _, cfg, store = env
+    cs = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", None, op["text"], "", "trusted")
+    )
+    return [p for p in check(cs, ctx) if p.check == "owed-to-missing"]
+
+
+def test_the_persons_own_action_for_someones_thing_owed_to_nobody_is_sent_back_naming_them(env):
+    text = f"Return {TEAMMATE['full_name']}'s library book"
+    (problem,) = owed(env, {"op": "action.add", "text": text, "owners": [ME["id"]], "evidence": {"quote": text}})
+    assert problem.severity == "return" and TEAMMATE["id"] in problem.message
+
+
+def test_an_action_owed_to_someone_already_or_owned_by_someone_else_is_left_alone(env):
+    text = f"Return {TEAMMATE['full_name']}'s library book"
+    base = {"op": "action.add", "text": text, "evidence": {"quote": text}}
+    assert owed(env, base | {"owners": [ME["id"]], "promised_to": [TEAMMATE["id"]]}) == []
+    assert owed(env, base | {"owners": [TEAMMATE["id"]]}) == []
+    plain = "Return the library book"
+    assert owed(env, {"op": "action.add", "text": plain, "owners": [ME["id"]], "evidence": {"quote": plain}}) == []
+
+
+# ---- project-start-as-fact: a named start that no project has, kept only as a fact ---------------------------------
+
+
+def started(env, ops: list[dict]) -> list:
+    _, cfg, store = env
+    raw = "\n".join(op["evidence"]["quote"] for op in ops if "evidence" in op)
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", "SRC-1", raw, "", "untrusted")
+    )
+    return [p for p in check(cs, ctx) if p.check == "project-start-as-fact"]
+
+
+NEW_WORK = load_yaml((DEMO_A / "evals" / "project-no-record.yaml").read_text(encoding="utf-8"))
+START = next(op for op in NEW_WORK["stub_answer"]["ops"] if op["op"] == "project.add")
+
+
+def test_a_named_start_no_project_has_kept_only_as_a_fact_is_sent_back(env):
+    (problem,) = started(env, [fact(f"We are {START['evidence']['quote']}.")])
+    assert problem.severity == "return" and START["name"] in problem.message
+
+
+def test_a_known_project_a_proposed_one_or_a_start_with_no_name_is_left_alone(env):
+    known = fixture_records(DEMO_B, "project")[0]["name"]
+    assert started(env, [fact(f"We are starting {known} next month.")]) == []
+    proposed = {"op": "project.add", "name": START["name"], "evidence": START["evidence"]}
+    assert started(env, [proposed, fact(f"We are {START['evidence']['quote']}.")]) == []
+    assert started(env, [fact("We are starting the pilot next month.")]) == []

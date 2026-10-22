@@ -215,6 +215,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _own_promise_missed(cs, ctx)
     problems += _promise_as_fact(cs, ctx)
     problems += _due_move_missed(cs, ctx)
+    problems += _project_start_as_fact(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -485,6 +486,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no {op.kind} {op.id}")
             elif op.field not in SETTABLE[op.kind]:
                 refuse(i, "targets", f"{op.kind}.{op.field} can't be changed this way")
+            elif op.kind == "action" and op.field == "due" and target.data.get("status") not in ("open", "held"):
+                refuse(
+                    i,
+                    "targets",
+                    f"action {op.id} is {target.data.get('status')}, so it has no day to move: a new day goes on the "
+                    "open action the words are about",
+                )
             else:
                 try:
                     model_for(op.kind).model_validate({**target.data, op.field: op.value})
@@ -645,6 +653,17 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         i,
                         'the words say "we", not who: leave "owners" empty so the person picks one, unless the '
                         "words name who does it",
+                    )
+                )
+            if (owed := _possessed_by(op, ctx)) is not None:
+                problems.append(
+                    Problem(
+                        "owed-to-missing",
+                        ctx.cfg.checks.projects.get(op.project or "", {}).get("owed-to-missing")
+                        or ctx.cfg.checks.lints.get("owed-to-missing", "off"),
+                        i,
+                        f"the words name {ctx.people.name(owed)} as the one it belongs to: if the person owes it to "
+                        f'them, give "promised_to" ["{owed}"]',
                     )
                 )
             if (level := _someone_owner_level(op, ctx)) != "off":
@@ -2063,7 +2082,7 @@ def _promiser(before: str, cs: ChangesetIn, ctx: Context) -> str | None:
 
 
 def _promise_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    """A fact whose evidence is someone named promising to do something by a date ("Riley will drive the audit by the
+    """A fact whose evidence is someone named promising to do something by a date ("Kit will send the plan by the
     20th") is sent back once to be recorded as that person's action: a promise with a date is a to-do to follow up,
     whoever made it. A rule on the words with no AI: one of the language's promise words, not followed by one of its
     state words ("will be away"), after words naming a person on file or one the answer proposes, and before a date the
@@ -2128,7 +2147,7 @@ def _promise_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 
 
 def _due_move_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    """Words that give an open action a new day ("my approval can wait until Oct 20"), answered with no op but a fact
+    """Words that give an open action a new day ("my review can wait until the 20th"), answered with no op but a fact
     or a note quoting them, are sent back once: the date moves on the action. A rule on the words with no AI: one of
     the language's due-move words before a date the rules read, in the input or the person's note, while an action is
     open. Any other op quoting the words (a moved date, a moved calendar entry) settles it."""
@@ -2168,6 +2187,51 @@ def _due_move_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             missed[0],
         )
     ]
+
+
+def _project_start_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A fact quoting words that start something named ("we are starting the Harbor Survey"), when no project
+    has that name and the answer proposes none, is sent back once: a new piece of work is proposed as a project, which
+    waits for the person. A rule on the words with no AI: one of the language's project-start words, then a name of
+    capitalized words."""
+    name = "project-start-as-fact"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm or "project.add" not in ctx.allowed_ops:
+        return []
+    if any(isinstance(op, ProjectAddOp) for op in cs.ops):
+        return []
+    words = [w.strip() for w in ctx.cfg.language.project_start_words if w.strip()]
+    if not words:
+        return []
+    known = set()
+    for project in ctx.store.read().list("project"):
+        known |= {normalize(n).lower() for n in (project.data.get("name"), *(project.data.get("aliases") or [])) if n}
+    pattern = "|".join(re.escape(w) for w in words)
+    named = re.compile(rf"(?<!\w)(?i:{pattern})\s+(?:(?i:the)\s+)?((?:[A-Z][\w-]*\s+)*[A-Z][\w-]*)")
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if not isinstance(op, FactOp):
+            continue
+        for found in named.finditer(op.evidence.quote):
+            title = found.group(1).strip()
+            if len(title.split()) < 2:
+                continue
+            said = f" {normalize(title).lower()} "
+            # A name inside a project's own name, or holding it, is that project.
+            if any(said in f" {k} " or f" {k} " in said for k in known):
+                continue
+            problems.append(
+                Problem(
+                    name,
+                    ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or level,
+                    i,
+                    f"the words say {title!r} starts, and no project has that name: propose it with project.add "
+                    "quoting these words (it waits for the person), and keep its work out of other projects",
+                    op.evidence.quote,
+                )
+            )
+            break
+    return problems
 
 
 def _asked_subject(op: OpModel, name: str) -> str | None:
@@ -2226,6 +2290,30 @@ def _someone_owner_level(op: ActionAddOp, ctx: Context) -> str:
         if any(n and scope.has_word(quote, n) for n in names):
             return "off"
     return level
+
+
+def _possessed_by(op: ActionAddOp, ctx: Context) -> str | None:
+    """The person the `owed-to-missing` lint names for an action, or None when it doesn't apply: the action is the
+    person's own alone, says nobody it is owed to, and its words name someone else on file as having the thing ("return
+    Kit's book"). The person's own direct changes are left alone."""
+    name = "owed-to-missing"
+    level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or ctx.cfg.checks.lints.get(name, "off")
+    pm = ctx.people.pm
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm or op.promised_to or not op.owners or not pm:
+        return None
+    if {ctx.people.resolve(owner).person for owner in op.owners} != {pm}:
+        return None
+    evidence = _evidence(op)
+    for text in (evidence.quote if evidence is not None else "", op.text):
+        for found in re.finditer(r"((?:[A-Z][\w-]*\s+)?[A-Z][\w-]*)['\u2019]s\b", text or ""):
+            words = found.group(1).split()
+            for candidate in (" ".join(words), words[-1]):
+                who = ctx.people.resolve(candidate)
+                # A bare first name only one person has is that person here: the lint suggests, the answer decides.
+                person = who.person if who.status == "ok" else (who.candidates[0] if len(who.candidates) == 1 else None)
+                if person and person != pm:
+                    return person
+    return None
 
 
 def _team_word_one_owner_level(op: ActionAddOp, ctx: Context) -> str:

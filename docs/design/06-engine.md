@@ -914,6 +914,13 @@ is marked *designed*, with the phase.
 - Words that give an open action a new day ("my approval can wait until Oct 20"), answered only with a fact or a note,
   go back once to move the action's date (`due-move-missed`, *built*; `language.due_move_words`). Any other op quoting
   the words, such as a moved calendar entry, settles it.
+- A new day on an action that is no longer open is refused: the date goes on the open action the words are about.
+- The person's own action for something another person has ("return Edda's book"), owed to nobody, goes back once
+  naming that person for "promised_to" (`owed-to-missing`, *built*). A bare first name only one person has counts
+  here, since the answer decides.
+- A fact quoting the start of something named that no project has ("we are starting the Depot Scanner Pilot"), with no
+  project proposed, goes back once to propose it (`project-start-as-fact`, *built*; `language.project_start_words`). A
+  name inside a project's own counts as that project.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.

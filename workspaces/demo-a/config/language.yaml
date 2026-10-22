@@ -19,6 +19,8 @@ promise_state_words: [be]
 unassigned_words: [someone, somebody, anyone, anybody, nobody, no one]
 # Words that give an open action a new day; before a date and answered with only a fact or a note, they go back once.
 due_move_words: [is now due, can wait until, moved to, pushed to, postponed to, push it to]
+# Words that start a new piece of work; before a name in capitals no project has, recorded only as a fact, they go back once.
+project_start_words: [starting, launching, kicking off, start, launch, kick off]
 # Words that frame a question rather than say what it is about; left out when checking whether a recorded fact already answers it.
 asking_words: [when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about, confirm]
 # Phrases that make a draft report to the maintainers a standing rule, to be proposed as a rule instead.

@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 161. Three more answers go back once: a finished action's date, an owed-to left out, a new project kept as a fact (2026-10-22; B-10, built)
+
+- A due date set on an action that is no longer open is refused, so a note on a finished action moves the open one.
+  Built: `tests/test_promise_as_fact.py::test_a_new_day_on_a_finished_action_is_refused`
+- `owed-to-missing`: the person's own action for something another person has, owed to nobody, goes back naming
+  them. Built: `tests/test_promise_as_fact.py::test_the_persons_own_action_for_someones_thing_owed_to_nobody_is_sent_back_naming_them`
+- `project-start-as-fact`: a fact quoting the start of something named that no project has goes back to propose the
+  project. Setting `language.project_start_words`. Built:
+  `tests/test_promise_as_fact.py::test_a_named_start_no_project_has_kept_only_as_a_fact_is_sent_back`
+- Design 4 (language settings) and 6.33.
+
 ## 160. A new day for an open action answered only with a fact or a note goes back (2026-10-22; B-10, built)
 
 - `due-move-missed`: words that give an open action a new day ("can wait until Oct 20"), with a date the rules read,

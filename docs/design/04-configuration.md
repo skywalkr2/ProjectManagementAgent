@@ -327,6 +327,9 @@ Built keys:
 - `due_move_words` (is now due, can wait until, moved to, pushed to, postponed to, push it to): what the
   `due-move-missed` lint reads (6.33): before a date the rules read, answered only with a fact or a note, the words go
   back to move the open action's date.
+- `project_start_words` (starting, launching, kicking off, start, launch, kick off): what the `project-start-as-fact`
+  lint reads (6.33): before a name in capitals no project has, in a fact with no project proposed, the words go back
+  to propose the project.
 - `asking_words` (when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about,
   confirm): words that frame a question rather than say what it is about. The `already-known` check leaves them out and
   compares the rest in folded form (plurals, "ing", "ed"), so "Can you tell me when the proofs will ship?" is answered

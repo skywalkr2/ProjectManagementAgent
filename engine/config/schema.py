@@ -1293,6 +1293,8 @@ def _default_lints() -> dict[str, Severity]:
         "promise-as-fact": "return",
         "someone-given-owner": "return",
         "due-move-missed": "return",
+        "owed-to-missing": "return",
+        "project-start-as-fact": "return",
     }
 
 
@@ -1809,9 +1811,15 @@ class LanguageFile(FileModel):
         description="Words that make a sentence the person's own promise even when it also asks something: a request "
         "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
     )
+    project_start_words: list[str] = Field(
+        default_factory=lambda: ["starting", "launching", "kicking off", "start", "launch", "kick off"],
+        description='Words that start a new piece of work ("we are starting the Harbor Survey"). Followed by a '
+        "name in capitals that no project has, and recorded only as a fact, they are sent back once to propose the "
+        "project. Matched as whole words, ignoring case.",
+    )
     due_move_words: list[str] = Field(
         default_factory=lambda: ["is now due", "can wait until", "moved to", "pushed to", "postponed to", "push it to"],
-        description='Words that give an open action a new day ("my approval can wait until Oct 20"). Followed by a '
+        description='Words that give an open action a new day ("my review can wait until the 20th"). Followed by a '
         "date and answered with only a fact or a note, they are sent back once to move the action's date. Matched as "
         "whole words, ignoring case.",
     )
@@ -1823,7 +1831,7 @@ class LanguageFile(FileModel):
     )
     promise_words: list[str] = Field(
         default_factory=lambda: ["will", "is going to", "are going to"],
-        description='Words that make a sentence someone\'s promise to do something ("Riley will send it by Friday"). '
+        description='Words that make a sentence someone\'s promise to do something ("Kit will send it by Friday"). '
         "Such words after a name and before a date, recorded as a fact rather than as that person's action, are sent "
         "back once. Matched as whole words, ignoring case.",
     )
