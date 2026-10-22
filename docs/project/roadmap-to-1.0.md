@@ -788,6 +788,18 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
       glossary term, not a lesson), `other-project` (a routing entry where a lesson was wanted), pair 19 (no lesson
       proposed), and thread-t14, whose answers are in the owner's `rerun.json`, not yet seen. All of these are done only
       when the owner's next re-run passes them.
+  - the owner's re-runs of 2026-10-22 (Claude Code on its low-cost model, 3 runs per case): the main set went 47%,
+    62%, 64%, 80% and the harder pair 17%, 17%, 50%, 100%, as each batch landed. What moved them:
+    - the app's instructions as Claude Code's own (`agent.system_option`,
+      `tests/test_catalog_claims.py::test_a_program_that_takes_system_instructions_from_a_file_gets_ours_there_and_only_the_request_as_its_packet`);
+    - answers sent back once by rule, each checked first on a low-cost model with the exact packet and send-back:
+      `promise-as-fact`, `someone-given-owner`, `due-move-missed`, `owed-to-missing`, `project-start-as-fact`, and a
+      due date on a finished action refused (`tests/test_promise_as_fact.py`, `tests/test_own_request_lint.py`);
+    - a scoring fix: a forbidden owner is met only by an action that person owns
+      (`tests/test_evaluate_harness.py::test_a_forbidden_owner_is_met_only_by_an_action_that_person_owns`).
+    *Left on the 80% run:* `follow-up-goes-to-who-made-the-claim` (33%: the question goes to the person, not whoever
+    made the claim), `thread-t21-m4-no-answer` (33%), `first-name-in-thread`, `promise-078`, `promise-114`,
+    `promise-119` and `they-finished-note` (67% each); the learning pairs are not re-run yet.
   - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
     reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
     20): whether the reach the model picks should be widened or checked against the correction's own task kind;
