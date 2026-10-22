@@ -14,6 +14,7 @@ import { PromiseWhy } from "./PromiseWhy";
 import { ReassignForm } from "./ReassignAction";
 import { TodoRow } from "./TodayRail";
 import { HeldDetail } from "./HeldDetail";
+import { MadeBy } from "./MadeBy";
 import { ChangeRow } from "./WhatChanged";
 
 /** The kinds of line that open to items; the rest are a single act on the line itself. */
@@ -33,6 +34,7 @@ export function LineDetail(props: { line: QueueLine; sendBack?: boolean; onOpenG
           {props.line.notes}
         </p>
       )}
+      <MadeBy line={props.line} />
       <LineItems {...props} />
     </>
   );

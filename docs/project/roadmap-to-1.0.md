@@ -923,8 +923,10 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     (`web/src/components/FollowUps.test.tsx`, `tests/test_followups_later.py`); Copy at once on a message already shown
     unchanged (`web/src/lib/seen-messages.test.ts`, `web/src/components/FollowUpsListDetail.test.tsx`); "ready since Tue"
     on the Follow-ups line, kept from the ledger (`tests/test_followups_ready_since.py`).
-    *Left:* Top priorities' "who suggested it" in the inspector: no field on a Today line or its record says who suggested an
-    item or whether a suggestion has an answer; "ready since" on Today's send line.
+    *Built (change 181):* who made an item, in the inspector: `QueueLineView.made_by` read from the change and the item
+    (`engine/line_maker.py`, no stored field), worded in `web/src/components/MadeBy.tsx`, never outward
+    (`tests/test_line_maker.py`, `web/src/components/MadeBy.test.tsx`).
+    *Left:* "ready since" on Today's send line.
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings

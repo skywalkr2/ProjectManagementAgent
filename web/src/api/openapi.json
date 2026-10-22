@@ -10283,6 +10283,158 @@
         "title": "LookBackView",
         "type": "object"
       },
+      "MadeBy": {
+        "description": "Who made the item a Today line is about (design 7.7). `kind`: the assistant's run, a rule (`rule`) or the\nperson's own entry, which the screen says nothing about. `state`: suggested (waits for the person's yes) or added\n(applied, with Undo). `source` is the input it came from; `answered` how the person answered a suggestion;\n`inferred` that the assistant worked it out rather than being told.",
+        "properties": {
+          "answered": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MadeByAnswer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inferred": {
+            "default": false,
+            "title": "Inferred",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "assistant",
+              "rule",
+              "person"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MadeByRule"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MadeBySource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "suggested",
+              "added"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "state"
+        ],
+        "title": "MadeBy",
+        "type": "object"
+      },
+      "MadeByAnswer": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The answer given, for answered.",
+            "title": "Answer"
+          },
+          "how": {
+            "description": "kept: the person said yes to a suggested change. answered: the person gave an answer. dropped: the person set the question aside.",
+            "enum": [
+              "kept",
+              "answered",
+              "dropped"
+            ],
+            "title": "How",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day, on the person's own clock.",
+            "title": "On"
+          }
+        },
+        "required": [
+          "how"
+        ],
+        "title": "MadeByAnswer",
+        "type": "object"
+      },
+      "MadeByRule": {
+        "properties": {
+          "id": {
+            "description": "The rule's id as the change names it.",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The rule's own name when a rule record has one; none otherwise.",
+            "title": "Label"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "MadeByRule",
+        "type": "object"
+      },
+      "MadeBySource": {
+        "properties": {
+          "origin": {
+            "$ref": "#/components/schemas/Origin",
+            "description": "One click to the input: its page or its saved text."
+          },
+          "title": {
+            "description": "The input's own short name, shown as the link's words.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "origin"
+        ],
+        "title": "MadeBySource",
+        "type": "object"
+      },
       "MadeView": {
         "description": "A draft or file a change made, for the \"Made:\" link on the change's card: `label` says what it is for (the\nrecord a draft is for, or the file's name) and `record` is where the person opens it.",
         "properties": {
@@ -16349,6 +16501,17 @@
             ],
             "description": "For a catch_up line: how many kinds of earlier correction were too many for the list and expired unread.",
             "title": "Left Out"
+          },
+          "made_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MadeBy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a line about one item: who made it, read from the change that made it and the item itself, for the inspector to say (never put in anything copied, shared or sent). None for a line about several things and for an item no maker is known for."
           },
           "model": {
             "anyOf": [

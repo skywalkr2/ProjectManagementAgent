@@ -2141,6 +2141,39 @@ class ReviewDid(BaseModel):
     item: str
 
 
+class MadeByRule(BaseModel):
+    id: str = Field(description="The rule's id as the change names it.")
+    label: str | None = Field(None, description="The rule's own name when a rule record has one; none otherwise.")
+
+
+class MadeBySource(BaseModel):
+    title: str = Field(description="The input's own short name, shown as the link's words.")
+    origin: Origin = Field(description="One click to the input: its page or its saved text.")
+
+
+class MadeByAnswer(BaseModel):
+    how: Literal["kept", "answered", "dropped"] = Field(
+        description="kept: the person said yes to a suggested change. answered: the person gave an answer. dropped: "
+        "the person set the question aside."
+    )
+    on: date | None = Field(None, description="The day, on the person's own clock.")
+    answer: str | None = Field(None, description="The answer given, for answered.")
+
+
+class MadeBy(BaseModel):
+    """Who made the item a Today line is about (design 7.7). `kind`: the assistant's run, a rule (`rule`) or the
+    person's own entry, which the screen says nothing about. `state`: suggested (waits for the person's yes) or added
+    (applied, with Undo). `source` is the input it came from; `answered` how the person answered a suggestion;
+    `inferred` that the assistant worked it out rather than being told."""
+
+    kind: Literal["assistant", "rule", "person"]
+    rule: MadeByRule | None = None
+    source: MadeBySource | None = None
+    state: Literal["suggested", "added"]
+    answered: MadeByAnswer | None = None
+    inferred: bool = False
+
+
 class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
@@ -2524,6 +2557,12 @@ class QueueLineView(BaseModel):
         None,
         description="For a held line that rests on an inference or would drop something that reached someone: the "
         "question it asks. Keeping things as they are is POST /api/changesets/{id}/ops/{index}/decline.",
+    )
+    made_by: MadeBy | None = Field(
+        None,
+        description="For a line about one item: who made it, read from the change that made it and the item itself, "
+        "for the inspector to say (never put in anything copied, shared or sent). None for a line about several "
+        "things and for an item no maker is known for.",
     )
 
 

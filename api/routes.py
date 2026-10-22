@@ -683,7 +683,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/today/queue")
     def today_queue() -> list[QueueLineView]:
         """What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7)."""
-        from engine import sides
+        from engine import line_maker, sides
         from engine.today import zone
         from engine.today_queue import queue
 
@@ -710,6 +710,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     parent_name=parents.get(line.project or ""),
                     notes=(about.data.get("notes") or None) if about is not None else None,
                     side=sides.side_of_line(view, cfg, line),
+                    made_by=line_maker.of_line(view, line, here),
                 )
             )
         return out

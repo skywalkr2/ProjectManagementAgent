@@ -44,6 +44,7 @@ import { StageTodayRows, useStageToday } from "./StageToday";
 import { ProjectTag } from "./ProjectTag";
 import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
+import { MadeBy } from "./MadeBy";
 import styles from "./Today.module.css";
 
 export interface QueueHandlers {
@@ -408,7 +409,7 @@ function QueueInspector(props: {
       <Panel title={line ? props.title : props.empty ? t("queue.inspector.nothing") : t("queue.inspector.title")} count={where}>
         {line ? (
           <div className={styles.detail}>
-            {opensItems(line) ? <LineDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} /> : <p className="hint">{t("queue.inspector.nothing_more")}</p>}
+            {opensItems(line) ? <LineDetail line={line} sendBack={props.sendBack} onOpenGuide={props.onOpenGuide} /> : <><MadeBy line={line} /><p className="hint">{t("queue.inspector.nothing_more")}</p></>}
           </div>
         ) : (
           <>

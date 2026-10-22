@@ -32,6 +32,16 @@ def _source_id(kind: str, data: dict[str, Any]) -> str | None:
     return data.get("source") or None
 
 
+def source_origin(source: Any) -> dict[str, Any] | None:
+    """The origin an input itself gives: its original page when it has an address a browser can open, else its saved
+    text; None for no input."""
+    if source is None:
+        return None
+    if _openable(source.data.get("url")):
+        return {"kind": LINK, "url": source.data["url"].strip(), "source": source.id}
+    return {"kind": SOURCE, "source": source.id}
+
+
 def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any] | None]:
     """The origin of each record of `kind` named in `ids`, by id: a dict with `kind` (link, source or change) and the
     address, source, change and request it needs, or None. Reads only."""
@@ -44,11 +54,9 @@ def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any
         record = view.get(kind, record_id, include_deleted=True)
         source_id = _source_id(kind, record.data) if record is not None else None
         source = view.get("source", source_id) if source_id else None
-        if source is not None and _openable(source.data.get("url")):
-            out[record_id] = {"kind": LINK, "url": source.data["url"].strip(), "source": source.id}
-            continue
-        if source is not None:
-            out[record_id] = {"kind": SOURCE, "source": source.id}
+        found = source_origin(source)
+        if found is not None:
+            out[record_id] = found
             continue
         if created is None:
             created = view.creations(kind)
