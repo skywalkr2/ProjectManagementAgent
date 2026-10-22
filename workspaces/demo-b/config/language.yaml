@@ -77,15 +77,23 @@ time_zone_abbreviations:
   ET: America/New_York
   EST: America/New_York
   EDT: America/New_York
+  Eastern: America/New_York
+  Eastern time: America/New_York
   CT: America/Chicago
   CST: America/Chicago
   CDT: America/Chicago
+  Central: America/Chicago
+  Central time: America/Chicago
   MT: America/Denver
   MST: America/Denver
   MDT: America/Denver
+  Mountain: America/Denver
+  Mountain time: America/Denver
   PT: America/Los_Angeles
   PST: America/Los_Angeles
   PDT: America/Los_Angeles
+  Pacific: America/Los_Angeles
+  Pacific time: America/Los_Angeles
   UTC: UTC
   GMT: UTC
   BST: Europe/London

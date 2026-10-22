@@ -77,12 +77,12 @@ DEFAULT_NUMBER_WORDS: dict[str, int] = {
     "ten": 10,
     "twelve": 12,
 }
-#: Time zone abbreviations to the zone they name, for a time like "5pm ET".
+#: Time zone abbreviations and plain names to the zone they name, for a time like "5pm ET" or "5pm Central".
 DEFAULT_TIME_ZONES: dict[str, str] = {
-    **dict.fromkeys(("ET", "EST", "EDT"), "America/New_York"),
-    **dict.fromkeys(("CT", "CST", "CDT"), "America/Chicago"),
-    **dict.fromkeys(("MT", "MST", "MDT"), "America/Denver"),
-    **dict.fromkeys(("PT", "PST", "PDT"), "America/Los_Angeles"),
+    **dict.fromkeys(("ET", "EST", "EDT", "Eastern", "Eastern time"), "America/New_York"),
+    **dict.fromkeys(("CT", "CST", "CDT", "Central", "Central time"), "America/Chicago"),
+    **dict.fromkeys(("MT", "MST", "MDT", "Mountain", "Mountain time"), "America/Denver"),
+    **dict.fromkeys(("PT", "PST", "PDT", "Pacific", "Pacific time"), "America/Los_Angeles"),
     **dict.fromkeys(("UTC", "GMT"), "UTC"),
     "BST": "Europe/London",
 }
@@ -216,6 +216,7 @@ def resolve(
     phrase_words: Mapping[str, Sequence[str]] | None = None,
     number_words: Mapping[str, int] | None = None,
     time_zones: Mapping[str, str] | None = None,
+    sender_zone: str | tzinfo | None = None,
     holidays: Sequence[Holiday] | None = None,
 ) -> Due:
     """Resolve against the received instant converted to tz, never the clock.
@@ -225,8 +226,10 @@ def resolve(
     retried in another order.
     end_of_day is a local wall time, defaulting to 17:00. Working-day counts
     exclude the received day and weekends defined by workweek, but not holidays. "Within <n> days" counts calendar
-    days; only "within <n> working days" skips weekends. phrase_words, number_words, time_zones (abbreviation to zone
-    name) and holidays default to the English words, and to the shipped calendar of the locale.
+    days; only "within <n> working days" skips weekends. phrase_words, number_words, time_zones (abbreviation or
+    plain name to zone name) and holidays default to the English words, and to the shipped calendar of the locale.
+    sender_zone is the zone the message's sender is known to be in: a short zone word the time_zones setting doesn't
+    name is read in it when it goes by that word on the date, and otherwise the words are left to check.
     Invalid configuration raises ValueError; unsupported phrases return Due
     with no dates. exact is true only for one definite date, optionally a time.
     """
@@ -271,6 +274,7 @@ def resolve(
             phrase_words=phrase_words,
             number_words=number_words,
             time_zones=time_zones,
+            sender_zone=sender_zone,
             holidays=holidays,
         )
 
@@ -335,13 +339,44 @@ def resolve(
     clock_text = rf"{noon}|{midnight}|\d{{1,2}}(?::\d{{2}})?\s*(?:a\.?m\.?|p\.?m\.?)"
     base = value.removeprefix("by ").replace("the end of the day", "end of day")
 
-    # A time with a zone abbreviation ("5pm ET") is read in that zone and given in the person's own.
-    if (parts := base.rsplit(" ", 1))[-1] in zones and len(parts) == 2 and re.search(rf"(?:{clock_text})$", parts[0]):
-        try:
-            stated = ZoneInfo(zones[parts[1]])
-        except (ZoneInfoNotFoundError, ValueError):
-            return unknown("The time zone abbreviation names no known zone; no date was guessed.")
-        inner = sub(parts[0])
+    # A time with a zone name ("5pm ET", "5pm Central time") is read in that zone and given in the person's own. A
+    # short word the setting doesn't name is read in the sender's zone when that zone goes by it on that date.
+    words_in_base = base.split(" ")
+    zone_key = next(
+        (
+            key
+            for count in (3, 2, 1)
+            if len(words_in_base) > count and (key := " ".join(words_in_base[-count:])) in zones
+        ),
+        None,
+    )
+    unnamed = (
+        words_in_base[-1]
+        if zone_key is None
+        and sender_zone is not None
+        and len(words_in_base) > 1
+        and re.fullmatch(r"[a-z]{2,5}", words_in_base[-1])
+        else None
+    )
+    label = zone_key or unnamed or ""
+    text_before = " ".join(words_in_base[: len(words_in_base) - len(label.split())]) if label else ""
+    if label and re.search(rf"(?:{clock_text})$", text_before):
+        inner = sub(text_before)
+        if zone_key is not None:
+            try:
+                stated = ZoneInfo(zones[zone_key])
+            except (ZoneInfoNotFoundError, ValueError):
+                return unknown("The time zone abbreviation names no known zone; no date was guessed.")
+        else:
+            try:
+                theirs = ZoneInfo(sender_zone) if isinstance(sender_zone, str) else sender_zone
+            except (ZoneInfoNotFoundError, ValueError):
+                theirs = None
+            if inner.start is None or inner.time is None or theirs is None:
+                return unknown("A time zone needs a single understood date and clock time; no date was guessed.")
+            if (datetime.combine(inner.start, inner.time, tzinfo=theirs).tzname() or "").lower() != label:
+                return unknown("The time zone abbreviation names no known zone; no date was guessed.")
+            stated = theirs
         if inner.start is None or inner.start != inner.end or inner.time is None:
             return unknown("A time zone needs a single understood date and clock time; no date was guessed.")
         there = datetime.combine(inner.start, inner.time, tzinfo=stated).astimezone(zone)

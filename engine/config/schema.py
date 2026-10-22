@@ -2033,9 +2033,11 @@ class LanguageFile(FileModel):
     )
     time_zone_abbreviations: dict[str, str] = Field(
         default_factory=lambda: dict(DEFAULT_TIME_ZONES),
-        description='Time zone abbreviations and the zone each names (ET for Eastern time), so "by 5pm ET" is '
-        "read in that zone and shown in yours. An abbreviation that means different zones in different places is "
-        "better left out: its words are then left for you to check. Case is ignored.",
+        description='Time zone abbreviations and plain names, and the zone each names (ET, or "Eastern", for Eastern '
+        'time), so "by 5pm ET" is read in that zone and shown in yours. A name stands for the zone on that date, so '
+        '"CST" in July is Central time. An abbreviation that means different zones in different places ("IST") is '
+        "better left out: it is read in your own time zone when that zone goes by it on that date, and otherwise its "
+        "words are left for you to check. Case is ignored.",
     )
     holiday_calendar: str | None = Field(
         None,

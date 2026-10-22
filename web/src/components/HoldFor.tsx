@@ -5,11 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day, localDate } from "../lib/dates";
+import { day, localDate, nextMonday } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import type { MenuAction } from "./RowMenu";
 
 const DAY = "day";
+const MONDAY = "monday";
 
 /** The menu entries for holding one of a person's questions that are ready to send, or all of them (the whole message),
  * and the small form they open: which question (for one, when there is more than one), and a meeting from the calendar
@@ -42,11 +43,14 @@ export function useHoldFor(
     d.setDate(d.getDate() + 1);
     return localDate(d);
   })();
+  // The weekly note is held for the coming Monday: a day hold, so on that day the question is in that day's batch.
+  const monday = nextMonday(new Date());
   const save = async () => {
     if (!ready || !question) return;
     const [kind, id] = target.split(":");
-    const heldFor: S["HeldForIn"] = target === DAY ? { on: date } : kind === "series" ? { series: id } : { event: id };
-    const until = target === DAY ? day(date) : (unique.find((m) => m.value === target)?.until ?? "");
+    const heldFor: S["HeldForIn"] =
+      target === DAY ? { on: date } : target === MONDAY ? { on: monday } : kind === "series" ? { series: id } : { event: id };
+    const until = target === DAY ? day(date) : target === MONDAY ? day(monday) : (unique.find((m) => m.value === target)?.until ?? "");
     const done = whole
       ? await act(
           () => api.holdMessage(person, heldFor),
@@ -114,6 +118,7 @@ export function useHoldFor(
       </label>
       <select id={`hold-for-${question.id}`} autoFocus={questions.length < 2 || whole} value={target} onChange={(e) => setTarget(e.target.value)}>
         <option value={DAY}>{t("followups.hold_for_day")}</option>
+        <option value={MONDAY}>{t("followups.hold_for_monday", { date: day(monday) })}</option>
         {unique.map((m) => (
           <option key={m.value} value={m.value}>
             {m.label}

@@ -776,6 +776,52 @@ def test_the_zone_abbreviations_are_a_setting_of_the_language():
     assert resolve("5pm ET", NOW_IN_NEW_YORK, ZONE, time_zones={"ET": "Not/AZone"}).start is None
 
 
+JULY_IN_NEW_YORK = datetime(2026, 7, 6, 10, tzinfo=ZONE)
+
+
+@pytest.mark.parametrize(
+    ("received", "phrase", "at"),
+    [
+        (JULY_IN_NEW_YORK, "5pm CST", time(18)),  # a name stands for the zone on that date: Central is on daylight time
+        (NOW_IN_NEW_YORK, "5pm CST", time(18)),  # and the same words in winter
+        (JULY_IN_NEW_YORK, "5pm Central", time(18)),
+        (NOW_IN_NEW_YORK, "5pm central time", time(18)),
+        (NOW_IN_NEW_YORK, "by 5pm CENTRAL TIME", time(18)),
+        (NOW_IN_NEW_YORK, "noon Pacific", time(15)),
+        (NOW_IN_NEW_YORK, "noon Mountain time", time(14)),
+        (NOW_IN_NEW_YORK, "9am Eastern", time(9)),
+    ],
+)
+def test_the_plain_names_and_an_abbreviation_read_as_their_zone_on_that_date(received, phrase, at):
+    got = resolve(phrase, received, ZONE)
+    assert (got.start, got.time) == (received.date(), at)
+
+
+def test_the_plain_names_are_words_of_the_setting():
+    assert resolve("5pm Central", NOW_IN_NEW_YORK, ZONE, time_zones={"ET": "America/New_York"}).start is None
+    assert resolve("5pm Zentral", NOW_IN_NEW_YORK, ZONE, time_zones={"zentral": "America/Chicago"}).time == time(18)
+
+
+def test_an_ambiguous_abbreviation_is_read_in_the_senders_zone_only_when_that_zone_goes_by_it():
+    india = ZoneInfo("Asia/Kolkata")
+    for sender in (None, ZONE, "America/Los_Angeles"):
+        got = resolve("5pm IST", NOW_IN_NEW_YORK, ZONE, sender_zone=sender)
+        assert got.start is None  # left to check, as before
+    got = resolve("5pm IST", NOW_IN_NEW_YORK, ZONE, sender_zone=india)
+    # It is already the next day in India, so a bare "5pm" is doubtful, as with any zone across the date line.
+    assert (got.start, got.time, got.exact) == (date(2026, 11, 4), time(6, 30), False)
+    assert resolve("tomorrow 5pm IST", NOW_IN_NEW_YORK, ZONE, sender_zone="Asia/Kolkata").time == time(6, 30)
+    # A zone that has another name on that date doesn't read it: Chicago is on CDT in July and CST in winter.
+    assert resolve("5pm CDT", NOW_IN_NEW_YORK, ZONE, time_zones={}, sender_zone="America/Chicago").start is None
+    assert resolve("5pm CST", NOW_IN_NEW_YORK, ZONE, time_zones={}, sender_zone="America/Chicago").time == time(18)
+    assert resolve("5pm CST", JULY_IN_NEW_YORK, ZONE, time_zones={}, sender_zone="America/Chicago").start is None
+    # The setting wins over the sender's zone, and a word with no clock time before it is never a zone.
+    assert resolve("5pm IST", NOW_IN_NEW_YORK, ZONE, time_zones={"IST": "Europe/Dublin"}, sender_zone=india).time == (
+        time(12)
+    )
+    assert resolve("Friday IST", NOW_IN_NEW_YORK, ZONE, sender_zone=india).start is None
+
+
 # ---- holidays by name ------------------------------------------------------------------------------------------------
 
 

@@ -2379,6 +2379,7 @@ def _section(
             links=a["links"],
             told=a["told"],
             told_days=a["told_days"],
+            ready_since=a.get("ready_since"),
             followed_up=a["followed_up"],
             chases=a["chases"],
             on_hold=a["on_hold"],
@@ -2399,6 +2400,7 @@ def _section(
         message="" if held else s.message,
         withheld=held,
         to_send=s.to_send,
+        ready_since=s.ready_since,
         nudge=_nudge_view(s.nudge, nudge_held) if s.nudge is not None else None,
     )
 
@@ -2420,6 +2422,7 @@ def _followup_question(q: dict[str, Any], people: People, question_origin: dict[
         chase_due=q["chase_due"],
         held_until=q.get("held_until"),
         held_for_name=q.get("held_for_name"),
+        ready_since=q.get("ready_since") if q["status"] == "open" else None,
         about=resolves.get("kind"),
         options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
         origin=question_origin.get(q["id"]),

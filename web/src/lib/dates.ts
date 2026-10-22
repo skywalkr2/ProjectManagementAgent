@@ -48,6 +48,23 @@ export function localDate(when: Date): string {
   return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}`;
 }
 
+/** The coming Monday after a date, as yyyy-mm-dd: on a Monday it is the Monday a week on, never the day itself. */
+export function nextMonday(from: Date): string {
+  const ahead = (8 - from.getDay()) % 7 || 7;
+  return localDate(new Date(from.getFullYear(), from.getMonth(), from.getDate() + ahead));
+}
+
+/** How a past day is said in "ready since Tue": the weekday for the last six days, else the month and day ("Oct 6"); empty
+ * for today or a day not yet come, since a batch ready today is not a stale one. */
+export function sinceDay(iso: string | null | undefined, today: Date): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  const then = new Date(y, m - 1, d);
+  const ago = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() - then.getTime()) / 86_400_000);
+  if (ago <= 0) return "";
+  return ago < 7 ? weekdayFormat.format(then) : monthDay(iso);
+}
+
 /** The date n days after a yyyy-mm-dd date, as yyyy-mm-dd. */
 export function addDays(iso: string, n: number): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);

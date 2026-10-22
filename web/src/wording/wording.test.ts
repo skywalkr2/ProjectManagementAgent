@@ -254,3 +254,12 @@ test("a review title for one thing the assistant did is in the past tense and na
   expect(did.filter(([, text]) => !text.startsWith("{assistant} ") || !text.includes("{item}")).map(([k]) => k)).toEqual([]);
   expect(did.filter(([, text]) => /^\{assistant\} (add|close|drop|move|mark|take|ask|file|record)\b/i.test(text)).map(([k]) => k)).toEqual([]);
 });
+
+// Money has no picker: every amount is in US dollars, and the first amount of a screen or its field label says so in
+// plain words rather than with a code (design Part 7, "Money has no picker").
+test("amounts are labeled as US dollars in plain words where a currency is named", () => {
+  for (const key of ["setup.budget", "welcome.spend.intro", "settings.group.ai.budgets", "addons.intro", "addons.costs_hint"]) {
+    expect(words[key], key).toContain("US dollars");
+  }
+  expect(Object.entries(words).filter(([, text]) => /\bUSD\b/.test(text)).map(([key]) => key)).toEqual([]);
+});

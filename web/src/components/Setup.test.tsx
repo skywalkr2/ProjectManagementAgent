@@ -122,7 +122,7 @@ test("the project form offers Inside (never itself), Language with the inherited
   expect(labels[0]).toBe("Same as English (United Kingdom)");
   expect(labels.slice(1)).toEqual(["English (Australia)", "English (United Kingdom)", "English (United States)", "French (Canada)"]);
   expect(within(dialog).getByText("Choose a writing preference to override the parent project's choice.")).toBeInTheDocument();
-  const budget = within(dialog).getByRole("spinbutton", { name: /Budget \(USD\)/ });
+  const budget = within(dialog).getByRole("spinbutton", { name: /Budget \(US dollars\)/ });
   expect(budget).toHaveValue(null);
   await user.selectOptions(language, "en-AU");
   await user.type(budget, "120.5");

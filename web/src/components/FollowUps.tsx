@@ -7,12 +7,13 @@ import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { copyBoth, copyMessage, copyPlain, type CopyResult } from "../lib/copy";
-import { day, localDate, monthDay } from "../lib/dates";
+import { day, localDate, monthDay, sinceDay } from "../lib/dates";
 import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
 import { sendKeyTo, useRowKeys, type RowKey } from "../lib/keys";
 import { choiceRow, useListChoice, type ListChoice } from "../lib/list-choice";
 import { useIsNarrow, useMediaQuery } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
+import { hasSeenMessage, markMessageSeen } from "../lib/seen-messages";
 import { onSide, useSideFilter, type SideChoice } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -217,7 +218,16 @@ export function FollowUps(props: { compact?: boolean }) {
               </li>
             )}
             {shown.map((s) => (
-              <FollowListRow key={s.person} section={s} kind={filter === "later" ? "later" : s.is_pm ? "you" : filter} choice={choice} compact={compact} copied={sharedMessage(s.person).state.copied} />
+              <FollowListRow
+                key={s.person}
+                section={s}
+                kind={filter === "later" ? "later" : s.is_pm ? "you" : filter}
+                choice={choice}
+                compact={compact}
+                copied={sharedMessage(s.person).state.copied}
+                message={sharedMessage(s.person).state.draft ?? s.message}
+                onCopied={() => sharedMessage(s.person).set({ copied: true })}
+              />
             ))}
           </ol>
         </ListDetail>
@@ -249,8 +259,19 @@ function focusMessage(tries = 12): void {
 /** One person as a line of the list (design 7.13): who, how many asks and how long the oldest has waited, and on To send the
  * one primary, Copy. Choosing the line shows the person's message and asks in the detail; Copy on a line whose detail is not
  * shown shows it first, and the next Copy is the one that copies. */
-function FollowListRow(props: { section: S["FollowupSection"]; kind: "you" | "send" | "later" | "waiting"; choice: ListChoice; compact: boolean; copied: boolean }) {
+function FollowListRow(props: {
+  section: S["FollowupSection"];
+  kind: "you" | "send" | "later" | "waiting";
+  choice: ListChoice;
+  compact: boolean;
+  copied: boolean;
+  /** The message as it stands now (the person's edit, or the assistant's wording). */
+  message: string;
+  /** Called once the line has copied the message itself, so the line and the detail say Mark sent. */
+  onCopied: () => void;
+}) {
   const { t, tn } = useWords();
+  const { push } = useToasts();
   const { section: s, choice, kind } = props;
   const ref = useRef<HTMLLIElement>(null);
   const questions = waitingQuestions(s);
@@ -260,24 +281,44 @@ function FollowListRow(props: { section: S["FollowupSection"]; kind: "you" | "se
   const oldest = days.length ? Math.max(...days) : null;
   const chase = questions.some((q) => q.chase_due) || actions.some((a) => a.chase_due);
   const name = kind === "you" ? t("followups.you") : s.name;
+  // A batch that has waited says since when ("ready since Tue"), so a stale one shows; one ready today says nothing of it.
+  const since = sinceDay(s.ready_since, new Date());
+  const sinceText = (what: string) => (since ? t("followups.ready_since", { what, day: since }) : what);
   const sub =
     kind === "you"
       ? yourCounts(s, props.compact, tn)
       : kind === "send"
-        ? tn("followups.to_send", s.to_send)
+        ? sinceText(tn("followups.to_send", s.to_send))
         : kind === "later"
           ? tn("followups.later_count", (s.later ?? []).length)
           : tn("followups.waiting_count", questions.length + actions.length);
   // The line's keys and button reach the person's message in the detail once it is shown there. Until then they show it, with
   // the cursor in the message, and the next press is the one that acts.
+  const showFirst = () => {
+    choice.choose(s.person);
+    if (kind === "send") focusMessage();
+  };
+  // A message the person has already seen, exactly as it is now, is copied at once; a new or changed one is shown first.
+  const copyAtOnce = async () => {
+    if ((await copyMessage(props.message)) === "blocked") {
+      showFirst();
+      return;
+    }
+    markMessageSeen(s.person, props.message);
+    props.onCopied();
+    push({ message: t("toast.copied") });
+  };
   const toDetail = (key: RowKey) => {
     const detail = choice.chosen === s.person ? document.querySelector<HTMLElement>("[data-detail-pane] [data-row], [data-modal-open] [data-row]") : null;
     if (detail) {
       sendKeyTo(detail, key);
       return;
     }
-    choice.choose(s.person);
-    if (kind === "send") focusMessage();
+    if (kind === "send" && (key === "primary" || key === "copy") && !props.copied && hasSeenMessage(s.person, props.message)) {
+      void copyAtOnce();
+      return;
+    }
+    showFirst();
   };
   useRowKeys(ref, {
     toggle: () => choice.enter(s.person),
@@ -516,6 +557,10 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     setOpen(true);
     window.setTimeout(() => area.current?.focus(), 0);
   };
+  // Once the message is on screen it counts as seen, so Copy on its line later copies at once while it is unchanged.
+  useEffect(() => {
+    if (open) markMessageSeen(s.person, s.message);
+  }, [open, s.person, s.message]);
 
   // Two deliberate steps. Copy only puts the text on the clipboard, formatted and plain together (mail and documents take
   // the formatting, chat the plain text); nothing changes on the server. Once it has copied, the card offers Mark sent,
@@ -534,6 +579,7 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
       push({ message: t("toast.copy_blocked") });
       return;
     }
+    markMessageSeen(s.person, message);
     setCopied(true);
     push({ message: t(done) });
   };

@@ -846,6 +846,11 @@ class FollowupQuestion(BaseModel):
     held_for_name: str | None = Field(
         None, description="For a question held for a meeting: the meeting's name; none for a question held for a day."
     )
+    ready_since: str | None = Field(
+        None,
+        description="For an open question: the day it became ready to send (a date), or the day its hold ended when "
+        "that is later.",
+    )
     about: str | None
     options: list[Option]
     origin: Origin | None = Field(None, description="Where the question came from, for its link.")
@@ -875,6 +880,11 @@ class FollowupAction(BaseModel):
     )
     told: str | None
     told_days: int | None
+    ready_since: str | None = Field(
+        None,
+        description="For an action not yet told to this owner: the day it became ready to send them (a date): when "
+        "it was made, when they became an owner, or when it changed after they were told.",
+    )
     followed_up: str | None = Field(None, description="The day the person was last chased about it (a date).")
     chases: int = Field(0, description="How many times the person was chased about it.")
     on_hold: str | None = Field(
@@ -941,6 +951,11 @@ class FollowupSection(BaseModel):
         "someone else never does. `message` is empty then.",
     )
     to_send: int
+    ready_since: str | None = Field(
+        None,
+        description="The day the oldest of what is to send became ready to send (a date), so a stale batch shows; "
+        "none when nothing is to send.",
+    )
     nudge: NudgeView | None = Field(None, description="The follow-up message to draft, when anything is due one.")
 
 

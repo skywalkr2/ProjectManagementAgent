@@ -2,11 +2,15 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
+import { nextMonday } from "../lib/dates";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 
 // The window is wide, so a person's detail stands beside the list (design 7.13).
-beforeEach(() => besidePane());
+beforeEach(() => {
+  besidePane();
+  window.localStorage.clear();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 /** The detail pane beside the list: the chosen person's message and asks. */
@@ -902,6 +906,30 @@ test("Hold for later on a card holds a question for a day, with the cursor in th
   await waitFor(() => expect(calls.filter((c) => c.route === "POST questions/Q-1/held-for").at(-1)?.body).toEqual({ held_for: null }));
 });
 
+test("Hold for later has one choice for next Monday: a day hold for the coming Monday, at once and with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET followups": () => sections,
+    "GET people": () => [],
+    "GET today/agenda": () => [],
+    "POST questions/Q-1/held-for": () => ({ ok: "Q-1", previous: null }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
+  const choice = screen.getByRole("combobox", { name: "Hold it for" });
+  await user.selectOptions(choice, within(choice).getByRole("option", { name: /^Until next Monday, / }));
+  expect(screen.queryByLabelText("Send it on")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Hold for later" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/held-for")?.body).toEqual({ held_for: { on: nextMonday(new Date()) } }));
+  const [y, m, d] = nextMonday(new Date()).split("-").map(Number);
+  expect(new Date(y, m - 1, d).getDay()).toBe(1);
+  expect(await screen.findByText(/^Kept for later, until /)).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST questions/Q-1/held-for").at(-1)?.body).toEqual({ held_for: null }));
+});
+
 test("Hold for later offers the meetings the calendar keeps entries for, a series as its next one, and holds for the one picked", async () => {
   const user = userEvent.setup();
   const meeting = (extra: Partial<S["AgendaItemView"]>): S["AgendaItemView"] => ({
@@ -918,7 +946,7 @@ test("Hold for later offers the meetings the calendar keeps entries for, a serie
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
   const choice = await screen.findByRole("combobox", { name: "Hold it for" });
-  await waitFor(() => expect(within(choice).getAllByRole("option")).toHaveLength(3));
+  await waitFor(() => expect(within(choice).getAllByRole("option")).toHaveLength(4));
   expect(within(choice).getByRole("option", { name: "Print sync, the next one" })).toBeInTheDocument();
   expect(within(choice).getByRole("option", { name: /^One-off review, / })).toBeInTheDocument();
   expect(within(choice).queryByRole("option", { name: /No entry|Called off/ })).toBeNull();

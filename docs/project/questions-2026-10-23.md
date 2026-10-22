@@ -9,6 +9,17 @@ this file.
 Answered on 2026-10-22: recorded in `docs/decisions.md` ("The functional designer's answers on the 2026-10-23 questions"),
 written into the design (change log 174) and planned as roadmap item B-12.
 
+1. **"Who suggested it" in the inspector (B-12 batch 4, item 3; stopped for a definition).** The answer moved it from
+   Top priorities' second line to the inspector, but nothing on a Today line or its record says who suggested the item,
+   and "a line that comes from a suggestion" isn't defined: decisions and questions are always asked by the assistant,
+   and only owner and escalate lines carry a suggestion today (`OwnerSuggestionView`). What exists: a question's status
+   and answer, a promise's basis (said or inferred), and which change made a record (its run or the person).
+   - Decides: which lines count as a suggestion, and whether "who" is the change that made the item (the assistant's run,
+     a rule, or the person), which can be derived without a new field.
+   - Proposed: every line about an item the assistant made from an input says "Suggested by <assistant> from <source>"
+     in the inspector, with "no answer yet" while a question to the person is open; items the person made say nothing.
+   - Meanwhile: nothing is shown; Top priorities stays one line.
+
 ## For the owner
 
 0. **The gate before the rest of phase S.** The roadmap gates phase S on a week of real use: S1 (promises, reminders,

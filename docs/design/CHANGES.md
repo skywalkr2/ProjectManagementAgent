@@ -1027,6 +1027,37 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 179. The smaller answers: time zone names, US dollars, Hold until next Monday, Copy at once, ready since (2026-10-22; B-12 batch 4, built except "who suggested it")
+
+- **Time zone names (4, the date reader):** the setting `language.time_zone_abbreviations` also names the plain words
+  ("Eastern", "Central", "Mountain", "Pacific", each also with "time"), read in any case, so "5pm Central time" is read
+  as that zone's local time on that date, as "CST" already was in July. A short word the setting doesn't name ("IST") is
+  read in the workspace's own time zone when that zone goes by the word on that date; otherwise the words are marked to
+  check. People records keep no time zone, so there is no per-sender zone: the date reader takes a `sender_zone`
+  argument, and the applier passes the workspace's. Built: `tests/test_due_phrases.py` (the plain names, "CST" in July
+  and January, "IST" with and without a matching zone, the setting winning).
+- **US dollars, labeled plainly (7.9):** wording only. Where a currency is named, the words say "US dollars": the
+  project budget label, Settings' "AI spending" heading, the first-run spending screen's intro, the add-ons screen's intro
+  (prices) and its estimates' hint. "$0.80" stays. Built: `web/src/wording/wording.test.ts` ("amounts are labeled as US
+  dollars…"), `web/src/components/Setup.test.tsx`.
+- **Hold until next Monday (7.5):** a choice in Later's hold form, for one question or a whole message: a day hold
+  through the existing `held_for` op for the coming Monday (never today), with Undo; on Monday it is in that day's batch.
+  Built: `web/src/components/FollowUps.test.tsx` ("one choice for next Monday"), `web/src/lib/dates.test.ts`,
+  `tests/test_followups_later.py` (a hold for a Monday returns that day).
+- **Copy at once on a message already seen (7.13):** the browser remembers, wrapped in `localStorage` and keyed by who the
+  message is for and a hash of its exact words, each message it has shown (`web/src/lib/seen-messages.ts`). Copy on a
+  line copies at once when that exact message was shown before, and shows it first when it is new, changed, or storage is
+  blocked. Built: `web/src/lib/seen-messages.test.ts`, `web/src/components/FollowUpsListDetail.test.tsx`.
+- **"Ready since <day>" on a message to send (7.13):** `FollowupSection.ready_since` (and on each question and action)
+  is the day, where the workspace is, its oldest ask became ready: a question's creation (ledger) or the day its hold
+  ended if later; an action's creation, the day its owner was added, or after something they were told changed. It is
+  derived from the ledger; no field was added to a record. The line says "ready since Tue" for the last six days and
+  "Oct 6" before that, and nothing for today. Built: `tests/test_followups_ready_since.py`,
+  `web/src/components/FollowUpsListDetail.test.tsx`, `web/src/lib/dates.test.ts`. *Not built:* the same words on Today's
+  send line.
+- **Not built, "who suggested it" in the inspector (7.7):** no field on a Today line or its record says who suggested
+  an item or whether a suggestion has an answer (see the roadmap).
+
 ## 178. Newer models, and a saved account's move to its service's own connection (2026-10-22; B-12 batch 2b, built)
 
 - **One rule for "newest" (6.16):** the family a tier's model belongs to is the catalog's own word; among a family's
@@ -1116,7 +1147,7 @@ yet follow, that it is *designed*, with its phase.
   them apart. *Built (B-12 batch 3), change 176.*
 - **Time zones (4, the date reader):** abbreviations and the plain names read as the zone's local time on the date; an
   ambiguous one ("IST") from the workspace's setting or the sender's zone, else marked to check. Calendar days for "within
-  <n> days" and the weekend as a range are confirmed. *The plain names and the sender's zone are not built yet.*
+  <n> days" and the weekend as a range are confirmed. *Built (B-12 batch 4), change 177.*
 - **Reminders' running record (6.32):** confirmed as built; telling sleep from closed waits for phase I.
 - **Stopped-work lines (7.7):** keep their second line.
 - **AI accounts (6.16):** thinking off only where the listing says so; a newer model is asked about once and watched weekly,
@@ -1124,11 +1155,11 @@ yet follow, that it is *designed*, with its phase.
   every run's reported usage, plus a measured fixed overhead for a command-line agent; a saved account moves to a native
   adapter only on a yes with a read-back of the identity it signs in as. *Not built yet.*
 - **Small screen items (7.9, 7.7, 7.5):** US dollars, labeled plainly; no second line on Top priorities (who suggested it
-  is in the inspector); "Hold until next Monday" in Later now. *Not built yet.*
+  is in the inspector); "Hold until next Monday" in Later now. *Built apart from the inspector line (B-12 batch 4), change 177.*
 - **A held message (6.35, 7.5):** confirmed as built: a to-do in a held message isn't held (the limit governs who may see
   it, not when it is done); singling one reader out of a group draft waits for S1b.
 - **List | detail (7.13):** Copy copies at once when the person has seen this exact message unchanged, and shows it first
-  only when it is new or changed; a message to send says "ready since <day>". *Not built yet.*
+  only when it is new or changed; a message to send says "ready since <day>". *Built (B-12 batch 4), change 177.*
 
 ## 173. Every view swept for internal words, a throttled read says until when, and three screen fixes (2026-10-22; B-7, S1-3, built)
 

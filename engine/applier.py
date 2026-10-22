@@ -3281,6 +3281,7 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
         phrase_words=settings.due_phrase_words,
         number_words=settings.due_number_words,
         time_zones=settings.time_zone_abbreviations,
+        sender_zone=zone(ctx.cfg),
         holidays=load_holidays(settings.holiday_calendar or language),
     )
     day = found.end or found.start

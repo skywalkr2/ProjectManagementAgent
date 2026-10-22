@@ -83,6 +83,20 @@ def test_a_question_held_for_a_date_is_out_of_to_send_until_that_day(env):
     assert back.to_send == to_send_before
 
 
+def test_a_question_held_for_the_coming_monday_comes_back_in_that_days_batch(env):
+    _, cfg, store = env
+    q = _question(store)
+    wednesday = datetime(2026, 10, 14, tzinfo=UTC).date()
+    monday = wednesday + timedelta(days=5)
+    assert monday.weekday() == 0
+    assert hold_question(store, q, {"on": monday.isoformat()}, today=wednesday) is None
+    for before in (wednesday, wednesday + timedelta(days=4)):
+        assert all(x["id"] != q for x in _section(store, cfg, before).questions)
+    assert any(x["id"] == q for x in _section(store, cfg, wednesday).later)
+    on_monday = _section(store, cfg, monday)
+    assert any(x["id"] == q for x in on_monday.questions) and all(x["id"] != q for x in on_monday.later)
+
+
 def test_a_question_held_for_a_meeting_waits_for_that_meetings_day_and_names_it(env):
     _, cfg, store = env
     q = _question(store)

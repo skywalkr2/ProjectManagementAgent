@@ -7071,6 +7071,18 @@
             "title": "Project Name",
             "type": "string"
           },
+          "ready_since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an action not yet told to this owner: the day it became ready to send them (a date): when it was made, when they became an owner, or when it changed after they were told.",
+            "title": "Ready Since"
+          },
           "side": {
             "anyOf": [
               {
@@ -7243,6 +7255,18 @@
             "description": "The projects it is about, by name, joined with commas.",
             "title": "Project Name"
           },
+          "ready_since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an open question: the day it became ready to send (a date), or the day its hold ended when that is later.",
+            "title": "Ready Since"
+          },
           "sent": {
             "anyOf": [
               {
@@ -7365,6 +7389,18 @@
             },
             "title": "Questions",
             "type": "array"
+          },
+          "ready_since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the oldest of what is to send became ready to send (a date), so a stale batch shows; none when nothing is to send.",
+            "title": "Ready Since"
           },
           "to_send": {
             "title": "To Send",

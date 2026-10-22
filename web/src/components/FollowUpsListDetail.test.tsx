@@ -8,10 +8,16 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { useShortcuts } from "../lib/keys";
+import { localDate } from "../lib/dates";
+import { markMessageSeen } from "../lib/seen-messages";
 import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => window.localStorage.clear());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const question = (id: string, title: string, extra: Partial<S["FollowupQuestion"]> = {}): S["FollowupQuestion"] => ({
   id,
@@ -102,6 +108,70 @@ describe("beside the list", () => {
     const box = within(pane).getByRole("textbox", { name: /Message to Casey Moor/ });
     await waitFor(() => expect(box).toHaveFocus());
     expect(await navigator.clipboard.readText()).toBe("");
+  });
+
+  test("Copy on a line copies at once when that exact message was opened before, and shows it first when it is new or changed", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes());
+    renderApp(<FollowUps />);
+    await screen.findByRole("complementary", { name: "Ana Person" });
+    // Robin's message is opened by choosing the line; then another line is chosen, so Robin's is not shown.
+    await user.click(await line("Robin Sample"));
+    await screen.findByRole("complementary", { name: "Robin Sample" });
+    await user.click(await line("Casey Moor"));
+    await screen.findByRole("complementary", { name: "Casey Moor" });
+    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy 1" }));
+    expect(await navigator.clipboard.readText()).toBe(sections[1].message);
+    expect(within(await line("Robin Sample")).getByRole("button", { name: "Mark sent" })).toBeInTheDocument();
+    // The pane still shows the chosen line: copying at once did not move the choice.
+    expect(chosenId()).toBe("PER-3");
+  });
+
+  test("a message opened before in another wording is shown first, not copied", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes());
+    markMessageSeen("PER-3", "Hi Casey Moor,\n\nAn older question\n\nThanks!");
+    renderApp(<FollowUps />);
+    await screen.findByRole("complementary", { name: "Ana Person" });
+    await user.click(within(await line("Casey Moor")).getByRole("button", { name: "Copy 1" }));
+    const pane = await screen.findByRole("complementary", { name: "Casey Moor" });
+    await waitFor(() => expect(within(pane).getByRole("textbox", { name: /Message to Casey Moor/ })).toHaveFocus());
+    expect(await navigator.clipboard.readText()).toBe("");
+  });
+
+  test("with browser storage blocked the page works and Copy on a line shows the message first", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    fakeApi(routes());
+    renderApp(<FollowUps />);
+    await screen.findByRole("complementary", { name: "Ana Person" });
+    await user.click(await line("Robin Sample"));
+    await screen.findByRole("complementary", { name: "Robin Sample" });
+    await user.click(await line("Casey Moor"));
+    await user.click(within(await line("Robin Sample")).getByRole("button", { name: "Copy 1" }));
+    const pane = await screen.findByRole("complementary", { name: "Robin Sample" });
+    await waitFor(() => expect(within(pane).getByRole("textbox", { name: /Message to Robin Sample/ })).toHaveFocus());
+    expect(await navigator.clipboard.readText()).toBe("");
+  });
+
+  test("a line to send says since when its oldest ask has been ready, as a weekday for a few days and a date after that, and nothing when it is new", async () => {
+    const ago = (days: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return localDate(d);
+    };
+    const weekday = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(new Date(`${ago(3)}T12:00:00`));
+    fakeApi(routes(() => [person("PER-1", "Ana Person", { ready_since: ago(0) }), person("PER-2", "Robin Sample", { ready_since: ago(3) }), person("PER-3", "Casey Moor", { ready_since: ago(30) })]));
+    renderApp(<FollowUps />);
+    expect(await line("Robin Sample")).toHaveTextContent(`1 to send · ready since ${weekday}`);
+    expect(await line("Casey Moor")).toHaveTextContent(/1 to send · ready since [A-Z][a-z]{2} \d{1,2}/);
+    expect(await line("Ana Person")).not.toHaveTextContent("ready since");
+    expect(document.body.textContent).not.toMatch(/ready since \d{4}-/);
   });
 
   test("Mark sent, from the detail, records the message and the person leaves the list, so the next is chosen", async () => {

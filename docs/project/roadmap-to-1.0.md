@@ -917,6 +917,14 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     (S1-3); US dollars labeled plainly (B-6a); Top priorities' "who suggested it" in the inspector (B-6b); "Hold until next
     Monday" in Later (B-6a); Copy at once on a message already seen unchanged, and "ready since <day>" on a message to send
     (B-6b).
+    *Built (batch 4, change 177):* the plain zone names and "IST" read in the workspace's own zone when it goes by the word
+    (`tests/test_due_phrases.py`; people records keep no zone, so the sender's zone is the workspace's); "US dollars" in the
+    words where a currency is named (`web/src/wording/wording.test.ts`); "Until next Monday" in the hold form
+    (`web/src/components/FollowUps.test.tsx`, `tests/test_followups_later.py`); Copy at once on a message already shown
+    unchanged (`web/src/lib/seen-messages.test.ts`, `web/src/components/FollowUpsListDetail.test.tsx`); "ready since Tue"
+    on the Follow-ups line, kept from the ledger (`tests/test_followups_ready_since.py`).
+    *Left:* Top priorities' "who suggested it" in the inspector: no field on a Today line or its record says who suggested an
+    item or whether a suggestion has an answer; "ready since" on Today's send line.
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings

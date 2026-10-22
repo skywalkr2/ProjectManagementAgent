@@ -96,6 +96,8 @@ class Section:
     actions: list[dict[str, Any]] = field(default_factory=list)
     message: str = ""
     to_send: int = 0
+    #: The day the oldest of what is to send became ready to send, where the workspace is; none when nothing is.
+    ready_since: str | None = None
     nudge: Nudge | None = None
 
 
@@ -171,6 +173,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     project_links = {p.id: p.data.get("links", []) for p in store.read().list("project")}
     project_parents = {p.id: projects.get(p.data.get("parent") or "") for p in store.read().list("project")}
     by_person: dict[str, Section] = {}
+    made = reader.creators("question")
 
     def section(pid: str) -> Section:
         if pid not in by_person:
@@ -191,10 +194,15 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
         waiting = max(0, (today - last_word).days) if last_word else None
         held_until, held_name = held_until_day(store.read(), d.get("held_for"), today, here)
         later = d["status"] == "open" and held_until is not None and held_until > today
+        # An open question is ready to send from the day it was made, or from the day its hold ended if that is later.
+        ready = _day(made[q.id][1], here) if q.id in made else None
+        if ready and held_until is not None and held_until.isoformat() > ready:
+            ready = held_until.isoformat()
         (section(d["to"]).later if later else section(d["to"]).questions).append(
             {
                 "held_until": held_until.isoformat() if later and held_until else None,
                 "held_for_name": held_name if later else None,
+                "ready_since": ready,
                 "id": q.id,
                 "side": row_side,
                 "title": d["title"],
@@ -218,6 +226,8 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     open_actions = [a for a in store.read().list("action") if a.data["status"] == "open"]
     history = store.read().field_changes("action", TOLD_FIELDS) if any(a.data.get("told") for a in open_actions) else {}
     view = store.read()
+    made_actions = view.creators("action")
+    owner_changes = view.field_changes("action", ("owners",))
     for a in open_actions:
         d = a.data
         row_side = sides.side_of_item(view, cfg, a)
@@ -225,7 +235,8 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
             if owner["person"] != people.pm and stance_of(view, cfg.steward, owner["person"]) in UNTOLD_STANCES:
                 continue  # nothing is drafted to someone the person only watches or reports to (design 6.34)
             told = d.get("told", {}).get(owner["person"])
-            if told and changed_since_told(history.get(a.id, []), owner["person"], d):
+            reset = bool(told) and changed_since_told(history.get(a.id, []), owner["person"], d)
+            if reset:
                 told = None  # what they were told is out of date, so they need telling again
             chases = (d.get("followed_up") or {}).get(owner["person"]) or []
             last_chase = str(max(chases)) if chases else None
@@ -249,6 +260,16 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                     "notes": d.get("notes") or None,
                     "links": project_links.get(d.get("project"), []),
                     "told": told,
+                    "ready_since": None
+                    if told
+                    else _ready_day(
+                        history.get(a.id, []),
+                        owner_changes.get(a.id, []),
+                        made_actions.get(a.id),
+                        owner["person"],
+                        reset,
+                        here,
+                    ),
                     "first_told": _first_told(history.get(a.id, []), owner["person"], told),
                     "told_days": told_days,
                     "followed_up": last_chase,
@@ -273,6 +294,10 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
         s.actions.sort(key=lambda a: (("9999" if a["due_check"] else a["due"]) or "9999", a["text"]))
         if not s.is_pm:
             s.to_send = sum(q["status"] == "open" for q in s.questions) + sum(a["told"] is None for a in s.actions)
+            days = [q["ready_since"] for q in s.questions if q["status"] == "open"] + [
+                a["ready_since"] for a in s.actions if a["told"] is None
+            ]
+            s.ready_since = min((x for x in days if x), default=None)
             s.message = compose(s, cfg, people)
             s.nudge = compose_nudge(s, cfg, people, today)
     settled: list[dict[str, str]] | None = None
@@ -286,6 +311,27 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
 def _day(stamp: str, here: tzinfo) -> str:
     """The day a stored time falls on where the workspace is, as an ISO date (a bare day stays as it is)."""
     return local_day(datetime.fromisoformat(stamp), here).isoformat() if "T" in stamp else stamp[:10]
+
+
+def _ready_day(
+    history: list[dict[str, Any]],
+    owner_history: list[dict[str, Any]],
+    created: tuple[str, str] | None,
+    person: str,
+    reset: bool,
+    here: tzinfo,
+) -> str | None:
+    """The day an action became ready to send to `person` where the workspace is, from the ledger: the day it was
+    made, or the day they were made an owner of it if that is later; after something they were told changed, the day of
+    that change (the latest change to its words or its date). None when the ledger has no entry for it."""
+    days = [_day(created[1], here)] if created else []
+    for row in owner_history:
+        before = {o.get("person") for o in row["before"] or []}
+        if person in {o.get("person") for o in row["after"] or []} and person not in before:
+            days.append(_day(row["at"], here))
+    if reset:
+        days.append(max((_day(row["at"], here) for row in history if row["field"] in ("text", "due")), default=""))
+    return max((x for x in days if x), default=None)
 
 
 def _first_told(history: list[dict[str, Any]], person: str, told: Any) -> str | None:
