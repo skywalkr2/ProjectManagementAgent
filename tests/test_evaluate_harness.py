@@ -634,7 +634,7 @@ def test_forbid_can_name_who_a_promise_must_not_be_owed_to(monkeypatch):
     assert not result.passed and result.forbidden == [f"op=action.add, promised_to={forbidden}"]
 
 
-def test_a_starting_record_with_the_id_of_one_the_workspace_holds_sets_its_fields(tmp_path):
+def test_a_starting_record_marked_update_sets_its_fields_on_the_record_the_workspace_holds(tmp_path):
     from engine.evaluate import _create_starting_records
     from engine.storage import Store
     from engine.workspace import init_workspace
@@ -643,7 +643,8 @@ def test_a_starting_record_with_the_id_of_one_the_workspace_holds_sets_its_field
     store = Store(ws.db_path, cfg=ws.config(env={}))
     try:
         person = store.read().list("person")[0]
-        _create_starting_records(store, "case", [{"kind": "person", "id": person.id, "fields": {"role": "Tester"}}])
+        given = {"kind": "person", "id": person.id, "update": True, "fields": {"role": "Tester"}}
+        _create_starting_records(store, "case", [given])
         updated = store.read().get("person", person.id)
         assert updated.data["role"] == "Tester" and updated.data["full_name"] == person.data["full_name"]
     finally:

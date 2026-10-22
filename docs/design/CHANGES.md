@@ -1030,8 +1030,8 @@ yet follow, that it is *designed*, with its phase.
 ## 156. The person's own promise in sent mail is checked (2026-10-21; B-10, built)
 
 - `own-promise-missed`: mail the person sent with their own "I'll ..." answered with no action of theirs quoting it
-  goes back once. The promise cases now give the person the address their test mail comes from (a starting record with
-  an existing id sets fields on it), so the checks that read the person's own mail run in those cases. A team's "we'll" said to the person is no longer scored
+  goes back once. The promise cases now give the person the address their test mail comes from (a starting record
+  marked `update` sets fields on one the workspace holds), so the checks that read the person's own mail run in those cases. A team's "we'll" said to the person is no longer scored
   on who it is owed to. Design 6.33.
 
 ## 155. A service that no longer lets a program be used with the person's kind of account (2026-10-21; B-11c part 2d, built)

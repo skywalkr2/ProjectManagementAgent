@@ -4,6 +4,7 @@
 # The person's own address, so their own sent mail reads as theirs.
 - kind: person
   id: PER-1
+  update: true
   fields:
     how_to_reach: {email: avery.lane@example.com}
 - kind: person

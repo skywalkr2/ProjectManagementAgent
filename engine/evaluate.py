@@ -279,7 +279,8 @@ def starting_records(template: Path, case: dict[str, Any]) -> list[dict[str, Any
 
 def _create_starting_records(store: Store, case_id: str, records: list[dict[str, Any]]) -> None:
     """Create a case's starting records the way the fixture loader does, people and projects before what refers to
-    them. A record with the id of one the workspace already holds sets the fields it gives on that record."""
+    them. A record marked `update: true` sets the fields it gives on the record the workspace already holds with its id;
+    any other record whose id is taken is a mistake in the case, said as one."""
     order = list(REGISTRY)
     ordered = sorted(records, key=lambda r: order.index(r["kind"]) if r["kind"] in order else len(order))
     unknown = sorted({r["kind"] for r in records if r["kind"] not in store.plugins.records})
@@ -289,8 +290,8 @@ def _create_starting_records(store: Store, case_id: str, records: list[dict[str,
         with store.transaction(notify=False) as tx:
             for record in ordered:
                 fields = dict(record.get("fields") or {})
-                existing = tx.get(record["kind"], record["id"]) if record.get("id") else None
-                if existing is not None:  # a record the workspace already holds: the case gives some of its fields
+                existing = tx.get(record["kind"], record["id"]) if record.get("update") and record.get("id") else None
+                if existing is not None:  # marked "update": the case sets some fields on a record the workspace holds
                     tx.update(record["kind"], existing.id, fields, _STARTING, read_version=existing.version)
                     continue
                 tx.create(record["kind"], fields, _STARTING, record_id=record.get("id"))
