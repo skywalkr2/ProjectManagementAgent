@@ -229,8 +229,9 @@ test("a stopped hand-in keeps Try again as its action and offers Dismiss in its 
     "POST requests/REQ-9/undismiss": () => ({ ok: "REQ-9", version: 6 }),
   });
   renderApp(<WhatChanged />);
-  expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: /More actions for/ }));
+  expect((await screen.findAllByRole("button", { name: "Try again" }))[0]).toBeInTheDocument();
+  // The line's menu: the first in the page, whether or not the chosen change's pane beside it has drawn yet.
+  await user.click(screen.getAllByRole("button", { name: /More actions for/ })[0]);
   await user.click(await screen.findByRole("menuitem", { name: "Dismiss" }));
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST requests/REQ-9/dismiss")?.body).toEqual({ read_version: 4 }),
