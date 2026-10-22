@@ -43,7 +43,7 @@ test.describe("meetings and people", () => {
 
     await line.getByRole("button", { name: "Open prep" }).click();
     await expect(page.getByRole("heading", { level: 1, name: found.coming.title })).toBeVisible();
-    const prep = page.getByRole("region", { name: "Prep" });
+    const prep = page.getByRole("region", { name: "Before the meeting" });
     await expect(prep).toContainText(found.guest.name);
     // What is open with them is shown with the words it was made from.
     await expect(prep).toContainText(found.promise.text);

@@ -90,23 +90,25 @@ def test_the_default_stance_decides_for_someone_with_none(env):
 def test_a_watched_persons_action_is_not_on_the_follow_up_line_either(env):
     _, cfg, store = env
     them = other(cfg)
-    # Told eleven days ago with no date: past the follow-up rule's ten days, short of the promise rule's fourteen, so
-    # only the follow-up line would name it.
+    # Told long ago with no date: past the one undated rule both the follow-up and the promise lines read. A person you
+    # manage or work alongside gets the follow-up; one you report to gets only a waiting-on line of its own, never a
+    # follow-up (design 6.34); one you only watch gets no line at all.
+    days = cfg.ui.followups.undated_after_days + 1
     undated = make(
         store,
         [them],
         due=None,
-        made=TODAY - timedelta(days=11),
-        told={them: (TODAY - timedelta(days=11)).isoformat()},
+        made=TODAY - timedelta(days=days),
+        told={them: (TODAY - timedelta(days=days)).isoformat()},
     )
     set_stance(store, them, "manage")
-    assert chasing(env, undated) == ["nudge"]
+    assert "nudge" in chasing(env, undated)
     set_stance(store, them, "report_to")
-    assert chasing(env, undated) == []
+    assert chasing(env, undated) == ["promise"]
     set_stance(store, them, "watch")
     assert chasing(env, undated) == []
     set_stance(store, them, "alongside")
-    assert chasing(env, undated) == ["nudge"]
+    assert "nudge" in chasing(env, undated)
 
 
 @pytest.mark.parametrize("stance", ["manage", "alongside", "report_to", "watch"])

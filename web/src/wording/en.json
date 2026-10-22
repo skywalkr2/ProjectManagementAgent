@@ -4717,7 +4717,7 @@
   "meeting.touch.to": "Last in touch: a message to them on {date}",
   "meeting.touch.met": "Last in touch: you met on {date}",
   "meeting.touch.none": "No contact on file yet.",
-  "meeting.prep.heading": "Prep",
+  "meeting.prep.heading": "Before the meeting",
   "meeting.prep.alone": "Nobody else is on this calendar entry.",
   "meeting.prep.nothing_open": "Nothing is open with {name}.",
   "meeting.prep.more.one": "1 more open thing isn't listed.",
