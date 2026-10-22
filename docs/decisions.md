@@ -25,6 +25,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   `POST /api/ai/model-watch/{account}/{state}/not-now`; Switch back and Keep it also settle a move made on its own.
   Change log: section 178.
 
+## 2026-10-22: Who made an item is said in the inspector, suggested apart from added, and never leaves the person's screens
+
+- **Decided (functional designer, through the owner):** kind of rule: a core concept, no setting. "Who" is whatever made
+  the item, from the change that made it (no new field). Suggested (waiting for the person's yes) reads "Suggested by
+  <assistant> from <source> · no answer yet", then "you kept it, <day>"; added (applied, with Undo) reads "Added by
+  <assistant> from <source>", plus "worked out" when inferred; a rule is named; the person's own items say nothing; the
+  source is one click to the input; the attribution never appears in anything copied, shared or sent.
+- **Why:** "suggested" and "added" mean different things to the person; in the designer's running version, the person
+  needed to reach the source in one click, and an assistant's name showing on someone else's pages was a real failure.
+- **Impact:** design 7.7; the Today inspector and the API's line detail; the outward check covers the attribution.
+  Change log: section 181.
+
 ## 2026-10-22: Every outward act is a record with states, and the person's yes covers a fingerprint
 
 - **Decided (main session, designing S1b-1 from design 6.3 and 6.12 and the designer's F7):** kind of rule: a core concept

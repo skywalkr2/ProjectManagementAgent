@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 181. Who made an item, in the inspector (2026-10-22; designed)
+
+- **Design 7.7:** "who" is what made the item (the assistant's run, a rule, the person), from the change that made it,
+  with no new field; *suggested* items (waiting for a yes) and *added* items (already applied, with Undo) are worded
+  apart; a rule is named; the person's own items say nothing; the source is one click to the input; the attribution
+  never leaves the person's own screens. *Not built yet* (B-12 batch 4, item 3).
+
 ## 180. The outward act and the publisher, built in part (2026-10-22; S1b-1a, built)
 
 - **Design 6.12:** the `act` record, its outbound-tier ops, the fingerprint, the callouts, the publisher with its attempt
