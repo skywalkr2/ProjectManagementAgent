@@ -2143,7 +2143,7 @@ hand, an automatic close pulled back, and an edited follow-up message (a draft t
 | kept / discarded / retired | the person keeps or discards a proposed piece of what the assistant learned, or retires an active one (6.22). Refs: the entry; no note (a discard's reason stays on the entry). Undoing records no signal. **Built**: `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`, `tests/test_knowledge_records.py::test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`, `tests/test_knowledge_records.py::test_retire_ends_an_active_entry_and_undo_makes_it_active_again` |
 | edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch. *As built:* an edit through `record.edit` or `record.set` of an action's text, due, owners or project, a question's title, text, recipient, stake or project, a fact's key, value, date or project, or a calendar entry's title, dates or project, or a note's project, whose previous value the assistant set, records one `edited` signal per record naming the change and run that set it; a record another signal of the same change already names is left alone. A question's project is its `projects` list (the field was named `project`, which a question doesn't have, so filing a question under a project recorded nothing; fixed with the Unfiled group, 7.14). **Built**: `tests/test_hold_drop_fold.py::test_the_persons_edit_of_what_the_assistant_set_is_an_edited_correction_that_queues_learning` |
 | answered the assistant | the person writes an answer to a question the assistant asked them. Refs: the question; its changeset and run. Learned from at once. A bare confirmation, or an answer about someone else, records none. **Built**: `tests/test_learn_input.py::test_an_answer_to_the_assistants_question_records_a_signal_and_queues_learning_at_once` |
-| repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item: its task kind, record type, filter and project (with ancestors). Not a record: computed from the signals and the log. Corrections the person took back, corrections of something no run made, and Keep, Discard, Retire, Narrow and "Just this time" don't count; an entry with no target never counts as repeated. **Built**: `tests/test_quality.py::test_a_correction_repeats_only_when_the_run_was_given_knowledge_whose_target_matched_the_corrected_item` |
+| repeat correction | any of the above except a drop (work no longer needed says nothing about the assistant; drops, misses and declined changes are counted apart, below), on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item: its task kind, record type, filter and project (with ancestors). Not a record: computed from the signals and the log. Corrections the person took back, corrections of something no run made, and Keep, Discard, Retire, Narrow and "Just this time" don't count; an entry with no target never counts as repeated. **Built**: `tests/test_quality.py::test_a_correction_repeats_only_when_the_run_was_given_knowledge_whose_target_matched_the_corrected_item` |
 
 The repeat-correction rate, not the raw correction rate, says whether the assistant is learning; the quality panel shows it
 next to the others, week by week. Refusals are counted per check too, and a check that refuses often brings its seed
@@ -2153,7 +2153,7 @@ given, so it is a checked citation, not the model's say-so. If the first rate do
 second stays near zero, the knowledge isn't reaching the runs that need it. *As built,* `GET /api/quality` reports both
 per task kind over `knowledge.quality_window_days` (28), the repeat-correction rate per week only for weeks with at least
 `knowledge.min_corrections_per_week` (10) corrections, and the weekly missing-op list from each changeset's `missing`
-(6.13); only the run that produced a changeset counts. The screen is phase B's. **Built:** `tests/test_quality.py`. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
+(6.13); only the run that produced a changeset counts. The screen is phase B's. **Built:** `tests/test_quality.py`. Missed, declined and dropped are also reported each on its own (`apart`, window and weeks), so a week of drops never reads as a week of misses: **built:** `tests/test_quality.py::test_the_quality_route_gives_missed_declined_and_dropped_apart`. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
 
 - **Quality panel** (Admin tab): rates over time by task kind, provider and model (share of changesets sent back or undone,
   share of questions dropped, auto-close pull-back rate, draft edit size), with each figure linking to its examples.
@@ -2477,12 +2477,17 @@ It returns **at most one** proposal op, "nothing to generalize", or one question
   nothing) is never "nothing to generalize": an answer with no op goes back once (`miss-left-unlearned`, *built*).
 - The packet says what each kind of correction means: a declined change was the wrong change, and its note is the
   change's own label, not the person's words; a drop asks why, from the note or the input.
-- **Missed, declined and dropped are three signals, never one** (designer, 2026-10-22; change log 174; *not built yet*):
+- **Missed, declined and dropped are three signals, never one** (designer, 2026-10-22; change log 174, 176; *built*):
   *missed* means the assistant failed to find something, and teaches extraction or asks; *declined* means not the
   person's, or not a promise, and teaches relevance or routing; *dropped* means no longer needed, and teaches nothing
   unless the person's own words give a reason that generalizes (a drop with no note is not learned from at all). The
   Quality measures (6.20) count the three apart, so a week of drops never reads as a week of misses, and a drop never
-  counts as a correction of the assistant. When no run made the
+  counts as a correction of the assistant. *As built:* the packet and the prompt say what each teaches; a `dropped`
+  signal with no note queues no learning (the draft set aside records none); `GET /api/quality` reports `apart`, the
+  three counted apart for the window and each week; `dropped` is not in the correction count or the repeat-correction
+  rate (`tests/test_learn_correction.py::test_a_drop_with_no_reason_is_not_queued_for_learning_and_one_with_a_reason_is`,
+  `tests/test_quality.py::test_missed_declined_and_dropped_are_counted_apart_for_each_week_and_never_added_together`).
+  When no run made the
   corrected work, the packet says so and a lesson names no kind of work (built:
   `tests/test_learn_correction.py::test_a_lesson_from_a_correction_no_run_made_names_no_kind_of_work`).
 

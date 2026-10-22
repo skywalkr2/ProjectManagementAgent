@@ -4719,6 +4719,26 @@ class QualityMissedWeek(BaseModel):
     count: int = Field(description="How many times they said the assistant missed something that week.")
 
 
+class QualityApartWeek(BaseModel):
+    """Missed, declined and dropped for one week, each counted on its own (design 6.20, 6.22)."""
+
+    week: date = Field(description="The Monday of the week, in the person's time zone.")
+    week_end: date = Field(description="The Sunday of the week.")
+    missed: int = Field(description="Times the person said the assistant failed to find something.")
+    declined: int = Field(description="Held changes the person declined: not theirs, or not a promise.")
+    dropped: int = Field(description="Questions and actions the person dropped as no longer needed.")
+
+
+class QualityApart(BaseModel):
+    """The three signals the person gives, never added together: missed, declined and dropped. A drop is not a
+    correction of the assistant, so it is in no correction count and not in the repeat-correction rate."""
+
+    missed: int = Field(description="Times in the window the person said the assistant failed to find something.")
+    declined: int = Field(description="Held changes declined in the window: not the person's, or not a promise.")
+    dropped: int = Field(description="Questions and actions dropped in the window as no longer needed.")
+    weeks: list[QualityApartWeek] = Field(description="The same for each week of the window, oldest first.")
+
+
 class QualityCloseDay(BaseModel):
     day: date = Field(description="The day, on the person's own clock.")
     total: int = Field(description="Closes made that day.")
@@ -4817,6 +4837,9 @@ class QualityView(BaseModel):
         default_factory=list,
         description='"Missed one" for each person and week, oldest week first; a person with any in the window has a '
         "row for every week, so a week with none is zero. It should fall from week to week.",
+    )
+    apart: QualityApart = Field(
+        description="Missed, declined and dropped, each counted on its own, over the window and for each week."
     )
     since: date = Field(description="The first day of the window the gate-week measures cover.")
     until: date = Field(description="The last day of the window: today, on the person's own clock.")

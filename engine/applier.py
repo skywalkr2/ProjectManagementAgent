@@ -2851,7 +2851,7 @@ def _apply_op(
             if sha:
                 sent_version.keep_work_in(tx, ctx.store, owner.id, _read(ctx.store, sha), ctx.store.clock())
         if version.data["status"] == "discarded":
-            _record_draft_correction(tx, ctx, pending, "dropped", "set the draft aside, rejecting every change")
+            _record_draft_correction(tx, ctx, pending, "dropped", None)
         elif "reject" in op.choices.values():
             from engine.texts import read_text
 
@@ -2862,7 +2862,7 @@ def _apply_op(
 
         pending = tx.get("text_version", op.version)
         discard(tx, w, op.version, op.read_version)
-        _record_draft_correction(tx, ctx, pending, "dropped", "set the draft aside")
+        _record_draft_correction(tx, ctx, pending, "dropped", None)
         return [{"kind": "text_version", "id": op.version}], None
     if isinstance(op, ProjectAddOp):
         data = {"name": op.name.strip(), "summary": op.summary, "parent": op.parent, "language": op.language}
@@ -3429,11 +3429,11 @@ def _review_reply(tx: Tx, op: ActionReplyOp, ctx: Context, w: WriteContext) -> l
     return [{"kind": "action", "id": op.id}]
 
 
-def _record_draft_correction(tx: Tx, ctx: Context, pending: Any, signal: str, note: str) -> None:
+def _record_draft_correction(tx: Tx, ctx: Context, pending: Any, signal: str, note: str | None) -> None:
     """The person's own review of a draft the assistant wrote that changes it or sets it aside: a `draft_edited` signal
-    with the text as they kept it, or a `dropped` one, naming the record the text belongs to and the changeset and run
-    that wrote it. Taking a draft as it is corrects nothing. It is written apart from the change, so Undo leaves it as
-    it was."""
+    with the text as they kept it, or a `dropped` one with no note (setting a draft aside gives no reason), naming the
+    record the text belongs to and the changeset and run that wrote it. Taking a draft as it is corrects nothing. It is
+    written apart from the change, so Undo leaves it as it was."""
     if pending is None or pending.data.get("source") != "draft" or not pending.data.get("run"):
         return
     changeset, _ = _made_by(tx, "text_version", pending.id)

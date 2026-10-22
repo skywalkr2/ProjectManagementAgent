@@ -9,6 +9,8 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     Ok,
+    QualityApart,
+    QualityApartWeek,
     QualityCloseDay,
     QualityCloses,
     QualityCountBefore,
@@ -43,9 +45,10 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
     def quality_view() -> QualityView:
         """The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week
         (only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,
-        grouped by wording with counts, and "Missed one" for each person and week (design 6.32), over the configured
-        window; and the gate week's instruments, each a count with its denominator for each day and for the window:
-        silent closes out of all closes, wrong endings out of endings made, the person's own missed out of present,
+        grouped by wording with counts, "Missed one" for each person and week (design 6.32), and missed, declined and
+        dropped each counted on its own (a drop is not a correction of the assistant), over the configured window;
+        and the gate week's instruments, each a count with its denominator for each day and for the window: silent
+        closes out of all closes, wrong endings out of endings made, the person's own missed out of present,
         and the replay set."""
         view = store.read()
         people = People(store, cfg)
@@ -56,6 +59,7 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
         shut = gate_measures.closes_measure(view, span, here)
         ended = gate_measures.endings_measure(view, view.ledger(kind="action"), span, here)
         person = people.pm
+        apart = quality.apart_per_week(view, now, days, here)
         counted = gate_measures.counts_measure(view, person, span)
         return QualityView(
             since=span.since,
@@ -102,6 +106,21 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
                     view, store.plugins.records, now, days, settings.min_corrections_per_week, here
                 )
             ],
+            apart=QualityApart(
+                missed=sum(w.missed for w in apart),
+                declined=sum(w.declined for w in apart),
+                dropped=sum(w.dropped for w in apart),
+                weeks=[
+                    QualityApartWeek(
+                        week=w.week,
+                        week_end=w.week + timedelta(days=6),
+                        missed=w.missed,
+                        declined=w.declined,
+                        dropped=w.dropped,
+                    )
+                    for w in apart
+                ],
+            ),
             missing=[
                 QualityMissingWeek(
                     week=w.week,

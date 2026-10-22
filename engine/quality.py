@@ -9,6 +9,8 @@ Plain functions over a read of the records, with no AI.
 - The repeat-correction rate, per kind of work and week: the corrections whose run had been given an active lesson or
   rule whose target matched the corrected item, over all the corrections of that kind of work that week. A week with
   fewer corrections than the configured minimum has no rate.
+- Missed, declined and dropped, each counted on its own for each week; a drop is not a correction of the assistant and
+  is not in the repeat-correction rate.
 - The missing-op list: what runs said they lacked, grouped by wording, week by week.
 - The first run on a fallback account, so its cards can say so.
 """
@@ -27,12 +29,12 @@ from engine.learn import NETTED_WAITING, kind_of_id, learn_request
 from engine.records import Scope
 
 #: The corrections that count: the person changed, undid or sent back what the assistant made. What the person does to
-#: what was learned (keep, discard, retire, narrow, just this time) is not one.
+#: what was learned (keep, discard, retire, narrow, just this time) is not one, and neither is a drop: work no longer
+#: needed says nothing about the assistant, so drops are counted apart (`apart_per_week`).
 CORRECTIONS = frozenset(
     {
         "sent_back",
         "undone",
-        "dropped",
         "reworded",
         "pulled_back",
         "draft_edited",
@@ -283,6 +285,35 @@ def missed_per_week(view: Any, now: datetime, days: int, here: tzinfo) -> list[M
             continue
         counts[(person, week_of(when, here))] += 1
     return [MissedWeek(p, week, counts[(p, week)]) for p in sorted({p for p, _ in counts}) for week in weeks]
+
+
+# ---- missed, declined and dropped, counted apart -------------------------------------------------------------------
+
+#: The three signals counted on their own, by the kind of signal each is recorded as.
+APART = {"missed": "missed", "declined": "held_declined", "dropped": "dropped"}
+
+
+@dataclass(frozen=True)
+class ApartWeek:
+    week: date  # the Monday
+    missed: int  # the assistant failed to find something
+    declined: int  # a held change was not the person's, or not a promise
+    dropped: int  # work no longer needed: not a correction of the assistant
+
+
+def apart_per_week(view: Any, now: datetime, days: int, here: tzinfo) -> list[ApartWeek]:
+    """How many times the person said each of the three over the last `days` days, for each week of the window, oldest
+    week first. The three are never added together: a week of drops is not a week of misses."""
+    start = now - timedelta(days=days)
+    by_kind = {kind: name for name, kind in APART.items()}
+    counts: dict[date, dict[str, int]] = {w: dict.fromkeys(APART, 0) for w in _weeks_in(now, days, here)}
+    for signal in view.list("signal"):
+        name = by_kind.get(signal.data["kind"])
+        when = at_of(signal.data["at"])
+        if name is None or when < start or when > now:
+            continue
+        counts[week_of(when, here)][name] += 1
+    return [ApartWeek(week, **found) for week, found in counts.items()]
 
 
 # ---- the missing-op list ---------------------------------------------------------------------------------------------

@@ -18,6 +18,7 @@ const quality = (over: Partial<View> = {}): View => ({
   repeat_corrections: [],
   missing: [],
   missed: [],
+  apart: { missed: 0, declined: 0, dropped: 0, weeks: [] },
   since: "2026-09-21",
   until: "2026-10-19",
   closes: { total: 0, silent: 0, days: [] },
@@ -35,6 +36,15 @@ const FULL = quality({
     { person: "PER-1", person_name: "Casey Example", week: "2026-10-12", week_end: "2026-10-18", count: 3 },
     { person: "PER-1", person_name: "Casey Example", week: "2026-10-19", week_end: "2026-10-25", count: 1 },
   ],
+  apart: {
+    missed: 1,
+    declined: 2,
+    dropped: 9,
+    weeks: [
+      { week: "2026-10-12", week_end: "2026-10-18", missed: 0, declined: 0, dropped: 0 },
+      { week: "2026-10-19", week_end: "2026-10-25", missed: 1, declined: 2, dropped: 9 },
+    ],
+  },
   replays: { count: 2, last_run: null },
 });
 
@@ -59,6 +69,7 @@ test("the screen has a section for each measure and shows the window's dates", a
     "Wrong endings",
     "Promises the app missed",
     "Missed one",
+    "Missed, declined and dropped",
     "Replays",
     "Using what it learned",
     "Corrections that repeated",
@@ -99,6 +110,17 @@ test("the other measures read in the same plain style", async () => {
   expect(within(section("quality-lacking")).getByText("an op to put an action on hold: said 2 times.")).toBeInTheDocument();
 });
 
+test("missed, declined and dropped are three lines of their own, so a week of drops never reads as misses", async () => {
+  show(FULL);
+  await loaded();
+  const apart = within(section("quality-apart"));
+  expect(apart.getByText("Missed: you said once that the assistant failed to find something.")).toBeInTheDocument();
+  expect(apart.getByText(/^Declined: you declined 2 changes it held for you/)).toBeInTheDocument();
+  expect(apart.getByText(/^Dropped: you dropped 9 questions and to-dos as no longer needed\. That is not a mistake of the assistant's\./)).toBeInTheDocument();
+  expect(apart.getByText("Oct 19 to Oct 25: missed 1, declined 2, dropped 9.")).toBeInTheDocument();
+  expect(apart.queryByText(/Oct 12 to Oct 18/)).not.toBeInTheDocument();
+});
+
 test("a screen with nothing to show says so in plain words in every section", async () => {
   show(quality());
   await loaded();
@@ -106,6 +128,7 @@ test("a screen with nothing to show says so in plain words in every section", as
   expect(within(section("quality-endings")).getByText("The assistant hasn't ended anything in this window.")).toBeInTheDocument();
   expect(within(section("quality-counts")).getByText("You haven't entered a count in this window.")).toBeInTheDocument();
   expect(within(section("quality-missed")).getByText("No one has said the assistant missed something in this window.")).toBeInTheDocument();
+  expect(within(section("quality-apart")).getByText("Nothing was missed, declined or dropped in this window.")).toBeInTheDocument();
   expect(within(section("quality-replays")).getByText("No misses have been kept as replays yet.")).toBeInTheDocument();
   expect(within(section("quality-knowledge")).getByText(/No work was given what you'd taught the assistant/)).toBeInTheDocument();
   expect(within(section("quality-repeats")).getByText("You haven't corrected the assistant in this window.")).toBeInTheDocument();

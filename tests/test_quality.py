@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -274,6 +274,64 @@ def test_what_runs_lacked_is_grouped_by_wording_with_counts_week_by_week(env):
     ]
     assert this[0].tasks == ["ask", "notes"] and len(this[0].changesets) == 2
     assert [g.count for g in found[1].groups] == [1]
+
+
+def drop_signals(store, kind: str, count: int, at=NOW, note: str | None = "No longer needed.") -> None:
+    for _ in range(count):
+        make(store, "signal", {"kind": kind, "refs": [], "note": note, "at": at.isoformat()})
+
+
+def test_a_drop_is_not_a_correction_of_the_assistant_and_leaves_the_counts_and_the_repeat_rate(env):
+    _, _, store = env
+    assert "dropped" not in quality.CORRECTIONS
+    assert {"held_declined", "missed", "sent_back"} <= quality.CORRECTIONS
+    entry = lesson(store, task_kinds=["notes"], records=["note"])
+    run = run_record(store, task="notes", given=[entry])
+    item = note(store)
+    changeset = changeset_record(store, run, task="notes", records=[("note", item)])
+    correction(store, run, changeset, kind="sent_back")
+    correction(store, run, changeset, kind="held_declined")
+    before = weeks(store, minimum=1)
+    for _ in range(5):
+        correction(store, run, changeset, kind="dropped")  # a week of drops of this run's work
+    after = weeks(store, minimum=1)
+    assert before == after, "five drops changed neither the corrections counted nor the repeats"
+    (week,) = after
+    assert (week.corrections, week.enough) == (2, True)
+
+
+def test_missed_declined_and_dropped_are_counted_apart_for_each_week_and_never_added_together(env):
+    _, _, store = env
+    drop_signals(store, "missed", 1)
+    drop_signals(store, "held_declined", 2)
+    drop_signals(store, "dropped", 9)
+    drop_signals(store, "dropped", 4, at=NOW - timedelta(weeks=1))
+    drop_signals(store, "sent_back", 3)  # a correction of another kind is in none of the three
+    drop_signals(store, "missed", 1, at=NOW - timedelta(days=90))  # outside the window
+    rows = quality.apart_per_week(store.read(), NOW, 28, UTC_ZONE)
+    by_week = {r.week: (r.missed, r.declined, r.dropped) for r in rows}
+    assert by_week[THIS_WEEK] == (1, 2, 9)
+    assert by_week[LAST_WEEK] == (0, 0, 4)
+    assert [r.week for r in rows] == sorted(by_week) and len(rows) == 5, "every week of the window, oldest first"
+
+
+def test_the_quality_route_gives_missed_declined_and_dropped_apart(tmp_path):
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    cfg = ws.config(env={}, flags={"storage.backups.automatic": False})
+    application = create_app(ws, cfg, "quality-token", ui_dist=tmp_path / "no-ui", start_worker=False)
+    with TestClient(application, headers={"Authorization": "Bearer quality-token"}) as client:
+        now = datetime.now(UTC)
+        store = application.state.store
+        drop_signals(store, "missed", 2, at=now)
+        drop_signals(store, "held_declined", 1, at=now)
+        drop_signals(store, "dropped", 7, at=now)
+        body = client.get("/api/quality").json()
+    apart = body["apart"]
+    assert (apart["missed"], apart["declined"], apart["dropped"]) == (2, 1, 7)
+    assert sum(w["dropped"] for w in apart["weeks"]) == 7 and sum(w["missed"] for w in apart["weeks"]) == 2
+    last = apart["weeks"][-1]
+    assert date.fromisoformat(last["week_end"]) - date.fromisoformat(last["week"]) == timedelta(days=6)
+    assert body["repeat_corrections"] == [], "drops and misses with no run are no repeat-correction week"
 
 
 def test_the_quality_route_reports_the_three_measures_and_the_default_gate_hides_a_small_week(tmp_path):

@@ -212,6 +212,29 @@ export function Quality(props: { onBack: () => void }) {
               )}
             </Section>
 
+            <Section id="quality-apart" title={t("quality.apart.title")} hint={t("quality.apart.hint")}>
+              {view.apart.missed + view.apart.declined + view.apart.dropped === 0 ? (
+                <Empty text={t("quality.apart.empty")} />
+              ) : (
+                <>
+                  <Days
+                    label={t("quality.apart.title")}
+                    rows={[
+                      tn("quality.apart.missed", view.apart.missed, {}),
+                      tn("quality.apart.declined", view.apart.declined, {}),
+                      tn("quality.apart.dropped", view.apart.dropped, {}),
+                    ]}
+                  />
+                  <Days
+                    label={t("quality.day_list")}
+                    rows={view.apart.weeks
+                      .filter((w) => w.missed + w.declined + w.dropped > 0)
+                      .map((w) => t("quality.apart.week", { from: monthDay(w.week), to: monthDay(w.week_end), missed: w.missed, declined: w.declined, dropped: w.dropped }))}
+                  />
+                </>
+              )}
+            </Section>
+
             <Section id="quality-replays" title={t("quality.replays.title")} hint={t("quality.replays.hint")}>
               {view.replays.count === 0 ? (
                 <Empty text={t("quality.replays.empty")} />

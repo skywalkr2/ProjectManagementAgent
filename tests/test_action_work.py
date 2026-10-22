@@ -234,6 +234,8 @@ def test_discarding_the_draft_is_a_signal_naming_the_action_and_the_run(env):
     assert signal.data["kind"] == "dropped" and signal.data["refs"] == [action]
     assert signal.data["run"] == draft.data["run"] and signal.data["changeset"]
     assert store.read().get("text_version", draft.id).data["status"] == "discarded"
+    assert not signal.data.get("note"), "setting a draft aside gives no reason, so there is nothing to learn from"
+    assert [r for r in store.read().list("request") if r.data["task"] == "learn-correction"] == []
 
 
 def test_accepting_the_draft_as_it_is_corrects_nothing(env):

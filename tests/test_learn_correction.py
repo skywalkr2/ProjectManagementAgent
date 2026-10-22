@@ -665,3 +665,61 @@ def test_a_lesson_from_a_correction_no_run_made_names_no_kind_of_work(env):
     run_learning(env, queued.id)
     assert "No run of the assistant made the work corrected" in asked[0].request
     assert len(asked) == 2 and "name no kinds of work" in asked[1].request, "the answer went back once"
+
+
+# ---- missed, declined and dropped are three signals ---------------------------------------------------------------
+
+
+def an_action(store) -> str:
+    with store.transaction() as tx:
+        owner = [{"person": person("Editor")["id"]}]
+        return tx.create("action", {"text": "Prepare the display boards", "status": "open", "owners": owner}, _TEST).id
+
+
+def packet_of(env, kind: str, note: str | None) -> str:
+    """The learning packet for one more correction of this kind, queued as it is recorded."""
+    ws, cfg, store = env
+    before = {r.id for r in learning(store)}
+    signal(store, kind, [an_action(store)], note=note)
+    (queued,) = [r for r in learning(store) if r.id not in before]
+    return packets.build(ws, store, cfg, queued.id, NOW.date()).task.request
+
+
+def test_the_packet_says_what_each_of_the_three_kinds_teaches(env):
+    missed = packet_of(env, "missed", "Dana promised me the layout notes and nothing picked it up")
+    assert "failed to find it" in missed and "teach what to look for and where, or ask" in missed
+    assert "no longer needed" not in missed and "relevance or routing" not in missed
+    declined = packet_of(env, "held_declined", "Add the display boards action")
+    assert "not theirs, or not a promise" in declined and "teach relevance or routing" in declined
+    assert "failed to find it" not in declined and "no longer needed" not in declined
+    dropped = packet_of(env, "dropped", "The venue changed, so nothing is needed for any hall.")
+    assert "no longer needed" in dropped and "not a mistake of the assistant's by itself" in dropped
+    assert 'never "don\'t file this"' in dropped
+    assert "<note>\nThe venue changed, so nothing is needed for any hall.\n</note>" in dropped, "their own words"
+    assert "failed to find it" not in dropped and "relevance or routing" not in dropped
+
+
+def test_the_prompt_tells_the_three_kinds_apart_and_a_drop_never_teaches_dont_file_this():
+    from importlib import resources
+
+    prompt = resources.files("engine.prompts").joinpath("learn-correction.md").read_text(encoding="utf-8")
+    assert "*Missed*" in prompt and "*Declined*" in prompt and "*Dropped*" in prompt
+    assert 'never "don\'t file this"' in prompt and "relevance or routing" in prompt
+
+
+def test_a_drop_with_no_reason_is_not_queued_for_learning_and_one_with_a_reason_is(env):
+    _, _, store = env
+    for note in (None, "", "   \n"):
+        signal(store, "dropped", [an_action(store)], note=note)
+    assert learning(store) == [], "a drop with no reason of the person's own is not learned from"
+    assert len([s for s in store.read().list("signal") if s.data["kind"] == "dropped"]) == 3, "the signals stay"
+    reason = signal(store, "dropped", [an_action(store)], note="Called off with the venue.")
+    (queued,) = learning(store)
+    assert queued.data["about"] == {"kind": "signal", "id": reason}
+
+
+def test_a_miss_and_a_declined_change_are_still_learned_from(env):
+    _, _, store = env
+    signal(store, "missed", [], note="Dana's layout notes were missed")
+    signal(store, "held_declined", [an_action(store)], note="Add the display boards action")
+    assert len(learning(store)) == 2

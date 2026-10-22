@@ -903,8 +903,12 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     moved to the native adapter only on a yes with a read-back of the identity it signs in as; a newer model in a family
     asked about once and watched weekly, never switched silently; `thinking: off` only where the listing says so (true
     today: a test pins it).
-  - *Batch 3, corrections:* missed, declined and dropped kept apart in the learning packet and in the Quality measures; a
-    drop with no note is not learned from.
+  - *Batch 3, corrections:* **built** (`tests/test_learn_correction.py`, `tests/test_quality.py`,
+    `tests/test_action_work.py`, `web/src/components/Quality.test.tsx`): missed, declined and dropped kept apart in the
+    learning packet and prompt and in the Quality measures (`apart`, window and weeks; a drop is not a correction and
+    leaves the repeat rate); a drop with no note is not learned from. Pairs `promise-pair-19` and `-23` still
+    expect a lesson from a drop, and rightly: in each the input itself called the work off and the assistant recorded
+    nothing, so the person's reason generalizes (read a cancellation in the input).
   - *Batch 4, smaller ones:* the plain time zone names and an ambiguous abbreviation from the setting or the sender's zone
     (S1-3); US dollars labeled plainly (B-6a); Top priorities' "who suggested it" in the inspector (B-6b); "Hold until next
     Monday" in Later (B-6a); Copy at once on a message already seen unchanged, and "ready since <day>" on a message to send

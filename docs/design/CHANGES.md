@@ -1027,6 +1027,25 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 176. Missed, declined and dropped are three signals (2026-10-22; B-12 batch 3, built)
+
+- **What each teaches (6.22):** the learning packet and prompt say it in words. *Missed*: the assistant failed to find
+  something, so teach what to look for and where, or ask. *Declined* (a held change the person declined): it was not
+  theirs, or not a promise, so teach relevance or routing. *Dropped*: no longer needed, which is not a mistake of the
+  assistant's; it teaches nothing unless the person's own reason generalizes, and then the lesson is about that reason,
+  never "don't file this". A drop's reason is shown as the person's own words.
+- **A drop with no reason is not learned from (6.22):** no learning request is queued for a `dropped` signal with an
+  empty note. The drop ops require a reason, so this is the draft set aside, which now records its `dropped` signal with
+  no note (its old text was the app's, not the person's).
+- **Counted apart (6.20):** `GET /api/quality` gains `apart` (`QualityApart`): missed, declined and dropped each as a
+  total for the window and for each week, never added together. `dropped` leaves the corrections the repeat-correction
+  rate counts; `missed` and `held_declined` stay in it. The Quality screen has a section, "Missed, declined and
+  dropped", with one line for each.
+- Built: `tests/test_learn_correction.py` (the packet's words, the prompt, the no-reason drop),
+  `tests/test_quality.py` (the three apart, a drop leaves the repeat rate, the route), `tests/test_action_work.py`
+  (a discarded draft records no reason), `web/src/components/Quality.test.tsx`. The existing pair `rejected-ask` is the
+  pair for a drop whose reason generalizes.
+
 ## 175. Estimates learn from use (2026-10-22; B-12 batch 2a, built)
 
 - **Calibrated per account (6.16):** the app's own count (about four characters to a token) is corrected by a ratio of real
@@ -1062,7 +1081,7 @@ yet follow, that it is *designed*, with its phase.
   click that teaches. *Built (B-12 batch 1), above.*
 - **Missed, declined, dropped (6.22, 6.20):** three meanings kept apart: missed teaches extraction or asks, declined teaches
   relevance or routing, dropped teaches nothing unless the person's words give a general reason; the Quality measures count
-  them apart. *Not built yet.*
+  them apart. *Built (B-12 batch 3), change 176.*
 - **Time zones (4, the date reader):** abbreviations and the plain names read as the zone's local time on the date; an
   ambiguous one ("IST") from the workspace's setting or the sender's zone, else marked to check. Calendar days for "within
   <n> days" and the weekend as a range are confirmed. *The plain names and the sender's zone are not built yet.*

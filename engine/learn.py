@@ -57,16 +57,17 @@ KIND_WORDS = {
     "draft_edited": "The person edited the assistant's draft before using it; the note is the text as they used it.",
     "routed": "The person answered the assistant's question about who someone is or who owns something.",
     "answered_assistant": "The person answered a question the assistant asked them; the note is their answer.",
-    "dropped": "The person dropped a question or an action the assistant filed. Find in the note or the input why: it "
-    "was wrong to file, or the work was called off, done or covered elsewhere since, which the assistant should have "
-    "read from what it had.",
+    "dropped": "The person dropped a question or an action: it is no longer needed. That is not a mistake of the "
+    "assistant's by itself, so it teaches nothing unless the note, the person's own reason, gives a reason that holds "
+    'beyond this item; then the lesson is about that reason, never "don\'t file this".',
     "reworded": "The person reworded a question the assistant filed; the note is the new wording.",
-    "held_declined": "The person declined a change the assistant had held for them: that change was the mistake. The "
-    "note below names the change they declined, not what they want; find in the input what the change should have "
-    "been.",
+    "held_declined": "The person declined a change the assistant had held for them: it was not theirs, or not a "
+    "promise, so that change was the mistake. The note below names the change they declined, not what they want; "
+    "teach relevance or routing: find in the input whose it was, or why it was not a promise.",
     "edited": "The person changed a field the assistant had set.",
     "no_reply_needed": "The person said no reply was owed for a message the assistant added a reply for.",
-    "missed": "The person said the assistant missed something; the note is their sentence, and no run is named.",
+    "missed": "The person said the assistant missed something: it failed to find it. The note is their sentence, and "
+    "no run is named; teach what to look for and where, or ask.",
 }
 
 
@@ -174,13 +175,15 @@ def on_signal(tx: Any, cfg: Any, signal_id: str, now: datetime) -> str | None:
     needs no wait is queued to run now. A silent one is queued with the time of the next batch as the reason it
     waits. Nothing is queued when learning is off, for a kind of signal that doesn't teach, for one already queued,
     for one whose own answer already recorded what it teaches (one correction, one piece of learning), or for mail set
-    aside as not work. Returns the request id."""
+    aside as not work, or for a drop with no reason. Returns the request id."""
     knowledge = cfg.dispatch.knowledge
     found = tx.get("signal", signal_id)
     if not knowledge.learn or found is None or found.data["kind"] not in TEACHES or found.data.get("learned"):
         return None
     if learn_request(tx, signal_id) is not None or _names_set_aside(tx, found.data):
         return None
+    if found.data["kind"] == "dropped" and not (found.data.get("note") or "").strip():
+        return None  # a drop with no reason of the person's own says nothing to learn from
     data: dict[str, Any] = {
         "task": TASK,
         "about": {"kind": "signal", "id": signal_id},
@@ -566,7 +569,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
 
     note = data.get("note") or ""
     correction = [KIND_WORDS.get(data["kind"], "The person corrected the assistant's work.")]
-    if note and data["kind"] in ("sent_back", "draft_edited", "answered_assistant", "missed"):
+    if note and data["kind"] in ("sent_back", "draft_edited", "answered_assistant", "missed", "dropped"):
         correction.append(f"<note>\n{note}\n</note>")
     elif note:
         # A declined change's note is the change's own description, not words the person wrote.

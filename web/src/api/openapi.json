@@ -14651,6 +14651,83 @@
         "title": "ProposedOp",
         "type": "object"
       },
+      "QualityApart": {
+        "description": "The three signals the person gives, never added together: missed, declined and dropped. A drop is not a\ncorrection of the assistant, so it is in no correction count and not in the repeat-correction rate.",
+        "properties": {
+          "declined": {
+            "description": "Held changes declined in the window: not the person's, or not a promise.",
+            "title": "Declined",
+            "type": "integer"
+          },
+          "dropped": {
+            "description": "Questions and actions dropped in the window as no longer needed.",
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "missed": {
+            "description": "Times in the window the person said the assistant failed to find something.",
+            "title": "Missed",
+            "type": "integer"
+          },
+          "weeks": {
+            "description": "The same for each week of the window, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/QualityApartWeek"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "missed",
+          "declined",
+          "dropped",
+          "weeks"
+        ],
+        "title": "QualityApart",
+        "type": "object"
+      },
+      "QualityApartWeek": {
+        "description": "Missed, declined and dropped for one week, each counted on its own (design 6.20, 6.22).",
+        "properties": {
+          "declined": {
+            "description": "Held changes the person declined: not theirs, or not a promise.",
+            "title": "Declined",
+            "type": "integer"
+          },
+          "dropped": {
+            "description": "Questions and actions the person dropped as no longer needed.",
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "missed": {
+            "description": "Times the person said the assistant failed to find something.",
+            "title": "Missed",
+            "type": "integer"
+          },
+          "week": {
+            "description": "The Monday of the week, in the person's time zone.",
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          },
+          "week_end": {
+            "description": "The Sunday of the week.",
+            "format": "date",
+            "title": "Week End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "week_end",
+          "missed",
+          "declined",
+          "dropped"
+        ],
+        "title": "QualityApartWeek",
+        "type": "object"
+      },
       "QualityCloseDay": {
         "properties": {
           "day": {
@@ -15202,6 +15279,10 @@
       "QualityView": {
         "description": "The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly\nmissing-op list and \"Missed one\" for each person and week, over the configured window.",
         "properties": {
+          "apart": {
+            "$ref": "#/components/schemas/QualityApart",
+            "description": "Missed, declined and dropped, each counted on its own, over the window and for each week."
+          },
           "closes": {
             "$ref": "#/components/schemas/QualityCloses"
           },
@@ -15272,6 +15353,7 @@
           "knowledge_used",
           "repeat_corrections",
           "missing",
+          "apart",
           "since",
           "until",
           "closes",
@@ -28213,7 +28295,7 @@
     },
     "/api/quality": {
       "get": {
-        "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, and \"Missed one\" for each person and week (design 6.32), over the configured\nwindow; and the gate week's instruments, each a count with its denominator for each day and for the window:\nsilent closes out of all closes, wrong endings out of endings made, the person's own missed out of present,\nand the replay set.",
+        "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, \"Missed one\" for each person and week (design 6.32), and missed, declined and\ndropped each counted on its own (a drop is not a correction of the assistant), over the configured window;\nand the gate week's instruments, each a count with its denominator for each day and for the window: silent\ncloses out of all closes, wrong endings out of endings made, the person's own missed out of present,\nand the replay set.",
         "operationId": "quality_view_api_quality_get",
         "responses": {
           "200": {
