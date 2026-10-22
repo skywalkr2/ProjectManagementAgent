@@ -854,6 +854,11 @@ def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, 
             q = _record(store, o, "question")
             if q and q["to"] != f["to"]:
                 continue
+        if f["op"] == "action.add" and "owners" in f:
+            # A forbidden owner is an action that person owns; one held for the person to pick an owner is not.
+            a = _record(store, o, "action")
+            if a is None or not {x["person"] for x in a.get("owners") or []} & set(f["owners"]):
+                continue
         if "promised_to" in f:
             # A forbidden "owed to" is any action owed to one of the listed people, whoever else it is owed to.
             a = _record(store, o, "action")

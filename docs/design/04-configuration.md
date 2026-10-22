@@ -322,6 +322,8 @@ Built keys:
 - `promise_words` (will, is going to, are going to) and `promise_state_words` (be): what the `promise-as-fact` lint
   reads (6.33): a fact quoting a named person, a promise word not followed by a state word, and a date goes back to
   be recorded as that person's action.
+- `unassigned_words` (someone, somebody, anyone, anybody, nobody, no one): what the `someone-given-owner` lint reads
+  (6.33): an action quoting one, given owners the words don't name, goes back to leave its owners empty.
 - `asking_words` (when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about,
   confirm): words that frame a question rather than say what it is about. The `already-known` check leaves them out and
   compares the rest in folded form (plurals, "ing", "ed"), so "Can you tell me when the proofs will ship?" is answered

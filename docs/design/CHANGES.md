@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 159. "Someone should" given an owner goes back to leave the owners empty (2026-10-22; B-10, built)
+
+- `someone-given-owner`: an action quoting words that leave the doer open ("someone should find out"), with owners
+  the words don't name, goes back once to leave the owners empty. A request to the reader and the speaker's own
+  promise are left alone. Setting `language.unassigned_words`. Design 4 (language settings) and 6.33. Built:
+  `tests/test_own_request_lint.py::test_someone_should_given_an_owner_the_words_dont_name_is_sent_back_to_leave_the_owners_empty`
+- Scoring: a case's forbidden action owner is met only by an action that person owns. It was met by any action, so
+  an action rightly held for the person to pick an owner failed the case. Built:
+  `tests/test_evaluate_harness.py::test_a_forbidden_owner_is_met_only_by_an_action_that_person_owns`
+
 ## 158. Someone's dated promise recorded as a fact goes back to be their action (2026-10-22; B-10, built)
 
 - `promise-as-fact`: a fact whose words are a named person promising something by a date goes back once to be that

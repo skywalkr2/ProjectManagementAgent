@@ -908,6 +908,9 @@ is marked *designed*, with the phase.
   (`promise-as-fact`, *built*; `language.promise_words`, `language.promise_state_words`). A rule on the words: a
   promise word after a named person and before a date the rules read. A state ("will be away on the 20th"), a
   project the person only watches and a promise by someone on file on another team stay facts.
+- Work the words leave open ("someone should find out"), given owners the words don't name, goes back once to leave
+  the owners empty so the person picks one or is asked (`someone-given-owner`, *built*; `language.unassigned_words`).
+  A request to the reader ("can you ask someone") and the speaker's own promise are left alone.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.

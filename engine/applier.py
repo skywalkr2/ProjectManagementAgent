@@ -646,6 +646,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         "words name who does it",
                     )
                 )
+            if (level := _someone_owner_level(op, ctx)) != "off":
+                problems.append(
+                    Problem(
+                        "someone-given-owner",
+                        level,
+                        i,
+                        'the words say "someone", not who: leave "owners" empty so the person picks one (or ask them '
+                        "who takes it), unless the words name who does it",
+                    )
+                )
             if (level := _own_request_level(op, ctx, view)) != "off":
                 problems.append(
                     Problem(
@@ -2140,6 +2150,37 @@ def _asks_someone(quote: str, ctx: Context) -> bool:
         if word.strip()
     )
     return leads or _asked_as_question(text, ctx)
+
+
+def _someone_owner_level(op: ActionAddOp, ctx: Context) -> str:
+    """The severity of the `someone-given-owner` lint for an action, or "off" when it doesn't apply: its evidence quote
+    leaves the doer open (one of the language's unassigned words, "someone should find out") yet the action has owners
+    the quote doesn't name. A request to the reader ("can you ask someone"), the speaker's own promise and the
+    person's own note and changes are left alone."""
+    name = "someone-given-owner"
+    level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or ctx.cfg.checks.lints.get(name, "off")
+    evidence = _evidence(op)
+    if level == "off" or evidence is None or ctx.actor == "pm" or ctx.confirmed_by_pm or not op.owners:
+        return "off"
+    quote = evidence.quote
+    if not any(scope.has_word(quote, w) for w in ctx.cfg.language.unassigned_words if w.strip()):
+        return "off"
+    if _asks_someone(quote, ctx):
+        return "off"
+    view = ctx.store.read()
+    for owner in op.owners:
+        if scope.has_word(quote, owner):
+            return "off"
+        found = ctx.people.resolve(owner)
+        record = view.get("person", found.person) if found.status == "ok" and found.person else None
+        if record is None:
+            continue
+        data = record.data
+        names = [data.get("full_name") or "", data.get("first_name") or "", *(data.get("aliases") or [])]
+        names += (data.get("full_name") or "").split()[:1]
+        if any(n and scope.has_word(quote, n) for n in names):
+            return "off"
+    return level
 
 
 def _team_word_one_owner_level(op: ActionAddOp, ctx: Context) -> str:

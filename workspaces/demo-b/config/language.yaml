@@ -15,6 +15,8 @@ team_promise_words: [we'll, we will, we're going to]
 promise_words: [will, is going to, are going to]
 # Words that, right after a promise word, make it a state ("will be away"), which stays a fact.
 promise_state_words: [be]
+# Words that leave who does something open; an action quoting one, given owners the words don't name, goes back once.
+unassigned_words: [someone, somebody, anyone, anybody, nobody, no one]
 # Words that frame a question rather than say what it is about; left out when checking whether a recorded fact already answers it.
 asking_words: [when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about, confirm]
 # Phrases that make a draft report to the maintainers a standing rule, to be proposed as a rule instead.

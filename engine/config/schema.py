@@ -1291,6 +1291,7 @@ def _default_lints() -> dict[str, Severity]:
         "own-promise-missed": "return",
         "team-we-one-owner": "return",
         "promise-as-fact": "return",
+        "someone-given-owner": "return",
     }
 
 
@@ -1806,6 +1807,12 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["I'll", "I will"],
         description="Words that make a sentence the person's own promise even when it also asks something: a request "
         "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
+    )
+    unassigned_words: list[str] = Field(
+        default_factory=lambda: ["someone", "somebody", "anyone", "anybody", "nobody", "no one"],
+        description='Words that leave who does something open ("someone should find out"). An action quoting one, '
+        "given owners the words don't name, is sent back once to leave its owners empty so you pick one. Matched as "
+        "whole words, ignoring case.",
     )
     promise_words: list[str] = Field(
         default_factory=lambda: ["will", "is going to", "are going to"],

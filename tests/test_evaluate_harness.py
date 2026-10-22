@@ -634,6 +634,20 @@ def test_forbid_can_name_who_a_promise_must_not_be_owed_to(monkeypatch):
     assert not result.passed and result.forbidden == [f"op=action.add, promised_to={forbidden}"]
 
 
+def test_a_forbidden_owner_is_met_only_by_an_action_that_person_owns(monkeypatch):
+    """An action held for the person to pick its owner is not one owned by the forbidden person."""
+    case = case_of(DEMO_B, "follow-up-with-no-clear-owner-asks-who")
+    (forbidden,) = [f for f in case["forbid"] if f["op"] == "action.add"]
+    names = {p["id"]: p["full_name"] for p in fixture_records(DEMO_B, "person")}
+    quote = case["pasted"].split("\n\n")[1].split(",")[0]
+    unowned = {"op": "action.add", "text": "Find out the carrier", "owners": [], "evidence": {"quote": quote}}
+    answer = {"summary": "One action with no owner yet.", "ops": [unowned]}
+    assert not run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=answer).forbidden
+    owned = {**unowned, "owners": [names[forbidden["owners"][0]]]}
+    result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={**answer, "ops": [owned]})
+    assert result.forbidden == [f"op=action.add, owners={forbidden['owners']}"]
+
+
 def test_a_starting_record_marked_update_sets_its_fields_on_the_record_the_workspace_holds(tmp_path):
     from engine.evaluate import _create_starting_records
     from engine.storage import Store

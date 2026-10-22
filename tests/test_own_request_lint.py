@@ -182,3 +182,37 @@ def test_a_we_that_names_its_doer_an_own_promise_or_no_owner_is_left_alone(env):
     own = "I'll circulate the notes, we'll meet Friday."
     assert team_lint(env, action(own, owner=OTHER["id"]), mail(FROM_OTHER, own)) == []
     assert team_lint(env, action(TEAM, owner=OTHER["id"], owners=[]) | {"owners": []}, mail(FROM_OTHER, TEAM)) == []
+
+
+# ---- someone-given-owner: "someone should" names no doer -----------------------------------------------------------
+
+
+def someone_lint(env, op: dict, raw: str, *, actor: str = "assistant") -> list:
+    _, cfg, store = env
+    cs = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        tuple(store.plugins.ops),
+        Inputs("REQ-1", "SRC-1", raw, "", "untrusted"),
+        actor=actor,
+    )
+    return [p for p in check(cs, ctx) if p.check == "someone-given-owner"]
+
+
+OPEN = "Nobody has confirmed the agenda yet, and someone should find out."
+
+
+def test_someone_should_given_an_owner_the_words_dont_name_is_sent_back_to_leave_the_owners_empty(env):
+    (problem,) = someone_lint(env, action(OPEN, owner=OTHER["id"]), mail(FROM_OTHER, OPEN))
+    assert (problem.severity, problem.op) == ("return", 0) and '"someone"' in problem.message
+
+
+def test_someone_with_the_doer_named_a_request_no_owner_or_the_persons_own_note_is_left_alone(env):
+    named = f"Someone should find out; {OTHER['full_name'].split()[0]} offered."
+    assert someone_lint(env, action(named, owner=OTHER["id"]), mail(FROM_OTHER, named)) == []
+    ask = "Can you ask someone about the agenda?"
+    assert someone_lint(env, action(ask, owner=OTHER["id"]), mail(FROM_OTHER, ask)) == []
+    assert someone_lint(env, action(OPEN, owner=OTHER["id"]) | {"owners": []}, mail(FROM_OTHER, OPEN)) == []
+    assert someone_lint(env, action(OPEN, owner=OTHER["id"]), mail(FROM_OTHER, OPEN), actor="pm") == []
