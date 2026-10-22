@@ -20,14 +20,14 @@ for a promise (design 6.33), `promised_to` (the people it is owed to), `due_word
 when it doesn't).
 An expected `action.move`, `action.part` or `action.news` names the action's `id`, and may name `due_words` (a move) or
 `text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title); an
-ending that waits only for the person's Keep counts as made, for what a case expects and for what it forbids.
-A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
-change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
-held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
-hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed under
-`injected`. A plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too, for each
-plugin enabled in the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a scorer
-of the plugin (`score`) that judges the plugin's own ops, while the core's exact matching scores everything else.
+ending or a repeat that waits only for the person's Keep counts as made, for what a case expects and for what it
+forbids. A case may name the `project` its input is about (as the person does when handing it in), or give `watched`
+(title, change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may
+expect a held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question
+(`held: who-is`). A hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person
+listed under `injected`. A plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too,
+for each plugin enabled in the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a
+scorer of the plugin (`score`) that judges the plugin's own ops, while the core's exact matching scores everything else.
 The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
 one account.
 
@@ -656,11 +656,11 @@ def _held(e: dict[str, Any], outcomes: list[dict[str, Any]]) -> list[dict[str, A
 
 
 def _awaits_keep(o: dict[str, Any]) -> bool:
-    """Whether a held op waits only for the person to keep an ending read from an input, or to say whether a bare
-    "closed" meant done or no longer needed (design 6.33): it is the op a case expects, waiting for the person, not one
-    the checks doubted."""
+    """Whether a held op waits only for the person to keep an ending or a repeat read from an input, or to say whether a
+    bare "closed" meant done or no longer needed (design 6.33): it is the op a case expects, waiting for the person, not
+    one the checks doubted."""
     holds = [p for p in o.get("problems") or [] if p.get("severity") == "hold"]
-    waits = ("ending-confirm", CHOICE_CHECK)
+    waits = ("ending-confirm", CHOICE_CHECK, "repeat-confirm")
     return o["status"] == "held" and bool(holds) and all(p.get("check") in waits for p in holds)
 
 

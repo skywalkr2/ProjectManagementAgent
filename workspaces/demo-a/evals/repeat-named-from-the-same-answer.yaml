@@ -1,0 +1,39 @@
+id: repeat-named-from-the-same-answer
+title: A to-do someone says they repeat gets its repeat in their own words, naming the to-do from the same answer
+skills: [dates, evidence]
+received: '2026-10-14'
+# The repeat names the to-do made by the first op as "@0" and carries only the words; the app reads them. From an input
+# it waits for the person's yes, so it is held while the to-do itself is kept.
+pasted: |-
+  From: Odile Fenwick
+
+  I'll send the cut-over status numbers every Friday.
+expect:
+- op: action.add
+  owners:
+  - PER-2
+  promised_to:
+  - PER-1
+  text_has:
+  - status numbers
+- held: action.repeat
+  text_has:
+  - '@0'
+  - every Friday
+stub_answer:
+  summary: Odile will send the status numbers every Friday; the repeat waits for a yes.
+  ops:
+  - op: action.add
+    text: Send the cut-over status numbers
+    owners:
+    - Odile Fenwick
+    promised_to:
+    - PER-1
+    project: PRJ-1
+    evidence:
+      quote: I'll send the cut-over status numbers every Friday
+  - op: action.repeat
+    id: '@0'
+    words: every Friday
+    evidence:
+      quote: every Friday

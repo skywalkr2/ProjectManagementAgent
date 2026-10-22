@@ -100,6 +100,11 @@ How to answer:
     condition's words in "due_words", never instead of them.
   A promise is read from the new text of a message. Quoted history, a signature, a forwarded message and example or
   template wording never make a new promise.
+- When the input says a to-do repeats and who does it ("I'll send the numbers every Friday"), follow its "action.add"
+  with an "action.repeat" whose "id" is "@" and the index of that "action.add" in your ops, counting from 0 ("@0"),
+  and whose "words" are the input's own words for how often ("every Friday"), copied exactly with nothing else; the
+  app reads them, so never write a rule, a day or a date. Only for a to-do that repeats; a habit of someone's that is
+  not a to-do ("she usually replies on Mondays") gets no "action.repeat".
 - A promise ends, moves or is answered with an op on the open action in the list, each with the words that say so as
   evidence. Never add a second action for something an open action already covers.
   - "action.close": the work is done, and the words you quote say it was delivered ("sent", "finished", "it's in",

@@ -9,6 +9,7 @@ dropped and shown, returned lints hold an op that would reach another person and
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from email.utils import parseaddr
@@ -496,12 +497,18 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if isinstance(op, ActionRepeatOp):
             from engine import repeats
 
-            why = repeats.problem(view, op)
+            if op.id.startswith("@"):
+                why = _repeat_ref_problem(cs.ops, i)
+            elif op.words is not None:
+                why = None  # read in order, against what the earlier ops made (`_validate_in_order`)
+            else:
+                why = repeats.problem(view, op)
             if why:
                 refuse(i, "targets", why)
             elif not _persons_own(view, ctx):
                 # A repeat read from an input waits for the person's yes, like an ending read from one.
-                problems.append(Problem("repeat-confirm", "hold", i, REPEAT_WAITS))
+                said = f' The words: "{" ".join(op.words.split())}".' if op.words else ""
+                problems.append(Problem("repeat-confirm", "hold", i, REPEAT_WAITS + said))
         if endings.asks(op, ctx):
             # Closed with no delivery words or call-off words (or both) is one choice, even in the person's own note.
             problems.append(Problem(endings.CHOICE_CHECK, "hold", i, endings.CHOICE_WAITS))
@@ -1213,6 +1220,62 @@ def _persons_own(view: Any, ctx: Context) -> bool:
     return bool(((source or {}).get("watched") or {}).get("by_you"))
 
 
+REPEAT_UNCLEAR = "the repeat in the input isn't clear"
+REPEAT_OFF_DAY = "the to-do's day isn't one of the days the repeat in the input names"
+
+
+def _repeat_ref_problem(ops: Sequence[OpModel], index: int) -> str | None:
+    """Why `@<n>` on the repeat at `index` doesn't name a to-do made earlier in the same answer, or None."""
+    n = int(ops[index].id[1:])
+    if n >= index:
+        return f"{ops[index].id} must name an op earlier in the answer"
+    if not isinstance(ops[n], ActionAddOp):
+        return f"{ops[index].id} must name an action.add, and op {n} is {ops[n].op}"
+    return None
+
+
+def _resolved_repeat(
+    tx: Any, op: ActionRepeatOp, ctx: Context, earlier: Sequence[tuple[str, Sequence[dict[str, Any]]]]
+) -> ActionRepeatOp:
+    """A repeat ready to apply: `@<n>` replaced by the to-do op `n` made (`earlier` is each earlier op's name and the
+    records it wrote), and the input's words read with the repeat grammar from the to-do's due day, else the day the
+    input was received on the person's own clock, into a rule, the words and a first day. An op that names a real
+    action by a rule or stops one is returned as it is. Raises StoreError, refusing this op alone, when the to-do isn't
+    there, the words aren't clear, or the action can't repeat."""
+    from engine import repeats
+
+    if not op.id.startswith("@") and op.words is None:
+        return op
+    action_id = op.id
+    if op.id.startswith("@"):
+        n = int(op.id[1:])
+        name, records = earlier[n] if n < len(earlier) else ("", ())
+        made = next((r["id"] for r in records if r.get("kind") == "action"), None) if name == "action.add" else None
+        if made is None:
+            raise StoreError("the to-do this repeat is for isn't there")
+        action_id = made
+    resolved = op.model_copy(update={"id": action_id})
+    found = tx.get("action", action_id)
+    if found is None:
+        raise StoreError(f"there is no action {action_id}")
+    if op.words is not None:
+        due = found.data.get("due")
+        received = _received_at(tx, ctx, ctx.inputs.source).astimezone(zone(ctx.cfg)).date()
+        words = " ".join(op.words.split())
+        reading = repeats.read_phrase(words, date.fromisoformat(str(due)) if due else None, received)
+        if reading.status == "unclear":
+            raise StoreError(REPEAT_UNCLEAR)
+        if reading.status == "off_start":
+            raise StoreError(REPEAT_OFF_DAY)
+        resolved = resolved.model_copy(
+            update={"rule": reading.rule, "phrase": words, "start": reading.start, "words": None}
+        )
+    why = repeats.problem(tx, resolved)
+    if why:
+        raise StoreError(why)
+    return resolved
+
+
 def action_hold_problem(view: Any, op: Any) -> str | None:
     """Why an action can't be put on hold, dropped, moved, partly delivered or given news, or None. It must exist and be
     open: one waiting for an owner is given one (or folded into another action) where it waits, and a finished or
@@ -1770,7 +1833,12 @@ def apply_changeset(
                     tx.sql("SAVEPOINT plugin_op")
                     pending = len(tx.pending)
                     try:
-                        outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
+                        ready = (
+                            _resolved_repeat(tx, op, ctx, [(o.op["op"], o.records) for o in outcomes])
+                            if isinstance(op, ActionRepeatOp)
+                            else op
+                        )
+                        outcome.records, question = _apply_op(tx, ready, ctx, wctx, today)
                         outcome.question = question
                         stopped = _rule_problems(tx, ctx, i, op, outcome.records)
                         if stopped:
@@ -2772,19 +2840,30 @@ def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     found: list[Problem] = []
     try:
         with ctx.store.transaction(notify=False) as tx:
+            earlier: list[tuple[str, list[dict[str, Any]]]] = []
             for i, op in enumerate(cs.ops):
                 messages = ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
                 found += [Problem("plugin-validator", "refuse", i, m) for m in messages]
                 if messages or op.op not in ctx.allowed_ops:
+                    earlier.append((op.op, []))
                     continue
                 tx.sql("SAVEPOINT dry_op")
+                written: list[dict[str, Any]] = []
                 try:
+                    if isinstance(op, ActionRepeatOp):
+                        try:
+                            op = _resolved_repeat(tx, op, ctx, earlier)
+                        except StoreError as err:
+                            found.append(Problem("targets", "refuse", i, str(err)))
+                            continue
                     written, _ = _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), datetime.now(UTC).date())
                     found += _rule_problems(tx, ctx, i, op, written)
                 except Exception:
                     tx.sql("ROLLBACK TO dry_op")
+                    written = []
                 finally:
                     tx.sql("RELEASE dry_op")
+                    earlier.append((op.op, written))
             raise _DryRun
     except _DryRun:
         pass
@@ -2815,12 +2894,21 @@ def refusals(cs: ChangesetIn, ctx: Context) -> dict[int, str]:
     today = datetime.now(UTC).date()
     try:
         with ctx.store.transaction(notify=False) as tx:
+            earlier: list[tuple[str, list[dict[str, Any]]]] = []
             for i, op in enumerate(cs.ops):
+                written: list[dict[str, Any]] = []
                 if i in found:
+                    earlier.append((op.op, written))
                     continue
                 tx.sql("SAVEPOINT trial_op")
                 try:
-                    _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), today)
+                    written, _ = _apply_op(
+                        tx,
+                        _resolved_repeat(tx, op, ctx, earlier) if isinstance(op, ActionRepeatOp) else op,
+                        ctx,
+                        _wctx(ctx, "dry-run", i, op),
+                        today,
+                    )
                 except NeedsPerson:
                     tx.sql("ROLLBACK TO trial_op")
                 except StoreError as err:
@@ -2828,6 +2916,7 @@ def refusals(cs: ChangesetIn, ctx: Context) -> dict[int, str]:
                     found[i] = str(err)
                 finally:
                     tx.sql("RELEASE trial_op")
+                    earlier.append((op.op, written))
             raise _DryRun
     except _DryRun:
         pass
@@ -3267,6 +3356,8 @@ def _apply_op(
                 tx, ctx, "action", op.id, reason, "no_reply_needed" if cur.data.get("reply_owed") else "dropped"
             )
     elif isinstance(op, ActionRepeatOp):
+        if op.id.startswith("@") or op.words is not None:
+            raise StoreError("the repeat was not read before it was applied")
         cur = tx.get("action", op.id)
         changes: dict[str, Any] = {"repeat": None}
         if op.rule is not None:
@@ -3804,6 +3895,8 @@ def _release_one(
             evidence=outcome["op"].get("evidence")
             and {"source": inputs.source, "quote": outcome["op"]["evidence"]["quote"]},
         )
+        if isinstance(op, ActionRepeatOp):
+            op = _resolved_repeat(tx, op, ctx, [(o["op"]["op"], o.get("records") or []) for o in outcomes[:index]])
         records, question = _apply_op(tx, op, ctx, w, now.date())
         outcome.update(status="applied", records=records, reason=None)
         if question:

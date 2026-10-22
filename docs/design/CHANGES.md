@@ -1045,10 +1045,13 @@ yet follow, that it is *designed*, with its phase.
   default and demo values in both workspaces. Built: `tests/test_standing_yes.py`, `tests/test_reminder_acts.py`,
   `web/src/components/ReminderWhere.test.tsx`.
 
-## 188. The assistant suggests a repeat in the input's own words (2026-10-22; S2, designed)
+## 188. The assistant suggests a repeat in the input's own words (2026-10-22; S2, built)
 
 - **Design 6.32, "Repeating to-dos":** `action.repeat` may carry only the input's words for the engine to read, and may
   name a to-do added earlier in the same answer as `@<index>`; it stays a suggestion that waits for the person.
+  Built: the op's `words` and `@<index>`, resolved by the applier at check, apply and release, unclear words refusing
+  the repeat op alone, the extraction prompt line and two golden-set cases per fictional workspace
+  (`tests/test_repeating_todos.py`, `tests/test_evaluate_harness.py::test_the_repeat_cases_pass_on_their_stub_answers_and_the_repeat_stays_held`).
 
 ## 187. The core's mailbox channel, built (2026-10-22; S1b-2b)
 

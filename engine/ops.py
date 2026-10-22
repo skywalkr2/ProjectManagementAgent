@@ -7,6 +7,7 @@ Evidence is the exact words from the input that justify the op.
 from __future__ import annotations
 
 import json
+import re
 import types
 from datetime import date
 from typing import Annotated, Any, Literal, Union, get_args, get_origin
@@ -502,15 +503,20 @@ class ActionMoveOp(OpModel):
 
 
 class ActionRepeatOp(OpModel):
-    """Set how an open action repeats, or stop it repeating. To set one, give the repeat rule the grammar read from the
+    """Set how an open action repeats, or stop it repeating. There are three shapes. To stop it repeating, leave out
+    `rule`, `phrase`, `start` and `words`. To set one from a rule, give the repeat rule the grammar read from the
     person's words (`rule`), the words themselves (`phrase`) and the day of the first occurrence (`start`, the
     action's own due day when it has one); the rule must be one the repeat grammar can say back, or the op is
-    refused. Leave all three out to stop it repeating. When the action has no due day it is due on `start`. Refused
-    if the action doesn't exist or isn't open. From the person it applies at once; read from an input, it waits for
-    the person's yes. Evidence is required from the assistant: the exact words that say it repeats."""
+    refused. To set one from an input's words, give only `words`, copied exactly from the input: the engine reads
+    them with the repeat grammar from the action's due day (else the day the input was received), and words it
+    can't read repeat nothing and refuse only this op. `id` may be `@<n>`: the action made by op `n` of the same
+    answer (counting from 0), which must be an `action.add` earlier in the list. When the action has no due day it is
+    due on the first day of the repeat. Refused if the action doesn't exist or isn't open. From the person it applies
+    at once; read from an input, it waits for the person's yes. Evidence is required from the assistant: the exact
+    words from the input that say it repeats."""
 
     op: Literal["action.repeat"] = "action.repeat"
-    id: str = Field(description="The id of the open action.")
+    id: str = Field(description='The id of the open action, or "@<n>" for the action made by op n of this answer.')
     rule: str | None = Field(
         None,
         max_length=200,
@@ -520,19 +526,40 @@ class ActionRepeatOp(OpModel):
         None, min_length=1, max_length=120, description="The words the repeat was read from, as written."
     )
     start: date | None = Field(None, description="The day of the first occurrence; a rule needs one.")
+    words: str | None = Field(
+        None,
+        min_length=1,
+        max_length=120,
+        description='The input\'s exact words that say how often it repeats ("every Friday"), copied from the input '
+        "with no other words; give these instead of a rule, a phrase and a start.",
+    )
     evidence: EvidenceIn | None = Field(
         None, description="The exact words from the input that justify this op; required unless the person makes it."
     )
 
     @model_validator(mode="after")
-    def _all_or_none(self) -> ActionRepeatOp:
-        given = [self.rule is not None, bool((self.phrase or "").strip()), self.start is not None]
-        if any(given) and not all(given):
+    def _one_shape(self) -> ActionRepeatOp:
+        by_rule = [self.rule is not None, bool((self.phrase or "").strip()), self.start is not None]
+        by_words = bool((self.words or "").strip())
+        if by_words and any(by_rule):
+            raise ValueError("give the words of a repeat, or its rule, words and first day; not both")
+        if any(by_rule) and not all(by_rule):
             raise ValueError("a repeat needs its rule, its words and its first day; leave all three out to stop it")
+        if self.words is not None and not by_words:
+            raise ValueError("the words of a repeat can't be empty; leave them out to stop it")
+        # The words come from the input: they sit inside the quoted evidence, which the applier finds in the input.
+        if by_words and self.evidence is not None:
+            said = " ".join(self.evidence.quote.split()).casefold()
+            if " ".join((self.words or "").split()).casefold() not in said:
+                raise ValueError("the words of a repeat are copied from the quoted evidence; these aren't in it")
+        if self.id.startswith("@") and not re.fullmatch(r"@\d{1,3}", self.id):
+            raise ValueError('a to-do made in the same answer is named "@" and the number of the op that adds it')
         return self
 
     def describe(self, view: Any = None) -> str | None:
-        what = named(view, "action", self.id)
+        what = "the new to-do" if self.id.startswith("@") else named(view, "action", self.id)
+        if self.words is not None:
+            return f"Make {what} repeat: {self.words}"
         return f"Stop {what} repeating" if self.rule is None else f"Make {what} repeat"
 
 

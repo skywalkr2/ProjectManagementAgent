@@ -3311,13 +3311,21 @@ people and details, and never acts in their name without their yes on the exact 
   (`web/src/components/RepeatingTodos.test.tsx`). A phrase that carries the to-do's own words ("water the plants every
   day") is declined, since the field holds the repeat only. The same field is on the form that adds a to-do by hand,
   and Today's to-do rows carry the repeat mark in words (`web/src/components/AddTodo.test.tsx`,
-  `tests/test_add_todo.py`). **Left:** teaching the assistant to propose a repeat from an input, decided
-  (2026-10-22, change log 188): `action.repeat` may carry only `words` (the input's exact words, as `due_words` does
-  for a day), which the engine reads with the repeat grammar from the to-do's due day (else the input's received
-  day), and its `id` may name a to-do added earlier in the same answer as `@<index of that op>`, which the applier
-  resolves to the new id when it checks and applies (and when a held one is released later). Words the grammar
-  declines repeat nothing and are said in the held line. It stays a suggestion that waits for the person
-  (`repeat-confirm`).
+  `tests/test_add_todo.py`). **Built (S2c, change log 188):** the assistant proposes a repeat from an input's own
+  words. `action.repeat` may carry only `words` (the input's exact words, as `due_words` does for a day), which the engine reads with the repeat grammar
+  from the to-do's due day (else the day the input was received, on the person's own clock) into a rule, the words and a
+  first day; its `id` may name a to-do added earlier in the same answer as `@<index of that op>` (counting from 0, an
+  `action.add` before it), which the applier resolves to the new id when it checks (against the ops before it, as
+  plugin validators see them), when it applies, and when a held one is released later (from the changeset's recorded
+  outcome of that op). Words the grammar declines, or that miss the to-do's own day, refuse the repeat op alone ("the
+  repeat in the input isn't clear"): the to-do still applies and nothing repeats. From anyone but the person it stays a
+  suggestion that waits for their yes (`repeat-confirm`), and its held line says the repeat in words. The extraction
+  prompt names the op for a to-do the input says someone repeats and never for a habit that isn't a to-do; a case that
+  expects a repeat waiting for the person, or forbids one, counts it as made. Built:
+  `tests/test_repeating_todos.py` (the `@` resolved at check and apply, held and released later, a to-do gone, words read
+  from the due day and from the received day, unclear words, a bad `@`), the golden-set cases
+  `repeat-named-from-the-same-answer` and `repeat-someone-elses-habit` in both fictional workspaces
+  (`tests/test_evaluate_harness.py::test_the_repeat_cases_pass_on_their_stub_answers_and_the_repeat_stays_held`).
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank

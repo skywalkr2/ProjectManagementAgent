@@ -2545,15 +2545,16 @@ The input says part of an open action was delivered: say what was delivered and 
 
 ### `action.repeat`
 
-Set how an open action repeats, or stop it repeating. To set one, give the repeat rule the grammar read from the person's words (`rule`), the words themselves (`phrase`) and the day of the first occurrence (`start`, the action's own due day when it has one); the rule must be one the repeat grammar can say back, or the op is refused. Leave all three out to stop it repeating. When the action has no due day it is due on `start`. Refused if the action doesn't exist or isn't open. From the person it applies at once; read from an input, it waits for the person's yes. Evidence is required from the assistant: the exact words that say it repeats.
+Set how an open action repeats, or stop it repeating. There are three shapes. To stop it repeating, leave out `rule`, `phrase`, `start` and `words`. To set one from a rule, give the repeat rule the grammar read from the person's words (`rule`), the words themselves (`phrase`) and the day of the first occurrence (`start`, the action's own due day when it has one); the rule must be one the repeat grammar can say back, or the op is refused. To set one from an input's words, give only `words`, copied exactly from the input: the engine reads them with the repeat grammar from the action's due day (else the day the input was received), and words it can't read repeat nothing and refuse only this op. `id` may be `@<n>`: the action made by op `n` of the same answer (counting from 0), which must be an `action.add` earlier in the list. When the action has no due day it is due on the first day of the repeat. Refused if the action doesn't exist or isn't open. From the person it applies at once; read from an input, it waits for the person's yes. Evidence is required from the assistant: the exact words from the input that say it repeats.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
-| `id` | str | required | The id of the open action. |
+| `id` | str | required | The id of the open action, or "@<n>" for the action made by op n of this answer. |
 | `rule` | str \| None | `None` | The repeat rule (an iCalendar RRULE value) the phrase reads as; left out to stop repeating. |
 | `phrase` | str \| None | `None` | The words the repeat was read from, as written. |
 | `start` | date \| None | `None` | The day of the first occurrence; a rule needs one. |
+| `words` | str \| None | `None` | The input's exact words that say how often it repeats ("every Friday"), copied from the input with no other words; give these instead of a rule, a phrase and a start. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 

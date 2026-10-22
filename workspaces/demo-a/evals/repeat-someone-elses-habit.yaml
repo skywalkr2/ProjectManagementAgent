@@ -1,0 +1,14 @@
+id: repeat-someone-elses-habit
+title: Someone else's habit that is not a to-do repeats nothing
+skills: [dates, evidence]
+received: '2026-10-14'
+pasted: |-
+  From: Odile Fenwick
+
+  FYI, Tobias reviews the vendor invoices on the first Monday of every month, so calls that day tend to run short.
+forbid:
+- op: action.repeat
+- op: action.add
+stub_answer:
+  summary: A habit of Tobias's, with nothing for anyone to do.
+  ops: []

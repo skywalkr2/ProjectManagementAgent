@@ -663,3 +663,20 @@ def test_a_starting_record_marked_update_sets_its_fields_on_the_record_the_works
         assert updated.data["role"] == "Tester" and updated.data["full_name"] == person.data["full_name"]
     finally:
         store.close()
+
+
+# ---- a repeat named in the input's own words ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("template", [DEMO_A, DEMO_B])
+def test_the_repeat_cases_pass_on_their_stub_answers_and_the_repeat_stays_held(monkeypatch, template):
+    named = case_of(template, "repeat-named-from-the-same-answer")
+    habit = case_of(template, "repeat-someone-elses-habit")
+    assert [op["op"] for op in named["stub_answer"]["ops"]] == ["action.add", "action.repeat"]
+    assert named["stub_answer"]["ops"][1]["id"] == "@0" and "rule" not in named["stub_answer"]["ops"][1]
+    for case in (named, habit):
+        result = run_edited(monkeypatch, template, case["id"])
+        assert result.passed and not result.missing and not result.forbidden, (case["id"], result)
+    # A repeat waiting for the person's yes counts as made, so a case that forbids one catches it.
+    caught = run_edited(monkeypatch, template, named["id"], expect=[], forbid=[{"op": "action.repeat"}])
+    assert not caught.passed and caught.forbidden

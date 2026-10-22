@@ -1124,7 +1124,7 @@ management (not just read only) lets do it"):
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*
-- [ ] [S2] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
+- [x] [S2] **Repeating to-dos** on the repeat engine the calendar uses (open promise P17), each occurrence its own row.
   A repeat is typed as a phrase and shown back from data (`engine/repeat_phrases.py`, `tests/test_repeat_phrases.py`):
   "the 31st" falls on a short month's last day rather than skipping it.
   The repeats people say that the grammar declines today (the outside helper's 60 phrases,
@@ -1146,10 +1146,12 @@ S2. **Time and attention:**
   and the page's earlier occurrences (`web/src/components/RepeatingTodos.test.tsx`, `web/src/lib/repeat.test.ts`).
   The Repeats field is also on the form that adds a to-do by hand, and Today's to-do rows carry the repeat mark in
   words (`tests/test_add_todo.py`, `web/src/components/AddTodo.test.tsx`).
-  **Left:** the assistant is not yet taught to propose `action.repeat` from a sentence like "I send the report every
-  Friday" (no prompt line or extraction case). The op needs an existing action's id and a rule and start the assistant
-  can't write, so it first needs a way to name a to-do made in the same answer and to carry only the person's words
-  (a design decision).
+  **Built (S2c):** the assistant proposes a repeat from a sentence like "I send the report every Friday": `action.repeat`
+  carries only the input's words (the engine reads them from the to-do's day, else the day the input was received),
+  names a to-do added earlier in the same answer as `@<n>`, refuses alone on unclear words, and waits for the person's
+  yes from an input (`tests/test_repeating_todos.py`; the extraction prompt line; the golden-set cases
+  `repeat-named-from-the-same-answer` and `repeat-someone-elses-habit`,
+  `tests/test_evaluate_harness.py::test_the_repeat_cases_pass_on_their_stub_answers_and_the_repeat_stays_held`).
 - [x] [S2] **Adding a to-do yourself** (design 6.32; found while building repeating to-dos): Add a to-do on Today and
   To-dos, no AI, at once with Undo. Built: `POST /api/todos/day` and `POST /api/todos`, with a day in words, none, for
   someone else, with a repeat, Undo and what isn't clear said back (`tests/test_add_todo.py`); the drawer with the

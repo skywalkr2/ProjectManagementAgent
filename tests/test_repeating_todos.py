@@ -12,15 +12,17 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from engine import repeats
-from engine.applier import apply_as_person, release
+from engine.applier import Context, Inputs, apply_as_person, apply_changeset, check, release
 from engine.dispatcher import undo_changeset
 from engine.followups import they_finished
+from engine.names import People
+from engine.ops import CHANGESET
 from engine.storage import Store, StoreError, WriteContext
 from engine.today import zone
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B
 from tests.test_corrections import other_of, pm_of
-from tests.test_knowledge_records import apply, source
+from tests.test_knowledge_records import NOW, apply, source
 
 TOKEN = "repeating-todos-token"
 _TEST = WriteContext(actor="pm", trust="trusted", op="test.repeat")
@@ -177,6 +179,182 @@ def test_a_repeat_the_assistant_reads_from_an_input_waits_for_the_persons_yes(en
     bad = {**op, "id": other, "rule": "FREQ=HOURLY"}
     _, statuses = apply(store, cfg, [bad], origin="input", trust="untrusted", source_id=source(store), raw=raw)
     assert statuses == ["refused"]
+
+
+# ---- a repeat the assistant names in the input's own words ----------------------------
+
+SAID = f"I will {TEXT.lower()} {WEEKLY}."
+MONDAY = date(2026, 11, 9)
+
+
+def added(due: date | None = None, **more) -> dict:
+    """An `action.add` for the person with the quote from `SAID`, optionally with a day."""
+    op = {"op": "action.add", "text": TEXT, "owners": ["PERSON"], "evidence": {"quote": f"{TEXT.lower()} {WEEKLY}"}}
+    return {**op, **({"due": due.isoformat()} if due else {}), **more}
+
+
+def repeat_of(words: str = WEEKLY, to: str = "@0", **more) -> dict:
+    """An `action.repeat` naming a to-do by `@`, with its words quoted as its evidence."""
+    quote = words if len(words.strip()) >= 3 else WEEKLY
+    return {"op": "action.repeat", "id": to, "words": words, "evidence": {"quote": quote}, **more}
+
+
+def run(store, cfg, ops, *, mine: bool, raw: str = SAID):
+    """The ops as the answer to one input: the person's own note, or an input from outside."""
+    ops = [{**op, "owners": [pm_of(cfg)]} if op.get("owners") == ["PERSON"] else op for op in ops]
+    if not mine:
+        return apply(store, cfg, ops, origin="input", trust="untrusted", source_id=source(store), raw=raw)
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    with store.transaction() as tx:
+        request = tx.create("request", {"task": "notes", "origin": "pm", "state": "done", "created_at": NOW}, _TEST).id
+    ctx = Context(store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs(request, None, "", raw, "trusted"))
+    cs_id = apply_changeset(cs, [], ctx, run=None)
+    return cs_id, [o["status"] for o in store.read().get("changeset", cs_id).data["ops"]]
+
+
+def made_action(store, cs_id, index: int = 0) -> str:
+    records = store.read().get("changeset", cs_id).data["ops"][index]["records"]
+    return next(r["id"] for r in records if r["kind"] == "action")
+
+
+def test_the_persons_own_words_make_the_to_do_and_its_repeat_at_once_read_from_the_to_dos_day(env):
+    cfg, store, _ = env
+    cs_id, statuses = run(
+        store, cfg, [added(due=MONDAY), repeat_of("every Monday")], mine=True, raw=f"{SAID} Every Monday."
+    )
+    assert statuses == ["applied", "applied"]
+    # Read from the to-do's own day (a Monday), not from the day the input arrived.
+    assert data(store, made_action(store, cs_id))["repeat"] == {
+        "rule": "FREQ=WEEKLY;BYDAY=MO",
+        "phrase": "every Monday",
+        "start": MONDAY.isoformat(),
+    }
+    assert store.read().get("changeset", cs_id).data["ops"][1]["op"]["id"] == "@0"
+
+
+def test_a_to_do_with_no_day_reads_the_words_from_the_day_the_input_was_received_and_is_due_on_the_first_day(env):
+    cfg, store, _ = env
+    cs_id, statuses = run(store, cfg, [added(), repeat_of()], mine=True)
+    assert statuses == ["applied", "applied"]
+    kept = data(store, made_action(store, cs_id))
+    # Received on a Wednesday: the first Friday on or after it is two days later.
+    assert kept["repeat"]["start"] == "2026-10-16" and kept["due"] == "2026-10-16"
+
+
+def test_the_at_sign_counts_ops_from_zero_and_names_only_the_one_it_says(env):
+    cfg, store, _ = env
+    other = {**added(due=FRIDAY), "text": "Send the monthly report"}
+    ops = [{"op": "note", "text": "Noted."}, added(due=MONDAY), other, repeat_of(to="@2")]
+    cs_id, statuses = run(store, cfg, ops, mine=True)
+    assert statuses == ["applied"] * 4
+    assert data(store, made_action(store, cs_id, 1))["repeat"] is None
+    assert data(store, made_action(store, cs_id, 2))["repeat"]["start"] == FRIDAY.isoformat()
+    assert data(store, made_action(store, cs_id, 2))["repeat"]["phrase"] == WEEKLY
+
+
+def test_a_repeat_read_from_an_input_is_held_with_its_words_and_the_to_do_still_applies(env):
+    cfg, store, _ = env
+    cs_id, statuses = run(store, cfg, [added(due=FRIDAY), repeat_of()], mine=False)
+    assert statuses == ["applied", "held"]
+    action_id = made_action(store, cs_id)
+    assert data(store, action_id)["repeat"] is None
+    held = store.read().get("changeset", cs_id).data["ops"][1]
+    assert WEEKLY in held["reason"] and held["problems"][0]["check"] == "repeat-confirm"
+    assert held["label"] == f"Make the new to-do repeat: {WEEKLY}"
+
+
+def test_a_held_repeat_released_later_resolves_from_what_the_changeset_made(env):
+    cfg, store, _ = env
+    cs_id, _ = run(store, cfg, [added(due=FRIDAY), repeat_of()], mine=False)
+    action_id = made_action(store, cs_id)
+    release(store, cfg, cs_id, 1)
+    assert data(store, action_id)["repeat"] == {
+        "rule": "FREQ=WEEKLY;BYDAY=FR",
+        "phrase": WEEKLY,
+        "start": FRIDAY.isoformat(),
+    }
+    assert store.read().get("changeset", cs_id).data["ops"][1]["status"] == "applied"
+
+
+def test_a_held_repeat_released_after_its_to_do_is_gone_or_ended_is_refused_plainly(env):
+    cfg, store, _ = env
+    cs_id, _ = run(store, cfg, [added(due=FRIDAY), repeat_of()], mine=False)
+    action_id = made_action(store, cs_id)
+    with store.transaction() as tx:
+        tx.delete("action", action_id, _TEST, read_version=tx.get("action", action_id).version)
+    with pytest.raises(StoreError, match=f"there is no action {action_id}"):
+        release(store, cfg, cs_id, 1)
+    assert store.read().get("changeset", cs_id).data["ops"][1]["status"] == "held"
+    ended, _ = run(store, cfg, [added(due=FRIDAY), repeat_of()], mine=False)
+    finish(store, cfg, made_action(store, ended))
+    with pytest.raises(StoreError, match="can't be made to repeat"):
+        release(store, cfg, ended, 1)
+
+
+def test_words_the_grammar_declines_refuse_the_repeat_alone_and_the_to_do_still_applies(env):
+    cfg, store, _ = env
+    for mine in (True, False):
+        odd = "whenever the mood takes me"
+        cs_id, statuses = run(store, cfg, [added(due=FRIDAY), repeat_of(odd)], mine=mine, raw=f"{SAID} {odd}.")
+        assert statuses == ["applied", "refused"]
+        refused = store.read().get("changeset", cs_id).data["ops"][1]
+        assert refused["reason"] == "the repeat in the input isn't clear"
+        assert data(store, made_action(store, cs_id))["repeat"] is None
+
+
+def test_words_that_are_clear_but_miss_the_to_dos_day_are_refused_in_plain_words(env):
+    cfg, store, _ = env
+    cs_id, statuses = run(store, cfg, [added(due=FRIDAY), repeat_of("every Monday")], mine=True)
+    assert statuses == ["applied", "refused"]
+    assert "isn't one of the days" in store.read().get("changeset", cs_id).data["ops"][1]["reason"]
+
+
+def test_the_check_reads_the_words_against_the_earlier_ops_before_anything_is_applied(env):
+    cfg, store, _ = env
+    before = len(store.read().list("action"))
+
+    def problems(words: str):
+        cs = CHANGESET.validate_python({"ops": [added(due=FRIDAY, owners=[pm_of(cfg)]), repeat_of(words)]})
+        ctx = Context(store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs(None, None, SAID, "", "trusted"))
+        return [(p.op, p.severity) for p in check(cs, ctx) if p.check == "targets"]
+
+    assert problems("whenever the mood takes me") == [(1, "refuse")]
+    assert problems(WEEKLY) == []
+    assert len(store.read().list("action")) == before
+
+
+def test_an_at_sign_that_does_not_name_an_earlier_add_is_refused_and_nothing_repeats(env):
+    cfg, store, _ = env
+    note = {"op": "note", "text": "Noted."}
+    for ops in (
+        [repeat_of(to="@0")],
+        [added(due=FRIDAY), repeat_of(to="@1")],
+        [added(due=FRIDAY), repeat_of(to="@5")],
+        [note, repeat_of(to="@0")],
+    ):
+        cs_id, statuses = run(store, cfg, ops, mine=True)
+        assert statuses[-1] == "refused", ops
+        assert "must name an" in store.read().get("changeset", cs_id).data["ops"][-1]["reason"]
+    assert all(a.data.get("repeat") is None for a in store.read().list("action"))
+    with pytest.raises(ValueError, match="the number of the op"):
+        run(store, cfg, [added(), repeat_of(to="@first")], mine=True)
+
+
+def test_the_words_of_a_repeat_cannot_be_given_with_its_rule_or_empty(env):
+    cfg, store, _ = env
+    both = {**repeat_of(), "rule": "FREQ=WEEKLY;BYDAY=FR", "phrase": WEEKLY, "start": FRIDAY.isoformat()}
+    with pytest.raises(ValueError, match="not both"):
+        run(store, cfg, [added(), both], mine=True)
+    with pytest.raises(ValueError):
+        run(store, cfg, [added(), repeat_of(" ")], mine=True)
+
+
+def test_the_words_of_a_repeat_must_be_inside_its_quoted_evidence(env):
+    cfg, store, _ = env
+    # A model that writes words the input never said is refused: the words are read only from the quote.
+    made_up = {**repeat_of(), "words": "every Monday"}
+    with pytest.raises(ValueError, match="aren't in it"):
+        run(store, cfg, [added(), made_up], mine=False)
 
 
 # ---- the next occurrence ----------------------------
