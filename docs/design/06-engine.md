@@ -1678,8 +1678,10 @@ A person who adds an account gets every tier filled in, so routine work never la
   person accepts or not. Cost is measured, not read from the price list, because a higher effort writes more tokens: a
   low-cost model at high effort may or may not beat a stronger one at low effort, and only the run says which. A measurement older than
   the service's newest listed model is offered again.
-- **A newer model is asked about, never switched to** (designer, 2026-10-22; change log 174; *not built yet*): the preset
-  asks once which model of the family to use, and a weekly check of the service's models and prices asks before any
+- **A newer model is asked about, never switched to** (designer, 2026-10-22; change log 174; *not built yet*). Setup
+  asks nothing (owner, 2026-10-22): a new account's tier takes the newest model of its family, decided from the listing's
+  release date, else the version in the model's id compared as numbers, never the list's order, and never a model of
+  another family. After setup, and a weekly check of the service's models and prices asks before any
   switch, with what it would change in cost; it never switches by itself.
 - **Thinking off** is sent only to a model whose listing says it supports it; it is never inferred from a hand test.
 - **Estimates learn from use** (*built*, `tests/test_estimate_calibration.py`, change log 175): when an account is
