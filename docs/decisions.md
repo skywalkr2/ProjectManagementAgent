@@ -4,6 +4,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: A person adds a to-do directly, without the assistant
+
+- **Decided (main session):** kind of rule: a core concept (a screen form over the existing `action.add`, applied as the
+  person's own). A daily assistant needs a plain way to write down a to-do; until now one came only from the hand-in
+  box (read by the assistant) or a meeting entry.
+- **Impact:** design 6.32 ("Adding a to-do yourself"), roadmap S2. A small addition to scope inside phase S. Change log:
+  section 186.
+
 ## 2026-10-22: A repeating to-do makes its next occurrence when one ends, and a missed one stays open
 
 - **Decided (main session, from the owner's "each occurrence its own row"):** kind of rule: a core concept (a repeat on

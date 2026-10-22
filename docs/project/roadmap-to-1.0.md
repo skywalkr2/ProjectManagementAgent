@@ -1140,6 +1140,8 @@ S2. **Time and attention:**
   **Left:** there is no form for adding a to-do by hand yet, so the Repeats field is on the edit form only; the
   assistant is not yet taught to propose `action.repeat` from a sentence like "I send the report every Friday" (no
   prompt line or extraction case); the repeat mark is on the open-items row only, not on Today's to-do rows.
+- [ ] [S2] **Adding a to-do yourself** (design 6.32; found while building repeating to-dos): Add a to-do on Today and
+  To-dos, no AI, at once with Undo.
 - [ ] [S2] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
   `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
   added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed

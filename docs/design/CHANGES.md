@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 186. Adding a to-do yourself, designed (2026-10-22; S2, designed)
+
+- **Design 6.32, "Adding a to-do yourself":** Add a to-do on Today and To-dos, with the words, when, who, project and
+  Repeats, applying at once as the person's own with Undo and no AI. Found while building repeating to-dos: a person
+  could add a to-do only through the hand-in box or a meeting entry.
+
 ## 185. Mail and calendar acts, built in part (2026-10-22; S1b-2a, engine, API and plugin API 0.3.88)
 
 - **Design 6.12, "Mail and calendar acts":** the act names its `action`, what it is `about` (saved messages for the new

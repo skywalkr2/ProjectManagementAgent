@@ -3157,6 +3157,11 @@ people and details, and never acts in their name without their yes on the exact 
   tomorrow and still waiting on others; the Monday briefing opens with a copy-ready message to whoever the person
   reports to, then the week's promises, questions, chases and decisions, and three to five goals the person confirms,
   under the same line rules (6.35; `docs/project/steward-wrapup-samples.md`).
+- **Adding a to-do yourself (phase S2; designed 2026-10-22).** Today and To-dos have **Add a to-do**: the words, when
+  (typed in plain words and read by the due-date rules, said back under the field, or left without a day), who
+  (the person by default, picked from the list of people), the project (picked, optional) and Repeats. No AI is
+  involved: it applies at once as the person's own, with Undo, and the cursor starts in the words. The hand-in box stays
+  the way to hand in something to be read.
 - **Repeating to-dos (phase S2; designed 2026-10-22).** A to-do repeats when the person says how, in their own words
   ("every other Tuesday", "the 1st and 15th"), read by the repeat grammar (`engine/repeat_phrases.py`) into a standard
   repeat rule and said back from the wording sheet, so the person sees what was understood before it is kept; a phrase
