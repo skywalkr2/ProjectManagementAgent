@@ -418,6 +418,16 @@ test.describe("screen use and the shell", () => {
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(12);
       const menu = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
       expect(menu.x + menu.width).toBeLessThanOrEqual(width);
+      if (beside) {
+        // The assistant's line changes with what it says (a time, a paused account's name); a long one is cut short,
+        // never pushing the header's end past the window.
+        await header.evaluate((h) => {
+          const say = h.querySelector<HTMLElement>("[data-alive] span:last-child");
+          if (say) say.textContent = "the assistant is paused on a rather long account name until Wednesday at 12:58 PM";
+        });
+        const after = (await header.getByRole("button", { name: /^Change appearance, / }).boundingBox())!;
+        expect(after.x + after.width).toBeLessThanOrEqual(width);
+      }
       // The plugin panels are in the sidebar, under Work and Records, and scroll there if they don't fit.
       await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /number 1$/ })).toHaveCount(1);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
