@@ -128,7 +128,7 @@ test("a meta line joins only the parts it has: no dot beside nothing, no lone do
 
 test("a project's page has what the assistant knows about it, and a person's page does not", async () => {
   api("project", "PRJ-1", { name: "Harbor" }, page(), {
-    "GET projects/PRJ-1/knows": () => ({ id: "PRJ-1", name: "Harbor", sources: [], facts: [{ id: "FACT-1", version: 1, text: "Trim size is fixed.", key: false, source: { basis: "person", on: "2026-10-08", origin: null } }], terms: [], routing: [], unknown: [] }),
+    "GET projects/PRJ-1/knows": () => ({ id: "PRJ-1", name: "Harbor", sources: [], facts: [{ id: "FACT-1", version: 1, text: "Trim size is fixed.", key: false, source: { basis: "person", on: "2026-10-08", origin: null } }], terms: [], routing: [], unknown: [], area: false, reading: { state: "none", levels: [], readers: [] } }),
   });
   const { unmount } = renderApp(<RecordPage kind="project" id="PRJ-1" onBack={() => {}} />);
   const knows = await screen.findByRole("region", { name: "What Helper knows" });

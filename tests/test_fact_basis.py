@@ -199,7 +199,7 @@ def test_the_notes_prompt_says_when_a_fact_is_inferred_and_when_to_mark_a_questi
     from pathlib import Path
 
     text = (Path(__file__).parent.parent / "engine" / "prompts" / "notes.md").read_text(encoding="utf-8")
-    assert '"basis": "inferred"' in text and "waits for the PM" in text
+    assert '"basis": "inferred"' in text and "waits for the user" in text
     assert "question.mark_sent" in text
 
 

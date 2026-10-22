@@ -26,7 +26,7 @@ expect_signals: [sent_back]
 expect_records:
 - kind: request
   where: {state: queued, task: notes}
-  text_has: [Sent back by the PM, new due date]
+  text_has: [Sent back by the user, new due date]
   count: 1
 - kind: lesson
   where: {status: proposed}

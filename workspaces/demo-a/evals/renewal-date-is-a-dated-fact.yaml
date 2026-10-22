@@ -2,6 +2,7 @@ id: renewal-date-is-a-dated-fact
 title: A renewal date an input states in full becomes a dated fact, and its reminder waits for the person's yes
 skills: [evidence]
 received: '2026-10-14'
+given_file: busy-portfolio.yaml
 # The day is recorded as stated; the reminder is a suggestion held for the person to keep, and nothing else changes.
 pasted: |-
   From: Tobias Wren
