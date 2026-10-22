@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: The free mail add-on is open; paid add-ons are closed from the start
+
+**Decided:** The mail and calendar add-on is the free one and is released as open source, so its release files can be
+downloaded by anyone and testers install it with no read token. Every later add-on that is sold is closed from its first
+release: its file carries no readable source and is handed only to the app it was sold to, with no setup step for the
+person. How that is done (a release host keyed per install, compiling the add-on, or both) is planned with phase I's
+installers.
+
+**Decided by:** the owner ("this is the free plugin so i guess this one should be open source as well", "future plugins
+need to be setup from the get go as blackbox").
+
+**Why:** A Python add-on's file carries its code, so a downloadable file is never closed; and testers can't be asked to
+make a token.
+
+**Impact:** Open promises P26 (stands), P38 and P39; roadmap phase I and phase C. The design text for pack distribution
+(3.11) is edited when phase I plans it. Change log: none.
+
 ## 2026-10-22: A channel is handed a context limited to its own hosts and its act's own account
 
 - **Decided (main session, from the mail add-on builder's round 8):** kind of rule: an extension point (plugin API
