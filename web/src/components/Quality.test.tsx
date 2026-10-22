@@ -115,7 +115,7 @@ test("missed, declined and dropped are three lines of their own, so a week of dr
   await loaded();
   const apart = within(section("quality-apart"));
   expect(apart.getByText("Missed: you said once that the assistant failed to find something.")).toBeInTheDocument();
-  expect(apart.getByText(/^Declined: you declined 2 changes it held for you/)).toBeInTheDocument();
+  expect(apart.getByText(/^Declined: you said no to 2 changes it asked you about/)).toBeInTheDocument();
   expect(apart.getByText(/^Dropped: you dropped 9 questions and to-dos as no longer needed\. That is not a mistake of the assistant's\./)).toBeInTheDocument();
   expect(apart.getByText("Oct 19 to Oct 25: missed 1, declined 2, dropped 9.")).toBeInTheDocument();
   expect(apart.queryByText(/Oct 12 to Oct 18/)).not.toBeInTheDocument();
