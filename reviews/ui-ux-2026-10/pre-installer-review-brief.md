@@ -62,3 +62,42 @@ The first run should read as one simple story, in this order:
 - **A short verdict for the owner:** could persona A and persona B each set it up alone, yes or no, and what stops them
   if not.
 - **Proposed checklist items** for the personal and business setup (P1…), added to the master checklist.
+
+## The plan as agreed, and what to check against it
+
+The main session's plan is in its roadmap (I-0, pushed as `2961aa6`, `b2e9449` and `71f2722`):
+
+- **The order:** Welcome → You (no workspace name) → AI account → Mail and calendar → Your promises (the first result) →
+  the people in your life (optional, suggested from mail) → "Do you have a business you want to track?" (optional) →
+  Backups → Done.
+- **Everyone gets a Personal project by default.** Business-only users can ignore it.
+- **The new steps follow the same UI rules as before:**
+  - all wording from the wording sheet
+  - the cursor in each step's first field
+  - lists for known values
+  - one main action per step
+  - no sideways scrolling
+  - WCAG 2.2 AA in light and dark
+  - browser tests at every width
+
+**My five adjustments,** sent to the main session on 2026-10-22. Check each one:
+
+1. **The business yes or no, and the business name, are asked early,** in the first step, so the first-result step
+   files business mail correctly. The details (projects, people, programs) come after the first result.
+2. **No "project" wording for personal-only users.**
+   - The sidebar shows "Personal" instead of "Projects".
+   - With a business, it shows "Personal" plus the business name, and "projects" appears only inside the business.
+   - Personal sub-areas (home, health, money, family) are optional and suggested, never a form.
+3. **Small-business words in the business step:** the business name; "What do you work on?" (jobs, clients or projects,
+   using the Client work template's words); and its people as customers, suppliers or staff. "Programs" is only an
+   optional way to group projects.
+4. **The people step asks how someone relates to you** ("my sister", "our dentist"): no organizations, teams or roles on
+   the personal side. With mail skipped, offer "paste a list" or type names, never an empty form.
+5. **The two sides stay apart from day one.**
+   - Every item belongs to Personal or the business.
+   - Today and Follow-ups have an "All / Personal / [business]" filter.
+   - The assistant asks when it isn't sure which side something belongs to.
+
+**Also check:**
+- With mail skipped, "Your promises" becomes "Hand something in to see what it does".
+- Welcome isn't counted as a step; progress starts at "You: 1 of 7".
