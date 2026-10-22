@@ -23,7 +23,22 @@ export function opensItems(line: QueueLine): boolean {
   return OPENS.has(line.kind);
 }
 
+/** What a line opens, headed by its action's notes when it is about one: where there is no hover (the phone, and below the
+ * inspector's width) this is where they are read. */
 export function LineDetail(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (step: string) => void }) {
+  return (
+    <>
+      {props.line.notes && (
+        <p className="hint" data-notes="">
+          {props.line.notes}
+        </p>
+      )}
+      <LineItems {...props} />
+    </>
+  );
+}
+
+function LineItems(props: { line: QueueLine; sendBack?: boolean; onOpenGuide?: (step: string) => void }) {
   const { line } = props;
   switch (line.kind) {
     case "decision":

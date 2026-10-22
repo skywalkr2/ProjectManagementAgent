@@ -70,7 +70,7 @@ export function ReassignForm(props: { action: Target; from?: string; onDone?: ()
 
 /** The row menu's "Reassign…" entry, and the form it opens. `onClosed` runs when the form goes, so the row can take focus
  * back. */
-export function useReassign(action: Target, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
+export function useReassign(action: Target, onClosed?: () => void, from?: string): { entry: MenuAction; form: ReactNode } {
   const { t } = useWords();
   const [open, setOpen] = useState(false);
   const close = () => {
@@ -78,6 +78,6 @@ export function useReassign(action: Target, onClosed?: () => void): { entry: Men
     onClosed?.();
   };
   const entry: MenuAction = { id: "reassign", label: t("open.reassign"), run: () => setOpen(true) };
-  const form = open ? <ReassignForm action={action} onDone={close} onCancel={close} /> : null;
+  const form = open ? <ReassignForm action={action} from={from} onDone={close} onCancel={close} /> : null;
   return { entry, form };
 }

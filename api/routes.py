@@ -99,6 +99,7 @@ from api.schemas import (
     OrganizationPatch,
     OrganizationView,
     OutsideEditView,
+    OwnerNameView,
     OwnerPick,
     OwnerSuggestionView,
     PanelRow,
@@ -205,7 +206,7 @@ from engine.followups import (
 )
 from engine.intake import IntakeError, hand_in, note_as_input, source_text
 from engine.made import made_by
-from engine.names import People
+from engine.names import People, render_owner
 from engine.next_steps import add_project as add_held_project
 from engine.next_steps import unfile_missing
 from engine.ops import StageMoveOp
@@ -689,6 +690,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         people = People(store, cfg)
         view = store.read()
         projects = {p.id: p.data["name"] for p in view.list("project")}
+        parents = {p.id: projects.get(p.data.get("parent") or "") for p in view.list("project")}
         here = zone(cfg)
         out = []
         for line in queue(ws, store, cfg, worker.now(), handover=worker.handover_state()):
@@ -698,12 +700,15 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 data["until"] = datetime.fromisoformat(line.until).astimezone(here)
             if line.waiting_since:
                 data["waiting_since"] = datetime.fromisoformat(line.waiting_since).astimezone(here)
+            about = view.get("action", line.actions[0]) if len(line.actions) == 1 else None
             out.append(
                 QueueLineView(
                     **data,
                     title=_title_view(line.title, people),
                     person_name=people.name(line.person) if line.person else None,
                     project_name=projects.get(line.project or ""),
+                    parent_name=parents.get(line.project or ""),
+                    notes=(about.data.get("notes") or None) if about is not None else None,
                     side=sides.side_of_line(view, cfg, line),
                 )
             )
@@ -2352,10 +2357,23 @@ def _section(
     actions = [
         FollowupAction(
             id=a["id"],
+            version=a["version"],
+            owners=[
+                OwnerNameView(
+                    person=o["person"],
+                    name=render_owner(
+                        people.owner_format, people.name(o["person"]), people.team_names.get(o.get("team") or "")
+                    ),
+                    team=o.get("team"),
+                )
+                for o in a["owners"]
+            ],
             text=a["text"],
             due=a["due"],
             due_check=a["due_check"],
             project_name=a["project_name"],
+            parent_name=a.get("parent_name"),
+            notes=a.get("notes"),
             links=a["links"],
             told=a["told"],
             told_days=a["told_days"],

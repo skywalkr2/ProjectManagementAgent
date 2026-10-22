@@ -431,8 +431,12 @@ From the original designer's lessons of 2026-10-14:
   *Built (B-6a):* To-dos and questions under Work, with filters, edit, reassign, merge, hold and drop from the row with
   Undo; stale and no-owner lines on Today; a note box on every action button; the action-stands-alone lint
   (`tests/test_open_items.py`, `tests/test_action_stands_alone.py`, `web/src/components/OpenItems.test.tsx`,
-  `web/src/components/NoteBoxEverywhere.test.tsx`). *Left:* notes on hover and the parent project tag on Follow-ups and
-  Today rows, Reassign on Waiting-on-them rows, and the owner's exit check on a laptop and a phone.
+  `web/src/components/NoteBoxEverywhere.test.tsx`); notes and the parent project tag on Follow-ups asks and Today lines, and
+  Reassign on Waiting-on-them asks (`tests/test_action_row_details.py`, `web/src/components/FollowUps.test.tsx`,
+  `web/src/components/Today.test.tsx`); To-dos and questions show notes as a second line on a phone too
+  (`web/src/components/OpenItems.tsx` uses the same `NotesTitle`). *Left:* the owner's exit check on a laptop and a phone;
+  and on a phone, Today's lines that open no detail (a reminder, a reply) reach their notes only through a screen reader,
+  since Today's lines keep one line each (B-8 R3).
 - [ ] [B-6b] **Top priorities, always current** (owner, 2026-10-13: the version used at work has "a constantly updated top
   priority items" list). A short ranked list on Today across every project, rebuilt as records change and ranked by
   rules (due and overdue, at risk, blocked, waiting on the person, the project's priority), never by an AI call. Shaped

@@ -169,6 +169,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     pulled = _pulled(store.read(), cfg, today, held_up, people.pm)
     projects = {p.id: p.data["name"] for p in store.read().list("project")}
     project_links = {p.id: p.data.get("links", []) for p in store.read().list("project")}
+    project_parents = {p.id: projects.get(p.data.get("parent") or "") for p in store.read().list("project")}
     by_person: dict[str, Section] = {}
 
     def section(pid: str) -> Section:
@@ -236,12 +237,16 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
             section(owner["person"]).actions.append(
                 {
                     "id": a.id,
+                    "version": a.version,
+                    "owners": [{"person": o["person"], "team": o.get("team")} for o in d.get("owners") or []],
                     "side": row_side,
                     "text": d["text"],
                     "due": d.get("due"),
                     "due_check": bool(d.get("due") and d.get("due_check")),
                     "project": d.get("project"),
                     "project_name": projects.get(d.get("project"), ""),
+                    "parent_name": project_parents.get(d.get("project")),
+                    "notes": d.get("notes") or None,
                     "links": project_links.get(d.get("project"), []),
                     "told": told,
                     "first_told": _first_told(history.get(a.id, []), owner["person"], told),

@@ -860,3 +860,46 @@ test("a name the person chose is used as it is", async () => {
   show([review]);
   expect(await screen.findByText("Look over 3 to-dos Helper added")).toBeInTheDocument();
 });
+
+// ---- an action's project with its parent, and its notes (roadmap B-6a) ---------------------------------------------------
+
+const aboutAction = line("owner", {
+  key: "question:Q-9",
+  text: "Plan the launch",
+  project: "PRJ-2",
+  project_name: "Autumn book",
+  parent_name: "Upper Shelf",
+  notes: "Ask about the paper too",
+  actions: ["ACT-9"],
+  question: "Q-9",
+});
+
+test("a line about an action tags its project with the project it is part of", async () => {
+  show([decision, aboutAction]);
+  await screen.findByText("Pick an owner for “Plan the launch”");
+  expect(within(row("owner")).getByText("Upper Shelf › Autumn book")).toBeInTheDocument();
+  expect(within(row("decision")).getByText("Spring book")).toBeInTheDocument();
+});
+
+test("a line's notes are on hover and read by a screen reader, and a line with none has neither", async () => {
+  show([decision, aboutAction]);
+  await screen.findByText("Pick an owner for “Plan the launch”");
+  const owner = row("owner");
+  expect(owner.querySelector("[title]")).toHaveAttribute("title", "Ask about the paper too");
+  const described = owner.getAttribute("aria-describedby")!;
+  expect(document.getElementById(described)).toHaveTextContent("Ask about the paper too");
+  expect(row("decision").querySelector("[title]")).toBeNull();
+  expect(row("decision")).not.toHaveAttribute("aria-describedby");
+});
+
+test("opened, a line reads its notes where there is no hover", async () => {
+  const user = userEvent.setup();
+  show([decision, aboutAction]);
+  await user.click(await within(await screen.findByRole("group", { name: /Plan the launch/ })).findByRole("button", { name: "Pick an owner" }));
+  const detail = await waitFor(() => {
+    const found = row("owner").querySelector<HTMLElement>("p[data-notes]");
+    expect(found).not.toBeNull();
+    return found!;
+  });
+  expect(detail).toHaveTextContent("Ask about the paper too");
+});

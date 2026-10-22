@@ -1027,6 +1027,24 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 172. An action's project with its parent and its notes on Follow-ups and Today, and Reassign on Waiting on them (2026-10-22; B-6a, built)
+
+- **Follow-ups (7.5):** an ask that is an action names its project as the shared project tag, with the project it is part of
+  ("Parent › Project") when there is one, in the to-send list, the waiting rows and the person's own to-dos. Its notes are the
+  title's hover text and a description a screen reader reads with the row; on a phone, where there is no hover, they are a
+  second line under the words. **Reassign** is in the menu of each Waiting on them ask that is an action, through the same
+  form as the To-dos screen (a list of people, the cursor in it, acts at once with Undo); the person whose message it is is the
+  owner being replaced, so the other owners of a shared ask stay. After it, the ask is in the new owner's message, or in the
+  person's own to-dos when it was given to them.
+- **Today (7.7):** a queue line about one action carries its project with the parent by the same tag, where the line shows a
+  project today (only when the screen mixes projects), and its notes on hover and to a screen reader; opened (in place, or
+  in the inspector) the line starts with the notes, which is where a phone and a window below the inspector's width read them.
+- **API:** the Follow-ups ask (`FollowupAction`) gains `parent_name`, `notes`, `version` and `owners` (what Reassign needs);
+  the Today queue line (`QueueLineView`) gains `parent_name` and `notes` (the notes only for a line about exactly one action).
+- Built: `tests/test_action_row_details.py` (the payloads), `web/src/components/FollowUps.test.tsx` (tag with parent, notes on
+  hover, focus and for a screen reader, the phone's second line, Reassign with Undo, a shared ask),
+  `web/src/components/Today.test.tsx` (tag with parent, notes on hover and opened).
+
 ## 171. What changed and Follow-ups as list | detail, and the phone's review mode for messages to send (2026-10-22; B-6b, built)
 
 - **What changed (7.3, 7.13):** one line per change (state, title, one line of what was done, the one primary, the rest in the

@@ -6834,6 +6834,18 @@
             "title": "Links",
             "type": "array"
           },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its notes, which the screen shows on hover and on a phone.",
+            "title": "Notes"
+          },
           "on_hold": {
             "anyOf": [
               {
@@ -6856,6 +6868,33 @@
               }
             ],
             "description": "Where the action came from, for its link."
+          },
+          "owners": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OwnerNameView"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its owners, for Reassign.",
+            "title": "Owners"
+          },
+          "parent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the project its project is part of, if any.",
+            "title": "Parent Name"
           },
           "project_name": {
             "title": "Project Name",
@@ -6902,6 +6941,18 @@
               }
             ],
             "title": "Told Days"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its version as read; sent back when its owners change.",
+            "title": "Version"
           }
         },
         "required": [
@@ -15565,6 +15616,18 @@
             "title": "Names",
             "type": "array"
           },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a line about one action: that action's notes, which the screen shows on hover and in the inspector.",
+            "title": "Notes"
+          },
           "op": {
             "anyOf": [
               {
@@ -15604,6 +15667,18 @@
             ],
             "description": "For a nudge line: how many of its items are past their date; `due` is the oldest of those.",
             "title": "Overdue"
+          },
+          "parent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the project its project is part of, if any.",
+            "title": "Parent Name"
           },
           "person": {
             "anyOf": [

@@ -41,6 +41,7 @@ import { QueueGroup } from "./QueueGroup";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 import { StageTodayRows, useStageToday } from "./StageToday";
+import { ProjectTag } from "./ProjectTag";
 import { ThisWeekInspector } from "./ThisWeek";
 import { LineDetail, opensItems } from "./TodayDetail";
 import styles from "./Today.module.css";
@@ -944,7 +945,7 @@ function QueueRow(props: {
   })();
 
   useRowKeys(ref, { toggle: props.beside ? choose : opens ? () => select(!open) : undefined });
-  const project = props.mixed && line.project_name ? <span className={styles.tag}>{line.project_name}</span> : null;
+  const project = props.mixed && line.project_name ? <ProjectTag name={line.project_name} parent={line.parent_name} className={styles.tag} /> : null;
   const onClick = (event: React.MouseEvent) => {
     if ((event.target as HTMLElement).closest("button, a, input, textarea, select, [role='menuitem']")) return;
     if (props.beside) select(true);
@@ -994,14 +995,22 @@ function QueueRow(props: {
       data-queue-line={line.kind}
       data-line-key={line.key}
       aria-label={title}
+      aria-describedby={line.notes ? `${detailId}-notes` : undefined}
       role="group"
       pill={d.pill ? <Pill tone={d.tone}>{d.pill}</Pill> : undefined}
       tag={line.untrusted ? <OutsideTag /> : undefined}
       title={
-        <span id={`${detailId}-title`}>
-          {project}
-          {title}
-        </span>
+        <>
+          <span id={`${detailId}-title`} title={line.notes ?? undefined}>
+            {project}
+            {title}
+          </span>
+          {line.notes && (
+            <span id={`${detailId}-notes`} className="sr">
+              {line.notes}
+            </span>
+          )}
+        </>
       }
       meta={d.meta || undefined}
       oneLine

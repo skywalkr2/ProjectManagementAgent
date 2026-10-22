@@ -34,6 +34,8 @@ import { HoldNote, useHold } from "./OnHold";
 import styles from "./OpenItems.module.css";
 import { OriginLink } from "./Origin";
 import { useHandToAssistant } from "./HandToAssistant";
+import { ProjectTag } from "./ProjectTag";
+import { NotesTitle } from "./ActionNotes";
 import { useReassign } from "./ReassignAction";
 import type { MenuAction } from "./RowMenu";
 import { RowMenu } from "./RowMenu";
@@ -151,19 +153,12 @@ function join(parts: Array<ReactNode | null | undefined | false | "">): ReactNod
   ));
 }
 
-function ProjectTag(props: { name: string; parent: string | null | undefined }) {
-  const { t } = useWords();
-  if (!props.name) return null;
-  return <span className={styles.project}>{props.parent ? t("open.project_in", { parent: props.parent, project: props.name }) : props.name}</span>;
-}
-
 function ActionRow(props: { action: OpenAction }) {
   const { t, tn } = useWords();
   const act = useAct();
   const noted = useNoted();
   const a = props.action;
   const ref = useRef<HTMLLIElement & HTMLDivElement>(null);
-  const notesId = useId();
   const focus = () => ref.current?.focus();
   const [noting, setNoting] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -213,16 +208,7 @@ function ActionRow(props: { action: OpenAction }) {
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,
   ]);
-  const title = a.notes ? (
-    <span title={a.notes} aria-describedby={notesId}>
-      {a.text}
-      <span id={notesId} className="sr">
-        {a.notes}
-      </span>
-    </span>
-  ) : (
-    a.text
-  );
+  const title = <NotesTitle notes={a.notes}>{a.text}</NotesTitle>;
   return (
     <Row
       ref={ref}

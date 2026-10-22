@@ -24,9 +24,12 @@ import { useDropAction } from "./DropAction";
 import { HoldNote, useHold } from "./OnHold";
 import { useHoldFor, useSendNow } from "./HoldFor";
 import { useHandToAssistant } from "./HandToAssistant";
+import { NotesTitle } from "./ActionNotes";
 import { NoteBox, useNoted } from "./NoteBox";
 import { NudgeLeftOut } from "./NudgeLeftOut";
 import { OriginLink } from "./Origin";
+import { ProjectTag } from "./ProjectTag";
+import { useReassign } from "./ReassignAction";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
@@ -427,10 +430,12 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
         <div className="title">
-          {a.text}
+          <NotesTitle notes={a.notes}>{a.text}</NotesTitle>
           <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} />
         </div>
-        <div className="meta">{actionMeta(a, t)}</div>
+        <div className="meta">
+          <ActionMeta a={a} rest={dueWords(a, t)} />
+        </div>
         <OriginLink origin={a.origin} />
       </div>
       <div className="acts">
@@ -460,8 +465,20 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Tn = (key: string, n: number, vars?: Record<string, string | number>) => string;
 
-function actionMeta(a: S["FollowupAction"], t: T): string {
-  return [a.project_name, a.due ? t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }) : ""].filter(Boolean).join(" · ");
+function dueWords(a: S["FollowupAction"], t: T): string {
+  return a.due ? t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }) : "";
+}
+
+/** An ask that is an action says its project first, as a tag with the project it is part of when there is one, then `rest`. */
+function ActionMeta(props: { a: S["FollowupAction"]; rest: string }) {
+  const { a, rest } = props;
+  return (
+    <>
+      {a.project_name && <ProjectTag name={a.project_name} parent={a.parent_name} />}
+      {a.project_name && rest && " · "}
+      {rest}
+    </>
+  );
 }
 
 /** What a person's message keeps while the list shows them and the detail edits them: the words as edited, and whether the
@@ -678,8 +695,14 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                 ))}
                 {actions.map((a) => (
                   <li key={a.id}>
-                    <span className="title">{a.text}</span>
-                    {actionMeta(a, t) && <span className="meta">{actionMeta(a, t)}</span>}
+                    <span className="title">
+                      <NotesTitle notes={a.notes}>{a.text}</NotesTitle>
+                    </span>
+                    {(a.project_name || dueWords(a, t)) && (
+                      <span className="meta">
+                        <ActionMeta a={a} rest={dueWords(a, t)} />
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -1059,9 +1082,8 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
   const hold = useHold(a);
   const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
   const drop = useDropAction(a, () => ref.current?.focus());
-  const meta = a.followed_up
-    ? [a.project_name, t("followups.followed_up_on", { date: day(a.followed_up) })].filter(Boolean).join(" · ")
-    : sentLine(a.told, a.told_days, a.project_name, tn, t);
+  const reassign = useReassign({ id: a.id, version: a.version ?? 0, owners: a.owners ?? [] }, () => ref.current?.focus(), props.person);
+  const rest = a.followed_up ? t("followups.followed_up_on", { date: day(a.followed_up) }) : sentLine(a.told, a.told_days, "", tn, t);
   const finish: MenuAction = { id: "finished", label: t("followups.they_finished"), run: () => void finished() };
   const chased: MenuAction = { id: "followed-up", label: t("followups.followed_up"), run: () => void followedUp() };
   const note: MenuAction = { id: "note", label: t("note.add"), run: () => setNoting(true) };
@@ -1074,17 +1096,21 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
         <div className="title">
-          {a.text}
+          <NotesTitle notes={a.notes}>{a.text}</NotesTitle>
           {a.on_hold || a.blocker ? <HoldNote on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
         </div>
-        {meta && <div className="meta">{meta}</div>}
+        {(a.project_name || rest) && (
+          <div className="meta">
+            <ActionMeta a={a} rest={rest} />
+          </div>
+        )}
         <OriginLink origin={a.origin} />
       </div>
       <div className="acts">
         <button type="button" className="btn primary" onClick={() => void (chase ? followedUp() : finished())}>
           {t(chase ? "followups.followed_up" : "followups.they_finished")}
         </button>
-        <RowMenu label={a.text} actions={[chase ? finish : chased, note, hold.entry, change.entry, drop.entry]} />
+        <RowMenu label={a.text} actions={[chase ? finish : chased, note, ...(a.version != null && a.owners ? [reassign.entry] : []), hold.entry, change.entry, drop.entry]} />
       </div>
       {noting && (
         <NoteBox
@@ -1095,6 +1121,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
           }}
         />
       )}
+      {reassign.form}
       {hold.form}
       {change.form}
       {drop.form}

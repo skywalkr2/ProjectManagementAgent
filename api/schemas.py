@@ -858,6 +858,8 @@ class FollowupQuestion(BaseModel):
 
 class FollowupAction(BaseModel):
     id: str
+    version: int | None = Field(None, description="Its version as read; sent back when its owners change.")
+    owners: list[OwnerNameView] | None = Field(None, description="Its owners, for Reassign.")
     text: str
     due: str | None
     due_check: bool | None = Field(
@@ -866,6 +868,8 @@ class FollowupAction(BaseModel):
         "never overdue or chased by it.",
     )
     project_name: str
+    parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
+    notes: str | None = Field(None, description="Its notes, which the screen shows on hover and on a phone.")
     links: list[Link] = Field(
         default_factory=list, description="Pages that belong to the action's project, for the copied table."
     )
@@ -2229,6 +2233,12 @@ class QueueLineView(BaseModel):
     person_name: str | None = None
     project: str | None = None
     project_name: str | None = None
+    parent_name: str | None = Field(None, description="The name of the project its project is part of, if any.")
+    notes: str | None = Field(
+        None,
+        description="For a line about one action: that action's notes, which the screen shows on hover and in the "
+        "inspector.",
+    )
     side: Literal["personal", "business"] | None = Field(
         None,
         description="Which side the line is on, from its project: personal, business, or none for neither "

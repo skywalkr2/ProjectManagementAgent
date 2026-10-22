@@ -1037,3 +1037,114 @@ test("on Today the switch is not shown", async () => {
   await screen.findByRole("button", { name: /^Robin Sample/ });
   expect(screen.queryByRole("radio", { name: "By project" })).toBeNull();
 });
+
+// ---- an ask that is an action: its project with the project it is part of, its notes, and Reassign (roadmap B-6a) -----------
+
+function detailedSections(): S["FollowupSection"][] {
+  const waiting = waitingSections();
+  Object.assign(waiting[0].actions[0], {
+    parent_name: "Upper Shelf",
+    notes: "Ask about the paper too",
+    version: 4,
+    owners: [{ person: "PER-2", name: "Robin Sample" }],
+  });
+  return waiting;
+}
+
+const reassignRoutes = {
+  "GET people": () => [
+    { id: "PER-1", name: "Pat Example", status: "active" },
+    { id: "PER-2", name: "Robin Sample", status: "active" },
+    { id: "PER-3", name: "Sam Twin", status: "active" },
+  ],
+  "POST records/edit": () => ({ changeset: "CS-1" }),
+  "POST changesets/CS-1/undo": () => ({ restored: [0], skipped: [] }),
+};
+
+test("a waiting ask that is an action names its project with the project it is part of", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => detailedSections(), ...reassignRoutes });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  expect(within(row).getByText("Upper Shelf › Book")).toBeInTheDocument();
+  expect(row).toHaveTextContent("Upper Shelf › Book · sent Fri, Oct 9");
+});
+
+test("an ask's notes are on hover, on focus and to a screen reader; an ask with none has neither", async () => {
+  const user = userEvent.setup();
+  const found = detailedSections();
+  found[0].actions.push({ ...found[0].actions[0], id: "ACT-2", text: "Order the copies", notes: null });
+  fakeApi({ "GET followups": () => found, ...reassignRoutes });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  const title = within(row).getByText("Send the index");
+  expect(title.closest("[title]")).toHaveAttribute("title", "Ask about the paper too");
+  // Focus on the row reads the notes: the row's words point at a description a screen reader reads.
+  const described = title.closest("[aria-describedby]")!.getAttribute("aria-describedby")!;
+  expect(document.getElementById(described)).toHaveTextContent("Ask about the paper too");
+  const plain = screen.getByText("Order the copies").closest("li") as HTMLElement;
+  expect(plain.querySelector("[title]")).toBeNull();
+});
+
+test("on a phone the notes are a second line, as there is no hover", async () => {
+  document.documentElement.setAttribute("data-narrow", "");
+  try {
+    const user = userEvent.setup();
+    fakeApi({ "GET followups": () => detailedSections(), ...reassignRoutes });
+    renderApp(<FollowUps />);
+    await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+    const line = await screen.findByText("Ask about the paper too");
+    expect(line).toBeVisible();
+    expect(line.closest("[title]")).toBeNull();
+  } finally {
+    document.documentElement.removeAttribute("data-narrow");
+  }
+});
+
+test("Reassign on a waiting ask picks a person from a list, changes the owner and offers Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ "GET followups": () => detailedSections(), ...reassignRoutes });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Reassign…" }));
+  const picker = await screen.findByRole("combobox", { name: "Reassign to" });
+  await waitFor(() => expect(picker).toHaveFocus());
+  await user.selectOptions(picker, "PER-3");
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({
+      kind: "action",
+      id: "ACT-1",
+      read_version: 4,
+      fields: { owners: [{ person: "PER-3" }] },
+    }),
+  );
+  expect(await screen.findByText("Reassigned to Sam Twin.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/undo")).toBe(true));
+});
+
+test("on a shared ask, Reassign changes the part of the person whose message it is and leaves the other owners", async () => {
+  const user = userEvent.setup();
+  const found = detailedSections();
+  found[0].actions[0].owners = [
+    { person: "PER-2", name: "Robin Sample" },
+    { person: "PER-1", name: "Pat Example" },
+  ];
+  const calls = fakeApi({ "GET followups": () => found, ...reassignRoutes });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Reassign…" }));
+  expect(screen.queryByRole("combobox", { name: /Whose part/ })).toBeNull();
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Reassign to" }), "PER-3");
+  await waitFor(() =>
+    expect((calls.find((c) => c.route === "POST records/edit")?.body as { fields: unknown }).fields).toEqual({
+      owners: [{ person: "PER-3" }, { person: "PER-1" }],
+    }),
+  );
+});
