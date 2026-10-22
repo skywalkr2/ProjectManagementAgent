@@ -888,10 +888,13 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   a request's settings are shown as configured when the report is made.
 - [ ] [B-12] **The functional designer's answers on the 2026-10-23 questions** (received 2026-10-22; `docs/decisions.md`,
   design change log 174). Built in batches, the two that matter most first. Each sub-item is done when its test passes:
-  - *Batch 1, filing by words (S1-4):* signals ranked people with the sender's domain, then identifiers and project
-    aliases, then multi-word project names, then side words; a one-word everyday name never counts alone (a list per
-    language); `aliases` on projects (record, form, export); the item says why words filed it, and moving it is one click
-    that records a correction.
+  - *Batch 1, filing by words (S1-4):* **built** (`tests/test_filing_signals.py`, `tests/test_sides.py`, and the screens'
+    tests in `web/src/components/SinceYesterday.test.tsx`, `RecordPageRecords.test.tsx`, `Projects.test.tsx`): signals ranked
+    people, the sender's mail domain, project aliases, project names that count by themselves, then side words, a rank
+    pointing both ways passing to the next; a one-word everyday name never counts alone (`language.everyday_words`, a
+    shipped list); `aliases` on projects (record, form, export); the item says why (`filed_by`) on what changed's line and
+    its page, and Move to the other side is one step with Undo that records the `edited` correction. *Left:* the other
+    sub-items of B-12 (batches 2 to 4).
   - *Batch 2, AI accounts (B-11c):* estimates calibrated by one count request at the account check, kept as a ratio and
     corrected from every run's reported usage; a command-line agent's measured fixed overhead per request (*built, 2a:*
     `tests/test_estimate_calibration.py`, the native adapter's count in `tests/test_anthropic_messages.py`; left: the

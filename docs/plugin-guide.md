@@ -1191,6 +1191,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 | `phase` | str \| None | `None` | The part of its life the project is in, from the project-phase list. |
 | `target` | date \| None | `None` | The day the project is meant to be finished. |
 | `priority` | str \| None | `None` | How important the project is, from the project-priority list. |
+| `aliases` | list[str] | `[]` | Other forms the project is called by: another name, a code or a ticket-key prefix. An item that contains one as a whole word is filed under the project's side. |
 | `summary` | str \| None | `None` | A short description of what the project is. |
 | `owner` | str \| None | `None` | The id of the person responsible for the project. |
 | `links` | list[Link] | `[]` | Pages that belong to the project. |
@@ -1243,6 +1244,10 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `evidence` | Evidence \| None | see below | The words in the source that justify the action. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
+| `filed_by` | FiledBy \| None | see below | Why the assistant filed it under its project, when it chose the project itself (design 6.32): the signal, the word or domain that matched and the project. Set once by the applier; none for an item the person or the input placed. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `promised_to` | list[Annotated[str, RefTo(kind='person')]] | `[]` | For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33). |
 | `basis` | Literal['inferred', 'said'] \| None | `None` | For a promise: said outright, or inferred by the assistant; never a confidence score. |
 | `said_by` | str \| None | `None` | The id of the person who said it, when the input names them. |
@@ -1276,6 +1281,10 @@ A question for a person; a decision is a question to the PM. Added by `question.
 | `links[].url` | str | required | The address to open. |
 | `kind` | Literal['question', 'decision', 'action-notice', 'routing', 'impact'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. action-notice: tells someone about an action. routing: asks the PM who or what something is. impact: asks another area's contact how a change affects them. |
 | `projects` | list[str] | `[]` | The ids of the projects it is about. |
+| `filed_by` | FiledBy \| None | see below | Why the assistant filed it under its project, when it chose the project itself (design 6.32): the signal, the word or domain that matched and the project. Set once by the applier; none for an item the person or the input placed. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
 | `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `batch` | Literal['now', 'later'] | `'now'` | Whether it is ready to go out now or waits for a later batch. |
@@ -1415,6 +1424,10 @@ Something recorded as true, with the words that show it. Added by `fact` and by 
 | `evidence` | Evidence \| None | see below | The words that justify it. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
+| `filed_by` | FiledBy \| None | see below | Why the assistant filed it under its project, when it chose the project itself (design 6.32): the signal, the word or domain that matched and the project. Set once by the applier; none for an item the person or the input placed. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 | `key` | bool | `False` | True for the facts that matter most, which are always shown first. |
 | `as_of` | date \| None | `None` | The day the fact was true as of: the day the input it came from was received, unless a later input says otherwise. |
@@ -1536,6 +1549,10 @@ Something kept from an input that is not a fact, action or question. Added by `n
 | `project` | str \| None | `None` | The id of the project it is about, if any. |
 | `question` | str \| None | `None` | The id of the question it adds to, if any: what an input says about a question. |
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
+| `filed_by` | FiledBy \| None | see below | Why the assistant filed it under its project, when it chose the project itself (design 6.32): the signal, the word or domain that matched and the project. Set once by the applier; none for an item the person or the input placed. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 
 ### `lesson` (LES-n)
@@ -2050,6 +2067,10 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `waiting_for` | str \| None | `None` | For a promise that holds only once something happens ('once the keys arrive', 'if the board agrees'): the condition, in plain words. The action starts on hold until it is met. |
 | `due_at_event` | bool | `False` | The date is the calendar entry's in `event` ('by Thursday's meeting', 'after the review'): it is due on the entry's day and moves when the entry moves. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
+| `filed_by` | FiledBy \| None | see below | Why the engine filed this under its project; set by the engine, never by the assistant. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
 | `reply_owed` | bool | `False` | True for the one action that is the reply the person owes to a message that asks them something (owned by the person). The rules then read the message: automatic mail, mail the person sent and a message that says no reply is needed are refused. Leave it false for any other action. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
@@ -2220,6 +2241,10 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `text` | str | required | The fact, as a statement. |
 | `project` | str \| None | `None` | Project id, if the fact is about one. |
+| `filed_by` | FiledBy \| None | see below | Why the engine filed this under its project; set by the engine, never by the assistant. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 | `key` | bool | `False` | True only for a fact that matters most to the project; it is shown first. |
@@ -2405,6 +2430,10 @@ Keep something from the input that isn't a fact, action or question. Creates a n
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `text` | str | required | What to keep. |
 | `project` | str \| None | `None` | Project id, if the note is about one. |
+| `filed_by` | FiledBy \| None | see below | Why the engine filed this under its project; set by the engine, never by the assistant. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `question` | str \| None | `None` | The id of the open question it adds to, when the input says more about one. |
 
 ### `person.add`
@@ -2489,6 +2518,10 @@ A question for a person, written for its reader. A decision is a question to who
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open; a question to someone else needs one the recipient can open. |
 | `project` | str \| None | `None` | Project id, if the question is about one. |
+| `filed_by` | FiledBy \| None | see below | Why the engine filed this under its project; set by the engine, never by the assistant. |
+| `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
+| `filed_by.word` | str \| None | `None` | The word or domain that matched; none when people decided. |
+| `filed_by.project` | str | required | The id of the project it was filed under. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `asks_about` | Literal['date', 'decision', 'design', 'mistake', 'other'] | `'other'` | What the question asks about: date (chasing when something will be done, or a promise), decision, design (how they do their own work, or its detail), mistake (an apparent contradiction with a recorded decision or fact: link both sides), or other. |

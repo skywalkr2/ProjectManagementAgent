@@ -1,0 +1,48 @@
+# Everyday words: common English words (nouns, verbs, adjectives, days and months of the week, and the small words of a
+# sentence) that a person might also use as the whole name of a project. A project whose name is one of these alone
+# ("Launch", "Home", "Budget") never files an item by that name: it would match almost any message. The same word
+# works as an alias the person gives, or as part of a longer name. The list was written for the core, by hand, from
+# the kinds of words that name projects and chores; it is not taken from any outside list. Words are lower case and
+# whole words; case is ignored when read. It is the default of the setting `language.everyday_words`, which a
+# workspace can extend or replace. One list for each language, named by its primary language tag.
+en: [
+  a, about, above, account, across, act, action, add, after, again, against, age, agent, ago, agree, air, all, allow,
+  almost, alone, along, already, also, always, among, and, animal, another, answer, any, app, apple, area, arm,
+  around, art, ask, at, audit, away, baby, back, bad, bag, ball, bank, base, basic, bath, be, beach, bed, before,
+  begin, behind, believe, below, best, better, between, big, bike, bill, bird, birthday, black, blog, blue, board,
+  boat, body, bonus, book, boss, both, bottom, box, boy, brain, branch, bread, break, bridge, bring, brother, brown,
+  budget, build, building, bus, business, busy, but, buy, by, cake, call, camp, can, car, card, care, career, carry,
+  case, cash, cat, center, chair, change, charge, check, child, choice, city, class, clean, cleanup, clear, clock,
+  close, clothes, cloud, club, coach, coat, coffee, cold, college, color, come, common, company, contract, cook,
+  cool, copy, corner, cost, count, country, course, court, cover, craft, credit, crew, cross, cup, customer, cut,
+  dad, daily, dance, data, date, daughter, day, deal, dear, debt, decision, deep, delivery, design, desk, detail,
+  dinner, doctor, dog, door, down, draft, dream, dress, drink, drive, early, earth, east, easy, eat, edge, effort,
+  egg, end, energy, event, every, exam, example, exit, expense, extra, eye, face, fact, fair, fall, family, far,
+  farm, fast, father, fee, feel, field, file, fill, film, final, find, fine, finish, fire, first, fish, fix, flight,
+  floor, flow, food, foot, for, forest, form, forward, free, fresh, friday, friend, from, front, fruit, fuel, full,
+  fun, fund, future, game, garage, garden, gas, gate, gift, girl, give, glass, go, goal, gold, good, grade, grand,
+  green, group, grow, guest, guide, gym, hair, half, hall, hand, happy, hard, head, health, hear, heart, help, here,
+  high, hill, history, hobby, hold, holiday, home, hope, horse, hospital, hot, hotel, hour, house, how, human, idea,
+  important, in, income, insurance, interest, invoice, issue, it, item, job, join, journey, just, keep, key, kid,
+  kind, king, kitchen, know, lab, lake, land, large, last, late, launch, law, lead, learn, leave, left, legal,
+  lesson, letter, level, library, life, light, like, line, list, little, live, loan, local, long, look, lost, love,
+  low, luck, lunch, machine, mail, main, make, man, many, map, market, marriage, master, match, math, matter, meal,
+  meeting, member, memory, message, middle, mile, milk, mind, minute, miss, mobile, mom, monday, money, month, moon,
+  more, morning, mother, move, movie, music, name, need, network, new, news, next, night, noon, north, note, now,
+  number, office, old, one, open, order, other, outside, over, owner, pack, page, paint, pair, paper, parent, park,
+  part, partner, party, pass, past, path, pay, peace, pen, people, pet, phone, photo, piece, pilot, place, plan,
+  plant, plate, play, plug, point, pool, poor, port, power, present, price, print, private, problem, process,
+  product, profile, project, promise, property, public, purchase, push, quality, question, quick, quiet, race, rain,
+  rate, read, ready, real, reason, record, red, refresh, release, remote, renewal, rent, repair, report, request,
+  rest, result, return, review, rich, ride, right, ring, rise, river, road, rock, roll, roof, room, root, round,
+  route, rule, run, safe, sale, salt, save, school, science, sea, season, seat, second, secret, see, sell, send,
+  service, set, shop, short, show, sick, side, sign, simple, sister, site, size, skill, sky, sleep, slow, small,
+  snow, social, soft, sold, son, song, soon, sort, sound, south, space, speed, spend, sport, spring, staff, stage,
+  star, start, state, stay, step, stock, stop, store, story, street, strong, student, study, style, success, summer,
+  sun, sunday, supply, support, sure, system, table, take, talk, task, tax, taxes, tea, teacher, team, test, thing,
+  think, this, thursday, ticket, time, today, tomorrow, tool, top, total, town, trade, train, travel, tree, trip,
+  "true", trust, try, tuesday, turn, type, under, unit, update, use, user, value, view, visit, voice, wait, walk, wall,
+  want, warm, watch, water, way, wedding, wednesday, week, weekend, west, what, when, where, white, who, why, wife,
+  win, wind, window, winter, wish, with, woman, wonder, wood, word, work, world, write, year, yellow, "yes", you,
+  young
+]

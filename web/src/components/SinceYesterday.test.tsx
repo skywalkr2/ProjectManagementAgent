@@ -204,3 +204,50 @@ test("the What changed screen's header links to the list", async () => {
   const link = await screen.findByRole("link", { name: "Since yesterday" });
   expect(link.getAttribute("href")).toMatch(/#work\/since$/);
 });
+
+const FILED = {
+  by: "name" as const,
+  word: "Salt Orchard",
+  project: "PRJ-1",
+  project_name: "Business",
+  move_to: "PRJ-2",
+  move_to_name: "Personal",
+  field: "project" as const,
+  version: 3,
+};
+const ADDED_BY_WORDS = entry({ ref: "changeset:CS-9:0", act: "added", title: "Order the cider", record: { kind: "action", id: "ACT-9" }, changeset: "CS-9", filed: FILED });
+
+test("an item filed by words says why on its row, and Move to the other side is in the menu", async () => {
+  const user = userEvent.setup();
+  open([ADDED_BY_WORDS, ADDED]);
+  await screen.findByRole("list", { name: "What changed since yesterday" });
+  const [filed, plain] = rows();
+  expect(filed).toHaveTextContent("Filed under Business: it names Salt Orchard");
+  expect(plain).not.toHaveTextContent("Filed under");
+  // The row keeps its one button; Move is a menu item.
+  expect(within(filed).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual(["Open Order the cider", "More actions for Order the cider"]);
+  await user.click(within(filed).getByRole("button", { name: /More actions for/ }));
+  expect(await screen.findByRole("menuitem", { name: "Move to Personal" })).toBeInTheDocument();
+});
+
+test("a sender's domain that filed an item is said as where it is from", async () => {
+  open([entry({ ...ADDED_BY_WORDS, filed: { ...FILED, by: "domain", word: "example.com" } })]);
+  await screen.findByRole("list", { name: "What changed since yesterday" });
+  expect(rows()[0]).toHaveTextContent("Filed under Business: it's from example.com");
+});
+
+test("Move edits the item's project as the person, says so with Undo, and the row no longer says why", async () => {
+  const user = userEvent.setup();
+  const { calls } = open([ADDED_BY_WORDS], {
+    "POST records/edit": () => ({ changeset: "CS-20" }),
+    "POST changesets/CS-20/undo": () => ({ restored: ["ACT-9"], skipped: [] }),
+  });
+  await screen.findByRole("list", { name: "What changed since yesterday" });
+  await user.click(within(rows()[0]).getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Move to Personal" }));
+  await waitFor(() => expect(body(calls, "POST records/edit")).toEqual({ kind: "action", id: "ACT-9", fields: { project: "PRJ-2" }, read_version: 3 }));
+  expect(await screen.findByText("Moved to Personal.")).toBeInTheDocument();
+  expect(rows()[0]).not.toHaveTextContent("Filed under");
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-20/undo")).toBe(true));
+});

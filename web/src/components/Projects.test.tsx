@@ -364,3 +364,32 @@ test("the owner list in the project form has Add a person…: a second drawer op
   expect(within(still).getByRole("textbox", { name: "Name" })).toHaveValue("Fresh");
   await waitFor(() => expect(within(still).getByRole("combobox", { name: "Owner" })).toHaveValue("PER-9"));
 });
+
+test("a project's other names are a list in its form, saved as the aliases and put back by Undo", async () => {
+  const user = userEvent.setup();
+  const calls = api([project("PRJ-1", "Book one", { aliases: ["B1"] })], { "POST projects/PRJ-1": () => ({ ok: "PRJ-1" }) });
+  renderApp(<Projects />);
+  const dialog = await edit(user, "Book one");
+  const aliases = within(dialog).getByRole("textbox", { name: /Other names/ });
+  expect(aliases).toHaveValue("B1");
+  await user.clear(aliases);
+  await user.type(aliases, "B1, BOOK-1 , ");
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-1")).toBe(true));
+  expect(calls.find((c) => c.route === "POST projects/PRJ-1")?.body).toMatchObject({ aliases: ["B1", "BOOK-1"] });
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST projects/PRJ-1")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST projects/PRJ-1")[1].body).toMatchObject({ aliases: ["B1"] });
+});
+
+test("a new project can be given other names, and none is sent as an empty list", async () => {
+  const user = userEvent.setup();
+  const calls = api([], { "POST projects": () => ({ id: "PRJ-9" }) });
+  renderApp(<Projects />);
+  await user.click(await screen.findByRole("button", { name: "Add a project" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a project" });
+  await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Fresh");
+  await user.click(within(dialog).getByRole("button", { name: "Add a project" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects")).toBe(true));
+  expect(calls.find((c) => c.route === "POST projects")?.body).toMatchObject({ name: "Fresh", aliases: [] });
+});

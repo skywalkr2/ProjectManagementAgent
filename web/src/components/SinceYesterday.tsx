@@ -13,6 +13,7 @@ import { Button } from "../ui/Button";
 import { LoadFailed } from "../ui/LoadFailed";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
+import { filedWords, useMoveFiled } from "./Filed";
 import { MissedOneLine } from "./MissedOne";
 import { RowMenu, type MenuAction } from "./RowMenu";
 
@@ -112,7 +113,11 @@ export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string)
 function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string) => void; onGone: () => void }) {
   const { t } = useWords();
   const act = useAct();
+  const move = useMoveFiled();
+  const [moved, setMoved] = useState(false);
   const { entry: e } = props;
+  // The row stays as it was drawn, but once the item is moved its filing is no longer what the row says.
+  const filed = moved ? undefined : e.filed;
   const text = sentence(e, t);
   const unseen = !e.seen && CLOSES.has(e.act);
   const undone = async (run: () => Promise<unknown>, done: string) => {
@@ -141,6 +146,11 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
     const version = e.version;
     menu.push({ id: "is-work", label: t("since.is_work"), run: () => void undone(() => api.isWork(snapshot, version), "since.is_work_done") });
   }
+  // Moving an item the assistant filed by words to the other side is one step with Undo, like Undo itself in this menu.
+  if (filed?.move_to && e.record) {
+    const { kind, id } = e.record;
+    menu.push({ id: "move-filed", label: t("filed.move", { project: filed.move_to_name ?? "" }), run: () => void move(kind, id, filed).then((done) => done && setMoved(true)) });
+  }
   const record = e.record;
   return (
     <Row
@@ -150,6 +160,7 @@ function EntryRow(props: { entry: Entry; onOpenRecord: (kind: string, id: string
         <>
           {dayAndTime(e.when)}
           {e.detail ? ` · ${e.detail}` : ""}
+          {filed ? ` · ${filedWords(filed, t)}` : ""}
           {unseen && (
             <>
               {" · "}

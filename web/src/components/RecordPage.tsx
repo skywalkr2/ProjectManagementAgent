@@ -14,6 +14,7 @@ import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { useChangeThis, useQuestionMenu, type ChangeKind } from "./ChangeThis";
 import { FactSource } from "./FactSource";
+import { FiledLine } from "./Filed";
 import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
 import { PersonDrawer } from "./PersonForm";
@@ -84,7 +85,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     ? inReadingOrder(
         Object.entries(data.fields)
           // The id of the input an item came from is shown as its "Where it came from" link instead.
-          .filter(([name]) => name !== "id" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
+          .filter(([name]) => name !== "id" && name !== "filed_by" && !(name === "source" && data.origin) && !(kind === "person" && name === "stance"))
           // A calendar entry's people are a list of their own below; its internal key, flags and answer aren't details.
           .filter(([name, value]) => !(kind === "event" && (CALENDAR_LISTED.has(name) || (name === "cancelled" && value !== true))))
           .map(([name, value]) => ({ name, lines: detailLines(name, value, info.get(name), names) }))
@@ -115,6 +116,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       </div>
       {data && kind === "question" && questionMenu.form}
       {data && CHANGEABLE.has(kind) && change.form}
+      {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
       {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}

@@ -4,9 +4,11 @@
 parent chain; a person is on a side, both or neither by their own record; an item is on the side of the project it is
 filed under. Filing by people (`file_by_people`) gives an item that names no project the side's top project when every
 person it names, and the one it came from, are on one side; people on both sides, and people not known, don't decide.
-When the people don't place an item and there is a business, its words may: the item's text and quote, matched as whole
-words whatever their case, against each side's words (the names of the projects on that side and the configured
-`project.side_words`); words of exactly one side file it there, under the one project they name, else the side's top.
+When the people don't place an item and there is a business, the signals after them may, each a rank read in order, the
+first that decides deciding and a rank pointing to both sides deciding nothing: the sender's mail domain when the sender
+is nobody known, a project's aliases, the names of projects that count by themselves (two or more words, or one that is
+no everyday word), then the configured `project.side_words`; the item's text and quote are matched as whole words
+whatever their case. Whatever files an item is kept on it (`filed_by`) so the item can say why.
 Reads only, except `make_personal` and `set_business`, which write the one project each side needs."""
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from engine.ops import ActionAddOp, FactOp, NoteOp, ProjectAddOp, QuestionAddOp
+from engine.records import FiledBy
 from engine.storage import StoreError, WriteContext
 from engine.yaml_load import load_yaml
 
@@ -157,72 +160,214 @@ def _words_of(op: Any) -> str:
     return "\n".join(p for p in parts if p)
 
 
-def _side_words(view: Any, cfg: Any) -> dict[Side, list[tuple[re.Pattern[str], str | None]]]:
-    """For each side, the patterns that place an item on it, each with the project it names (none for a configured
-    word), in order: the names of the projects on that side, then the configured words."""
+#: The ranks of words, in the order they are read after the people and the sender's domain.
+WORD_RANKS: tuple[Literal["alias", "name", "word"], ...] = ("alias", "name", "word")
+
+#: What a rank holds for each side: the pattern, the project it names (none for a configured word) and the word itself.
+Patterns = dict[Side, list[tuple[re.Pattern[str], str | None, str]]]
+
+
+def _everyday(cfg: Any) -> frozenset[str]:
+    """The words a project name made of one of them alone never files by (`language.everyday_words`), case ignored."""
+    return frozenset(" ".join(w.split()).casefold() for w in cfg.language.everyday_words if w.strip())
+
+
+def _name_counts(name: str, everyday: frozenset[str]) -> bool:
+    """Whether a project's name files an item by itself: two or more words, or one that isn't an everyday word."""
+    parts = name.split()
+    return len(parts) >= 2 or (len(parts) == 1 and parts[0].casefold() not in everyday)
+
+
+def _side_words(view: Any, cfg: Any) -> dict[str, Patterns]:
+    """For each rank of words, the patterns that place an item on each side, each with the project it names: a
+    project's aliases (any alias counts, even one word, since the person gave it), then the names of the projects on
+    that side that count by themselves, then the configured side words. Only projects on a side have any."""
     configured = cfg.workspace.project.side_words
-    found: dict[Side, list[tuple[re.Pattern[str], str | None]]] = {"personal": [], "business": []}
+    everyday = _everyday(cfg)
+    found: dict[str, Patterns] = {rank: {"personal": [], "business": []} for rank in WORD_RANKS}
     for project in view.list("project"):
         side = side_of_project(view, cfg, project.id)
-        if side and (pattern := _phrase(str(project.data.get("name") or ""))):
-            found[side].append((pattern, project.id))
+        if side is None:
+            continue
+        for alias in project.data.get("aliases") or []:
+            if pattern := _phrase(str(alias)):
+                found["alias"][side].append((pattern, project.id, " ".join(str(alias).split())))
+        name = " ".join(str(project.data.get("name") or "").split())
+        if name and _name_counts(name, everyday) and (pattern := _phrase(name)):
+            found["name"][side].append((pattern, project.id, name))
     for side, words in (("personal", configured.personal), ("business", configured.business)):
-        found[side] += [(pattern, None) for w in words if (pattern := _phrase(w))]
+        found["word"][side] += [(pattern, None, " ".join(w.split())) for w in words if (pattern := _phrase(w))]
     return found
 
 
-def file_by_words(
-    op: Any, view: Any, cfg: Any, words: dict[Side, list[tuple[re.Pattern[str], str | None]]] | None = None
-) -> str | None:
-    """The project an item's words place it under, none when they don't: words of exactly one side give that side's top
-    project, or the one project of that side the words name; words of both sides, or of neither, decide nothing."""
+@dataclass(frozen=True)
+class Filing:
+    """The project an item is filed under and why: the signal (`FiledBy.by`), the word or domain that matched (none for
+    people) and the project."""
+
+    project: str
+    by: Literal["people", "domain", "alias", "name", "word"]
+    word: str | None = None
+
+    def stamp(self) -> FiledBy:
+        return FiledBy(by=self.by, word=self.word, project=self.project)
+
+
+def _top_of_side(view: Any, cfg: Any, side: Side) -> str | None:
+    return personal_project(view, cfg) if side == "personal" else business_project(view, cfg)
+
+
+def file_by_words(op: Any, view: Any, cfg: Any, words: dict[str, Patterns] | None = None) -> Filing | None:
+    """How an item's words place it, none when they don't. The ranks are read in order (identifiers, project names,
+    configured words) and the first that decides, decides: a rank whose words are all of one side gives that side's top
+    project, or the one project of that side the words name; a rank with words of both sides decides nothing, so the
+    next is read."""
     text = _words_of(op)
-    matched: dict[Side, list[str | None]] = {}
-    for side, patterns in (words or _side_words(view, cfg)).items():
-        hits = [project for pattern, project in patterns if pattern.search(text)]
-        if hits:
-            matched[side] = hits
-    if len(matched) != 1:
+    ranks = words or _side_words(view, cfg)
+    for rank in WORD_RANKS:
+        matched: dict[Side, list[tuple[str | None, str]]] = {}
+        for side, patterns in ranks[rank].items():
+            hits = [(project, word) for pattern, project, word in patterns if pattern.search(text)]
+            if hits:
+                matched[side] = hits
+        if len(matched) != 1:
+            continue
+        side, hits = next(iter(matched.items()))
+        named = {project for project, _ in hits if project}
+        project = next(iter(named)) if len(named) == 1 else _top_of_side(view, cfg, side)
+        if project is None:
+            continue
+        word = next((w for p, w in hits if p == project), hits[0][1])
+        return Filing(project, rank, word)
+    return None
+
+
+def _domain_of(address: str) -> str:
+    return address.rpartition("@")[2].strip().lower().rstrip(".") if "@" in address else ""
+
+
+def sender_domain(people: Any, raw_input: str | None) -> str | None:
+    """The domain of the From address of a message that opens the input, when that sender is nobody known; none for
+    anything else."""
+    from email.utils import parseaddr
+
+    from engine.reply_lines import leading_headers
+
+    head = leading_headers(raw_input or "")
+    sender = (head[0].get("from") or "") if head else ""
+    if not sender or people.match_entries([sender]):
         return None
-    side, hits = next(iter(matched.items()))
-    top = personal_project(view, cfg) if side == "personal" else business_project(view, cfg)
-    named = {h for h in hits if h}
-    return next(iter(named)) if len(named) == 1 else top
+    return _domain_of(parseaddr(sender)[1]) or None
 
 
-def file_by_people(ops: list[Any], view: Any, cfg: Any, people: Any, sender: str | None) -> list[Any]:
-    """The ops with every new action, question, fact or note that names no project filed under a side's top project.
-    The side is the one every deciding person is on (the people the op names and the input's sender, when a known
-    person; those on both sides and those not known don't decide). With no business set an unplaced item goes to the
-    personal project when that is the only top-level project (a workspace tracking other work without naming a business
-    keeps its unfiled items for the person to place); with one, an item whose people don't agree, or don't say, is filed
-    by its words (`file_by_words`) when those place it, else stays unfiled for the person to place. A changeset that
-    also proposes a new project is left as it is: adding that project files what the same input made with no project
-    under it.
-    The same ops always give the same result."""
+def domain_side(people: Any, cfg: Any, domain: str) -> Side | None:
+    """The side a mail domain votes for: when every known person with an address there works for one organization and
+    that organization's people are all on one side. A public mail service shared by many unrelated people, an address
+    nobody known has, and a person with no organization never vote."""
+    from engine.set_aside import is_public_domain
+
+    if is_public_domain(domain, cfg):
+        return None
+    orgs = {
+        data.get("org")
+        for data in people.records.values()
+        if any(_domain_of(v) == domain for v in data.get("how_to_reach", {}).values())
+    }
+    if len(orgs) != 1 or None in orgs:
+        return None
+    org = next(iter(orgs))
+    on = {data.get("side") for data in people.records.values() if data.get("org") == org and data.get("side")}
+    if len(on) != 1:
+        return None
+    side = next(iter(on))
+    return side if side in ("personal", "business") else None
+
+
+def without_filed_by(ops: list[Any]) -> list[Any]:
+    """The ops with any reason for filing they carry cleared: only `file_by_people` sets one."""
+    return [
+        op.model_copy(update={"filed_by": None})
+        if isinstance(op, (ActionAddOp, QuestionAddOp, FactOp, NoteOp)) and op.filed_by is not None
+        else op
+        for op in ops
+    ]
+
+
+def file_by_people(
+    ops: list[Any], view: Any, cfg: Any, people: Any, sender: str | None, raw_input: str | None = None
+) -> list[Any]:
+    """The ops with every new action, question, fact or note that names no project filed under a project, each keeping
+    why it was (`filed_by`). The signals are read in order and the first that decides, decides; one that points to both
+    sides decides nothing and the next is read:
+    1. the people the op names and the input's sender, when known: the side every deciding person is on (those on
+       both sides and those not known don't decide), filed under that side's top project;
+    2. the sender's mail domain, when the sender is nobody known (`domain_side`);
+    3. a project's aliases, 4. the names of projects that count by themselves, 5. the configured side words
+       (`file_by_words`): under the one project they name, else the side's top project.
+    With no business set an unplaced item goes to the personal project when that is the only top-level project (a
+    workspace tracking other work without naming a business keeps its unfiled items for the person to place); with one,
+    an item no signal places stays unfiled for the person to place. A changeset that also proposes a new project is left
+    as it is: adding that project files what the same input made with no project under it. Whatever the assistant
+    wrote in `filed_by` is cleared: only this function sets it. The same ops always give the same result."""
+    ops = without_filed_by(ops)
     personal, business = personal_project(view, cfg), business_project(view, cfg)
     if personal is None and business is None:
         return ops
     if any(isinstance(op, ProjectAddOp) for op in ops):
         return ops
     words = _side_words(view, cfg) if business is not None else None
+    domain = sender_domain(people, raw_input) if business is not None else None
+    by_domain = domain_side(people, cfg, domain) if domain else None
     only_personal = business is None and personal is not None and _only_top(view, personal)
     out: list[Any] = []
     for op in ops:
         if not isinstance(op, (ActionAddOp, QuestionAddOp, FactOp, NoteOp)) or op.project:
             out.append(op)
             continue
+        if business is None:
+            out.append(op.model_copy(update={"project": personal}) if only_personal else op)
+            continue
         who = [people.resolve(name) for name in _named(op)]
         persons = [r.person for r in who if r.status == "ok" and r.person] + ([sender] if sender else [])
         decided = {s for p in persons if (s := side_of_person(people, p)) in ("personal", "business")}
-        if business is None:
-            target = personal if only_personal else None
-        elif len(decided) == 1:
+        filing: Filing | None = None
+        if len(decided) == 1:
             target = business if decided == {"business"} else personal
-        else:
-            target = file_by_words(op, view, cfg, words)
-        out.append(op.model_copy(update={"project": target}) if target else op)
+            filing = Filing(target, "people") if target else None
+        if filing is None and len(decided) != 1:
+            if by_domain is not None and (target := _top_of_side(view, cfg, by_domain)) and domain:
+                filing = Filing(target, "domain", domain)
+            else:
+                filing = file_by_words(op, view, cfg, words)
+        out.append(op.model_copy(update={"project": filing.project, "filed_by": filing.stamp()}) if filing else op)
     return out
+
+
+def filed_view(view: Any, cfg: Any, kind: str, record: Any) -> dict[str, Any] | None:
+    """What an item says about why it was filed, for its line and its page: the signal and the word or domain, the
+    project it was filed under and its name, and the top project of the other side it can move to in one step (with
+    the field that holds its project and the version to read). None when people placed it or nobody did, when the
+    project it was filed under is gone, and once the item is anywhere else: the line goes when the person moves it, and
+    comes back with Undo."""
+    found = record.data.get("filed_by")
+    if not isinstance(found, dict) or found.get("by") == "people":
+        return None
+    project = view.get("project", found.get("project", ""))
+    if project is None or found["project"] not in projects_of(record.data):
+        return None
+    side = side_of_project(view, cfg, project.id)
+    other = _top_of_side(view, cfg, "personal" if side == "business" else "business") if side else None
+    target = view.get("project", other) if other and other != project.id else None
+    return {
+        "by": found["by"],
+        "word": found.get("word"),
+        "project": project.id,
+        "project_name": str(project.data.get("name") or ""),
+        "move_to": target.id if target is not None else None,
+        "move_to_name": str(target.data.get("name") or "") if target is not None else None,
+        "field": "projects" if kind == "question" else "project",
+        "version": record.version,
+    }
 
 
 # ---- making the two top projects ----------------------------------------------------------------------------

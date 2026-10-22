@@ -10,7 +10,7 @@ import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
 import { OrgSelect } from "./OrgSelect";
 
-const list = (text: string) =>
+export const list = (text: string) =>
   text
     .split(",")
     .map((x) => x.trim())

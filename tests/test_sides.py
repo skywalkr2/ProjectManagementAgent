@@ -361,15 +361,23 @@ def test_the_words_of_one_side_file_an_item_there_whatever_their_case_and_only_a
         new_op(text=f"Ask about {SIDE_WORDS['personal'][0]}"),
     ]
     assert filed(env, ops) == [BUSINESS_ID, PERSONAL_ID, BUSINESS_ID, BUSINESS_ID, PERSONAL_ID]
-    inside = [new_op(text=f"Check on x{business_name}y"), new_op(text=f"Check on {business_name}s")]
+    business_word = SIDE_WORDS["business"][0]
+    inside = [new_op(text=f"Check on x{business_word}y"), new_op(text=f"Check on {business_word}s")]
     assert filed(env, inside) == [None, None]
 
 
-def test_the_words_of_both_sides_or_of_neither_place_nothing(env):
-    both = new_op(text=f"Compare {BUSINESS_PROJECT_NAME} with {SIDE_WORDS['personal'][0]}")
-    both_by_names = new_op(text=f"Compare {BUSINESS_PROJECT_NAME} with {PERSONAL_PROJECT_NAME}")
+def test_the_words_of_both_sides_in_one_rank_or_of_neither_place_nothing(env):
+    both_side_words = new_op(text=f"Compare {SIDE_WORDS['business'][0]} with {SIDE_WORDS['personal'][0]}")
+    _, _, store = env
+    business_two, personal_two = "Harbor survey", "Garden beds"
+    make_project(store, business_two, BUSINESS_ID)
+    make_project(store, personal_two, PERSONAL_ID)
+    both_by_names = new_op(text=f"Compare {business_two} with {personal_two}")
     neither = new_op(text="Call about it")
-    assert filed(env, [both, both_by_names, neither]) == [None, None, None]
+    assert filed(env, [both_side_words, both_by_names, neither]) == [None, None, None]
+    # A project's name outranks the configured words, so a name of one side decides before the other side's words.
+    name_then_word = new_op(text=f"Compare {BUSINESS_PROJECT_NAME} with {SIDE_WORDS['personal'][0]}")
+    assert filed(env, [name_then_word]) == [BUSINESS_ID]
 
 
 def test_words_that_name_a_project_under_a_side_file_the_item_under_that_project(env):

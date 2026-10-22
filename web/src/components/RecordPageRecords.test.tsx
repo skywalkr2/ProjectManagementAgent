@@ -294,3 +294,52 @@ test("an entry with nobody on it has no list of people, and one the person organ
   expect(within(section).getByText(/Organized by/)).toBeInTheDocument();
   expect(within(section).queryByText(/Your answer/)).toBeNull();
 });
+
+const FILED = {
+  by: "alias" as const,
+  word: "RTE",
+  project: "PRJ-1",
+  project_name: "Business",
+  move_to: "PRJ-2",
+  move_to_name: "Personal",
+  field: "project" as const,
+  version: 3,
+};
+
+test("an item the assistant filed by words says why on its page, and Move to the other side edits its project with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    "action",
+    "ACT-5",
+    { text: "Send the proof", project: "PRJ-1", filed_by: { by: "alias", word: "RTE", project: "PRJ-1" } },
+    page({ kind: "action", id: "ACT-5", name: "Send the proof", filed: FILED }),
+    { "POST records/edit": () => ({ changeset: "CS-30" }), "POST changesets/CS-30/undo": () => ({ restored: ["ACT-5"], skipped: [] }) },
+  );
+  renderApp(<RecordPage kind="action" id="ACT-5" onBack={() => {}} />);
+  expect(await screen.findByText("Filed under Business: it names RTE")).toBeInTheDocument();
+  // The stored reason is the line above, never a detail row.
+  expect(screen.queryByText(/by: alias/)).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Move to Personal" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "action", id: "ACT-5", fields: { project: "PRJ-2" }, read_version: 3 }));
+  expect(await screen.findByText("Moved to Personal.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-30/undo")).toBe(true));
+});
+
+test("a question is moved by its list of projects, and an item nobody filed by words has no such line", async () => {
+  const user = userEvent.setup();
+  const calls = api("question", "Q-5", { title: "Which one?", projects: ["PRJ-1"] }, page({ kind: "question", id: "Q-5", name: "Which one?", filed: { ...FILED, by: "domain", word: "example.com", field: "projects" } }), {
+    "POST records/edit": () => ({ changeset: "CS-31" }),
+  });
+  renderApp(<RecordPage kind="question" id="Q-5" onBack={() => {}} />);
+  expect(await screen.findByText("Filed under Business: it's from example.com")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Move to Personal" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { projects: ["PRJ-2"] } }));
+});
+
+test("an item with no filing reason shows no filed line", async () => {
+  api("action", "ACT-6", { text: "Call", project: "PRJ-1" }, page({ kind: "action", id: "ACT-6", name: "Call" }));
+  renderApp(<RecordPage kind="action" id="ACT-6" onBack={() => {}} />);
+  await screen.findByRole("heading", { level: 1, name: "Call" });
+  expect(screen.queryByText(/Filed under/)).toBeNull();
+});

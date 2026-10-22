@@ -101,9 +101,16 @@ Built keys, with defaults:
 - `project.completed_status`: the project status that means a project is finished (default `Done`), picked from the project status list on screen. Projects with it are listed under Completed at the end of the Projects table and count as completed in the project record; nothing is removed (7.13). Live.
 - `project.side_words`: `personal` and `business`, each a list of words or phrases (empty by default) that place an item
   on a side when the people it names don't (6.32). With a business set, an item's text and quote are matched as whole
-  words, whatever the case, against each side's words: these and the names of the projects on that side. Words of exactly
-  one side file it there; words of both sides, or none, leave it for the "Which side?" line. Unused with no business.
-  **Built (S1-4):** `tests/test_sides.py`.
+  words, whatever the case, as the last rank of the filing signals (6.32): after the people, the sender's mail domain, the
+  projects' aliases and the names of projects that count by themselves. Words of exactly one side file it there; words of
+  both sides, or none, leave it for the "Which side?" line. Unused with no business.
+  **Built (S1-4, B-12 batch 1):** `tests/test_sides.py`, `tests/test_filing_signals.py`.
+- `everyday_words`: common words that a project named by one of them alone never files an item by ("Launch", "Home"):
+  they would match almost any message. Matched as whole words, ignoring case; a longer name and a project's aliases still
+  count (6.32). The default is the core's list for the language, read from `engine/defaults/everyday_words.yaml`
+  (637 English words, written for the core by hand and taken from no outside list); setting it replaces that list, so a
+  workspace keeps the words of it that it wants and adds its own. Live. **Built (B-12 batch 1):**
+  `tests/test_filing_signals.py::test_a_one_word_everyday_project_name_never_files_an_item_but_the_same_word_as_an_alias_does`.
 - `our_accounts`: the names this app uses on watched sources (its own publishes). A watched change by one of them is
   marked `by_us` (6.4, 6.5). Live.
 - `user.accounts`: the person's own names on watched sources. A change by one of them is the person's own work

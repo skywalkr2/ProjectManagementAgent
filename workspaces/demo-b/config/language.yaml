@@ -21,6 +21,8 @@ unassigned_words: [someone, somebody, anyone, anybody, nobody, no one]
 due_move_words: [is now due, can wait until, moved to, pushed to, postponed to, push it to]
 # Words that start a new piece of work; before a name in capitals no project has, recorded only as a fact, they go back once.
 project_start_words: [starting, launching, kicking off, start, launch, kick off]
+# Common words a project named by one of them alone never files an item by (a longer name, or an alias, still does).
+everyday_words: [launch, release, edit, draft, review, book, tour, garden, home, trip, taxes, budget]
 # Words that, right after a name, say that person stated something; a question to you about it goes back once to ask them.
 claim_words: [told me, told us, said that, says that, tells me, claims]
 # Words that frame a question rather than say what it is about; left out when checking whether a recorded fact already answers it.

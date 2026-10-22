@@ -31,6 +31,7 @@ from engine.endings import (
     DEFAULT_DELIVERY_WORDS,
     DEFAULT_MEETING_WORDS,
 )
+from engine.everyday_words import shipped as shipped_everyday_words
 from engine.secrets import SecretHint
 
 
@@ -1862,6 +1863,13 @@ class LanguageFile(FileModel):
         description='Words that start a new piece of work ("we are starting the Harbor Survey"). Followed by a '
         "name in capitals that no project has, and recorded only as a fact, they are sent back once to propose the "
         "project. Matched as whole words, ignoring case.",
+    )
+    everyday_words: list[str] = Field(
+        default_factory=shipped_everyday_words,
+        description='Common words that a project named by one of them alone never files an item by ("Launch", '
+        '"Home"): they would match almost any message. Matched as whole words, ignoring case. Longer names, and a '
+        "project's aliases, still count. The default is the core's list for English; setting this replaces it, so "
+        "keep the words of it you still want and add the words of your own language or work.",
     )
     due_move_words: list[str] = Field(
         default_factory=lambda: ["is now due", "can wait until", "moved to", "pushed to", "postponed to", "push it to"],

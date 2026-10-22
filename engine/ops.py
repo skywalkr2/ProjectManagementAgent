@@ -12,9 +12,10 @@ from datetime import date
 from typing import Annotated, Any, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from engine.id_words import KNOWLEDGE_KINDS, named, named_one_of, named_text_of
-from engine.records import RefTo, Scope, canonical_time, entry_problem
+from engine.records import FiledBy, RefTo, Scope, canonical_time, entry_problem
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -72,12 +73,21 @@ class LinkIn(BaseModel):
     url: str = Field(description="The address to open; a question to someone else needs one the recipient can open.")
 
 
+#: Why the engine filed an item under a project (`engine/sides.py`). Set by the engine only, so the assistant's own
+#: answer never sees it and anything it writes there is cleared; the applier keeps it on the record.
+FiledByField = Annotated[
+    SkipJsonSchema[FiledBy | None],
+    Field(description="Why the engine filed this under its project; set by the engine, never by the assistant."),
+]
+
+
 class NoteOp(OpModel):
     """Keep something from the input that isn't a fact, action or question. Creates a note record."""
 
     op: Literal["note"]
     text: str = Field(min_length=1, description="What to keep.")
     project: str | None = Field(None, description="Project id, if the note is about one.")
+    filed_by: FiledByField = None
     question: Annotated[str | None, RefTo("question")] = Field(
         None, description="The id of the open question it adds to, when the input says more about one."
     )
@@ -89,6 +99,7 @@ class FactOp(OpModel):
     op: Literal["fact"]
     text: str = Field(min_length=1, description="The fact, as a statement.")
     project: str | None = Field(None, description="Project id, if the fact is about one.")
+    filed_by: FiledByField = None
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
     key: bool = Field(False, description="True only for a fact that matters most to the project; it is shown first.")
     as_of: date | None = Field(
@@ -338,6 +349,7 @@ class ActionAddOp(OpModel):
         "due on the entry's day and moves when the entry moves.",
     )
     project: str | None = Field(None, description="Project id, if the action belongs to one.")
+    filed_by: FiledByField = None
     reply: str | None = Field(
         None,
         description="For an action that is a reply the person owes: the drafted reply, ready to copy, only when a "
@@ -520,6 +532,7 @@ class QuestionAddOp(OpModel):
     text: str = Field("", description="The detail the reader needs to answer.")
     links: list[LinkIn] = Field(default_factory=list, description="Pages the reader can open to see what it is about.")
     project: str | None = Field(None, description="Project id, if the question is about one.")
+    filed_by: FiledByField = None
     event: Annotated[str | None, RefTo("event")] = Field(
         None, description="The calendar entry it is for, when the input ties it to one."
     )

@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, time, timedelta
 from typing import Any, Literal
 
-from engine import closes
+from engine import closes, sides
 from engine.reply_lines import ANSWERED_RULE as RULE_REPLIED
 from engine.storage import WriteContext
 from engine.titles import head_of, title_for
@@ -66,7 +66,8 @@ class Entry:
     rule's own words (or the assistant's, for a drop), `day` the date a move or a reply carries, `detail` what was heard
     (news). `changeset` and `op` name the op to undo; a rule's close or set-aside mail names its `request` or
     `snapshot` and the `version` read, and `undo` says which kind of undo it is (none when it can no longer be put
-    back)."""
+    back). `filed` says why a new item was filed under its project when words or a mail domain did it
+    (`engine.sides.filed_view`)."""
 
     ref: str
     act: Act
@@ -83,6 +84,7 @@ class Entry:
     day: str | None = None
     detail: str | None = None
     record: tuple[str, str] | None = None
+    filed: dict[str, Any] | None = None
     changeset: str | None = None
     op: int | None = None
     request: str | None = None
@@ -317,6 +319,7 @@ def _entries_of(
         day=str(day) if day else None,
         detail=detail,
         record=(kind, target.id),
+        filed=sides.filed_view(view, cfg, kind, target) if act == "added" else None,
         changeset=cs.id,
         op=index,
     )

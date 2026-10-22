@@ -9,6 +9,7 @@ from typing import Any, Literal, get_args, get_origin
 from zoneinfo import ZoneInfo
 
 from engine import agenda as agenda_module
+from engine import sides
 from engine.history import changes_for_person
 from engine.names import render_owner
 from engine.origin import origins
@@ -18,7 +19,7 @@ from engine.texts import long_text_fields
 ACTIVITY_MAX = 60
 COMPLETED_MAX = 50
 _NAME_FIELDS = ("full_name", "name", "title", "text")
-_HIDDEN = {"id", "stage", "ext", "aliases", "agenda"}
+_HIDDEN = {"id", "stage", "ext", "aliases", "agenda", "filed_by"}
 
 
 def display_name(data: dict[str, Any]) -> str:
@@ -61,6 +62,7 @@ def page(
     today: date | None = None,
     here: ZoneInfo | None = None,
     second_move_days: int = 14,
+    cfg: Any | None = None,
 ) -> dict[str, Any] | None:
     view = store.read()
     record = view.get(kind, record_id)
@@ -144,6 +146,7 @@ def page(
         ],
         "completed_actions": _completed(view, kind, record_id, name_of),
         "fact_source": fact_source(view, record) if kind == "fact" else None,
+        "filed": sides.filed_view(view, cfg, kind, record) if cfg is not None else None,
         "agenda": _agenda(view, record, today, here),
         "activity": _activity(view, kind, record_id, actions, questions, name_of, pm, second_move_days),
     }

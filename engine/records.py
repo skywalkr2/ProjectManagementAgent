@@ -206,6 +206,18 @@ class Evidence(BaseModel):
     quote: str = Field(min_length=1, description="The exact words, as they appear in that source.")
 
 
+class FiledBy(BaseModel):
+    """Why the assistant filed an item under a project: the signal that decided (`people` it names or came from, the
+    sender's mail `domain`, a project's `alias`, a project's `name`, or a configured side `word`), the word or domain
+    that matched (none for people) and the project it was filed under."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    by: Literal["people", "domain", "alias", "name", "word"] = Field(description="The signal that decided.")
+    word: str | None = Field(None, description="The word or domain that matched; none when people decided.")
+    project: str = Field(description="The id of the project it was filed under.")
+
+
 class LogEntry(BaseModel):
     """One dated line in a project's update log."""
 
@@ -405,6 +417,11 @@ class Project(Record):
     priority: Annotated[str | None, InList("project-priority")] = Field(
         None, description="How important the project is, from the project-priority list."
     )
+    aliases: list[str] = Field(
+        default_factory=list,
+        description="Other forms the project is called by: another name, a code or a ticket-key prefix. An item that "
+        "contains one as a whole word is filed under the project's side.",
+    )
     summary: str | None = Field(None, description="A short description of what the project is.")
     owner: str | None = Field(None, description="The id of the person responsible for the project.")
     links: list[Link] = Field(default_factory=list, description="Pages that belong to the project.")
@@ -519,6 +536,12 @@ class Action(Record):
     )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     evidence: Evidence | None = Field(None, description="The words in the source that justify the action.")
+    filed_by: FiledBy | None = Field(
+        None,
+        description="Why the assistant filed it under its project, when it chose the project itself (design 6.32): "
+        "the signal, the word or domain that matched and the project. Set once by the applier; none for an item the "
+        "person or the input placed.",
+    )
     promised_to: list[Annotated[str, RefTo("person")]] = Field(
         default_factory=list,
         description="For a promise, the ids of the people it was promised to; empty for a plain to-do (design 6.33).",
@@ -608,6 +631,12 @@ class Question(Record):
         ),
     )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
+    filed_by: FiledBy | None = Field(
+        None,
+        description="Why the assistant filed it under its project, when it chose the project itself (design 6.32): "
+        "the signal, the word or domain that matched and the project. Set once by the applier; none for an item the "
+        "person or the input placed.",
+    )
     event: Annotated[str | None, RefTo("event")] = Field(
         None, description="The id of the calendar entry it belongs to (the instance it sits on, for a series)."
     )
@@ -1369,6 +1398,12 @@ class Fact(Record):
     project: str | None = Field(None, description="The id of the project it is about, if any.")
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     evidence: Evidence | None = Field(None, description="The words that justify it.")
+    filed_by: FiledBy | None = Field(
+        None,
+        description="Why the assistant filed it under its project, when it chose the project itself (design 6.32): "
+        "the signal, the word or domain that matched and the project. Set once by the applier; none for an item the "
+        "person or the input placed.",
+    )
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
     )
@@ -1706,6 +1741,12 @@ class Note(Record):
         None, description="The id of the question it adds to, if any: what an input says about a question."
     )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
+    filed_by: FiledBy | None = Field(
+        None,
+        description="Why the assistant filed it under its project, when it chose the project itself (design 6.32): "
+        "the signal, the word or domain that matched and the project. Set once by the applier; none for an item the "
+        "person or the input placed.",
+    )
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
     )

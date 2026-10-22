@@ -1018,6 +1018,9 @@ class OrganizationPatch(BaseModel):
 class ProjectView(BaseModel):
     id: str
     name: str
+    aliases: list[str] = Field(
+        default_factory=list, description="Other forms it is called by: another name, a code or a ticket-key prefix."
+    )
     group: str | None
     status: str | None
     phase: str | None
@@ -1101,6 +1104,7 @@ class UnfiledFile(BaseModel):
 
 class ProjectIn(BaseModel):
     name: str = Field(min_length=1)
+    aliases: list[str] = Field(default_factory=list, description="Other forms it is called by.")
     group: str | None = Field(None, description="From the project-group list.")
     status: str | None = Field(None, description="From the project-status list.")
     phase: str | None = Field(None, description="From the project-phase list.")
@@ -1116,6 +1120,7 @@ class ProjectIn(BaseModel):
 
 class ProjectPatch(BaseModel):
     name: str | None = Field(None, min_length=1)
+    aliases: list[str] | None = Field(None, description="Other forms it is called by; replaces the list.")
     parent: str | None = None
     language: str | None = Field(None, description="A language tag such as en-US; null to inherit.")
     budget_usd: float | None = Field(None, ge=0, description="null for no cap.")
@@ -1230,6 +1235,23 @@ class RecordRefName(BaseModel):
     kind: str
     id: str
     name: str
+
+
+class FiledView(BaseModel):
+    """Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the
+    signal (`domain`: the sender's mail domain; `alias`, `name`: a project's alias or name; `word`: a configured side
+    word) and `word` what matched, under `project_name`. `move_to` is the top project of the other side, `move_to_name`
+    its name, and the item moves there in one step: POST /api/records/edit with `{field: id}` (a list for
+    `projects`) and `read_version` set to `version`. Absent once the item is anywhere else."""
+
+    by: Literal["domain", "alias", "name", "word"]
+    word: str | None = None
+    project: str
+    project_name: str
+    move_to: str | None = None
+    move_to_name: str | None = None
+    field: Literal["project", "projects"]
+    version: int
 
 
 class RecordDetail(BaseModel):
@@ -1483,6 +1505,9 @@ class RecordPageView(BaseModel):
         description="Finished actions credited to this person (who did the work) or in this project, newest first.",
     )
     fact_source: FactSource | None = Field(None, description="For a fact: who it rests on and where it came from.")
+    filed: FiledView | None = Field(
+        None, description="For an item the assistant filed by words or the sender's domain: why, and where it can move."
+    )
     agenda: list[AgendaLine] = Field(
         default_factory=list,
         description="For a calendar entry: what is to be taken up at it, its own items and, when it is the next "
@@ -3814,6 +3839,9 @@ class SinceEntryView(BaseModel):
     day: date | None = None
     detail: str | None = None
     record: RecordRef | None = Field(None, description="The action or question it is about, which the screen opens.")
+    filed: FiledView | None = Field(
+        None, description="For a new item filed by words or the sender's domain: why, and where it can move."
+    )
     changeset: str | None = None
     op: int | None = None
     request: str | None = None

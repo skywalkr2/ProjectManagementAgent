@@ -1,5 +1,8 @@
 [
   {
+    "aliases": [
+      "RTE"
+    ],
     "group": "Freight Platform",
     "id": "PRJ-1",
     "links": [

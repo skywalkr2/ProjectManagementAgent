@@ -1197,6 +1197,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             today=worker.now().astimezone(here).date(),
             here=here,
             second_move_days=cfg.steward.second_move_days,
+            cfg=cfg,
         )
         if found is None:
             raise HTTPException(status_code=404, detail=f"There is no {kind} {record_id}.")
@@ -2004,6 +2005,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 spent_usd=round(spent_on(store, p.id), 4),
                 id=p.id,
                 name=p.data["name"],
+                aliases=p.data.get("aliases") or [],
                 group=p.data.get("group"),
                 status=p.data.get("status"),
                 phase=p.data.get("phase"),

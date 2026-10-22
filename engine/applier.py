@@ -200,7 +200,10 @@ def restatements(cs: ChangesetIn, ctx: Context) -> ChangesetIn:
             ctx.inputs.raw_input, view, ctx.cfg, ctx.people, contact_kind(ctx.cfg, "phone"), ops
         )
     if ctx.actor != "pm" and not ctx.confirmed_by_pm:
-        ops = sides.file_by_people(ops, view, ctx.cfg, ctx.people, _reporter(ctx))
+        ops = sides.file_by_people(ops, view, ctx.cfg, ctx.people, _reporter(ctx), ctx.inputs.raw_input)
+    else:
+        # Only the filing above says why an item was filed; a reason arriving any other way is not kept.
+        ops = sides.without_filed_by(ops)
     return cs if ops == list(cs.ops) else cs.model_copy(update={"ops": ops})
 
 
@@ -2627,6 +2630,12 @@ def origin_of(ctx: Context) -> dict[str, Any]:
     return {"actor": actor, "trust": ctx.inputs.trust, "via": via, **run}
 
 
+def _filed_by(op: Any) -> dict[str, Any] | None:
+    """Why the engine filed an item under its project, as the record keeps it; none when it did not choose the project
+    (`engine/sides.py`)."""
+    return op.filed_by.model_dump(mode="json") if op.filed_by is not None and op.project else None
+
+
 def _reporter(ctx: Context) -> str | None:
     """The person who said the work was done: the PM for their own note, else the one person the input came from
     (its sender or author); none when that isn't one known person."""
@@ -2931,7 +2940,14 @@ def _apply_op(
             "note",
             tx.create(
                 "note",
-                {"text": op.text, "project": op.project, "question": op.question, "source": source, "trust": trust},
+                {
+                    "text": op.text,
+                    "project": op.project,
+                    "question": op.question,
+                    "source": source,
+                    "trust": trust,
+                    "filed_by": _filed_by(op),
+                },
                 w,
             ).id,
         )
@@ -2946,6 +2962,7 @@ def _apply_op(
             "text": op.text,
             "project": op.project,
             "source": source,
+            "filed_by": _filed_by(op),
             "evidence": ev,
             "trust": trust,
             "key": op.key,
@@ -3066,6 +3083,7 @@ def _apply_op(
             if op.waiting_for and op.waiting_for.strip()
             else started_on_hold,
             "project": op.project,
+            "filed_by": _filed_by(op),
             "event": placed,
             "series": op.series,
             "source": source,
@@ -3170,6 +3188,7 @@ def _apply_op(
             "text": op.text,
             "links": [link.model_dump() for link in op.links],
             "projects": [op.project] if op.project else [],
+            "filed_by": _filed_by(op),
             "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
             "series": op.series,
             "kind": op.kind,

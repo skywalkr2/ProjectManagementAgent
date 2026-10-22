@@ -10,7 +10,7 @@ import { languageChoices, languageLabel } from "../lib/languages";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
-import { Field } from "./PersonForm";
+import { Field, list } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
 import { ValueSelect } from "./ValueSelect";
 
@@ -39,6 +39,7 @@ export function ProjectDrawer(props: {
   const p = props.project;
   const first = useFirstField<HTMLFormElement>();
   const [name, setName] = useState(p?.name ?? "");
+  const [aliases, setAliases] = useState((p?.aliases ?? []).join(", "));
   const [status, setStatus] = useState(p?.status ?? "");
   const [phase, setPhase] = useState(p?.phase ?? "");
   const [group, setGroup] = useState(p?.group ?? "");
@@ -61,6 +62,7 @@ export function ProjectDrawer(props: {
       language: language.trim() || null,
       budget_usd: budgetNumber,
       name: name.trim(),
+      aliases: list(aliases),
       status: status.trim() || null,
       phase: phase.trim() || null,
       group: group.trim() || null,
@@ -74,6 +76,7 @@ export function ProjectDrawer(props: {
       language: p.language_own ? p.language : null,
       budget_usd: p.budget_usd ?? null,
       name: p.name,
+      aliases: p.aliases ?? [],
       status: p.status,
       phase: p.phase,
       group: p.group,
@@ -116,8 +119,9 @@ export function ProjectDrawer(props: {
   };
   const dirty =
     p === undefined
-      ? [name, status, phase, group, priority, target, owner, summary, parent, language, budget].some((v) => v !== "")
+      ? [name, aliases, status, phase, group, priority, target, owner, summary, parent, language, budget].some((v) => v !== "")
       : name !== p!.name ||
+        aliases !== (p!.aliases ?? []).join(", ") ||
         status !== (p!.status ?? "") ||
         phase !== (p!.phase ?? "") ||
         group !== (p!.group ?? "") ||
@@ -163,6 +167,7 @@ export function ProjectDrawer(props: {
       }}
     >
       <Field id={`jn-${key}`} label={t("setup.project_name")} value={name} onChange={setName} required />
+      <Field id={`ja-${key}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("setup.project_aliases_hint")} />
       <Field id={`jt-${key}`} label={t("setup.target")} value={target} onChange={setTarget} type="date" />
       <ValueSelect id={`js-${key}`} list={PROJECT_LISTS.status} label={t("setup.status")} value={status} onChange={setStatus} />
       <ValueSelect id={`jp-${key}`} list={PROJECT_LISTS.phase} label={t("setup.phase")} value={phase} onChange={setPhase} />

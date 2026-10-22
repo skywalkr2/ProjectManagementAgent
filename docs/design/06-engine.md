@@ -2990,15 +2990,23 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   second side, a business or a job as the person chose at setup (a top-level project, its projects under it; a
   setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for
   another person stays whole while any of its items is on the chosen side, since it is one message). Filing reads the
-  signals in this order (designer, 2026-10-22; change log 174; *built so far:* people, then project names and the side words,
-  all of them as one rank): **people first**, since each person belongs to a side, **including the sender's domain** (an
-  organization's domain on one side is a stronger signal than any word in the body); then **distinctive identifiers**
-  (codes and ticket keys a project records, and a project's aliases, which projects carry as people do); then
-  **multi-word project names**; last, the configured **side words** (`workspace.project.side_words`). Words are matched as
-  whole words in any case. A project's name counts on its own only when it has two or more words or isn't an everyday word
-  (a list per language); "Launch" counts only through an alias such as "Spring launch" or a code. Words **propose, never
-  file silently**: an item words placed says so on the item ("Filed under <side>: it names <project>"), and moving it is one
-  click that records a correction to learn from. Only an item neither its people nor its words place is asked
+  signals in this order (designer, 2026-10-22; change log 174; **built, B-12 batch 1:** `tests/test_filing_signals.py`,
+  `tests/test_sides.py`; the first rank that decides, decides, and a rank whose signals point to both sides decides
+  nothing, so the next is read): **people first**, since each person belongs to a side; then **the sender's domain**,
+  when the sender is nobody known: it votes for a side when every known person with an address there is in one
+  organization and that organization's people are all on one side (a public mail service, or a domain shared by people of
+  two organizations, never votes); then **identifiers**: a project's `aliases` (any form the person gives: another name, a
+  code, a ticket-key prefix; any alias counts, even one word); then **project names**; last, the configured **side words**
+  (`workspace.project.side_words`). Words are matched as whole words in any case. A project's name counts on its own only
+  when it has two or more words or is no everyday word (`language.everyday_words`, from a shipped list for the default
+  language); "Launch" counts only through an alias such as "Spring launch" or a code. Words **propose, never file
+  silently**: every item filed this way keeps why (`filed_by`: the signal, the word or domain that matched, the project;
+  written by the applier with the op, and cleared if the assistant writes one), and what changed's line for a new action
+  and the item's page say it in words when anything but its people filed it ("Filed under <project>: it names <word>", or
+  "it's from <domain>") with **Move to <the other side>**, one step through the person's own change of the item's project
+  with Undo; the change is the `edited` correction every change of a field the assistant set already records
+  (`tests/test_filing_signals.py::test_move_changes_the_items_project_as_the_person_records_one_correction_and_undo_restores_it`).
+  Only an item neither its people nor its words place is asked
   about, and those are asked together in one "Which side?" question, never one each. A person with no business is never
   asked: what the assistant can't place goes to Personal while Personal is the only top-level project (its areas and
   projects under it); a workspace that tracks other work at the top without naming a business keeps such items unfiled

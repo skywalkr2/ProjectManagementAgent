@@ -6259,6 +6259,83 @@
         "title": "FileView",
         "type": "object"
       },
+      "FiledView": {
+        "description": "Why the assistant filed an item under a project when words or a mail domain did (design 6.32): `by` is the\nsignal (`domain`: the sender's mail domain; `alias`, `name`: a project's alias or name; `word`: a configured side\nword) and `word` what matched, under `project_name`. `move_to` is the top project of the other side, `move_to_name`\nits name, and the item moves there in one step: POST /api/records/edit with `{field: id}` (a list for\n`projects`) and `read_version` set to `version`. Absent once the item is anywhere else.",
+        "properties": {
+          "by": {
+            "enum": [
+              "domain",
+              "alias",
+              "name",
+              "word"
+            ],
+            "title": "By",
+            "type": "string"
+          },
+          "field": {
+            "enum": [
+              "project",
+              "projects"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "move_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move To"
+          },
+          "move_to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move To Name"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "word": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Word"
+          }
+        },
+        "required": [
+          "by",
+          "project",
+          "project_name",
+          "field",
+          "version"
+        ],
+        "title": "FiledView",
+        "type": "object"
+      },
       "FingerprintIn": {
         "additionalProperties": false,
         "properties": {
@@ -13149,6 +13226,14 @@
       },
       "ProjectIn": {
         "properties": {
+          "aliases": {
+            "description": "Other forms it is called by.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
           "budget_usd": {
             "anyOf": [
               {
@@ -13351,6 +13436,21 @@
       },
       "ProjectPatch": {
         "properties": {
+          "aliases": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Other forms it is called by; replaces the list.",
+            "title": "Aliases"
+          },
           "budget_usd": {
             "anyOf": [
               {
@@ -13518,6 +13618,14 @@
       },
       "ProjectView": {
         "properties": {
+          "aliases": {
+            "description": "Other forms it is called by: another name, a code or a ticket-key prefix.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
           "budget_usd": {
             "anyOf": [
               {
@@ -16210,6 +16318,17 @@
             ],
             "description": "For a fact: who it rests on and where it came from."
           },
+          "filed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FiledView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an item the assistant filed by words or the sender's domain: why, and where it can move."
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -18772,6 +18891,17 @@
               }
             ],
             "title": "Detail"
+          },
+          "filed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FiledView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a new item filed by words or the sender's domain: why, and where it can move."
           },
           "op": {
             "anyOf": [

@@ -1046,12 +1046,20 @@ yet follow, that it is *designed*, with its phase.
   estimates (they price a practice workspace, which has no kept measurements) and the fit-to-context test still use the
   app's own count.
 
-## 174. The functional designer's answers on the 2026-10-23 questions (2026-10-22; designed)
+## 174. The functional designer's answers on the 2026-10-23 questions (2026-10-22; designed; filing by words built, B-12 batch 1)
+
+- **Built, B-12 batch 1 (6.32, 4, 5.1):** the ranked filing signals (people, the sender's mail domain, project aliases,
+  project names that count by themselves, the side words; a rank pointing both ways passes to the next); `aliases` on a
+  project (record, form, export and import); `language.everyday_words` (a shipped list, `engine/defaults/everyday_words.yaml`,
+  637 words, with demo values in both workspaces); `filed_by` on an action, question, fact and note, written by the
+  applier; the line on what changed and the item's page that say why it was filed and the one **Move to <the other
+  side>** step with Undo, recorded as the existing `edited` correction. Tests: `tests/test_filing_signals.py`,
+  `tests/test_sides.py`.
 
 - **Filing by words (6.32):** signals ranked people (with the sender's domain), then distinctive identifiers (codes, ticket
   keys, project aliases), then multi-word project names, then side words; a one-word everyday project name never counts
   alone; projects get aliases; words propose, never file silently: the item says why it was filed, and moving it is one
-  click that teaches. *Not built yet.*
+  click that teaches. *Built (B-12 batch 1), above.*
 - **Missed, declined, dropped (6.22, 6.20):** three meanings kept apart: missed teaches extraction or asks, declined teaches
   relevance or routing, dropped teaches nothing unless the person's words give a general reason; the Quality measures count
   them apart. *Not built yet.*
