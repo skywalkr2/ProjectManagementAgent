@@ -212,6 +212,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _learning_reach(cs, ctx)
     problems += _follow_on_reach(cs, ctx)
     problems += _thread_promise_unanswered(cs, ctx)
+    problems += _owner_mail_unanswered(cs, ctx)
     problems += _own_promise_missed(cs, ctx)
     problems += _promise_as_fact(cs, ctx)
     problems += _due_move_missed(cs, ctx)
@@ -1975,6 +1976,55 @@ def _thread_promise_unanswered(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 "has no op on it: say what the reply means for it (news, a new date, a part done, or done), or give "
                 "it action.news saying the reply doesn't answer it",
                 found,
+            )
+        )
+    return problems
+
+
+def _owner_mail_unanswered(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """Mail from someone who owes an open promise, about the same thing (it shares one of the promise's longer words),
+    answered with no op on that promise, is sent back once (design 6.33): the answer says what the mail means for it,
+    news saying it doesn't answer it included. A rule on the From line and the words, with no AI; the person's own
+    mail, note and changes are left alone."""
+    if ctx.actor == "pm" or ctx.confirmed_by_pm or "action.news" not in ctx.allowed_ops:
+        return []
+    name = "owner-mail-unanswered"
+    lints = ctx.cfg.checks.lints
+    if lints.get(name, "off") == "off":
+        return []
+    message = reply_lines.read_message(ctx.inputs.raw_input)
+    if message is None:
+        return []
+    sender = ctx.people.resolve(message.sender)
+    if sender.status != "ok" or not sender.person or sender.person == ctx.people.pm:
+        return []
+    named = {
+        ref
+        for op in cs.ops
+        for ref in (getattr(op, "id", None), getattr(getattr(op, "record", None), "id", None))
+        if isinstance(ref, str)
+    }
+    said = set(_WORD.findall(normalize(without_links(message.new_text)).lower()))
+    problems: list[Problem] = []
+    for action in ctx.store.read().list("action"):
+        data = action.data
+        if data["status"] != "open" or action.id in named:
+            continue
+        if sender.person not in [o.get("person") for o in data.get("owners") or []]:
+            continue
+        if not said & set(_WORD.findall(normalize(data["text"]).lower())):
+            continue
+        level = ctx.cfg.checks.projects.get(data.get("project") or "", {}).get(name) or lints.get(name, "off")
+        if level == "off":
+            continue
+        problems.append(
+            Problem(
+                name,
+                level,
+                None,
+                f"{ctx.people.name(sender.person)} owes {action.id} ({data['text']!r}) and wrote about it, and the "
+                "answer has no op on it: say what the mail means for it (news, a new date, a part done, or done), or "
+                "give it action.news saying the mail doesn't answer it",
             )
         )
     return problems

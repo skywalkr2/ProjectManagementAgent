@@ -247,3 +247,40 @@ def test_a_question_to_the_person_about_someones_claim_is_sent_back_to_ask_them(
 def test_a_question_to_the_claimant_or_one_with_no_claim_in_the_words_is_left_alone(env):
     assert claimed(env, [question(TEAMMATE["id"])], CLAIM) == []
     assert claimed(env, [question(ME["id"])], "The stock arrives on November 10, but the quote says October 30.") == []
+
+
+# ---- owner-mail-unanswered: mail from whoever owes a promise, about it, answered with nothing on it -----------------
+
+
+OWER = next(p for p in PEOPLE if p.get("how_to_reach", {}).get("email") and p["id"] != ME["id"])
+
+
+def promise_of(env, text: str) -> str:
+    _, _, store = env
+    fields = {"text": text, "owners": [{"person": OWER["id"]}], "promised_to": [ME["id"]], "status": "open"}
+    with store.transaction() as tx:
+        return tx.create("action", fields, _PM).id
+
+
+def answered(env, ops: list[dict], body: str) -> list:
+    _, cfg, store = env
+    raw = f"From: {OWER['full_name']} <{OWER['how_to_reach']['email']}>\nTo: {ME['full_name']}\n\n{body}\n"
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", "SRC-1", raw, "", "untrusted")
+    )
+    return [p for p in check(cs, ctx) if p.check == "owner-mail-unanswered"]
+
+
+def test_mail_from_whoever_owes_a_promise_about_it_answered_with_nothing_on_it_is_sent_back(env):
+    action = promise_of(env, "Confirm the interview time")
+    (problem,) = answered(env, [], "The interview sounds interesting.")
+    assert problem.severity == "return" and action in problem.message
+
+
+def test_news_on_the_promise_or_mail_about_something_else_is_left_alone(env):
+    action = promise_of(env, "Confirm the interview time")
+    quote = "The interview sounds interesting."
+    news = {"op": "action.news", "id": action, "text": "No time yet.", "evidence": {"quote": quote}}
+    assert answered(env, [news], quote) == []
+    assert answered(env, [], "Lovely weather today.") == []

@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 163. Mail from whoever owes a promise, about it, answered with nothing on it goes back (2026-10-22; B-10, built)
+
+- `owner-mail-unanswered`: mail whose sender owes an open promise and shares one of its longer words, answered with
+  no op on it, goes back once to say what the mail means for it. Design 6.33. Built:
+  `tests/test_promise_as_fact.py::test_mail_from_whoever_owes_a_promise_about_it_answered_with_nothing_on_it_is_sent_back`
+
 ## 162. A question about someone's claim goes to them (2026-10-22; B-10, built)
 
 - `claim-asked-of-the-person`: a question to the person about something another person on file is said to have

@@ -924,6 +924,9 @@ is marked *designed*, with the phase.
 - A question to the person about something the input says another person stated ("Jun told me it arrives on the
   10th, but the quote says the 30th") goes back once to ask whoever made the claim (`claim-asked-of-the-person`,
   *built*; `language.claim_words`).
+- Mail from someone who owes an open promise, sharing one of its longer words, answered with no op on that promise,
+  goes back once to say what it means for it, news that it doesn't answer it included (`owner-mail-unanswered`,
+  *built*). This covers a reply that quotes no history, which `thread-promise-unanswered` can't link.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
