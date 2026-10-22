@@ -62,6 +62,54 @@ class MailboxSettings(BaseModel):
         description="How many seconds to wait for the server.",
         json_schema_extra={"advanced": True},
     )
+    from_address: str = Field(
+        "",
+        description="The address messages are sent from. Empty: the user name, when it is an address.",
+        json_schema_extra={"advanced": True},
+    )
+    smtp_host: str | None = Field(
+        None,
+        description="The outgoing mail server's name. Empty: the mail server's name, with a leading imap. made smtp.",
+        json_schema_extra={"advanced": True},
+    )
+    smtp_port: int = Field(
+        465,
+        ge=1,
+        le=65535,
+        description="The number the outgoing mail server listens on: 465 is a secure connection from the start, "
+        "any other number (587, usually) is made secure after connecting.",
+        json_schema_extra={"advanced": True},
+    )
+    sent_folder: str | None = Field(
+        None,
+        description="The folder a copy of each sent message is saved in, picked from the mailbox's folders. Empty: "
+        "the folder the server marks as sent mail, else Sent.",
+        json_schema_extra={"advanced": True},
+    )
+    server_keeps_sent: bool = Field(
+        False,
+        description="Turn on when the outgoing server saves a copy of what it sends in the sent folder by itself, so "
+        "none is saved here.",
+        json_schema_extra={"advanced": True},
+    )
+    archive_folder: str | None = Field(
+        None,
+        description="The folder Archive moves messages to, picked from the mailbox's folders. Empty: the folder the "
+        "server marks as the archive; with none, Archive isn't available for this mailbox.",
+        json_schema_extra={"advanced": True},
+    )
+
+    @property
+    def outgoing_host(self) -> str:
+        """The outgoing server: the one set, else the incoming host with a leading `imap.` made `smtp.`."""
+        if self.smtp_host:
+            return self.smtp_host
+        return "smtp." + self.host[5:] if self.host.lower().startswith("imap.") else self.host
+
+    @property
+    def sender(self) -> str:
+        """The address messages go from: the one set, else the user name when that is an address, else empty."""
+        return self.from_address.strip() or (self.user.strip() if "@" in self.user else "")
 
 
 def message_item(raw: bytes) -> SourceItem | None:
@@ -249,11 +297,12 @@ def read_mailbox(settings: MailboxSettings, state: dict[str, Any], context: Conn
 
 @dataclass(frozen=True)
 class Folders:
-    """The folders of a mailbox that can be read, and the one the server marks as the sent mail (None when it marks
-    none)."""
+    """The folders of a mailbox that can be read, the one the server marks as the sent mail and the one it marks as the
+    archive (None when it marks none)."""
 
     names: tuple[str, ...]
     sent: str | None
+    archive: str | None = None
 
 
 _LISTED = re.compile(rb'^\((?P<flags>[^)]*)\) (?:"(?:[^"\\]|\\.)*"|NIL) (?P<name>"(?:[^"\\]|\\.)*"|\S+)\s*$')
@@ -261,9 +310,11 @@ _LISTED = re.compile(rb'^\((?P<flags>[^)]*)\) (?:"(?:[^"\\]|\\.)*"|NIL) (?P<name
 
 def parse_folders(lines: list[Any]) -> Folders:
     """The folders in a server's LIST answer. A folder flagged as not selectable is left out; the one flagged `\\Sent`
-    (the server's own word for the sent mail, where it gives one) is the sent folder."""
+    (the server's own word for the sent mail, where it gives one) is the sent folder, and the one flagged
+    `\\Archive` the archive."""
     names: list[str] = []
     sent: str | None = None
+    archive: str | None = None
     for line in lines:
         found = _LISTED.match(line) if isinstance(line, bytes) else None
         if found is None:
@@ -277,7 +328,9 @@ def parse_folders(lines: list[Any]) -> Folders:
         names.append(name)
         if "\\sent" in flags and sent is None:
             sent = name
-    return Folders(tuple(names), sent)
+        if "\\archive" in flags and archive is None:
+            archive = name
+    return Folders(tuple(names), sent, archive)
 
 
 def list_folders(settings: MailboxSettings) -> Folders:

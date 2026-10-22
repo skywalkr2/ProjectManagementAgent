@@ -235,9 +235,10 @@ because one of them "handles it". Remove a line in the change that builds it.
 - The scope resolver (design 6.18; phase E): nothing enforces scope today.
 - Fact lookups (6.19; phase C4): facts are only recorded, never looked up.
 - Read-backs and the rules review (6.7, 6.21; phase E).
-- Channels other than Copy (6.3, 6.12): mail and calendar acts in phase S1b-2, the file channel in C4. The act, its ops and
-  the publisher (`engine/publisher.py`) are built (S1b-1a), and so are Waiting to go out and its Today lines (S1b-1b); no
-  real channel exists until an add-on registers one.
+- Channels other than Copy and `mailbox` (6.3, 6.12): the add-ons' mail and calendar channels in phase S1b-2, the file
+  channel in C4. The act, its ops and the publisher (`engine/publisher.py`) are built (S1b-1a), and so are Waiting to go
+  out and its Today lines (S1b-1b), and the core's `mailbox` channel for a plain mailbox (S1b-2b,
+  `engine/channels_mailbox.py`); no other real channel exists until an add-on registers one.
 - `record.rename` (6.7): ids make most renames unnecessary, but there is no general rename op.
 - The governor: stale sweeps, outage handling, point-in-time restore (6.13; phase E).
 

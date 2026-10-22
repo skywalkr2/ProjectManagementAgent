@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 187. The core's mailbox channel, built (2026-10-22; S1b-2b)
+
+- **Design 6.12, the bullet "Built (S1b-2b, change log 187...)":** a plain mailbox acts through its own servers: the core
+  channel `mailbox` sends (send, reply, reply all, forward) through the account's outgoing server with a Message-ID made
+  from the attempt key, saves a copy to the sent folder unless the server does, answers `status` by searching the sent
+  folder (found is sent, anything else unknown), archives, moves, labels and marks read over IMAP by Message-ID with Undo,
+  and answers an invitation by mail with the iTIP reply attached. A reply, reply all or forward is now about the saved
+  message it answers, so the channel is handed its service id and the fingerprint covers it.
+| Where | Before | Now |
+|---|---|---|
+| Channels (6.12) | Only `copy` in the core | `mailbox` too, for `mailbox:<source id>` accounts. Built: `tests/test_mailbox_channel.py` |
+| Settings (4.6) | A mailbox source: host, port, user, password, folder, first_read, max_per_read, timeout_seconds | Also `from_address`, `smtp_host`, `smtp_port`, `sent_folder`, `server_keeps_sent`, `archive_folder`, each with a description and a default; demo values in both fictional workspaces |
+
 ## 186. Adding a to-do yourself, designed (2026-10-22; S2, designed)
 
 - **Design 6.32, "Adding a to-do yourself":** Add a to-do on Today and To-dos, with the words, when, who, project and

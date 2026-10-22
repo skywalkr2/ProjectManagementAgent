@@ -28,6 +28,7 @@ from engine import act_accounts, audience, outward
 from engine.channels import COPY, OutgoingAbout, OutgoingAct, OutgoingRecipient
 from engine.ops import (
     ACT_ACTIONS,
+    ACT_REPLY_ACTIONS,
     ACT_UNDOABLE,
     ActApproveOp,
     ActConfirmSentOp,
@@ -126,8 +127,12 @@ def service_ref(view: Any, record_id: str) -> dict[str, Any]:
 
 
 def about_refs(view: Any, data: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """The records the act is about, each as it resolves now."""
-    return [service_ref(view, rid) for rid in data["target"].get("about") or []]
+    """The records the act is about, each as it resolves now. A reply, a reply to all or a forward is about the saved
+    message it answers."""
+    ids = list(data["target"].get("about") or [])
+    if data.get("in_reply_to") and what(data) in ACT_REPLY_ACTIONS:
+        ids.append(data["in_reply_to"])
+    return [service_ref(view, rid) for rid in ids]
 
 
 def what(data: Mapping[str, Any]) -> str:

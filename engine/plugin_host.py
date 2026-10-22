@@ -158,10 +158,13 @@ class PluginHost:
         self.ops = dict(OP_MODELS)
         self.tiers = dict(TIERS)
         self.tasks = dict(TASKS)
+        from engine import channels_mailbox
         from engine.channels import COPY
 
-        #: The channels the core itself carries: `copy`. Tests add a `FakeChannel` here; a plugin's are its own.
-        self.core_channels: dict[str, Any] = {COPY.name: COPY}
+        #: The channels the core itself carries: `copy` and `mailbox`. Tests add a `FakeChannel` here; a plugin's are
+        #: its own.
+        mailbox = channels_mailbox.for_workspace(store, lambda: self.cfg).registration()
+        self.core_channels: dict[str, Any] = {COPY.name: COPY, mailbox.name: mailbox}
         self.stage_checks = {}
         self.stages = cfg.stages.model_copy(deep=True)
         self._in_stage_check = False

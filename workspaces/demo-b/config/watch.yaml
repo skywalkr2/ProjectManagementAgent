@@ -42,6 +42,12 @@ sources:
       user: pm@example.com
       password: env:PROJECT_MAIL_PASSWORD
       folder: Projects
+      from_address: pm@example.com   # the address messages are sent from (the user name when that is an address)
+      smtp_host: smtp.example.com    # the outgoing server (the mail server with imap. made smtp. when empty)
+      smtp_port: 465                 # 465 is secure from the start; 587 is made secure after connecting
+      sent_folder: Sent              # where a copy of each sent message is saved (the server's sent folder when empty)
+      server_keeps_sent: false       # true when the outgoing server saves its own copy
+      archive_folder: Archive        # where Archive moves messages (the server's archive folder when empty)
 acting: []   # accounts the assistant may act on after your yes; none until you tick one in Settings
 look_back_choices: [30, 90, 365]   # days a mail source can be asked to look further back, shown as a list
 failures_before_asking: 3

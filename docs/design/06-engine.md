@@ -1458,7 +1458,63 @@ for it, that nothing goes out without the PM approving that exact content, alrea
         `::test_only_the_person_asks_to_take_an_act_back_and_a_channel_without_undo_cannot`.
       - **The act view:** `::test_the_api_shows_what_an_act_does_and_takes_back_a_sent_mailbox_act`,
         `::test_an_account_not_switched_on_says_why_copy_carries_it_and_the_settings_offer_the_switch`.
-    - **Not built (S1b-2, and what S1b-1b left):** the core `mailbox` channel, the add-ons' channels, the screens for
+    - **Built (S1b-2b, change log 187: the core `mailbox` channel, `engine/channels_mailbox.py`).** Registered as the core
+      channel `mailbox`, serving `mailbox:<source id>` accounts, with `message`: send, reply, reply_all, forward;
+      `mailbox`: archive, move, label, mark_read; `calendar`: answer. Settings on the mailbox source: `from_address`
+      (the user name when that is an address), `smtp_host` (the incoming host with a leading `imap.` made `smtp.`),
+      `smtp_port` (465 secure from the start, any other number made secure after connecting, never plain),
+      `sent_folder` (else the server's `\Sent` folder, else Sent), `server_keeps_sent` (off: a copy is saved after the
+      send, and a copy that can't be saved changes nothing about the answer), `archive_folder` (else the server's
+      `\Archive` folder, else Archive is refused with a plain reason), and the existing `timeout_seconds`. One connection
+      to each server per act, no retry: a try-later is `outage`. A reply, reply all or forward is about the saved message it
+      answers (`about_refs`), so the channel is handed its service id and the fingerprint covers it.
+      - **Sending:** the Message-ID is `<attempt key@sender's domain>`, so a key always makes the same one; a reply has
+        In-Reply-To and References; a forward quotes the saved text as plain text. Every recipient must be accepted before
+        the message is handed over. 2xx is sent; 535 and friends are `auth` naming the mailbox; 5xx `refused`; 4xx
+        `outage`; an unreachable server `offline`; a connection lost while the message goes over is no clear answer.
+        `::test_a_send_hands_the_exact_parts_and_recipients_with_a_message_id_made_from_the_key`,
+        `::test_the_same_key_gives_the_same_message_id_and_another_key_another`,
+        `::test_the_outgoing_server_settings_have_defaults_from_the_incoming_host`,
+        `::test_port_587_connects_and_then_makes_the_connection_secure`,
+        `::test_a_reply_carries_in_reply_to_and_references_from_the_originals_service_id`,
+        `::test_a_forward_quotes_the_saved_text_as_plain_text_and_is_no_reply`,
+        `::test_a_copy_is_saved_in_the_sent_folder_the_server_marks_unless_the_server_keeps_its_own`,
+        `::test_a_copy_that_cannot_be_saved_does_not_change_the_answer`,
+        `::test_a_message_with_nowhere_to_come_from_or_go_is_refused_before_any_connection`,
+        `::test_a_refused_sign_in_is_auth_and_names_the_account`,
+        `::test_a_5xx_refusal_is_refused_naming_the_address_and_nothing_is_handed_over`,
+        `::test_a_try_later_is_an_outage_and_is_never_retried`,
+        `::test_a_server_that_cannot_be_reached_is_offline_and_one_that_hangs_up_before_data_is_an_outage`,
+        `::test_a_connection_lost_while_the_message_goes_over_is_no_clear_answer_and_saves_no_copy`,
+        `::test_a_server_that_does_not_offer_a_secure_connection_is_never_used_without_one`
+        (all in `tests/test_mailbox_channel.py`).
+      - **Status:** the sent folders of the mailboxes acting is on for are searched, read-only, for the Message-ID of the
+        key: found is `sent`, anything else `unknown`, never "not sent". `::test_status_finds_the_message_id_in_the_sent_folder_and_otherwise_cannot_say`,
+        `::test_status_looks_only_in_mailboxes_acting_is_on_for_and_a_failure_is_unknown`.
+      - **Mailbox acts:** over IMAP, each message found by `SEARCH HEADER Message-ID` in the source's folder (all must
+        be there before any change), then `MOVE` (or, with UIDPLUS, `COPY`, `\Deleted` and `UID EXPUNGE` of that one
+        message; a server with neither is refused), `STORE +FLAGS` a keyword for label or `\Seen` for mark read. A
+        missing message is refused ("moved or deleted"); nothing is ever deleted. Undo moves back, removes the keyword
+        or `\Seen`. `::test_archive_moves_the_message_found_by_its_message_id_to_the_archive_folder`,
+        `::test_archive_with_no_archive_folder_is_refused_with_a_plain_reason`,
+        `::test_move_label_and_mark_read_use_move_and_store_by_message_id`,
+        `::test_a_server_without_move_copies_then_flags_and_expunges_only_that_message`,
+        `::test_a_message_that_is_not_there_is_refused_and_nothing_changes`,
+        `::test_a_folder_that_does_not_exist_is_refused`,
+        `::test_a_mailbox_act_never_deletes_and_a_refused_sign_in_is_auth`,
+        `::test_undo_moves_a_message_back_to_its_folder_and_takes_the_label_and_the_read_mark_off`,
+        `::test_undo_says_so_when_the_message_was_moved_again_and_never_takes_back_a_sent_message`.
+      - **Answering an invitation:** mail to the organizer with `reply_ics` attached as `text/calendar; method=REPLY`
+        through the same send path; a proposed new time is refused (a plain mailbox can't). `::test_an_answer_goes_as_mail_to_the_organizer_with_the_itip_reply_attached`,
+        `::test_each_answer_has_its_own_status_and_a_new_time_cannot_be_proposed_by_mail`.
+      - **Through the publisher with the stand-in servers:** `::test_the_core_registers_the_mailbox_channel_for_mailbox_accounts_with_its_actions`,
+        `::test_an_approved_message_goes_out_through_the_publisher_and_is_sent_with_its_message_id`,
+        `::test_a_reply_through_the_publisher_is_handed_the_saved_messages_own_id`,
+        `::test_a_lost_answer_is_settled_by_asking_the_sent_folder_and_never_sent_twice`,
+        `::test_a_lost_answer_with_no_copy_to_find_is_uncertain_not_reopened`,
+        `::test_an_archive_goes_through_the_publisher_and_undo_puts_it_back`,
+        `::test_an_invitation_answer_goes_through_the_publisher_as_mail`.
+    - **Not built (S1b-2, and what S1b-1b left):** the add-ons' channels, the screens for
       the new actions, the undo toast and the sent list's Undo, the Settings step that starts the sign-in with acting after the
       tick (the route takes `acting`), asking the service to drop the wider access when acting is turned off, the
       reminders and the standing yes, the invitation's name on an answer line (the view carries `about` now),

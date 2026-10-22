@@ -1081,7 +1081,10 @@ management (not just read only) lets do it"):
   or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
   **Built so far (S1b-2a):** the acts' actions, `about`, account and undo in the engine and API
-  (`tests/test_act_actions.py`). **Left:** the core `mailbox` channel, the screens.
+  (`tests/test_act_actions.py`), and **(S1b-2b)** the core `mailbox` channel for a plain mailbox: sending through its
+  outgoing server, the sent copy, status by Message-ID, archive, move, label and mark read over IMAP, and Undo
+  (`tests/test_mailbox_channel.py`). **Left:** the add-ons' channels, the screens (including picking the sent and archive
+  folders from the mailbox's folder list).
 - [ ] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
   the publisher for it): (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
@@ -1094,7 +1097,9 @@ management (not just read only) lets do it"):
   Reading an invitation and preparing the answer has its engine (`engine/itip.py`, `tests/test_itip.py`); sending it
   waits for the publisher.
   **Built so far (S1b-2a):** the calendar acts' actions, an answer addressed to the organizer, and undo of a created event
-  (`tests/test_act_actions.py`). **Left:** the answer's iTIP reply by mail through the core channel, the screens.
+  (`tests/test_act_actions.py`). **Built (S1b-2b):** the answer's iTIP reply by mail through the core `mailbox` channel
+  (`tests/test_mailbox_channel.py::test_an_answer_goes_as_mail_to_the_organizer_with_the_itip_reply_attached`).
+  **Left:** creating, moving and cancelling events (a calendar service's add-on), the screens.
 - [ ] [S1b-2] **Plugin API for acting:** add-ons declare the acts they can carry out (a channel per account kind: send,
   reply, move, label, create or change an event) and the access they need in `requires`; the core calls them only from
   the publisher after the yes, and their sign-in asks for the wider access when the person turns acting on. Released
