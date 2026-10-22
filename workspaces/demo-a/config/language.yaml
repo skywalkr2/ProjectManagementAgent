@@ -55,6 +55,39 @@ due_ordinal_suffixes: [st, nd, rd, th]
 due_condition_words: [once, after, before, when, whenever, until, till, if, unless, upon, as soon as, of receiving, of receipt, sometime, soon, eventually]
 due_hold_words: [once, after, when, whenever, until, till, if, unless, upon, as soon as, of receiving, of receipt]
 due_before_words: [before]
+# The words of the day-and-time phrases ("day after tomorrow", "first thing Monday", "within 48 hours"), by what they mean; the number words read in "within two days"; the time zone abbreviations ("5pm ET") and the zone each names; and the list of named days ("by Thanksgiving") the reader uses (empty: the one for the language).
+due_phrase_words:
+  day_after_tomorrow: [day after tomorrow]
+  later_today: [later today]
+  tonight: [tonight]
+  noon: [noon, midday]
+  midnight: [midnight]
+  first_thing: [first thing]
+  end_of_month: [end of month, end of the month, end of this month]
+  end_of_next_month: [end of next month, end of the next month]
+  this_weekend: [this weekend]
+  within: [within]
+  hours: [hours, hour]
+  days: [days, day]
+  working_days: [working days, working day, business days, business day]
+due_number_words: {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12}
+time_zone_abbreviations:
+  ET: America/New_York
+  EST: America/New_York
+  EDT: America/New_York
+  CT: America/Chicago
+  CST: America/Chicago
+  CDT: America/Chicago
+  MT: America/Denver
+  MST: America/Denver
+  MDT: America/Denver
+  PT: America/Los_Angeles
+  PST: America/Los_Angeles
+  PDT: America/Los_Angeles
+  UTC: UTC
+  GMT: UTC
+  BST: Europe/London
+holiday_calendar: en-US
 # The verbs a task's title starts with: a plain calendar entry whose first word is one is offered as a to-do.
 task_verbs: [pay, send, call, email, text, book, buy, order, renew, submit, file, return, pick, drop, cancel, confirm, schedule, register, sign, review, write, finish, prepare, collect, fix, clean, pack, check, ask, remind, reply, print, post, pickup, organize, arrange]
 # The words that read an ending: delivered (done), learned another way or no longer matters (called off), or only closed (asks).

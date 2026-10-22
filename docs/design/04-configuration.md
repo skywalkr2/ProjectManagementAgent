@@ -330,6 +330,11 @@ Built keys:
 - `project_start_words` (starting, launching, kicking off, start, launch, kick off): what the `project-start-as-fact`
   lint reads (6.33): before a name in capitals no project has, in a fact with no project proposed, the words go back
   to propose the project.
+- `due_phrase_words`, `due_number_words`, `time_zone_abbreviations` and `holiday_calendar`: what the date reader reads
+  beyond dates and weekdays (6.33): "day after tomorrow", "later today", "tonight", "noon", "midnight", "first thing
+  Monday", "end of the month", "this weekend", "within 48 hours", a time with a zone ("5pm ET"), and named days ("by
+  Thanksgiving") from the calendar for the workspace's language (`engine/defaults/holidays.yaml`). A year-less
+  numeric date ("11/6") reads in the language's order.
 - `claim_words` (told me, told us, said that, says that, tells me, claims): what the `claim-asked-of-the-person` lint
   reads (6.33): right after a name, they say that person stated something, so a question to the person about it
   goes back to ask them.

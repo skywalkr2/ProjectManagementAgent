@@ -44,6 +44,41 @@ def test_a_deadline_the_rules_read_firmly_is_the_one_a_person_means(case):
     assert (found.end or found.start) == date.fromisoformat(case["end"])
 
 
+def _reading(case):
+    received, here = _received(case["received"])
+    return resolve(case["phrase"], received, here)
+
+
+def test_the_rules_read_more_of_the_deadline_words_people_use_every_day():
+    """How much of the helper's set the rules read for certain, never wrongly (the test above fails on a wrong one).
+    Exact readings that match are what the person no longer has to check; the phrases that mean nothing firm (unclear or
+    waiting on an event) must still read as nothing."""
+    exact = [c for c in DUE if c["meaning"] not in ("condition", "unclear") and _reading(c).exact]
+    matching = [c for c in exact if c["phrase"] not in WORKWEEK_END]
+    assert all((_reading(c).end or _reading(c).start) == date.fromisoformat(c["end"]) for c in matching)
+    nothing = [c for c in DUE if c["meaning"] in ("condition", "unclear") and _reading(c).start is None]
+    assert len(nothing) == sum(c["meaning"] in ("condition", "unclear") for c in DUE)
+    assert len(matching) >= 33
+    # Counting the phrases read as nothing too (the roadmap's measure, 42 before this change).
+    assert len(nothing) + len(exact) >= 55
+    # The phrases the helper marked firm that are everyday words read exactly now.
+    firm = {c["phrase"] for c in matching}
+    for phrase in (
+        "first thing Monday",
+        "later today",
+        "day after tomorrow",
+        "end of the month",
+        "end of next month",
+        "11/6",
+        "12/4",
+        "by noon tomorrow",
+        "by 5pm ET",
+        "by 8 tonight",
+        "by Thanksgiving",
+    ):
+        assert phrase in firm, phrase
+
+
 def _dates(rule: str, start: date, count: int) -> list[date]:
     first = datetime.combine(start, datetime.min.time())
     return [d.date() for d in rrulestr(rule, dtstart=first).xafter(first, count=count, inc=True)]

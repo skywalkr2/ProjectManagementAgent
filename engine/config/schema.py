@@ -10,6 +10,7 @@ import re
 import string
 from datetime import date
 from typing import Any, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -18,8 +19,11 @@ from engine.due_phrases import (
     DEFAULT_CONDITION_WORDS,
     DEFAULT_HOLD_WORDS,
     DEFAULT_LEAD_WORDS,
+    DEFAULT_NUMBER_WORDS,
     DEFAULT_ORDINAL_SUFFIXES,
+    DEFAULT_PHRASE_WORDS,
     DEFAULT_TASK_VERBS,
+    DEFAULT_TIME_ZONES,
 )
 from engine.endings import (
     DEFAULT_CALLED_OFF_WORDS,
@@ -1947,6 +1951,31 @@ class LanguageFile(FileModel):
         "words that follow name one entry that is still ahead, the promise is due at that entry and moves with it; "
         "when they name none, or more than one, it has no date and keeps its words. Case is ignored.",
     )
+    due_phrase_words: dict[str, list[str]] = Field(
+        default_factory=lambda: {concept: list(words) for concept, words in DEFAULT_PHRASE_WORDS.items()},
+        description="The words of the day-and-time phrases the date reader knows, by what they mean: "
+        'day_after_tomorrow, later_today, tonight, noon, midnight, first_thing ("first thing Monday"), '
+        'end_of_month, end_of_next_month, this_weekend, within ("within 48 hours") and the units hours, days and '
+        "working_days. Each is a list of whole phrases; a meaning left out keeps its default, and an empty list turns "
+        "it off. Case is ignored.",
+    )
+    due_number_words: dict[str, int] = Field(
+        default_factory=lambda: dict(DEFAULT_NUMBER_WORDS),
+        description='The number words the date reader understands in "within two working days", each with its number. '
+        "Digits are always read. Case is ignored.",
+    )
+    time_zone_abbreviations: dict[str, str] = Field(
+        default_factory=lambda: dict(DEFAULT_TIME_ZONES),
+        description='Time zone abbreviations and the zone each names (ET for Eastern time), so "by 5pm ET" is '
+        "read in that zone and shown in yours. An abbreviation that means different zones in different places is "
+        "better left out: its words are then left for you to check. Case is ignored.",
+    )
+    holiday_calendar: str | None = Field(
+        None,
+        description='Which list of named days the date reader uses for words like "by Thanksgiving". Empty: the one '
+        "for your language, when there is one; a language with none reads no holiday names.",
+        json_schema_extra={"choices": "holiday_calendars"},
+    )
     task_verbs: list[str] = Field(
         default_factory=lambda: list(DEFAULT_TASK_VERBS),
         description='The verbs a task\'s title starts with ("pay", "send", "book"). A plain calendar entry (nobody '
@@ -2036,6 +2065,26 @@ class LanguageFile(FileModel):
                 re.compile(pattern)
             except re.error as exc:
                 raise ValueError(f"{pattern!r} is not a regular expression: {exc}") from exc
+        return value
+
+    @field_validator("due_phrase_words")
+    @classmethod
+    def _phrase_words_are_known(cls, value: dict[str, list[str]]) -> dict[str, list[str]]:
+        unknown = sorted(set(value) - set(DEFAULT_PHRASE_WORDS))
+        if unknown:
+            raise ValueError(
+                f"{', '.join(unknown)} is not a meaning the date reader knows; use {sorted(DEFAULT_PHRASE_WORDS)}"
+            )
+        return value
+
+    @field_validator("time_zone_abbreviations")
+    @classmethod
+    def _abbreviations_name_zones(cls, value: dict[str, str]) -> dict[str, str]:
+        for abbreviation, name in value.items():
+            try:
+                ZoneInfo(name)
+            except (ZoneInfoNotFoundError, ValueError) as exc:
+                raise ValueError(f"{abbreviation!r} names {name!r}, which is not a time zone") from exc
         return value
 
     @field_validator("date_patterns")

@@ -903,6 +903,11 @@ is marked *designed*, with the phase.
   theirs quoting it goes back once (`own-promise-missed`, *built*; the words are `language.own_promise_words`). A
   team's "we'll" made the sender's alone, when the words don't name the sender, goes back once to leave the owners
   empty (`team-we-one-owner`, *built*; `language.team_promise_words`).
+- The date reader reads the deadline words people use every day: numeric dates in the language's order, "day after
+  tomorrow", "later today", "tonight", "noon" and "midnight", "first thing <day>", "end of the month" and "of next
+  month", "this weekend", "within <n> hours, days or working days", a time with a zone abbreviation, and named days
+  from the language's calendar. A doubtful reading stays inexact, so it waits for "check this" (built:
+  `tests/test_phrase_cases.py::test_the_rules_read_more_of_the_deadline_words_people_use_every_day`).
 - Someone's promise with a date ("Riley will drive the audit by the 20th"), recorded as a fact rather than as their
   action, goes back once to be their action, including for someone not on file yet, who is proposed and asked about
   (`promise-as-fact`, *built*; `language.promise_words`, `language.promise_state_words`). A rule on the words: a

@@ -150,7 +150,6 @@ def test_explicit_dates(phrase, locale, expected):
         "next quarter",
         "",
         "Friday or Monday",
-        "11/06",
         "11/06/26",
         "13/06/2026",
         "02/30/2026",
@@ -350,7 +349,6 @@ def test_custom_eod_combined_with_day():
         "at 15:00",
         "November 31",
         "31 Nov.",
-        "11/20",
         "after the workshop at noon",
         "when the files arrive at 3pm",
         "next week at noon",
@@ -548,3 +546,367 @@ def test_a_bare_weekday_said_on_that_weekday_is_read_forward_and_checked(hour):
 def test_a_bare_weekday_said_on_another_day_stays_firm():
     found = resolve("by Friday", datetime(2026, 11, 4, 9, tzinfo=ZONE), ZONE)
     assert (found.start, found.exact) == (date(2026, 11, 6), True)
+
+
+# ---- numeric dates, with the year optional ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("phrase", "locale", "expected", "exact"),
+    [
+        ("11/20", "en_US", date(2026, 11, 20), True),
+        ("by 11/6", "en_US", date(2026, 11, 6), True),
+        ("11/3", "en_US", date(2027, 11, 3), False),  # nearly a year ahead is more likely a date just past
+        ("12/4", "en_US", date(2026, 12, 4), True),
+        ("20/11", "en_GB", date(2026, 11, 20), True),
+        ("4/12", "en_GB", date(2026, 12, 4), True),
+        ("11/4", "en_US", date(2026, 11, 4), True),  # the received day itself
+    ],
+)
+def test_a_numeric_date_without_a_year_is_read_in_the_languages_order(phrase, locale, expected, exact):
+    result = resolve(phrase, RECEIVED, ZONE, locale=locale)
+    assert result.start == result.end == expected
+    assert result.exact is exact
+
+
+def test_a_numeric_date_without_a_year_never_tries_the_other_order():
+    assert resolve("20/11", RECEIVED, ZONE, locale="en_US").start is None
+    assert resolve("11/20", RECEIVED, ZONE, locale="en_GB").start is None
+    assert resolve("2/30", RECEIVED, ZONE).start is None
+
+
+@pytest.mark.parametrize("phrase", ["11/06/26", "11/6/26", "1/2/3", "11/", "/6", "11/6/", "1.5", "11-6"])
+def test_a_two_digit_year_or_a_broken_numeric_date_is_refused(phrase):
+    result = resolve(phrase, RECEIVED, ZONE)
+    assert result.start is result.end is result.time is None and not result.exact
+
+
+# ---- day-and-time words ----------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("phrase", "day", "at", "exact"),
+    [
+        ("day after tomorrow", date(2026, 11, 6), None, True),
+        ("the day after tomorrow", date(2026, 11, 6), None, True),
+        ("by the day after tomorrow", date(2026, 11, 6), None, True),
+        ("day after tomorrow at noon", date(2026, 11, 6), time(12), True),
+        ("later today", date(2026, 11, 4), None, True),
+        ("tonight", date(2026, 11, 4), None, False),
+        ("by 8 tonight", date(2026, 11, 4), time(20), True),
+        ("8:30 tonight", date(2026, 11, 4), time(20, 30), True),
+        ("tonight at 9", date(2026, 11, 4), time(21), True),
+        ("tonight at 9pm", date(2026, 11, 4), time(21), True),
+        ("noon tomorrow", date(2026, 11, 5), time(12), True),
+        ("by noon tomorrow", date(2026, 11, 5), time(12), True),
+        ("5pm Friday", date(2026, 11, 6), time(17), True),
+        ("at 5pm on Friday", date(2026, 11, 6), time(17), True),
+        ("midday today", date(2026, 11, 4), time(12), True),
+        ("midnight Friday", date(2026, 11, 6), time(0), False),
+        ("at midnight tomorrow", date(2026, 11, 5), time(0), False),
+    ],
+)
+def test_the_everyday_day_and_time_words_are_read(phrase, day, at, exact):
+    result = resolve(phrase, RECEIVED, ZONE)
+    assert (result.start, result.end, result.time, result.exact) == (day, day, at, exact)
+
+
+@pytest.mark.parametrize(
+    "phrase", ["midnight tonight", "3 tonight", "13 tonight", "8:75 tonight", "noon noon", "5pm 6pm", "noon maybe"]
+)
+def test_doubtful_times_of_day_give_no_date(phrase):
+    result = resolve(phrase, RECEIVED, ZONE)
+    assert result.start is result.end is result.time is None and not result.exact
+
+
+@pytest.mark.parametrize(
+    ("phrase", "day", "exact"),
+    [
+        ("first thing Monday", date(2026, 11, 9), True),
+        ("first thing tomorrow", date(2026, 11, 5), True),
+        ("by first thing Friday", date(2026, 11, 6), True),
+        ("first thing Wednesday", date(2026, 11, 11), False),  # said on a Wednesday: may mean today
+    ],
+)
+def test_first_thing_is_the_start_of_that_day_with_no_clock_time(phrase, day, exact):
+    result = resolve(phrase, RECEIVED, ZONE)
+    assert (result.start, result.end, result.time, result.exact) == (day, day, None, exact)
+
+
+@pytest.mark.parametrize(
+    "phrase", ["first thing", "first thing soon", "first thing noon", "first thing in the morning"]
+)
+def test_first_thing_needs_a_day(phrase):
+    assert resolve(phrase, RECEIVED, ZONE).start is None
+
+
+@pytest.mark.parametrize(
+    ("received", "phrase", "expected"),
+    [
+        (datetime(2026, 11, 10, 10, tzinfo=ZONE), "end of the month", date(2026, 11, 30)),
+        (datetime(2026, 11, 30, 10, tzinfo=ZONE), "end of month", date(2026, 11, 30)),
+        (datetime(2026, 11, 10, 10, tzinfo=ZONE), "by the end of the month", date(2026, 11, 30)),
+        (datetime(2026, 11, 10, 10, tzinfo=ZONE), "end of next month", date(2026, 12, 31)),
+        (datetime(2026, 12, 10, 10, tzinfo=ZONE), "end of next month", date(2027, 1, 31)),
+        (datetime(2027, 1, 31, 10, tzinfo=ZONE), "end of next month", date(2027, 2, 28)),
+        (datetime(2028, 1, 15, 10, tzinfo=ZONE), "end of next month", date(2028, 2, 29)),
+    ],
+)
+def test_the_end_of_a_month_is_its_last_calendar_day(received, phrase, expected):
+    result = resolve(phrase, received, ZONE)
+    assert result.start == result.end == expected and result.exact
+
+
+@pytest.mark.parametrize(
+    ("day", "hour", "weekend"),
+    [
+        (4, 14, (date(2026, 11, 7), date(2026, 11, 8))),  # Wednesday
+        (6, 9, (date(2026, 11, 7), date(2026, 11, 8))),  # Friday
+        (7, 9, (date(2026, 11, 7), date(2026, 11, 8))),  # Saturday: the current one
+        (8, 20, (date(2026, 11, 7), date(2026, 11, 8))),  # Sunday: the current one
+        (9, 9, (date(2026, 11, 14), date(2026, 11, 15))),  # Monday
+    ],
+)
+def test_this_weekend_is_the_coming_or_current_saturday_and_sunday(day, hour, weekend):
+    result = resolve("this weekend", datetime(2026, 11, day, hour, tzinfo=ZONE), ZONE)
+    assert (result.start, result.end) == weekend
+    assert result.time is None and not result.exact
+
+
+@pytest.mark.parametrize(
+    ("phrase", "end"),
+    [
+        ("within 48 hours", date(2026, 11, 6)),
+        ("within 24 hours", date(2026, 11, 5)),
+        ("within 1 hour", date(2026, 11, 4)),
+        ("within 12 hours", date(2026, 11, 5)),
+        ("within two hours", date(2026, 11, 4)),
+        ("within 3 days", date(2026, 11, 7)),
+        ("within five days", date(2026, 11, 9)),
+        ("within 1 day", date(2026, 11, 5)),
+        ("within 3 working days", date(2026, 11, 9)),  # Wednesday: Thursday, Friday, Monday
+        ("within three business days", date(2026, 11, 9)),
+        ("within two working days", date(2026, 11, 6)),
+    ],
+)
+def test_within_a_span_is_a_range_from_the_received_day(phrase, end):
+    result = resolve(phrase, RECEIVED, ZONE)
+    assert (result.start, result.end, result.time, result.exact) == (date(2026, 11, 4), end, None, False)
+
+
+def test_within_hours_counts_from_the_received_instant_in_the_local_zone():
+    late = datetime(2026, 11, 4, 22, 30, tzinfo=ZONE)
+    assert resolve("within 2 hours", late, ZONE).end == date(2026, 11, 5)
+    assert resolve("within 1 hour", late, ZONE).end == date(2026, 11, 4)
+    # The same instant, seen from Tokyo, is already the next morning.
+    assert resolve("within 1 hour", late, "Asia/Tokyo").start == date(2026, 11, 5)
+
+
+def test_within_days_counts_calendar_days_unless_it_says_working_days():
+    friday = datetime(2026, 11, 6, 10, tzinfo=ZONE)
+    assert resolve("within 3 days", friday, ZONE).end == date(2026, 11, 9)
+    assert resolve("within 3 working days", friday, ZONE).end == date(2026, 11, 11)
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "within",
+        "within days",
+        "within 0 days",
+        "within 1001 days",
+        "within 2 weeks",
+        "within a couple of days",
+        "within 2 days of receiving the files",
+        "within two",
+        "within 2.5 hours",
+    ],
+)
+def test_a_span_the_rules_cannot_count_gives_no_date(phrase):
+    assert resolve(phrase, RECEIVED, ZONE).start is None
+
+
+# ---- time zone abbreviations -----------------------------------------------------------------------------------------
+
+NOW_IN_NEW_YORK = datetime(2026, 11, 4, 14, 30, tzinfo=ZONE)
+
+
+@pytest.mark.parametrize(
+    ("phrase", "zone", "day", "at"),
+    [
+        ("by 5pm ET", "America/Los_Angeles", date(2026, 11, 4), time(14)),
+        ("5pm EST", "America/Chicago", date(2026, 11, 4), time(16)),
+        ("noon ET", "America/Los_Angeles", date(2026, 11, 4), time(9)),
+        ("tomorrow at 9am PT", "America/New_York", date(2026, 11, 5), time(12)),
+        ("tomorrow 11pm PT", "America/New_York", date(2026, 11, 6), time(2)),  # the date moves with the zone
+        ("5pm ET", "America/New_York", date(2026, 11, 4), time(17)),
+        ("5:30pm et", "America/New_York", date(2026, 11, 4), time(17, 30)),
+        ("noon UTC", "Europe/London", date(2026, 11, 4), time(12)),
+    ],
+)
+def test_a_time_with_a_zone_abbreviation_is_given_in_the_persons_zone(phrase, zone, day, at):
+    got = resolve(phrase, NOW_IN_NEW_YORK, zone)
+    assert (got.start, got.end, got.time, got.exact) == (day, day, at, True)
+
+
+def test_a_zone_abbreviation_follows_the_daylight_saving_rules_of_the_date():
+    # Before the US clocks change (1 November) New York is four hours behind UTC, after it five; London stays at UTC.
+    before = datetime(2026, 10, 30, 9, tzinfo=ZONE)
+    assert resolve("noon ET", before, "Europe/London").time == time(16)
+    assert resolve("noon ET", NOW_IN_NEW_YORK, "Europe/London").time == time(17)
+
+
+def test_a_day_word_said_across_a_date_line_with_a_zone_is_doubtful():
+    # 14:30 in New York is already the next day in Tokyo, where "today" is the 5th and 15:30 UTC is the 6th there.
+    got = resolve("3:30pm UTC", NOW_IN_NEW_YORK, "Asia/Tokyo")
+    assert (got.start, got.time, got.exact) == (date(2026, 11, 6), time(0, 30), False)
+
+
+@pytest.mark.parametrize(
+    "phrase", ["5pm XYZ", "Friday ET", "ET", "end of day ET", "after 5pm ET", "5pm ET if approved"]
+)
+def test_a_zone_without_a_clock_time_or_an_unknown_abbreviation_gives_no_date(phrase):
+    assert resolve(phrase, NOW_IN_NEW_YORK, ZONE).start is None
+
+
+def test_the_zone_abbreviations_are_a_setting_of_the_language():
+    assert resolve("5pm ET", NOW_IN_NEW_YORK, ZONE, time_zones={"PT": "America/Los_Angeles"}).start is None
+    got = resolve("5pm CET", NOW_IN_NEW_YORK, ZONE, time_zones={"cet": "Europe/Paris"})
+    assert (got.start, got.time) == (date(2026, 11, 4), time(11))
+    assert resolve("5pm ET", NOW_IN_NEW_YORK, ZONE, time_zones={"ET": "Not/AZone"}).start is None
+
+
+# ---- holidays by name ------------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("phrase", "calendar", "day"),
+    [
+        ("Thanksgiving", "en_US", date(2026, 11, 26)),
+        ("by Thanksgiving", "en_US", date(2026, 11, 26)),
+        ("by Thanksgiving Day", "en_US", date(2026, 11, 26)),
+        ("Christmas", "en_US", date(2026, 12, 25)),
+        ("by Christmas Eve", "en_US", date(2026, 12, 24)),
+        ("by New Year\u2019s Day", "en_US", date(2027, 1, 1)),
+        ("Labor Day", "en_US", date(2027, 9, 6)),
+        ("by Boxing Day", "en_GB", date(2026, 12, 26)),
+        ("the spring bank holiday", "en_GB", date(2027, 5, 31)),
+    ],
+)
+def test_a_holiday_named_is_its_day_by_the_calendar_of_the_language(phrase, calendar, day):
+    got = resolve(phrase, RECEIVED, ZONE, locale=calendar)
+    assert got.start == got.end == day
+
+
+def test_a_holiday_far_ahead_may_mean_one_just_past():
+    got = resolve("by Labor Day", RECEIVED, ZONE)
+    assert got.start == date(2027, 9, 6) and not got.exact
+    assert resolve("by Thanksgiving", RECEIVED, ZONE).exact
+
+
+def test_a_holiday_that_is_today_is_today_and_one_that_passed_is_next_years():
+    assert resolve("Thanksgiving", datetime(2026, 11, 26, 8, tzinfo=ZONE), ZONE).start == date(2026, 11, 26)
+    assert resolve("Thanksgiving", datetime(2026, 11, 27, 8, tzinfo=ZONE), ZONE).start == date(2027, 11, 25)
+
+
+def test_a_holiday_is_dated_by_its_rule_in_every_year():
+    from engine.due_phrases import holiday_date, load_holidays
+
+    by_name = {name: day for day in load_holidays("en-US") for name in day.names}
+    assert [holiday_date(by_name["thanksgiving"], y) for y in (2026, 2027, 2028)] == [
+        date(2026, 11, 26),
+        date(2027, 11, 25),
+        date(2028, 11, 23),
+    ]
+    assert [holiday_date(by_name["memorial day"], y) for y in (2026, 2027)] == [date(2026, 5, 25), date(2027, 5, 31)]
+    assert holiday_date(by_name["labor day"], 2026) == date(2026, 9, 7)
+
+
+def test_a_holiday_calendar_belongs_to_a_language_and_a_language_without_one_reads_none():
+    from engine.due_phrases import holiday_calendars, load_holidays
+
+    assert {"en-US", "en-GB"} <= set(holiday_calendars())
+    assert load_holidays("en-AU") == () and load_holidays("xx") == ()
+    assert resolve("by Boxing Day", RECEIVED, ZONE, locale="en_US").start is None
+    assert resolve("by Thanksgiving", RECEIVED, ZONE, locale="en_GB").start is None
+
+
+def test_the_holidays_can_be_passed_in():
+    from engine.due_phrases import Holiday
+
+    own = (Holiday(("founders day",), month=3, day=3),)
+    assert resolve("by founders day", RECEIVED, ZONE, holidays=own).start == date(2027, 3, 3)
+    assert resolve("by Thanksgiving", RECEIVED, ZONE, holidays=own).start is None
+    assert resolve("by Thanksgiving", RECEIVED, ZONE, holidays=()).start is None
+
+
+@pytest.mark.parametrize(
+    "phrase", ["before Thanksgiving", "after Christmas", "Thanksgiving week", "by Easter", "Thanksgiving Friday"]
+)
+def test_words_around_a_holiday_that_say_more_than_its_day_give_no_date(phrase):
+    assert resolve(phrase, RECEIVED, ZONE).start is None
+
+
+# ---- the words are settings of the language --------------------------------------------------------------------------
+
+
+def test_the_day_and_time_words_come_from_the_language_settings():
+    words = {
+        "day_after_tomorrow": ["overmorrow"],
+        "first_thing": ["at dawn"],
+        "end_of_month": [],
+        "noon": ["high noon"],
+    }
+    assert resolve("overmorrow", RECEIVED, ZONE, phrase_words=words).start == date(2026, 11, 6)
+    assert resolve("day after tomorrow", RECEIVED, ZONE, phrase_words=words).start is None
+    assert resolve("at dawn Friday", RECEIVED, ZONE, phrase_words=words).start == date(2026, 11, 6)
+    assert resolve("end of the month", RECEIVED, ZONE, phrase_words=words).start is None
+    assert resolve("high noon tomorrow", RECEIVED, ZONE, phrase_words=words).time == time(12)
+    # A meaning left out of the setting keeps its default.
+    assert resolve("later today", RECEIVED, ZONE, phrase_words=words).start == date(2026, 11, 4)
+
+
+def test_the_number_words_and_units_come_from_the_language_settings():
+    assert resolve("within couple hours", RECEIVED, ZONE, number_words={"couple": 2}).end == date(2026, 11, 4)
+    assert resolve("within two hours", RECEIVED, ZONE, number_words={}).start is None
+    assert resolve("within 3 jours", RECEIVED, ZONE, phrase_words={"days": ["jours"]}).end == date(2026, 11, 7)
+    assert resolve("within 3 days", RECEIVED, ZONE, phrase_words={"days": ["jours"]}).start is None
+
+
+def test_the_language_settings_accept_only_known_meanings_and_real_zones():
+    from pydantic import ValidationError
+
+    from engine.config.schema import LanguageFile
+
+    assert LanguageFile(due_phrase_words={"noon": ["noon"]}).due_phrase_words == {"noon": ["noon"]}
+    with pytest.raises(ValidationError):
+        LanguageFile(due_phrase_words={"nonn": ["noon"]})
+    with pytest.raises(ValidationError):
+        LanguageFile(time_zone_abbreviations={"ET": "Nowhere/Land"})
+    defaults = LanguageFile()
+    assert defaults.holiday_calendar is None
+    assert defaults.time_zone_abbreviations["ET"] == "America/New_York"
+    assert defaults.due_number_words["two"] == 2
+
+
+def test_the_demo_workspaces_language_settings_read_the_new_words(tmp_path):
+    from engine.due_phrases import load_holidays
+    from engine.workspace import init_workspace
+    from tests.conftest import DEMO_A, DEMO_B
+
+    for template in (DEMO_A, DEMO_B):
+        settings = init_workspace(tmp_path / template.name, template=template, git=False).config(env={}).language
+        assert settings.holiday_calendar and load_holidays(settings.holiday_calendar)
+        read = resolve(
+            "by 5pm ET",
+            NOW_IN_NEW_YORK,
+            "America/Los_Angeles",
+            phrase_words=settings.due_phrase_words,
+            number_words=settings.due_number_words,
+            time_zones=settings.time_zone_abbreviations,
+            holidays=load_holidays(settings.holiday_calendar),
+        )
+        assert (read.start, read.time, read.exact) == (date(2026, 11, 4), time(14), True)
+        assert resolve("within two days", NOW_IN_NEW_YORK, ZONE, number_words=settings.due_number_words).end == date(
+            2026, 11, 6
+        )

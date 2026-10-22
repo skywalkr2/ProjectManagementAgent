@@ -1,0 +1,34 @@
+# Named days the date reader knows ("by Thanksgiving"), one calendar per language tag, each day by the rule that dates it.
+# A day is a fixed `month` and `day`, or the `nth` `weekday` of a `month` (weekday 0 is Monday, 6 is Sunday; nth -1 is
+# the last). `names` are the whole phrases that name it, in lower case. A day that moves with the moon (Easter) is not
+# listed: it cannot be given by a rule here, so a phrase naming it stays for the person to check. A language with no
+# calendar here reads no holiday names.
+calendars:
+  en-US:
+    - {names: [new year's day, new years day, new year's, new years], month: 1, day: 1}
+    - {names: [martin luther king jr. day, martin luther king day, mlk day], month: 1, weekday: 0, nth: 3}
+    - {names: [valentine's day, valentines day], month: 2, day: 14}
+    - {names: [presidents' day, presidents day, president's day], month: 2, weekday: 0, nth: 3}
+    - {names: [memorial day], month: 5, weekday: 0, nth: -1}
+    - {names: [juneteenth], month: 6, day: 19}
+    - {names: [independence day, the fourth of july, fourth of july, 4th of july], month: 7, day: 4}
+    - {names: [labor day], month: 9, weekday: 0, nth: 1}
+    - {names: [columbus day], month: 10, weekday: 0, nth: 2}
+    - {names: [halloween], month: 10, day: 31}
+    - {names: [veterans day, veterans' day], month: 11, day: 11}
+    - {names: [thanksgiving, thanksgiving day], month: 11, weekday: 3, nth: 4}
+    - {names: [christmas eve], month: 12, day: 24}
+    - {names: [christmas, christmas day], month: 12, day: 25}
+    - {names: [new year's eve, new years eve], month: 12, day: 31}
+  en-GB:
+    - {names: [new year's day, new years day, new year's, new years], month: 1, day: 1}
+    - {names: [valentine's day, valentines day], month: 2, day: 14}
+    - {names: [early may bank holiday, may day bank holiday], month: 5, weekday: 0, nth: 1}
+    - {names: [spring bank holiday], month: 5, weekday: 0, nth: -1}
+    - {names: [summer bank holiday, august bank holiday], month: 8, weekday: 0, nth: -1}
+    - {names: [halloween], month: 10, day: 31}
+    - {names: [bonfire night], month: 11, day: 5}
+    - {names: [christmas eve], month: 12, day: 24}
+    - {names: [christmas, christmas day], month: 12, day: 25}
+    - {names: [boxing day], month: 12, day: 26}
+    - {names: [new year's eve, new years eve], month: 12, day: 31}

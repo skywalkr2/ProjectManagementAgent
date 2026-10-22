@@ -3224,7 +3224,7 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
     have no date, whatever date the model gave. Other words the rules can't read keep the model's own date, marked for
     the person to check. Without words, the given date stands. A workspace whose language the rules don't read keeps
     the given date."""
-    from engine.due_phrases import is_condition, resolve
+    from engine.due_phrases import is_condition, load_holidays, resolve
 
     language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
     if not (words or "").strip() or not language.lower().startswith("en"):
@@ -3245,6 +3245,10 @@ def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: dat
         locale=locale,
         lead_words=settings.due_lead_words,
         ordinal_suffixes=settings.due_ordinal_suffixes,
+        phrase_words=settings.due_phrase_words,
+        number_words=settings.due_number_words,
+        time_zones=settings.time_zone_abbreviations,
+        holidays=load_holidays(settings.holiday_calendar or language),
     )
     day = found.end or found.start
     if day is None:

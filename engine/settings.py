@@ -347,6 +347,13 @@ def _date_formats_of(name: str) -> list[str]:
     return [str(code) for code in data.get(name) or []]
 
 
+def _holiday_calendars() -> list[str]:
+    """The language tags the shipped holiday data has a calendar for."""
+    from engine.due_phrases import holiday_calendars
+
+    return holiday_calendars()
+
+
 CHOICES_FILE = Path(__file__).parent / "defaults" / "choices.yaml"
 
 
@@ -380,6 +387,7 @@ def _date_time_formats() -> list[str]:
 CHOICE_LISTS = {
     "time_zones": _time_zones,
     "languages": _languages,
+    "holiday_calendars": _holiday_calendars,
     "times_of_day": _times_of_day,
     "date_formats": _date_formats,
     "date_time_formats": _date_time_formats,

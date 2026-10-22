@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 167. The deadline words people use every day are read by the rules (2026-10-22; S1-3, built)
+
+- The date reader reads numeric dates in the language's order, "day after tomorrow", "later today", "tonight",
+  "noon", "midnight", "first thing <day>", "end of the month" and "of next month", "this weekend", "within <n> hours,
+  days or working days", a time with a zone abbreviation and named days. Of the outside helper's 80 phrases, 33 now
+  read exactly as a person means them (21 before), none reads wrongly, and every condition and unclear phrase still
+  reads as nothing. Settings `language.due_phrase_words`, `due_number_words`, `time_zone_abbreviations` and
+  `holiday_calendar`; data `engine/defaults/holidays.yaml`. Design 4 and 6.33. Built: `tests/test_due_phrases.py`,
+  `tests/test_phrase_cases.py::test_the_rules_read_more_of_the_deadline_words_people_use_every_day`
+
 ## 165. Learning from corrections: misses, declines, drops, and reach; promises owed to the reader (2026-10-22; B-10, built)
 
 - `miss-left-unlearned`: a learning answer with no op to a correction saying something was missed goes back once.

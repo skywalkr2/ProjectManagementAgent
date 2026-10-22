@@ -917,13 +917,16 @@ the code by the main session),** for S1 before the gate week:
   looks complete.
 - [ ] [S1-3] A date marked "check this" is never a firm deadline: no reminder, at-risk line or overdue from it until the
   person confirms it.
-- [ ] [S1-3] The deadline words people use every day are read by the rules, so fewer dates wait for "check this"
+- [x] [S1-3] The deadline words people use every day are read by the rules, so fewer dates wait for "check this"
   (the outside helper's 80 phrases, `tests/fixtures/phrases/due-phrases-01.yaml`, 42 read as a person means them at
   `1ec95d2` and none read wrongly; `tests/test_phrase_cases.py` holds the rules to them): numeric dates in the
   language's order ("11/6"), "day after tomorrow", "later today", "tonight", "noon" and "midnight", "first thing
   <day>", "end of the month" and "end of next month", "this weekend", "within <n> hours or days", a time with a zone
   abbreviation ("5pm ET", zone abbreviations as language data), and holidays as dated data per locale ("by
   Thanksgiving"), never in code. Each one read is a case in that file passing; a doubtful reading stays inexact.
+  **Built:** `tests/test_phrase_cases.py::test_the_rules_read_more_of_the_deadline_words_people_use_every_day`
+  (33 of the 80 read exactly, 21 before, none wrongly; the roadmap's "42" counted differently and could not be
+  reproduced). *Left:* "by 9 in the morning", and Easter-dated days.
 - [ ] [S1-3] A late reminder says "overdue · due <time>" unless the app knows it was closed or asleep (today's
   `queue.reminder.late` says "while this computer was asleep" without knowing).
 - [ ] [S1-3] The brief's all-clear names any source not read since the last brief, so a stale mailbox never reads as a
