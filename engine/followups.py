@@ -735,6 +735,18 @@ def held_until_day(
     return (days[0] if days else None), name
 
 
+def _checked_hold(tx: Any, store: Store, held_for: dict[str, Any], today: date) -> dict[str, Any]:
+    """A hold as it is kept (with the day it began), after checking that it can be dated and is after today."""
+    new = {k: v for k, v in held_for.items() if v is not None}
+    new.setdefault("since", today.isoformat())
+    until, _ = held_until_day(tx, new, today, zone(store.plugins.cfg))
+    if until is None:
+        raise FollowUpError("that meeting has no day to wait for")
+    if until <= today:
+        raise FollowUpError("a question is held until a day after today")
+    return new
+
+
 def hold_question(
     store: Store, question_id: str, held_for: dict[str, Any] | None, *, today: date | None = None, here: tzinfo = UTC
 ) -> dict[str, Any] | None:
@@ -746,18 +758,43 @@ def hold_question(
         if rec is None or rec.data["status"] != "open":
             raise FollowUpError("only a question that hasn't gone out can be held")
         previous = rec.data.get("held_for")
-        new = None
-        if held_for is not None:
-            new = {k: v for k, v in held_for.items() if v is not None}
-            new.setdefault("since", today.isoformat())
-            here = zone(store.plugins.cfg)
-            until, _ = held_until_day(tx, new, today, here)
-            if until is None:
-                raise FollowUpError("that meeting has no day to wait for")
-            if until <= today:
-                raise FollowUpError("a question is held until a day after today")
+        new = _checked_hold(tx, store, held_for, today) if held_for is not None else None
         tx.update("question", question_id, {"held_for": new}, _PM, read_version=rec.version)
     return previous
+
+
+def hold_message(
+    store: Store, person: str, held_for: dict[str, Any], *, today: date | None = None, here: tzinfo = UTC
+) -> dict[str, dict[str, Any] | None]:
+    """Hold a person's whole message for a meeting or a day: every question in it that is ready to send, each by its own
+    `held_for`, in one changeset. It leaves today's batch and comes back, numbered as before, on that day or the day of
+    that meeting. An action has no hold of this kind and stays in what is left to send. Returns what each question was
+    held for before (or None), keyed by id, which `restore_holds` takes."""
+    today = today or local_day(datetime.now(UTC), here)
+    mine = next((s for s in sections(store, store.plugins.cfg, today) if s.person == person), None)
+    ids = [q["id"] for q in mine.questions if q["status"] == "open"] if mine is not None else []
+    if not ids:
+        raise FollowUpError("there is no question in that message to hold")
+    with store.transaction() as tx:
+        new = _checked_hold(tx, store, held_for, today)
+        before: dict[str, dict[str, Any] | None] = {}
+        for question_id in ids:
+            rec = tx.get("question", question_id)
+            if rec is None or rec.data["status"] != "open":
+                raise FollowUpError("only a question that hasn't gone out can be held")
+            before[question_id] = rec.data.get("held_for")
+            tx.update("question", question_id, {"held_for": new}, _PM, read_version=rec.version)
+    return before
+
+
+def restore_holds(store: Store, holds: dict[str, dict[str, Any] | None]) -> None:
+    """Put each question's hold back to exactly what `holds` says (None: not held), in one changeset: how undoing a held
+    message works. A question that has gone out since is left as it is."""
+    with store.transaction() as tx:
+        for question_id, held_for in holds.items():
+            rec = tx.get("question", question_id)
+            if rec is not None and rec.data["status"] == "open":
+                tx.update("question", question_id, {"held_for": held_for}, _PM, read_version=rec.version)
 
 
 def put_on_hold(

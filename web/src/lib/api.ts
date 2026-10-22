@@ -160,6 +160,11 @@ export const api = {
   /** Hold an unsent question for a meeting, a series or a day; null sends it now. */
   holdQuestion: (q: string, held_for: S["HeldForIn"] | null) =>
     call<S["HeldChanged"]>("POST", `questions/${id(q)}/held-for`, { held_for }),
+  /** Hold a person's whole message (every question ready to send) for a meeting, a series or a day. */
+  holdMessage: (person: string, held_for: S["HeldForIn"]) =>
+    call<S["HeldMessageChanged"]>("POST", `followups/${id(person)}/held-for`, { held_for }),
+  restoreMessageHolds: (person: string, holds: S["QuestionHold"][]) =>
+    call<S["Ok"]>("POST", `followups/${id(person)}/held-for/restore`, { holds }),
   takeOffHold: (a: string) => call<S["HoldChanged"]>("POST", `actions/${id(a)}/unhold`),
   restoreHold: (a: string, hold: S["HoldState"] | null) => call<S["Ok"]>("POST", `actions/${id(a)}/hold/restore`, { hold }),
   reply: (q: string, text: string) => call<S["Handed"]>("POST", `questions/${id(q)}/reply`, { text }),

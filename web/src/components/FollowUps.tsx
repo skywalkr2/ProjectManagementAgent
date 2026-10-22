@@ -462,10 +462,11 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
   // (with the cursor in it) and the next Copy is the one that copies.
   const copyShown = () => void (!open ? edit() : view === "table" ? copyTable() : copy());
   const primary = () => void (copied ? markSent() : copyShown());
-  const hold = useHoldFor(questions);
+  const hold = useHoldFor(questions, s.person);
   const menu: MenuAction[] = [
     { id: "edit", label: t("followups.edit"), run: edit },
     { id: "copy-plain", label: t("followups.copy_plain"), run: () => void (!open ? edit() : view === "table" ? copySheet() : copyPlainText()) },
+    ...(questions.length > 1 ? [hold.messageEntry] : []),
     ...(questions.length > 0 ? [hold.entry] : []),
     { id: "mark-sent", label: t("followups.mark_sent"), run: () => void markSent() },
   ];

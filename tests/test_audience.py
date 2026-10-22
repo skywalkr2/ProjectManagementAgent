@@ -405,6 +405,125 @@ def test_the_limit_can_only_change_through_these_ops(env):
         )
 
 
+# ---- what is made from a limited message carries its limit -----------------------------------------------------------
+
+RESTRICTED_WORD = "tangerine"
+OPEN_WORD = "marigold"
+PROJECT = fixture_records(DEMO_B, "project")[0]["id"]
+TODAY = NOW.date()
+
+
+def fact_from(env, source: str, raw: str, word: str, quote: str) -> str:
+    """Record a fact quoted from a message, the way a run on it does; returns the fact's id."""
+    _, cfg, store = env
+    op = {"op": "fact", "text": f"The {word} proof date is moving.", "project": PROJECT, "evidence": {"quote": quote}}
+    _, outcomes = run(env, [op], source, raw)
+    assert outcomes[0]["status"] == "applied", outcomes
+    return next(f.id for f in store.read().list("fact") if word in f.data["text"])
+
+
+def action_from(env, source: str, raw: str, word: str, quote: str) -> str:
+    _, cfg, store = env
+    op = {"op": "action.add", "text": f"Check the {word} proof", "owners": [me(cfg)], "evidence": {"quote": quote}}
+    _, outcomes = run(env, [op], source, raw)
+    assert outcomes[0]["status"] == "applied", outcomes
+    return next(a.id for a in store.read().list("action") if word in a.data["text"])
+
+
+def mail_from(who: dict, address: str, body: str, *, to, subject="Proof date") -> str:
+    lines = [f"From: {who['full_name']} <{address}>", f"To: {', '.join(write(p) for p in to)}"]
+    return "\n".join([*lines, f"Subject: {subject}", "", body])
+
+
+def test_a_fact_quoted_from_a_limited_message_carries_its_limit_read_from_the_source(env):
+    _, cfg, store = env
+    text, limited = hand(env, RESTRICTED_BODY)
+    open_text, open_source = hand(env, OPEN_BODY, subject="Other")
+    fact = fact_from(env, limited, text, RESTRICTED_WORD, "moving the proof date")
+    plain = fact_from(env, open_source, open_text, OPEN_WORD, "The proof date is moving")
+    view = store.read()
+    carried = audience.limit_of_record(view, view.get("fact", fact).data)
+    assert carried is not None and carried["people"] == audience_of(store, limited)["people"]
+    assert audience.limit_of_record(view, view.get("fact", plain).data) is None
+    # derived, not copied: widening the source widens what was made from it, with nothing else to update
+    assert "audience" not in view.get("fact", fact).data
+    apply_as_person(store, cfg, [{"op": "source.widen", "id": limited, "people": [OUTSIDE["id"]]}], "Widened")
+    again = store.read()
+    assert OUTSIDE["id"] in audience.limit_of_record(again, again.get("fact", fact).data)["people"]
+
+
+def test_a_record_drawing_on_several_sources_carries_the_narrowest_limit(env):
+    _, cfg, store = env
+    _, limited = hand(env, RESTRICTED_BODY)
+    narrow_text, narrower = hand(env, RESTRICTED_BODY.replace("print team", "cover team"), subject="Narrower")
+    limit = {
+        "op": "source.limit",
+        "id": narrower,
+        "people": [INSIDE["full_name"]],
+        "group": "the cover designer",
+        "evidence": {"quote": "keep this among us"},
+    }
+    assert run(env, [limit], narrower, narrow_text)[1][0]["status"] == "applied"
+    record = {"source": limited, "evidence": {"source": narrower, "quote": "x"}}
+    got = audience.limit_of_record(store.read(), record)
+    assert got is not None and got["people"] == [INSIDE["id"]]
+    assert audience.limit_of_record(store.read(), {"evidence": {"source": "note", "quote": "x"}}) is None
+
+
+def test_a_draft_naming_a_record_made_from_a_limited_message_is_refused_outside_its_audience(env):
+    _, cfg, store = env
+    text, limited = hand(env, RESTRICTED_BODY)
+    open_text, open_source = hand(env, OPEN_BODY, subject="Other")
+    secret = fact_from(env, limited, text, RESTRICTED_WORD, "moving the proof date")
+    plain = fact_from(env, open_source, open_text, OPEN_WORD, "The proof date is moving")
+    # a later run, on a message that is itself open, names the fact in what it asks
+    later = mail_from(OUTSIDE, ADDRESSES["outside"], "Is the date still right? Thanks.", to=recipients(cfg))
+    later_source = hand_in(env[0], store, pasted=later, now=NOW).source
+    op = question_to(OUTSIDE, matters_for=f"The date in {secret}")
+    (refused,) = problems(env, op, later_source, later)
+    assert refused.severity == "refuse" and f"can't go to {OUTSIDE['full_name']}" in refused.message
+    assert problems(env, question_to(OUTSIDE, matters_for=f"The date in {plain}"), later_source, later) == []
+    assert problems(env, question_to(INSIDE, matters_for=f"The date in {secret}"), later_source, later) == []
+    # an action's reply naming it is refused to a reader outside, as a question is
+    reply = {
+        "op": "action.add",
+        "text": "Tell them the date",
+        "owners": [me(cfg)],
+        "reply": f"As {secret} says, it is moving.",
+        "evidence": {"quote": "Is the date still right"},
+    }
+    (refused,) = problems(env, reply, later_source, later)
+    assert f"can't go to {OUTSIDE['full_name']}" in refused.message
+
+
+def test_a_packet_for_a_draft_outside_a_limited_message_leaves_it_and_what_was_made_from_it_out(env):
+    ws, cfg, store = env
+    text, limited = hand(env, RESTRICTED_BODY)
+    open_text, open_source = hand(env, OPEN_BODY, subject="Other")
+    fact_from(env, limited, text, RESTRICTED_WORD, "moving the proof date")
+    fact_from(env, open_source, open_text, OPEN_WORD, "The proof date is moving")
+    action_from(env, limited, text, RESTRICTED_WORD, "moving the proof date")
+    action_from(env, open_source, open_text, OPEN_WORD, "The proof date is moving")
+    with store.transaction() as tx:  # a question made from the limited message, still to be asked
+        tx.create(
+            "question",
+            {"to": INSIDE["id"], "title": f"Is the {RESTRICTED_WORD} file final?", "source": limited},
+            _TEST,
+        )
+    from engine.packet import build
+
+    def packet(sender: dict, address: str) -> str:
+        raw = mail_from(sender, address, "Which proof date should I plan around? Thanks.", to=recipients(cfg))
+        request = hand_in(ws, store, pasted=raw, now=NOW, project=PROJECT).request
+        built = build(ws, store, cfg, request, TODAY).task
+        return built.stable + "\n" + built.request
+
+    outside = packet(OUTSIDE, ADDRESSES["outside"])  # the sender of this one is outside the limited message
+    assert OPEN_WORD in outside and RESTRICTED_WORD not in outside
+    inside = packet(INSIDE, ADDRESSES["inside"])  # someone it went to may see all of it
+    assert OPEN_WORD in inside and inside.count(RESTRICTED_WORD) >= 3
+
+
 # ---- on screen -------------------------------------------------------------------------------------------------------
 
 

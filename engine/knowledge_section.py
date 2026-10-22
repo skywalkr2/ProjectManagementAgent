@@ -12,7 +12,7 @@ source, never as guidance.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping
 from datetime import date
 from typing import Any, NamedTuple
 
@@ -279,6 +279,7 @@ def per_input_section(
     moved: Iterable[str] = (),
     facts: bool = True,
     scope_projects: Iterable[str] | None = None,
+    hide: Callable[[Mapping[str, Any]], bool] | None = None,
 ) -> PerInput:
     """The knowledge that depends on the input: rules narrowed to some projects or task kinds that cover it, rules a
     stage check enforces (in full) and rules that moved out of the stable part; lessons for its projects or people;
@@ -287,7 +288,8 @@ def per_input_section(
     terms and rank the facts. Returns the text, the ids given, the ids left out by scope, and how many facts didn't
     fit. With `facts` False (work the core's learning doesn't run on) the facts are left out. Scopes are matched against
     `scope_projects` (the projects and their ancestors; the projects alone when None); facts stay per exact project,
-    except a fact marked as reaching the projects inside its own, which goes with them too."""
+    except a fact marked as reaching the projects inside its own, which goes with them too. A fact `hide` is true for
+    (one made from a message the draft's reader may not see) is never shown."""
     project_set, people_set, moved_set = set(projects), set(people), set(moved)
     scoped = set(scope_projects) if scope_projects is not None else project_set
     ids: list[str] = []
@@ -376,7 +378,7 @@ def per_input_section(
     add(HEADINGS["input_glossary"], terms)
 
     fact_text, fact_ids, cut = (
-        _facts_section(view, project_set, text, today, settings.facts_budget, scoped) if facts else ("", [], 0)
+        _facts_section(view, project_set, text, today, settings.facts_budget, scoped, hide) if facts else ("", [], 0)
     )
     if fact_text:
         sections.append(fact_text)
@@ -385,7 +387,13 @@ def per_input_section(
 
 
 def _facts_section(
-    view: Any, projects: set[str], text: str, today: date, budget: int, scoped: set[str] | None = None
+    view: Any,
+    projects: set[str],
+    text: str,
+    today: date,
+    budget: int,
+    scoped: set[str] | None = None,
+    hide: Callable[[Mapping[str, Any]], bool] | None = None,
 ) -> tuple[str, list[str], int]:
     """The input's projects' facts that no newer fact replaces, key facts first, then by how many of the input's words
     and ids they share, then newest; cut at `budget` characters with the count of those left out said. A fact of a
@@ -398,6 +406,7 @@ def _facts_section(
         f
         for f in facts
         if f.id not in replaced
+        and not (hide is not None and hide(f.data))
         and (f.data.get("project") in projects or (f.data.get("project") in above and f.data.get("reaches_children")))
     ]
     if not mine:

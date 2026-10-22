@@ -68,6 +68,9 @@ from api.schemas import (
     HandoverView,
     HeldChanged,
     HeldIn,
+    HeldMessageChanged,
+    HeldMessageIn,
+    HeldMessageRestore,
     HoldChanged,
     HoldIn,
     HoldRestore,
@@ -112,6 +115,7 @@ from api.schemas import (
     ProjectView,
     ProposedFile,
     ProposedOp,
+    QuestionHold,
     QueueLineView,
     ReadVersion,
     RecordEdit,
@@ -185,11 +189,13 @@ from engine.followups import (
     UNTOLD_STANCES,
     actions_to_send,
     follow_up,
+    hold_message,
     hold_question,
     mark_followed_up,
     mark_sent,
     put_on_hold,
     restore_hold,
+    restore_holds,
     sections,
     take_off_hold,
     they_finished,
@@ -1653,6 +1659,31 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         previous = guard(lambda: hold_question(store, question_id, held, here=zone(cfg)))
         changed()
         return HeldChanged(ok=question_id, previous=previous)
+
+    @r.post("/followups/{person}/held-for")
+    def message_held_for(person: str, body: HeldMessageIn) -> HeldMessageChanged:
+        """Hold a person's whole message for a meeting, a series or a day: every question in it that is ready to send
+        waits in Later, in one change, and comes back numbered as before. Undo posts `previous` to the restore route."""
+        need("person", person)
+        from engine.today import zone
+
+        held = body.held_for.model_dump(exclude_none=True)
+        before = guard(lambda: hold_message(store, person, held, here=zone(cfg)))
+        changed()
+        return HeldMessageChanged(ok=person, previous=[QuestionHold(id=q, held_for=h) for q, h in before.items()])
+
+    @r.post("/followups/{person}/held-for/restore")
+    def message_hold_restored(person: str, body: HeldMessageRestore) -> Ok:
+        """Undo a held message: each question goes back to what it was held for."""
+        need("person", person)
+        guard(
+            lambda: restore_holds(
+                store,
+                {h.id: h.held_for.model_dump(exclude_none=True) if h.held_for else None for h in body.holds},
+            )
+        )
+        changed()
+        return Ok(ok=person)
 
     @r.post("/followups/{person}/actions/{action_id}/followed-up")
     def action_followed_up(person: str, action_id: str, body: NoteIn | None = None) -> FollowedUp:

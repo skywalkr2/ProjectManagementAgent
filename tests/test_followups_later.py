@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from api.app import create_app
-from engine.followups import FollowUpError, hold_question, mark_sent, sections
+from engine.followups import FollowUpError, hold_message, hold_question, mark_sent, restore_holds, sections
 from engine.records import REFERENCES, Question
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
@@ -157,3 +157,84 @@ def test_the_api_holds_a_question_for_later_with_undo_and_the_view_lists_it_in_l
     bad = client.post(f"{base}/questions/{q}/held-for", json={"held_for": {"on": "2020-01-01"}})
     assert bad.status_code == 409
     assert client.post(f"{base}/questions/Q-999/held-for", json={"held_for": None}).status_code == 404
+
+
+def _two_questions(store):
+    """Two more questions ready to send to the same person, so the message is numbered."""
+    with store.transaction() as tx:
+        return [
+            tx.create("question", {"to": ASKED, "title": title, "text": f"About {title}"}, _PM).id
+            for title in ("Which cover is final?", "Who signs off the proof?")
+        ]
+
+
+def test_a_message_held_for_a_day_leaves_todays_batch_and_comes_back_numbered_as_before(env):
+    _, cfg, store = env
+    _two_questions(store)
+    before = _section(store, cfg)
+    ids = [q["id"] for q in before.questions]
+    titles = [q["title"] for q in before.questions]
+    assert len(ids) >= 3 and all(f"{n}. {t}" in before.message for n, t in enumerate(titles, 1))
+    day = TODAY + timedelta(days=3)
+    held_before = hold_message(store, ASKED, {"on": day.isoformat()}, today=TODAY)
+    assert held_before == {i: None for i in ids}
+    held = _section(store, cfg)
+    assert held.questions == [] and sorted(x["id"] for x in held.later) == sorted(ids)
+    assert all(t not in held.message for t in titles)  # none of its asks is in today's message
+    assert {store.read().get("question", i).data["held_for"]["on"] for i in ids} == {day.isoformat()}
+    # On its day the whole message is to send again, numbered as before, and Later is empty.
+    back = _section(store, cfg, day)
+    assert [q["id"] for q in back.questions] == ids and back.later == []
+    assert back.message == before.message
+
+
+def test_a_message_held_for_a_meeting_waits_for_it_and_undo_puts_every_question_back(env):
+    _, cfg, store = env
+    _two_questions(store)
+    before = _section(store, cfg)
+    meeting = _entry(store, (TODAY + timedelta(days=6)).isoformat())
+    previous = hold_message(store, ASKED, {"event": meeting}, today=TODAY)
+    held = _section(store, cfg)
+    assert held.questions == [] and {x["held_for_name"] for x in held.later} == {"Print sync"}
+    assert {x["held_until"] for x in held.later} == {(TODAY + timedelta(days=6)).isoformat()}
+    restore_holds(store, previous)
+    after = _section(store, cfg)
+    assert after.message == before.message and after.later == []
+    assert all(store.read().get("question", i).data.get("held_for") is None for i in previous)
+
+
+def test_holding_a_message_is_one_change_and_refuses_what_a_single_question_refuses(env):
+    _, cfg, store = env
+    _two_questions(store)
+    ids = [q["id"] for q in _section(store, cfg).questions]
+    before = store.read().get("question", ids[0]).version
+    with pytest.raises(FollowUpError):
+        hold_message(store, ASKED, {"on": TODAY.isoformat()}, today=TODAY)  # not after today
+    with pytest.raises(FollowUpError):
+        hold_message(store, ASKED, {"event": "EVT-999"}, today=TODAY)
+    assert store.read().get("question", ids[0]).version == before  # nothing changed
+    with pytest.raises(FollowUpError):
+        hold_message(store, "PER-999", {"on": (TODAY + timedelta(days=2)).isoformat()}, today=TODAY)  # no message
+    hold_message(store, ASKED, {"on": (TODAY + timedelta(days=2)).isoformat()}, today=TODAY)
+    with pytest.raises(FollowUpError):
+        hold_message(store, ASKED, {"on": (TODAY + timedelta(days=4)).isoformat()}, today=TODAY)  # nothing left to hold
+
+
+def test_the_api_holds_a_whole_message_with_undo(api):
+    client, base, store, cfg = api
+    ids = [
+        q["id"] for q in next(s for s in client.get(f"{base}/followups").json() if s["person"] == ASKED)["questions"]
+    ]
+    when = (datetime.now(UTC).date() + timedelta(days=4)).isoformat()
+    put = client.post(f"{base}/followups/{ASKED}/held-for", json={"held_for": {"on": when}})
+    assert put.status_code == 200
+    assert sorted(h["id"] for h in put.json()["previous"]) == sorted(ids)
+    section = next(s for s in client.get(f"{base}/followups").json() if s["person"] == ASKED)
+    assert section["questions"] == [] and sorted(x["id"] for x in section["later"]) == sorted(ids)
+    undone = client.post(f"{base}/followups/{ASKED}/held-for/restore", json={"holds": put.json()["previous"]})
+    assert undone.status_code == 200
+    section = next(s for s in client.get(f"{base}/followups").json() if s["person"] == ASKED)
+    assert sorted(x["id"] for x in section["questions"]) == sorted(ids) and section["later"] == []
+    bad = client.post(f"{base}/followups/{ASKED}/held-for", json={"held_for": {"on": "2020-01-01"}})
+    assert bad.status_code == 409
+    assert client.post(f"{base}/followups/PER-999/held-for", json={"held_for": {"on": when}}).status_code == 404

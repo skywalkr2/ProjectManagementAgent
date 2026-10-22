@@ -502,6 +502,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     is now with why it is tied and who it already reached. Records are data: marked as from outside."""
     from dataclasses import replace
 
+    from engine import audience
     from engine.cleaning import Cleaned
     from engine.dispatcher import _data_level
     from engine.names import People
@@ -515,6 +516,14 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
         raise PacketRefused("the change this was for is gone")
     people = People(store, cfg)
     tied = tied_records(view, cfg, moves)
+    # A correction goes to people a tied record already reached: records made from a message limited to people they
+    # aren't among stay out of the packet (design 6.35).
+    readers = [(p, p) for p in dict.fromkeys(p for t in tied for p in reached(view, t.kind, t.data))]
+    out = audience.left_out_for(view, people, readers)
+    tied = [t for t in tied if not out(t.data)]
+    moves = [m for m in moves if (found := view.get(m.kind, m.record)) is None or not out(found.data)]
+    if not moves:
+        raise PacketRefused("what moved was made from a message its readers may not see")
     lines = "\n".join(f"- {_line(view, m)}" for m in moves)
     project = next(
         (p for m in moves if (f := view.get(m.kind, m.record)) is not None and (p := f.data.get("project"))), None
@@ -528,6 +537,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
         source=None,
         text=lines,
         today=today,
+        hide=out,
     )
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     stable = "\n\n".join(

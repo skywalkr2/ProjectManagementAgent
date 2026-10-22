@@ -4,12 +4,18 @@ A message that says who may see it (a configured marking such as "internal only"
 history) limits its source to the people it went to and came from: its `audience`. The rules read it when the message
 is taken in; the assistant may only narrow it (`source.limit`) and the person widens it (`source.widen`). A question or
 reply drawn from a limited source goes only to someone in its audience (the person running the app is never outside
-it), checked by the applier as the `audience` invariant."""
+it), checked by the applier as the `audience` invariant.
+
+A record made from a limited source (a fact, an action or a question whose evidence or source is one) carries its
+source's limit too. The limit is derived from the source when read, never copied, so widening the source widens
+everything made from it, and a record drawing on several sources has the narrowest of them. A packet for a draft to a
+named reader leaves out the records that reader is outside of (`left_out_for`), and the invariant refuses a draft that
+names such a record."""
 
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from email.utils import parseaddr
 from typing import Any
 
@@ -109,11 +115,58 @@ def names_of(people: Any, audience: Mapping[str, Any]) -> str:
     return ", ".join(people.name(p) for p in audience["people"])
 
 
-def recipient_problem(view: Any, people: Any, sources: Iterable[str | None], written: str) -> str | None:
-    """Why something drawn from these sources can't go to `written` (a name, an id or an address), or None. Each source
-    that has an audience must hold the recipient."""
+def sources_of(data: Mapping[str, Any]) -> list[str]:
+    """The saved sources a record rests on: the one it came from and the one its evidence quotes (the person's own
+    note is no saved source)."""
+    evidence = data.get("evidence")
+    found = [data.get("source"), evidence.get("source") if isinstance(evidence, Mapping) else None]
+    return list(dict.fromkeys(s for s in found if isinstance(s, str) and s and s != "note"))
+
+
+def limit_of_record(view: Any, data: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The limit a record carries: the narrowest audience of the sources it rests on, read from them now, or None when
+    none of them is limited."""
+    found = (view.get("source", s) for s in sources_of(data))
+    return narrowest(r.data.get("audience") for r in found if r is not None)
+
+
+def left_out_for(
+    view: Any, people: Any, readers: Iterable[tuple[str | None, str]]
+) -> Callable[[Mapping[str, Any]], bool]:
+    """A test for the records a packet leaves out because it drafts to these readers (each a person id or None, and the
+    name or address as written): true for a record whose limit has any of them outside. With no readers nothing is
+    left out."""
+    named = list(readers)
+
+    def out(data: Mapping[str, Any]) -> bool:
+        limit = limit_of_record(view, data) if named else None
+        return limit is not None and any(not within(limit, people, person, written) for person, written in named)
+
+    return out
+
+
+def sender_reader(people: Any, text: str) -> tuple[str | None, str] | None:
+    """Who a message is from, as `left_out_for` takes a reader: the one known person's id, else the From entry as
+    written; None for a text that isn't a message."""
+    read = reply_lines.read_message(text)
+    if read is None:
+        return None
+    found = people.match_entries([read.sender])
+    return (next(iter(found)) if len(found) == 1 else None), read.sender
+
+
+def recipient_problem(
+    view: Any,
+    people: Any,
+    sources: Iterable[str | None],
+    written: str,
+    records: Iterable[Mapping[str, Any]] = (),
+) -> str | None:
+    """Why something drawn from these sources, and from these records (which rest on sources of their own), can't go
+    to `written` (a name, an id or an address), or None. Each source that has an audience must hold the recipient."""
     resolved = people.resolve(written)
     person = resolved.person if resolved.status == "ok" else None
+    sources = [*sources, *(s for record in records for s in sources_of(record))]
     for source_id in dict.fromkeys(s for s in sources if s):
         source = view.get("source", source_id)
         audience = source.data.get("audience") if source is not None else None

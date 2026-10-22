@@ -973,8 +973,10 @@ S1. **Promises, and how they end:**
   designer's review, 2026-10-19). Exit: a test per lint, a test that two asks to one person on one day make one
   message with two numbered asks answered separately, and a learning pair for singling out.
   *Built so far (S1-2):* the `bookkeeping` and `long-quote` lints (`tests/test_reader_checks.py`); one message per
-  person with numbered asks already existed (`engine/followups.py`). Left: holding a message for a later batch, and
-  singling out (with drafts to several people, S1b) and its learning pair.
+  person with numbered asks already existed (`engine/followups.py`); holding a whole message for a day or a meeting, one
+  choice with Undo (`tests/test_followups_later.py`, `web/src/components/FollowUps.test.tsx`; a to-do told in the message
+  has no hold of its own and stays to send). Left: singling out and its learning pair, which wait for drafts to several
+  people (S1b).
 - [ ] [S1-2] **A sender's distribution limit travels with the content** (the designer's notes, 2026-10-19; design 6.35):
   a limit read from a message is recorded on the source as its audience (narrowing applies at once; widening is the
   person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
@@ -982,9 +984,10 @@ S1. **Promises, and how they end:**
   an open message in one area; a draft outside the group draws only on the open one.
   *Built so far (S1-2):* markings read by rules into the source's audience, `source.limit` (narrow only) and
   `source.widen` (the person's), the `audience` invariant on questions, reroutes and drafted replies, and "Limited to"
-  with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Left: records made from a limited source
-  carrying the limit (a fact quoted later), and a packet leaving a limited source out once a task drafts to a named
-  recipient.
+  with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Also built: a fact, action or question made from a limited
+  source carries its limit (derived from the source when read), the `audience` invariant refuses a draft naming one,
+  and the notes and follow-on packets leave out records their reader is outside of (`tests/test_audience.py`,
+  `tests/test_follow_on.py`). Left: the drafted follow-up message does not yet check a to-do's limit against its owner.
 
 S1b. **Acting for you, after your yes** (owner, 2026-10-17: "if we can have the app actually able to do mail/calendar
 management (not just read only) lets do it"):

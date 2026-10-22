@@ -3574,9 +3574,21 @@ invariant `audience` refuses a `question.add`, a rerouted `question.move`, or an
 when a source it draws on (the input's own, the one a quote of its evidence is from, a rerouted question's own; a reply
 owed does not count the message it answers) has an audience the recipient is not in; the person is never outside one.
 The saved text of a limited source shows "Limited to: <names>" with the sentence and a Widen choice with Undo
-(`tests/test_audience.py`, `web/src/components/SourceLimit.test.tsx`). Not yet: records made from a limited source do
-not carry the limit themselves, and no packet leaves a limited source out, because no task drafts to a recipient named
-in its request today.
+(`tests/test_audience.py`, `web/src/components/SourceLimit.test.tsx`).
+
+*Built (S1-2, what is made from a limited source):* a fact, an action or a question carries the limit of the sources its
+`source` and its evidence name, the narrowest when there are several. The limit is derived from the sources when it is
+read (`audience.limit_of_record`), not copied onto the record, because every reader can follow the reference and a
+widening then reaches everything made from the source. The `audience` invariant also refuses a `question.add`, a
+rerouted `question.move` or a drafted reply that names (by id, in its title, text, reply or "matters for") a record whose
+limit the recipient is outside. Packets for a draft to a named reader leave such records out (`audience.left_out_for`):
+the notes run, whose reader is the input's sender (open actions, open questions and the facts section), and the follow-on
+run, whose readers are the people a tied record already reached (the tied records and the moved records). An input's own
+text is never left out of its own run. Runs with no named reader are not filtered: asks and learning runs go to the
+person, who is never outside a limit, and a plugin's draft names its reader in its own packet. Not yet: the drafted
+follow-up message (`followups.compose`) does not check a to-do's limit against its owner, and singling a person out in a
+group draft, with its learning pair, waits for drafts to several people (S1b). (`tests/test_audience.py`,
+`tests/test_follow_on.py`)
 
 **What changed since yesterday says what the assistant did (S1-2).** Each line names the act and its reason in the
 assistant's own voice ("Closed the floor plan promise: the owner said it was sent"), and anything the assistant closed,

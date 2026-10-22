@@ -399,6 +399,36 @@ def test_the_packet_shows_the_move_the_tied_records_as_they_are_now_who_they_rea
     assert built.task.instructions.startswith("You are") and built.task.kind == follow_on.TASK
 
 
+def test_the_packet_leaves_out_records_made_from_a_message_limited_to_people_the_correction_goes_to_are_not_among(env):
+    ws, cfg, store = env
+    entry = make(store, "event")
+    with store.transaction() as tx:
+        limited = tx.create(
+            "source",
+            {
+                "received_at": NOW,
+                "kind": "pasted",
+                "title": "Limited message",
+                "content_hash": "0" * 64,
+                "trust": "untrusted",
+                "audience": {"people": [OWNER], "marking": "Internal only", "why": "Internal only."},
+            },
+            _PM,
+        ).id
+    open_one = make(store, "action", text="Review the proof", event=entry, due=OLD, told={TOLD: "2026-10-10"})
+    kept = make(store, "action", text="Check the marigold file", event=entry, due=OLD, source=limited)
+    edit(env, "event", entry, start=NEW)
+    (queued,) = follow_ons(store)
+    built = packets.build(ws, store, cfg, queued.id, TODAY)
+    assert open_one in built.raw_input and kept not in built.raw_input and "marigold" not in built.raw_input
+    # with nobody outside it among those reached, the same record is shown
+    with store.transaction() as tx:
+        found = tx.get("action", open_one)
+        tx.update("action", open_one, {"told": {OWNER: "2026-10-10"}}, _PM, read_version=found.version)
+    again = packets.build(ws, store, cfg, queued.id, TODAY)
+    assert kept in again.raw_input
+
+
 def test_a_run_writes_its_knowledge_log_and_the_kind_declares_the_ops_it_may_use(env):
     ws, cfg, store = env
     _, _, queued = moved_entry(env)

@@ -902,6 +902,54 @@ test("Hold for later offers the meetings the calendar keeps entries for, a serie
   await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-1/held-for")?.body).toEqual({ held_for: { series: "SER-1" } }));
 });
 
+const twoQuestions: S["FollowupSection"][] = [
+  sections[0],
+  {
+    ...sections[1],
+    questions: [...sections[1].questions, { ...sections[1].questions[0], id: "Q-2", title: "Who signs off the proof?" }],
+    to_send: 3,
+  },
+];
+
+test("a message with several questions can be held whole: one choice, with the cursor in its field, at once and with Undo", async () => {
+  const user = userEvent.setup();
+  const previous = [
+    { id: "Q-1", held_for: null },
+    { id: "Q-2", held_for: null },
+  ];
+  const calls = fakeApi({
+    "GET followups": () => twoQuestions,
+    "GET people": () => [],
+    "GET today/agenda": () => [],
+    "POST followups/PER-2/held-for": () => ({ ok: "PER-2", previous }),
+    "POST followups/PER-2/held-for/restore": () => ({ ok: "PER-2" }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Hold this message for later…" }));
+  // the whole message is held, so no question is picked
+  expect(screen.queryByRole("combobox", { name: "Which question" })).toBeNull();
+  expect(screen.getByRole("combobox", { name: "Hold it for" })).toHaveFocus();
+  const save = screen.getByRole("button", { name: "Hold for later" });
+  expect(save).toBeDisabled();
+  await user.type(screen.getByLabelText("Send it on"), "2099-01-05");
+  await user.click(save);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST followups/PER-2/held-for")?.body).toEqual({ held_for: { on: "2099-01-05" } }));
+  expect(calls.some((c) => c.route.startsWith("POST questions/"))).toBe(false);
+  expect(await screen.findByText(/^Kept for later, until /)).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST followups/PER-2/held-for/restore")?.body).toEqual({ holds: previous }));
+});
+
+test("a message with one question offers only the one hold, not a second choice for the whole message", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => sections, "GET people": () => [], "GET today/agenda": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
+  expect(await screen.findByRole("menuitem", { name: "Hold for later…" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Hold this message for later…" })).toBeNull();
+});
+
 // By person or by project (design 7.5): the same open items, grouped under the project each belongs to.
 
 const byProject: S["FollowupSection"][] = [

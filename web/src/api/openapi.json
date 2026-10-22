@@ -7862,6 +7862,58 @@
         "title": "HeldIn",
         "type": "object"
       },
+      "HeldMessageChanged": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "string"
+          },
+          "previous": {
+            "description": "What each held question was held for before, for undoing it (none: it was not held).",
+            "items": {
+              "$ref": "#/components/schemas/QuestionHold"
+            },
+            "title": "Previous",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "previous"
+        ],
+        "title": "HeldMessageChanged",
+        "type": "object"
+      },
+      "HeldMessageIn": {
+        "properties": {
+          "held_for": {
+            "$ref": "#/components/schemas/HeldForIn",
+            "description": "What to hold the person's whole message for: a meeting, a series or a day."
+          }
+        },
+        "required": [
+          "held_for"
+        ],
+        "title": "HeldMessageIn",
+        "type": "object"
+      },
+      "HeldMessageRestore": {
+        "properties": {
+          "holds": {
+            "description": "What each question was held for before the hold being undone.",
+            "items": {
+              "$ref": "#/components/schemas/QuestionHold"
+            },
+            "title": "Holds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "holds"
+        ],
+        "title": "HeldMessageRestore",
+        "type": "object"
+      },
       "HoldChanged": {
         "properties": {
           "ok": {
@@ -15085,6 +15137,31 @@
           "reason"
         ],
         "title": "QuestionDropIn",
+        "type": "object"
+      },
+      "QuestionHold": {
+        "properties": {
+          "held_for": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeldForState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it is held for; none: it is not held."
+          },
+          "id": {
+            "description": "The id of the question.",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "QuestionHold",
         "type": "object"
       },
       "QuestionRerouteIn": {
@@ -24886,6 +24963,106 @@
           }
         },
         "summary": "Nudge Sent"
+      }
+    },
+    "/api/followups/{person}/held-for": {
+      "post": {
+        "description": "Hold a person's whole message for a meeting, a series or a day: every question in it that is ready to send\nwaits in Later, in one change, and comes back numbered as before. Undo posts `previous` to the restore route.",
+        "operationId": "message_held_for_api_followups__person__held_for_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person",
+            "required": true,
+            "schema": {
+              "title": "Person",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeldMessageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeldMessageChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Message Held For"
+      }
+    },
+    "/api/followups/{person}/held-for/restore": {
+      "post": {
+        "description": "Undo a held message: each question goes back to what it was held for.",
+        "operationId": "message_hold_restored_api_followups__person__held_for_restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person",
+            "required": true,
+            "schema": {
+              "title": "Person",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeldMessageRestore"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Message Hold Restored"
       }
     },
     "/api/followups/{person}/mark-sent": {

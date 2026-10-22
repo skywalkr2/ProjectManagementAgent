@@ -506,6 +506,7 @@
   "followups.later_until": "Waiting until {date}",
   "followups.later_for": "Waiting for {meeting}, {date}",
   "followups.hold_for": "Hold for later…",
+  "followups.hold_message": "Hold this message for later…",
   "followups.send_now": "Send now",
   "followups.hold_which": "Which question",
   "followups.hold_for_label": "Hold it for",

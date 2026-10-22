@@ -1,6 +1,6 @@
 // A question that is ready to send can be held for later: for a meeting (a calendar entry, or a series, which is its next
-// one) or for a day. It waits in Later, out of To send, until that day, and "Send now" brings it back. Both act at once with
-// Undo.
+// one) or for a day. It waits in Later, out of To send, until that day, and "Send now" brings it back. A person's whole
+// message (every question in it that is ready to send) can be held the same way, as one choice. Both act at once with Undo.
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
@@ -11,12 +11,17 @@ import type { MenuAction } from "./RowMenu";
 
 const DAY = "day";
 
-/** The menu entry for holding one of a person's questions that are ready to send, and the small form it opens: which
- * question (when there is more than one), and a meeting from the calendar or a day. */
-export function useHoldFor(questions: Array<{ id: string; title: string }>): { entry: MenuAction; form: ReactNode } {
+/** The menu entries for holding one of a person's questions that are ready to send, or all of them (the whole message),
+ * and the small form they open: which question (for one, when there is more than one), and a meeting from the calendar
+ * or a day. */
+export function useHoldFor(
+  questions: Array<{ id: string; title: string }>,
+  person: string,
+): { entry: MenuAction; messageEntry: MenuAction; form: ReactNode } {
   const { t } = useWords();
   const act = useAct();
   const [asking, setAsking] = useState(false);
+  const [whole, setWhole] = useState(false);
   const [chosen, setChosen] = useState("");
   const question = questions.find((q) => q.id === chosen) ?? questions[0];
   const [target, setTarget] = useState(DAY);
@@ -42,20 +47,43 @@ export function useHoldFor(questions: Array<{ id: string; title: string }>): { e
     const [kind, id] = target.split(":");
     const heldFor: S["HeldForIn"] = target === DAY ? { on: date } : kind === "series" ? { series: id } : { event: id };
     const until = target === DAY ? day(date) : (unique.find((m) => m.value === target)?.until ?? "");
-    const done = await act(
-      () => api.holdQuestion(question.id, heldFor),
-      (result) => ({
-        message: t("toast.held_for", { date: until }),
-        undo: () => api.holdQuestion(question.id, result.previous ?? null),
-      }),
-    );
+    const done = whole
+      ? await act(
+          () => api.holdMessage(person, heldFor),
+          (result) => ({
+            message: t("toast.held_for", { date: until }),
+            undo: () => api.restoreMessageHolds(person, result.previous),
+          }),
+        )
+      : await act(
+          () => api.holdQuestion(question.id, heldFor),
+          (result) => ({
+            message: t("toast.held_for", { date: until }),
+            undo: () => api.holdQuestion(question.id, result.previous ?? null),
+          }),
+        );
     if (done) {
       setAsking(false);
       setDate("");
       setTarget(DAY);
     }
   };
-  const entry: MenuAction = { id: "hold-for", label: t("followups.hold_for"), run: () => setAsking(true) };
+  const entry: MenuAction = {
+    id: "hold-for",
+    label: t("followups.hold_for"),
+    run: () => {
+      setWhole(false);
+      setAsking(true);
+    },
+  };
+  const messageEntry: MenuAction = {
+    id: "hold-message",
+    label: t("followups.hold_message"),
+    run: () => {
+      setWhole(true);
+      setAsking(true);
+    },
+  };
   const form = asking && question ? (
     <form
       className="answer-form"
@@ -67,7 +95,7 @@ export function useHoldFor(questions: Array<{ id: string; title: string }>): { e
         if (e.key === "Escape") setAsking(false);
       }}
     >
-      {questions.length > 1 && (
+      {questions.length > 1 && !whole && (
         <>
           <label className="hint" htmlFor={`hold-which-${questions[0].id}`}>
             {t("followups.hold_which")}
@@ -84,7 +112,7 @@ export function useHoldFor(questions: Array<{ id: string; title: string }>): { e
       <label className="hint" htmlFor={`hold-for-${question.id}`}>
         {t("followups.hold_for_label")}
       </label>
-      <select id={`hold-for-${question.id}`} autoFocus={questions.length < 2} value={target} onChange={(e) => setTarget(e.target.value)}>
+      <select id={`hold-for-${question.id}`} autoFocus={questions.length < 2 || whole} value={target} onChange={(e) => setTarget(e.target.value)}>
         <option value={DAY}>{t("followups.hold_for_day")}</option>
         {unique.map((m) => (
           <option key={m.value} value={m.value}>
@@ -110,7 +138,7 @@ export function useHoldFor(questions: Array<{ id: string; title: string }>): { e
       </div>
     </form>
   ) : null;
-  return { entry, form };
+  return { entry, messageEntry, form };
 }
 
 /** "Send now": the question leaves Later and is to send again. */

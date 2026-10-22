@@ -8,10 +8,12 @@ projects. The request part comes last: the date, the PM's note (trusted) and the
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date
 from html import escape
 
+from engine import audience
 from engine.ai.task import AiTask
 from engine.blocked import standing_hold
 from engine.cleaning import Cleaned, clean
@@ -120,6 +122,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     offered = offered_ops(offered, learns) if kind.name == "notes" else offered
     candidates = store.plugins.note_candidates(offered, req.data.get("project")) if kind.name == "notes" else ""
     people = People(store, cfg)
+    # A reply or question this run drafts may go to the input's sender: records made from a message limited to people
+    # the sender isn't among stay out of the packet (design 6.35).
+    sender = audience.sender_reader(people, raw)
+    out = audience.left_out_for(store.read(), people, [sender] if sender is not None else [])
     about_project = store.read().get("project", req.data["project"]) if req.data.get("project") else None
     learned = _learned(
         store,
@@ -131,6 +137,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         text=f"{raw}\n{req.data.get('note') or ''}",
         today=today,
         learns=request_learns(store, req.data),
+        hide=out,
     )
     stable = "\n\n".join(
         part
@@ -141,8 +148,8 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             _value_lists(store),
             learned.stable,
             _calendar_section(store, cfg, today),
-            "# Open actions\n" + _open_actions(store, people),
-            "# Open questions\n" + _open_questions(store, people),
+            "# Open actions\n" + _open_actions(store, people, out),
+            "# Open questions\n" + _open_questions(store, people, out),
             "# People\n" + _people(store, cfg),
             "# Projects\n" + _projects(store, people.pm),
         )
@@ -232,6 +239,7 @@ def _learned(
     text: str,
     today: date,
     learns: bool = True,
+    hide: Callable[[Mapping], bool] | None = None,
 ) -> _Learned:
     """What the workspace has learned that applies to this run (design 6.22), and the log of it for the run's record.
     The input's projects are the one it was handed in for and the ones its source names; its people are those the text
@@ -255,6 +263,7 @@ def _learned(
         moved=stable.moved,
         facts=learns,
         scope_projects=with_ancestors(view, in_input),
+        hide=hide,
     )
     stable_text = "\n\n".join(part for part in (stable.text, seeds.text) if part)
 
@@ -743,12 +752,13 @@ def _known_texts(ws: Workspace, store: Store, exclude: str | None) -> list[str]:
     return [source_text(ws, store, s.id) for s in store.read().list("source") if s.id != exclude]
 
 
-def _open_actions(store: Store, people: People) -> str:
+def _open_actions(store: Store, people: People, left_out: Callable[[Mapping], bool] | None = None) -> str:
+    """The open actions, one line each, without those `left_out` says a packet's recipient may not see."""
     lines = []
     reader = store.read()
     for a in reader.list("action"):
         d = a.data
-        if d["status"] in ("done", "dropped"):
+        if d["status"] in ("done", "dropped") or (left_out is not None and left_out(d)):
             continue
         owners = ", ".join(people.name(o["person"]) for o in d.get("owners", [])) or "no owner yet"
         due = f"; due {d['due']}" if d.get("due") else ""
@@ -764,11 +774,11 @@ def _open_actions(store: Store, people: People) -> str:
     return "\n".join(lines) or "(none)"
 
 
-def _open_questions(store: Store, people: People) -> str:
+def _open_questions(store: Store, people: People, left_out: Callable[[Mapping], bool] | None = None) -> str:
     lines = []
     for q in store.read().list("question"):
         d = q.data
-        if d["status"] in ("answered", "dropped"):
+        if d["status"] in ("answered", "dropped") or (left_out is not None and left_out(d)):
             continue
         lines.append(f"- {q.id} to {people.name(d['to'])}: {d['title']}{_belongs_to(d, ' (', ')')}")
     return "\n".join(lines) or "(none)"

@@ -153,6 +153,21 @@ class HeldIn(BaseModel):
     )
 
 
+class QuestionHold(BaseModel):
+    id: str = Field(description="The id of the question.")
+    held_for: HeldForState | None = Field(None, description="What it is held for; none: it is not held.")
+
+
+class HeldMessageIn(BaseModel):
+    held_for: HeldForIn = Field(
+        description="What to hold the person's whole message for: a meeting, a series or a day."
+    )
+
+
+class HeldMessageRestore(BaseModel):
+    holds: list[QuestionHold] = Field(description="What each question was held for before the hold being undone.")
+
+
 class HoldRestore(BaseModel):
     hold: HoldState | None = Field(
         None, description="What the action's hold was before the change that is being undone; none for off hold."
@@ -373,6 +388,13 @@ class HeldChanged(BaseModel):
     ok: str
     previous: HeldForState | None = Field(
         None, description="What the question was held for before the change, for undoing it (none: it was not held)."
+    )
+
+
+class HeldMessageChanged(BaseModel):
+    ok: str
+    previous: list[QuestionHold] = Field(
+        description="What each held question was held for before, for undoing it (none: it was not held)."
     )
 
 

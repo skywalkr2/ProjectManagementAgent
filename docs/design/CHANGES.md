@@ -1027,6 +1027,24 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 170. A message held for a later batch, and a limit carried by what is made from a source (2026-10-22; S1-2, built)
+
+- A person's whole message on Follow-ups can be held for a day or a meeting as one choice ("Hold this message for later…",
+  beside the one-question hold, offered when the message has more than one question to send). Every question in it that is
+  ready to send gets its own `held_for` in one change, so it leaves today's batch and comes back numbered as before on that
+  day or the day of that meeting; Undo puts each question's earlier hold back. A to-do told in the message has no hold of
+  this kind and stays in what is left to send. Design 7.5.
+- A fact, action or question made from a limited source carries its limit: the narrowest audience of the sources its
+  `source` and evidence name, **derived from the sources when read** (`engine/audience.py: limit_of_record`), never copied,
+  so widening a source widens everything made from it with nothing else to update. The `audience` invariant also refuses a
+  draft to someone outside the limit of a fact, action or question it names by id. Design 6.35.
+- A packet for a draft to a named reader leaves out records that reader is outside of: the notes run (a reply or question
+  may go to the input's sender; open actions, open questions and facts made from a message limited to others stay out) and
+  the follow-on run (a correction goes to those a tied record already reached). Singling a person out in a group draft, with
+  its learning pair, waits for drafts to several people (S1b).
+  Built: `tests/test_audience.py`, `tests/test_follow_on.py`, `tests/test_followups_later.py`,
+  `web/src/components/FollowUps.test.tsx`
+
 ## 169. Filing by an item's words when its people don't place it (2026-10-22; S1-4, built)
 
 - With a business set, an item that names no project and whose people don't place it (people on both sides, people not

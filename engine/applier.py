@@ -1181,25 +1181,39 @@ def _reply_owed_problem(view: Any, ctx: Context, op: ActionAddOp) -> str | None:
     return reply_lines.refusal(view, ctx.cfg, ctx.inputs.raw_input, when, bulk)
 
 
+def _named_records(view: Any, op: OpModel) -> list[dict[str, Any]]:
+    """The facts, actions and questions a draft names by id in its own words (an id in a title is refused elsewhere), as
+    the records it draws on."""
+    words = " ".join(str(getattr(op, name, None) or "") for name in ("title", "text", "reply", "matters_for"))
+    kinds = {model.prefix: kind for kind, model in REGISTRY.items() if kind in ("fact", "action", "question")}
+    found = (
+        view.get(kinds[match.rpartition("-")[0]], match)
+        for match in id_words.ID.findall(words)
+        if match.rpartition("-")[0] in kinds
+    )
+    return [record.data for record in found if record is not None]
+
+
 def _audience_problem(view: Any, ctx: Context, op: QuestionAddOp | QuestionMoveOp | ActionAddOp) -> str | None:
     """Why a draft to someone can't go to them, or None (design 6.35): a source it draws on (the input's own, the one a
-    quote of its evidence is from, and for a rerouted question the one it was asked from) is limited to people the
-    recipient isn't among. The reader of a reply is the input's sender; a reply owed answers its own message, whose
-    limit never counts against the one who sent it."""
+    quote of its evidence is from, and for a rerouted question the one it was asked from), or a record it names that
+    was made from one, is limited to people the recipient isn't among. The reader of a reply is the input's sender; a
+    reply owed answers its own message, whose limit never counts against the one who sent it."""
     evidence = _evidence(op)
     drawn = [ctx.inputs.source, ctx.inputs.evidence_source(evidence.quote) if evidence is not None else None]
+    records = _named_records(view, op)
     if isinstance(op, QuestionAddOp):
-        return audience.recipient_problem(view, ctx.people, drawn, op.to)
+        return audience.recipient_problem(view, ctx.people, drawn, op.to, records)
     if isinstance(op, QuestionMoveOp):
         asked = view.get("question", op.id)
-        return audience.recipient_problem(view, ctx.people, [asked.data.get("source")] if asked else [], op.to)
+        return audience.recipient_problem(view, ctx.people, [asked.data.get("source")] if asked else [], op.to, records)
     read = reply_lines.read_message(ctx.inputs.raw_input)
     if read is None:
         return None  # no sender to read it, so no reader to check
     if op.reply_owed:
         drawn = [s for s in drawn if s != ctx.inputs.source]
     reader = reply_lines.asker_of(ctx.people, ctx.inputs.raw_input) or read.sender
-    return audience.recipient_problem(view, ctx.people, drawn, reader)
+    return audience.recipient_problem(view, ctx.people, drawn, reader, records)
 
 
 def _audience_names(ctx: Context, names: list[str]) -> tuple[list[str], str | None]:
