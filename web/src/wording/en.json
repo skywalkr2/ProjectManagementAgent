@@ -1693,6 +1693,8 @@
   "sources.last.baseline": "First check complete; existing items noted",
   "sources.last.offline": "Not checked: no internet connection",
   "sources.last.failed": "Couldn't be read",
+  "sources.last.throttled": "Not read yet: the service asked to wait. It is tried again by itself",
+  "sources.last.throttled_until": "Not read yet: the service asked to wait until {when}. It is tried again then",
   "sources.failures": "Failed {n} times in a row",
   "sources.problem_generic": "It couldn't be read.",
   "sources.advice.check_credentials": "Check the user name and password in this connection's settings (Change, on Connections). If the service wants an app password, make one on its website and type it in the password box there. It is read again on its next turn.",

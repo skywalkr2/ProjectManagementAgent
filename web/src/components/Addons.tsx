@@ -10,7 +10,7 @@ import { Heading, Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { api, ApiError, type S } from "../lib/api";
 
 import { copyPlain } from "../lib/copy";
-import { whenText as when } from "../lib/dates";
+import { day, whenText as when } from "../lib/dates";
 import { useSmallMoney, useTotal } from "../lib/money";
 import {
   SAFE_ID,
@@ -316,7 +316,8 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
   const facts = [
     t(pack.maintainers ? "addons.by_maintainers" : "addons.third_party"),
     pack.publisher,
-    pack.updated ? t("addons.updated", { updated: pack.updated }) : "",
+    // A catalog states the date as stored; any other wording it gives is shown as it is.
+    pack.updated ? t("addons.updated", { updated: /^\d{4}-\d{2}-\d{2}$/.test(pack.updated) ? day(pack.updated) : pack.updated }) : "",
     compat,
   ].filter(Boolean);
   const safeHomepage = pack.homepage && pack.homepage_domain && domainOf(pack.homepage) ? pack.homepage : null;

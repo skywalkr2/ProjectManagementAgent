@@ -90,7 +90,7 @@ function open(extra: Routes = {}, review: S["RuleReviewView"] = REVIEW, onOpenRe
 }
 
 const rows = () => within(screen.getByRole("list", { name: "What Helper knows" })).getAllByRole("listitem");
-const texts = () => rows().map((r) => r.querySelector("p")?.textContent);
+const texts = () => rows().map((r) => r.querySelector("[class*='title']")?.textContent);
 const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
 
 test("it opens on what waits for the person, with a count on each filter", async () => {

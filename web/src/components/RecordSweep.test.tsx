@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
 import type { S } from "../lib/api";
 import { org, person, project, unfiledItem, unfiledView } from "../lib/records-fixtures";
+import { sweep } from "../test-sweep";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { OpenItems } from "./OpenItems";
 import { People } from "./People";
@@ -15,23 +16,6 @@ import { Unfiled } from "./Unfiled";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
 const WEB = "https" + "://";
-const ID = /\b[A-Z]{2,5}-\d+\b/;
-const ISO_DATE = /\d{4}-\d{2}-\d{2}/;
-const EMPTY_DOT = /·\s*·|·\s*$|^\s*·/m;
-
-/** What no screen of the app says. `choices` are the stored words of choice fields, which a label stands in for. */
-function sweep(root: HTMLElement, choices: string[] = []) {
-  const text = root.textContent ?? "";
-  expect(text.match(ID)?.[0] ?? null, "an id of the app's own").toBeNull();
-  expect(text.match(ISO_DATE)?.[0] ?? null, "a date as it is stored").toBeNull();
-  for (const piece of root.querySelectorAll("li, .detail, .meta, .sub, dd, td, p")) {
-    // Lines of text only: a piece that holds other pieces is looked at through them.
-    if (piece.querySelector("li, .detail, .meta, .sub, dd, td, p")) continue;
-    const own = (piece.textContent ?? "").trim();
-    expect(own, `an empty separator in "${own}"`).not.toMatch(EMPTY_DOT);
-    expect(choices, `a stored word on its own line: "${own}"`).not.toContain(own);
-  }
-}
 
 const field = (name: string, type: S["FieldView"]["type"], extra: Partial<S["FieldView"]> = {}): S["FieldView"] => ({ name, description: `Help for ${name}.`, type, required: false, editable: true, ...extra });
 const ref = (kind: string, id: string, name: string) => ({ kind, id, name });

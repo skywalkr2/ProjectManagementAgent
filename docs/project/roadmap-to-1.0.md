@@ -36,10 +36,10 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   most of phase B's last screens: batches B-5, B-6a and B-6b, the UI/UX designer's re-review (the UI gate: its feedback
   is recorded in `ui-rereview-2026-10-20.md`) and seven of batch B-7's sub-items. Each open item below says what is built
   and what is left; a part is never ticked.
-- **In progress:** the end of phase B. What B-7 and B-6b still lack, in short: the sweep for ids, ISO dates and raw
-  words covers record pages and four lists, not every view (the browser checks written on 2026-10-20 all pass in the
-  full run of `9c0f76e`); the reviewer's further feedback; and the owner's re-run of the failed
-  learning cases. The items below name the rest.
+- **In progress:** the end of phase B. The sweep for ids, ISO dates and raw words now covers every view
+  (`web/src/components/ViewSweep.test.tsx`), and the browser checks written on 2026-10-20 all pass in the full run of
+  `9c0f76e`. What B-7 and B-6b still lack: the reviewer's next round on the pushed commit, and the owner's re-run of the
+  failed learning cases. The items below name the rest.
 - **The order** (decided; the batches below follow it): S1 (S1-1 to S1-3) → B's waves 5 and 6 (B-5, B-6a, B-6b) built to
   S's shape → the UI/UX designer's re-review and the feedback it brings (UI gate, B-7) → the gate week → the rest of S
   (S1b, S2 to S5) → I (installers; the first milestone ends here) → C (the writing pack) → P (the other packs) → D
@@ -569,8 +569,12 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     the domain beside it (`web/src/components/RecordPageNames.test.tsx`, `web/src/components/RecordPageRecords.test.tsx`,
     `web/src/components/OpenItems.test.tsx`, `web/src/components/WhatChanged.test.tsx`, `tests/test_record_page.py`);
     the sweep over every kind of record's page and the People, Projects, open to-dos and Unfiled lists
-    (`web/src/components/RecordSweep.test.tsx`). *Left:* the sweep over the other views (Today, What changed,
-    Follow-ups, Sources, Settings and the rest): it covers record pages and four lists, not "every view".
+    (`web/src/components/RecordSweep.test.tsx`); and every other view, drawn from data as the server sends it: Today
+    with its inspector open on each kind of line and its rail, What changed with its first item open on each filter,
+    Follow-ups by person on each tab and by project, Sources, every section of Settings, Since yesterday, Knowledge,
+    Files, Handover, Quality, Stages as a board and a list, Add-ons, and a draft's versions and review
+    (`web/src/components/ViewSweep.test.tsx`, 14 tests). It found the add-on catalog's date shown as stored, now
+    formatted (`web/src/components/Addons.test.tsx`). Nothing is left.
   - **Today's first screen** (§3.1, C47): the backup reminder is an At risk line plus the status chip, This week is a
     rail panel at every width, and at 1280×720 with setup unfinished the first queue line is at most 260px down with at
     least six lines visible (at most 200px with setup done), checked in `shell.spec.ts`.
@@ -628,8 +632,8 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     those screens (check C54). **Built (wave 1):** `tests/test_titles_without_ids.py` (labels by title, the kind in words
     when there is none, a held and a review line, the invariant, the sweep of an old label and of a stored title with Undo),
     `web/src/components/TodayRecords.test.tsx` ("no line of Today shows an id"), `web/e2e/shell.spec.ts` ("no Today line,
-    inspector heading or What changed title holds an internal id": passing at `9c0f76e`). *Left:* the web sweep
-    (`RecordSweep.test.tsx`) does not yet draw What changed and Follow-ups from data (C48);
+    inspector heading or What changed title holds an internal id": passing at `9c0f76e`), and the web sweep draws
+    What changed and Follow-ups from data (`web/src/components/ViewSweep.test.tsx`), so nothing is left;
   - R2: a held line is asked as a question ("Close 'Send two spine options'?") with the same two result buttons in the
     line and the inspector ("Close it", "Keep it open"); its meta keeps the quote and who said it, the rest moves to the
     inspector (check C55). **Built (wave 1):** `web/src/components/TodayRecords.test.tsx` (every ask on the line, no

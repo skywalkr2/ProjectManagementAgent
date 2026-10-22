@@ -57,6 +57,9 @@ export function lastReadText(source: Source, t: T): string {
       return t("sources.last.baseline");
     case "offline":
       return t("sources.last.offline");
+    case "throttled":
+      // Why it waits and until when: the service asked to wait, and the read is tried again by itself.
+      return last.retry_at && when(last.retry_at) ? t("sources.last.throttled_until", { when: when(last.retry_at) }) : t("sources.last.throttled");
     default:
       return t("sources.last.failed");
   }

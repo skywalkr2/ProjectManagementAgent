@@ -42,7 +42,7 @@ export function Row(props: RowProps) {
         {tag}
       </div>
       <div className={styles.main}>
-        <p className={styles.title}>{title}</p>
+        <div className={styles.title}>{title}</div>
         {meta && (
           <p className={oneLine ? `${styles.meta} ${styles.oneLine}` : styles.meta} title={oneLine && typeof meta === "string" ? meta : undefined}>
             {meta}

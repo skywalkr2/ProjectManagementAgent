@@ -174,6 +174,8 @@ test("every outcome has its own words", async () => {
       problem: "It can't be read: refused. Sign in again.",
     }),
     source("fresh", { last: null, read_at: null }),
+    source("slowed", { last: run({ outcome: "throttled", retry_at: "2026-10-11T15:00:00Z" }) }),
+    source("slowed-plain", { last: run({ outcome: "throttled" }) }),
   ]);
   expect(await row("Source quiet")).toHaveTextContent("Nothing new");
   expect(await row("Source first")).toHaveTextContent("First check complete; existing items noted");
@@ -183,6 +185,11 @@ test("every outcome has its own words", async () => {
   expect(broken).toHaveTextContent("Failed 3 times in a row");
   expect(within(broken).getByText("It can't be read: refused. Sign in again.")).toBeInTheDocument();
   expect(await row("Source fresh")).toHaveTextContent("Not read yet");
+  // A throttled read says why it waits and until when, never that it couldn't be read.
+  const slowed = await row("Source slowed");
+  expect(slowed).toHaveTextContent(`Not read yet: the service asked to wait until ${whenText("2026-10-11T15:00:00Z")}. It is tried again then`);
+  expect(slowed).not.toHaveTextContent("Couldn't be read");
+  expect(await row("Source slowed-plain")).toHaveTextContent("Not read yet: the service asked to wait. It is tried again by itself");
 });
 
 test("a source that found no network shows when it was last really read, not the try", async () => {

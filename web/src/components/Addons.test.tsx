@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { day } from "../lib/dates";
 import { wordsOfWork } from "../lib/packs";
 import { RestartNotice, RestartProvider } from "../lib/restart";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
@@ -133,10 +134,10 @@ test("the header says who made it, the publisher, when it was updated and whethe
     }),
   );
   const mine = await row("Name of mine");
-  expect(mine).toHaveTextContent("Made by the app's developers · Publisher of mine · updated 2026-09-01 · Works with this version");
-  expect(await row("Name of theirs")).toHaveTextContent("Made by someone else · Publisher of theirs · updated 2026-09-01 · Needs a different version of the app");
+  expect(mine).toHaveTextContent(`Made by the app's developers · Publisher of mine · updated ${day("2026-09-01")} · Works with this version`);
+  expect(await row("Name of theirs")).toHaveTextContent(`Made by someone else · Publisher of theirs · updated ${day("2026-09-01")} · Needs a different version of the app`);
   const unknown = await row("Name of unknown");
-  expect(unknown).toHaveTextContent("Made by someone else · Publisher of unknown · updated 2026-09-01");
+  expect(unknown).toHaveTextContent(`Made by someone else · Publisher of unknown · updated ${day("2026-09-01")}`);
   expect(unknown).not.toHaveTextContent("Works with");
   expect(unknown).not.toHaveTextContent("Needs a different");
   expect(within(mine).getByText("What mine does")).toBeInTheDocument();
