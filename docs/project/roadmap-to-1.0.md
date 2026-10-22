@@ -805,7 +805,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     Decision F31 says such a correction still proposes the narrow lesson; design 6.22 and
     `tests/test_learn_correction.py::test_nothing_to_generalize_makes_no_knowledge` allow none ("Typo in the title").
     The owner decided (`docs/decisions.md` 2026-10-22): not always; an unclear correction asks the person one
-    question. *Left:* the five pairs, on the owner's next re-run.
+    question. *Left:* the five pairs, on the owner's next re-run. The harder pairs re-run after it: 80%; left there are
+    `other-project` (no lesson proposed; the later run files the work under the wrong project) and `over-application`
+    (the later run moves an existing action's date instead of adding the review for the person).
   - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
     reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
     20): whether the reach the model picks should be widened or checked against the correction's own task kind;
