@@ -1804,7 +1804,8 @@ class Registrar:
         `throttled` (with `retry_after=` seconds). The core compares, keeps snapshots and hands in what is new,
         changed or gone (for a read that lists only changes, the keys in `Poll.removed`); the connector never writes
         records. `context.web` (when `requires.network` lists hosts) reaches only those hosts, over HTTPS:
-        `context.web.get(url, params=..., headers=...)` and `.post(...)` return a response with `status`, `headers`,
+        `context.web.get(url, params=..., headers=...)`, `.post(...)`, `.put(...)`, `.patch(...)` and `.delete(...)`
+        return a response with `status`, `headers`,
         `content`, `.text` and `.json()`, and raise `ConnectorError` for no connection (offline), timeouts and 5xx
         (outage), 401 (auth), 403 (no_access), 404 (not_found), and 429 or 503 with a Retry-After (throttled, with
         the wait). Those errors carry the answer's `status`, `headers` and `body` (`err.json()`), so a connector can

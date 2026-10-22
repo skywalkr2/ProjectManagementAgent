@@ -43,8 +43,8 @@ def host_allowed(host: str, allowed: list[str]) -> bool:
 
 
 class WebClient:
-    """GET and POST to allowed hosts only. Raises ConnectorError: offline (no connection could be made), outage
-    (timeouts, server errors), auth (401), no_access (403), not_found (404), throttled (429, or 503 with a
+    """GET, POST, PUT, PATCH and DELETE to allowed hosts only. Raises ConnectorError: offline (no connection could be
+    made), outage (timeouts, server errors), auth (401), no_access (403), not_found (404), throttled (429, or 503 with a
     Retry-After; `retry_after` is the wait in seconds). Errors from an answer carry its status, headers and body.
     Every other status comes back as a Response for the caller to read."""
 
@@ -97,6 +97,15 @@ class WebClient:
 
     def post(self, url: str, **kwargs: Any) -> Response:
         return self.request("POST", url, **kwargs)
+
+    def put(self, url: str, **kwargs: Any) -> Response:
+        return self.request("PUT", url, **kwargs)
+
+    def patch(self, url: str, **kwargs: Any) -> Response:
+        return self.request("PATCH", url, **kwargs)
+
+    def delete(self, url: str, **kwargs: Any) -> Response:
+        return self.request("DELETE", url, **kwargs)
 
     def close(self) -> None:
         self._client.close()

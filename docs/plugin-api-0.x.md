@@ -12,6 +12,9 @@ version range alone. The complete runnable example is
 
 ## What 0.3.89 adds
 
+- `context.web` (connectors and channels) also has `.put`, `.patch` and `.delete`, with the same host limits, errors
+  and redirect rules as `.get` and `.post`.
+
 Manifests stay `'>=0.3,<0.4'`. A channel written for 0.3.88 keeps working for this release: `send(act, attempt_key)`,
 `status(attempt_key)` and `undo(act, service_id)` are still called without a context. Those signatures are deprecated
 and are removed in the next release.
