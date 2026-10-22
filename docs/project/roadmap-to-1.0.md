@@ -36,11 +36,9 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   most of phase B's last screens: batches B-5, B-6a and B-6b, the UI/UX designer's re-review (the UI gate: its feedback
   is recorded in `ui-rereview-2026-10-20.md`) and seven of batch B-7's sub-items. Each open item below says what is built
   and what is left; a part is never ticked.
-- **In progress:** the end of phase B. What B-7 and B-6b still lack, in short: the browser checks written on 2026-10-20
-  (`web/e2e/shell.spec.ts`, `a11y.spec.ts` and `tables.spec.ts`: the first queue line's place at 1280×720, the header
-  as one row, targets of at least 24px, tables beside the pane) have not been run, because the browser tests run once,
-  in the full run before a push (CLAUDE.md, "Usage and machine load"); the sweep for ids, ISO dates and raw words covers
-  record pages and four lists, not every view; the reviewer's further feedback; and the owner's re-run of the failed
+- **In progress:** the end of phase B. What B-7 and B-6b still lack, in short: the sweep for ids, ISO dates and raw
+  words covers record pages and four lists, not every view (the browser checks written on 2026-10-20 all pass in the
+  full run of `9c0f76e`); the reviewer's further feedback; and the owner's re-run of the failed
   learning cases. The items below name the rest.
 - **The order** (decided; the batches below follow it): S1 (S1-1 to S1-3) → B's waves 5 and 6 (B-5, B-6a, B-6b) built to
   S's shape → the UI/UX designer's re-review and the feedback it brings (UI gate, B-7) → the gate week → the rest of S
@@ -362,8 +360,10 @@ From the original designer's lessons of 2026-10-14:
   *Built (B-6b, B-7):* the final layout, one row with the alive line beside the status chip from 1440px and in the chip's
   popover below it (`web/src/shell/Header.test.tsx`: "the assistant's alive line is in the header beside the status
   chip", "below 1440px the assistant's state moves into the status chip's popover, as on the phone, and the line beside
-  the chip is gone"). *Left:* the browser check of the header at 1000, 1100 and 1200px (`web/e2e/shell.spec.ts`: "the
-  header is one row, with every control inside the window"), written on 2026-10-20 and not run.
+  the chip is gone"), and in a browser at 800, 1000, 1100, 1200 and 1300px (`web/e2e/shell.spec.ts`: "at 1000px the
+  header is one row, with every control inside the window and the assistant's state in the status chip", passing at
+  `9c0f76e`), with a long assistant line beside the chip at 1440px ("the header never wraps, with plugin panels
+  present").
 - [ ] [B-6b] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
   *Built (B-6b):* the stages board (`web/src/components/StagesBoard.test.tsx`, `tests/test_stage_cards.py`), the hand-in as a
   drawer and Ask as a pane from 1440px (`web/src/components/AskPane.test.tsx`), and the phone's review mode on What
@@ -578,7 +578,8 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     (`tests/test_follow_up_lines.py`, `web/src/components/TodayFirstScreen.test.tsx`); This week as a rail panel at every
     width (`web/src/components/Today.test.tsx`, `web/src/components/TodayFirstScreen.test.tsx`). *Left:* the browser
     check that the first queue line is at most 260px down with six lines visible at 1280×720 (200px with setup done)
-    (`web/e2e/shell.spec.ts`): written on 2026-10-20, not run.
+    (`web/e2e/shell.spec.ts`: "Today at 1280x720 with setup unfinished: the first queue line is at most 260px down and
+    six lines show", and "… with setup done …"): passing at `9c0f76e`, so nothing is left.
   - **Tables beside the detail pane** (§3.3, C49): no break inside a word, columns by priority, the pane overlaying the
     table when even those don't fit, no per-row Details button, the People organization filter sized to its content
     and its Organizations list as a table.
@@ -586,7 +587,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     title), columns by priority beside the pane, the pane overlaying the table when they don't fit, no per-row Details
     button, the People organization filter sized to its content, Organizations as a table, a row or its name opening the
     pane (`web/src/components/TablesBesidePane.test.tsx`). *Left:* the browser check at 1440px that no header or cell
-    breaks inside a word (`web/e2e/tables.spec.ts`): written, not run.
+    breaks inside a word (`web/e2e/tables.spec.ts`: "Projects with the pane open at 1440px: no header or cell breaks
+    inside a word…", the same for People, and "at 1280px the pane overlays the Projects table…"): passing at
+    `9c0f76e`, so nothing is left.
   - **The P2 findings** (§3.6 to §3.15, C52): What changed opens the first item and edits in the meta line; the header
     below 1440px puts the assistant's state in the status chip's popover and "Your pages" in the person's menu, and the
     ⚠ gets a label or joins the chip; no visible interactive element under 24×24 (checked in `a11y.spec.ts`); only the
@@ -603,8 +606,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     drawer and an empty Agenda as one line (`web/src/components/TodayRail.test.tsx`); the inspector header on one line,
     Send back at 72ch with its reason and "Whose words" as a segmented control (`web/src/components/SmallPoints.test.tsx`);
     the phone's rail panels one line each and review lines tagged "Outside" (`web/src/components/TodayFirstScreen.test.tsx`).
-    *Left:* the browser checks written on 2026-10-20 and not run: no visible interactive element under 24×24
-    (`web/e2e/a11y.spec.ts`) and the header as one row at 1000, 1100 and 1200px (`web/e2e/shell.spec.ts`).
+    The browser checks pass at `9c0f76e`: no visible interactive element under 24×24 (`web/e2e/a11y.spec.ts`, "…
+    has no visible interactive element under 24×24 at 1024, 1440 and 390px", every main screen) and the header as one row
+    at 1000, 1100 and 1200px (`web/e2e/shell.spec.ts`, "at 1000px the header is one row…"), so nothing is left.
   - **The reviewer's further feedback** (owner, 2026-10-20: "provide the UI/UX agent the next batch when you can because
     it already has more feedback"): received (`reviews/ui-ux-2026-10/first-run/`; built in "First run for a person with no
     IT background", checked off in `roadmap-done.md`). *Left:* when B-7 is pushed and green, the reviewer gets the commit,
@@ -624,7 +628,7 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     those screens (check C54). **Built (wave 1):** `tests/test_titles_without_ids.py` (labels by title, the kind in words
     when there is none, a held and a review line, the invariant, the sweep of an old label and of a stored title with Undo),
     `web/src/components/TodayRecords.test.tsx` ("no line of Today shows an id"), `web/e2e/shell.spec.ts` ("no Today line,
-    inspector heading or What changed title holds an internal id": written, not run). *Left:* the web sweep
+    inspector heading or What changed title holds an internal id": passing at `9c0f76e`). *Left:* the web sweep
     (`RecordSweep.test.tsx`) does not yet draw What changed and Follow-ups from data (C48);
   - R2: a held line is asked as a question ("Close 'Send two spine options'?") with the same two result buttons in the
     line and the inspector ("Close it", "Keep it open"); its meta keeps the quote and who said it, the rest moves to the
@@ -635,8 +639,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   - R3: every Today line's meta is one line, cut with an ellipsis, and "Outside" folds into the pill column, so six lines
     fit at 1280×720 (checks C47, C56). **Built (wave 1):** `web/src/ui/Row.test.tsx`,
     `web/src/components/TodayRecords.test.tsx` ("Outside in the pill column, meta one line"), `web/e2e/shell.spec.ts` (six
-    lines in full at 1280×720 with the demo's longest held and moved lines, each meta one line: written, not run; the
-    same lines measured in a browser by hand put the sixth line's bottom at 679px of 720). *Left:* the stopped-work lines
+    lines in full at 1280×720 with the demo's longest held and moved lines, each meta one line), and in a browser
+    (`web/e2e/today-capacity.spec.ts`: "Today at 1280x720 shows six lines in full when the held and moved lines are as
+    long as the demo's, each with its meta on one line", passing at `9c0f76e`). *Left:* the stopped-work lines
     (`HeldLines`) still wrap their second line, because it says why and until when and has no inspector to hold the rest;
   - R4: on a new workspace the header has no "Missed one" until there is something it could have missed, and the
     workspace's new name shows without a reload. **Built (wave 1):** `web/src/shell/Header.test.tsx` ("a new workspace
@@ -654,7 +659,8 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     `web/src/shell/HeldLines.test.tsx` (the line and "Allow gives the yes … and Undo puts the answer back"). The step
     already asked the yes after the check and kept Continue disabled until it was answered
     (`web/src/components/WelcomeAi.test.tsx`: "the question names the account and its sign-in…"). *Left:* the browser check
-    `web/e2e/work-access.spec.ts` and the server's `--standin-account` are written, not run;
+    `web/e2e/work-access.spec.ts` ("Today offers Allow for an account the person said Not now about, and Allow and Undo
+    work", on the server's `--standin-account`) passes at `9c0f76e`, so nothing is left;
   - R6–R11: the Done step's empty cards; the series page's side panel (labels above values, an item not listed in both
     Agenda and Next); the rules line's weight and pill; 24px hit areas for checkboxes; no "From: <person>" titles in What
     changed; shorter Top priorities wording. **Built (wave 2):** R6 `web/src/components/Walkthrough.test.tsx` ("each step
@@ -664,9 +670,11 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     not measured); R9 `web/src/theme/targets.test.ts` ("a checkbox or radio is a 24px control itself…"); R10
     `web/src/components/WhatChanged.test.tsx` ("a change from an email is titled by Today's rule…"); R11
     `web/src/components/TopPriorities.test.tsx` ("a person's row reads name · 1 overdue · 1 waiting 10 days…"). *Left:* the
-    browser checks added for R6, R9 (a11y.spec.ts measures the element now) and R10 are written, not run; no layout was
-    measured in a browser for R6, R7 and R9 (none is available here), so the CSS follows the review's numbers and the
-    stylesheet tests;
+    browser checks for R6 (`web/e2e/acceptance.spec.ts`, "the setup walkthrough and Settings are screens of their own…":
+    every recap row at most 64px high), R9 (`web/e2e/a11y.spec.ts`, "… has no visible interactive element under 24×24
+    at 1024, 1440 and 390px", measuring the control itself) and R10 (`web/e2e/shell.spec.ts`, "What changed titles follow
+    Today's title rule, never From: and a person") pass at `9c0f76e`; R7's side panel is still not measured in a
+    browser (its CSS follows the review's numbers and the stylesheet tests);
   - CI's python-later job (the tests with the clock 40 days ahead) finishes: on `46cc3ea` it ran past 30 minutes with
     every other job green and was cancelled, as the same run hung locally at 94% with three workers and passed with two.
     The job now has a time limit and prints the stack of any test past five minutes; the hanging test is found and fixed,
@@ -688,7 +696,8 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     `deciding` keys, a change with only held ops has no review line, `looks_good` never settles a held op, no op on two
     lines), `tests/test_source_intake.py`, `web/src/components/TodayOneDecision.test.tsx` ("the decision stays a question
     under Decide, and the review line beside it says it waits there", "Go to what waits opens the held line's details");
-    the browser check "one decision is one line…" in `web/e2e/today-capacity.spec.ts` is written, not run;
+    the browser check "one decision is one line: no item is on two Today lines, read from the demo through the API" in
+    `web/e2e/today-capacity.spec.ts` passes at `9c0f76e`;
   - S2: a held line's details show only the held decision (the question, the quote and who said it, the source, why it
     waits, the two answers); a held op's label is conditional ("Would close a to-do"). **Built (B-9):**
     `web/src/components/TodayOneDecision.test.tsx` ("a held line opens on only its decision…", "a held op the engine
@@ -697,8 +706,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   - S3: the pill column has one fixed width on every row, so every title starts in line. **Built (B-9):**
     `web/src/components/TodayOneDecision.test.tsx` ("the lines that stop or ask for something use the queue's columns…");
     measured at 1440px on the demo's build: every line's title starts at x = 413, where the Access line started at 344 and
-    the Rules line at 333 (the browser checks in `web/e2e/today-capacity.spec.ts` and `web/e2e/work-access.spec.ts` are
-    written, not run);
+    the Rules line at 333 (`web/e2e/today-capacity.spec.ts`: "every line's title starts at the same place at 1440px,
+    whichever kind of line it is", and `web/e2e/work-access.spec.ts`: "the Access line's title starts where every other
+    line's title starts, at 1440px", both passing at `9c0f76e`);
   - S4: What changed and Today topics come from a short topic, never a cut-off first sentence; "Work <assistant>
     started" says what the work was. **Built (B-9):** `tests/test_item_titles.py` ("a short topic beats a first line that
     would be cut off", "with no topic and a first line too long to show whole the topic is empty", "work the app
