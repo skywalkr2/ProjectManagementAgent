@@ -2567,6 +2567,7 @@
   "walkthrough.coverage.add_sent": "Add your Sent folder",
   "walkthrough.coverage.complete": "Everything listed was read.",
   "walkthrough.coverage.partial": "Not everything was read, so this list may be missing promises.",
+  "walkthrough.coverage.read_no_sent": "Everything listed was read, but not the mail you sent, so this list may be missing promises you made.",
   "walkthrough.promises.none": "No open promises found in the mail it looked over.",
   "walkthrough.promises.none_hint": "If you know of one it missed, say so and it is added.",
   "walkthrough.promises.follow_up": "One follow-up is ready",

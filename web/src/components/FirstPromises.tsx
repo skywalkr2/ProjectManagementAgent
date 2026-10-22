@@ -102,7 +102,7 @@ function Found(props: { data: Result; onOpenSources: () => void }) {
   if (data.promises.length === 0) {
     return (
       <div className="field" data-first-promises="none">
-        <p>{t(data.coverage.length > 0 && !data.complete ? "walkthrough.promises.none_partial" : "walkthrough.promises.none")}</p>
+        <p>{t(unread(data) ? "walkthrough.promises.none_partial" : "walkthrough.promises.none")}</p>
         <p className="hint">{t("walkthrough.promises.none_hint")}</p>
         {list}
         <div className="row-end">
@@ -134,6 +134,9 @@ function Found(props: { data: Result; onOpenSources: () => void }) {
 
 type Place = Result["coverage"][number];
 type Folder = Place["folders"][number];
+
+/** Whether a folder the person connected wasn't read. A missing sent folder alone isn't that: it has its own line. */
+const unread = (data: Result) => data.coverage.some((p) => p.folders.some((f) => f.outcome !== "read"));
 
 /** What is read, one row per source: before the Start the account, the folder and the day it reads from; after it how
  * each one went, said in words. A source that wasn't read, or a mail account with no sent folder, is said plainly
@@ -167,7 +170,7 @@ function ReadList(props: { data: Result; done: boolean; plan?: boolean; onOpenSo
           </li>
         ))}
       </ul>
-      {props.done && <p className="hint">{t(data.complete ? "walkthrough.coverage.complete" : "walkthrough.coverage.partial")}</p>}
+      {props.done && <p className="hint">{t(data.complete ? "walkthrough.coverage.complete" : unread(data) ? "walkthrough.coverage.partial" : "walkthrough.coverage.read_no_sent")}</p>}
       {missing.length > 0 && (
         <div className="row-end">
           <Button onClick={props.onOpenSources}>{t("walkthrough.coverage.add_sent")}</Button>

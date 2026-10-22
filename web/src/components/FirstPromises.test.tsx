@@ -226,6 +226,15 @@ describe("what it reads", () => {
     expect(open).toHaveBeenCalledTimes(1);
   });
 
+  test("with only the sent folder missing, nothing found isn't blamed on something unread: the missing sent folder is said instead", async () => {
+    show(view({ complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] }));
+    expect(await screen.findByText("No open promises found in the mail it looked over.")).toBeInTheDocument();
+    expect(screen.getByText("Everything listed was read, but not the mail you sent, so this list may be missing promises you made.")).toBeInTheDocument();
+    expect(screen.queryByText(/wasn't read, so there may be/)).toBeNull();
+    expect(screen.queryByText("Everything listed was read.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Add your Sent folder" })).toBeInTheDocument();
+  });
+
   test("after the read each source is said as read, and a list of everything read says so", async () => {
     show(view({ coverage: [place([folder("Inbox", { from_date: from }), folder("Sent", { sent: true, from_date: from })])], promises: [promise("ACT-2", { mine: true })] }));
     const list = await screen.findByRole("list", { name: "What was read" });
