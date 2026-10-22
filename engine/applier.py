@@ -61,6 +61,7 @@ from engine.ops import (
     ActionMoveOp,
     ActionNewsOp,
     ActionPartOp,
+    ActionRepeatOp,
     ActionReplyOp,
     ActionUnholdOp,
     AgendaAddOp,
@@ -467,6 +468,15 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", why)
             elif evidence is not None and not _about_action(evidence.quote, view.get("action", op.id), view, ctx):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+        if isinstance(op, ActionRepeatOp):
+            from engine import repeats
+
+            why = repeats.problem(view, op)
+            if why:
+                refuse(i, "targets", why)
+            elif not _persons_own(view, ctx):
+                # A repeat read from an input waits for the person's yes, like an ending read from one.
+                problems.append(Problem("repeat-confirm", "hold", i, REPEAT_WAITS))
         if endings.asks(op, ctx):
             # Closed with no delivery words or call-off words (or both) is one choice, even in the person's own note.
             problems.append(Problem(endings.CHOICE_CHECK, "hold", i, endings.CHOICE_WAITS))
@@ -1162,6 +1172,7 @@ def _shares_words(a: str, b: str) -> bool:
 #: The ops that end an action or change its date: read from what came in, each waits for the person to keep it.
 ENDING_OPS = (ActionCloseOp, ActionDropOp, ActionMoveOp, ActionPartOp, ActionUnholdOp)
 ENDING_WAITS = "Something that came in says this ended or moved."
+REPEAT_WAITS = "Something that came in says this repeats."
 
 
 def _persons_own(view: Any, ctx: Context) -> bool:
@@ -3176,6 +3187,7 @@ def _apply_op(
         }
         tx.update("action", op.id, credit, w, read_version=cur.version)
         made("action", op.id)
+        _next_occurrence(tx, ctx, cur, w, made)
     elif isinstance(op, ActionHoldOp):
         cur = tx.get("action", op.id)
         hold = {"waiting_for": " ".join(op.waiting_for.split()), "since": today.isoformat()}
@@ -3199,6 +3211,7 @@ def _apply_op(
         reason = " ".join(op.reason.split())
         tx.update("action", op.id, {"status": "dropped", "dropped_reason": reason}, w, read_version=cur.version)
         made("action", op.id)
+        _next_occurrence(tx, ctx, cur, w, made)
         if op.event or op.series:
             # Called off because it moved into a meeting: it goes on that meeting's agenda, linked, so it isn't lost.
             moved = AgendaAddOp(event=op.event, series=op.series, action=op.id)
@@ -3212,6 +3225,19 @@ def _apply_op(
             _record_dropped(
                 tx, ctx, "action", op.id, reason, "no_reply_needed" if cur.data.get("reply_owed") else "dropped"
             )
+    elif isinstance(op, ActionRepeatOp):
+        cur = tx.get("action", op.id)
+        changes: dict[str, Any] = {"repeat": None}
+        if op.rule is not None:
+            changes = {
+                "repeat": {"rule": op.rule, "phrase": " ".join(op.phrase.split()), "start": op.start.isoformat()}
+            }
+            if cur.data.get("due") is None:
+                # A repeat starts on a day: a to-do with none is due on it.
+                changes |= {"due": op.start.isoformat(), "due_words": None, "due_check": False, "due_event": None}
+                changes["due_by_person"] = _persons_own(tx, ctx)
+        tx.update("action", op.id, changes, w, read_version=cur.version)
+        made("action", op.id)
     elif isinstance(op, ActionMoveOp):
         cur = tx.get("action", op.id)
         due, check = _due(tx, ctx, source, op.due_words, op.due)
@@ -3305,6 +3331,16 @@ def _apply_op(
         tx.update("person", op.person, {"how_to_reach": reach}, w, read_version=found.version)
         made("person", op.person)
     return touched, None
+
+
+def _next_occurrence(tx: Tx, ctx: Context, ended: Any, w: WriteContext, made: Any) -> None:
+    """When an action that repeats ends, its next occurrence is made in the same change, so Undo takes both back."""
+    from engine import repeats
+
+    if ended.data.get("repeat"):
+        found = repeats.make_next(tx, ended, w, repeats.local_today(ctx.store, ctx.cfg))
+        if found:
+            made("action", found)
 
 
 def _due(tx: Tx, ctx: Context, source: str | None, words: str | None, given: date | None) -> tuple[date | None, bool]:

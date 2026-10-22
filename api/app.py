@@ -39,6 +39,7 @@ from api.promise_routes import build_promise_router
 from api.quality_routes import build_quality_router
 from api.records_routes import build_records_router
 from api.reminder_routes import build_reminder_router
+from api.repeat_routes import build_repeat_router
 from api.reply_routes import build_reply_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
@@ -333,6 +334,7 @@ def create_app(
     inner.include_router(build_today_router(ws, cfg, store, events, worker))
     inner.include_router(build_promise_router(ws, cfg, store, events, worker))
     inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
+    inner.include_router(build_repeat_router(cfg, store, events, worker))
     inner.include_router(build_since_router(ws, cfg, store, events, worker))
     inner.include_router(build_reply_router(ws, cfg, store, events, worker))
     inner.include_router(build_action_work_router(ws, cfg, store, events, worker))

@@ -6376,6 +6376,41 @@
         "title": "DroppedQuestionView",
         "type": "object"
       },
+      "EarlierOccurrence": {
+        "description": "An occurrence of a repeating to-do that has ended: its day and how it ended.",
+        "properties": {
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "how": {
+            "enum": [
+              "done",
+              "dropped"
+            ],
+            "title": "How",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "how"
+        ],
+        "title": "EarlierOccurrence",
+        "type": "object"
+      },
       "EndingAnswer": {
         "description": "The answer to \"Done by <owner>, or no longer needed?\": `done` closes the action and credits its owners,\n`called_off` drops it and credits nobody, with the words it quoted as the reason.",
         "properties": {
@@ -12141,6 +12176,17 @@
             "title": "Project Name",
             "type": "string"
           },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepeatView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How it repeats, when it does, said back from data."
+          },
           "since": {
             "default": "",
             "description": "The day it was made, as an ISO date.",
@@ -17417,6 +17463,14 @@
             "title": "Details",
             "type": "array"
           },
+          "earlier_occurrences": {
+            "description": "For a to-do that repeats: the occurrences that ended, oldest first, with how each ended.",
+            "items": {
+              "$ref": "#/components/schemas/EarlierOccurrence"
+            },
+            "title": "Earlier Occurrences",
+            "type": "array"
+          },
           "fact_source": {
             "anyOf": [
               {
@@ -17464,6 +17518,17 @@
             },
             "title": "Open Questions",
             "type": "array"
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepeatView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a to-do that repeats: how, said back from data."
           },
           "version": {
             "title": "Version",
@@ -17659,6 +17724,265 @@
           "at"
         ],
         "title": "ReminderItemView",
+        "type": "object"
+      },
+      "RepeatCheckIn": {
+        "properties": {
+          "phrase": {
+            "description": "The words typed for the repeat.",
+            "title": "Phrase",
+            "type": "string"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The to-do's day; left out, the repeat is read from today.",
+            "title": "Start"
+          }
+        },
+        "required": [
+          "phrase"
+        ],
+        "title": "RepeatCheckIn",
+        "type": "object"
+      },
+      "RepeatCheckView": {
+        "description": "What words typed for a repeat say (POST /api/repeats/check). `ok`: the repeat starts on `start` with `shape`\nand `rule`. `off_start`: the words are clear but the day given isn't one of theirs; `start` is the first that is.\n`unclear`: nothing is read, and nothing repeats.",
+        "properties": {
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          },
+          "shape": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepeatShapeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "off_start",
+              "unclear"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "RepeatCheckView",
+        "type": "object"
+      },
+      "RepeatSetIn": {
+        "properties": {
+          "phrase": {
+            "description": "The words typed for the repeat.",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Phrase",
+            "type": "string"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day; the to-do's own day, or, when it has none, the first day the words fall on.",
+            "title": "Start"
+          }
+        },
+        "required": [
+          "phrase"
+        ],
+        "title": "RepeatSetIn",
+        "type": "object"
+      },
+      "RepeatShapeView": {
+        "description": "A repeat as data the screen says back from its wording sheet (`engine/repeat_phrases.py`): `kind` says which of\nthe others are set. daily: interval. weekdays: none. weekly: interval and weekday. weekly_days: interval and\nweekdays. monthly_day: interval and day. monthly_days: interval and days. monthly_last_day: interval. monthly_nth:\nordinal and weekday. monthly_nths: ordinals and weekday. monthly_weekday: position (first or last). yearly: month\nand day. yearly_nth: month, ordinal and weekday. Weekdays, months and ordinals are English words used as keys.",
+        "properties": {
+          "day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "days": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval"
+          },
+          "kind": {
+            "enum": [
+              "daily",
+              "weekdays",
+              "weekly",
+              "weekly_days",
+              "monthly_day",
+              "monthly_days",
+              "monthly_last_day",
+              "monthly_nth",
+              "monthly_nths",
+              "monthly_weekday",
+              "yearly",
+              "yearly_nth"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "ordinal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ordinal"
+          },
+          "ordinals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ordinals",
+            "type": "array"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "enum": [
+                  "first",
+                  "last"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "weekday": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekday"
+          },
+          "weekdays": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RepeatShapeView",
+        "type": "object"
+      },
+      "RepeatView": {
+        "description": "How a to-do repeats: the words as typed, and what they were read as.",
+        "properties": {
+          "phrase": {
+            "description": "The words the person typed.",
+            "title": "Phrase",
+            "type": "string"
+          },
+          "rule": {
+            "description": "The standard repeat rule the words were read as.",
+            "title": "Rule",
+            "type": "string"
+          },
+          "shape": {
+            "$ref": "#/components/schemas/RepeatShapeView"
+          },
+          "start": {
+            "description": "The day of the first occurrence.",
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phrase",
+          "rule",
+          "start",
+          "shape"
+        ],
+        "title": "RepeatView",
         "type": "object"
       },
       "Reply": {
@@ -23435,6 +23759,96 @@
           }
         },
         "summary": "Merge"
+      }
+    },
+    "/api/actions/{action_id}/repeat": {
+      "post": {
+        "description": "Make an open to-do repeat as the words say, with Undo. A to-do with no day is due on the first day the words\nfall on; words that aren't clear, or a day that isn't one of theirs, are refused in plain words.",
+        "operationId": "set_repeat_api_actions__action_id__repeat_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepeatSetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Repeat"
+      }
+    },
+    "/api/actions/{action_id}/repeat/stop": {
+      "post": {
+        "description": "Stop an open to-do repeating, with Undo. It stays as it is; no next one is made when it ends.",
+        "operationId": "stop_repeat_api_actions__action_id__repeat_stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop Repeat"
       }
     },
     "/api/actions/{action_id}/reply": {
@@ -30782,6 +31196,45 @@
           }
         },
         "summary": "Remind"
+      }
+    },
+    "/api/repeats/check": {
+      "post": {
+        "description": "What the words typed for a repeat are read as, from the to-do's day (or today). Nothing is kept.",
+        "operationId": "check_api_repeats_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepeatCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepeatCheckView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check"
       }
     },
     "/api/replies/{action_id}/answered": {

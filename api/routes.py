@@ -167,7 +167,7 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
-from engine import catch_up, endings, held_ask, learned, source_intake
+from engine import catch_up, endings, held_ask, learned, repeats, source_intake
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -1623,6 +1623,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     owners = [o["person"] for o in cur.data.get("owners", [])]
                     change |= {"done_by": owners, "reported_by": cfg.workspace.user.person}
                 tx.update("action", action_id, change, _PM, read_version=cur.version)
+                if cur.data.get("repeat"):
+                    # The next occurrence is made with the ending, and a reopening (Undo) takes it back.
+                    if body.status == "done":
+                        repeats.make_next(tx, cur, _PM, repeats.local_today(store, cfg))
+                    elif body.status == "open" and cur.data["status"] == "done":
+                        repeats.take_back_next(tx, cur, _PM)
 
         guard(do)
         request = hand_note(("action", action_id), body.note, "mark_done" if body.status == "done" else "reopened")

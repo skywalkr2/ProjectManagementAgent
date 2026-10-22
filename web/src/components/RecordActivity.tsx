@@ -6,6 +6,7 @@ import { type S } from "../lib/api";
 import { day, monthDay } from "../lib/dates";
 import { forMeeting } from "../lib/meetings";
 import { useFieldLabel } from "../lib/records";
+import { useSaid } from "../lib/repeat";
 import { recordView, viewHref } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { Pill } from "../ui/Pill";
@@ -57,6 +58,8 @@ export function RecordActivity(props: { page: Page }) {
     const time = e.moved_again === 2 ? t("record.activity.time.second") : e.moved_again === 3 ? t("record.activity.time.third") : t("record.activity.time.many", { n: e.moved_again });
     return t("record.activity.moved_again", { time, date: monthDay(e.moved_since) });
   };
+  const said = useSaid();
+  const earlier = page.earlier_occurrences ?? [];
   const completed = page.completed_actions ?? [];
   const open = page.open_actions.length + page.open_questions.length;
   return (
@@ -93,6 +96,25 @@ export function RecordActivity(props: { page: Page }) {
           </ul>
         </Section>
       )}
+      {(page.repeat || earlier.length > 0) && (
+        <Section id="record-repeat" title={t("repeat.section")}>
+          {page.repeat && <p>{said(page.repeat)}</p>}
+          {earlier.length > 0 && (
+            <>
+              <h4 className="hint">{t("repeat.earlier")}</h4>
+              <ul className="queue">
+                {earlier.map((e) => (
+                  <Row
+                    key={e.id}
+                    pill={<Pill tone={e.how === "done" ? "ok" : "neutral"}>{t(`repeat.ended.${e.how}`)}</Pill>}
+                    title={<a href={viewHref(recordView("action", e.id))}>{e.due ? day(e.due) : page.name}</a>}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+        </Section>
+      )}
       {completed.length > 0 && (
         <Section id="record-completed" title={t("record.completed")} count={completed.length}>
           <ul className="queue">
@@ -126,7 +148,7 @@ export function RecordActivity(props: { page: Page }) {
           </ol>
         </Section>
       )}
-      {open === 0 && completed.length === 0 && page.activity.length === 0 && <p className="hint">{t("record.nothing_yet")}</p>}
+      {open === 0 && completed.length === 0 && !page.repeat && earlier.length === 0 && page.activity.length === 0 && <p className="hint">{t("record.nothing_yet")}</p>}
       <span className="sr">{tn("record.items_count", open)}</span>
     </div>
   );

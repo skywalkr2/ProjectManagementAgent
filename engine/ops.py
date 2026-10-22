@@ -501,6 +501,41 @@ class ActionMoveOp(OpModel):
         return f"Move the date of {named(view, 'action', self.id)}"
 
 
+class ActionRepeatOp(OpModel):
+    """Set how an open action repeats, or stop it repeating. To set one, give the repeat rule the grammar read from the
+    person's words (`rule`), the words themselves (`phrase`) and the day of the first occurrence (`start`, the
+    action's own due day when it has one); the rule must be one the repeat grammar can say back, or the op is
+    refused. Leave all three out to stop it repeating. When the action has no due day it is due on `start`. Refused
+    if the action doesn't exist or isn't open. From the person it applies at once; read from an input, it waits for
+    the person's yes. Evidence is required from the assistant: the exact words that say it repeats."""
+
+    op: Literal["action.repeat"] = "action.repeat"
+    id: str = Field(description="The id of the open action.")
+    rule: str | None = Field(
+        None,
+        max_length=200,
+        description="The repeat rule (an iCalendar RRULE value) the phrase reads as; left out to stop repeating.",
+    )
+    phrase: str | None = Field(
+        None, min_length=1, max_length=120, description="The words the repeat was read from, as written."
+    )
+    start: date | None = Field(None, description="The day of the first occurrence; a rule needs one.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
+
+    @model_validator(mode="after")
+    def _all_or_none(self) -> ActionRepeatOp:
+        given = [self.rule is not None, bool((self.phrase or "").strip()), self.start is not None]
+        if any(given) and not all(given):
+            raise ValueError("a repeat needs its rule, its words and its first day; leave all three out to stop it")
+        return self
+
+    def describe(self, view: Any = None) -> str | None:
+        what = named(view, "action", self.id)
+        return f"Stop {what} repeating" if self.rule is None else f"Make {what} repeat"
+
+
 class ActionPartOp(OpModel):
     """The input says part of an open action was delivered: say what was delivered and what is left. What was
     delivered is credited in its news; the action's text becomes what is left, which stays open. Refused if the action
@@ -1547,6 +1582,7 @@ Op = Annotated[
     | ActionUnholdOp
     | ActionDropOp
     | ActionMoveOp
+    | ActionRepeatOp
     | ActionPartOp
     | ActionNewsOp
     | QuestionAddOp
@@ -1623,6 +1659,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "action.unhold": ActionUnholdOp,
     "action.drop": ActionDropOp,
     "action.move": ActionMoveOp,
+    "action.repeat": ActionRepeatOp,
     "action.part": ActionPartOp,
     "action.news": ActionNewsOp,
     "question.add": QuestionAddOp,
@@ -1762,6 +1799,7 @@ NEEDS_EVIDENCE = {
     "action.unhold",
     "action.drop",
     "action.move",
+    "action.repeat",
     "action.part",
     "action.news",
     "question.drop",
@@ -1780,6 +1818,7 @@ EVIDENCE_UNLESS_PERSON = {
     "action.unhold",
     "action.drop",
     "action.move",
+    "action.repeat",
     "action.part",
     "question.drop",
 }

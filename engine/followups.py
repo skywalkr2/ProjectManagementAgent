@@ -749,6 +749,10 @@ def they_finished(store: Store, cfg: Config, action_id: str, person: str) -> Non
         rec = _owned_open_action(tx, action_id, person)
         credit = {"status": "done", "done_by": [person], "reported_by": People(store, cfg).pm}
         tx.update("action", action_id, credit, _PM, read_version=rec.version)
+        if rec.data.get("repeat"):
+            from engine import repeats
+
+            repeats.make_next(tx, rec, _PM, repeats.local_today(store, cfg))
 
 
 def _open_action(tx: Any, action_id: str) -> Any:

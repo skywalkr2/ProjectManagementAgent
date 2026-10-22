@@ -1504,6 +1504,78 @@ class ProjectKnowsView(BaseModel):
     unknown: list[KnowsUnknown] = Field(description="What is still unknown.")
 
 
+class RepeatShapeView(BaseModel):
+    """A repeat as data the screen says back from its wording sheet (`engine/repeat_phrases.py`): `kind` says which of
+    the others are set. daily: interval. weekdays: none. weekly: interval and weekday. weekly_days: interval and
+    weekdays. monthly_day: interval and day. monthly_days: interval and days. monthly_last_day: interval. monthly_nth:
+    ordinal and weekday. monthly_nths: ordinals and weekday. monthly_weekday: position (first or last). yearly: month
+    and day. yearly_nth: month, ordinal and weekday. Weekdays, months and ordinals are English words used as keys."""
+
+    kind: Literal[
+        "daily",
+        "weekdays",
+        "weekly",
+        "weekly_days",
+        "monthly_day",
+        "monthly_days",
+        "monthly_last_day",
+        "monthly_nth",
+        "monthly_nths",
+        "monthly_weekday",
+        "yearly",
+        "yearly_nth",
+    ]
+    interval: int | None = None
+    weekday: str | None = None
+    weekdays: list[str] = Field(default_factory=list)
+    day: int | None = None
+    days: list[int] = Field(default_factory=list)
+    ordinal: str | None = None
+    ordinals: list[str] = Field(default_factory=list)
+    position: Literal["first", "last"] | None = None
+    month: str | None = None
+
+
+class RepeatView(BaseModel):
+    """How a to-do repeats: the words as typed, and what they were read as."""
+
+    phrase: str = Field(description="The words the person typed.")
+    rule: str = Field(description="The standard repeat rule the words were read as.")
+    start: date = Field(description="The day of the first occurrence.")
+    shape: RepeatShapeView
+
+
+class EarlierOccurrence(BaseModel):
+    """An occurrence of a repeating to-do that has ended: its day and how it ended."""
+
+    id: str
+    due: date | None = None
+    how: Literal["done", "dropped"]
+
+
+class RepeatCheckIn(BaseModel):
+    phrase: str = Field(description="The words typed for the repeat.")
+    start: date | None = Field(None, description="The to-do's day; left out, the repeat is read from today.")
+
+
+class RepeatCheckView(BaseModel):
+    """What words typed for a repeat say (POST /api/repeats/check). `ok`: the repeat starts on `start` with `shape`
+    and `rule`. `off_start`: the words are clear but the day given isn't one of theirs; `start` is the first that is.
+    `unclear`: nothing is read, and nothing repeats."""
+
+    status: Literal["ok", "off_start", "unclear"]
+    rule: str | None = None
+    shape: RepeatShapeView | None = None
+    start: date | None = None
+
+
+class RepeatSetIn(BaseModel):
+    phrase: str = Field(min_length=1, max_length=120, description="The words typed for the repeat.")
+    start: date | None = Field(
+        None, description="The first day; the to-do's own day, or, when it has none, the first day the words fall on."
+    )
+
+
 class RecordPageView(BaseModel):
     """A record's page (design 7.14): its name, details in declared order with names resolved, what is open with
     it, and its activity, newest first."""
@@ -1527,6 +1599,11 @@ class RecordPageView(BaseModel):
         default_factory=list,
         description="For a calendar entry: what is to be taken up at it, its own items and, when it is the next "
         "meeting of a series, the series' after them.",
+    )
+    repeat: RepeatView | None = Field(None, description="For a to-do that repeats: how, said back from data.")
+    earlier_occurrences: list[EarlierOccurrence] = Field(
+        default_factory=list,
+        description="For a to-do that repeats: the occurrences that ended, oldest first, with how each ended.",
     )
     activity: list[ActivityEntry]
 
@@ -5034,6 +5111,7 @@ class OpenActionView(BaseModel):
         description="For one with no owner, the open question asking who owns it (answered with POST "
         "/api/questions/{id}/answer).",
     )
+    repeat: RepeatView | None = Field(None, description="How it repeats, when it does, said back from data.")
 
 
 class MeetingIn(BaseModel):

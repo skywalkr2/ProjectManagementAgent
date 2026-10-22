@@ -19,6 +19,7 @@ import {
   type OpenAction,
   type OpenQuestion,
 } from "../lib/open-items";
+import { useSaid } from "../lib/repeat";
 import { revealOrKeep } from "../lib/reveal";
 import { toHash } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -29,6 +30,7 @@ import { AskChooser } from "./AskChooser";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { useDropAction } from "./DropAction";
 import { useEditAction } from "./EditAction";
+import { useStopRepeat } from "./StopRepeat";
 import { NoteBox, useNoted } from "./NoteBox";
 import { HoldNote, useHold } from "./OnHold";
 import styles from "./OpenItems.module.css";
@@ -168,6 +170,8 @@ function ActionRow(props: { action: OpenAction }) {
   const reassign = useReassign(a, focus);
   const hand = useHandToAssistant(a, focus);
   const edit = useEditAction(a, focus);
+  const stopRepeat = useStopRepeat(a);
+  const said = useSaid();
   const done = (note?: string) =>
     act(
       () => api.actionStatus(a.id, "done", note),
@@ -193,6 +197,7 @@ function ActionRow(props: { action: OpenAction }) {
     ...(merge ? [merge] : []),
     ...(unowned || !hand.entry ? [] : [hand.entry]),
     ...(unowned ? [] : [hold.entry]),
+    ...(stopRepeat ? [stopRepeat] : []),
     change.entry,
     drop.entry,
   ];
@@ -204,6 +209,11 @@ function ActionRow(props: { action: OpenAction }) {
       </strong>
     ),
     a.due && t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }),
+    a.repeat && (
+      <span key="r" data-repeat="" title={said(a.repeat)}>
+        {t("repeat.mark")}
+      </span>
+    ),
     a.project_name && <ProjectTag key="p" name={a.project_name} parent={a.parent_name} />,
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,

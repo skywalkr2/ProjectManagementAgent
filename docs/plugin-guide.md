@@ -686,7 +686,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `act.draft`, `action.close`, `action.drop`, `action.hold`, `action.move`, `action.part`, `action.reply`, `action.unhold`, `agenda.add`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `source.widen`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `act.draft`, `action.close`, `action.drop`, `action.hold`, `action.move`, `action.part`, `action.repeat`, `action.reply`, `action.unhold`, `agenda.add`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `source.widen`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1351,6 +1351,11 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `news[].source` | str \| None | `None` | The id of the source it came from, if any. |
 | `news[].delivered` | bool | `False` | It records a part that was delivered, credited to the owners. |
 | `news[].non_answer` | bool | `False` | It records a reply that didn't answer (an acknowledgement, thanks, a deferral or a change of subject), written by the news op. A non-answer restarts the chase clock once; a second brings the line back with the news shown. Other news (a part delivered, a call-off) has none. |
+| `repeat` | Repeat \| None | see below | How it repeats, when it does (design 6.32): each occurrence is its own action, and the next one is made when this one ends. Set and stopped by `action.repeat`. |
+| `repeat.rule` | str | required | The repeat rule (an iCalendar RRULE value) the phrase was read as. |
+| `repeat.phrase` | str | required | The words the person typed, kept as they were written. |
+| `repeat.start` | date | required | The day of the first occurrence; the rule's counting starts from it. |
+| `occurrence_of` | str \| None | `None` | For a later occurrence of a repeating to-do, the id of the first occurrence; empty for the first. |
 | `work` | str \| None | `None` | The work the action stands for (a message, a list, a page) when the assistant drafted it at the person's request. It is long text: a draft waits for the person's review and is theirs once they accept it. The action itself stays the person's. |
 
 ### `question` (Q-n)
@@ -2498,6 +2503,20 @@ The input says part of an open action was delivered: say what was delivered and 
 | `id` | str | required | The id of the open action that was partly delivered. |
 | `delivered` | str | required | What was delivered, in plain words. |
 | `left` | str | required | What is left to do, starting with a verb. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `action.repeat`
+
+Set how an open action repeats, or stop it repeating. To set one, give the repeat rule the grammar read from the person's words (`rule`), the words themselves (`phrase`) and the day of the first occurrence (`start`, the action's own due day when it has one); the rule must be one the repeat grammar can say back, or the op is refused. Leave all three out to stop it repeating. When the action has no due day it is due on `start`. Refused if the action doesn't exist or isn't open. From the person it applies at once; read from an input, it waits for the person's yes. Evidence is required from the assistant: the exact words that say it repeats.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the open action. |
+| `rule` | str \| None | `None` | The repeat rule (an iCalendar RRULE value) the phrase reads as; left out to stop repeating. |
+| `phrase` | str \| None | `None` | The words the repeat was read from, as written. |
+| `start` | date \| None | `None` | The day of the first occurrence; a rule needs one. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 

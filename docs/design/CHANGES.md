@@ -1043,11 +1043,18 @@ yet follow, that it is *designed*, with its phase.
 | Settings (4.6) | None | `watch.acting` (accounts the assistant may act on, picked from a live list), `language.messages.undo_no_answer`, each with a description, a default and demo values in both fictional workspaces |
 | API | `GET /api/acts?status=`; no undo | several `status` values and a `limit`; `POST /api/acts/{id}/undo`; `ActView` carries action, about, account, event fields and why Copy carries it; `POST /api/sign-ins/{name}/start?acting=true`; the sign-in view says which accounts are let act |
 
-## 184. Repeating to-dos, designed (2026-10-22; S2, designed)
+## 184. Repeating to-dos, designed and built in part (2026-10-22; S2)
 
 - **Design 6.32, "Repeating to-dos":** a repeat typed in the person's words and said back before it is kept; each
   occurrence its own to-do, only the next one existing; the next made when one ends, Undo taking both back; a missed one
   stays open and the next waits for it; Stop repeating; a repeat the assistant reads from an input waits for the yes.
+- **Built (S2, first slice):** the grammar reads wording variants, several weekdays, "weekdays except Friday", several
+  days of the month, the last day, weekday or a given weekday of the month, a yearly weekday and February 29
+  (`tests/test_repeat_phrases.py`, `tests/test_phrase_cases.py`); `action.repeat`, the `repeat` and `occurrence_of`
+  fields and the next occurrence made with the ending (`tests/test_repeating_todos.py`); the routes
+  `POST /api/repeats/check`, `POST /api/actions/{id}/repeat` and `.../repeat/stop`; the Repeats field, the row's mark,
+  Stop repeating and the page's earlier occurrences (`web/src/components/RepeatingTodos.test.tsx`). Left: adding a
+  to-do by hand (no form yet), teaching the assistant to propose a repeat from an input, the mark on Today's rows.
 
 ## 183. Mail and calendar acts, designed (2026-10-22; S1b-2, designed)
 

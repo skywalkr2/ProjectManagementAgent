@@ -51,6 +51,7 @@ def _action(r: OpenAction) -> OpenActionView:
         owner_question=r.owner_question,
         to_send=r.to_send,
         due_check=r.due_check,
+        repeat=r.repeat,  # type: ignore[arg-type]
     )
 
 

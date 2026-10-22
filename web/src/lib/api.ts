@@ -334,6 +334,12 @@ export const api = {
     call<S["Applied"]>("POST", `lists/${named(list)}/rename`, { value, to }),
   listRetire: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/retire`, { value }),
   editRecord: (body: S["RecordEdit"]) => call<S["Applied"]>("POST", "records/edit", body),
+  /** What words typed for a repeat are read as, from the to-do's day; nothing is kept. */
+  checkRepeat: (body: S["RepeatCheckIn"]) => call<S["RepeatCheckView"]>("POST", "repeats/check", body),
+  /** Make a to-do repeat as the words say, with Undo. */
+  setRepeat: (a: string, body: S["RepeatSetIn"]) => call<S["Applied"]>("POST", `actions/${id(a)}/repeat`, body),
+  /** Stop a to-do repeating, with Undo; it stays as it is. */
+  stopRepeat: (a: string) => call<S["Applied"]>("POST", `actions/${id(a)}/repeat/stop`),
   /** Why a promise exists: its words, who owes it to whom, its day, how it is known and what was heard since. */
   remind: (action: string, body: S["ReminderIn"]) => call<S["Applied"]>("POST", `reminders/${id(action)}`, body),
   promise: (action: string) => call<S["PromiseView"]>("GET", `promises/${id(action)}`),

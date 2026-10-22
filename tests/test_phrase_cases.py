@@ -94,3 +94,33 @@ def test_a_repeat_the_rules_read_is_the_one_a_person_means(case):
         return
     assert case["rule"] != "unclear", f"{case['phrase']!r} is unclear, but the rules read it as {got}"
     assert _dates(got, start, 24) == _dates(case["rule"], start, 24)
+
+
+# The helper's phrases that carry the to-do's own words (what to water, which meeting): the repeat is the part of a
+# phrase about when, so the rules read the Repeats field, never words about what is to be done.
+WITH_TASK_WORDS = {
+    "water the plants every day",
+    "weekday standup",
+    "water plants every 2 days",
+    "school pickup every Saturday",
+}
+
+
+def _start_of(case):
+    return date.fromisoformat(case["start"]) if case["start"] else date(2026, 11, 2)
+
+
+def test_the_rules_read_every_repeat_the_helper_wrote_except_those_with_the_task_in_them():
+    """Every phrase the helper marked as a repeat is read, and read as the helper's rule (the test above checks the
+    dates); the unclear ones and the phrases that carry other words stay declined, so nothing is read wrongly."""
+    clear = [case for case in REPEAT if case["rule"] != "unclear"]
+    declined = {c["phrase"] for c in clear if isinstance(rule_from_phrase(c["phrase"], _start_of(c)), Unknown)}
+    assert declined == WITH_TASK_WORDS
+    unclear = [case for case in REPEAT if case["rule"] == "unclear"]
+    assert unclear and all(isinstance(rule_from_phrase(c["phrase"], _start_of(c)), Unknown) for c in unclear)
+    assert len(clear) - len(declined) >= 40
+
+
+@pytest.mark.parametrize("phrase", sorted(WITH_TASK_WORDS))
+def test_a_phrase_with_the_task_in_it_is_declined_not_guessed(phrase):
+    assert isinstance(rule_from_phrase(phrase, date(2026, 11, 2)), Unknown)

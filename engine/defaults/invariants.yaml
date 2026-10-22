@@ -102,6 +102,7 @@ invariants:
       - action.unhold
       - action.drop
       - action.move
+      - action.repeat
       - action.part
       - action.news
       - action.reply
@@ -166,6 +167,7 @@ invariants:
       - action.unhold
       - action.drop
       - action.move
+      - action.repeat
       - action.part
       - action.news
       - question.drop

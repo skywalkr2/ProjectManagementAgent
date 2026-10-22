@@ -454,6 +454,17 @@ class Project(Record):
     )
 
 
+class Repeat(BaseModel):
+    """How a to-do repeats: the phrase as the person typed it, the standard repeat rule it was read as, and the day the
+    repeat started. Set by `action.repeat`; each occurrence is its own action carrying the same repeat."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rule: str = Field(min_length=1, description="The repeat rule (an iCalendar RRULE value) the phrase was read as.")
+    phrase: str = Field(min_length=1, description="The words the person typed, kept as they were written.")
+    start: date = Field(description="The day of the first occurrence; the rule's counting starts from it.")
+
+
 class Action(Record):
     """Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`;
     `action.reply` approves or replaces its drafted reply (only the person does), `record.set` changes text, due, notes
@@ -568,6 +579,15 @@ class Action(Record):
     )
     news: list[ActionNews] = Field(
         default_factory=list, description="What was heard about it that didn't end it, oldest first."
+    )
+    repeat: Repeat | None = Field(
+        None,
+        description="How it repeats, when it does (design 6.32): each occurrence is its own action, and the next one "
+        "is made when this one ends. Set and stopped by `action.repeat`.",
+    )
+    occurrence_of: Annotated[str | None, RefTo("action")] = Field(
+        None,
+        description="For a later occurrence of a repeating to-do, the id of the first occurrence; empty for the first.",
     )
     work: Annotated[str | None, LongText("markdown")] = Field(
         None,
@@ -2394,6 +2414,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("said_by", "person"),
         ("asker", "person"),
         ("due_event", "event"),
+        ("occurrence_of", "action"),
         ("on_hold.on", "person"),
         ("on_hold.on", "action"),
         ("on_hold.on", "question"),

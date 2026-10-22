@@ -1128,6 +1128,18 @@ S2. **Time and attention:**
   Tuesday"); the last day, weekday or a given day of the month; a yearly weekday ("the last Friday in November"); and
   February 29 falling on the 28th. Each needs a shape and its wording to say it back; unclear ones ("biweekly",
   "quarterly") stay declined and asked.
+  **Built so far (S2):** the grammar reads all of those phrases, each with a shape
+  (`tests/test_repeat_phrases.py`, `tests/test_phrase_cases.py::test_the_rules_read_every_repeat_the_helper_wrote_except_those_with_the_task_in_them`;
+  the four phrases that carry the to-do's own words stay declined, "biweekly" and "quarterly" stay unclear); a repeat on
+  a to-do (`action.repeat`, `repeat` and `occurrence_of` on the action) set by the person at once with Undo, from an
+  input waiting for the yes; the next occurrence made in the same change when one is done, dropped or done by someone
+  else, a missed one staying open and Undo taking both back (`tests/test_repeating_todos.py`); the check route, the set
+  and stop routes and the views' `repeat` and earlier occurrences (`tests/test_repeating_todos.py::test_checking_a_phrase_says_what_was_understood_or_that_it_is_not_clear`);
+  and the screens: the Repeats field in the edit form with its said-back words, the row's repeat mark, Stop repeating
+  and the page's earlier occurrences (`web/src/components/RepeatingTodos.test.tsx`, `web/src/lib/repeat.test.ts`).
+  **Left:** there is no form for adding a to-do by hand yet, so the Repeats field is on the edit form only; the
+  assistant is not yet taught to propose `action.repeat` from a sentence like "I send the report every Friday" (no
+  prompt line or extraction case); the repeat mark is on the open-items row only, not on Today's to-do rows.
 - [ ] [S2] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
   `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
   added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed

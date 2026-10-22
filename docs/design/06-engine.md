@@ -3168,6 +3168,14 @@ people and details, and never acts in their name without their yes on the exact 
   the first rule date from that day. "Stop repeating" in the to-do's menu ends the repeat and leaves the open one as
   it is; its detail lists the earlier occurrences and how each ended. A repeat set by the person applies at once; one
   the assistant read from an input ("I send the report every Friday") is a suggestion that waits for their yes.
+  **Built so far:** the grammar and its shapes (`tests/test_repeat_phrases.py`, `tests/test_phrase_cases.py`); the
+  repeat on a to-do (`repeat`, `occurrence_of`, the op `action.repeat`) and the next occurrence made in the same change
+  as the ending, whichever way it ends, with Undo taking both back (`tests/test_repeating_todos.py`); the words
+  checked as the person types (`POST /api/repeats/check`), said back from data under the Repeats field of the edit
+  form, a repeat mark on the row, Stop repeating in its menu and the earlier occurrences on the to-do's page
+  (`web/src/components/RepeatingTodos.test.tsx`). A phrase that carries the to-do's own words ("water the plants every
+  day") is declined, since the field holds the repeat only. **Left:** a form to add a to-do by hand, teaching the
+  assistant to propose `action.repeat` from an input, and the mark on Today's rows.
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank

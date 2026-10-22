@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time
 from typing import Any
 
+from engine import repeats
 from engine.applier import _similar, apply_as_person
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.firm_due import firm_due
@@ -68,6 +69,8 @@ class OpenAction:
     to_send: bool = False
     #: Its date is one the rules couldn't read for certain: it is shown to be checked and is never a deadline.
     due_check: bool = False
+    #: How it repeats, when it does (`engine.repeats.view_of`).
+    repeat: dict[str, Any] | None = None
 
 
 @dataclass
@@ -185,6 +188,7 @@ def open_actions(
                 owner_question=asking_owner.get(a.id) if state == "no_owner" else None,
                 to_send=a.id in to_send,
                 due_check=bool(d.get("due_check")) and due is not None,
+                repeat=repeats.view_of(d.get("repeat")),
             )
         )
     if not light:
