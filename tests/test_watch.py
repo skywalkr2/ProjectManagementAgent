@@ -721,3 +721,39 @@ def test_the_line_for_an_unread_source_is_served_on_the_queue(tmp_path):
     ]
     assert (line["group"], line["source"], line["subject"], line["problem_kind"]) == ("risk", "s", "Board", "auth")
     assert line["waiting_since"] and "Sign in" in line["text"]
+
+
+def test_a_source_not_read_successfully_within_the_stale_hours_is_named_by_when_it_was_last_read(tmp_path):
+    from engine.watch import refresh, stale_since
+
+    ws, cfg, store = make(
+        tmp_path,
+        [
+            {"id": "read", "connector": "fake", "label": "Work mailbox", "every_minutes": 30},
+            {
+                "id": "failing",
+                "connector": "fake",
+                "label": "Board",
+                "every_minutes": 30,
+                "settings": {"error": "auth"},
+            },
+            {"id": "never", "connector": "fake", "label": "Archive", "every_minutes": 30, "enabled": False},
+        ],
+        stale_after_hours=6,
+    )
+    try:
+        refresh(ws, store, cfg, "read", NOW)
+        refresh(ws, store, cfg, "failing", NOW)
+        by_id = {s.id: s for s in cfg.watch.sources}
+        within = NOW + timedelta(hours=cfg.watch.stale_after_hours)
+        after = within + timedelta(minutes=1)
+        assert stale_since(store, cfg, by_id["read"], within) is None, "exactly the hours is not more than them"
+        assert stale_since(store, cfg, by_id["read"], after) == str(
+            store.read().find("watch_run", {"source": "read"})[-1].data["started_at"]
+        )
+        assert stale_since(store, cfg, by_id["failing"], after) is None, "never read: not read yet, a state of its own"
+        assert stale_since(store, cfg, by_id["never"], after) is None, "turned off"
+        refresh(ws, store, cfg, "read", after)
+        assert stale_since(store, cfg, by_id["read"], after) is None, "a good read ends it"
+    finally:
+        store.close()

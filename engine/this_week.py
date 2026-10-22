@@ -13,6 +13,7 @@ from typing import Any
 
 from engine.blocked import standing_hold
 from engine.config.schema import WEEKDAYS
+from engine.firm_due import firm_due
 from engine.names import People
 from engine.today import AgendaItem, agenda, zone
 
@@ -70,7 +71,7 @@ def this_week(store: Any, cfg: Any, now: datetime) -> Week:
         d = record.data
         if d.get("status") != "open" or standing_hold(reader, d, people):
             continue
-        day = date.fromisoformat(str(d["due"])) if d.get("due") else None
+        day = firm_due(d)
         owners = [o["person"] for o in d.get("owners") or [] if o.get("person")]
         mine = pm is not None and pm in owners
         if day is not None and today <= day <= last:

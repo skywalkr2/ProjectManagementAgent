@@ -166,7 +166,9 @@ def found(store: Any, cfg: Any, limit: int, today: date | None = None) -> FirstP
         for a in reader.list("action")
         if a.data.get("status") == "open" and not standing_hold(reader, a.data) and promises.is_promise(a.data)
     ]
-    open_promises.sort(key=lambda a: (a.data.get("due") is None, str(a.data.get("due") or ""), a.data["text"], a.id))
+    # A date still to be checked sorts as no date: it isn't a deadline.
+    firm = lambda a: None if a.data.get("due_check") else a.data.get("due")  # noqa: E731
+    open_promises.sort(key=lambda a: (firm(a) is None, str(firm(a) or ""), a.data["text"], a.id))
     shown = open_promises[: max(0, limit)]
     listed = [
         Promise(

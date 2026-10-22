@@ -2742,6 +2742,13 @@ class WatchFile(FileModel):
         "line on Today for you to act on (1 is as soon as one interval has passed). A source with no network is "
         "not counted.",
     )
+    stale_after_hours: int = Field(
+        24,
+        ge=1,
+        le=720,
+        description="A source that is on and hasn't been read successfully for this many hours is named where Today "
+        "would otherwise say nothing needs you, so a mailbox that isn't being read never looks like a quiet day.",
+    )
     default_data_level: Literal["open", "internal", "restricted"] = Field(
         "internal",
         description="How sensitive what a watched source holds is, when the source and its kind say nothing.",

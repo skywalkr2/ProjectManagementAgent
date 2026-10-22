@@ -2323,6 +2323,7 @@ def _section(
             id=a["id"],
             text=a["text"],
             due=a["due"],
+            due_check=a["due_check"],
             project_name=a["project_name"],
             links=a["links"],
             told=a["told"],

@@ -343,7 +343,7 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 type Tn = (key: string, n: number, vars?: Record<string, string | number>) => string;
 
 function actionMeta(a: S["FollowupAction"], t: T): string {
-  return [a.project_name, a.due ? t("op.meta.due", { date: day(a.due) }) : ""].filter(Boolean).join(" · ");
+  return [a.project_name, a.due ? t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }) : ""].filter(Boolean).join(" · ");
 }
 
 /** One person's message to send. `open` shows the message box from the start (the Today inspector). */
@@ -735,7 +735,7 @@ function NudgeCard(props: { section: S["FollowupSection"]; nudge: S["NudgeView"]
             <span className="title">{a.text}</span>
             <span className="meta">
               {[
-                a.due ? t(a.due < today ? "followups.nudge.overdue" : "op.meta.due", { date: day(a.due) }) : "",
+                a.due ? t(a.due_check ? "op.meta.due_check" : a.due < today ? "followups.nudge.overdue" : "op.meta.due", { date: day(a.due) }) : "",
                 a.told ? tn("followups.sent_on", a.told_days ?? 0, { date: day(a.told) }) : "",
               ]
                 .filter(Boolean)

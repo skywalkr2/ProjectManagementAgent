@@ -240,6 +240,17 @@ test("when a source couldn't be read, neither the heading nor the empty Today sa
   expect(screen.getAllByText(/Work mail couldn't be read since/).length).toBeGreaterThanOrEqual(2);
 });
 
+test("a source not read lately is named where Today would say nothing needs you, with its own label", async () => {
+  const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  show([], { "GET watch": () => [watched("m", { label: "Work mailbox", read_at: old, stale: true, last: { outcome: "ok", started_at: old, new: 0, changed: 0, removed: 0 } })] });
+  const empty = await screen.findByText((_, el) => el?.hasAttribute("data-queue-empty") === true && /hasn't been read since/.test(el.textContent ?? ""));
+  expect(empty.textContent).toMatch(/^Nothing found that needs you/);
+  expect(screen.getByText(/Nothing found that needs you$/)).toBeInTheDocument();
+  expect(screen.queryByText(/Nothing needs you/)).toBeNull();
+  expect(screen.getAllByText(/Work mailbox hasn't been read since/).length).toBeGreaterThanOrEqual(2);
+  expect(screen.queryByText(/Checked 1 connection/)).toBeNull();
+});
+
 test("a row names its project only when the screen holds more than one", async () => {
   const other = line("owner", { key: "question:Q-9", text: "Plan the launch", project: "PRJ-2", project_name: "Autumn book", question: "Q-9" });
   show([decision, other]);

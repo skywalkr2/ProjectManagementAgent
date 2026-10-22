@@ -11,7 +11,7 @@ import { LookBack } from "./LookBack";
 import styles from "./Today.module.css";
 
 interface Part {
-  kind: "read" | "looked" | "unread" | "pending";
+  kind: "read" | "looked" | "unread" | "stale" | "pending";
   text: string;
   key: string;
   /** The source whose mail wasn't looked at before a day: its part offers to look further back. */
@@ -39,11 +39,12 @@ function useParts(found: Coverage): Part[] {
       : t(`coverage.${kind}.never`, { label });
     parts.push({ kind: "unread", key: `unread:${source.id}`, text });
   }
+  for (const source of found.stale) parts.push({ kind: "stale", key: `stale:${source.id}`, text: t("coverage.stale.since", { label: source.label, when: whenWords(source.read_at!, now, t) }) });
   for (const source of found.pending) parts.push({ kind: "pending", key: `pending:${source.id}`, text: t("coverage.pending", { label: source.label }) });
   return parts;
 }
 
-function Parts(props: { found: Coverage; onLookBack?: (source: string) => void }) {
+export function Parts(props: { found: Coverage; onLookBack?: (source: string) => void }) {
   const { t } = useWords();
   const parts = useParts(props.found);
   return (

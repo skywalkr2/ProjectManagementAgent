@@ -28,17 +28,20 @@ daily or weekly review** (`engine/records.py`; nothing in the engine schedules a
    becomes your to-do; "they'll get back to me by Tuesday" becomes a waiting-on with its date. Your sent folder is a
    source by default when a mailbox is connected. (Builds on actions and follow-ups; the change is reading your own
    words for promises, not only others'.)
-2. **Reminders at a time, and notifications that reach you.** Any to-do, waiting-on, fact with a date or calendar entry
-   can carry "remind me" (a time, or "the morning of", "an hour before"). Reminders appear as desktop notifications from
-   the installed app's menu bar or tray (phase I) and as a Today line; the content shown follows the data level rules
-   (counts only where content isn't allowed). Snooze is a choice on the reminder.
+2. **Reminders at a time, and notifications that reach you.** A to-do or a waiting-on (both are actions) carries "remind
+   me" at a time the person picks, and Snooze is a choice on the reminder (built in phase S, batch S1-2: a Today line and
+   a browser notification in the app). A reminder is not set on every dated thing: a date is never a reminder by
+   itself, and a date marked "check this" gives none. A dated fact, booking or bill gets a proposed reminder the person
+   keeps, with the dates-in-documents item (phase S, S4). Desktop notifications from the installed app's menu bar or tray
+   come with phase I; a reminder that reaches a sleeping computer is an approved calendar write or a mail to the person
+   (phase S, S1b-2). The content shown follows the data level rules (counts only where content isn't allowed).
 3. **Repeating to-dos.** "Pay the water bill on the 1st", "send the weekly update every Friday": a repeat rule on a
    to-do, using the same repeat engine the calendar needs for repeating events (open promise P17), each occurrence its
    own row that can be done, moved or skipped.
 4. **The shape of the day: a morning brief and an evening wrap-up.** Morning: today's meetings with what to prepare for
    each, what is due, what you are waiting on that is late, and the three things that matter most (Top priorities).
    Evening: what got done (credited), what moved, what is left for tomorrow, one question if something looks stuck.
-   The Monday briefing (phase B) is the weekly form of the same thing. Each is a page in the app and, if the person
+   The Monday briefing (phase S, S2) is the weekly form of the same thing. Each is a page in the app and, if the person
    wants, a notification.
 5. **Meeting prep and after-meeting capture for any calendar event**, not only series: before it, who is coming, what is
    open with each of them, the last notes and decisions; after it, "what came out of it?" takes a quick note that
@@ -88,16 +91,18 @@ The core stays a base; whole uses go in packs (CLAUDE.md, "The boundary"):
 ## Decisions for the owner
 
 1. **Accept the twelve core additions** (or strike some), and their order.
-2. **Calendar and mail stay read-only?** Today the add-ons only read. A steward would eventually propose calendar holds
-   and send replies, always after your yes on the exact content (through the publisher, phase C4). Keep read-only for 1.0,
-   or plan approved writes?
+2. **Calendar and mail stay read-only?** Decided (owner, 2026-10-17): no. Approved writes are in 1.0 as phase S1b, behind the
+   gate (S1 is proved on a week of real use first). A steward proposes calendar holds and sends replies, always after
+   your yes on the exact content, through the publisher brought forward from phase C4. Until S1b, the add-ons only read.
 3. **Notifications:** desktop notifications from the installed app are proposed; should a phone get them too (a push
    service costs something and needs an account), or is the phone review page enough for 1.0?
 4. **Areas of life:** separate areas with their own AI accounts in one workspace (proposed), or separate workspaces?
-5. **When:** most of this is after phase B. Proposed order: reminders, repeating to-dos and the morning brief in phase B's
-   last wave (they are screens on things the core nearly has); commitments both ways, replies owed, meeting prep and
-   people memory as a new phase S right after phase I; dates in documents, areas, capture and voice after that, before
-   phase C's packs; the PM audit with phase P.
+5. **When:** phase S comes before phase I (the installers), after phase B's screens. Order: S1 first (commitments both
+   ways, replies owed, reminders, the one "what changed since yesterday" line and the coverage line), then a week of
+   real use on the owner's own mail that gates everything else; behind the gate: S1b (approved mail and calendar acts),
+   then S2 (repeating to-dos, the morning brief, the evening wrap-up and the Monday briefing), meeting prep, people
+   memory, dates in documents, areas, capture and voice; then phase I, then phase C's packs; the PM audit with phase P.
+   The roadmap (`docs/project/roadmap-to-1.0.md`) holds the batches.
 
 ## Review, 2026-10-17 (an outside review the owner brought), and what changed
 
@@ -115,10 +120,10 @@ into phase S (the roadmap has the new order):
   **an attention budget** (12); **outcome measures** on the Quality screen (13, part).
 
 Decisions the review raises, for the owner:
-1. **Approved writes** (review 6): today mail and calendar are read-only and replies are copied. Sending a reply or
-   placing a calendar hold after the person's yes on the exact content, with recipient checks and a visible sent/failed
-   status, removes the copy-and-paste step. It needs the publisher (phase C4) and the add-ons asking for send and write
-   access. Keep read-only for 1.0, or bring approved writes in?
+1. **Approved writes** (review 6): decided, in phase S1b behind the gate (owner, 2026-10-17). Today mail and calendar are
+   read-only and replies are copied. Sending a reply or placing a calendar hold after the person's yes on the exact
+   content, with recipient checks and a visible sent/failed status, removes the copy-and-paste step. It needs the
+   publisher (brought forward from phase C4) and the add-ons asking for send and write access.
 2. **A phone when the computer sleeps** (review 10): a desktop app can't remind anyone while its computer sleeps. Options:
    (a) missed reminders shown on waking only (built in S2 either way); (b) the person's own calendar carries the alarm,
    with Thimbleby adding the reminder to it (needs approved calendar writes, decision 1); (c) a push service to the phone

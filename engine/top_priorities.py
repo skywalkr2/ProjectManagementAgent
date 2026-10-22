@@ -24,6 +24,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine.blocked import blocked_actions, holds_up, standing_hold, waits_on_person
+from engine.firm_due import firm_due
 from engine.followups import sections
 from engine.lists import projects_at_risk, value_rank
 from engine.names import People
@@ -130,7 +131,7 @@ def top_priorities(store: Any, cfg: Any, now: datetime) -> TopPriorities:
     for section in sections(store, cfg, today):
         if section.is_pm:
             for a in section.actions:
-                due = date.fromisoformat(str(a["due"])) if a.get("due") else None
+                due = None if a.get("due_check") else date.fromisoformat(str(a["due"])) if a.get("due") else None
                 if a["on_hold"]:
                     # Blocked on a question or another action: the blocker is the act, never this. Waiting on the
                     # person themselves is their own to-do.
@@ -174,7 +175,7 @@ def top_priorities(store: Any, cfg: Any, now: datetime) -> TopPriorities:
         for a in section.actions:
             if a["on_hold"]:
                 continue
-            due = date.fromisoformat(str(a["due"])) if a.get("due") else None
+            due = None if a.get("due_check") else date.fromisoformat(str(a["due"])) if a.get("due") else None
             if due is not None and due < today:
                 counts["overdue"] += 1
                 things.append(Thing("action", a["id"], a["text"], "overdue", due, a["told_days"]))
@@ -300,10 +301,10 @@ def _coming(reader: Any, cfg: Any, people: People, today: date, listed: set[str]
     found: list[Coming] = []
     for record in reader.list("action"):
         d = record.data
-        if d.get("status") != "open" or not d.get("due") or record.id in listed or standing_hold(reader, d, people):
+        if d.get("status") != "open" or record.id in listed or standing_hold(reader, d, people):
             continue
-        due = date.fromisoformat(str(d["due"]))
-        if not today < due <= last:
+        due = firm_due(d)
+        if due is None or not today < due <= last:
             continue
         owners = [o["person"] for o in d.get("owners") or [] if o.get("person")]
         found.append(

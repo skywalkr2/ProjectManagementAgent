@@ -16,6 +16,7 @@ from engine import agenda as agenda_module
 from engine import entry_rules
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.connectors import moment
+from engine.firm_due import firm_due
 from engine.names import People
 from engine.records import entry_time
 
@@ -296,6 +297,8 @@ class Todo:
     #: What its hold is blocked on, when the hold names a blocker (a person, an action or a question). A blocker that is
     #: over (an answered question, a finished action) leaves the to-do unblocked: `on_hold` is None and it is due again.
     blocker: Blocker | None = None
+    #: Its date is one the rules couldn't read for certain: shown to be checked, never a deadline.
+    due_check: bool = False
 
 
 def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
@@ -315,6 +318,7 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
         if data.get("status") != "open" or not any(o.get("person") == me for o in data.get("owners") or []):
             continue
         due = date.fromisoformat(str(data["due"])) if data.get("due") else None
+        firm = firm_due(data)
         hold = data.get("on_hold")
         blocker = blocker_of(view, hold, people, here)
         if blocker is not None and blocker.resolved:
@@ -327,13 +331,16 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
                 text=data["text"],
                 project=data.get("project"),
                 due=due,
-                overdue=due is not None and due < today_here and not hold,
+                overdue=firm is not None and firm < today_here and not hold,
                 on_hold=hold["waiting_for"] if hold else None,
                 remind_at=datetime.fromisoformat(str(data["remind_at"])).astimezone(here)
                 if data.get("remind_at")
                 else None,
                 blocker=blocker,
+                due_check=bool(data.get("due_check")) and due is not None,
             )
         )
     unblocked = lambda t: not (t.blocker is not None and t.blocker.resolved)  # noqa: E731
-    return sorted(found, key=lambda t: (unblocked(t), t.due is None, t.due or today_here, t.text))
+    # A date to be checked sorts as no date: it isn't a deadline.
+    dated = lambda t: None if t.due_check else t.due  # noqa: E731
+    return sorted(found, key=lambda t: (unblocked(t), dated(t) is None, dated(t) or today_here, t.text))

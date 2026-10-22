@@ -208,7 +208,7 @@ function ActionRow(props: { action: OpenAction }) {
         {t("action.to_send")}
       </strong>
     ),
-    a.due && t("op.meta.due", { date: day(a.due) }),
+    a.due && t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }),
     a.project_name && <ProjectTag key="p" name={a.project_name} parent={a.parent_name} />,
     a.state === "stale" && a.untouched_days != null && tn("open.untouched", a.untouched_days),
     a.on_hold || a.blocker ? <HoldNote key="h" on_hold={a.on_hold} blocker={a.blocker} due={a.due} /> : null,

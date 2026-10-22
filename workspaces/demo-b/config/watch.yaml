@@ -45,6 +45,7 @@ sources:
 look_back_choices: [30, 90, 365]   # days a mail source can be asked to look further back, shown as a list
 failures_before_asking: 3
 unread_gap_factor: 2   # a failing source becomes a line on Today after this many of its own read intervals
+stale_after_hours: 36   # hours without a good read before Today names a source instead of saying nothing needs you
 default_data_level: internal   # how sensitive a watched source's items are when nothing else says
 connector_data_levels: {mailbox: restricted}   # per kind of source; a source's own data_level wins over this
 set_aside_defaults: true   # mailing lists and promotions are set aside with no AI run

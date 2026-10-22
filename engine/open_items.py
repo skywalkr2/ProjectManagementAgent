@@ -14,6 +14,7 @@ from typing import Any
 
 from engine.applier import _similar, apply_as_person
 from engine.blocked import Blocker, blocker_of, own_wait
+from engine.firm_due import firm_due
 from engine.followups import ROUTING, actions_to_send, held_until_day
 from engine.names import People, render_owner
 from engine.origin import origins
@@ -65,6 +66,8 @@ class OpenAction:
     owner_question: str | None = None
     #: An owner other than the person hasn't been told about it yet (design 6.10).
     to_send: bool = False
+    #: Its date is one the rules couldn't read for certain: it is shown to be checked and is never a deadline.
+    due_check: bool = False
 
 
 @dataclass
@@ -149,7 +152,7 @@ def open_actions(
             state = "no_owner"
         elif hold:
             state = "on_hold"
-        elif due is not None and due < today:
+        elif (firm := firm_due(d)) is not None and firm < today:
             state = "overdue"
         elif (
             stale_after
@@ -181,6 +184,7 @@ def open_actions(
                 untouched_days=untouched if state == "stale" else None,
                 owner_question=asking_owner.get(a.id) if state == "no_owner" else None,
                 to_send=a.id in to_send,
+                due_check=bool(d.get("due_check")) and due is not None,
             )
         )
     if not light:

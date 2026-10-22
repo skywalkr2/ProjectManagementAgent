@@ -915,8 +915,9 @@ the code by the main session),** for S1 before the gate week:
 - [ ] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
   were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
   looks complete.
-- [ ] [S1-3] A date marked "check this" is never a firm deadline: no reminder, at-risk line or overdue from it until the
-  person confirms it.
+- [x] [S1-3] A date marked "check this" is never a firm deadline: no reminder, at-risk line or overdue from it until the
+  person confirms it. **Built:** `tests/test_due_check.py` (one reading, `engine/firm_due.py`, wherever a due date
+  becomes urgency).
 - [x] [S1-3] The deadline words people use every day are read by the rules, so fewer dates wait for "check this"
   (the outside helper's 80 phrases, `tests/fixtures/phrases/due-phrases-01.yaml`, 42 read as a person means them at
   `1ec95d2` and none read wrongly; `tests/test_phrase_cases.py` holds the rules to them): numeric dates in the
@@ -927,12 +928,17 @@ the code by the main session),** for S1 before the gate week:
   **Built:** `tests/test_phrase_cases.py::test_the_rules_read_more_of_the_deadline_words_people_use_every_day`
   (33 of the 80 read exactly, 21 before, none wrongly; the roadmap's "42" counted differently and could not be
   reproduced). *Left:* "by 9 in the morning", and Easter-dated days.
-- [ ] [S1-3] A late reminder says "overdue · due <time>" unless the app knows it was closed or asleep (today's
+- [x] [S1-3] A late reminder says "overdue · due <time>" unless the app knows it was closed or asleep (today's
   `queue.reminder.late` says "while this computer was asleep" without knowing).
-- [ ] [S1-3] The brief's all-clear names any source not read since the last brief, so a stale mailbox never reads as a
+  **Built:** `tests/test_reminder_lines.py::test_a_late_reminder_says_the_app_was_away_only_when_a_gap_in_its_running_covers_the_due_time`
+  (the app's own running record, `engine/running.py`; the words say "while the app wasn't running", since a gap can't
+  tell sleep from closed).
+- [x] [S1-3] The brief's all-clear names any source not read since the last brief, so a stale mailbox never reads as a
   quiet day.
-- [ ] [S1-3] `docs/project/steward-proposal.md`'s stale statements (phase order, the Monday briefing's phase, reminders on
-  any dated thing, approved writes as an open question) are corrected to the roadmap.
+  **Built:** `tests/test_watch.py::test_a_source_not_read_successfully_within_the_stale_hours_is_named_by_when_it_was_last_read`
+  (there is no brief yet, so Today's all-clear carries it; `watch.stale_after_hours`).
+- [x] [S1-3] `docs/project/steward-proposal.md`'s stale statements (phase order, the Monday briefing's phase, reminders on
+  any dated thing, approved writes as an open question) are corrected to the roadmap. Checked by reading.
 
 **The gate (functional designer's F1 and F2, 2026-10-19; design 6.32 "Dependability").** Phase S builds a first slice,
 proves it on a week of real use, and only then goes on:

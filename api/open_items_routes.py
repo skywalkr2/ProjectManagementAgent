@@ -50,6 +50,7 @@ def _action(r: OpenAction) -> OpenActionView:
         untouched_days=r.untouched_days,
         owner_question=r.owner_question,
         to_send=r.to_send,
+        due_check=r.due_check,
     )
 
 

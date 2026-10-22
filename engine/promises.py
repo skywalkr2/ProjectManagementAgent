@@ -11,6 +11,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine.blocked import standing_hold
+from engine.firm_due import firm_due
 from engine.origin import origins
 from engine.scope import stance_of
 
@@ -86,7 +87,7 @@ def late(
         owners = [o["person"] for o in d.get("owners") or [] if o.get("person")]
         if not owners:
             continue
-        due = date.fromisoformat(str(d["due"])) if d.get("due") else None
+        due = firm_due(d)
         entries = [(date.fromisoformat(str(n["on"])), bool(n.get("non_answer"))) for n in d.get("news") or []]
         news = [on for on, _ in entries]
         mine = pm in owners

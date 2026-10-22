@@ -107,6 +107,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if last
             else None,
             read_at=str(read.data["started_at"]) if read else None,
+            stale=watch.stale_since(store, cfg, source, worker.now()) is not None,
             failures=failures,
             problem=problem,
             looked_back_to=back_to,

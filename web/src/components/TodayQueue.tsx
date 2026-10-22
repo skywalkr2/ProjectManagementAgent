@@ -10,6 +10,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day, wallTime } from "../lib/dates";
 import { backupAge } from "../lib/backup";
+import { useCoverage } from "../lib/coverage";
 import { useFirstGoText } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { chooseFilters } from "../lib/open-items";
@@ -28,6 +29,7 @@ import { Pill, type PillTone } from "../ui/Pill";
 import { OutsideTag } from "../ui/OutsideTag";
 import { Row } from "../ui/Row";
 import { Skeleton } from "../ui/Skeleton";
+import { Parts } from "./Coverage";
 import { TodayEmpty } from "./TodayEmpty";
 import { usePromiseChoices } from "./PromiseLine";
 import { ReminderItems, digestTitle, reminderTitle, useReminderChoices, useReminderNotices } from "./ReminderLine";
@@ -428,9 +430,17 @@ function NothingNext() {
     .filter((source) => source.enabled && source.read_at)
     .map((source) => new Date(new Date(source.read_at!).getTime() + source.every_minutes * 60_000))
     .sort((a, b) => a.getTime() - b.getTime())[0];
+  const found = useCoverage();
+  // With a source unread or not read lately, the all-clear says only that nothing was found, and names those sources.
+  const unchecked = !!found && !found.complete;
   return (
     <div className={styles.inspectorEmpty}>
-      <p>{t("queue.inspector.all_clear")}</p>
+      <p>{t(unchecked ? "queue.inspector.all_clear_unchecked" : "queue.inspector.all_clear")}</p>
+      {unchecked && found && (
+        <p>
+          <Parts found={found} />
+        </p>
+      )}
       {next && <p>{t("queue.inspector.next_check", { time: wallTime(next.toISOString()) })}</p>}
     </div>
   );

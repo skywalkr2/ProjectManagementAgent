@@ -26,7 +26,9 @@ export interface Coverage {
   unread: Unread[];
   /** On, never read and with no failure to report: not tried yet. */
   pending: Source[];
-  /** Every source that is on was read at its latest try. */
+  /** On, read before, the latest try didn't fail, and not read successfully within the configured hours. */
+  stale: Source[];
+  /** Every source that is on was read at its latest try, and recently. */
   complete: boolean;
 }
 
@@ -35,13 +37,15 @@ export function coverage(sources: Source[]): Coverage {
   const unread: Unread[] = [];
   const read: Source[] = [];
   const pending: Source[] = [];
+  const stale: Source[] = [];
   for (const source of on) {
     const outcome = source.last?.outcome;
     if (outcome === "failed" || outcome === "offline") unread.push({ source, kind: outcome });
+    else if (source.read_at && source.stale) stale.push(source);
     else if (source.read_at) read.push(source);
     else pending.push(source);
   }
-  return { enabled: on.length, read, last: latestRead(read), unread, pending, complete: on.length > 0 && unread.length === 0 && pending.length === 0 };
+  return { enabled: on.length, read, last: latestRead(read), unread, pending, stale, complete: on.length > 0 && unread.length === 0 && pending.length === 0 && stale.length === 0 };
 }
 
 /** The coverage of the sources the app reads; null until they are known, and when there is none on. */

@@ -1037,6 +1037,20 @@ yet follow, that it is *designed*, with its phase.
   `holiday_calendar`; data `engine/defaults/holidays.yaml`. Design 4 and 6.33. Built: `tests/test_due_phrases.py`,
   `tests/test_phrase_cases.py::test_the_rules_read_more_of_the_deadline_words_people_use_every_day`
 
+## 166. Dates to check, late reminders and stale sources say only what is known (2026-10-22; S1-3, built)
+
+- A date marked "check this" (`due_check`) is never a deadline: no overdue state or line, no due-soon or at-risk line, no
+  "due this week", no chase by its date, and no "it was due" in a message to someone else, until the person confirms it;
+  rows that show it say "check this date", and a to-do with one is in its own group, "Date to check". One reading,
+  `engine/firm_due.py`, is used wherever a due date becomes urgency.
+- A late reminder says "overdue · due <time>", and "while the app wasn't running" only when the app's own record of when
+  it was running (`engine/running.py`, written by the worker in the workspace's private folder) has a gap covering that time.
+- Where Today would say nothing needs the person, a source not read successfully in `watch.stale_after_hours` (24, new, with
+  demo values in both workspaces) is named with its own label and when it was last read, and the line says only that nothing
+  was found.
+- Design 6.32. Built: `tests/test_due_check.py`, `tests/test_reminder_lines.py`, `tests/test_watch.py`,
+  `web/src/components/TodayReminders.test.tsx`, `TodayRail.test.tsx`, `OpenItems.test.tsx`, `Today.test.tsx`
+
 ## 165. Learning from corrections: misses, declines, drops, and reach; promises owed to the reader (2026-10-22; B-10, built)
 
 - `miss-left-unlearned`: a learning answer with no op to a correction saying something was missed goes back once.

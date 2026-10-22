@@ -373,12 +373,14 @@ function TodoPanel() {
   // A to-do whose blocker is over (a question answered, a to-do finished) goes first, saying so.
   const unblocked = items.filter((x) => !!x.blocker && x.blocker.state !== "waiting");
   const live = items.filter((x) => !x.on_hold && !unblocked.includes(x));
-  const isToday = (x: Todo) => !x.overdue && !!x.due && x.due <= today;
+  // A date still to be checked is never a deadline: it is not overdue, due today or later, and has its own group.
+  const isToday = (x: Todo) => !x.overdue && !x.due_check && !!x.due && x.due <= today;
   const groups = [
     { id: "unblocked", label: t("today.todo.unblocked"), rows: unblocked },
     { id: "overdue", label: t("today.todo.overdue"), rows: live.filter((x) => x.overdue) },
     { id: "today", label: t("today.todo.today"), rows: live.filter(isToday) },
-    { id: "later", label: t("today.todo.later"), rows: live.filter((x) => !x.overdue && !isToday(x) && !!x.due) },
+    { id: "later", label: t("today.todo.later"), rows: live.filter((x) => !x.overdue && !x.due_check && !isToday(x) && !!x.due) },
+    { id: "check", label: t("today.todo.check_date"), rows: live.filter((x) => !!x.due_check) },
     { id: "none", label: t("today.todo.no_date"), rows: live.filter((x) => !x.overdue && !x.due) },
     { id: "on_hold", label: t("today.todo.on_hold"), rows: items.filter((x) => !!x.on_hold) },
   ].filter((g) => g.rows.length > 0);
@@ -432,7 +434,7 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
   const change = useChangeThis({ kind: "action", id: item.action }, () => row.current?.focus());
   const drop = useDropAction({ id: item.action }, () => row.current?.focus());
   const remind = useRemindMe(item.action, item.remind_at, () => row.current?.focus());
-  const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : "", item.remind_at ? t("today.todo.reminder", { when: dateAndTime(item.remind_at) }) : ""]
+  const meta = [props.project, props.showDue && item.due ? t(item.due_check ? "today.todo.due_check" : "today.todo.due", { date: day(item.due) }) : "", item.remind_at ? t("today.todo.reminder", { when: dateAndTime(item.remind_at) }) : ""]
     .filter(Boolean)
     .join(" · ");
   const done = (note?: string) =>

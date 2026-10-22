@@ -14,7 +14,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from engine import problems
+from engine import problems, running
 from engine.ai.router import Router
 from engine.config import Config
 from engine.dispatcher import needs_you, process
@@ -247,6 +247,11 @@ class Worker:
     SYNC_CHECK_SECONDS = 10
     #: How often this install's lease in the synced folder is renewed when nothing else is written.
     HEARTBEAT_SECONDS = 60
+    #: How often the moment the app was last running is written down.
+    RUNNING_NOTE_SECONDS = 20
+    #: Beyond the reminders' late-after time, how long the app may go unnoted before that stretch is a time it wasn't
+    #: running: the loops that note it come round at least every minute.
+    RUNNING_SLACK = timedelta(minutes=2)
 
     def __init__(
         self,
@@ -280,6 +285,7 @@ class Worker:
         self._synced_at: int | None = -1
         self._said_no_git = False
         self._beat = 0.0
+        self._running_noted: float | None = None
         self.sync_lost = False
         #: Started while this computer and the synced folder had diverged: nothing is written to the folder until the
         #: person's choice is carried out at the next start.
@@ -373,7 +379,18 @@ class Worker:
             log.exception("checking the file readers failed")
             self._problem("file readers check")
 
+    def note_running(self, *, force: bool = False) -> None:
+        """Write down that the app is running now, at most every `RUNNING_NOTE_SECONDS`, so a stretch it wasn't (the
+        computer asleep, the app closed) is known later and a line can say so (`engine.running`)."""
+        beat = time.monotonic()
+        if not force and self._running_noted is not None and beat - self._running_noted < self.RUNNING_NOTE_SECONDS:
+            return
+        self._running_noted = beat
+        grace = timedelta(minutes=self.cfg.steward.reminders.late_after_minutes)
+        running.note(self.ws, self.now(), grace + self.RUNNING_SLACK)
+
     def start(self) -> None:
+        self.note_running(force=True)
         self.check_readers()
         if any(requeue_interrupted(self.store)):
             self.events.changed()
@@ -795,6 +812,7 @@ class Worker:
 
     def _jobs_loop(self) -> None:
         while not self._stop.is_set():
+            self.note_running()
             try:
                 self.run_due_jobs()
             except Exception:  # a job's failure is recorded on its run; nothing here may stop the thread
@@ -836,6 +854,7 @@ class Worker:
 
     def _loop(self) -> None:
         while not self._stop.is_set():
+            self.note_running()
             self.run_pending()
             if self.restart_due():
                 return

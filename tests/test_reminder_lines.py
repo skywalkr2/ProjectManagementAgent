@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from api.app import create_app
+from engine import running
 from engine.ai.adapters.stub import set_responder
 from engine.config.schema import RemindersSettings, StewardFile
 from engine.storage import Store, WriteContext
@@ -105,6 +106,84 @@ def test_a_reminder_that_came_due_while_the_app_was_not_running_is_a_late_line_s
     make(store, cfg, due)
     (line,) = reminders(env)
     assert line.kind == "reminder" and line.late is True and datetime.fromisoformat(line.at) == due
+
+
+def test_a_late_reminder_says_the_app_was_away_only_when_a_gap_in_its_running_covers_the_due_time(env):
+    ws, cfg, store = env
+    grace = timedelta(minutes=cfg.steward.reminders.late_after_minutes)
+    covered = NOW - timedelta(hours=3)
+    uncovered = NOW - timedelta(hours=6)
+    a = make(store, cfg, covered, text="Send the estimate")
+    b = make(store, cfg, uncovered, text="Book the printer")
+
+    # Nothing records when the app was running: both are only overdue.
+    assert {x.actions[0]: x.asleep for x in reminders(env, kind="reminder")} == {a: False, b: False}
+
+    # The app was last noted running before the first, and next noted after it; the second falls outside.
+    running.note(ws, covered - timedelta(minutes=30), grace)
+    running.note(ws, covered + timedelta(hours=1), grace)
+    assert {x.actions[0]: x.asleep for x in reminders(env, kind="reminder")} == {a: True, b: False}
+
+
+def test_a_reminder_that_was_not_late_carries_no_claim_about_the_app(env):
+    _, cfg, store = env
+    make(store, cfg, NOW - timedelta(minutes=1))
+    (line,) = reminders(env)
+    assert (line.late, line.asleep) == (False, None)
+
+
+def test_a_summary_of_missed_reminders_says_the_app_was_away_only_when_it_covers_every_one(tmp_path):
+    ws, cfg, store = build(tmp_path, COCKPIT__STEWARD__REMINDERS__MISSED="summary")
+    try:
+        grace = timedelta(minutes=cfg.steward.reminders.late_after_minutes)
+        _three_late(store, cfg)
+        (digest,) = reminders((ws, cfg, store))
+        assert (digest.late, digest.asleep) == (True, False)
+        running.note(ws, NOW - timedelta(hours=10), grace)
+        running.note(ws, NOW - timedelta(minutes=30), grace)
+        (digest,) = reminders((ws, cfg, store))
+        assert digest.asleep is True
+    finally:
+        store.close()
+
+
+def test_the_running_record_keeps_a_gap_only_when_the_app_went_unnoted_longer_than_the_gap(tmp_path):
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    gap = timedelta(minutes=7)
+    assert running.note(ws, NOW, gap) is False, "the first note has nothing before it"
+    assert running.note(ws, NOW + timedelta(minutes=5), gap) is False
+    assert running.note(ws, NOW + timedelta(minutes=5) + gap, gap) is False, "exactly the gap is not more than it"
+    later = NOW + timedelta(hours=4)
+    assert running.note(ws, later, gap) is True
+    (found,) = running.gaps(ws)
+    assert found == (NOW + timedelta(minutes=5) + gap, later)
+    assert running.covers([found], NOW + timedelta(hours=2)) and not running.covers([found], NOW)
+
+
+def test_a_damaged_running_record_is_read_as_no_gaps_and_mends_itself(tmp_path):
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    (ws.private_dir / running.STATE_FILE).parent.mkdir(parents=True, exist_ok=True)
+    (ws.private_dir / running.STATE_FILE).write_text("not json", encoding="utf-8")
+    assert running.gaps(ws) == []
+    assert running.note(ws, NOW, timedelta(minutes=7)) is False
+    assert running.gaps(ws) == []
+
+
+def test_the_worker_notes_when_the_app_is_running_and_not_more_often_than_it_should(tmp_path):
+    from engine.worker import Events, Worker
+
+    ws, cfg, store = build(tmp_path)
+    try:
+        clock = [NOW]
+        worker = Worker(ws, store, cfg, Events(), now=lambda: clock[0])
+        worker.note_running(force=True)
+        clock[0] = NOW + timedelta(hours=5)
+        worker.note_running()
+        assert running.gaps(ws) == [], "noted a moment ago on the worker's own timer: not again yet"
+        worker.note_running(force=True)
+        assert running.gaps(ws) == [(NOW, NOW + timedelta(hours=5))]
+    finally:
+        store.close()
 
 
 def test_a_late_reminder_in_the_evening_is_still_shown_during_quiet_hours(env):

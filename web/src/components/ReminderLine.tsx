@@ -19,14 +19,16 @@ type T = (key: string, vars?: Record<string, string | number>) => string;
 /** A moment as a day and a time on the person's own clock, as the server wrote it: "Mon, Oct 19, 9:00 PM". */
 export const dateAndTime = (iso: string) => `${day(iso)}, ${wallTime(iso)}`;
 
-/** The words of a reminder line, `{task} · due now`, or for one that came due while the computer slept, when it was due. */
+/** The words of a reminder line, `{task} · due now`. A late one says when it was due: that it came due while the computer was
+ * away only when the app knows that (`asleep`), otherwise only that it is overdue. */
 export function reminderTitle(line: Line, t: T): string {
   const task = line.text ?? "";
-  return line.late ? t("queue.reminder.late", { task, due_time: line.at ? wallTime(line.at) : "" }) : t("queue.reminder.due", { task });
+  if (!line.late) return t("queue.reminder.due", { task });
+  return t(line.asleep ? "queue.reminder.late" : "queue.reminder.overdue", { task, due_time: line.at ? wallTime(line.at) : "" });
 }
 
 /** The title of the line that lists reminders that waited. */
-export const digestTitle = (line: Line, t: T): string => t(line.late ? "queue.reminder.missed" : "queue.reminder.digest");
+export const digestTitle = (line: Line, t: T): string => t(line.late ? (line.asleep ? "queue.reminder.missed" : "queue.reminder.missed_overdue") : "queue.reminder.digest");
 
 /** One item of that list. */
 export const digestLine = (item: S["ReminderItemView"], t: T): string => t("queue.reminder.digest_line", { task: item.text, due_date_and_time: dateAndTime(item.at) });

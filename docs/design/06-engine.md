@@ -3074,6 +3074,20 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
 - **Coverage on Today.** "Couldn't read" and "read, nothing new" are different words and never share a color. A source that
   has failed for longer than its usual gap becomes a line for the person ("work mail hasn't been read since yesterday
   6 PM: sign in again?"). A day whose right top line is "nothing needs you, and here is what was read" is a test case.
+  Where Today would say nothing needs the person (its heading, the empty queue, the inspector's all-clear), a source that
+  is on and hasn't been read successfully in `watch.stale_after_hours` (24; there is no brief yet, so the last day stands
+  in for "since the last brief") is named with its own label and when it was last read ("Work mailbox hasn't been read
+  since Tuesday"), and the line then says only that nothing was found, never that nothing needs the person. Built:
+  `tests/test_watch.py::test_a_source_not_read_successfully_within_the_stale_hours_is_named_by_when_it_was_last_read`,
+  `web/src/components/Today.test.tsx` ("a source not read lately is named where Today would say nothing needs you").
+- **A date marked "check this" is never a deadline.** An action whose `due_check` is set (the rules couldn't read its date
+  for certain) keeps the date for the person to see, marked "check this date" wherever its row shows it, but has no
+  reminder from it, no at-risk or due-soon line, no overdue state or line, no place in "due this week", no chase by it and
+  no "it was due" in a message to someone else, until the person confirms it (setting the date, which clears the doubt).
+  It is chased and sorted as an undated action. Every place a due date becomes urgency reads it through
+  `engine/firm_due.py`. A reminder the person set at a time of their own is theirs and stays. Built:
+  `tests/test_due_check.py`, `web/src/components/TodayRail.test.tsx` and `web/src/components/OpenItems.test.tsx` (the
+  marker).
 - **Missed one** is reachable wherever the person is looking, the evening wrap-up included ("anything I missed today?"),
   and accepts a plain sentence with no source.
   *Built so far (S1-2):* `POST /api/missed` takes the sentence, records one `missed` signal with the person's id (the
@@ -3155,15 +3169,25 @@ Friday), quiet hours (21:00 to 07:00, which may cross midnight), how reminders m
 as late; working hours that end before they start, and quiet hours with equal ends, are refused in plain words
 (`tests/test_reminder_lines.py`). When a reminder reaches the person is decided by `engine/reminders.py` through
 `engine/reminder_lines.py`: an open action that is not on hold, whose `remind_at` has come, is one Today line,
-`{task} · due now`; one that came due and was not shown for the late-after time (the app or the computer was not running)
-is `{task} · late: due {time}, while this computer was asleep`, shown at once and never dropped; reminders that fell in
+`{task} · due now`; one that came due and was not shown for the late-after time is `{task} · overdue · due {time}`, shown
+at once and never dropped, and says "late: due {time}, while the app wasn't running" only when the app knows it was not
+running then (a gap in the record of when it was running, below); reminders that fell in
 quiet hours wait, then arrive together as "Saved during quiet hours" with `{task} · was due {day and time}`, and with
 `summary` the late ones are one line too. Each line has Done first and Snooze in its menu with In 1 hour, Later today,
 This evening, Tomorrow morning, Next week (each with the time it moves to, a choice with no time left today left out)
 and Pick a time…. A line that appears while the app is open is also one browser notification with its words, once the
 person has allowed them from the button in Settings (the browser is never asked on load). Not built yet: the reminder in
 the person's own calendar or mailed to them (the publisher, S1b), and desktop notifications from the tray (phase I). A
-reminder is marked late by how long ago it came due, since the engine does not yet know when the computer slept. Working hours never move a reminder the person set; only quiet hours hold it (6.35).
+reminder is marked late by how long ago it came due. What the line says about why is only what the app knows: while it
+runs, the worker notes the moment it was last seen in the workspace's private folder (`engine/running.py`, at most every
+20 seconds); when the next note is more than the late-after time and two minutes after the last, that stretch is kept as
+a gap (the computer asleep or the app closed; the record cannot tell which). A late reminder, or a summary of missed ones
+(all of them), is worded as asleep only when a gap covers its due time. Built:
+`tests/test_reminder_lines.py::test_a_late_reminder_says_the_app_was_away_only_when_a_gap_in_its_running_covers_the_due_time`,
+`::test_a_summary_of_missed_reminders_says_the_app_was_away_only_when_it_covers_every_one`,
+`::test_the_running_record_keeps_a_gap_only_when_the_app_went_unnoted_longer_than_the_gap`,
+`::test_the_worker_notes_when_the_app_is_running_and_not_more_often_than_it_should`,
+`web/src/components/TodayReminders.test.tsx`. Working hours never move a reminder the person set; only quiet hours hold it (6.35).
 
 ## 6.33 Promises (phase S1, designed 2026-10-19)
 

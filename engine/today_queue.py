@@ -21,6 +21,7 @@ from engine import (
     release_hours,
     reminder_lines,
     reply_lines,
+    running,
     sent_version,
     sides,
     since_yesterday,
@@ -28,6 +29,7 @@ from engine import (
     watch,
 )
 from engine.blocked import standing_hold
+from engine.firm_due import firm_due
 from engine.followups import ROUTING, sections
 from engine.names import People
 from engine.owners import suggest_owner
@@ -113,12 +115,14 @@ class Line:
     and in `person` the one to chase, none when it is the person's own, with `stance`: who they are to the person, so
     the line says Chase or Waiting on; none for the person's own), reminder (an open action whose reminder has
     reached the person: its id in `actions`, its words in `text`, the moment it was set for in `at` on the person's
-    clock, `late` when it came due while the app or the computer was not running, and in `snoozes` the choices that
-    still have a time, each `choice` with the `at` it resolves to), reminder_digest (reminders that fell in quiet hours,
-    or, by the person's choice, were missed while the computer slept, arriving together: `reminders` lists each with
-    its action, words and `at`, and `late` says which of the two it is), reply (a reply owed, one open action: its id in
-    `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`
-    as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest first),
+    clock, `late` when it came due and wasn't shown in time, `asleep` when the app also knows it was not running (the
+    computer asleep or the app closed) when it came due, and in `snoozes` the choices that still have a time, each
+    `choice` with the `at` it resolves to), reminder_digest (reminders that fell in quiet hours, or, by the person's
+    choice, were missed, arriving together: `reminders` lists each with its action, words and `at`, `late` says which
+    of the two it is, and `asleep` that the app knows it was not running for every one), reply (a reply owed, one open
+    action: its id in `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody
+    known, `sender` as written, and the drafted `reply` with `reply_reviewed`; ranked by when the message came, oldest
+    first),
     sent_check (a message the person copied that no sent message has matched, asked about once a sent folder is
     being read: its copy's id in `sent_copy`, who it was for in `person`, what it covered in `questions` and
     `actions`),
@@ -197,6 +201,9 @@ class Line:
     names: list[str] = field(default_factory=list)
     at: str | None = None
     late: bool | None = None
+    #: For a late reminder, or a line of the ones that were missed: the app knows it was not running when each came due
+    #: (the computer asleep or the app closed). Without that, the line says only that it is overdue.
+    asleep: bool | None = None
     snoozes: list[dict[str, str]] = field(default_factory=list)
     reminders: list[dict[str, str]] = field(default_factory=list)
     reply: str | None = None
@@ -711,7 +718,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     # those missed while the computer slept) together as one.
     here = zone(cfg)
     snoozes = [{"choice": choice, "at": at.isoformat()} for choice, at in reminder_lines.choices(cfg, now)]
-    reminded = reminder_lines.plan(reader, cfg, now)
+    reminded = reminder_lines.plan(reader, cfg, now, running.gaps(ws))
     for item in [*reminded.now, *reminded.late]:
         lines.append(
             Line(
@@ -724,6 +731,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 actions=[item.action],
                 at=item.due.isoformat(),
                 late=item in reminded.late,
+                asleep=item.away if item in reminded.late else None,
                 snoozes=snoozes,
                 since=item.at.isoformat(),
             )
@@ -737,6 +745,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     kind="reminder_digest",
                     count=len(group),
                     late=late,
+                    asleep=all(x.away for x in group) if late else None,
                     snoozes=snoozes,
                     actions=[x.action for x in group],
                     reminders=[
@@ -800,13 +809,13 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     overdue = []
     for action in reader.list("action"):
         d = action.data
-        if d.get("status") != "open" or not d.get("due") or standing_hold(reader, d, people) or people.pm is None:
+        due = firm_due(d)
+        if d.get("status") != "open" or due is None or standing_hold(reader, d, people) or people.pm is None:
             continue
         if action.id in on_a_line:
             continue
         if not any(o.get("person") == people.pm for o in d.get("owners") or []):
             continue
-        due = date.fromisoformat(str(d["due"]))
         if due < today:
             overdue.append((due, action.id))
     if overdue:
@@ -1049,7 +1058,9 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 + [a["told_days"] if a["told_days"] is not None else max(0, quiet.get(a["id"], 0)) for a in told]
             )
             late_on = sorted(
-                date.fromisoformat(str(a["due"])) for a in told if a["due"] and str(a["due"]) < today.isoformat()
+                date.fromisoformat(str(a["due"]))
+                for a in told
+                if a["due"] and not a["due_check"] and str(a["due"]) < today.isoformat()
             )
             lines.append(
                 Line(

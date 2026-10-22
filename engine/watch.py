@@ -152,6 +152,21 @@ def unread(store: Any, cfg: Any, source: Any, now: datetime) -> Unread | None:
     return Unread(since=since, kind=kind, problem=problem)
 
 
+def stale_since(store: Any, cfg: Any, source: Any, now: datetime) -> str | None:
+    """When a source that is on was last read, when that was more than `watch.stale_after_hours` ago, so a screen that
+    would say nothing needs the person names it. None for a source that is off, one never read (it is not read yet, a
+    state of its own) and one read within the time."""
+    if not source.enabled:
+        return None
+    read = last_read(store, source.id)
+    if read is None:
+        return None
+    since = str(read.data["started_at"])
+    if now - datetime.fromisoformat(since) <= timedelta(hours=cfg.watch.stale_after_hours):
+        return None
+    return since
+
+
 def due(store: Any, cfg: Any, now: datetime) -> list[str]:
     """Sources that are on and whose time has come."""
     found = []

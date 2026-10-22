@@ -233,6 +233,18 @@ test("to do: Overdue first with its label and count, then Today, Later and No da
   expect(due).not.toHaveTextContent("Due");
 });
 
+test("to do: a date to check is its own group, says so beside the date and is never overdue, today or later", async () => {
+  const checked: S["TodoView"] = { action: "ACT-6", text: "Book the printer", project: null, due: "2026-10-01", overdue: false, due_check: true, on_hold: null };
+  open({ "GET today/todo": () => [...todo, checked] });
+  const col = await column("Your to-dos");
+  const heads = await within(col).findAllByRole("heading", { level: 3 });
+  expect(heads.map((h) => h.textContent)).toEqual(["Overdue 1", "Today 1", "Later 1", "Date to check 1", "No date 1"]);
+  const group = within(col).getByRole("heading", { name: "Date to check 1" }).closest("[data-group]") as HTMLElement;
+  expect(group).toHaveTextContent("Book the printer");
+  expect(group).toHaveTextContent(/Due .*1 \(check this date\)/);
+  expect(within(col).getByRole("heading", { name: "Overdue 1" }).closest("[data-group]")).not.toHaveTextContent("Book the printer");
+});
+
 test("to do: an action on hold leaves Overdue and sits last under On hold, saying what it waits for", async () => {
   const held: S["TodoView"] = { action: "ACT-5", text: "Sign the contract", project: null, due: "2026-10-01", overdue: false, on_hold: "legal review" };
   open({ "GET today/todo": () => [...todo, held] });

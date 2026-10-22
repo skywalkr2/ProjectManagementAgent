@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: A screen says only what the app knows about dates, lateness and unread sources
+
+- **Decided (main session, roadmap S1-3):** kind of rule: a core concept, with one setting. A date marked "check this" is
+  not a deadline until the person confirms it (no reminder, at-risk, overdue, due-this-week or chase from it). A late
+  reminder says "overdue" and names sleep only when the app's own record of when it was running has a gap over that time,
+  kept in the workspace's private folder. Where Today would say nothing needs the person, a source not read successfully
+  in `watch.stale_after_hours` (24) is named with its label and when it was last read.
+- **Impact:** design 6.32 ("Coverage on Today", "A date marked 'check this' is never a deadline", reminders). New setting
+  `watch.stale_after_hours` with demo values in both workspaces. API: `due_check` on to-dos, open actions and follow-up
+  actions, `asleep` on reminder lines, `stale` on watched sources. Change log: section 166.
+
 ## 2026-10-22: An unclear correction is answered with a question to the person, not a forced lesson
 
 - **Decided (owner):** a correction need not always produce a lesson: "even humans sometimes need to ask again. so if

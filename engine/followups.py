@@ -16,6 +16,7 @@ from engine.blocked import ViewNames, blocker_of, blocker_problem, holds_up
 from engine.cleaning import normalize
 from engine.config import Config
 from engine.dispatcher import signal
+from engine.firm_due import firm_due
 from engine.names import People
 from engine.promises import Late
 from engine.scope import stance_of
@@ -131,7 +132,7 @@ def _pulled(view: Any, cfg: Config, today: date, held_up: dict[str, list[str]], 
     for blocker, held in held_up.items():
         for action_id in held:
             data = view.get("action", action_id).data
-            due = date.fromisoformat(str(data["due"])) if data.get("due") else None
+            due = firm_due(data)
             would = False
             for owner in data.get("owners") or []:
                 who = owner["person"]
@@ -238,6 +239,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                     "side": row_side,
                     "text": d["text"],
                     "due": d.get("due"),
+                    "due_check": bool(d.get("due") and d.get("due_check")),
                     "project": d.get("project"),
                     "project_name": projects.get(d.get("project"), ""),
                     "links": project_links.get(d.get("project"), []),
@@ -254,7 +256,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                         today,
                         waiting_days=told_days,
                         action=True,
-                        due=date.fromisoformat(str(d["due"])) if d.get("due") else None,
+                        due=firm_due(d),
                         on_hold=bool(hold),
                     )
                     or (a.id in pulled and told_days is not None and owner["person"] != people.pm and not hold),
@@ -263,7 +265,7 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
                 }
             )
     for s in by_person.values():
-        s.actions.sort(key=lambda a: (a["due"] or "9999", a["text"]))
+        s.actions.sort(key=lambda a: (("9999" if a["due_check"] else a["due"]) or "9999", a["text"]))
         if not s.is_pm:
             s.to_send = sum(q["status"] == "open" for q in s.questions) + sum(a["told"] is None for a in s.actions)
             s.message = compose(s, cfg, people)
@@ -391,7 +393,7 @@ def compose(s: Section, cfg: Config, people: People) -> str:
         lines.append(words.actions_heading)
         for a in actions:
             bits = [a["project_name"]] if a["project_name"] else []
-            if a["due"]:
+            if a["due"] and not a.get("due_check"):
                 bits.append("due " + date.fromisoformat(a["due"]).strftime(words.date_format))
             lines.append(f"- {a['text']}" + (f" ({', '.join(bits)})" if bits else ""))
         lines.append("")
@@ -408,7 +410,11 @@ def compose_nudge(s: Section, cfg: Config, people: People, today: date) -> Nudge
     shown = lambda day: date.fromisoformat(str(day)).strftime(words.date_format)  # noqa: E731
     due = [
         *(("question", q["id"], q["title"], q["chases"], q["sent"], None) for q in s.questions if q["chase_due"]),
-        *(("action", a["id"], a["text"], a["chases"], a["told"], a["due"]) for a in s.actions if a["chase_due"]),
+        *(
+            ("action", a["id"], a["text"], a["chases"], a["told"], None if a["due_check"] else a["due"])
+            for a in s.actions
+            if a["chase_due"]
+        ),
     ]
     if not due:
         return None

@@ -6681,6 +6681,18 @@
             ],
             "title": "Due"
           },
+          "due_check": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its date is one the rules couldn't read for certain: shown to be checked, never a deadline, so never overdue or chased by it.",
+            "title": "Due Check"
+          },
           "followed_up": {
             "anyOf": [
               {
@@ -10742,6 +10754,18 @@
               }
             ],
             "title": "Due"
+          },
+          "due_check": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its date is one the rules couldn't read for certain: the row says to check it, and it is never overdue or a deadline until the person confirms it.",
+            "title": "Due Check"
           },
           "duplicate": {
             "anyOf": [
@@ -15056,6 +15080,18 @@
             "description": "For a backup line: the hours since the last backup that worked; none when none has.",
             "title": "Age Hours"
           },
+          "asleep": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a late reminder line, or a reminder_digest line of missed ones: true only when the app knows it was not running (the computer asleep or the app closed) when each came due. Otherwise the screen says only that the reminder is overdue.",
+            "title": "Asleep"
+          },
           "at": {
             "anyOf": [
               {
@@ -15288,7 +15324,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a reminder line: true when it came due while the app or the computer was not running. For a reminder_digest line: true when it lists reminders missed while the computer slept, false when it lists those that waited for quiet hours to end.",
+            "description": "For a reminder line: true when it came due and was not shown in time. For a reminder_digest line: true when it lists reminders that were missed, false when it lists those that waited for quiet hours to end.",
             "title": "Late"
           },
           "left_out": {
@@ -20227,6 +20263,18 @@
             ],
             "title": "Due"
           },
+          "due_check": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its date is one the rules couldn't read for certain: the row says to check it, and it is never overdue until the person confirms it.",
+            "title": "Due Check"
+          },
           "on_hold": {
             "anyOf": [
               {
@@ -20251,7 +20299,7 @@
             "description": "Where the action came from, for its link."
           },
           "overdue": {
-            "description": "Whether it is past its due date; never true while it is on hold.",
+            "description": "Whether it is past its due date; never true while it is on hold or its date is to be checked.",
             "title": "Overdue",
             "type": "boolean"
           },
@@ -21308,6 +21356,18 @@
             },
             "title": "Secrets",
             "type": "array"
+          },
+          "stale": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On, read before, and not read successfully within `watch.stale_after_hours`: Today names it instead of saying nothing needs the person.",
+            "title": "Stale"
           }
         },
         "required": [

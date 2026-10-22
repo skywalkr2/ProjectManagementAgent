@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, time, timedelta, tzinfo
 from typing import Any
 
+from engine import running
 from engine.blocked import standing_hold
 from engine.config.schema import WEEKDAYS
 from engine.reminders import QuietHours, Reminder, Snooze, WorkingHours, in_quiet_hours, next_fire, snooze
@@ -29,13 +30,16 @@ class Due:
     project: str | None
     due: datetime
     at: datetime
+    #: A gap in the time the app was running covers `due`: the app knows it was not running then.
+    away: bool = False
 
 
 @dataclass(frozen=True)
 class Plan:
     """What reminders show now. `now`: came due and reach the person at once. `late`: came due a while ago without
-    being shown (the app or the computer was not running), one line each. `missed`: the same, when the person chose one
-    summary and there is more than one. `kept`: fell in quiet hours and arrive together now that they have ended."""
+    being shown, one line each (`away` says whether the app knows it was not running when it came due). `missed`:
+    the same, when the person chose one summary and there is more than one. `kept`: fell in quiet hours and arrive
+    together now that they have ended."""
 
     now: list[Due] = field(default_factory=list)
     late: list[Due] = field(default_factory=list)
@@ -81,9 +85,9 @@ def _scheduled(due: datetime, r: Rules) -> datetime:
     return plan.fires[0].at if plan.status == "known" and plan.fires else due
 
 
-def plan(reader: Any, cfg: Any, now: datetime) -> Plan:
+def plan(reader: Any, cfg: Any, now: datetime, gaps: list[running.Gap] | None = None) -> Plan:
     """The reminders that have reached the person and are still waiting for them: actions that are open and not on
-    hold, with a `remind_at` whose time has come."""
+    hold, with a `remind_at` whose time has come. `gaps` are the times the app is known not to have been running."""
     r = rules(cfg)
     found = Plan()
     waiting: list[Due] = []
@@ -95,7 +99,9 @@ def plan(reader: Any, cfg: Any, now: datetime) -> Plan:
         at = _scheduled(due, r)
         if at > now:
             continue
-        item = Due(action.id, str(d["text"]), d.get("project"), due, at.astimezone(r.tz))
+        item = Due(
+            action.id, str(d["text"]), d.get("project"), due, at.astimezone(r.tz), running.covers(gaps or [], due)
+        )
         if in_quiet_hours(due, r.quiet):
             found.kept.append(item)
         elif now - at > r.grace:

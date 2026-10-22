@@ -257,6 +257,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
 - `unread_gap_factor` (2): how many of a source's own read intervals (`every_minutes`) it may go unread, failing, before
   it becomes a line on Today for the person (6.32, "Coverage on Today"). One line stands in for the question above;
   a source with no network is not counted.
+- `stale_after_hours` (24): how many hours a source that is on may go without a successful read before Today names it
+  wherever it would say nothing needs the person (6.32, "Dependability").
 
 Sources are also added by a sign-in (6.27): an add-on declares the inbox and the main calendar, and signing in starts them
 (`first_run: recent`, the add-on's own interval). The person narrows, adds or removes sources afterwards from the Connections

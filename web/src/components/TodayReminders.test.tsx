@@ -96,10 +96,17 @@ test("a reminder that has come due is the task with when it is due, and Done is 
   await waitFor(() => expect(calls.filter((c) => c.route === "POST actions/ACT-1/status").map((c) => c.body)).toEqual([{ status: "done" }, { status: "open" }]));
 });
 
-test("a reminder that came due while the computer was asleep says when it was due and is still shown", async () => {
-  show([reminder({ late: true, at: "2026-10-19T09:30:00-04:00" })]);
-  const row = await rowOf(`Send Oren the estimate · late: due ${wallTime("2026-10-19T09:30:00-04:00")}, while this computer was asleep`);
+test("a late reminder says the computer was asleep only when the app knows it was not running, and is still shown", async () => {
+  show([reminder({ late: true, asleep: true, at: "2026-10-19T09:30:00-04:00" })]);
+  const row = await rowOf(`Send Oren the estimate · late: due ${wallTime("2026-10-19T09:30:00-04:00")}, while the app wasn't running`);
   expect(within(row).getByRole("button", { name: "Done" })).toBeInTheDocument();
+});
+
+test("a late reminder the app knows nothing more about says only that it is overdue and when it was due", async () => {
+  show([reminder({ late: true, asleep: false, at: "2026-10-19T09:30:00-04:00" })]);
+  const row = await rowOf(`Send Oren the estimate · overdue · due ${wallTime("2026-10-19T09:30:00-04:00")}`);
+  expect(within(row).getByRole("button", { name: "Done" })).toBeInTheDocument();
+  expect(screen.queryByText(/asleep/)).toBeNull();
 });
 
 // ---- snooze ----------------------------------------------------------------------------------------------------------
@@ -167,9 +174,15 @@ test("a reminder in the digest can be snoozed from its own menu", async () => {
   await waitFor(() => expect(calls.find((c) => c.route === "POST reminders/ACT-1")?.body).toEqual({ choice: "in 1 hour" }));
 });
 
-test("reminders missed while the computer slept, when the person chose one summary, are a line with their own title", async () => {
-  show([digest({ key: "reminder_digest:missed", late: true })]);
-  expect(await rowOf("Missed while this computer was asleep")).toBeInTheDocument();
+test("reminders missed, when the person chose one summary, are a line with their own title, naming sleep only when it is known", async () => {
+  show([digest({ key: "reminder_digest:missed", late: true, asleep: true })]);
+  expect(await rowOf("Missed while the app wasn't running")).toBeInTheDocument();
+});
+
+test("a summary of missed reminders the app knows nothing more about is titled overdue", async () => {
+  show([digest({ key: "reminder_digest:missed", late: true, asleep: false })]);
+  expect(await rowOf("Overdue reminders")).toBeInTheDocument();
+  expect(screen.queryByText(/asleep/)).toBeNull();
 });
 
 // ---- the notification ---------------------------------------------------------------------------------------------

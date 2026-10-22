@@ -838,6 +838,11 @@ class FollowupAction(BaseModel):
     id: str
     text: str
     due: str | None
+    due_check: bool | None = Field(
+        None,
+        description="Its date is one the rules couldn't read for certain: shown to be checked, never a deadline, so "
+        "never overdue or chased by it.",
+    )
     project_name: str
     links: list[Link] = Field(
         default_factory=list, description="Pages that belong to the action's project, for the copied table."
@@ -1905,7 +1910,14 @@ class TodoView(BaseModel):
     text: str
     project: str | None = None
     due: date | None = None
-    overdue: bool = Field(description="Whether it is past its due date; never true while it is on hold.")
+    overdue: bool = Field(
+        description="Whether it is past its due date; never true while it is on hold or its date is to be checked."
+    )
+    due_check: bool | None = Field(
+        None,
+        description="Its date is one the rules couldn't read for certain: the row says to check it, and it is never "
+        "overdue until the person confirms it.",
+    )
     on_hold: str | None = Field(None, description="What it waits for while it is on hold; its due date is kept.")
     blocker: BlockerView | None = Field(
         None,
@@ -2351,9 +2363,15 @@ class QueueLineView(BaseModel):
     )
     late: bool | None = Field(
         None,
-        description="For a reminder line: true when it came due while the app or the computer was not running. For a "
-        "reminder_digest line: true when it lists reminders missed while the computer slept, false when it lists "
-        "those that waited for quiet hours to end.",
+        description="For a reminder line: true when it came due and was not shown in time. For a reminder_digest "
+        "line: true when it lists reminders that were missed, false when it lists those that waited for quiet hours "
+        "to end.",
+    )
+    asleep: bool | None = Field(
+        None,
+        description="For a late reminder line, or a reminder_digest line of missed ones: true only when the app knows "
+        "it was not running (the computer asleep or the app closed) when each came due. Otherwise the screen says "
+        "only that the reminder is overdue.",
     )
     snoozes: list[SnoozeChoiceView] = Field(
         default_factory=list,
@@ -3591,6 +3609,11 @@ class WatchSourceView(BaseModel):
     read_at: str | None = Field(
         None, description="When it was last actually read; a try that found no network or failed doesn't count."
     )
+    stale: bool | None = Field(
+        None,
+        description="On, read before, and not read successfully within `watch.stale_after_hours`: Today names it "
+        "instead of saying nothing needs the person.",
+    )
     failures: int = Field(0, description="Failed reads in a row.")
     problem: ScreenText | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
     looked_back_to: date | None = Field(
@@ -4755,6 +4778,11 @@ class OpenActionView(BaseModel):
     untouched_days: int | None = Field(None, description="For a stale one, the days nothing has changed on it.")
     to_send: bool = Field(
         False, description="An owner other than the person hasn't been told about it yet (design 6.10)."
+    )
+    due_check: bool | None = Field(
+        None,
+        description="Its date is one the rules couldn't read for certain: the row says to check it, and it is never "
+        "overdue or a deadline until the person confirms it.",
     )
     owner_question: str | None = Field(
         None,

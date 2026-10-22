@@ -102,6 +102,15 @@ test("every open to-do is a row with its owners, due date, project and the proje
   expect(all[4]).toHaveTextContent("On hold: the printer's quote");
 });
 
+test("a row whose date is to be checked says so beside the date and is not shown as overdue", async () => {
+  api({}, { actions: [action("A-1", "Send the proof", { due: "2026-10-12", due_check: true, state: "open" }), action("A-2", "Review it", { due: "2026-10-12" })] });
+  renderApp(<OpenItems />);
+  const [first, second] = await rows();
+  expect(first).toHaveTextContent(/due Mon, Oct 12 \(check this date\)/);
+  expect(within(first).queryByText("Overdue")).toBeNull();
+  expect(second).not.toHaveTextContent("check this date");
+});
+
 test("a to-do whose owner hasn't been told says to send, and the others don't", async () => {
   api({}, { actions: [action("A-1", "Send the proof", { to_send: true }), action("A-2", "Review it", { to_send: false })] });
   renderApp(<OpenItems />);
