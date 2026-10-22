@@ -2216,7 +2216,7 @@ The person's standing yes for reminders (design 6.12): one choice, on one accoun
 | `person` | str | required | The person whose own address or calendar it covers. |
 | `account` | str | required | The account it goes through, as `<kind>:<name>` (the sign-in or mailbox). |
 | `channel` | str | required | The channel that account's reminders go through. |
-| `form` | Literal['calendar', 'mail'] | required | calendar: an event with an alarm on the account's own calendar. mail: a message to the person's own address. |
+| `form` | Literal['mail', 'calendar'] | required | calendar: an event with an alarm on the account's own calendar. mail: a message to the person's own address. |
 | `address` | str \| None | `None` | For mail: the person's own address as it was when they said yes. A different address makes the yes stale. |
 | `template` | ActTemplate | required | The reminder template and the version the person saw. |
 | `template.name` | str | required | The template's name. |
@@ -3201,7 +3201,7 @@ The person's standing yes for reminders: reminders that go only to them (a messa
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `account` | str | required | The account the reminders go through. |
-| `form` | Literal['calendar', 'mail'] | required | calendar: an event with an alarm on the account's own calendar. mail: a message. |
+| `form` | Literal['mail', 'calendar'] | required | calendar: an event with an alarm on the account's own calendar. mail: a message. |
 | `template_version` | str | required | The version of the reminder template the person saw. |
 
 ### `style.add`

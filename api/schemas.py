@@ -5478,7 +5478,7 @@ class StandingYesView(BaseModel):
     (`template`, `acting`, `address`, `person`, `channel`)."""
 
     id: str
-    form: Literal["calendar", "mail"]
+    form: Literal["mail", "calendar"]
     account: str
     account_label: str | None = None
     given_at: datetime
@@ -5508,6 +5508,6 @@ class StandingYesIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    form: Literal["calendar", "mail"]
+    form: Literal["mail", "calendar"]
     account: str = Field(min_length=1)
     template_version: str = Field(min_length=1)

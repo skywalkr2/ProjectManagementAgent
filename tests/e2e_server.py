@@ -28,6 +28,7 @@ from starlette.routing import Mount, Route
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.cleaning import normalize
+from engine.cli import KEEP_ALIVE
 from engine.evaluate import load_cases
 from engine.storage import WriteContext
 from engine.workspace import init_workspace
@@ -299,7 +300,7 @@ def main() -> None:
         ],
         lifespan=_lifespan(app),
     )
-    uvicorn.run(outer, host="127.0.0.1", port=args.port, log_level="warning")
+    uvicorn.run(outer, host="127.0.0.1", port=args.port, log_level="warning", timeout_keep_alive=KEEP_ALIVE)
 
 
 def _lifespan(app):

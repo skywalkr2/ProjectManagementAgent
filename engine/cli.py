@@ -35,6 +35,11 @@ TEMP_FOLDER = "This folder is emptied when the computer restarts. Keep workspace
 _TEMP_NAMES = ("/tmp", "/private/tmp")
 
 
+#: Seconds an idle connection stays open: longer than browsers and test clients keep one, so a connection they
+#: reuse is never closed under a request (a save would fail; browsers don't retry it).
+KEEP_ALIVE = 75
+
+
 def repo_root() -> Path:
     """The folder this package was run from, found from the package's own location, not the current directory."""
     return Path(__file__).resolve().parents[1]
@@ -691,7 +696,11 @@ def cmd_serve(args: argparse.Namespace) -> int:
             app.state.events.close()
             self.should_exit = True
 
-    server = CockpitServer(uvicorn.Config(app, host=cfg.server.host, port=cfg.server.port, log_level="warning"))
+    server = CockpitServer(
+        uvicorn.Config(
+            app, host=cfg.server.host, port=cfg.server.port, log_level="warning", timeout_keep_alive=KEEP_ALIVE
+        )
+    )
     try:
         server.run()
     except KeyboardInterrupt:

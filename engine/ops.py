@@ -1647,7 +1647,7 @@ class StandingYesGiveOp(OpModel):
 
     op: Literal["standing_yes.give"] = "standing_yes.give"
     account: str = Field(min_length=1, description="The account the reminders go through.")
-    form: Literal["calendar", "mail"] = Field(
+    form: Literal["mail", "calendar"] = Field(
         description="calendar: an event with an alarm on the account's own calendar. mail: a message."
     )
     template_version: str = Field(min_length=1, description="The version of the reminder template the person saw.")

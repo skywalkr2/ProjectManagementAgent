@@ -21434,8 +21434,8 @@
           },
           "form": {
             "enum": [
-              "calendar",
-              "mail"
+              "mail",
+              "calendar"
             ],
             "title": "Form",
             "type": "string"
@@ -21474,8 +21474,8 @@
           },
           "form": {
             "enum": [
-              "calendar",
-              "mail"
+              "mail",
+              "calendar"
             ],
             "title": "Form",
             "type": "string"

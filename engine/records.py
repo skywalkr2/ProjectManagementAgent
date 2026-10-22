@@ -2355,7 +2355,7 @@ class StandingYes(Record):
         min_length=1, description="The account it goes through, as `<kind>:<name>` (the sign-in or mailbox)."
     )
     channel: str = Field(min_length=1, description="The channel that account's reminders go through.")
-    form: Literal["calendar", "mail"] = Field(
+    form: Literal["mail", "calendar"] = Field(
         description="calendar: an event with an alarm on the account's own calendar. mail: a message to the person's "
         "own address."
     )
