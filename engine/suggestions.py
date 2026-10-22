@@ -11,13 +11,18 @@ records, and records a "Not now". Everything else on Today is never held back he
 something about the suggestion changes (its change key), and taking it back makes it show again. The day's cap counts
 what shows and what the person put off or chose something about today. A pattern line and a stale line carry choices
 (`engine.patterns`); "Leave it" keeps a line off the way "Not now" does.
+
+what shows and what the person put off today.
+
+A snooze is the same signal with a day in its note (`until`): the line it names stays off until that day, whatever
+changes, and taking it back makes it show again. A snooze is not a "Not now": it does not count toward the day's cap.
 """
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, time
+from datetime import UTC, date, datetime, time
 from typing import Any
 
 from engine import attention, patterns
@@ -62,11 +67,28 @@ def dismissed(view: Any) -> dict[tuple[str, str], str]:
             continue
         try:
             said = json.loads(signal.data["note"])
+            if said.get("until"):
+                continue  # a snooze, read by `snoozed`
             found[(said["kind"], said["subject"])] = said["change"]
-        except (ValueError, KeyError, TypeError):
+        except (ValueError, KeyError, TypeError, AttributeError):
             continue
     # A choice to leave a suggestion keeps it away the same way.
     return {**found, **patterns.stays_off(view)}
+
+
+def snoozed(view: Any, today: date) -> dict[str, date]:
+    """The lines the person snoozed that are still off today and not taken back: line key to the day it comes back."""
+    found: dict[str, date] = {}
+    for signal in sorted(view.list("signal"), key=lambda s: int(s.id.rpartition("-")[2])):
+        if signal.data["kind"] != "suggestion_dismissed" or signal.data.get("note") in (None, TAKEN_BACK):
+            continue
+        try:
+            said = json.loads(signal.data["note"])
+            until = date.fromisoformat(str(said["until"]))
+            found[said["subject"]] = until
+        except (ValueError, KeyError, TypeError, AttributeError):
+            continue
+    return {key: until for key, until in found.items() if until > today}
 
 
 def _put_off_today(view: Any, cfg: Any, now: datetime) -> tuple[datetime, ...]:
@@ -79,6 +101,8 @@ def _put_off_today(view: Any, cfg: Any, now: datetime) -> tuple[datetime, ...]:
             or signal.data.get("note") == TAKEN_BACK
         ):
             continue
+        if '"until"' in str(signal.data.get("note")):
+            continue  # a snooze doesn't use up the day's cap
         at = datetime.fromisoformat(str(signal.data["at"]))
         at = at if at.tzinfo else at.replace(tzinfo=UTC)
         if at.astimezone(here).date() == today and at <= now:
@@ -129,6 +153,20 @@ def put_off(store: Any, cfg: Any, line: Any, now: datetime) -> str:
     }
     with store.transaction() as tx:
         return record(tx, cfg, data, WriteContext(actor="pm", trust="trusted", op="suggestion.not_now"), now)
+
+
+def snooze(store: Any, cfg: Any, line_key: str, actions: list[str], until: date, now: datetime) -> str:
+    """Record that the person snoozed a line until a day; returns the signal's id, which `take_back` undoes."""
+    from engine.learn import record
+
+    data = {
+        "kind": "suggestion_dismissed",
+        "refs": actions[:20],
+        "note": json.dumps({"kind": "snooze", "subject": line_key, "change": "", "until": until.isoformat()}),
+        "at": now.astimezone(UTC).isoformat(),
+    }
+    with store.transaction() as tx:
+        return record(tx, cfg, data, WriteContext(actor="pm", trust="trusted", op="line.snooze"), now)
 
 
 def take_back(store: Any, signal_id: str) -> bool:

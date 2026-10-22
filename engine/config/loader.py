@@ -41,6 +41,8 @@ class Config:
     sources: dict[str, str] = field(default_factory=dict)
     #: Values found under keys that moved to records (one source of truth), by dotted key; the app moves them at start.
     moved: dict[str, Any] = field(default_factory=dict)
+    #: Old setting names still in use (a file, an environment variable or a flag), each with the name that replaces it.
+    deprecated: dict[str, str] = field(default_factory=dict)
 
     def __getattr__(self, name: str) -> Any:
         files = self.__dict__.get("files", {})
@@ -73,28 +75,40 @@ class Config:
 #: Keys whose data now lives on a record (one source of truth): the PM's name and aliases are on their person record.
 MOVED_TO_RECORDS = ("workspace.user.full_name", "workspace.user.aliases")
 
-#: Settings that moved to a new name: an old file keeps working, and the value is read under the new name unless the
-#: file also sets that.
-RENAMED_KEYS = {"ui.today.nudge_after_days": "ui.followups.question_after_days"}
+#: Settings that moved to a new name, which may be in another file: an old file, environment variable or flag keeps
+#: working for one release, and the value is read under the new name unless that is also set. `Config.deprecated`
+#: names each old key found, so the screen can say so.
+RENAMED_KEYS = {
+    "ui.today.nudge_after_days": "ui.followups.question_after_days",
+    "steward.chase_dated_days": "ui.followups.action_due_within_days",
+    "steward.chase_undated_days": "ui.followups.undated_after_days",
+}
 
 
-def _rename_keys(name: str, data: dict[str, Any]) -> None:
-    """Move any key in `data` (the contents of file `name`) that has a new name to it, unless the new name is set."""
+def _rename_keys(raw: dict[str, dict[str, Any]], deprecated: dict[str, str]) -> None:
+    """Move each key in the files' contents `raw` that has a new name to it, unless the new name is set, and note it."""
     for old, new in RENAMED_KEYS.items():
         old_file, *old_path = old.split(".")
         new_file, *new_path = new.split(".")
-        if old_file != name or new_file != name:
-            continue
-        holder: Any = data
+        holder: Any = raw.get(old_file)
         for part in old_path[:-1]:
             holder = holder.get(part) if isinstance(holder, dict) else None
         if not isinstance(holder, dict) or old_path[-1] not in holder:
             continue
         value = holder.pop(old_path[-1])
-        target = data
+        deprecated[old] = new
+        target = raw.setdefault(new_file, {})
         for part in new_path[:-1]:
             target = target.setdefault(part, {})
         target.setdefault(new_path[-1], value)
+
+
+def _current_key(key: str, deprecated: dict[str, str]) -> str:
+    """A key as it is named now: an old name set in the environment or by a flag is read under the new one."""
+    if key in RENAMED_KEYS:
+        deprecated[key] = RENAMED_KEYS[key]
+        return RENAMED_KEYS[key]
+    return key
 
 
 def load_config(
@@ -116,7 +130,6 @@ def load_config(
             if path.exists():
                 data = _read_yaml(path)
                 _check_version(name, data, path)
-                _rename_keys(name, data)
                 for key in MOVED_TO_RECORDS:
                     file, *rest = key.split(".")
                     holder = data if file == name else None
@@ -128,13 +141,21 @@ def load_config(
                     sources[key] = "file"
         raw[name] = data
 
+    deprecated: dict[str, str] = {}
+    _rename_keys(raw, deprecated)
+    for old, new in deprecated.items():
+        sources.pop(old, None)
+        sources[new] = "file"
+
     for key, value in _env_values(env).items():
+        key = _current_key(key, deprecated)
         _set_dotted(raw, key, value)
         sources[key] = "env"
 
     for key, value in (flags or {}).items():
         if value is None:
             continue
+        key = _current_key(key, deprecated)
         _set_dotted(raw, key, value)
         sources[key] = "flag"
 
@@ -144,7 +165,7 @@ def load_config(
             files[name] = model.model_validate(raw[name])
         except ValidationError as err:
             raise _describe(name, err) from None
-    cfg = Config(files=files, sources=sources, moved=moved)
+    cfg = Config(files=files, sources=sources, moved=moved, deprecated=deprecated)
     from engine.config.stages import validate_declared
 
     validate_declared(cfg, config_dir)

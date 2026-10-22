@@ -358,6 +358,72 @@ def test_exact_is_true_or_false_and_injected_needs_a_hostile_case(tmp_path):
         load_cases(tmp_path)
 
 
+# ---- an action handed to the assistant -------------------------------------------------------------------------------
+
+
+HANDED_OVER = "action-work-drafts-the-message"
+
+
+@pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=lambda t: t.name)
+def test_a_handed_over_action_starts_the_run_and_is_scored_on_the_prose_it_is_drafted_as(monkeypatch, template):
+    case = case_of(template, HANDED_OVER)
+    assert case["handed_over"]["action"] in {r["id"] for r in starting_records(template, case)}
+    assert run_edited(monkeypatch, template, HANDED_OVER).passed
+    wrong = run_edited(
+        monkeypatch,
+        template,
+        HANDED_OVER,
+        stub_answer={**case["stub_answer"], "draft": "Hello.\n\nNothing to report.\n"},
+    )
+    assert not wrong.passed and wrong.missing and wrong.missing[0].startswith("op=text.draft")
+
+
+def test_a_draft_that_changes_the_action_or_asks_someone_fails_the_case(monkeypatch):
+    case = case_of(DEMO_B, HANDED_OVER)
+    keeps = run_edited(monkeypatch, DEMO_B, HANDED_OVER, forbid=[{"op": "text.draft"}])
+    assert not keeps.passed and keeps.forbidden
+    assert case["forbid"] and {f["op"] for f in case["forbid"]} >= {"action.close", "action.add", "question.add"}
+
+
+STANDING_RULE = "standing-rule-only-suggests-an-act"
+
+
+def test_a_standing_rule_to_reply_alone_is_met_by_a_draft_reply_and_no_act_of_the_assistants_own(monkeypatch):
+    from engine.tasks import task_kind
+
+    case = case_of(DEMO_B, STANDING_RULE)
+    assert [r["kind"] for r in case["given"]] == ["rule"] and case["given"][0]["fields"]["status"] == "active"
+    assert run_edited(monkeypatch, DEMO_B, STANDING_RULE).passed
+    # A note's run has no act among the ops it may propose, whatever a rule says, so an attempt is refused ...
+    assert "act.draft" not in task_kind("notes").ops
+    act = {
+        "op": "act.draft",
+        "channel": "copy",
+        "target": {"kind": "message", "action": "send", "recipients": [{"person": "PER-6", "kind": "email"}]},
+        "parts": {"subject": "Proofs", "body": "They ship on Monday."},
+    }
+    tried = run_edited(
+        monkeypatch,
+        DEMO_B,
+        STANDING_RULE,
+        stub_answer={**case["stub_answer"], "ops": [*case["stub_answer"]["ops"], act]},
+    )
+    # ... and the case counts the attempt as the failure it is, though nothing was applied.
+    assert not tried.passed and tried.forbidden == ["op=act.draft, attempted=True"] and tried.refused == 1
+
+
+def test_a_handed_over_action_must_be_one_the_case_starts_with(tmp_path):
+    folder = tmp_path / "evals"
+    folder.mkdir()
+    base = {"id": "c", "received": "2026-10-09", "stub_answer": {"ops": []}, "handed_over": {"action": "ACT-90"}}
+    (folder / "c.yaml").write_text(yaml.safe_dump(base))
+    with pytest.raises(ValueError, match="case c: handed_over names an action the case doesn't start with"):
+        load_cases(tmp_path)
+    (folder / "c.yaml").write_text(yaml.safe_dump({**base, "handed_over": "ACT-90"}))
+    with pytest.raises(ValueError, match="case c: handed_over is a mapping"):
+        load_cases(tmp_path)
+
+
 # ---- starting records ------------------------------------------------------------------------------------------------
 
 

@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, tzinfo
 from typing import Any
 
-from engine import learn, outward, promises, sent_version, sides
+from engine import audience, learn, outward, promises, sent_version, sides
 from engine.blocked import ViewNames, blocker_of, blocker_problem, holds_up
 from engine.cleaning import normalize
 from engine.config import Config
@@ -94,6 +94,9 @@ class Section:
     #: Open questions held for a meeting or a day, out of To send until it comes (`held_until` on each).
     later: list[dict[str, Any]] = field(default_factory=list)
     actions: list[dict[str, Any]] = field(default_factory=list)
+    #: What the message leaves out because its source limits who may see it and this person is outside that group:
+    #: each `kind`, `id`, `text` and `limited_to` (the names it is limited to). The person sees it; the message doesn't.
+    limited: list[dict[str, Any]] = field(default_factory=list)
     message: str = ""
     to_send: int = 0
     #: The day the oldest of what is to send became ready to send, where the workspace is; none when nothing is.
@@ -116,6 +119,9 @@ def actions_to_send(store: Store, cfg: Config) -> set[str]:
             who = owner["person"]
             if who == people.pm or stance_of(view, cfg.steward, who) in UNTOLD_STANCES:
                 continue
+            limit = audience.limit_of_record(view, d)
+            if limit is not None and not audience.within(limit, people, who, ""):
+                continue  # no message to them carries it, so it isn't to send
             told = d.get("told", {}).get(who)
             if told and changed_since_told(history.get(a.id, []), who, d):
                 told = None
@@ -175,6 +181,17 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
     by_person: dict[str, Section] = {}
     made = reader.creators("question")
 
+    def out_of_reach(kind: str, record_id: str, text: str, data: dict[str, Any], person: str) -> bool:
+        """Whether the record rests on a source whose audience leaves this person out; it is then noted on the
+        section, to be left out of every message to them (design 6.35)."""
+        limit = audience.limit_of_record(reader, data)
+        if limit is None or audience.within(limit, people, person, ""):
+            return False
+        section(person).limited.append(
+            {"kind": kind, "id": record_id, "text": text, "limited_to": audience.names_of(people, limit)}
+        )
+        return True
+
     def section(pid: str) -> Section:
         if pid not in by_person:
             by_person[pid] = Section(pid, people.name(pid), pid == people.pm)
@@ -186,6 +203,8 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
             continue
         if (d.get("resolves") or {}).get("kind") in ROUTING:
             continue  # answered where the item waits (What changed), so it isn't shown twice
+        if out_of_reach("question", q.id, d["title"], d, d["to"]):
+            continue
         row_side = sides.side_of_item(reader, cfg, q)
         sent = local_day(datetime.fromisoformat(d["sent_at"]), here) if d.get("sent_at") else None
         chased = sorted(str(day) for day in d.get("followed_up") or [])
@@ -234,6 +253,8 @@ def sections(store: Store, cfg: Config, today: date, waiting: list[Late] | None 
         for owner in d.get("owners", []):
             if owner["person"] != people.pm and stance_of(view, cfg.steward, owner["person"]) in UNTOLD_STANCES:
                 continue  # nothing is drafted to someone the person only watches or reports to (design 6.34)
+            if out_of_reach("action", a.id, d["text"], d, owner["person"]):
+                continue
             told = d.get("told", {}).get(owner["person"])
             reset = bool(told) and changed_since_told(history.get(a.id, []), owner["person"], d)
             if reset:

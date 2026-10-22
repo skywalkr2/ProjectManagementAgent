@@ -354,3 +354,26 @@ def test_the_first_free_time_starts_at_the_next_round_time_after_now(client):
     first = found[0].start.astimezone(UTC)
     assert first.second == 0 and first.microsecond == 0 and first.minute % step == 0
     assert now < first <= now + timedelta(minutes=step)
+
+
+# ---- whether a new message can be carried out, and through which account ---------------------------------------
+
+
+def test_the_one_account_that_can_send_carries_a_new_message(client):
+    found = client.get("/api/acts/send-options").json()
+    assert found["can_act"] is True and found["account"] == ACCOUNT and found["account_label"] == "Work mail"
+
+
+def test_acting_off_or_no_account_means_copy_carries_a_new_message(client):
+    client.cfg.watch.acting.clear()
+    assert client.get("/api/acts/send-options").json() == {"can_act": False, "account": None, "account_label": None}
+
+
+def test_two_accounts_that_could_send_and_none_chosen_is_no_account_and_the_latest_act_chooses(client):
+    client.cfg.watch.sources.append(WatchSource(id="home-mail", connector="mailbox", label="Home mail"))
+    client.cfg.watch.acting.append("mailbox:home-mail")
+    assert client.get("/api/acts/send-options").json()["can_act"] is False
+    made = draft(client, to_person(client, action="send"), parts=BODY, account="mailbox:home-mail")
+    assert made.status_code == 200, made.text
+    chosen = client.get("/api/acts/send-options").json()
+    assert chosen["can_act"] is True and chosen["account"] == "mailbox:home-mail"

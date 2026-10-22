@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day, wallTime, wallWhen } from "../lib/dates";
+import { day, sinceDay, wallTime, wallWhen } from "../lib/dates";
 import { backupAge } from "../lib/backup";
 import { useCoverage } from "../lib/coverage";
 import { useFirstGoText } from "../lib/first-go";
@@ -27,6 +27,7 @@ import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, use
 import { useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
 import { HeldLine, isHeld } from "../shell/HeldLines";
+import { useQuietChoices } from "./QuietLine";
 import { Button } from "../ui/Button";
 import { Panel } from "../ui/Panel";
 import { Pill, type PillTone } from "../ui/Pill";
@@ -656,6 +657,8 @@ export function useLineTitle(): (line: QueueLine) => string {
         return sentCheckTitle(line, t);
       case "since_yesterday":
         return t("queue.since.title");
+      case "invitation":
+        return t("queue.invitation", { title: line.text ?? "" });
       case "meeting_prep":
         return t("queue.meeting_prep", { title: line.text ?? "" });
       case "meeting_capture":
@@ -713,6 +716,7 @@ function QueueRow(props: {
   const sentRow = useSentCheckChoices(line);
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null);
   const notNow = useNotNow();
+  const quietRow = useQuietChoices(line);
   const keepArea = () =>
     void act(
       () => api.keepArea(line.subject ?? ""),
@@ -888,7 +892,11 @@ function QueueRow(props: {
         return {
           pill: t("queue.pill.send"),
           tone: "need",
-          meta: q && a ? [tn("queue.send.n_questions", q), tn("queue.send.n_actions", a)].join(" · ") : t("queue.send.ready"),
+          meta: meta(
+            q && a ? [tn("queue.send.n_questions", q), tn("queue.send.n_actions", a)].join(" · ") : t("queue.send.ready"),
+            // A batch that has waited says since when; one ready today says nothing of it.
+            sinceDay(line.ready_since, new Date()) && t("queue.send.ready_since", { day: sinceDay(line.ready_since, new Date()) }),
+          ),
           primary: { label: t("queue.act.review_copy") },
           menu: [],
         };
@@ -1048,6 +1056,14 @@ function QueueRow(props: {
           primary: { label: t("queue.since.open"), run: () => props.handlers.onOpenView?.("work/since") },
           menu: [],
         };
+      case "invitation":
+        return {
+          pill: t("queue.pill.invitation"),
+          tone: "need",
+          meta: meta(line.at && dateAndTime(line.at), line.subject && t("queue.invitation.from", { name: line.subject })),
+          primary: { label: t("queue.act.reply_invitation"), run: () => props.handlers.onOpenRecord?.("event", line.event ?? "") },
+          menu: [],
+        };
       case "meeting_prep": {
         const names = line.names ?? [];
         const extra = line.count - names.length;
@@ -1075,7 +1091,8 @@ function QueueRow(props: {
           tone: "warn",
           meta: meta(t(line.state === "from" ? "queue.quiet_promise.from" : "queue.quiet_promise.to"), tn("queue.quiet_promise.days", n), line.due && t("queue.quiet_promise.due", { date: day(line.due) })),
           primary: { label: t("queue.act.open_person"), run: () => props.handlers.onOpenRecord?.("person", line.person ?? "") },
-          menu: [],
+          menu: quietRow.menu,
+          groups: quietRow.groups,
         };
       }
       case "away":

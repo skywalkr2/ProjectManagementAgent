@@ -20,6 +20,7 @@ from engine import (
     day_clashes,
     endings,
     held_ask,
+    invitation_lines,
     meeting_prep,
     move_groups,
     patterns,
@@ -159,8 +160,10 @@ class Line:
     are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
     without an answer any of its promises has had, which the line says), opening the one message to them. A promise
     line says its `replies` the same way.
-    meeting_prep (a calendar entry with other people on it that starts soon: its id in `event`, its title in `text`,
-    `at` when it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many
+    invitation (a calendar entry that came as an invitation and has not been answered, starting soon: its id in `event`,
+    its title in `text`, who invited in `subject`, `at` when it starts; the entry's page answers it), meeting_prep (a
+    calendar entry with other people on it that starts soon: its id in `event`, its title in `text`, `at` when it
+    starts, `names` the known people coming, `count` how many others are on it and `open_items` how many
     things are open with them; it opens the entry's page and goes when the entry starts), meeting_capture (an entry
     with other people on it that has ended and has nothing written down: `event`, `text` and `at` when it ended; it goes
     when the person writes down what happened or says there is nothing to note), quiet_promise (an open promise that
@@ -204,6 +207,8 @@ class Line:
     account: str | None = None
     until: str | None = None
     waiting_since: str | None = None
+    #: For a line of messages to send: the day the oldest of them became ready to send, where the workspace is.
+    ready_since: str | None = None
     state: str | None = None
     rules: list[str] = field(default_factory=list)
     stable_size: int | None = None
@@ -235,6 +240,8 @@ class Line:
     #: (the computer asleep or the app closed). Without that, the line says only that it is overdue.
     asleep: bool | None = None
     snoozes: list[dict[str, str]] = field(default_factory=list)
+    #: For a line about a promise gone quiet: the days it can be snoozed for, each `days` and the day it returns (`on`).
+    snooze_days: list[dict[str, Any]] = field(default_factory=list)
     reminders: list[dict[str, str]] = field(default_factory=list)
     reply: str | None = None
     reply_reviewed: bool | None = None
@@ -949,8 +956,28 @@ def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[st
             )
         )
 
+    # An invitation nobody has answered: one line to open its entry, where the answer is drafted for the person's yes.
+    for invited in invitation_lines.waiting(store, cfg, now):
+        lines.append(
+            Line(
+                key=f"invitation:{invited.event}",
+                group="decide",
+                kind="invitation",
+                count=1,
+                text=invited.title,
+                subject=invited.organizer or None,
+                event=invited.event,
+                at=invited.start.astimezone(here).isoformat(),
+                untrusted=invited.untrusted,
+                since=invited.start.isoformat(),
+            )
+        )
+
     # A promise to or from someone with no news for a while, that has no line of its own already.
+    snoozed = suggestions.snoozed(reader, today)
     for gone in people_memory.quiet_promises(store, cfg, today, skip=on_a_line, hidden=hidden):
+        if f"quiet_promise:{gone.action}" in snoozed:
+            continue
         lines.append(
             Line(
                 key=f"quiet_promise:{gone.action}",
@@ -963,6 +990,10 @@ def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[st
                 waiting_days=gone.quiet,
                 actions=[gone.action],
                 state=gone.direction,
+                snooze_days=[
+                    {"days": n, "on": (today + timedelta(days=n)).isoformat()}
+                    for n in sorted({n for n in cfg.steward.people.snooze_days if n > 0})
+                ],
                 since=gone.since.isoformat(),
             )
         )
@@ -1251,6 +1282,7 @@ def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[st
                     ),
                     questions=[q["id"] for q in s.questions if q["status"] == "open"],
                     actions=[a["id"] for a in s.actions if a["told"] is None],
+                    ready_since=s.ready_since,
                     since=s.name.lower(),
                 )
             )
@@ -1472,6 +1504,7 @@ _KIND_ORDER = {
     "intake_go": 4,
     "refused": 5,
     "question": 6,
+    "invitation": 7,
     "failed": 0,
     "paused": 1,
     "offline": 1,

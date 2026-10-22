@@ -22,15 +22,18 @@ An expected `action.move`, `action.part` or `action.news` names the action's `id
 `text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title), and
 an expected `fact` may name `as_of`, or `on` and `on_kind` (the day of a dated fact and what kind of day it is); an
 ending or a repeat that waits only for the person's Keep counts as made, for what a case expects and for what it
-forbids. A case may name the `project` its input is about (as the person does when handing it in), or give `watched`
-(title, change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may
-expect a held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question
-(`held: who-is`). A hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person
-listed under `injected`. A plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too,
-for each plugin enabled in the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a
-scorer of the plugin (`score`) that judges the plugin's own ops, while the core's exact matching scores everything else.
-The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
-one account.
+forbids. An expected `text.draft` (the prose of a draft task, filed as a pending draft) may name the `field` it is
+for and `text_has` (words in the drafted text). A case that names `handed_over` (`action`, an open action among its
+starting records, and a `note`) starts from the person handing that action to the assistant, as the button on its row
+does, with no input handed in; its `stub_answer` holds the prose as `draft`, and no ops. A case may name the
+`project` its input is about (as the person does when handing it in), or give `watched` (title, change, author,
+by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a held op (`held:
+<op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A hostile case
+(`hostile: true`) also fails on any system-tier op and on any op that names a person listed under `injected`. A
+plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too, for each plugin enabled in
+the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a scorer of the plugin
+(`score`) that judges the plugin's own ops, while the core's exact matching scores everything else. The report says
+which accounts ran, the version of each command-line agent, and whether every tier ran on one account.
 
 A case, pair and scenario may name the `data_level` of their material (default: a handed-in note's, `internal`);
 measuring an account runs only those it is allowed to see.
@@ -57,6 +60,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
+from engine import action_work
 from engine.ai.adapters import make_adapter
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
@@ -249,6 +253,14 @@ def _check_case(folder: Path, case: dict[str, Any]) -> None:
         raise ValueError(f"{where}: score names a plugin's scorer, which only the plugin's own cases use")
     if case.get("watched") is not None and not isinstance(case["watched"], dict):
         raise ValueError(f"{where}: watched is a mapping (title, change, author, by_us, by_you, credited_to)")
+    given = case.get("handed_over")
+    if given is not None:
+        if not isinstance(given, dict) or not isinstance(given.get("action"), str):
+            raise ValueError(f"{where}: handed_over is a mapping naming the action (`action`) and, if wanted, a `note`")
+        if not any(
+            r.get("kind") == "action" and r.get("id") == given["action"] for r in starting_records(folder.parent, case)
+        ):
+            raise ValueError(f"{where}: handed_over names an action the case doesn't start with")
     check_named(where, case.get("skills"))
     check_level(where, case.get("data_level"))
     starting_records(folder.parent, case)
@@ -416,7 +428,12 @@ def _run_case(
                 "ai.tiers.routine.use": "stub/default",
                 "ai.tiers.routine.fallback": [],
             }
-            set_responder(lambda task, answer=case["stub_answer"]: json.dumps(answer))
+            # A draft is answered in prose (the case's `draft`); everything else as the structured answer in JSON.
+            set_responder(
+                lambda task, answer=case["stub_answer"]: (
+                    answer["draft"] if case.get("handed_over") is not None else json.dumps(answer)
+                )
+            )
         elif account:
             flags |= {"ai.tiers.routine.use": account, "ai.tiers.routine.fallback": []}
         if case.get("_pack"):
@@ -578,6 +595,10 @@ def _hand_in_case(ws: Workspace, store: Store, cfg: Config, case: dict[str, Any]
     """Hand a case's input in. A case with `typed_on` is a note typed on a button of an action or question: it names
     the item (`kind`, `id`), the button (`route`) and, for They finished it, the person it waited on. The button's own
     change is made first, as the screen does, then the note is handed in as the person's own words."""
+    if case.get("handed_over") is not None:
+        # An action handed to the assistant: its request is queued as the button does, for the work to be drafted.
+        given = case["handed_over"]
+        return action_work.hand_over(store, given["action"], given.get("note"))
     on = case.get("typed_on")
     if on is None and case.get("watched") is not None:
         return _hand_in_watched(ws, store, case, now)
@@ -758,6 +779,12 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             and ("on" not in e or f.get("on") == str(e["on"]))
             and ("on_kind" not in e or f.get("on_kind") == e["on_kind"])
         )
+    if op == "text.draft":
+        # The prose a draft task answered, filed as a pending draft: its field and the words in the drafted text.
+        drafted = o["op"]
+        return drafted["field"] == e.get("field", drafted["field"]) and _has_words(
+            drafted["text"], e.get("text_has", [])
+        )
     if op == "routing.add":
         entry = _record(store, o, "routing_entry")
         return bool(
@@ -848,8 +875,13 @@ def extras_of(
 def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, people_before: int) -> bool:
     if f.get("new_person"):
         return len(store.read().list("person")) > people_before
-    # An ending waiting only for the person's Keep counts as made, as it does for what a case expects.
-    made = [o for o in outcomes if o["op"]["op"] == f["op"] and (o["status"] == "applied" or _awaits_keep(o))]
+    # An ending waiting only for the person's Keep counts as made, as it does for what a case expects. A forbidden op
+    # marked `attempted` counts whatever became of it: held or refused, it was still proposed.
+    made = [
+        o
+        for o in outcomes
+        if o["op"]["op"] == f["op"] and (o["status"] == "applied" or _awaits_keep(o) or f.get("attempted") is True)
+    ]
     for o in made:
         if "id" in f and o["op"].get("id") != f["id"]:
             continue
@@ -1070,11 +1102,13 @@ def estimate_cases(
     packs_of: Path | None = None,
     env: Mapping[str, str] | None = None,
     most_private: str | None = None,
+    calibrated_by: Any = None,
 ) -> tuple[float | None, int]:
     """About what running every case `runs` times on an account would cost in USD, and how many cases that is. A few
     evenly spread cases have their packets built and priced as a real run is; the rest are taken to cost the average of
     those. None when the account's price isn't known or no case could be priced. Cases more private than
-    `most_private` aren't counted."""
+    `most_private` aren't counted. `calibrated_by` is the workspace (or private folder) whose measured token counts and
+    agent overhead correct each price, since the practice workspace has measured nothing of its own."""
     from engine.dispatcher import estimate_request
 
     env = os.environ if env is None else env
@@ -1105,7 +1139,8 @@ def estimate_cases(
                     _create_starting_records(store, case["id"], records)
                 now = received_of(case)
                 request = _hand_in_case(ws, store, cfg, case, now)
-                prices.append(estimate_request(ws, store, cfg, Router(cfg, store, env=env), request, now, use=account))
+                router = Router(cfg, store, env=env, calibration_from=calibrated_by)
+                prices.append(estimate_request(ws, store, cfg, router, request, now, use=account))
             except (ValueError, StoreError):
                 continue
             finally:

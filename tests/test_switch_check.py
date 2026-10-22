@@ -177,6 +177,49 @@ def test_the_estimate_prices_a_few_real_packets_and_scales_with_the_runs(tmp_pat
     assert unpriced is None, "a choice with no known price is estimated as none, never as free"
 
 
+def test_the_estimate_is_corrected_by_what_the_workspace_measured_about_the_account(tmp_path, monkeypatch):
+    from engine.ai import calibration
+    from engine.ai.checked import Folder
+
+    monkeypatch.setattr(ev, "ESTIMATE_SAMPLE", 2)
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    path = ws.config_dir / "ai.yaml"
+    path.write_text(
+        path.read_text().replace(
+            "prices: {}", "prices: {stub/default: {input_per_million: 100, output_per_million: 0}}"
+        )
+    )
+    unmeasured, _ = estimate_cases(DEMO_B, account="stub/default", runs=1, ai_config=path, env={}, calibrated_by=ws)
+    # The account's model counts twice what the app does: every packet is priced at about twice its own count.
+    folder = Folder(ws.private_dir)
+    calibration.record_check(folder, "stub", "stub", counted=2 * calibration.estimate_tokens(4000), sample_chars=4000)
+    doubled, _ = estimate_cases(DEMO_B, account="stub/default", runs=1, ai_config=path, env={}, calibrated_by=ws)
+    assert unmeasured and doubled == pytest.approx(unmeasured * 2, rel=0.01)
+    # And the program adds a fixed amount to every request, which only makes it dearer.
+    calibration.record_overhead(folder, "stub", reported=5000, text_tokens=0)
+    measured, _ = estimate_cases(DEMO_B, account="stub/default", runs=1, ai_config=path, env={}, calibrated_by=ws)
+    assert measured and measured > doubled
+    # Without the workspace to read, the practice one has measured nothing, so it is priced as before.
+    alone, _ = estimate_cases(DEMO_B, account="stub/default", runs=1, ai_config=path, env={})
+    assert alone == pytest.approx(unmeasured)
+
+
+def test_the_switch_estimate_reads_the_workspaces_measurements(env, monkeypatch):
+    import engine.evaluate as ev
+
+    seen = {}
+
+    def priced(*args, **kwargs):
+        seen.update(kwargs)
+        return 1.0, 10
+
+    ws = env[0]
+    cfg = load_config(ws.config_dir, env={})
+    monkeypatch.setattr(ev, "estimate_cases", priced)
+    REAL_ESTIMATE(cfg, ws, "acct/m")
+    assert seen["calibrated_by"] is ws
+
+
 def test_an_estimate_whose_practice_workspace_cant_be_made_is_unknown_not_a_crash(tmp_path, monkeypatch):
     from engine.storage import StoreError
 

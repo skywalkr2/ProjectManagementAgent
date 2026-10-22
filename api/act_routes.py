@@ -25,6 +25,7 @@ from api.schemas import (
     ActOptionsView,
     ActRecipientView,
     ActResultView,
+    ActSendOptionsView,
     ActSettleIn,
     ActView,
     FreeSlotsView,
@@ -216,6 +217,26 @@ def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             out.answers = list(MAILBOX_ANSWERS) if mailbox else ["accepted", "tentative", "declined", "propose"]
             out.propose_refusal = NO_PROPOSE if mailbox else None
         return out
+
+    @r.get("/acts/send-options")
+    def send_options() -> ActSendOptionsView:
+        """Whether a new message can be carried out after the person's yes, and through which account: the account
+        their latest act named when acting is on for it and a channel sends messages through it, else the only account
+        that can. Several that could and none chosen is no account: nothing is picked for the person."""
+        view = store.read()
+
+        def can(account: str | None) -> bool:
+            if account is None or not act_accounts.acting_on(cfg, account):
+                return False
+            carrier = serving(account, "message", "send")
+            return carrier is not None and carrier[1].takes("message", "send")
+
+        picked = act_accounts.last_picked(view)
+        able = [a.id for a in act_accounts.known(store, cfg) if can(a.id)]
+        chosen = picked if can(picked) else able[0] if len(able) == 1 else None
+        if chosen is None:
+            return ActSendOptionsView()
+        return ActSendOptionsView(can_act=True, account=chosen, account_label=act_accounts.label_of(store, cfg, chosen))
 
     @r.get("/acts/accounts")
     def accounts() -> ActAccountsView:

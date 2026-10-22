@@ -75,19 +75,21 @@ def late(
     """The open actions that need a line, never one on hold or with an ending waiting for the person.
     - The person's own, once read as promises (a plain to-do stays on the overdue line): past their date with no news
       since that day.
-    - Owed by someone else, which the person waits on: with a date, from `steward.chase_dated_days` before it and once
-      it has passed (a past one with no news since its day); with none, after `steward.chase_undated_days` with no news
-      since it was made or since its latest news. One chased lately waits as long again.
+    - Owed by someone else, which the person waits on: with a date, from `ui.followups.action_due_within_days` before
+      it and once it has passed (a past one with no news since its day); with none, after
+      `ui.followups.undated_after_days` with no news since it was made or since its latest news. One chased lately
+      waits as long again.
     - A reply that didn't answer (a non-answer, written by the news op) is news that mustn't silence the chase: the
-      first restarts the clock once, for the dated window (`steward.chase_dated_days`) of a dated promise and the
-      undated wait of an undated one, and a second brings the line back at once with `replies` counted.
+      first restarts the clock once, for the dated window (`ui.followups.action_due_within_days`) of a dated promise
+      and the undated wait of an undated one, and a second brings the line back at once with `replies` counted.
     Each waiting-on carries the owner's stance (the screens word it by that, and Today leaves out a watched one).
     `made` gives the day an action was made. Oldest first."""
     found: list[Late] = []
     if pm is None:
         return found
     rule = cfg.steward
-    wait = cfg.ui.followups.question_after_days
+    timing = cfg.ui.followups
+    wait = timing.question_after_days
 
     def stance(owner: str, data: dict[str, Any]) -> str | None:
         return None if data.get("reply_owed") else stance_of(reader, rule, owner)
@@ -111,14 +113,14 @@ def late(
             continue
         chased = [date.fromisoformat(str(d["told"][p])) for p in owners if (d.get("told") or {}).get(p)]
         if due is not None:
-            if (due - today).days > rule.chase_dated_days:
+            if (due - today).days > timing.action_due_within_days:
                 continue
-            start = due if due < today else due - timedelta(days=rule.chase_dated_days)
+            start = due if due < today else due - timedelta(days=timing.action_due_within_days)
             heard = [(on, non) for on, non in entries if on >= start]
             replies = [on for on, non in heard if non]
             if len(replies) < len(heard):
                 continue  # news that wasn't a non-answer ends the wait for its day
-            if len(replies) == 1 and (today - replies[0]).days < rule.chase_dated_days:
+            if len(replies) == 1 and (today - replies[0]).days < timing.action_due_within_days:
                 continue  # one non-answer restarts the clock once
             if chased and (today - max(chased)).days < wait:
                 continue
@@ -140,7 +142,7 @@ def late(
         since = max([*news, *chased, *([began] if began else [])], default=None)
         last_chase = max(chased, default=None)
         replies = [on for on, non in entries if non and (last_chase is None or on > last_chase)]
-        if len(replies) < 2 and since is not None and (today - since).days < rule.chase_undated_days:
+        if len(replies) < 2 and since is not None and (today - since).days < timing.undated_after_days:
             continue
         found.append(
             Late(

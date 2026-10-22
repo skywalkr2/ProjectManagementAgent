@@ -4,6 +4,38 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: One family of follow-up timing settings; what a group message never carries; the cleanup batch's skips
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule for each:
+  - *One family for follow-up timing* (setting): `ui.followups.*` is the one set. The promise lines read
+    `ui.followups.action_due_within_days` and `undated_after_days`, the same two numbers the follow-ups, Today's nudge lines
+    and Top priorities read; `steward.chase_dated_days` and `steward.chase_undated_days` go. The old names are read for one
+    release from a file, an environment variable or a flag, the setting's row says so, and saving the new name takes the old
+    one out of the file. Both fictional workspaces already held the same values under both names.
+  - *Singling out* (rule, a lint): a draft to two or more people other than the person never names one of them as the
+    cause of a miss; found by rules from a sentence that holds the name and a phrase of `language.singling_out_phrases`,
+    returned once and then held for the person. It applies to a drafted reply to a message that went to several people and
+    to a message act to several recipients; the person's own drafts are not checked.
+  - *A limited source and a follow-up* (concept): the drafted follow-up leaves out a to-do or question whose source limits
+    who may see it when the person it goes to is outside that group, and the Follow-ups card says so beside the message
+    (not in it).
+  - *An unanswered invitation* (concept): one Today line in Decide for an invitation whose answer the calendar says is
+    needed and for which no answer act is waiting, sent or failed; it opens the entry's page.
+  - *A quiet promise's line* (concept): Snooze is a day from `steward.people.snooze_days`, kept as the `suggestion_dismissed`
+    signal with a day in its note (it does not use the day's cap of suggestions); a follow-up can be sent only for a promise
+    someone owes the person.
+  - *The Monday message and acting* (concept): Send beside Copy appears only when one account is clearly the one that
+    carries a new message (the latest act's account when it can, else the only one that can); with several and none chosen
+    there is none, so no account is picked for the person.
+  - *Evaluation estimates* (concept): a practice workspace is priced with the person's own workspace's measured token
+    counts and agent overhead.
+  - *Skipped, with the reason:* notices by mail to the person (they go without a click on each, which the act approval
+    guard allows only for reminders under a standing yes, so they need a yes of their own there: a trust-boundary change); a
+    currency setting (the designer's answer, 2026-10-22: US dollars, labeled plainly, for 1.0, and the app has no exchange
+    rates); the stopped-work lines' wrap (the designer accepted it as built, and measuring it needs a browser run).
+- **Impact:** design 4.0 (`followups`), 6.9, 6.12, 6.32, 6.33, 6.35, 7.5, 7.7, 7.13; roadmap items named in the change log.
+  No change to scope. Change log: section 196.
+
 ## 2026-10-22: Manner and proof (S5): choices on patterns, a conversation on a record, a core without PM wording, the outcome measured
 
 - **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings.

@@ -57,7 +57,7 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   53% pairs, 30% harder pairs; one run per case, as the B-6b item below records), and its failures led to
   the fixes built in batch B-7 (design `CHANGES.md` section 126). Left: the owner re-runs the failed cases with
   `cockpit evaluate ... --case-failed <the report>` on the commit that batch pushes (steps under O3, below).
-- **Open items:** 120, each in exactly one batch; 249 done items are in `roadmap-done.md`.
+- **Open items:** 112, each in exactly one batch; 262 done items are in `roadmap-done.md`.
 - **Plugin API:** 0.3.86 (the change notes are in `docs/plugin-api-0.x.md`).
 
 ## The plan in batches
@@ -71,7 +71,7 @@ keep each item's full text.
     - *Covers:* *Promises both ways* (phase S, S1; built so far: promise ops, rules-first dates, endings held for Keep, see that item's "Built so far"; left: prompts and playbook, the sent folder as a source, golden cases and harness pairs); *How a promise resolves* (S1; left: the line for a promise past its date with its choices); *Every promise shows why* (S1).
     - *Exit:* the twenty learning pairs run as harness pairs and pass; a fictional thread gives promises both ways with endings held for Keep; and the owner's one learning-test run (O3) on this batch's push.
 
-2. **S1-2 What the person owes and misses** (2 open items; size: about two and a half days)
+2. **S1-2 What the person owes and misses (built)** (0 open items; size: about two and a half days)
     - *Covers:* *Replies owed* (S1); *Reminders at a time* (moved here from S2, since the gate's first slice names reminders; S2 keeps a one-line pointer); *What changed since yesterday* (a new item in S1, from the designer's F2: the gate text names the line and no item stood for it); *"Missed one"* (S1).
     - *Also covers* (the designer's lessons, 2026-10-19): *A stance per person* (the field, its default and the gate on drafts and questions, design 6.34), and *A rejected ask is dropped, not reworded* (6.22), each with learning pairs.
     - *Also covers* (the designer's notes for later batches, 2026-10-19; design 6.35): *Learning from the sent version* (the style pair, moved here from L-more), *What a draft to someone else carries*, *A sender's distribution limit travels with the content*, and the extra endings of a reply owed (in *Replies owed*) and the assistant's own voice in *What changed since yesterday*.
@@ -86,12 +86,12 @@ keep each item's full text.
     - *Covers:* *Wave 5* with P17 (.ics calendars, full featured) and P18 (several accounts of one service); the items that belong with it: *Passwords, keys and private addresses typed on the screen* (P16), *Add-ons install from the screen* (P15), *Mailbox and calendar passwords and addresses entered on screen* (all in phase B, built to S's shape).
     - *Exit:* the tests each item names pass; the owner adds an .ics link and file and a second account of one service, and types a password and a key on screen, with no file edit.
 
-5. **B-6a The rest of B: records, Settings and forms** (3 open items, plus the numbered wave 6 entry; size: about one to two days)
+5. **B-6a The rest of B: records, Settings and forms** (2 open items, plus the numbered wave 6 entry; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): the designer's F12 and F13 and P26 (in the wave 6 entry), *Lists, not typing*, *The cursor starts where you type*, *Value-list values carry meaning*, *Follow-ups' Later*, *An action can be blocked*, *The obvious next steps on screen*; and the open items that fit this area: *A project's "what the assistant knows"*, *"Overlaps with …"*, *The Quality screen*, *Where a fact came from* (29), *A series page* (30), *A date move isn't news*, *Settings*, *Learning on screen*, *Action items and open questions, cleaned up*, *The app's own kit*, *Found by the phase A journeys*.
     - *Also covers* (the designer's lessons, 2026-10-19): *An unknown status stays unknown, and an add from a link says when nothing could read it* (design 6.19).
     - *Exit:* the tests each item names pass, and the browser test of every main screen at several widths shows no sideways scroll; the owner works through their own open items on a laptop and a phone.
 
-6. **B-6b The rest of B: Today and the shell** (12 open items; built on 2026-10-20 apart from what each item says is left; size: about one to two days)
+6. **B-6b The rest of B: Today and the shell** (10 open items; built on 2026-10-20 apart from what each item says is left; size: about one to two days)
     - *Covers:* from *Wave 6* (phase B): *The Today rows as the mockup review set them*, *This week at every width*, *Notifications for "needs you" only*, *The walkthrough's look*, *An unnamed assistant reads as one*, *The header shows the assistant is alive*, *Words and accessibility throughout*; and the open items that fit this area: *After a move* (27), *Held for a look* (28), *Work*, *Setup guide*, *The rest* (Stages board, phone review mode, hand-in drawer, Ask as a side pane), *Review after the first Go*, *When something is due a follow-up*, *Top priorities, always current*, *Copy puts the formatted message and its plain text on the clipboard together*, *What the work version's screens show*.
     - *Exit:* phase B's exit test: the owner reviews every screen on a laptop and a phone; checklist items C1 to C53 and N1 to N8 are marked Done or explained (`docs/project/ui-review-status-2026-10-20.md`), with screenshots; the journey tests run against the new screens.
 
@@ -99,7 +99,7 @@ keep each item's full text.
     - *Covers:* *The UI/UX designer's re-review* (phase B, last group): once B-6b is pushed, the main session messages the session titled "UI/UX design review" with the commit to review and the list of UI changes since its last review (`docs/design/CHANGES.md`); it builds and reviews the screens itself. The ping carries what the reviewer asked for (2026-10-20): the branch and commit, the main session's own Done / Partial / Not done table for C1–C46 (each row citing its test, audited against the code by a subagent first), its bug list re-checked, and every place the build chose differently from the review, with why.
     - *Exit:* its feedback is received and recorded in one file in `docs/project/`.
 
-8. **B-7 UI/UX feedback** (1 open item, with seven of its thirteen sub-items checked off; size: about two days)
+8. **B-7 UI/UX feedback** (1 open item, with eleven of its thirteen sub-items checked off; size: about two days)
     - *Covers:* *Build the UI/UX designer's accepted feedback* (phase B, last group): the whole re-review of 2026-10-20 (`docs/project/ui-rereview-2026-10-20.md`), its demo data, and the owner's learning-run fixes from B-6b, in four briefs: records and item text (§3.2, §3.5) beside the learning fixes, then Today (§3.1, §3.4, §3.12, §3.14, §3.15) beside the rest of the P2s and tables (§3.3, §3.6–§3.11, §3.13), then the demo data.
     - *Exit:* each accepted item has its test, and the owner sees the changed screens.
     - *Then* (owner, 2026-10-20): once B-7 is pushed and green, the UI/UX reviewer gets the next round, and the paid 1.0
@@ -111,7 +111,7 @@ keep each item's full text.
     - *Frozen:* What is measured is frozen during the counted week: Today, the promise lines, the prompts and the model choices don't change. Fixes found during the week go into `docs/project/gate-week-fixes.md` (created when the week starts) and land after it. The one exception is anything that loses a promise or closes one wrongly: it is fixed at once, and the day is noted in the week's log so the measures before and after it can be told apart.
     - *Exit:* pass or not on the owner's thresholds for the measures in design 6.32. The installers (I) start after it.
 
-10. **S1b-1 The publisher and the guards** (2 open items; size: about a day)
+10. **S1b-1 The publisher and the guards** (1 open item; size: about a day)
     - *Covers:* *The publisher, brought forward from phase C4*; *Nothing on its own* (both in phase S, S1b); and the named S1b tests of the approval guards (designer's F7, `docs/project/designer-answers-2026-10-19.md`): a closed lid or lost network mid-send is checked with the service before any retry, an approval does not survive a restart that changed the draft's inputs, and the rest of that answer's list.
     - *Exit:* those tests pass; every outward act shows its exact content and target, nothing runs without the person's yes on that exact act, and the status and ledger line are written.
 
@@ -357,7 +357,9 @@ From the original designer's lessons of 2026-10-14:
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
   *Built (wave 3):* nav, saved as made with Undo, "Changed · Reset", help beside the field, `Settings.test.tsx`, `shell.spec.ts`. Left: the contrast warning in Appearance and the pickers for money and dates, to check and finish in wave 6.
   *Built (B-6a):* the contrast warning in Appearance and the date-format list (`web/src/lib/theme.test.ts`,
-  `web/src/components/Settings.test.tsx`). *Left:* a money list needs a currency setting, which doesn't exist yet.
+  `web/src/components/Settings.test.tsx`). *Left:* a money list: the functional designer answered that amounts are US dollars, labeled plainly, for 1.0 (design 7.9,
+  change log 174), because every cost is an AI service's price in dollars and the app has no exchange rates; a currency
+  setting waits for that.
 - [x] [B-6b] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
   tooltip; amber or red when something is wrong. The held-work and paused lines cover the bad case; this covers "is it
@@ -412,9 +414,8 @@ From the original designer's lessons of 2026-10-14:
   in place (typed and kept as in P16 on a local app, a reference on a hosted one), then Install can be pressed again;
   the plugin guide's "Publishing a pack" says to attach the built wheel to the tagged release and give its address and
   SHA-256 in `release` (`tests/test_catalog_screen.py`, `web/src/components/Addons.test.tsx` (adding a catalog from the
-  screen, a read token for a private release)). *Left:* telling the mail add-on's builder to attach its wheel and give
-  `release` in its next release (the main session), and an install tried against a real private release host by the
-  owner.
+  screen, a read token for a private release)). The mail add-on's builder was told to attach its package and give `release` (2026-10-22). *Left:* an install tried against a
+  real private release host by the owner.
 - [ ] [B-6a] **Action items and open questions, cleaned up end to end** (owner, 2026-10-13: "the whole action items / open
   issues needs a lot of work"). Starts from L0's audit of design 6.8 to 6.11 against the code, so the list of what is
   wrong comes from the code, not memory. Then one place for each: every open action with its owner, due date, project
@@ -438,25 +439,6 @@ From the original designer's lessons of 2026-10-14:
   (`web/src/components/OpenItems.tsx` uses the same `NotesTitle`). *Left:* the owner's exit check on a laptop and a phone;
   and on a phone, Today's lines that open no detail (a reminder, a reply) reach their notes only through a screen reader,
   since Today's lines keep one line each (B-8 R3).
-- [ ] [B-6b] **Top priorities, always current** (owner, 2026-10-13: the version used at work has "a constantly updated top
-  priority items" list). A short ranked list on Today across every project, rebuilt as records change and ranked by
-  rules (due and overdue, at risk, blocked, waiting on the person, the project's priority), never by an AI call. Shaped
-  by the owner's screens of the work version (open promise P11, received 2026-10-13): one row per thing with a date chip
-  (red when due), a verb first, **one line per person** ("<person>: send 1 question, follow up on 3 waiting up to 5
-  days", with the items in the line's tooltip; the original designer's review: two lines per person made seven lines
-  where five said it all), "Review and publish 3 drafts", who suggested it and why on the second line ("The assistant suggests · no answer
-  yet"), and the row's actions (Mark done, Reassign, Hand to the assistant). Dated entries whose day has passed and
-  that aren't marked done are lines ("passed, not marked done"), and the next two weeks' entries are listed after.
-  *Built (B-6b):* the ranked list, one line per person, passed dated to-dos and the next days (`tests/test_top_priorities.py`,
-  `web/src/components/TopPriorities.test.tsx`).
-  *Changed (B-7, decisions 2026-10-20: the re-review's §3.4 and the designer's F16 and F24):* Top priorities is context
-  with no buttons and no menu; each entry's words link to its queue line or its record, so "Mark done", "Reassign" and
-  "Hand to the assistant" on its rows are not built, by decision (the queue is the place to act). The order is overdue,
-  waiting on the person, due within the window, at risk, and a blocked to-do appears as the question or action that
-  holds it up (`tests/test_top_priorities.py`, `tests/test_chase_moves_to_the_blocker.py`,
-  `web/src/components/TopPriorities.test.tsx`: "an entry has no buttons and no menu, only its words as a link").
-  *Left:* the second line's "who suggested it" ("The assistant suggests · no answer yet"), which is not built (design
-  7.7 says so).
 - [x] [B-6b] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work
   version opens a generated page with a copy button; decided on review, design 7.5): the preview on screen is what is
   pasted, mail and documents get the formatting, chat gets clean plain text, and the menu has Copy as plain text. Every
@@ -479,21 +461,13 @@ From the original designer's lessons of 2026-10-14:
   and decisions waiting, what Today holds counted and not repeated, the three to five goals (a `week_plan` record: proposed
   from what is due, confirmed or changed by the person, kept for the week, read by the morning brief) and the message
   to whoever the person reports to as a draft of the core kind `monday-message` (estimated, held for the go, unreviewed
-  until Copy) (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`). **Left:**
-  the message as an act the person approves (Copy only today).
+  until Copy) (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`). **Built (cleanup batch):** Send beside Copy when an account can act, drafting the message as an act through
+  `POST /api/acts` for the person's yes (`tests/test_act_draft_api.py`, `web/src/components/BriefCard.test.tsx`).
+  **Left:** asking once who the message is for when nobody is marked (the section is absent).
 - [ ] [B-6b] **What the work version's screens show** (owner's screens, 2026-10-13; the screens hold real names, so only
   what they do is written here). *Built (B-6b), checked off in `roadmap-done.md`:* Follow-ups by person, or by project;
   Projects at a glance; links to the person's own pages; a meeting added in one line; never raw data on screen. Two
   sub-items are open:
-  - [ ] **Hand an action to the assistant** from its row (beside Mark done and Reassign): the assistant drafts the work
-    (a message, a list, a page) as a pending draft for the person, under the usual estimate and approval. The action
-    stays the person's until they close it.
-    *Built (B-6b, B-7):* the core draft task kind `action-work`, estimated, held for the go and filed as a pending draft,
-    from the row's menu in To-dos and questions and in Follow-ups; the action stays the person's; keeping part or
-    discarding the draft records a signal; a Copy beside the draft keeps it as copied and the action stays open
-    (`tests/test_action_work.py`, `tests/test_action_work_api.py`, `tests/test_approved_draft_is_not_done.py`,
-    `web/src/components/HandToAssistant.test.tsx`). *Left:* an evaluation case for the task kind (no harness step starts
-    from a handed-over action).
   - [ ] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
     *Built:* the check of what it does today: a pasted picture is told plainly it can't be read yet, and the box keeps
     its words (`web/src/components/HandIn.test.tsx`). *Left:* reading a picture.
@@ -511,11 +485,6 @@ From the original designer's lessons of 2026-10-14:
   this later" or Skip beside it, and the cursor in the first field (`web/src/components/Walkthrough.test.tsx`, "the
   look"). The fields sized to what they hold and the page using its width pass in a browser after B-7's buttons
   (`web/e2e/panes.spec.ts`, "the walkthrough's look", at `0ce2108`), so nothing is left.
-- [ ] [B-6a] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
-  send.
-  *Built (B-6a):* held for a meeting, a series or a day, out of To send until then, "Send now" in its menu
-  (`tests/test_followups_later.py`, `web/src/components/FollowUps.test.tsx`). *Left:* holding a question for the weekly
-  note.
 - [ ] [B-6b] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
   (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.
@@ -523,17 +492,10 @@ From the original designer's lessons of 2026-10-14:
   an item enters Today's Decide group that the person has not been told about; quiet hours that hold it; a failed note
   tried again with the reason in Settings; the browser's own notification and a webhook (the person's own address kept
   as a secret reference), each with "Send me a test" (`tests/test_notifications.py`,
-  `web/src/components/Notifications.test.tsx`). *Left:* mail to the person themselves (it comes with mail sending,
-  S1b-2; Settings lists it as coming), and titles for an allowed data level (`detail`, `allowed_data`).
-- [ ] [B-6b] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
-  *Built (B-6b, B-7):* the rows of the microcopy table that remained (a change's line says what was done, Send back asks what
-  to do differently, "Who may see this?", one marker for outside material, Add-ons' sentence)
-  (`web/src/components/WhatChanged.test.tsx`, `web/src/components/ActionReview.test.tsx`,
-  `web/src/components/HandIn.test.tsx`); the wording check reaching the setup path's labels from schemas, connectors and
-  add-on manifests (`tests/test_setup_path_words.py`); axe in light and dark at 390, 1024, 1440 and 1920 for every main
-  screen, the board, the hand-in drawer, Ask and the review mode, run and passed at `ec37749`
-  (`web/e2e/a11y.spec.ts`, `web/e2e/panes.spec.ts`). Axe over what B-7 changed passes at `0ce2108` (`web/e2e/a11y.spec.ts`: every main screen in light and dark at
-  four widths, and the 24px targets), so nothing is left.
+  `web/src/components/Notifications.test.tsx`). *Left:* mail to the person themselves: mail sending is built, but a notice goes without a click on each one, which the
+  act approval guard allows only for a reminder under a standing yes, so a notice needs a standing yes of its own there
+  (a change to a trust boundary, for the main session; design 6.12); and titles for an allowed data level (`detail`,
+  `allowed_data`).
 - [ ] [B-6b] **Found by the owner's first real use (2026-10-20):**
   - adding a second AI account closes its form once saved; the account's row shows its checks as they run ("Checking for
     harder work…") and the outcome, and an account whose sign-in can't be told apart says so with "Use it anyway"
@@ -543,8 +505,10 @@ From the original designer's lessons of 2026-10-14:
     *Built (B-7):* the designer agreed (F20) and nobody else invited, no description and no promise's date makes an entry
     plain (`tests/test_plain_calendar_entries.py`);
   - the two follow-up settings (`steward.chase_*_days` and `ui.followups.*_days`) become one, with the impact noted;
-    *Left:* both families still exist: the promise lines read `steward.chase_*_days`, and Top priorities, Today's nudge
-    lines and the Follow-ups pills read `ui.followups.*_days` (design 6.9 lists them as not one rule yet);
+    *Built (cleanup batch):* one family, `ui.followups.*`: the promise lines read the same dated and undated days as the
+    follow-ups; `steward.chase_dated_days` and `steward.chase_undated_days` are read for one release from a file, an
+    environment variable or a flag, noted on the setting's row, and saving the new name removes the old one
+    (`tests/test_followup_timing_family.py`);
   - the toast-at-390px and the Today-cursor browser tests are made robust under load (each failed once under load and
     passed alone);
     *Built:* both tests are rewritten (`web/e2e/shell.spec.ts`: "with three toasts showing, Tab never leaves a control
@@ -578,64 +542,10 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
 - [ ] [B-7] **Build the UI/UX designer's accepted feedback** (owner, 2026-10-19): the feedback the owner accepts from that
   re-review is built before the gate week, each item with its test. *Received 2026-10-20 and accepted in full*
   (`docs/project/ui-rereview-2026-10-20.md`; the review's sections are cited as §3.x; choices in `docs/decisions.md`,
-  2026-10-20). Each sub-item is done when its test passes. *Built (2026-10-20), checked off in `roadmap-done.md`:* no
+  2026-10-20). Each sub-item is done when its test passes. *Built (2026-10-20), checked off in `roadmap-done.md`:* the record pages and every view saying names, dates and words, Today's first screen, the tables beside the detail pane, the P2 findings; no
   bookkeeping in item text; one row per thing; demo data for answers 27 to 31; first run for a person with no IT
   background; the functional designer's answers to F15 to F25; "Mark this closed" isn't "done"; outward material never
   names the assistant. What is left:
-  - **Record pages and every view say names, dates and words** (§3.2, C19, C48): references resolved to names, dates
-    formatted, enums as labels, no help text on view, details ordered (name, role, organization, how to reach, the
-    rest), meta joined only from non-empty parts, activity worded "Quill changed the due date of …" with field labels,
-    links by title with the domain as a hint; a sweep test over every view and record kind that fails on an id, an ISO
-    date, an empty separator or a raw enum value.
-    *Built:* references as names, dates formatted, choices as labels, no help text while viewing, details ordered, meta
-    joined from the parts that exist, activity worded with the assistant's name and the field's label, links by title with
-    the domain beside it (`web/src/components/RecordPageNames.test.tsx`, `web/src/components/RecordPageRecords.test.tsx`,
-    `web/src/components/OpenItems.test.tsx`, `web/src/components/WhatChanged.test.tsx`, `tests/test_record_page.py`);
-    the sweep over every kind of record's page and the People, Projects, open to-dos and Unfiled lists
-    (`web/src/components/RecordSweep.test.tsx`); and every other view, drawn from data as the server sends it: Today
-    with its inspector open on each kind of line and its rail, What changed with its first item open on each filter,
-    Follow-ups by person on each tab and by project, Sources, every section of Settings, Since yesterday, Knowledge,
-    Files, Handover, Quality, Stages as a board and a list, Add-ons, and a draft's versions and review
-    (`web/src/components/ViewSweep.test.tsx`, 14 tests). It found the add-on catalog's date shown as stored, now
-    formatted (`web/src/components/Addons.test.tsx`). Nothing is left.
-  - **Today's first screen** (§3.1, C47): the backup reminder is an At risk line plus the status chip, This week is a
-    rail panel at every width, and at 1280×720 with setup unfinished the first queue line is at most 260px down with at
-    least six lines visible (at most 200px with setup done), checked in `shell.spec.ts`.
-    *Built:* the backup reminder as one At risk queue line beside the status chip, with no bar
-    (`tests/test_follow_up_lines.py`, `web/src/components/TodayFirstScreen.test.tsx`); This week as a rail panel at every
-    width (`web/src/components/Today.test.tsx`, `web/src/components/TodayFirstScreen.test.tsx`). *Left:* the browser
-    check that the first queue line is at most 260px down with six lines visible at 1280×720 (200px with setup done)
-    (`web/e2e/shell.spec.ts`: "Today at 1280x720 with setup unfinished: the first queue line is at most 260px down and
-    six lines show", and "… with setup done …"): passing at `9c0f76e`, so nothing is left.
-  - **Tables beside the detail pane** (§3.3, C49): no break inside a word, columns by priority, the pane overlaying the
-    table when even those don't fit, no per-row Details button, the People organization filter sized to its content
-    and its Organizations list as a table.
-    *Built:* no break inside a word (headers on one line, a long value ending in an ellipsis with its whole value as its
-    title), columns by priority beside the pane, the pane overlaying the table when they don't fit, no per-row Details
-    button, the People organization filter sized to its content, Organizations as a table, a row or its name opening the
-    pane (`web/src/components/TablesBesidePane.test.tsx`). *Left:* the browser check at 1440px that no header or cell
-    breaks inside a word (`web/e2e/tables.spec.ts`: "Projects with the pane open at 1440px: no header or cell breaks
-    inside a word…", the same for People, and "at 1280px the pane overlays the Projects table…"): passing at
-    `9c0f76e`, so nothing is left.
-  - **The P2 findings** (§3.6 to §3.15, C52): What changed opens the first item and edits in the meta line; the header
-    below 1440px puts the assistant's state in the status chip's popover and "Your pages" in the person's menu, and the
-    ⚠ gets a label or joins the chip; no visible interactive element under 24×24 (checked in `a11y.spec.ts`); only the
-    weight tokens (a stylelint rule); the compare page and account row say "Not measured yet"; setup's primary is
-    Continue, Skip a secondary button, amounts in currency fields; "Add to agenda" opens the drawer; the inspector
-    header on one line, Send back at 72ch with its reason, the hand-in's "Whose words" as a segmented control; the
-    phone's rail panels one line each below the queue; review lines tagged "Outside" with the full phrase as its name.
-    *Built:* What changed opening the first item and editing in the meta line (`web/src/components/WhatChangedFold.test.tsx`);
-    the one-row header, the assistant's state in the status chip's popover below 1440px, "Your pages" in the person's menu
-    and Missed one with its words (`web/src/shell/Header.test.tsx`, `web/src/shell/HeaderLinks.test.tsx`); targets of at
-    least 24px (`web/src/theme/targets.test.ts`); only the weight tokens (`web/src/theme/stylelint-rules.test.ts`); "Not
-    measured yet" and "Nothing measured yet" (`web/src/components/AiCompare.test.tsx`); setup's Continue as the primary,
-    Skip a secondary and amounts as money fields (`web/src/components/Walkthrough.test.tsx`); "Add to agenda" opening the
-    drawer and an empty Agenda as one line (`web/src/components/TodayRail.test.tsx`); the inspector header on one line,
-    Send back at 72ch with its reason and "Whose words" as a segmented control (`web/src/components/SmallPoints.test.tsx`);
-    the phone's rail panels one line each and review lines tagged "Outside" (`web/src/components/TodayFirstScreen.test.tsx`).
-    The browser checks pass at `9c0f76e`: no visible interactive element under 24×24 (`web/e2e/a11y.spec.ts`, "…
-    has no visible interactive element under 24×24 at 1024, 1440 and 390px", every main screen) and the header as one row
-    at 1000, 1100 and 1200px (`web/e2e/shell.spec.ts`, "at 1000px the header is one row…"), so nothing is left.
   - **The reviewer's further feedback** (owner, 2026-10-20: "provide the UI/UX agent the next batch when you can because
     it already has more feedback"): received (`reviews/ui-ux-2026-10/first-run/`; built in "First run for a person with no
     IT background", checked off in `roadmap-done.md`). *Left:* when B-7 is pushed and green, the reviewer gets the commit,
@@ -894,46 +804,6 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   no packet text, secret or address. *Built:*
   `tests/test_problems.py::test_a_failed_calls_report_holds_the_parameters_and_the_error_and_no_packet_text_secret_or_address`;
   a request's settings are shown as configured when the report is made.
-- [ ] [B-12] **The functional designer's answers on the 2026-10-23 questions** (received 2026-10-22; `docs/decisions.md`,
-  design change log 174). Built in batches, the two that matter most first. Each sub-item is done when its test passes:
-  - *Batch 1, filing by words (S1-4):* **built** (`tests/test_filing_signals.py`, `tests/test_sides.py`, and the screens'
-    tests in `web/src/components/SinceYesterday.test.tsx`, `RecordPageRecords.test.tsx`, `Projects.test.tsx`): signals ranked
-    people, the sender's mail domain, project aliases, project names that count by themselves, then side words, a rank
-    pointing both ways passing to the next; a one-word everyday name never counts alone (`language.everyday_words`, a
-    shipped list); `aliases` on projects (record, form, export); the item says why (`filed_by`) on what changed's line and
-    its page, and Move to the other side is one step with Undo that records the `edited` correction. *Left:* the other
-    sub-items of B-12 (batches 2 to 4).
-  - *Batch 2, AI accounts (B-11c):* estimates calibrated by one count request at the account check, kept as a ratio and
-    corrected from every run's reported usage; a command-line agent's measured fixed overhead per request (*built, 2a:*
-    `tests/test_estimate_calibration.py`, the native adapter's count in `tests/test_anthropic_messages.py`; left: the
-    evaluation and switch estimates, which price a practice workspace); a saved account
-    moved to the native adapter only on a yes with a read-back of the identity it signs in as (*built, 2b:*
-    `tests/test_native_move.py`); a newer model in a family watched weekly, with the cost change per day at the current
-    use, switched to only by the person's Switch or, with `ai.models.follow_newest` on, after a check and only when it
-    costs the same or less (*built, 2b:* `tests/test_model_watch.py`, with the shared rule for the newest model in
-    `tests/test_family.py`; the preset takes the newest of the family); `thinking: off` only where the listing says so
-    (*built:* `tests/test_anthropic_messages.py::test_thinking_off_is_sent_only_where_the_listed_capabilities_accept_it_at_the_tiers_effort`).
-    *Left in batch 2:* the evaluation and switch estimates.
-  - *Batch 3, corrections:* **built** (`tests/test_learn_correction.py`, `tests/test_quality.py`,
-    `tests/test_action_work.py`, `web/src/components/Quality.test.tsx`): missed, declined and dropped kept apart in the
-    learning packet and prompt and in the Quality measures (`apart`, window and weeks; a drop is not a correction and
-    leaves the repeat rate); a drop with no note is not learned from. Pairs `promise-pair-19` and `-23` still
-    expect a lesson from a drop, and rightly: in each the input itself called the work off and the assistant recorded
-    nothing, so the person's reason generalizes (read a cancellation in the input).
-  - *Batch 4, smaller ones:* the plain time zone names and an ambiguous abbreviation from the setting or the sender's zone
-    (S1-3); US dollars labeled plainly (B-6a); Top priorities' "who suggested it" in the inspector (B-6b); "Hold until next
-    Monday" in Later (B-6a); Copy at once on a message already seen unchanged, and "ready since <day>" on a message to send
-    (B-6b).
-    *Built (batch 4, change 177):* the plain zone names and "IST" read in the workspace's own zone when it goes by the word
-    (`tests/test_due_phrases.py`; people records keep no zone, so the sender's zone is the workspace's); "US dollars" in the
-    words where a currency is named (`web/src/wording/wording.test.ts`); "Until next Monday" in the hold form
-    (`web/src/components/FollowUps.test.tsx`, `tests/test_followups_later.py`); Copy at once on a message already shown
-    unchanged (`web/src/lib/seen-messages.test.ts`, `web/src/components/FollowUpsListDetail.test.tsx`); "ready since Tue"
-    on the Follow-ups line, kept from the ledger (`tests/test_followups_ready_since.py`).
-    *Built (change 181):* who made an item, in the inspector: `QueueLineView.made_by` read from the change and the item
-    (`engine/line_maker.py`, no stored field), worded in `web/src/components/MadeBy.tsx`, never outward
-    (`tests/test_line_maker.py`, `web/src/components/MadeBy.test.tsx`).
-    *Left:* "ready since" on Today's send line.
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings
@@ -972,28 +842,6 @@ feature, never before, since the guide is what the assistant answers from.
 
 **From the outside design review (2026-10-21, `docs/project/reviews/steward-design-review-2026-10.md`; checked against
 the code by the main session),** for S1 before the gate week:
-- [ ] [S1-4] **Two sides from day one** (the UI/UX reviewer, 2026-10-21, design 6.32; first in phase S, because the
-  steward's first read of mail files into them): the business as a top-level project named by a setting, every item on
-  Personal or the business, filing by its people first, one batched "Which side?" question for what neither its people
-  nor its words place (never asked of a person with no business), the "All / Personal / <business>" filter on Today and
-  Follow-ups, and a relation field for people on the personal side. Done when a fictional week of mail for a person with
-  a business files each item to its side with at most one question, and a person with no business is asked nothing,
-  each with a named test.
-  *S1-4a, the data, built:* the settings `workspace.project.personal` and `workspace.project.business`, the Personal
-  project made by `cockpit init`, `POST /api/setup/business`, `Person.side` and `Person.relation`, filing by people in
-  the applier's restatements, and the one batched Today line
-  (`tests/test_sides.py::test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks_which_side_once`,
-  `::test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_nothing`). *S1-4b, the filter,
-  built:* "All / Personal / <business>" beside Today's and Follow-ups' headings, shown only with a business, remembered per
-  browser; the app's own lines and the Sort line show under every choice; Follow-ups keeps another person's section
-  whole (one message, one Mark sent) while any of its items is on the chosen side
-  (`tests/test_sides.py::test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_reported`,
-  `web/src/components/SideFilter.test.tsx`). *Filing by words, built:* with a business, an item its people don't place is
-  filed by its text and quote against each side's project names and `workspace.project.side_words`; words of one side
-  place it, words of both or neither still go to the one "Which side?" line
-  (`tests/test_sides.py::test_the_words_of_one_side_file_an_item_there_whatever_their_case_and_only_as_whole_words`,
-  `::test_the_words_of_both_sides_or_of_neither_place_nothing`, `::test_people_who_place_an_item_win_over_its_words`,
-  `::test_a_person_with_no_business_is_never_placed_by_words_and_asked_nothing`, and the week of mail). Left: nothing.
 - [x] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
   were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
   looks complete. (`tests/test_first_promises.py::test_before_the_start_it_names_the_account_the_folders_and_the_day_the_read_goes_back_to`,
@@ -1042,29 +890,6 @@ proves it on a week of real use, and only then goes on:
   rest of phase S are built first.
 
 S1. **Promises, and how they end:**
-- [ ] [S1-2] **What a draft to someone else carries** (the designer's notes, 2026-10-19; design 6.35): lints on every draft
-  to someone other than the person: no bookkeeping (the wording sheet's internal terms), only openable links, quotes of
-  the reader's own words at most `drafts.max_quote_words`, and never singling a person out in a group draft (a
-  discrepancy goes to that person alone). One message per person per batch: everything one gap needs is one ask, all
-  asks to one person go out together numbered, each keeping its own id, sent now or held for a later batch (the
-  designer's review, 2026-10-19). Exit: a test per lint, a test that two asks to one person on one day make one
-  message with two numbered asks answered separately, and a learning pair for singling out.
-  *Built so far (S1-2):* the `bookkeeping` and `long-quote` lints (`tests/test_reader_checks.py`); one message per
-  person with numbered asks already existed (`engine/followups.py`); holding a whole message for a day or a meeting, one
-  choice with Undo (`tests/test_followups_later.py`, `web/src/components/FollowUps.test.tsx`; a to-do told in the message
-  has no hold of its own and stays to send). Left: singling out and its learning pair, which wait for drafts to several
-  people (S1b).
-- [ ] [S1-2] **A sender's distribution limit travels with the content** (the designer's notes, 2026-10-19; design 6.35):
-  a limit read from a message is recorded on the source as its audience (narrowing applies at once; widening is the
-  person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
-  anyone outside an audience is refused (an invariant), and its packet leaves that source out. Exit: a restricted and
-  an open message in one area; a draft outside the group draws only on the open one.
-  *Built so far (S1-2):* markings read by rules into the source's audience, `source.limit` (narrow only) and
-  `source.widen` (the person's), the `audience` invariant on questions, reroutes and drafted replies, and "Limited to"
-  with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Also built: a fact, action or question made from a limited
-  source carries its limit (derived from the source when read), the `audience` invariant refuses a draft naming one,
-  and the notes and follow-on packets leave out records their reader is outside of (`tests/test_audience.py`,
-  `tests/test_follow_on.py`). Left: the drafted follow-up message does not yet check a to-do's limit against its owner.
 
 S1b. **Acting for you, after your yes** (owner, 2026-10-17: "if we can have the app actually able to do mail/calendar
 management (not just read only) lets do it"):
@@ -1096,7 +921,7 @@ management (not just read only) lets do it"):
   Archive, Move to, Label and Mark as read from a saved message, Send reply on a reply owed, the sent and archive folders as
   pick lists (`tests/test_act_draft_api.py`, `web/src/components/ActsOnRecords.test.tsx`,
   `web/src/components/TodayReplySend.test.tsx`, `web/src/components/Sources.test.tsx`); the browser test
-  `web/e2e/acts-journey.spec.ts` is written, not yet run. **Left:** the add-ons' channels; acting on several selected
+  `web/e2e/acts-journey.spec.ts` ran green in the full browser run. **Left:** the add-ons' channels; acting on several selected
   messages at once (no list of saved messages lets the person select any); Move to for a signed-in account (no folder
   list for one).
 - [x] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
@@ -1117,8 +942,9 @@ management (not just read only) lets do it"):
   (`tests/test_mailbox_channel.py::test_an_answer_goes_as_mail_to_the_organizer_with_the_itip_reply_attached`).
   **Built (S1b-2d, change log 190):** Accept, Maybe, Decline and Propose a time from the invitation's calendar entry, the
   free times of the working week to pick from (`tests/test_act_draft_api.py`,
-  `web/src/components/ActsOnRecords.test.tsx`). **Left:** creating, moving and cancelling events (a calendar service's
-  add-on, and their screens); an invitation line on Today (an invitation is answered from its entry).
+  `web/src/components/ActsOnRecords.test.tsx`). **Built (cleanup batch):** a Today line in Decide for an invitation waiting for an answer, opening the entry's page where
+  Accept, Maybe, Decline and Propose are (`tests/test_invitation_lines.py`, `web/src/components/MeetingPrep.test.tsx`).
+  **Left:** creating, moving and cancelling events (a calendar service's add-on, and their screens).
 - [ ] [S1b-2] **Plugin API for acting:** add-ons declare the acts they can carry out (a channel per account kind: send,
   reply, move, label, create or change an event) and the access they need in `requires`; the core calls them only from
   the publisher after the yes, and their sign-in asks for the wider access when the person turns acting on. Released
@@ -1130,15 +956,6 @@ management (not just read only) lets do it"):
   **Built (S1b-2d, change log 190):** the Settings switch for each account, which starts the sign-in with acting for a
   signed-in account and saves for a mailbox (`web/src/components/ActingAccounts.test.tsx`). **Left:** asking the service
   to drop the wider access when acting is turned off, and the guide's section for the mail add-on's builder to confirm.
-- [ ] [S1b-1] **Nothing on its own:** the assistant drafts every act; none runs without the person's yes on that exact act, and
-  rules may only suggest (an outbound op is never applied automatically, design 6.7).
-  **Built so far (S1b-1a):** an outbound op from the assistant is held, never applied; only the person's own click
-  approves (`act-approval`); only the publisher records what happened (`act-publisher-only`); outside content never adds
-  an act or a recipient (`act-from-outside`):
-  `tests/test_publisher.py::test_only_the_person_approves_and_an_outbound_op_is_never_applied_automatically`,
-  `tests/test_publisher.py::test_outside_content_that_tries_to_change_a_recipient_or_add_an_act_is_refused`.
-  **Built (S1b-1b):** the screens (Waiting to go out and the Today lines).
-  **Left:** the rule check that a standing rule can only suggest an act has no case yet (no rule produces acts).
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*
@@ -1183,7 +1000,8 @@ S2. **Time and attention:**
   moved, a new place, title or organizer, read from the calendar entries' history, and not who replied
   (`tests/test_brief.py::test_what_changed_in_an_invitation_overnight_is_a_line_for_each_change_that_matters`,
   `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
-  **Left:** the invitation's own page.
+  **Built (cleanup batch):** an unanswered invitation is a Today line that opens the entry's page, where it is answered
+  (`tests/test_invitation_lines.py`). **Left:** what changed in an invitation shown on the entry's page itself.
 - [ ] [S2] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
   evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
   Its shape is in design 6.32, with ten samples (`docs/project/steward-brief-samples.md`) that become its evaluation cases.
@@ -1236,8 +1054,9 @@ S3. **People and meetings:**
   `steward.meetings.prep_hours_before` before it starts; an optional prep note as the core draft kind `meeting-prep`
   (estimated, held for the go, unreviewed until accepted); and after it ends a Today line that opens a note box tied to the
   entry, whose words are handed in like any note (`engine/meeting_prep.py`, `tests/test_meetings_people.py`,
-  `web/src/components/MeetingPrep.test.tsx`). **Left:** the browser journey (a fictional meeting shows its prep and files
-  its notes) in the end-to-end tests, a capture for an entry nobody else is on, and an undo for "nothing to note".
+  `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** the browser journey, written and not yet run
+  (`web/e2e/meetings-journey.spec.ts`; its seed is `tests/e2e_meetings.py`, `tests/test_e2e_meetings_seed.py`).
+  **Left:** the journey passing in a browser run, a capture for an entry nobody else is on, and an undo for "nothing to note".
 - [ ] [S3] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
   dates, all with evidence; shown before a meeting, and one line when a promised follow-up has gone quiet.
   **Built so far (S3, change log 193):** a person's page has What to remember by rules, each part with its evidence: last in
@@ -1245,9 +1064,11 @@ S3. **People and meetings:**
   and the way they last wrote from, their dates (a date word and the next day, or a full date ahead) and the facts the
   person kept about them; and the Today line "Follow up with <person>: <promise> has gone quiet" after
   `steward.people.quiet_promise_days` (`engine/people_memory.py`, `tests/test_meetings_people.py`,
-  `web/src/components/MeetingPrep.test.tsx`). **Left:** who asked a question (a question has no asker, so "asked by them"
-  is the replies owed), sending the follow-up from the line, snoozing it, dates from a contact source or in other
-  languages, and the browser journey in the end-to-end tests.
+  `web/src/components/MeetingPrep.test.tsx`). **Built (cleanup batch):** Send a follow-up from the line (a message to whoever owes the promise, written from the wording
+  sheet and drafted as an act for the person's yes) and Snooze to a day from a list, with Undo
+  (`tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`); the person's page journey, written and
+  not yet run (`web/e2e/meetings-journey.spec.ts`). **Left:** who asked a question (a question has no asker, so "asked by
+  them" is the replies owed), dates from a contact source or in other languages, and the journey passing in a browser run.
 
 S4. **What arrives, and where it may go:**
 - [ ] [S4] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed

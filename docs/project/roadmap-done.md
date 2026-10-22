@@ -2069,6 +2069,149 @@ From the original designer's lessons of 2026-10-14:
   *Built (B-7):* the invariant `names-assistant`, the row's source, the withheld message that Mark sent refuses, and
   `outward.sweep` (`tests/test_outward_never_names_assistant.py`). The publisher calls `outward.check_outgoing` when it
   is built (S1b-1).
+- [x] [B-6a] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
+  send.
+  *Built (B-6a):* held for a meeting, a series or a day, out of To send until then, "Send now" in its menu
+  (`tests/test_followups_later.py`, `web/src/components/FollowUps.test.tsx`). *Built (cleanup batch):* holding for the weekly note is "Hold until next Monday", a day hold for the coming Monday
+  (change log 179), and that Monday's own briefing leaves it to Today's line for it
+  (`tests/test_followups_later.py::test_a_question_held_for_the_coming_monday_comes_back_in_that_days_batch`,
+  `tests/test_brief.py::test_a_question_held_for_the_weekly_note_is_in_that_mondays_briefing_and_not_the_one_before`).
+- [x] [B-6b] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
+  *Built (B-6b, B-7):* the rows of the microcopy table that remained (a change's line says what was done, Send back asks what
+  to do differently, "Who may see this?", one marker for outside material, Add-ons' sentence)
+  (`web/src/components/WhatChanged.test.tsx`, `web/src/components/ActionReview.test.tsx`,
+  `web/src/components/HandIn.test.tsx`); the wording check reaching the setup path's labels from schemas, connectors and
+  add-on manifests (`tests/test_setup_path_words.py`); axe in light and dark at 390, 1024, 1440 and 1920 for every main
+  screen, the board, the hand-in drawer, Ask and the review mode, run and passed at `ec37749`
+  (`web/e2e/a11y.spec.ts`, `web/e2e/panes.spec.ts`). Axe over what B-7 changed passes at `0ce2108` (`web/e2e/a11y.spec.ts`: every main screen in light and dark at
+  four widths, and the 24px targets), so nothing is left.
+- [x] [B-6b] **Top priorities, always current** (owner, 2026-10-13: the version used at work has "a constantly updated top
+  priority items" list). A short ranked list on Today across every project, rebuilt as records change and ranked by
+  rules (due and overdue, at risk, blocked, waiting on the person, the project's priority), never by an AI call. Shaped
+  by the owner's screens of the work version (open promise P11, received 2026-10-13): one row per thing with a date chip
+  (red when due), a verb first, **one line per person** ("<person>: send 1 question, follow up on 3 waiting up to 5
+  days", with the items in the line's tooltip; the original designer's review: two lines per person made seven lines
+  where five said it all), "Review and publish 3 drafts", who suggested it and why on the second line ("The assistant suggests · no answer
+  yet"), and the row's actions (Mark done, Reassign, Hand to the assistant). Dated entries whose day has passed and
+  that aren't marked done are lines ("passed, not marked done"), and the next two weeks' entries are listed after.
+  *Built (B-6b):* the ranked list, one line per person, passed dated to-dos and the next days (`tests/test_top_priorities.py`,
+  `web/src/components/TopPriorities.test.tsx`).
+  *Changed (B-7, decisions 2026-10-20: the re-review's §3.4 and the designer's F16 and F24):* Top priorities is context
+  with no buttons and no menu; each entry's words link to its queue line or its record, so "Mark done", "Reassign" and
+  "Hand to the assistant" on its rows are not built, by decision (the queue is the place to act). The order is overdue,
+  waiting on the person, due within the window, at risk, and a blocked to-do appears as the question or action that
+  holds it up (`tests/test_top_priorities.py`, `tests/test_chase_moves_to_the_blocker.py`,
+  `web/src/components/TopPriorities.test.tsx`: "an entry has no buttons and no menu, only its words as a link").
+  *Built (cleanup batch, change log 181):* "who suggested it" is said in the inspector, not on a second line: what made
+  the item, from the change and the item, never outward (`tests/test_line_maker.py`,
+  `web/src/components/MadeBy.test.tsx`).
+- [x] [B-12] **The functional designer's answers on the 2026-10-23 questions** (received 2026-10-22; `docs/decisions.md`,
+  design change log 174). Built in batches, the two that matter most first. Each sub-item is done when its test passes:
+  - *Batch 1, filing by words (S1-4):* **built** (`tests/test_filing_signals.py`, `tests/test_sides.py`, and the screens'
+    tests in `web/src/components/SinceYesterday.test.tsx`, `RecordPageRecords.test.tsx`, `Projects.test.tsx`): signals ranked
+    people, the sender's mail domain, project aliases, project names that count by themselves, then side words, a rank
+    pointing both ways passing to the next; a one-word everyday name never counts alone (`language.everyday_words`, a
+    shipped list); `aliases` on projects (record, form, export); the item says why (`filed_by`) on what changed's line and
+    its page, and Move to the other side is one step with Undo that records the `edited` correction. Batches 2 to 4 follow.
+  - *Batch 2, AI accounts (B-11c):* estimates calibrated by one count request at the account check, kept as a ratio and
+    corrected from every run's reported usage; a command-line agent's measured fixed overhead per request (*built, 2a:*
+    `tests/test_estimate_calibration.py`, the native adapter's count in `tests/test_anthropic_messages.py`; *built, cleanup batch:* the evaluation and switch estimates price
+    each practice-workspace request with the account's measured token count and agent overhead,
+    `tests/test_switch_check.py::test_the_estimate_is_corrected_by_what_the_workspace_measured_about_the_account`,
+    `::test_the_switch_estimate_reads_the_workspaces_measurements`); a saved account
+    moved to the native adapter only on a yes with a read-back of the identity it signs in as (*built, 2b:*
+    `tests/test_native_move.py`); a newer model in a family watched weekly, with the cost change per day at the current
+    use, switched to only by the person's Switch or, with `ai.models.follow_newest` on, after a check and only when it
+    costs the same or less (*built, 2b:* `tests/test_model_watch.py`, with the shared rule for the newest model in
+    `tests/test_family.py`; the preset takes the newest of the family); `thinking: off` only where the listing says so
+    (*built:* `tests/test_anthropic_messages.py::test_thinking_off_is_sent_only_where_the_listed_capabilities_accept_it_at_the_tiers_effort`).
+  - *Batch 3, corrections:* **built** (`tests/test_learn_correction.py`, `tests/test_quality.py`,
+    `tests/test_action_work.py`, `web/src/components/Quality.test.tsx`): missed, declined and dropped kept apart in the
+    learning packet and prompt and in the Quality measures (`apart`, window and weeks; a drop is not a correction and
+    leaves the repeat rate); a drop with no note is not learned from. Pairs `promise-pair-19` and `-23` still
+    expect a lesson from a drop, and rightly: in each the input itself called the work off and the assistant recorded
+    nothing, so the person's reason generalizes (read a cancellation in the input).
+  - *Batch 4, smaller ones:* the plain time zone names and an ambiguous abbreviation from the setting or the sender's zone
+    (S1-3); US dollars labeled plainly (B-6a); Top priorities' "who suggested it" in the inspector (B-6b); "Hold until next
+    Monday" in Later (B-6a); Copy at once on a message already seen unchanged, and "ready since <day>" on a message to send
+    (B-6b).
+    *Built (batch 4, change 177):* the plain zone names and "IST" read in the workspace's own zone when it goes by the word
+    (`tests/test_due_phrases.py`; people records keep no zone, so the sender's zone is the workspace's); "US dollars" in the
+    words where a currency is named (`web/src/wording/wording.test.ts`); "Until next Monday" in the hold form
+    (`web/src/components/FollowUps.test.tsx`, `tests/test_followups_later.py`); Copy at once on a message already shown
+    unchanged (`web/src/lib/seen-messages.test.ts`, `web/src/components/FollowUpsListDetail.test.tsx`); "ready since Tue"
+    on the Follow-ups line, kept from the ledger (`tests/test_followups_ready_since.py`).
+    *Built (change 181):* who made an item, in the inspector: `QueueLineView.made_by` read from the change and the item
+    (`engine/line_maker.py`, no stored field), worded in `web/src/components/MadeBy.tsx`, never outward
+    (`tests/test_line_maker.py`, `web/src/components/MadeBy.test.tsx`).
+    *Built (cleanup batch):* "ready since <day>" on Today's send line, from the same day the Follow-ups card says
+    (`tests/test_followups_ready_since.py::test_todays_send_line_carries_the_day_its_message_became_ready`,
+    `web/src/components/Today.test.tsx`: "a send line that has waited says since when, and one ready today says nothing").
+- [x] [B-7] **Record pages and every view say names, dates and words** (§3.2, C19, C48): references resolved to names, dates
+  formatted, enums as labels, no help text on view, details ordered (name, role, organization, how to reach, the
+  rest), meta joined only from non-empty parts, activity worded "Quill changed the due date of …" with field labels,
+  links by title with the domain as a hint; a sweep test over every view and record kind that fails on an id, an ISO
+  date, an empty separator or a raw enum value.
+  *Built:* references as names, dates formatted, choices as labels, no help text while viewing, details ordered, meta
+  joined from the parts that exist, activity worded with the assistant's name and the field's label, links by title with
+  the domain beside it (`web/src/components/RecordPageNames.test.tsx`, `web/src/components/RecordPageRecords.test.tsx`,
+  `web/src/components/OpenItems.test.tsx`, `web/src/components/WhatChanged.test.tsx`, `tests/test_record_page.py`);
+  the sweep over every kind of record's page and the People, Projects, open to-dos and Unfiled lists
+  (`web/src/components/RecordSweep.test.tsx`); and every other view, drawn from data as the server sends it: Today
+  with its inspector open on each kind of line and its rail, What changed with its first item open on each filter,
+  Follow-ups by person on each tab and by project, Sources, every section of Settings, Since yesterday, Knowledge,
+  Files, Handover, Quality, Stages as a board and a list, Add-ons, and a draft's versions and review
+  (`web/src/components/ViewSweep.test.tsx`, 14 tests). It found the add-on catalog's date shown as stored, now
+  formatted (`web/src/components/Addons.test.tsx`). Nothing is left.
+- [x] [B-7] **Today's first screen** (§3.1, C47): the backup reminder is an At risk line plus the status chip, This week is a
+  rail panel at every width, and at 1280×720 with setup unfinished the first queue line is at most 260px down with at
+  least six lines visible (at most 200px with setup done), checked in `shell.spec.ts`.
+  *Built:* the backup reminder as one At risk queue line beside the status chip, with no bar
+  (`tests/test_follow_up_lines.py`, `web/src/components/TodayFirstScreen.test.tsx`); This week as a rail panel at every
+  width (`web/src/components/Today.test.tsx`, `web/src/components/TodayFirstScreen.test.tsx`). *Left:* the browser
+  check that the first queue line is at most 260px down with six lines visible at 1280×720 (200px with setup done)
+  (`web/e2e/shell.spec.ts`: "Today at 1280x720 with setup unfinished: the first queue line is at most 260px down and
+  six lines show", and "… with setup done …"): passing at `9c0f76e`, so nothing is left.
+- [x] [B-7] **Tables beside the detail pane** (§3.3, C49): no break inside a word, columns by priority, the pane overlaying the
+  table when even those don't fit, no per-row Details button, the People organization filter sized to its content
+  and its Organizations list as a table.
+  *Built:* no break inside a word (headers on one line, a long value ending in an ellipsis with its whole value as its
+  title), columns by priority beside the pane, the pane overlaying the table when they don't fit, no per-row Details
+  button, the People organization filter sized to its content, Organizations as a table, a row or its name opening the
+  pane (`web/src/components/TablesBesidePane.test.tsx`). *Left:* the browser check at 1440px that no header or cell
+  breaks inside a word (`web/e2e/tables.spec.ts`: "Projects with the pane open at 1440px: no header or cell breaks
+  inside a word…", the same for People, and "at 1280px the pane overlays the Projects table…"): passing at
+  `9c0f76e`, so nothing is left.
+- [x] [B-7] **The P2 findings** (§3.6 to §3.15, C52): What changed opens the first item and edits in the meta line; the header
+  below 1440px puts the assistant's state in the status chip's popover and "Your pages" in the person's menu, and the
+  ⚠ gets a label or joins the chip; no visible interactive element under 24×24 (checked in `a11y.spec.ts`); only the
+  weight tokens (a stylelint rule); the compare page and account row say "Not measured yet"; setup's primary is
+  Continue, Skip a secondary button, amounts in currency fields; "Add to agenda" opens the drawer; the inspector
+  header on one line, Send back at 72ch with its reason, the hand-in's "Whose words" as a segmented control; the
+  phone's rail panels one line each below the queue; review lines tagged "Outside" with the full phrase as its name.
+  *Built:* What changed opening the first item and editing in the meta line (`web/src/components/WhatChangedFold.test.tsx`);
+  the one-row header, the assistant's state in the status chip's popover below 1440px, "Your pages" in the person's menu
+  and Missed one with its words (`web/src/shell/Header.test.tsx`, `web/src/shell/HeaderLinks.test.tsx`); targets of at
+  least 24px (`web/src/theme/targets.test.ts`); only the weight tokens (`web/src/theme/stylelint-rules.test.ts`); "Not
+  measured yet" and "Nothing measured yet" (`web/src/components/AiCompare.test.tsx`); setup's Continue as the primary,
+  Skip a secondary and amounts as money fields (`web/src/components/Walkthrough.test.tsx`); "Add to agenda" opening the
+  drawer and an empty Agenda as one line (`web/src/components/TodayRail.test.tsx`); the inspector header on one line,
+  Send back at 72ch with its reason and "Whose words" as a segmented control (`web/src/components/SmallPoints.test.tsx`);
+  the phone's rail panels one line each and review lines tagged "Outside" (`web/src/components/TodayFirstScreen.test.tsx`).
+  The browser checks pass at `9c0f76e`: no visible interactive element under 24×24 (`web/e2e/a11y.spec.ts`, "…
+  has no visible interactive element under 24×24 at 1024, 1440 and 390px", every main screen) and the header as one row
+  at 1000, 1100 and 1200px (`web/e2e/shell.spec.ts`, "at 1000px the header is one row…"), so nothing is left.
+- [x] [B-6b] **Hand an action to the assistant** from its row (beside Mark done and Reassign): the assistant drafts the work
+  (a message, a list, a page) as a pending draft for the person, under the usual estimate and approval. The action
+  stays the person's until they close it.
+  *Built (B-6b, B-7):* the core draft task kind `action-work`, estimated, held for the go and filed as a pending draft,
+  from the row's menu in To-dos and questions and in Follow-ups; the action stays the person's; keeping part or
+  discarding the draft records a signal; a Copy beside the draft keeps it as copied and the action stays open
+  (`tests/test_action_work.py`, `tests/test_action_work_api.py`, `tests/test_approved_draft_is_not_done.py`,
+  `web/src/components/HandToAssistant.test.tsx`). *Built (cleanup batch):* the evaluation case: a case that starts from the person handing an open action over
+  (`handed_over`) and is scored on the prose drafted (`workspaces/demo-a/evals/action-work-drafts-the-message.yaml`,
+  `workspaces/demo-b/evals/action-work-drafts-the-message.yaml`,
+  `tests/test_evaluate_harness.py::test_a_handed_over_action_starts_the_run_and_is_scored_on_the_prose_it_is_drafted_as`).
 
 ## Phase S: finished items
 
@@ -2189,6 +2332,72 @@ S1. **Promises, and how they end:**
 - [x] **A request's spending as a range** (designer F14): the estimate covers the whole request with its retries and the
   stronger model, stops at the upper figure, outage retries are free, and the finished item shows what was spent.
   *Built (S1):* `tests/test_pipeline.py`, `WhatChanged.test.tsx`. Left: a resumed request starts again from its first call.
+- [x] [S1-4] **Two sides from day one** (the UI/UX reviewer, 2026-10-21, design 6.32; first in phase S, because the
+  steward's first read of mail files into them): the business as a top-level project named by a setting, every item on
+  Personal or the business, filing by its people first, one batched "Which side?" question for what neither its people
+  nor its words place (never asked of a person with no business), the "All / Personal / <business>" filter on Today and
+  Follow-ups, and a relation field for people on the personal side. Done when a fictional week of mail for a person with
+  a business files each item to its side with at most one question, and a person with no business is asked nothing,
+  each with a named test.
+  *S1-4a, the data, built:* the settings `workspace.project.personal` and `workspace.project.business`, the Personal
+  project made by `cockpit init`, `POST /api/setup/business`, `Person.side` and `Person.relation`, filing by people in
+  the applier's restatements, and the one batched Today line
+  (`tests/test_sides.py::test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks_which_side_once`,
+  `::test_the_same_week_for_a_person_with_no_business_files_everything_and_asks_nothing`). *S1-4b, the filter,
+  built:* "All / Personal / <business>" beside Today's and Follow-ups' headings, shown only with a business, remembered per
+  browser; the app's own lines and the Sort line show under every choice; Follow-ups keeps another person's section
+  whole (one message, one Mark sent) while any of its items is on the chosen side
+  (`tests/test_sides.py::test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_reported`,
+  `web/src/components/SideFilter.test.tsx`). *Filing by words, built:* with a business, an item its people don't place is
+  filed by its text and quote against each side's project names and `workspace.project.side_words`; words of one side
+  place it, words of both or neither still go to the one "Which side?" line
+  (`tests/test_sides.py::test_the_words_of_one_side_file_an_item_there_whatever_their_case_and_only_as_whole_words`,
+  `::test_the_words_of_both_sides_or_of_neither_place_nothing`, `::test_people_who_place_an_item_win_over_its_words`,
+  `::test_a_person_with_no_business_is_never_placed_by_words_and_asked_nothing`, and the week of mail). Nothing is left.
+- [x] [S1-2] **What a draft to someone else carries** (the designer's notes, 2026-10-19; design 6.35): lints on every draft
+  to someone other than the person: no bookkeeping (the wording sheet's internal terms), only openable links, quotes of
+  the reader's own words at most `drafts.max_quote_words`, and never singling a person out in a group draft (a
+  discrepancy goes to that person alone). One message per person per batch: everything one gap needs is one ask, all
+  asks to one person go out together numbered, each keeping its own id, sent now or held for a later batch (the
+  designer's review, 2026-10-19). Exit: a test per lint, a test that two asks to one person on one day make one
+  message with two numbered asks answered separately, and a learning pair for singling out.
+  *Built so far (S1-2):* the `bookkeeping` and `long-quote` lints (`tests/test_reader_checks.py`); one message per
+  person with numbered asks already existed (`engine/followups.py`); holding a whole message for a day or a meeting, one
+  choice with Undo (`tests/test_followups_later.py`, `web/src/components/FollowUps.test.tsx`; a to-do told in the message
+  has no hold of its own and stays to send). *Built (cleanup batch):* never singling a person out in a draft to several
+  people: the lint `singling-out` (a return round, then held) on a drafted reply to a message that went to several
+  people and on a message act to several recipients, with the blame phrases a setting
+  (`language.singling_out_phrases`), and its learning pair `singling-out-in-a-group-reply`
+  (`tests/test_reader_checks.py::test_a_reply_to_a_group_that_blames_one_member_is_returned_and_names_who`,
+  `tests/test_reader_checks.py::test_a_drafted_message_to_several_people_is_checked_and_one_to_a_single_person_is_not`,
+  `tests/test_pairs.py::test_every_pair_and_the_scenario_pass_with_their_ideal_answers`).
+- [x] [S1-2] **A sender's distribution limit travels with the content** (the designer's notes, 2026-10-19; design 6.35):
+  a limit read from a message is recorded on the source as its audience (narrowing applies at once; widening is the
+  person's alone, recorded with who widened it); records drawing on it carry the most restrictive limit; a draft to
+  anyone outside an audience is refused (an invariant), and its packet leaves that source out. Exit: a restricted and
+  an open message in one area; a draft outside the group draws only on the open one.
+  *Built so far (S1-2):* markings read by rules into the source's audience, `source.limit` (narrow only) and
+  `source.widen` (the person's), the `audience` invariant on questions, reroutes and drafted replies, and "Limited to"
+  with Widen on screen (`tests/test_audience.py`, `SourceLimit.test.tsx`). Also built: a fact, action or question made from a limited
+  source carries its limit (derived from the source when read), the `audience` invariant refuses a draft naming one,
+  and the notes and follow-on packets leave out records their reader is outside of (`tests/test_audience.py`,
+  `tests/test_follow_on.py`). *Built (cleanup batch):* the drafted follow-up message leaves out a to-do or question its owner is outside the limit
+  of, and the Follow-ups card says so beside the message
+  (`tests/test_followup_limits.py`, `web/src/components/FollowUps.test.tsx`: "a to-do the person is outside the limit of is
+  left out of their message, and the detail says so").
+- [x] [S1b-1] **Nothing on its own:** the assistant drafts every act; none runs without the person's yes on that exact act, and
+  rules may only suggest (an outbound op is never applied automatically, design 6.7).
+  **Built so far (S1b-1a):** an outbound op from the assistant is held, never applied; only the person's own click
+  approves (`act-approval`); only the publisher records what happened (`act-publisher-only`); outside content never adds
+  an act or a recipient (`act-from-outside`):
+  `tests/test_publisher.py::test_only_the_person_approves_and_an_outbound_op_is_never_applied_automatically`,
+  `tests/test_publisher.py::test_outside_content_that_tries_to_change_a_recipient_or_add_an_act_is_refused`.
+  **Built (S1b-1b):** the screens (Waiting to go out and the Today lines).
+  **Built (cleanup batch):** the case that a standing rule can only suggest an act: with an active rule to reply on its
+  own, the assistant offers the reply as a draft on the person's to-do and proposes no act, and any act it does propose is
+  counted as the failure it is, though a note's run refuses it
+  (`workspaces/demo-b/evals/standing-rule-only-suggests-an-act.yaml`,
+  `tests/test_evaluate_harness.py::test_a_standing_rule_to_reply_alone_is_met_by_a_draft_reply_and_no_act_of_the_assistants_own`).
 
 ## Phase C: finished items
 

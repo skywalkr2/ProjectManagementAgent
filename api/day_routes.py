@@ -7,12 +7,27 @@ stale line acts at once with Undo and records its own signal."""
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import CapacityMoveView, CapacityView, ChooseDone, ChooseIn, NotNowDone, NotNowIn, Ok
-from engine import day_capacity, patterns, suggestions
+from api.schemas import (
+    CapacityMoveView,
+    CapacityView,
+    ChooseDone,
+    ChooseIn,
+    NotNowDone,
+    NotNowIn,
+    Ok,
+    QuietFollowUpView,
+    SnoozeDone,
+    SnoozeIn,
+)
+from engine import day_capacity, patterns, quiet_follow_up, suggestions
 from engine.config import Config
+from engine.names import People
 from engine.storage import Store, StoreError
+from engine.today import local_day, zone
 from engine.today_queue import queue_split
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -89,5 +104,40 @@ def build_day_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
             raise HTTPException(status_code=404, detail="There is no choice to take back.")
         events.changed()
         return Ok(ok=signal_id)
+
+    def quiet_line(action_id: str, now: Any) -> Any:
+        split = queue_split(ws, store, cfg, now, handover=worker.handover_state())
+        key = f"quiet_promise:{action_id}"
+        line = next((x for x in split.shown if x.key == key), None)
+        if line is None:
+            raise HTTPException(status_code=404, detail="That promise isn't on Today as gone quiet now.")
+        return line
+
+    @r.post("/quiet-promises/{action_id}/snooze")
+    def snooze(action_id: str, body: SnoozeIn) -> SnoozeDone:
+        """Put the line about a promise gone quiet off until a day it offers. It records a signal and changes nothing
+        else; taking the signal back makes the line show again."""
+        now = worker.now()
+        line = quiet_line(action_id, now)
+        if body.until.isoformat() not in {x["on"] for x in line.snooze_days}:
+            raise HTTPException(status_code=422, detail="That isn't one of the days the line can be snoozed to.")
+        made = suggestions.snooze(store, cfg, line.key, line.actions, body.until, now)
+        events.changed()
+        return SnoozeDone(signal=made, until=body.until)
+
+    @r.get("/quiet-promises/{action_id}/follow-up")
+    def quiet_follow_up_message(action_id: str) -> QuietFollowUpView:
+        """The follow-up written for whoever owes the person a promise that has gone quiet, for the person to draft as
+        an act. Nothing is sent. A promise the person made themselves has none."""
+        now = worker.now()
+        quiet_line(action_id, now)
+        found = quiet_follow_up.draft(store, cfg, action_id, local_day(now, zone(cfg)))
+        if found is None:
+            raise HTTPException(status_code=409, detail="Only a promise someone owes you has a follow-up to send.")
+        return QuietFollowUpView(
+            person=found.person,
+            person_name=People(store, cfg).name(found.person),
+            parts={"subject": found.subject, "body": found.body},
+        )
 
     return r

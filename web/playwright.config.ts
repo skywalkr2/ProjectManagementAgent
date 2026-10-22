@@ -29,6 +29,10 @@ const outgoing = { port: 8796 + offset };
 // messages and an invitation to reply to, file away and answer.
 const acts = { port: 8797 + offset };
 
+// And the meetings: its server seeds an entry about to start with another person on it, one that has ended with nothing
+// written down, and a promise of theirs gone quiet.
+const meetings = { port: 8798 + offset };
+
 // The journeys start the app as a person does (a new workspace, then the serve command) beside a process that plays the
 // outside services; each pair works in one state folder that the start-up script clears. Two pairs: one for the
 // journeys that share a workspace (a new workspace, a folder, an add-on installed from the list), and one for the
@@ -104,6 +108,7 @@ export default defineConfig({
     { name: "capacity", testMatch: /today-capacity\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
     { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },
     { name: "acts", testMatch: /acts-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${acts.port}/` } },
+    { name: "meetings", testMatch: /meetings-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${meetings.port}/` } },
     { name: "late", testMatch: /late-evening\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${late.port}/` } },
     {
       name: "journeys",
@@ -163,6 +168,13 @@ export default defineConfig({
       command: `uv run python -m tests.e2e_server --port ${acts.port} --base-path / --acts`,
       cwd: "..",
       url: `http://127.0.0.1:${acts.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: `uv run python -m tests.e2e_server --port ${meetings.port} --base-path / --meetings`,
+      cwd: "..",
+      url: `http://127.0.0.1:${meetings.port}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
     },

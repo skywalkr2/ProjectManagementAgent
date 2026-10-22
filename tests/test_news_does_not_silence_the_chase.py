@@ -1,9 +1,10 @@
 """News mustn't silence the chase clock (design 6.33; the functional designer's answer F22, B-7).
 
 A reply that doesn't answer is news on the open action (`action.news`, which records it as a non-answer). It restarts
-the chase clock once: at the dated window (`steward.chase_dated_days`) for a dated promise, at the undated wait for an
-undated one. After a second non-answer the line comes back with the news shown. News of any other kind (a delivered
-part, a call-off) still ends the wait for its day. Names, ids and numbers come from the fixtures and the settings."""
+the chase clock once: at the dated window (`ui.followups.action_due_within_days`) for a dated promise, at the undated
+wait for an undated one. After a second non-answer the line comes back with the news shown. News of any other kind
+(a delivered part, a call-off) still ends the wait for its day. Names, ids and numbers come from the fixtures and the
+settings."""
 
 from __future__ import annotations
 
@@ -73,7 +74,7 @@ def test_an_overdue_waiting_on_with_two_non_answers_gets_its_line_back(env):
 
 def test_one_non_answer_restarts_the_clock_at_the_dated_window_and_the_line_returns_after_it(env):
     _, cfg, store = env
-    window = cfg.steward.chase_dated_days
+    window = cfg.ui.followups.action_due_within_days
     action_id = make(store, cfg, due=PAST, news=[reply(TODAY)])
     assert waiting(env, action_id) is None
     assert waiting(env, action_id, TODAY + timedelta(days=window - 1)) is None
@@ -117,7 +118,7 @@ def test_an_old_news_entry_with_no_mark_keeps_the_rule_it_had(env):
 
 def test_an_undated_promise_restarts_its_wait_at_one_non_answer_and_returns_at_a_second(env):
     _, cfg, store = env
-    wait = cfg.steward.chase_undated_days
+    wait = cfg.ui.followups.undated_after_days
     once = make(store, cfg, due=None, news=[reply(TODAY - timedelta(days=wait - 1))])
     assert waiting(env, once) is None
     assert waiting(env, once, TODAY + timedelta(days=1)).replies == 1

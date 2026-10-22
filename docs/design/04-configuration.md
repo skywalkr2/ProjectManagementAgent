@@ -343,6 +343,12 @@ Built keys:
 - `reasoning_phrases` and `question_marks`: what the `reasoning-in-title` and `question-is-statement` lints read (6.7): the
   words that mark the assistant's reasoning ("no recorded fact", "couldn't find", …), and the characters that end a question
   ("?", "？", "؟").
+- `singling_out_phrases` (language): the words and phrases that blame someone for a miss, which the `singling-out` lint reads in
+  a draft to several people (6.35); `messages.quiet_intro` and `messages.quiet_subject`: the words of a follow-up written from
+  a line about a promise gone quiet (6.32).
+- `steward.people.snooze_days` ([1, 3, 7, 14]): the days a line about a promise gone quiet can be snoozed for, as a list;
+  `steward.meetings.invitation_days_ahead` (14; 0 is off): how soon an entry must start for an unanswered invitation to get a
+  Today line (6.32). Demo values are in both fictional workspaces.
 - `ask_lead_words` (Can you, Could you, Would you, Please) and `own_promise_words` (I'll, I will): what the
   `own-request-not-promise` lint reads (6.33): a sentence in the person's own sent mail that starts with an asking word
   or ends in a question mark, and holds no promising word, asks someone else, so an action owned by the person from it is
@@ -596,7 +602,9 @@ apply to (6.6) and the rules review (6.21), which keeps the list short and moves
   no due date and no word after this many days; `second_nudge_items` (2): how many items a second follow-up names; and
   `escalate_after_chases` (2; 0 is off): once something has had this many follow-ups and the wait has run its length again,
   Today suggests asking someone else (6.8). They replace the old `today.nudge_after_days`, which an existing file may still
-  carry and is read as `question_after_days`.
+  carry and is read as `question_after_days`; the promise lines (6.33) read `action_due_within_days` and `undated_after_days` too,
+  replacing `steward.chase_dated_days` and `steward.chase_undated_days`, which are read for one release and noted on the
+  setting's row (change log 196).
 - `walkthrough`: `first_promises` (5): how many promises found in the person's own mail the new-start walkthrough's first-result
   screen shows, soonest day first (7.8).
 - `brand`: `color` (`#rrggbb`; the app works out shades from it and Settings warns when its contrast would fail; empty uses the

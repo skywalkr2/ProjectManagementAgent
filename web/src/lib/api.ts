@@ -67,6 +67,7 @@ export const api = {
   /** The free times to propose for a calendar entry's invitation. */
   freeSlots: (about: string) => call<S["FreeSlotsView"]>("GET", `acts/free-slots?about=${id(about)}`),
   /** The accounts an act can go through, with the switch for letting the assistant act after the person's yes. */
+  actSendOptions: () => call<S["ActSendOptionsView"]>("GET", "acts/send-options"),
   actAccounts: () => call<S["ActAccountsView"]>("GET", "acts/accounts"),
   /** Take a sent act back where its channel can; the result says whether it is undone, or why not. */
   takeBackAct: (a: string) => call<S["ActResultView"]>("POST", `acts/${id(a)}/undo`),
@@ -392,6 +393,8 @@ export const api = {
   capacity: () => call<S["CapacityView"]>("GET", "capacity"),
   /** "Not now" on a suggestion line: it stays off until something about it changes. */
   notNowSuggestion: (key: string) => call<S["NotNowDone"]>("POST", "suggestions/not-now", { key }),
+  snoozeQuietPromise: (action: string, until: string) => call<S["SnoozeDone"]>("POST", `quiet-promises/${id(action)}/snooze`, { until }),
+  quietFollowUp: (action: string) => call<S["QuietFollowUpView"]>("GET", `quiet-promises/${id(action)}/follow-up`),
   undoNotNowSuggestion: (signal: string) => call<S["Ok"]>("POST", `suggestions/not-now/${id(signal)}/undo`),
   /** A choice on a suggestion line, done at once; Undo takes it and what it changed back. */
   chooseSuggestion: (body: S["ChooseIn"]) => call<S["ChooseDone"]>("POST", "suggestions/choose", body),

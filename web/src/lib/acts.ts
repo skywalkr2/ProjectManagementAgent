@@ -66,6 +66,11 @@ export function useActOptions(record: string | null, enabled = true) {
   });
 }
 
+/** Whether a new message the person writes can be carried out after their yes, and by which account. */
+export function useSendOptions(enabled = true) {
+  return useQuery({ queryKey: ["act-send-options"], queryFn: api.actSendOptions, enabled, staleTime: 30_000 });
+}
+
 /** The person drafts an act and it opens in Waiting to go out for their yes, with Undo taking the draft back. A refusal says
  * why (the account can't do it, the message has no one to reply to). Returns the act, or nothing when it was refused. */
 export function useDraftAct() {

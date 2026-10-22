@@ -1,6 +1,4 @@
 version: 1
-chase_undated_days: 14   # a waiting-on with no date gets a line after this many days with no news
-chase_dated_days: 7   # a dated waiting-on gets a line from this many days before its date
 second_move_days: 14   # a second move of the same date within this many days shows in your own history as moved again
 default_stance: alongside   # who a new person is to you until you say otherwise
 tracks: [dates, decisions]   # what you track: no question is drafted about anything else
@@ -41,8 +39,10 @@ meetings:
   prep_min_open: 0   # the fewest open things with the people coming that an entry needs for a line on Today; 0 gives every one a line
   capture_hours_after: 48   # the question of what happened at an entry stays on Today this many hours after it ends
   max_items: 6   # the most open things the prep shows for each person coming
+  invitation_days_ahead: 14   # an unanswered invitation gets a line on Today when its entry starts within this many days; 0 is off
 people:
   quiet_promise_days: 7   # a promise to or from someone with no news for this many days gets a line on Today; 0 is off
+  snooze_days: [1, 3, 7, 14]   # the days a line about a promise gone quiet can be snoozed for, as a list to pick from
   max_facts: 5   # the most facts a person's page shows under what matters to them, and under their dates
   date_words: [birthday, anniversary]   # words that mark a fact about a person as a date that comes round every year
 capacity:

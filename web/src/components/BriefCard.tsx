@@ -14,6 +14,7 @@ import { chooseFilters } from "../lib/open-items";
 import type { View } from "../lib/views";
 import { useMoney } from "../lib/money";
 import { reveal } from "../lib/reveal";
+import { useDraftAct, useSendOptions } from "../lib/acts";
 import { useToasts } from "../lib/toasts";
 import { useQueue, type QueueLine } from "../lib/today";
 import { useWords } from "../lib/wording";
@@ -339,6 +340,18 @@ function Message(props: { message: NonNullable<Brief["message"]> }) {
   const { push } = useToasts();
   const { message } = props;
   const names = message.to.map((p) => p.name).join(", ");
+  // Where the account can carry it out, Send drafts the message as an act that waits for the person's yes beside Copy.
+  const draftAct = useDraftAct();
+  const sending = useSendOptions(message.state === "draft" || message.state === "kept").data;
+  const canSend = !!sending?.can_act && message.to.length > 0;
+  const send = (text: string) =>
+    void draftAct({
+      kind: "message",
+      action: "send",
+      account: sending?.account ?? undefined,
+      recipients: message.to.map((p) => ({ person: p.person, kind: "email", role: "to", called_out: false, from_text: false })),
+      parts: { subject: t("brief.message.subject"), body: text },
+    });
   const copy = async (text: string, accept: boolean) => {
     if ((await copyMessage(text)) === "blocked") {
       push({ message: t("brief.message.copy_blocked") });
@@ -368,7 +381,12 @@ function Message(props: { message: NonNullable<Brief["message"]> }) {
             {message.text}
           </p>
           <div className={styles.actions}>
-            <Button variant="primary" onClick={() => void copy(message.text ?? "", message.state === "draft")}>
+            {canSend && (
+              <Button variant="primary" onClick={() => send(message.text ?? "")}>
+                {t("brief.message.send")}
+              </Button>
+            )}
+            <Button variant={canSend ? undefined : "primary"} onClick={() => void copy(message.text ?? "", message.state === "draft")}>
               {t("brief.message.copy")}
             </Button>
           </div>
@@ -378,7 +396,7 @@ function Message(props: { message: NonNullable<Brief["message"]> }) {
   return (
     <div className={styles.block} data-block="message">
       <h3 className={styles.sub}>{t("brief.message.title", { names })}</h3>
-      <p className="hint">{t("brief.message.hint")}</p>
+      <p className="hint">{t(canSend ? "brief.message.hint_send" : "brief.message.hint")}</p>
       {body}
     </div>
   );

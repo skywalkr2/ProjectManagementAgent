@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { actFixture } from "../lib/acts-fixtures";
 import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
 import { BriefCard } from "./BriefCard";
 
@@ -305,6 +306,42 @@ test("a message already copied can be copied again without approving anything", 
   await user.click(screen.getByRole("button", { name: "Copy message" }));
   expect(await navigator.clipboard.readText()).toBe("Hello.");
   expect(calls.some((c) => c.route === "POST brief/message/copied")).toBe(false);
+});
+
+const SEND_OPTIONS = { can_act: true, account: "mailbox:work", account_label: "Work mail" };
+
+test("where an account can act, Send sits beside Copy, drafts the message as an act to the person and opens it for the yes", async () => {
+  const user = userEvent.setup();
+  const text = "Hello,\n\nThe proof shipped.\n";
+  const calls = show(
+    { ...MONDAY, message: { state: "draft", to: [{ person: "PER-9", name: "Lena Example" }], text } },
+    { "GET acts/send-options": () => SEND_OPTIONS, "POST acts": () => actFixture({ id: "XACT-7" }) },
+  ).calls;
+  const send = await screen.findByRole("button", { name: "Send message" });
+  expect(send).toHaveAttribute("data-variant", "primary");
+  expect(screen.getByRole("button", { name: "Copy message" })).not.toHaveAttribute("data-variant", "primary");
+  await user.click(send);
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST acts")).toHaveLength(1));
+  expect(calls.find((c) => c.route === "POST acts")?.body).toEqual({
+    kind: "message",
+    action: "send",
+    account: "mailbox:work",
+    recipients: [{ person: "PER-9", kind: "email", role: "to", called_out: false, from_text: false }],
+    parts: { subject: "My week", body: text },
+  });
+  await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+  expect(calls.some((c) => c.route === "POST brief/message/copied")).toBe(false); // nothing was copied or approved here
+});
+
+test("where no account can act, Copy stays the one button and there is no Send", async () => {
+  show(
+    { ...MONDAY, message: { state: "draft", to: [{ person: "PER-9", name: "Lena Example" }], text: "Hello." } },
+    { "GET acts/send-options": () => ({ can_act: false }) },
+  );
+  const copy = await screen.findByRole("button", { name: "Copy message" });
+  expect(copy).toHaveAttribute("data-variant", "primary");
+  expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  expect(screen.getByText("A draft for you to read, change and send yourself. Nothing is sent from here.")).toBeInTheDocument();
 });
 
 const MORE: Brief = {

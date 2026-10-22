@@ -259,6 +259,7 @@ def estimate(
         packs_of=ws.root,
         env=env,
         most_private=most_private,
+        calibrated_by=ws,
     )
     # A pair or scenario makes about PAIR_CALLS calls (the learning run, the later input and what it proposes), each
     # priced at the cases' average.

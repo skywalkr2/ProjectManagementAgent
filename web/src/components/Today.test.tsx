@@ -166,6 +166,21 @@ test("the queue is one ranked list in the engine's order, each line starting wit
   }
 });
 
+test("a send line that has waited says since when, and one ready today says nothing", async () => {
+  const ago = new Date();
+  ago.setDate(ago.getDate() - 2);
+  const stamp = `${ago.getFullYear()}-${String(ago.getMonth() + 1).padStart(2, "0")}-${String(ago.getDate()).padStart(2, "0")}`;
+  show([{ ...send, ready_since: stamp }]);
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(ago);
+  expect(await screen.findByText(new RegExp(`ready since ${weekday}`))).toBeInTheDocument();
+  cleanup();
+  const today = new Date();
+  const todayStamp = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  show([{ ...send, ready_since: todayStamp }]);
+  await screen.findByText("Send 2 items to Robin Sample");
+  expect(screen.queryByText(/ready since/)).toBeNull();
+});
+
 test("the heading says how many lines need the person, and the same number is the menu's", async () => {
   show([decision, review, send], { "GET plugin-today": () => [{ plugin: "demo", id: "L-1", text: "Look at the proof", about: null, action: null, action_is: null, why: "", until: null }] });
   // The heading line says it, and so does the pane's own count for a screen reader.

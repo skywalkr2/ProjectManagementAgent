@@ -1157,9 +1157,9 @@ is marked *designed*, with the phase.
   `tests/test_on_hold_and_follow_ups.py::test_a_sent_question_is_chased_after_the_question_wait_and_not_before`,
   `tests/test_on_hold_and_follow_ups.py::test_the_rule_reads_every_threshold_from_the_settings`,
   `tests/test_top_priorities.py::test_every_number_the_list_reads_is_a_setting`). The wait before a dated action is chased (the
-  question wait) is part of the rule as built; the roadmap item's wording leaves it out. *Not one rule yet:* the promise lines
-  (6.33) read their own pair of numbers, `steward.chase_dated_days` and `steward.chase_undated_days`, which hold the same
-  defaults (7 and 14) as `action_due_within_days` and `undated_after_days` but are separate settings.
+  question wait) is part of the rule as built; the roadmap item's wording leaves it out. *One rule* (cleanup batch, change log 196): the promise lines (6.33) read the same `action_due_within_days` and
+  `undated_after_days`; the two `steward.chase_*_days` names are read for one release and noted on the setting's row.
+  `tests/test_followup_timing_family.py`.
 - **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
   other owners stay. Told dates, Followed up and They finished it are per person, so the new person has not been told and
   the action is to send to them. **Built (B-6a):** "Reassign…" in a to-do's row menu on the to-dos and questions screen (7.5)
@@ -1610,7 +1610,7 @@ for it, that nothing goes out without the PM approving that exact content, alrea
         `web/src/components/TodayReplySend.test.tsx`, `web/src/components/OutgoingActs.test.tsx`,
         `web/src/components/ActingAccounts.test.tsx`, `web/src/components/Sources.test.tsx` ("a mailbox's folders"),
         `web/src/components/ReminderWhere.test.tsx` ("Undo after giving the yes ..."); the browser test
-        `web/e2e/acts-journey.spec.ts` (written, not yet run).
+        `web/e2e/acts-journey.spec.ts` (ran green in the full browser run).
     - **Not built (S1b-2):** the add-ons' channels; asking the service to drop the wider access when acting is turned off;
       an invitation line on Today (an invitation is answered from its calendar entry); acting on several selected
       messages at once (the API takes a list in `about`, but no list of saved messages lets the person select any);
@@ -3454,10 +3454,15 @@ people and details, and never acts in their name without their yes on the exact 
     when it was made or its latest news. Left out: a promise that already has a line (the date-based promise lines, the
     person's own past its day), one on hold or with an ending waiting for the person's Keep, a reply owed, a promise made to
     a third person, and one from someone the person reports to or only watches (waited on, never chased).
-  - **Left:** asking "who asked this" of a question (a question has no asker, so "asked by them" is the replies owed);
-    sending a follow-up from the line (the line opens the person's page, and the chase buttons stay on the follow-up
-    screens); snoozing or dismissing a quiet line; a capture for an entry nobody else is on; birthdays from a contact
-    source; dates written in languages other than English. `tests/test_meetings_people.py`,
+  - **Built (cleanup batch, change log 196):** the line's menu: **Send a follow-up** for a promise someone owes the person
+    (a message written from the wording sheet, `language.messages.quiet_intro` and `quiet_subject`, drafted as an act through
+    `POST /api/acts` on the account that can carry a new message, else as a Copy act; `GET /api/quiet-promises/{id}/follow-up`)
+    and **Snooze** to a day from `steward.people.snooze_days` (`POST /api/quiet-promises/{id}/snooze`; a `suggestion_dismissed`
+    signal with a day in its note, which the line's own return and Undo read, not counted in the day's cap).
+    `tests/test_quiet_line_acts.py`, `web/src/components/MeetingPrep.test.tsx`.
+  - **Left:** asking "who asked this" of a question (a question has no asker, so "asked by them" is the replies owed); a
+    capture for an entry nobody else is on; birthdays from a contact source; dates written in languages other than
+    English; the browser journey `web/e2e/meetings-journey.spec.ts` (written, not yet run). `tests/test_meetings_people.py`,
     `web/src/components/MeetingPrep.test.tsx`.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
   connection); areas of life with their own data level and allowed accounts; capture from anywhere, voice included
@@ -3973,14 +3978,14 @@ Followed up (a nudge: it stays open), They finished it, hold, Change this and Dr
 it (6.34): *I manage them* and *I work alongside them* get the follow-up line and its draft; *I report to them* gets no
 follow-up and no draft, only a line of its own, "Waiting on Ana: the budget answer, due Tuesday", with New date, Done and Drop; *I only watch*
 gets no line at all, though the action still counts as covered, so no other line picks it up. A person with no stance has the default stance. A reply owed (6.35) is the person's own and is never gated by stance. A nudge never ends it. A waiting-on is not left to go stale: with a date it
-is due a follow-up from `steward.chase_dated_days` (7) before the date, and once the date has passed; with none, after
-`steward.chase_undated_days` (14) with no news since it was made or since its last news (it joins the person's follow-up line,
+is due a follow-up from `ui.followups.action_due_within_days` (7) before the date, and once the date has passed; with none, after
+`ui.followups.undated_after_days` (14) with no news since it was made or since its last news (it joins the person's follow-up line,
 "no date, nothing heard for 14 days" in its row). One chased lately waits as long again. Never while it is on hold.
 **News mustn't silence the chase clock** (the functional designer's F22, 2026-10-20; batch B-7). A reply that doesn't answer
 is news (`action.news`, which records it as `non_answer` on the news entry; a part delivered and a call-off carry none, and
 an entry written before this had none either, so it keeps the rule it had). The first non-answer since the promise's line
-began restarts the clock **once**: for a dated promise the line is quiet for `steward.chase_dated_days` (7) from that
-reply, for an undated one for its `chase_undated_days` (14); a **second** brings the line back at once with the news shown
+began restarts the clock **once**: for a dated promise the line is quiet for `ui.followups.action_due_within_days` (7) from that
+reply, for an undated one for its `undated_after_days` (14); a **second** brings the line back at once with the news shown
 ("Robin replied twice without a date: ask again?"; `replies` on the line, on the promise's own line and on the person's
 follow-up line). News of any other kind still ends the wait for its day. *Built so far (F22):*
 `tests/test_news_does_not_silence_the_chase.py` (an overdue waiting-on with two non-answers gets its line back),
@@ -4019,7 +4024,7 @@ to correct from a list or date picker as the person's own edit with Undo, a sign
 "Close 'Send the floor plan'?", with its words and who said them under it and the two buttons that name the result, Change
 in the menu (`tests/test_promise_lines.py`, `web/src/components/TodayPromises.test.tsx`); a promise needing a look is one Today
 line with its choices and on no other line: the person's own past their day, and those owed by someone else from
-`steward.chase_dated_days` (7) before their day or past it, or, with no day, after `steward.chase_undated_days` (14) with
+`ui.followups.action_due_within_days` (7) before their day or past it, or, with no day, after `ui.followups.undated_after_days` (14) with
 nothing heard, never while on hold or with news since their day (`tests/test_promise_lines.py`); the sent folder offered
 under a mailbox, the server's marked folder picked, taken in quietly (`tests/test_sent_folder.py`,
 `web/src/components/Sources.test.tsx`). The prompts and playbook entries ask for promises both
@@ -4035,8 +4040,8 @@ ways, and the golden cases and harness pairs are in demo-b (`tests/test_followup
   on, so the other-team check (6.18) lets it through (`tests/test_scope_slice.py`).
 - **Due at a meeting:** `action.add` with `due_at_event` and its `event` is due on the entry's day (`due_event`) and moves
   when the entry moves (`event.set`, or the person's own edit), as a date-only move with no news.
-- **The chase clock:** a promise owed to the person gets a line only after `steward.chase_undated_days` (14) days with no
-  news when it has no date, only within `steward.chase_dated_days` (7) days of its date or once past it when it has one,
+- **The chase clock:** a promise owed to the person gets a line only after `ui.followups.undated_after_days` (14) days with no
+  news when it has no date, only within `ui.followups.action_due_within_days` (7) days of its date or once past it when it has one,
   and never while on hold.
 - **Dates read against the message:** a mail message's source keeps `sent_at`, with the sender's own offset, and the
   rules read its words against that day and zone, so the same thread read on its day or ten days later gives the same
@@ -4156,8 +4161,11 @@ return, then held for the person when the draft will reach someone, per 6.22):
   label, so this one is a lint with a return, not a refusal.
 
 *Built so far (S1-2):* the `bookkeeping` and `long-quote` lints on a question to someone else and on a drafted reply
-(`tests/test_reader_checks.py`); openable links were already refused (6.8). Left: never singling a person out, which
-needs drafts to several people (S1b), and its learning pair.
+(`tests/test_reader_checks.py`); openable links were already refused (6.8). *Built (cleanup batch, change log 196):* never singling a
+person out: the lint `singling-out` finds a sentence in a draft to two or more people (other than the person) that names one
+of them with a phrase of `language.singling_out_phrases`; it applies to a drafted reply to a message that went to several
+people and to a message act to several recipients, is returned once and then held, and its learning pair is
+`singling-out-in-a-group-reply` (`tests/test_reader_checks.py`, `tests/test_pairs.py`).
 
 **One message per person per batch.** Everything one gap needs is one ask, never three messages about one gap. All the
 asks to one person go out together: one message per person per batch, the asks numbered inside it, sent now or held
@@ -4224,10 +4232,11 @@ limit the recipient is outside. Packets for a draft to a named reader leave such
 the notes run, whose reader is the input's sender (open actions, open questions and the facts section), and the follow-on
 run, whose readers are the people a tied record already reached (the tied records and the moved records). An input's own
 text is never left out of its own run. Runs with no named reader are not filtered: asks and learning runs go to the
-person, who is never outside a limit, and a plugin's draft names its reader in its own packet. Not yet: the drafted
-follow-up message (`followups.compose`) does not check a to-do's limit against its owner, and singling a person out in a
-group draft, with its learning pair, waits for drafts to several people (S1b). (`tests/test_audience.py`,
-`tests/test_follow_on.py`)
+person, who is never outside a limit, and a plugin's draft names its reader in its own packet. *Built (cleanup batch, change
+log 195):* the drafted follow-up message (`followups.sections`) leaves out a to-do or question whose source's limit its
+owner is outside of, from the message, the count to send and the nudge, and names it on the section (`limited`, shown beside
+the message as "Left out of every message to <name>: <text>. It is limited to <names>."; never in the message).
+(`tests/test_audience.py`, `tests/test_follow_on.py`, `tests/test_followup_limits.py`)
 
 **What changed since yesterday says what the assistant did (S1-2).** Each line names the act and its reason in the
 assistant's own voice ("Closed the floor plan promise: the owner said it was sent"), and anything the assistant closed,
@@ -4291,7 +4300,9 @@ due through the week, to confirm in one press or change. The morning brief carri
 message* is the core draft kind `monday-message` on the record's `message` text: asked for with `POST /api/brief/message`,
 estimated and held for the person's go like every draft, written from the week's facts under the draft rules, shown
 as "Draft, not yet reviewed" and made the person's by Copy (`POST /api/brief/message/copied`); setting it aside is a
-signal like any draft's. It is for the people marked "I report to them" and absent when there are none. **Left:** drafting
-the message as an act the person approves (Copy only today), and asking once who it is for when nobody is marked
-(the section is simply absent). `tests/test_brief.py`, `tests/test_brief_week.py`,
+signal like any draft's. It is for the people marked "I report to them" and absent when there are none. **Built (cleanup batch, change log 196):** **Send** beside Copy
+when one account clearly carries a new message (`GET /api/acts/send-options`: the account the latest act named when it can
+act, else the only one that can; with several and none chosen there is none, so Copy stays the one button): it drafts the
+message as an act through `POST /api/acts` for the person's yes in Waiting to go out, and marks nothing copied. **Left:**
+asking once who it is for when nobody is marked (the section is simply absent). `tests/test_brief.py`, `tests/test_brief_week.py`,
 `web/src/components/BriefCard.test.tsx`.

@@ -286,8 +286,12 @@ class Router:
         sleep: Callable[[float], None] = time.sleep,
         on_wait: Callable[[float], None] | None = None,
         catalogs: Catalogs | None = None,
+        calibration_from: Any = None,
     ):
         self.sleep = sleep
+        #: Where what was measured about the accounts is read from, when it isn't beside this store: an estimate that
+        #: prices a practice workspace is corrected by what the person's own workspace measured.
+        self.calibration_from = calibration_from
         self.on_wait = on_wait
         self.catalogs = catalogs or Catalogs(
             store.path.parent / ".cockpit" / "ai-catalog.json", cfg.ai.catalog_refresh_hours
@@ -613,7 +617,12 @@ class Router:
         """How this account's model counts compared with the app's own count, and the fixed tokens its adapter adds to
         every request, as kept on this computer (ratio 1 and no overhead until something was measured). Read at the
         moment of use, so a check or a run's report applies to the next estimate."""
-        return lookup(folder_of(self.store), choice.provider, choice.model_id, self.cfg.ai.estimates.calibration_runs)
+        return lookup(
+            self.calibration_from or folder_of(self.store),
+            choice.provider,
+            choice.model_id,
+            self.cfg.ai.estimates.calibration_runs,
+        )
 
     def _learn(self, choice: Choice, task: AiTask, result: AiResult | None) -> None:
         """A finished run whose service reported its input tokens moves the account model's ratio. A failure to keep it

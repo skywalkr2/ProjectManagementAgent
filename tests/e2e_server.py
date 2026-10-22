@@ -33,6 +33,7 @@ from engine.evaluate import load_cases
 from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
+from tests.e2e_meetings import seed_meetings
 from tests.roundtrip import round_trip
 
 TOKEN = "e2e-token"
@@ -248,6 +249,13 @@ def main() -> None:
         "handed and what it took back",
     )
     parser.add_argument(
+        "--meetings",
+        action="store_true",
+        help="seed a calendar entry with another person that starts in a few hours, one with them that has ended with "
+        "nothing written down, and a promise of theirs gone quiet, for the meeting journey; /__e2e/meetings says what "
+        "was seeded and whether the ended entry has its notes",
+    )
+    parser.add_argument(
         "--clock-at",
         metavar="MOMENT",
         help="start the clock at this ISO 8601 moment in UTC (for example 2026-10-21T00:30:00Z); it keeps ticking",
@@ -335,6 +343,7 @@ def main() -> None:
     folder_targets = list(cfg.storage.backups.targets)
     fake_channel = seed_outgoing(store, cfg) if args.fake_channel else None
     acts = seed_acts(ws, store, cfg) if args.acts else None
+    meetings = seed_meetings(store, cfg) if args.meetings else None
 
     async def case_list(_request):
         return JSONResponse(cases)
@@ -416,9 +425,17 @@ def main() -> None:
             }
         )
 
+    async def met(_request):
+        """What the meeting journey's records are, and whether what happened at the ended entry was written down."""
+        if meetings is None:
+            return JSONResponse({"enabled": False})
+        entry = store.read().get("event", meetings["ended"]["id"])
+        return JSONResponse({"enabled": True, **meetings, "captured": bool(entry and entry.data.get("captured_at"))})
+
     outer = Starlette(
         routes=[
             Route("/__e2e/delivered", delivered),
+            Route("/__e2e/meetings", met),
             Route("/__e2e/acts", acted),
             Route("/__e2e/cases", case_list),
             Route("/__e2e/ledger", ledger),

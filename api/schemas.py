@@ -917,6 +917,16 @@ class LeftOutView(BaseModel):
     on: str = Field(description="The day it was answered (a question) or done (an action), as an ISO date.")
 
 
+class LimitedOutView(BaseModel):
+    """Something a message to this person leaves out because the message it rests on limits who may see it, and the
+    person is outside that group; the screen says so beside the message (design 6.35)."""
+
+    kind: Literal["action", "question"]
+    id: str
+    text: str
+    limited_to: str = Field(description="The names of the people it is limited to.")
+
+
 class NudgeView(BaseModel):
     """A drafted follow-up message for one person (built from a template, no AI run): what has gone unanswered as long
     as the follow-up rule says. `round` is which follow-up it is: 1, or 2 and up once the person was chased before, when
@@ -950,6 +960,11 @@ class FollowupSection(BaseModel):
         None,
         description="Why the message is not offered to copy: it still names the assistant, which what goes to "
         "someone else never does. `message` is empty then.",
+    )
+    limited_out: list[LimitedOutView] = Field(
+        default_factory=list,
+        description="What no message to this person carries, because its source is limited to a group that leaves "
+        "them out.",
     )
     to_send: int
     ready_since: str | None = Field(
@@ -2272,6 +2287,13 @@ class AfterMove(BaseModel):
     )
 
 
+class SnoozeDayView(BaseModel):
+    """A day a line can be snoozed to: `days` from today, and `on` the day it comes back (a date)."""
+
+    days: int
+    on: date
+
+
 class SnoozeChoiceView(BaseModel):
     choice: Literal["in 1 hour", "later today", "this evening", "tomorrow morning", "next week"]
     at: datetime = Field(description="The moment the choice moves the reminder to, on the person's own clock.")
@@ -2407,7 +2429,11 @@ class QueueLineView(BaseModel):
     waiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,
     `waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup
     that works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup);
-    `meeting_prep` is a calendar entry with other people on it that starts soon (`event`, its title in `text`, `at`
+    `invitation` is a calendar entry that came as an invitation, has not been answered and starts within
+    `steward.meetings.invitation_days_ahead` days (`event`, its title in `text`, who invited in `subject`, `at` when it
+    starts; it opens the entry's page, where Accept, Maybe, Decline and Propose a time draft the answer for the
+    person's yes, and it goes once the person has answered); `meeting_prep` is a calendar entry with other people on it
+    that starts soon (`event`, its title in `text`, `at`
     when it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many things
     are open with them; it opens GET /api/meetings/{id}/prep and goes when the entry starts); `meeting_capture` is an
     entry with other people on it that has ended with nothing written down (`event`, `text`, `at` when it ended; it
@@ -2469,6 +2495,7 @@ class QueueLineView(BaseModel):
         "moved",
         "since_yesterday",
         "away",
+        "invitation",
         "meeting_prep",
         "meeting_capture",
         "quiet_promise",
@@ -2484,8 +2511,8 @@ class QueueLineView(BaseModel):
     )
     event: str | None = Field(
         None,
-        description="For a meeting_prep or meeting_capture line: the id of the calendar entry; its page is GET "
-        "/api/meetings/{id}/prep and what happened at it is written down with POST /api/meetings/{id}/capture.",
+        description="For an invitation, meeting_prep or meeting_capture line: the id of the calendar entry; its page "
+        "is GET /api/meetings/{id}/prep and what happened at it is written down with POST /api/meetings/{id}/capture.",
     )
     open_items: int | None = Field(
         None, description="For a meeting_prep line: how many things are open with the people coming."
@@ -2581,6 +2608,11 @@ class QueueLineView(BaseModel):
         None,
         description="When the oldest request waiting for the network began waiting (offline), on the person's own "
         "clock (their time zone).",
+    )
+    ready_since: str | None = Field(
+        None,
+        description="For a send line: the day (a date) the oldest of the messages to send became ready to send, where "
+        "the workspace is; the screen says it only when it is before today.",
     )
     state: (
         Literal[
@@ -2749,6 +2781,11 @@ class QueueLineView(BaseModel):
         default_factory=list,
         description="For a reminder line: the snooze choices that still have a time, in order, each with the moment it "
         "resolves to. A choice with no time left today is not listed.",
+    )
+    snooze_days: list[SnoozeDayView] = Field(
+        default_factory=list,
+        description="For a quiet_promise line: the days it can be snoozed for, each with the day it comes back "
+        "(POST /api/quiet-promises/{id}/snooze, taken back by POST /api/suggestions/not-now/{signal}/undo).",
     )
     reminders: list[ReminderItemView] = Field(
         default_factory=list, description="For a reminder_digest line: the reminders it lists, oldest first."
@@ -3216,6 +3253,11 @@ class SettingItem(BaseModel):
     file_types: list[str] = Field(
         default_factory=list,
         description="With a file chooser: the endings of the files it offers (such as .ics), so it lists only those.",
+    )
+    renamed_from: str | None = Field(
+        None,
+        description="The old name of this setting that is still in use (in a file, an environment variable or a "
+        "flag); it is read for one more release, and saving the setting writes the new name only.",
     )
     plugin: str | None = Field(
         None,
@@ -5683,6 +5725,17 @@ class ActOptionsView(BaseModel):
     )
 
 
+class ActSendOptionsView(BaseModel):
+    """GET /api/acts/send-options: whether a new message the person writes can be carried out after their yes, and by
+    which account: the one their latest act named when acting is on for it and its channel sends messages, else the
+    only account that can. With more than one candidate and none chosen, or none, `can_act` is false and Copy carries
+    the message; no account is picked by default."""
+
+    can_act: bool = False
+    account: str | None = None
+    account_label: str | None = None
+
+
 class ActAccountView(BaseModel):
     """An account an act can go through, and whether the person let the assistant act on it after their yes."""
 
@@ -6115,6 +6168,28 @@ class ChooseDone(BaseModel):
 
     signal: str
     changeset: str | None = None
+
+
+class SnoozeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    until: date = Field(description="The day the line comes back: after today, and one of the days it offers.")
+
+
+class SnoozeDone(BaseModel):
+    """A line snoozed until a day. `signal` is what Undo takes back."""
+
+    signal: str
+    until: date
+
+
+class QuietFollowUpView(BaseModel):
+    """GET /api/quiet-promises/{id}/follow-up: the follow-up written for someone who owes the person a promise that has
+    gone quiet, to draft as an act with POST /api/acts (a message to `person`, in `parts`)."""
+
+    person: str
+    person_name: str
+    parts: dict[str, str] = Field(description="The message by part: subject and body.")
 
 
 class NotNowDone(BaseModel):

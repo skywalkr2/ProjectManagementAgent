@@ -86,6 +86,16 @@ test("a message that still names the assistant shows why it is held back and can
   expect(posts(calls)).toHaveLength(0);
 });
 
+test("a to-do the person is outside the limit of is left out of their message, and the detail says so", async () => {
+  const user = userEvent.setup();
+  const limited = [{ kind: "action" as const, id: "ACT-7", text: "Check the print run", limited_to: "Pat Example, Lee Sample" }];
+  fakeApi({ ...markSentRoutes, "GET followups": () => [sections[0], { ...sections[1], limited_out: limited }] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  const pane = await findPane();
+  expect(within(pane).getByText("Left out of every message to Robin Sample: Check the print run. It is limited to Pat Example, Lee Sample.")).toBeInTheDocument();
+});
+
 afterEach(() => {
   // A test that gave the browser a rich clipboard takes it away again.
   vi.unstubAllGlobals();

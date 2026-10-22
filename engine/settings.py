@@ -26,7 +26,7 @@ from pydantic import BaseModel
 
 from engine import audit
 from engine.config import ConfigError, load_config
-from engine.config.loader import plain_label, refusal_text
+from engine.config.loader import RENAMED_KEYS, plain_label, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
 from engine.references import join_watch_changes
@@ -99,6 +99,7 @@ class Setting:
         False  # technical: the screens list it only behind Advanced, in the words the person who set it up uses
     )
     file_types: list[str] = field(default_factory=list)  # with picker "file": the endings it offers (".ics")
+    renamed_from: str | None = None  # the old name still in use for it (a file, an environment variable or a flag)
 
 
 @dataclass
@@ -188,6 +189,9 @@ def describe(
         defaults = model().model_dump(mode="json")
         values = getattr(cfg, name).model_dump(mode="json")
         _walk(model, [name], values, defaults, cfg.sources, found, live)
+    old_names = {new: old for old, new in (getattr(cfg, "deprecated", None) or {}).items()}
+    for setting in found:
+        setting.renamed_from = old_names.get(setting.key)
     for plugin, model in (plugin_models(plugins) if config_dir is not None else {}).items():
         file = PLUGIN_PREFIX + plugin
         raw = _plugin_raw(config_dir, plugin)
@@ -528,6 +532,15 @@ def save(
     for key in reset:
         name, *path = key.split(".")
         texts[name] = remove_key(texts[name], path)
+    for old, new in RENAMED_KEYS.items():
+        # A setting saved under its new name takes its old name out of the file, so only one of them is left.
+        if new not in changes and new not in reset:
+            continue
+        old_file, *old_path = old.split(".")
+        held = config_dir / f"{old_file}.yaml"
+        text = texts.get(old_file, held.read_text(encoding="utf-8") if held.exists() else "")
+        if text and has_key(load_yaml(text) or {}, old_path):
+            texts[old_file] = remove_key(text, old_path)
     for name in texts:
         if name in models and hasattr(models[name], "renamed_keys"):
             # An add-on's renamed setting is written under its new name, and the old name goes.

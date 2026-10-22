@@ -1,0 +1,37 @@
+id: action-work-drafts-the-message
+title: An action handed to the assistant gets its work drafted as prose for the person to review
+skills: [use-facts]
+received: '2026-10-14'
+# The person hands over an open to-do from its row: one request for the work, answered as a draft. The draft is filed for
+# review and nothing else changes: the to-do stays open and stays theirs.
+given_file: busy-portfolio.yaml
+given:
+- kind: action
+  id: ACT-90
+  fields:
+    project: PRJ-2
+    text: Send the reconciliation test results to the finance lead
+    owners:
+    - person: PER-1
+    due: '2026-10-20'
+handed_over:
+  action: ACT-90
+  note: Keep it to three lines.
+expect:
+- op: text.draft
+  text_has:
+  - reconciliation
+  - results
+forbid:
+- op: action.close
+- op: action.add
+- op: question.add
+stub_answer:
+  summary: The work is drafted as prose for the person to review.
+  ops: []
+  draft: |-
+    Hello,
+
+    The reconciliation test results are attached. Please tell me if anything looks off.
+
+    Thank you.

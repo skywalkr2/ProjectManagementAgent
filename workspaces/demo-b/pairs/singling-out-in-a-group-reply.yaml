@@ -1,0 +1,69 @@
+id: singling-out-in-a-group-reply
+title: A reply to a group never blames one member, and the same kind of reply isn't drafted again
+skills: [use-lesson]
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Okafor <maya.okafor@example.org>
+    To: Avery Lane <avery.lane@example.com>, Theo Brandt <theo.brandt@example.com>, Sam Rivera <sam.rivera@example.com>
+    Subject: Cover proof
+
+    Does anyone know why the cover proof is late?
+  wrong:
+    summary: Maya asks why the cover proof is late; a reply is drafted for the group.
+    ops:
+    - op: action.add
+      text: Tell the group why the cover proof is late
+      owners: [PER-1]
+      reply: The cover proof is late because Theo missed the file deadline.
+      reply_owed: true
+      project: PRJ-1
+      evidence:
+        quote: why the cover proof is late
+  correction:
+    kind: sent_back
+    note: Don't name Theo in a message to all three of them. If the file was late, I ask Theo on his own; the group only hears the new date.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [alone|own|private]
+  keep: true
+later:
+  received: '2026-10-19'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Okafor <maya.okafor@example.org>
+    To: Avery Lane <avery.lane@example.com>, Theo Brandt <theo.brandt@example.com>, Sam Rivera <sam.rivera@example.com>
+    Subject: Spine proof
+
+    The spine proof is two days behind. Can someone say what happened?
+  expect:
+  - op: action.add
+    text_has: [spine proof]
+    owners: [PER-1]
+  forbid:
+  - op: action.add
+    text_has: [Theo|Sam]
+  packet_has: ['# Lessons']
+ideal:
+  learn:
+    summary: A message to a group never blames one member; a gap in one person's work is asked of that person alone.
+    topic: blame in a group reply
+    ops:
+    - op: lesson.add
+      text: Never name one member of a group as the cause of a miss in a reply to the group; ask that person on their own.
+      guard: A reply that goes to several people says what is happening and what comes next, and names nobody as the cause.
+      evidence:
+        quote: I ask Theo on his own
+  later:
+    summary: Maya asks what happened to the spine proof; the reply to the group gives the next step and blames nobody.
+    topic: spine proof
+    ops:
+    - op: action.add
+      text: Tell the group what is happening with the spine proof
+      owners: [PER-1]
+      reply: The spine proof is two days behind, and I will share the new date with all of you once I have it.
+      reply_owed: true
+      project: PRJ-1
+      evidence:
+        quote: The spine proof is two days behind

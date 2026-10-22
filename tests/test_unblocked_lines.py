@@ -105,7 +105,7 @@ def test_a_reply_owed_for_a_blocked_to_do_comes_back_once_its_blocker_is_over(en
 def test_a_promise_someone_owes_is_chased_again_once_the_blocker_of_its_hold_is_over(env):
     _, cfg, store = env
     them = other(cfg)
-    long_ago = TODAY - timedelta(days=cfg.steward.chase_undated_days + 30)
+    long_ago = TODAY - timedelta(days=cfg.ui.followups.undated_after_days + 30)
     store.clock = lambda: f"{long_ago}T09:00:00+00:00"
     theirs = make(store, [them], due=None)
     asked = blocked_on_a_question(store, theirs, them)

@@ -666,6 +666,25 @@ def test_questions_to_send_answers_to_chase_and_decisions_waiting_are_their_own_
     assert section(found, "decide") is None and found.on_today >= 1
 
 
+def test_a_question_held_for_the_weekly_note_is_in_that_mondays_briefing_and_not_the_one_before(env):
+    from engine.followups import hold_question
+
+    ws, cfg, store, clock = env
+    other = someone(store, "Mira Fictional")
+    asked = make(store, "question", to=other, title="Which cover is final?")
+    next_monday = TODAY + timedelta(days=7)
+    assert next_monday.weekday() == 0
+    assert hold_question(store, asked, {"on": next_monday.isoformat()}, today=TODAY) is None
+    assert asked not in [x.link[1] for x in lines_of(built(env, "monday"), "send")]
+    # On that Monday it is a line on Today to send, which the briefing counts and links to instead of repeating.
+    from engine.today_queue import queue
+
+    later = NOW + timedelta(days=7)
+    assert asked in {i for q in queue(ws, store, cfg, later) if q.kind == "send" for i in q.questions}
+    assert asked not in [x.link[1] for x in lines_of(built(env, "monday", later), "send")]
+    assert built(env, "monday", later).on_today >= 1
+
+
 def test_goals_are_proposed_from_what_is_due_until_the_person_confirms_them(env):
     ws, cfg, store, clock = env
     for n in range(7):

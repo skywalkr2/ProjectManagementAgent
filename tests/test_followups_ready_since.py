@@ -87,3 +87,23 @@ def test_an_action_is_ready_from_the_day_it_was_made_and_again_after_it_changes_
         tx.update("action", action, {"text": "Tell the printer about the proof"}, _PM, read_version=rec.version)
     changed = mine((START + timedelta(days=6)).date())
     assert changed["told"] is None and changed["ready_since"] == (START + timedelta(days=6)).date().isoformat()
+
+
+def test_todays_send_line_carries_the_day_its_message_became_ready(tmp_path):
+    from engine.today_queue import queue
+
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    cfg = ws.config(env={"COCKPIT__WORKSPACE__USER__TIMEZONE": "UTC"})
+    clock = Clock()
+    store = Store(ws.db_path, cfg=cfg, clock=clock)
+    try:
+        clock.now = START + timedelta(days=1)
+        with store.transaction() as tx:
+            tx.create("question", {"to": ASKED, "title": "Which cover is final?"}, _PM)
+        now = START + timedelta(days=4)
+        line = next(x for x in queue(ws, store, cfg, now) if x.kind == "send" and x.person == ASKED)
+        section = _mine(store, cfg, now.date())
+        assert line.ready_since == section.ready_since
+        assert line.ready_since is not None and line.ready_since <= (START + timedelta(days=1)).date().isoformat()
+    finally:
+        store.close()

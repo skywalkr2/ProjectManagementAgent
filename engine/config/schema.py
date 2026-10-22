@@ -1375,6 +1375,7 @@ def _default_lints() -> dict[str, Severity]:
         "rejected-ask": "return",
         "bookkeeping": "return",
         "long-quote": "return",
+        "singling-out": "return",
         "action-stands-alone": "return",
         "reasoning-in-title": "return",
         "question-is-statement": "return",
@@ -1568,6 +1569,15 @@ class MessageSettings(ConfigModel):
     greeting: str = Field("Hi {first_name},", description="The first line of a copied message.")
     actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
     closing: str = Field("Thanks!", description="The last line of a copied message.")
+    quiet_intro: str = Field(
+        "Checking in on this:",
+        description="The line above a promise in a follow-up message written from a line about a promise gone quiet.",
+    )
+    quiet_subject: str = Field(
+        "Checking in: {text}",
+        description="The subject of a follow-up message written from a line about a promise gone quiet: {text} is the "
+        "promise.",
+    )
     nudge_intro: str = Field(
         "Following up on {count} things from my note on {date}:",
         description="The line above the list in a follow-up message: {count} is how many things it lists and {date} "
@@ -1886,6 +1896,16 @@ class LanguageFile(FileModel):
         description="Words and phrases that mark the assistant's reasoning, so a to-do's or a question's title that "
         "holds one is returned: a title says what to do or ask, and the reasoning belongs in the change's summary. "
         "Matched as whole words, ignoring case; words quoted from the input don't count.",
+    )
+    singling_out_phrases: list[str] = Field(
+        default_factory=lambda: [
+            *("missed", "forgot", "forgotten", "dropped the ball", "failed to"),
+            *("didn't send", "did not send", "never sent", "hasn't sent", "still hasn't"),
+            *("was late", "is late", "your fault", "their fault", "to blame"),
+        ],
+        description="Words and phrases that blame someone for a miss. A draft to several people that holds one in a "
+        "sentence naming one of them is returned: a discrepancy in one person's work is asked of that person alone, in "
+        "a draft to them. Matched as whole words, ignoring case.",
     )
     question_marks: list[str] = Field(
         default_factory=lambda: ["?", "\uff1f", "\u061f"],
@@ -2261,14 +2281,16 @@ class FollowupsSettings(ConfigModel):
         ge=0,
         le=365,
         description="Something sent to a person about an action is chased only when the action's own due date is this "
-        "many days away or less, or already past. An action on hold is never chased.",
+        "many days away or less, or already past; a promise someone owes you that has a date gets its Today line from "
+        "this many days before its date. An action on hold is never chased.",
     )
     undated_after_days: int = Field(
         14,
         ge=1,
         le=365,
         description="An action with no due date is chased once this many days have passed since the person was told "
-        "with no word back.",
+        "with no word back; a promise someone owes you that has no date gets its Today line after this many days "
+        "with no news.",
     )
     question_after_days: int = Field(
         4,
@@ -3129,6 +3151,14 @@ class MeetingSettings(ConfigModel):
         le=30,
         description="The most open things the prep shows for each person coming. The rest are counted.",
     )
+    invitation_days_ahead: int = Field(
+        14,
+        ge=0,
+        le=365,
+        description="An invitation you haven't answered gets a line on Today when its entry starts within this many "
+        "days; the line opens the entry, where you accept, say maybe, decline or propose a time. Zero turns the line "
+        "off.",
+    )
 
 
 class PeopleSettings(ConfigModel):
@@ -3145,6 +3175,11 @@ class PeopleSettings(ConfigModel):
         ge=1,
         le=30,
         description="The most facts a person's page shows under what matters to them, and under their dates.",
+    )
+    snooze_days: list[int] = Field(
+        default_factory=lambda: [1, 3, 7, 14],
+        description="The days a line about a promise gone quiet can be snoozed for, offered as a list to pick from: "
+        "each is that many days from today, and the line comes back on that day.",
     )
     date_words: list[str] = Field(
         default_factory=lambda: ["birthday", "anniversary"],
@@ -3383,20 +3418,6 @@ class StewardFile(FileModel):
         default_factory=lambda: ["dates", "decisions"],
         description="What you track for the work: delivery dates, decisions, and design quality. The assistant drafts "
         "no question about something you don't track, whoever it is for.",
-    )
-    chase_undated_days: int = Field(
-        14,
-        ge=1,
-        le=365,
-        description="A promise someone owes the person that has no date gets one line on Today after this many days "
-        "with no news, counted from when it was made or from its latest news. Nothing is shown while it is on hold.",
-    )
-    chase_dated_days: int = Field(
-        7,
-        ge=0,
-        le=365,
-        description="A promise someone owes the person that has a date gets a line on Today only from this many days "
-        "before its date, and once the date has passed. Nothing is shown while it is on hold.",
     )
     second_move_days: int = Field(
         14,

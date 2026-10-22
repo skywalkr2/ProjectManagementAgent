@@ -753,6 +753,11 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
                 ))}
               </ul>
               <div className="message">
+                {(s.limited_out ?? []).map((x) => (
+                  <p key={`${x.kind}:${x.id}`} className="hint" data-limited-out="">
+                    {t("followups.limited_out", { name: s.name, text: x.text, names: x.limited_to })}
+                  </p>
+                ))}
                 {s.withheld && (
                   <p className="hint" role="alert">
                     {s.withheld}

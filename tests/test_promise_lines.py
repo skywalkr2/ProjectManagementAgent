@@ -116,7 +116,7 @@ def test_news_since_its_date_a_held_ending_a_hold_or_a_future_date_leave_no_line
     news = make(store, [them], due=PAST, news=[{"on": TODAY.isoformat(), "text": "Replied, no date"}])
     old_news = make(store, [them], due=PAST, news=[{"on": (PAST - timedelta(days=2)).isoformat(), "text": "Early"}])
     held = make(store, [them], due=PAST, on_hold={"waiting_for": "the proof", "since": TODAY.isoformat()})
-    future = make(store, [them], due=TODAY + timedelta(days=cfg.steward.chase_dated_days + 2))
+    future = make(store, [them], due=TODAY + timedelta(days=cfg.ui.followups.action_due_within_days + 2))
     undated = make(store, [them], due=None)
     done = make(store, [them], due=PAST, status="done")
     assert promise_lines(env, news) == [] and promise_lines(env, held) == []
@@ -167,13 +167,13 @@ def test_a_chased_promise_with_news_since_its_date_keeps_its_place_on_the_follow
     assert action in {a for line in lines(env, kind="nudge") for a in line.actions}
 
 
-# ---- when the person's waiting-ons get a line: the clock for each case (settings steward.*) -----------------------
+# ---- when the person's waiting-ons get a line: the clock for each case (settings ui.followups.*) ---------------
 
 
 def test_an_undated_waiting_on_gets_a_line_after_the_undated_days_and_not_a_day_before(env):
     _, cfg, store = env
     them, days = other(cfg), 14
-    assert cfg.steward.chase_undated_days == days
+    assert cfg.ui.followups.undated_after_days == days
     early = make(store, [them], due=None, made=TODAY - timedelta(days=13))
     due = make(store, [them], due=None, made=TODAY - timedelta(days=days))
     assert promise_lines(env, early) == []
@@ -183,7 +183,7 @@ def test_an_undated_waiting_on_gets_a_line_after_the_undated_days_and_not_a_day_
 
 def test_news_or_a_chase_restarts_the_undated_clock(env):
     _, cfg, store = env
-    them, days = other(cfg), cfg.steward.chase_undated_days
+    them, days = other(cfg), cfg.ui.followups.undated_after_days
     old = TODAY - timedelta(days=days + 5)
     heard = make(
         store,
@@ -202,7 +202,7 @@ def test_news_or_a_chase_restarts_the_undated_clock(env):
 def test_a_dated_waiting_on_gets_a_line_only_within_the_dated_days_before_its_date(env):
     _, cfg, store = env
     them, days = other(cfg), 7
-    assert cfg.steward.chase_dated_days == days
+    assert cfg.ui.followups.action_due_within_days == days
     too_far = make(store, [them], due=TODAY + timedelta(days=8))
     in_window = make(store, [them], due=TODAY + timedelta(days=days))
     assert promise_lines(env, too_far) == []
@@ -216,7 +216,7 @@ def test_a_waiting_on_on_hold_never_gets_a_line_dated_or_not(env):
     hold = {"waiting_for": "the proof", "since": TODAY.isoformat()}
     dated = make(store, [them], due=PAST, on_hold=hold)
     undated = make(
-        store, [them], due=None, made=TODAY - timedelta(days=cfg.steward.chase_undated_days + 30), on_hold=hold
+        store, [them], due=None, made=TODAY - timedelta(days=cfg.ui.followups.undated_after_days + 30), on_hold=hold
     )
     assert promise_lines(env, dated) == [] and promise_lines(env, undated) == []
 

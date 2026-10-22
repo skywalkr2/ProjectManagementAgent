@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
+import { actFixture } from "../lib/acts-fixtures";
 import { forgetLine } from "../lib/today";
 import { RestartProvider } from "../lib/restart";
 import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
@@ -80,6 +81,16 @@ test("a meeting with nothing open and nobody on file says only who is coming", a
   expect(row).not.toHaveTextContent("open");
 });
 
+test("an invitation waiting for an answer is a line that says when and who invited, and its button opens the entry", async () => {
+  const user = userEvent.setup();
+  const { onOpenRecord } = today([line("invitation", { key: "invitation:EVT-3", group: "decide", text: "Planning session", subject: ANA, event: "EVT-3", at: "2026-10-22T10:00:00-04:00" })]);
+  const row = await rowOf("Answer the invitation to Planning session");
+  expect(within(row).getByText("Invitation")).toBeInTheDocument();
+  expect(row).toHaveTextContent(`from ${ANA}`);
+  await user.click(within(row).getByRole("button", { name: "Open invitation" }));
+  expect(onOpenRecord).toHaveBeenCalledWith("event", "EVT-3");
+});
+
 test("capture asks what happened with the cursor in the box, and Enter saves the words on the entry", async () => {
   const user = userEvent.setup();
   const { calls } = today([line("meeting_capture", { key: "meeting_capture:EVT-1", text: "Design review", event: "EVT-1", names: [ANA], at: "2026-10-20T11:00:00-04:00" })], {
@@ -126,6 +137,62 @@ test("a promise the other person made says so", async () => {
   const row = await rowOf(`Follow up with ${ANA}: Return the contract has gone quiet`);
   expect(row).toHaveTextContent("They promised you");
   expect(row).toHaveTextContent("No news for 1 day");
+});
+
+const SNOOZES = [
+  { days: 1, on: "2026-10-23" },
+  { days: 3, on: "2026-10-25" },
+];
+const quiet = (state: "to" | "from") => line("quiet_promise", { key: "quiet_promise:ACT-2", group: "send", text: "Return the contract", person: "PER-2", person_name: ANA, actions: ["ACT-2"], waiting_days: 9, state, snooze_days: SNOOZES });
+const menuOf = (user: ReturnType<typeof userEvent.setup>, row: HTMLElement) => user.click(within(row).getByRole("button", { name: /More actions for/ }));
+
+test("a promise someone owes you can be followed up from its line: the message is written, drafted as an act and opened to say yes", async () => {
+  const user = userEvent.setup();
+  const parts = { subject: "Checking in: Return the contract", body: "Hi Ana,\n\nChecking in on this:\nReturn the contract\n\nThanks!" };
+  const { calls } = today([quiet("from")], {
+    "GET quiet-promises/ACT-2/follow-up": () => ({ person: "PER-2", person_name: ANA, parts }),
+    "GET acts/send-options": () => ({ can_act: true, account: "mailbox:work", account_label: "Work mail" }),
+    "POST acts": () => actFixture({ id: "XACT-9" }),
+  });
+  const row = await rowOf(`Follow up with ${ANA}: Return the contract has gone quiet`);
+  await menuOf(user, row);
+  await user.click(await screen.findByRole("menuitem", { name: "Send a follow-up" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST acts")).toHaveLength(1));
+  expect(calls.find((c) => c.route === "POST acts")?.body).toEqual({
+    kind: "message",
+    action: "send",
+    account: "mailbox:work",
+    recipients: [{ person: "PER-2", kind: "email", role: "to", called_out: false, from_text: false }],
+    parts,
+  });
+  await waitFor(() => expect(window.location.hash).toBe("#work/outgoing"));
+});
+
+test("a promise the person made has no follow-up to send, and Snooze is a list of days", async () => {
+  const user = userEvent.setup();
+  today([quiet("to")]);
+  const row = await rowOf(`Follow up with ${ANA}: Return the contract has gone quiet`);
+  await menuOf(user, row);
+  expect(screen.queryByRole("menuitem", { name: "Send a follow-up" })).toBeNull();
+  const days = (await screen.findAllByRole("menuitem")).map((x) => x.textContent);
+  expect(days).toHaveLength(2);
+  expect(days[0]).toMatch(/^Tomorrow/);
+  expect(days[1]).toMatch(/^In 3 days/);
+});
+
+test("snoozing sends the chosen day, says when it comes back, and Undo takes the snooze back", async () => {
+  const user = userEvent.setup();
+  const { calls } = today([quiet("from")], {
+    "POST quiet-promises/ACT-2/snooze": () => ({ signal: "SIG-4", until: "2026-10-25" }),
+    "POST suggestions/not-now/SIG-4/undo": () => ({ ok: "SIG-4" }),
+  });
+  const row = await rowOf(`Follow up with ${ANA}: Return the contract has gone quiet`);
+  await menuOf(user, row);
+  await user.click(await screen.findByRole("menuitem", { name: /^In 3 days/ }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST quiet-promises/ACT-2/snooze")?.body).toEqual({ until: "2026-10-25" }));
+  expect(await screen.findByText(/Snoozed until/)).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST suggestions/not-now/SIG-4/undo")).toBe(true));
 });
 
 // ---- the entry's page ------------------------------------------------------------------------------------------------

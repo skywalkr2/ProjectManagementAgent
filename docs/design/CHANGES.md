@@ -1027,6 +1027,43 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 196. The cleanup before the gate week (2026-10-22; built)
+
+- **Design 6.35 (limits and group drafts):** a follow-up message leaves out what its reader is outside the limit of and says
+  so beside the message (`FollowupSection.limited_out`); the lint `singling-out` (a return round, then held; the phrases
+  are `language.singling_out_phrases`) on a drafted reply to a message that went to several people and on a message act to
+  several recipients, with the learning pair `singling-out-in-a-group-reply`.
+- **Design 4.0, 6.9, 6.33 (one family of follow-up timing):** the promise lines read `ui.followups.action_due_within_days`
+  and `undated_after_days`; `steward.chase_dated_days` and `steward.chase_undated_days` are read for one release from a
+  file, an environment variable or a flag (`Config.deprecated`, `renamed_from` on the setting's row, which the screen
+  says in words), and saving the new name removes the old one.
+- **Design 7.13 ("ready since"):** Today's send line carries the day (`QueueLineView.ready_since`) and says it when it is
+  before today.
+- **Design 7.5 (Later):** holding for the weekly note is "Hold until next Monday" (change log 179), and that Monday's
+  briefing leaves it to Today's line.
+- **Design 6.32, 7.7 (invitations):** a Today line in Decide for an unanswered invitation (`kind: invitation`, setting
+  `steward.meetings.invitation_days_ahead`), opening the entry's page where Accept, Maybe, Decline and Propose are.
+- **Design 6.32 (the Monday briefing):** Send beside Copy when an account can carry a new message
+  (`GET /api/acts/send-options`), drafting the message as an act through `POST /api/acts` for the person's yes.
+- **Design 6.32, 7.7 (the quiet-promise line):** Snooze to a day from a list (`steward.people.snooze_days`,
+  `POST /api/quiet-promises/{id}/snooze`, undone with the signal's Undo) and Send a follow-up for a promise someone owes the
+  person (`GET /api/quiet-promises/{id}/follow-up`, drafted as an act; words `language.messages.quiet_intro` and
+  `quiet_subject`).
+- **Design 6.16, 6.22 (evaluation):** a golden case may start from an open action handed to the assistant (`handed_over`) and
+  expects a `text.draft`; a forbidden op may say `attempted: true`; the cases `action-work-drafts-the-message` (both
+  workspaces) and `standing-rule-only-suggests-an-act`; the evaluation and switch estimates use the workspace's measured
+  token counts and agent overhead.
+- **Roadmap and tests:** the browser journey `web/e2e/meetings-journey.spec.ts` (written, not run); roadmap items checked off
+  with their tests and "Left" notes narrowed; `acts-journey.spec.ts` ran green.
+- **Not built, by decision:** notices by mail to the person, a currency setting, the stopped-work lines' wrap (decisions,
+  "One family of follow-up timing…").
+- **Built:** `tests/test_followup_limits.py`, `tests/test_reader_checks.py`, `tests/test_pairs.py`,
+  `tests/test_followup_timing_family.py`, `tests/test_followups_ready_since.py`, `tests/test_brief.py`,
+  `tests/test_invitation_lines.py`, `tests/test_act_draft_api.py`, `tests/test_quiet_line_acts.py`,
+  `tests/test_evaluate_harness.py`, `tests/test_switch_check.py`, `tests/test_e2e_meetings_seed.py`,
+  `web/src/components/FollowUps.test.tsx`, `web/src/components/Today.test.tsx`, `web/src/components/MeetingPrep.test.tsx`,
+  `web/src/components/BriefCard.test.tsx`.
+
 ## 195. Manner and proof: choices on patterns, a conversation on a record, a core without PM wording, the outcome measured (2026-10-22; S5, built in part)
 
 - **Design 6.32 (Manner, Measured), 6.25, 6.20 and 7.7:** patterns the rules find (a to-do moved again and again, a
@@ -1160,7 +1197,7 @@ yet follow, that it is *designed*, with its phase.
   `watch.propose_round_minutes`, each with a description, a default and demo values in both workspaces. No change to the
   act's rules or invariants, the applier, the ops or the prompts. Built: `tests/test_act_draft_api.py`,
   `web/src/components/ActsOnRecords.test.tsx`, `TodayReplySend.test.tsx`, `OutgoingActs.test.tsx`,
-  `ActingAccounts.test.tsx`; the browser test `web/e2e/acts-journey.spec.ts` is written, not yet run.
+  `ActingAccounts.test.tsx`; the browser test `web/e2e/acts-journey.spec.ts` was written then and has since run green in the full browser run.
 
 ## 189. Reminders that reach a sleeping person, and the standing yes (2026-10-22; S1b-2c, built)
 

@@ -32,6 +32,7 @@ from engine import (
     scope,
     sides,
     signature_contact,
+    singling_out,
     standing_yes,
 )
 from engine import agenda as agenda_module
@@ -318,6 +319,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             if isinstance(op, ActDraftOp) and ctx.actor != "pm" and (why := acts.stranger_problem(ctx, op)) is not None:
                 refuse(i, "act-recipient", why)
                 continue
+            if isinstance(op, ActDraftOp) and ctx.actor != "pm" and op.target.kind == "message":
+                _single_out(i, op.parts.values(), singling_out.group_of(ctx.people, acts.op_recipients(op)), ctx, lint)
             if isinstance(op, (ActDraftOp, ActEditOp)):
                 held = view.get("act", op.id) if isinstance(op, ActEditOp) else None
                 drawn = (
@@ -718,6 +721,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             if op.reply:
                 _wording(i, op.reply, ctx, lint, quotes)
                 _for_reader(i, op.reply, ctx, lint)
+                _single_out(i, [op.reply], singling_out.group_of_message(ctx.people, ctx.inputs.raw_input), ctx, lint)
             if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
             _item_text(i, op.text, ctx, lint, quotes)
@@ -1090,6 +1094,22 @@ def _for_reader(i: int, text: str, ctx: Context, lint: Any) -> None:
     longest = max((len(p.split()) for p in quoted_passages(text)), default=0)
     if longest > limit:
         lint(i, "long-quote", f"a quote of {longest} words is too long for the reader: link to it or say it in a line")
+
+
+def _single_out(i: int, texts: Any, group: list[str], ctx: Context, lint: Any) -> None:
+    """A draft to several people never names one of them as the cause of a miss (design 6.35): a draft that goes to a
+    group of two or more people other than the person is checked for a sentence that blames one of them."""
+    if len(group) < 2:
+        return
+    found = singling_out.singled_out(ctx.people, " ".join(texts), group, ctx.cfg.language.singling_out_phrases)
+    if found is not None:
+        who = ctx.people.name(found[0])
+        lint(
+            i,
+            "singling-out",
+            f"the draft goes to several people and blames {who} ({found[1]!r}): leave {who} out of it and ask "
+            f"{who} on their own, in a draft to them alone",
+        )
 
 
 def _openable(url: str) -> bool:
@@ -2020,7 +2040,7 @@ def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
     """Whether a lint still returned after the fix round holds the op: one that reaches someone else, or one of the
     scope checks or a rule's check, which hold whoever the item reaches."""
     returned = [p for p in mine if p.severity == "return"]
-    holds = scope.HELD_LINTS | {RULE_CHECK}
+    holds = scope.HELD_LINTS | {RULE_CHECK, "singling-out"}
     owned = any(p.check in OWNER_HELD_LINTS for p in returned) and _owned_by_someone_else(op, ctx)
     return bool(returned) and (_reaches_someone_else(op, ctx) or owned or any(p.check in holds for p in returned))
 

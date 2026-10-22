@@ -6,6 +6,8 @@ unanchored_words: [it, this, that, them, these, those, him, her, the above, the 
 unanchored_lead_words: [up, "on", to, with, about, for, back, out, "off", over, at]
 # Words that mark the assistant's reasoning, which a to-do's or a question's title never holds (it belongs in the change's summary), and the characters that end a question.
 reasoning_phrases: [no recorded fact, no fact gives, nothing recorded, not recorded, "couldn't find", could not find, not stated, not mentioned, I assume, I think]
+# Words that blame someone for a miss: a draft to several people that holds one in a sentence naming one of them is returned.
+singling_out_phrases: [missed, forgot, forgotten, dropped the ball, failed to, "didn't send", did not send, never sent, "hasn't sent", still hasn't, was late, is late, your fault, their fault, to blame]
 question_marks: ["?", "\uff1f", "\u061f"]
 # Words a sentence starts with when it asks someone to do something, and the words that make a sentence the person's own promise instead.
 ask_lead_words: [Can you, Could you, Would you, Please]
@@ -142,6 +144,8 @@ messages:
   not_a_project_reason: "You said this isn't a project"
   closing: "Thanks so much!"
   nudge_intro: "Following up on {count} things from my note on {date}:"
+  quiet_intro: "Checking in on this:"
+  quiet_subject: "Checking in: {text}"
   nudge_intro_one: "Following up on one thing from my note on {date}:"
   nudge_ask: "A quick yes or no, or a date, for each is plenty."
   nudge_ask_one: "A quick yes or no, or a date, is plenty."
