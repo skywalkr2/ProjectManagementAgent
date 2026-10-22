@@ -3082,6 +3082,8 @@
   "queue.detail.gone": "Already dealt with.",
   "made_by.suggested.assistant": "Suggested by {assistant}",
   "made_by.added.assistant": "Added by {assistant}",
+  "made_by.suggested.assistant.unnamed": "Suggested by your assistant",
+  "made_by.added.assistant.unnamed": "Added by your assistant",
   "made_by.suggested.rule": "Suggested by the rule {rule}",
   "made_by.added.rule": "Added by the rule {rule}",
   "made_by.suggested.rule_unnamed": "Suggested by a rule",
