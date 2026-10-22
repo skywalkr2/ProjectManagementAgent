@@ -3123,6 +3123,17 @@ people and details, and never acts in their name without their yes on the exact 
   tomorrow and still waiting on others; the Monday briefing opens with a copy-ready message to whoever the person
   reports to, then the week's promises, questions, chases and decisions, and three to five goals the person confirms,
   under the same line rules (6.35; `docs/project/steward-wrapup-samples.md`).
+- **Repeating to-dos (phase S2; designed 2026-10-22).** A to-do repeats when the person says how, in their own words
+  ("every other Tuesday", "the 1st and 15th"), read by the repeat grammar (`engine/repeat_phrases.py`) into a standard
+  repeat rule and said back from the wording sheet, so the person sees what was understood before it is kept; a phrase
+  the grammar declines is said to be unclear and nothing repeats. **Each occurrence is its own to-do**: only the next
+  one exists at a time, so a list never fills with future copies. When one ends (done, dropped, or done by someone
+  else), the next is made in the same change, with the same text, owners, project and notes, due on the next date of
+  the rule after the one that ended and not before today; Undo of the ending takes the next one back too. One that is
+  missed **stays open** (nothing a person meant to do is closed for them), and the next is made only when it ends, on
+  the first rule date from that day. "Stop repeating" in the to-do's menu ends the repeat and leaves the open one as
+  it is; its detail lists the earlier occurrences and how each ended. A repeat set by the person applies at once; one
+  the assistant read from an input ("I send the report every Friday") is a suggestion that waits for their yes.
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank

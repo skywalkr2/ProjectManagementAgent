@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 184. Repeating to-dos, designed (2026-10-22; S2, designed)
+
+- **Design 6.32, "Repeating to-dos":** a repeat typed in the person's words and said back before it is kept; each
+  occurrence its own to-do, only the next one existing; the next made when one ends, Undo taking both back; a missed one
+  stays open and the next waits for it; Stop repeating; a repeat the assistant reads from an input waits for the yes.
+
 ## 183. Mail and calendar acts, designed (2026-10-22; S1b-2, designed)
 
 - **Design 6.12, the new bullet "Mail and calendar acts":** an act names its action (send, reply, reply all, forward;

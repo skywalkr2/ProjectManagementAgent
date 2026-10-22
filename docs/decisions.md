@@ -4,6 +4,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: A repeating to-do makes its next occurrence when one ends, and a missed one stays open
+
+- **Decided (main session, from the owner's "each occurrence its own row"):** kind of rule: a core concept (a repeat on
+  a to-do, and the engine making the next occurrence by its own rule). Only the next occurrence exists; it is made when
+  the current one ends, so a missed one stays open rather than being closed for the person or piling up copies. For the
+  owner's review: the other common choice is to close a missed occurrence when the next date comes.
+- **Impact:** design 6.32 ("Repeating to-dos"), roadmap S2. No change to scope. Change log: section 184.
+
 ## 2026-10-22: Mail and calendar acts name their action and account; acting is a switch per account; reminders may have a standing yes
 
 - **Decided (main session, from the owner's 2026-10-17 list of acts and 2026-10-20 reminders that reach a sleeping
