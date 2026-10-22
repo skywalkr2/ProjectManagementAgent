@@ -92,10 +92,12 @@ class CliAgentAdapter:
         with _scratch() as scratch:
             outbox = scratch / "outbox"
             outbox.mkdir()
-            prompt = "\n\n".join(p for p in (task.instructions, task.stable, task.request) if p)
+            system = "\n\n".join(p for p in (task.instructions, task.stable) if p) if self.agent.system_option else ""
+            parts = (task.request,) if system else (task.instructions, task.stable, task.request)
+            prompt = "\n\n".join(p for p in parts if p)
             if self.agent.output_via == "outbox":
                 prompt += "\n\n" + render("agent-answer", {"answer": str(outbox / answer_name)})
-            done, seconds = self._start(prompt, model, scratch, outbox, task.effort)
+            done, seconds = self._start(prompt, model, scratch, outbox, task.effort, system)
             if done.returncode != 0:
                 raise self.classify_error(done.returncode, self._error_report(done), None)
             if self.agent.output_via == "outbox":
@@ -106,10 +108,13 @@ class CliAgentAdapter:
             return self._result(done.stdout, None, model, seconds)
 
     def _start(
-        self, prompt: str, model: str, scratch: Path, outbox: Path, effort: str | None = None
+        self, prompt: str, model: str, scratch: Path, outbox: Path, effort: str | None = None, system: str = ""
     ) -> tuple[subprocess.CompletedProcess, float]:
         packet = scratch / "packet.md"
         packet.write_text(prompt, encoding="utf-8")
+        system_file = scratch / "system.md"
+        if system:
+            system_file.write_text(system, encoding="utf-8")
         home = self._fresh_home(scratch) if self.agent.home == "fresh" else None
         if self.agent.packet_via == "argument" and len(prompt) > MAX_ARGUMENT_CHARS:
             raise AiError("other", "the packet is too long to pass on the command line; this agent can't take it")
@@ -118,6 +123,8 @@ class CliAgentAdapter:
         args = [_fill(part, values) for part in self.agent.command]
         if effort and self.agent.effort_option:
             args += [part.replace("{effort}", effort) for part in self.agent.effort_option]
+        if system and self.agent.system_option:
+            args += [part.replace("{system}", str(system_file)) for part in self.agent.system_option]
         if shutil.which(args[0], path=self._env(home).get("PATH")) is None and not Path(args[0]).is_file():
             raise AiError("provider_down", f"the agent program {args[0]} isn't installed on this computer")
         started = time.monotonic()

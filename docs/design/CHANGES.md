@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 157. A command-line agent can take the instructions as its own system instructions (2026-10-22; B-10, built)
+
+- `agent.system_option`: the arguments that hand a program its system instructions from a file (`{system}`). When set,
+  the instructions and the reference part go in that file, in place of the program's own coding-assistant
+  instructions, and only the request is the packet. The catalog sets it only where the program's own docs give the
+  option. Design 4 (the agent settings) and 6.16 (agent mode). Built:
+  `tests/test_catalog_claims.py::test_a_program_that_takes_system_instructions_from_a_file_gets_ours_there_and_only_the_request_as_its_packet`
+
 ## 156. The person's own promise in sent mail is checked (2026-10-21; B-10, built)
 
 - `own-promise-missed`: mail the person sent with their own "I'll ..." answered with no action of theirs quoting it

@@ -572,6 +572,13 @@ class AgentSettings(ConfigModel):
         "with {effort} replaced by it, such as an option name followed by {effort}. Empty: the program has no such "
         "option, or it isn't confirmed for it, and the effort is never passed on.",
     )
+    system_option: list[str] = Field(
+        default_factory=list,
+        description="The arguments that give the program its system instructions from a file, with {system} replaced "
+        "by the file's path, such as an option name followed by {system}. Set: the task's instructions and the stable "
+        "part of its packet go in that file, in place of the program's own default instructions, and only the request "
+        "is sent as the packet. Empty: everything is sent as the packet.",
+    )
     home: Literal["shared", "fresh"] = Field(
         "shared",
         description="shared: the agent uses this user's home folder, where it may keep memory between runs. fresh: "

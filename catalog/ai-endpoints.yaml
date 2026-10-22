@@ -177,6 +177,7 @@ endpoints:
           quota: ["usage limit reached", "hit your [a-z ]{0,30}limit", "credit balance is too low"]
           rate_limited: ["rate limit", "overloaded", "temporarily limiting requests"]
         effort_option: ["--effort", "{effort}"]
+        system_option: ["--system-prompt-file", "{system}"]  # our instructions in place of its coding-assistant ones
         sign_in_hint: Open a terminal, run claude and sign in, then press Test again.
         identity_command: [claude, auth, status]
         identity_field: email

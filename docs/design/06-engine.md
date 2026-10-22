@@ -1558,7 +1558,9 @@ registers its own, plugins add theirs (3.3).
 - **Agent mode:** a command-line agent (from any vendor) runs locked down: it gets the packet as files in a scratch folder, has no access to the workspace or the
   database, writes only its changeset to `outbox/`,
   no plugins or outside tools unless configured. The adapter knows how to start it, pass the packet (a file path or stdin), pick
-  the model, read its output and usage, and recognize its errors.
+  the model, read its output and usage, and recognize its errors. Where the program's docs give an option for system
+  instructions from a file (`system_option`), the packet's instructions and reference go there, in place of the
+  program's own, and only the request is sent as the packet.
 
 **Adapter interface** (each adapter is a module in `engine/ai/adapters/` or an installed plugin, registered by name):
 

@@ -88,3 +88,6 @@ native_adapter:
 list_first:
   entry: google
   list_failure_status: 503
+
+# The program that takes its system instructions from a file (its command reference lists --system-prompt-file).
+system_option: {entry: claude-code, option: ["--system-prompt-file", "{system}"]}

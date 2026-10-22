@@ -434,3 +434,25 @@ def test_an_account_that_names_no_refused_status_on_its_list_is_not_listed_befor
     got = key_check.check_account(cfg, os.environ, settings, "k", adapter_factory=service.factory())
     assert got.ok
     assert not any(p.endswith("/models") for p in service.paths)
+
+
+def test_a_program_that_takes_system_instructions_from_a_file_gets_ours_there_and_only_the_request_as_its_packet():
+    claim = CLAIMS["system_option"]
+    assert entry(claim["entry"])["settings"]["agent"]["system_option"] == claim["option"]
+    settings = settings_of(claim["entry"], models={"default": "agent-model"})
+    settings.agent.command[0] = sys.executable
+    seen: dict = {}
+
+    class Reading(Recorder):
+        def __call__(self, args, **kwargs):
+            name = claim["option"][0]
+            seen["system"] = Path(args[args.index(name) + 1]).read_text(encoding="utf-8")
+            return super().__call__(args, **kwargs)
+
+    run = Reading(stdout=agent_output(settings))
+    task = AiTask("notes", "Unmistakable instructions.", "Unmistakable reference.", "Unmistakable request.", {})
+    CliAgentAdapter(settings, runner=run).run(task, "agent-model")
+    assert "Unmistakable instructions." in seen["system"] and "Unmistakable reference." in seen["system"]
+    assert "Unmistakable request." not in seen["system"]
+    stdin = run.calls[0]["input"]
+    assert "Unmistakable request." in stdin and "Unmistakable instructions." not in stdin

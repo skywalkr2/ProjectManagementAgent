@@ -4,6 +4,15 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: A command-line agent takes the app's instructions as its own, where its docs allow
+
+- **Decided (main session):** kind of rule: a setting per agent (`agent.system_option`), set in the catalog only where
+  the program's own docs give an option for system instructions from a file. There, the app's instructions and
+  reference replace the program's own coding-assistant instructions, and only the request is the packet. The owner's
+  runs through a command-line agent failed cases that the same model answered correctly when given only the packet.
+- **Impact:** design 4 (agent settings), 6.16 (agent mode). A saved account keeps its own command and options until
+  the person updates it. Change log: section 157.
+
 ## 2026-10-21: Failures are captured in detail so a person can send them with feedback
 
 - **Decided (owner):** "We should have something in the program that captures failures in detail so the user can send

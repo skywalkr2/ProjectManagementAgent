@@ -390,6 +390,7 @@ providers:                       # every AI account the workspace may use; names
     agent:
       command: [<agent program>, <its locked-down flags>, --model, "{model}"]   # also {packet}, {prompt}, {outbox}, {scratch}
       packet_via: stdin          # stdin, file ({packet}), or argument ({prompt}, refused above a size limit)
+      system_option: []          # e.g. [<its system-prompt-file flag>, "{system}"]: the instructions go there, only the request in the packet
       output_via: stdout         # or outbox: the answer is a file in {outbox}
       output_json: true          # the agent prints JSON; output_fields says where the answer, usage and cost are
       output_fields: {text: result, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, cost_usd: cost}
