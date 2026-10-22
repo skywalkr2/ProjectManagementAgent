@@ -442,15 +442,16 @@ From the original designer's lessons of 2026-10-14:
   `web/src/components/TopPriorities.test.tsx`: "an entry has no buttons and no menu, only its words as a link").
   *Left:* the second line's "who suggested it" ("The assistant suggests · no answer yet"), which is not built (design
   7.7 says so).
-- [ ] [B-6b] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work
+- [x] [B-6b] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work
   version opens a generated page with a copy button; decided on review, design 7.5): the preview on screen is what is
   pasted, mail and documents get the formatting, chat gets clean plain text, and the menu has Copy as plain text. Every
   Copy in the app uses it (questions, follow-ups, the briefing, reports). A browser test pastes both versions and checks
   the formatted one escapes every piece of text.
   *Built (B-6b):* one helper, `web/src/lib/copy.ts`, used by every place the app copies (the preview is what is pasted,
   formatted and plain together, "Copy as plain text" in the menu, every piece of text escaped, a refused copy selects the
-  text) (`web/src/lib/copy.test.ts`, `web/src/components/FollowUps.test.tsx`). *Left:* the browser test that pastes both
-  versions (`web/e2e/acceptance.spec.ts`, 3d) is written and has not been run.
+  text) (`web/src/lib/copy.test.ts`, `web/src/components/FollowUps.test.tsx`). The browser test that pastes both
+  versions passes at `0ce2108` (`web/e2e/acceptance.spec.ts`, "3d. Copy puts the formatted message and its plain text on
+  the clipboard together…"), so nothing is left.
 - [ ] [S2] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). *Moved to phase
   S1 (2026-10-17), as the weekly form of the morning brief; the description below stands.* On the first
   open of the week (the day is a setting), a briefing in this order (the designer's notes, 2026-10-19; design 6.35):
@@ -474,7 +475,7 @@ From the original designer's lessons of 2026-10-14:
   - [ ] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
     *Built:* the check of what it does today: a pasted picture is told plainly it can't be read yet, and the box keeps
     its words (`web/src/components/HandIn.test.tsx`). *Left:* reading a picture.
-- [ ] [B-6b] **The walkthrough's look** (owner, 2026-10-12: "this looks rough"):
+- [x] [B-6b] **The walkthrough's look** (owner, 2026-10-12: "this looks rough"):
   - fields sized to what they hold, not the full page width;
   - one clear primary button per screen ("Save and continue"), with Skip as a quiet link;
   - the step list without "Not done yet" on every row;
@@ -486,9 +487,8 @@ From the original designer's lessons of 2026-10-14:
   *Built (B-6b, B-7):* the step list without "Not done yet" (only done and skipped are marked), "You are here" on the
   current step with a bar and no fill, one primary on every screen (Continue; "Save and continue" on You) with "I'll do
   this later" or Skip beside it, and the cursor in the first field (`web/src/components/Walkthrough.test.tsx`, "the
-  look"). *Left:* the fields sized to what they hold and the page using its width, which only a browser shows
-  (`web/e2e/panes.spec.ts`, "the walkthrough's look": it passed in the browser run at `ec37749` and has not been run since
-  B-7 changed the step's buttons).
+  look"). The fields sized to what they hold and the page using its width pass in a browser after B-7's buttons
+  (`web/e2e/panes.spec.ts`, "the walkthrough's look", at `0ce2108`), so nothing is left.
 - [ ] [B-6a] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
   send.
   *Built (B-6a):* held for a meeting, a series or a day, out of To send until then, "Send now" in its menu
@@ -510,8 +510,8 @@ From the original designer's lessons of 2026-10-14:
   `web/src/components/HandIn.test.tsx`); the wording check reaching the setup path's labels from schemas, connectors and
   add-on manifests (`tests/test_setup_path_words.py`); axe in light and dark at 390, 1024, 1440 and 1920 for every main
   screen, the board, the hand-in drawer, Ask and the review mode, run and passed at `ec37749`
-  (`web/e2e/a11y.spec.ts`, `web/e2e/panes.spec.ts`). *Left:* axe over what B-7 changed: `a11y.spec.ts` gained checks on
-  2026-10-20 and has not been run since.
+  (`web/e2e/a11y.spec.ts`, `web/e2e/panes.spec.ts`). Axe over what B-7 changed passes at `0ce2108` (`web/e2e/a11y.spec.ts`: every main screen in light and dark at
+  four widths, and the 24px targets), so nothing is left.
 - [ ] [B-6b] **Found by the owner's first real use (2026-10-20):**
   - adding a second AI account closes its form once saved; the account's row shows its checks as they run ("Checking for
     harder work…") and the outcome, and an account whose sign-in can't be told apart says so with "Use it anyway"
@@ -525,7 +525,8 @@ From the original designer's lessons of 2026-10-14:
     lines and the Follow-ups pills read `ui.followups.*_days` (design 6.9 lists them as not one rule yet);
   - the toast-at-390px and the Today-cursor browser tests are made robust under load (each failed once under load and
     passed alone);
-    *Built:* both tests are rewritten (`web/e2e/shell.spec.ts`). *Left:* they have not been run since.
+    *Built:* both tests are rewritten (`web/e2e/shell.spec.ts`: "with three toasts showing, Tab never leaves a control
+    under them at 390px" and "Today opens with the cursor in its first field…") and pass in the full run at `0ce2108`.
   - **date words the rules can't read** (the owner's learning run, 2026-10-20: 6 of 11 misses): `engine/due_phrases.py`
     reads "the 25th", "by the 30th", "due Oct 22" and their kin, and words it still can't read keep the model's own
     date marked to check instead of dropping it; the case `quoted-thread-action-exists` expects the move held for Keep
