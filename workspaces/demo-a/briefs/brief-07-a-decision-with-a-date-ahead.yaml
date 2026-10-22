@@ -1,0 +1,12 @@
+id: brief-07-a-decision-with-a-date-ahead
+sample: 7
+title: A renewal decision waits for the person's answer; the date in the letter and the reminder are not built yet
+received: '2026-10-27'
+now: '2026-10-27T09:00'
+form: morning
+given:
+- {kind: question, id: Q-91, fields: {to: PER-1, title: 'Renew the studio for another year?', kind: decision, options: [Renew, Cancel]}}
+expect:
+  'yes':
+  - {kind: 'yes', change: decision, ready: false, queue: 'question:Q-91'}
+left: [document_dates, deadline, reminder_offer]

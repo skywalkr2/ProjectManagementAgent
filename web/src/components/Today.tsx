@@ -10,6 +10,7 @@ import { useQueue, useTodayCount } from "../lib/today";
 import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { SetupLine } from "../shell/SetupLine";
+import { BriefCard } from "./BriefCard";
 import { CoverageLine, useNoneText } from "./Coverage";
 import { SideFilter } from "./SideFilter";
 import { opensItems } from "./TodayDetail";
@@ -99,6 +100,9 @@ export function Today(props: {
       </div>
       <div className={styles.full}>
         <SetupLine workspace={props.workspace} onOpenGuide={props.onOpenGuide} />
+      </div>
+      <div className={styles.full}>
+        <BriefCard workspace={props.workspace} onOpenRecord={props.onOpenRecord} />
       </div>
       <TodayQueue selected={selected} onSelect={setSelected} beside={beside} handlers={handlers} shortcuts={props.shortcuts} />
       <TodayRail onView={props.onView} onAddSource={props.onAddSource} />

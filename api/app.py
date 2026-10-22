@@ -26,6 +26,7 @@ from starlette.types import ASGIApp
 from api.act_routes import build_act_router
 from api.action_work_routes import build_action_work_router
 from api.ask_routes import build_ask_router
+from api.brief_routes import build_brief_router
 from api.calendar_routes import build_calendar_router
 from api.correction_routes import build_correction_router
 from api.data_form_routes import build_data_form_router
@@ -340,6 +341,7 @@ def create_app(
     inner.include_router(build_since_router(ws, cfg, store, events, worker))
     inner.include_router(build_reply_router(ws, cfg, store, events, worker))
     inner.include_router(build_action_work_router(ws, cfg, store, events, worker))
+    inner.include_router(build_brief_router(ws, cfg, store, events, worker))
     inner.include_router(build_calendar_router(ws, cfg, store, events, worker))
     inner.include_router(build_sent_router(cfg, store, events, worker))
     inner.include_router(build_act_router(ws, cfg, store, events, worker))

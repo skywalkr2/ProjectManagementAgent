@@ -1073,6 +1073,41 @@ class PromiseCount(Record):
         return self
 
 
+class WeekPlan(Record):
+    """The person's own plan for one week (design 6.32, the Monday briefing): the goals they confirmed for it and the
+    message to whoever they report to. One record for each person and week, made when the first goal is confirmed or
+    the message is first asked for; the week is named by its first day. The goals are the person's own words and
+    nothing but the person writes them. The message is a draft the assistant writes, unreviewed until the person copies
+    it, and it is never sent from here."""
+
+    record_kind: ClassVar[str] = "week_plan"
+    prefix: ClassVar[str] = "WEEK"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("person", "week"),)
+
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The person whose week it is; none when the workspace names no person yet."
+    )
+    week: date = Field(description="The first working day of the week, on the person's own clock.")
+    goals: list[str] = Field(
+        default_factory=list,
+        description="The goals the person confirmed for the week, in their own words, in the order they gave them, "
+        "each one to 200 characters. Empty until they confirm some.",
+    )
+    confirmed_at: datetime | None = Field(None, description="When the goals were last confirmed; none until then.")
+    message: Annotated[str | None, LongText("markdown")] = Field(
+        None,
+        description="The message to the person they report to, drafted from the week's records. It is long text: a "
+        "draft waits for the person's review and is theirs once they copy it.",
+    )
+
+    @field_validator("goals")
+    @classmethod
+    def _goals_are_short_words(cls, goals: list[str]) -> list[str]:
+        if any(not g.strip() or len(g) > 200 for g in goals):
+            raise ValueError("a goal is one to 200 characters")
+        return goals
+
+
 class AuditEntry(Record):
     """One sign-in, sign-out or turning an add-on on or off, made from the screens. The engine writes it as it happens;
     nothing changes it. It never holds a token, a secret or the signed-in account's name."""
@@ -2399,6 +2434,7 @@ REGISTRY: dict[str, type[Record]] = {
         SettingChange,
         Look,
         PromiseCount,
+        WeekPlan,
         AuditEntry,
         Answer,
         SettingProposal,
@@ -2447,6 +2483,7 @@ AGENDA_REFERENCES = [
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "look": [("person", "person")],
     "promise_count": [("person", "person")],
+    "week_plan": [("person", "person")],
     "copy": [("person", "person"), ("questions[]", "question"), ("actions[]", "action"), ("sent_source", "source")],
     "act": [
         ("target.recipients[].person", "person"),

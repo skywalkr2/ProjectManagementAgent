@@ -1,0 +1,13 @@
+id: brief-10-nothing-needs-you-again
+sample: 10
+title: A second quiet morning, with an invitation changed long before and work that is done
+received: '2026-10-30'
+now: '2026-10-30T09:00'
+form: morning
+given:
+- {kind: event, id: EVT-91, fields: {title: Weekly check-in, start: '2026-11-02T10:00:00-05:00', invitation: true, organizer: {address: organizer@example.com, name: Odile Fenwick}, trust: untrusted, source: SRC-0, key: weekly-1}}
+- {kind: action, id: ACT-91, fields: {text: Send the final report, owners: [{person: PER-1}], due: '2026-10-29', status: done, done_by: [PER-1]}}
+then:
+- at: '2026-10-20T12:00'
+  update: {kind: event, id: EVT-91, rule: calendar, fields: {where: Room 2}}
+quiet: true

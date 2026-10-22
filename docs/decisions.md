@@ -4,6 +4,27 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: The brief is built by rules; the week's goals are a record; the Monday message is a draft kind
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings. The
+  morning brief, the evening wrap-up and the Monday briefing are made by rules from the records and Today's own lines
+  (`engine/brief.py`), never by AI; a yes line is Today's own line and opens it, so the card and the queue can't
+  disagree. The week's goals are kept on a new record, `week_plan` (one for each person and week), not as a setting: they
+  are the person's own words about one week, change often and are the person's alone, so they follow the record
+  patterns (versions, ledger, export and import, forgetting a person) a setting doesn't. The message to whoever the
+  person reports to is a core draft kind on that record's `message` text, so it takes the draft rules unchanged
+  (estimate, the person's go, unreviewed until copied, a signal when set aside). The card closes for the day in the
+  browser only (a per-viewer convenience, no signal). "Overnight" starts at the evening time of the last working day
+  before today (`steward.brief.overnight_from`), so a Monday looks back to Friday evening. The Monday briefing shows on
+  its day and is offered beside the morning brief on the later working days until the week's goals are confirmed, which is
+  how "the first open of the week" is read.
+- **Left, said in the design:** the capacity line and its proposed moves (the capacity item); dates inside mail and
+  bookings, and a meeting named only in words, as at-risk lines; a clash after today; the Monday message as an act.
+  What others did that waits for the person's Keep (a close, a move or part delivered said in a message) is a held line
+  under "needs your yes", not under "changed overnight".
+- **Impact:** design 6.32, 5 (`week_plan`), 7.7 and 4.0 (`steward.brief`), roadmap S2. Plugin guide regenerated for the new
+  core record. No change to scope. Change log: section 191.
+
 ## 2026-10-22: Acting on mail and calendar from the screens: what the API adds
 
 - **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with three

@@ -93,6 +93,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         from engine.action_work import build as action_work_packet
 
         return action_work_packet(ws, store, cfg, req, kind, today)
+    if kind.name == "monday-message":
+        from engine.week_plan import build as monday_message_packet
+
+        return monday_message_packet(ws, store, cfg, req, kind, today)
     if kind.name == "follow-on":
         from engine.follow_on import build as follow_on_packet
 

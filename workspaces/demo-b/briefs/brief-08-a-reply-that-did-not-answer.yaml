@@ -1,0 +1,18 @@
+id: brief-08-a-reply-that-did-not-answer
+sample: 8
+title: A reply about a quote came in without the answer, and the question is chased with a draft
+received: '2026-10-28'
+now: '2026-10-28T09:00'
+form: morning
+given:
+- {kind: action, id: ACT-91, fields: {text: Send the quote, owners: [{person: PER-3}], promised_to: [PER-1], due: '2026-10-30', told: {PER-3: '2026-10-23'}}}
+- {kind: question, id: Q-91, fields: {to: PER-3, title: 'Does the quoted price include travel?', status: sent, sent_at: '2026-10-23T15:00:00-04:00'}}
+then:
+- at: '2026-10-28T07:30'
+  news: {action: ACT-91, by: PER-3, text: Replied but did not say whether the quote includes travel}
+expect:
+  changed:
+  - {kind: news, text: Send the quote, person: PER-3, detail: Replied but did not say whether the quote includes travel}
+  'yes':
+  - {kind: 'yes', change: nudge, person: PER-3, ready: true}
+left: [meeting_dependency]

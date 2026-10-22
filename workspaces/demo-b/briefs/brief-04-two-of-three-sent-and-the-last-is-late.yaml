@@ -1,0 +1,20 @@
+id: brief-04-two-of-three-sent-and-the-last-is-late
+sample: 4
+title: Two of three drawings came in, the third is a day late and the chase is drafted
+received: '2026-10-22'
+now: '2026-10-22T09:00'
+form: morning
+given:
+- {kind: action, id: ACT-91, fields: {text: Send the first two drawings, owners: [{person: PER-2}], promised_to: [PER-1], due: '2026-10-23', told: {PER-2: '2026-10-14'}}}
+- {kind: action, id: ACT-92, fields: {text: Send the third drawing, owners: [{person: PER-2}], promised_to: [PER-1], due: '2026-10-21', told: {PER-2: '2026-10-14'}}}
+then:
+- at: '2026-10-22T07:20'
+  news: {action: ACT-91, by: PER-2, text: Two of the three drawings are attached}
+expect:
+  changed:
+  - {kind: news, text: Send the first two drawings, person: PER-2, detail: Two of the three drawings are attached}
+  risk:
+  - {kind: owed_late, text: Send the third drawing, person: PER-2, day: '2026-10-21', days: 1}
+  'yes':
+  - {kind: 'yes', change: nudge, person: PER-2, ready: true}
+left: [meeting_dependency]

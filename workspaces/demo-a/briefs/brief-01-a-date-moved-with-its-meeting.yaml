@@ -1,0 +1,21 @@
+id: brief-01-a-date-moved-with-its-meeting
+sample: 1
+title: A promise's date followed its meeting overnight, an estimate is due today and a message to the client waits
+received: '2026-10-19'
+now: '2026-10-19T09:00'
+form: morning
+given:
+- {kind: event, id: EVT-91, fields: {title: Estimate review, start: '2026-10-19T12:00:00-05:00', trust: trusted}}
+- {kind: action, id: ACT-91, fields: {text: Send the draft deadline plan, owners: [{person: PER-1}], promised_to: [PER-2], due: '2026-10-20'}}
+- {kind: action, id: ACT-92, fields: {text: Send the estimate, owners: [{person: PER-1}], promised_to: [PER-3], due: '2026-10-19', due_event: EVT-91}}
+- {kind: question, id: Q-91, fields: {to: PER-3, title: 'Is the estimate wanted before the review?'}}
+then:
+- at: '2026-10-18T20:00'
+  update: {kind: action, id: ACT-91, rule: calendar, fields: {due: '2026-10-22'}}
+expect:
+  changed:
+  - {kind: moved, change: meeting, text: Send the draft deadline plan, day: '2026-10-22', link: [action, ACT-91]}
+  risk:
+  - {kind: own_due, state: today, text: Send the estimate, person: PER-3, day: '2026-10-19', days: 0, at: '12:00', link: [action, ACT-92]}
+  'yes':
+  - {kind: 'yes', change: send, person: PER-3, ready: true, queue: 'send:PER-3'}

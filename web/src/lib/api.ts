@@ -322,6 +322,14 @@ export const api = {
   todo: () => call<S["TodoView"][]>("GET", "today/todo"),
   priorities: () => call<S["TopPrioritiesView"]>("GET", "today/priorities"),
   thisWeek: () => call<S["ThisWeekView"]>("GET", "today/week"),
+  /** The form of the brief that is due now, or the one named: the morning brief, the evening wrap-up or the Monday briefing. */
+  brief: (form?: string) => call<S["BriefView"]>("GET", form ? `brief?form=${id(form)}` : "brief"),
+  /** Confirm the goals for this week as the person's own; the answer holds what they replaced, which is Undo. */
+  putGoals: (body: S["BriefGoalsIn"]) => call<S["BriefGoalsKept"]>("PUT", "brief/goals", body),
+  /** Ask the assistant to draft this week's message to whoever the person reports to. */
+  askBriefMessage: (body: S["BriefMessageAsk"]) => call<S["HandedOver"]>("POST", "brief/message", body),
+  /** The person copied the message: the draft waiting is theirs as it is. */
+  briefMessageCopied: () => call<S["Ok"]>("POST", "brief/message/copied"),
   arrived: () => call<S["InboxView"]>("GET", "today/arrived"),
   checkArrived: () => call<S["InboxCheckView"]>("POST", "today/arrived/check"),
   taskKinds: (kind?: string, record?: string) =>

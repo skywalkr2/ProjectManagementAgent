@@ -474,6 +474,13 @@ From the original designer's lessons of 2026-10-14:
   rules, with its estimate); "this week" through the last working day: promises due by owner with overdue first,
   questions to send, answers to chase, decisions waiting, built from the records by rules; and three to five goals the
   person confirms, kept for the week. Nothing already on Today is repeated. Sending it to the person is phase E.
+  **Built so far (S2):** the form on its day (`steward.brief.weekly_day`), offered beside the morning brief on the later
+  working days until the goals are confirmed, with the week's promises by owner, questions to send, answers to chase
+  and decisions waiting, what Today holds counted and not repeated, the three to five goals (a `week_plan` record: proposed
+  from what is due, confirmed or changed by the person, kept for the week, read by the morning brief) and the message
+  to whoever the person reports to as a draft of the core kind `monday-message` (estimated, held for the go, unreviewed
+  until Copy) (`tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`). **Left:**
+  the message as an act the person approves (Copy only today).
 - [ ] [B-6b] **What the work version's screens show** (owner's screens, 2026-10-13; the screens hold real names, so only
   what they do is written here). *Built (B-6b), checked off in `roadmap-done.md`:* Follow-ups by person, or by project;
   Projects at a glance; links to the person's own pages; a meeting added in one line; never raw data on screen. Two
@@ -1172,9 +1179,22 @@ S2. **Time and attention:**
   `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
   added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed
   overnight" lines and the invitation's page.
+  **Built so far (S2):** it feeds the brief's "changed overnight" lines: a new invitation, one called off or back on,
+  moved, a new place, title or organizer, read from the calendar entries' history, and not who replied
+  (`tests/test_brief.py::test_what_changed_in_an_invitation_overnight_is_a_line_for_each_change_that_matters`,
+  `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`, `web/src/components/BriefCard.test.tsx`).
+  **Left:** the invitation's own page.
 - [ ] [S2] **The morning brief as what changed, what is at risk and what needs your yes** (not another summary), and the
   evening wrap-up; the Monday briefing is the weekly form (moved from phase B).
   Its shape is in design 6.32, with ten samples (`docs/project/steward-brief-samples.md`) that become its evaluation cases.
+  **Built so far (S2):** the morning brief, the evening wrap-up and the card on Today that shows the one that is due
+  and closes for the day, by rules and never AI (`engine/brief.py`, `tests/test_brief.py`,
+  `web/src/components/BriefCard.test.tsx`); the ten samples are cases in both fictional workspaces
+  (`workspaces/*/briefs/`, `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`), each scored
+  exactly, with what it still lacks named. **Left:** the capacity line and its proposed moves (the capacity item below),
+  at-risk lines from dates inside mail and bookings ("the last day to cancel", samples 7 and 9), from a meeting named only
+  in words (samples 4 and 8) and from a clash after today (only today's meetings are compared), and the reminder offer
+  (sample 7).
 - [ ] [S2] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
   the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
   scheduling.

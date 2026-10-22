@@ -1,0 +1,18 @@
+id: brief-09-a-workshop-was-cancelled
+sample: 9
+title: A workshop was cancelled overnight and a message to cancel the room is drafted
+received: '2026-10-29'
+now: '2026-10-29T09:00'
+form: morning
+given:
+- {kind: event, id: EVT-91, fields: {title: Planning workshop, start: '2026-10-30T10:00:00-04:00', end: '2026-10-30T12:00:00-04:00', invitation: true, organizer: {address: organizer@example.com, name: Maya Okafor}, trust: untrusted, source: SRC-0, key: workshop-1}}
+- {kind: question, id: Q-91, fields: {to: PER-4, title: 'Can the room booking be cancelled?'}}
+then:
+- at: '2026-10-28T21:00'
+  update: {kind: event, id: EVT-91, rule: calendar, fields: {cancelled: true}}
+expect:
+  changed:
+  - {kind: invitation, change: cancelled, text: Planning workshop, person_name: Maya Okafor, day: '2026-10-30', link: [event, EVT-91]}
+  'yes':
+  - {kind: 'yes', change: send, person: PER-4, ready: true}
+left: [booking]

@@ -1,0 +1,10 @@
+id: brief-05-nothing-needs-you
+sample: 5
+title: Nothing changed, nothing is at risk and nothing waits, though the person has work ahead
+received: '2026-10-23'
+now: '2026-10-23T09:00'
+form: morning
+given:
+- {kind: action, id: ACT-91, fields: {text: Plan the review, owners: [{person: PER-1}], due: '2026-10-28'}}
+- {kind: action, id: ACT-92, fields: {text: Send the invoice, owners: [{person: PER-1}], due: '2026-10-22', status: done, done_by: [PER-1]}}
+quiet: true

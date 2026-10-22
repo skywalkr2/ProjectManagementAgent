@@ -1,0 +1,19 @@
+id: brief-02-a-promise-arrived-and-another-is-late
+sample: 2
+title: A signed agreement came in overnight, a promised set of measurements is a day late and the chase is drafted
+received: '2026-10-20'
+now: '2026-10-20T09:00'
+form: morning
+given:
+- {kind: action, id: ACT-91, fields: {text: Return the signed agreement, owners: [{person: PER-2}], promised_to: [PER-1], due: '2026-10-22', told: {PER-2: '2026-10-19'}}}
+- {kind: action, id: ACT-92, fields: {text: Send the measurements, owners: [{person: PER-3}], promised_to: [PER-1], due: '2026-10-19', told: {PER-3: '2026-10-13'}}}
+then:
+- at: '2026-10-20T07:10'
+  news: {action: ACT-91, by: PER-2, text: The signed agreement is attached}
+expect:
+  changed:
+  - {kind: news, text: Return the signed agreement, person: PER-2, detail: The signed agreement is attached, link: [action, ACT-91]}
+  risk:
+  - {kind: owed_late, text: Send the measurements, person: PER-3, day: '2026-10-19', days: 1, link: [action, ACT-92]}
+  'yes':
+  - {kind: 'yes', change: nudge, person: PER-3, ready: true, queue: 'nudge:PER-3'}

@@ -1027,6 +1027,23 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 191. The morning brief, the evening wrap-up and the Monday briefing (2026-10-22; S2, built in part)
+
+- **Design 6.32 (Time) and 7.7:** the brief is built by rules from the records and Today's own lines, as a card at the top
+  of Today. Morning: changed overnight (what someone else did to the person's things, and what an invitation changed),
+  at risk today (the person's own to-dos due or late, what others owe them that is late, meetings that overlap), needs
+  your yes (Today's own lines, opened from the card). Evening: done today credited to whoever did it, moved or still
+  open, and who is waited on. Monday: the week's promises by owner, questions to send, answers to chase and decisions
+  waiting, with what Today holds counted and not repeated, the week's goals and the message to whoever the person
+  reports to. Left (named in the design): the capacity line, dates inside mail and bookings, a clash after today.
+- **New:** `engine/brief.py`, `engine/week_plan.py`, `engine/brief_cases.py`; the record `week_plan` (the week's goals
+  and message, one for each person and week); the draft task kind `monday-message` with its prompt and guidance; routes
+  `GET /api/brief`, `PUT /api/brief/goals`, `POST /api/brief/message` and `POST /api/brief/message/copied`; settings
+  `steward.brief.*` (enabled, morning_from, evening_from, overnight_from, weekly_day, max_lines, goals_min, goals_max),
+  each with a description, a default and demo values in both workspaces; ten sample mornings as cases in both fictional
+  workspaces (`workspaces/*/briefs/`).
+- **Built:** `tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`.
+
 ## 190. The screens for mail and calendar acts (2026-10-22; S1b-2d, built)
 
 - **Design 6.12 and 7.4:** the person drafts an act from a saved message (Reply, Reply to everyone, Forward, Archive, Move

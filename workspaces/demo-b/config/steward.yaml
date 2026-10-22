@@ -25,3 +25,12 @@ reminders:
   where_account: ""   # the account those reminders go through, one the assistant may act on
   look_ahead_hours: 24   # a reminder coming due within this many hours is drafted ahead, so it can reach you while the computer sleeps
   allowed_data: internal   # the most sensitive to-do whose own words a reminder may carry out; above it only the time goes
+brief:
+  enabled: true   # Today opens with a card for the morning brief, the evening wrap-up and the Monday briefing
+  morning_from: "06:00"   # the morning brief starts to show at this time
+  evening_from: "17:00"   # the evening wrap-up takes the brief's place from this time
+  overnight_from: "18:00"   # what changed since this time on the last working day before today is what changed overnight
+  weekly_day: monday   # the day the Monday briefing shows
+  max_lines: 5   # the most lines one section shows; the rest become one line saying how many more
+  goals_min: 3   # the fewest goals for the week you confirm
+  goals_max: 5   # the most goals for the week

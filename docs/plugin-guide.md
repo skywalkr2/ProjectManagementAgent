@@ -1945,6 +1945,18 @@ The person's own count for one day: how many promises they count on their own li
 | `missed` | int | required | Of those, how many the app didn't have. |
 | `at` | datetime | required | When the count was last saved. |
 
+### `week_plan` (WEEK-n)
+
+The person's own plan for one week (design 6.32, the Monday briefing): the goals they confirmed for it and the message to whoever they report to. One record for each person and week, made when the first goal is confirmed or the message is first asked for; the week is named by its first day. The goals are the person's own words and nothing but the person writes them. The message is a draft the assistant writes, unreviewed until the person copies it, and it is never sent from here.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `person` | str \| None | `None` | The person whose week it is; none when the workspace names no person yet. |
+| `week` | date | required | The first working day of the week, on the person's own clock. |
+| `goals` | list[str] | `[]` | The goals the person confirmed for the week, in their own words, in the order they gave them, each one to 200 characters. Empty until they confirm some. |
+| `confirmed_at` | datetime \| None | `None` | When the goals were last confirmed; none until then. |
+| `message` | str \| None | `None` | The message to the person they report to, drafted from the week's records. It is long text: a draft waits for the person's review and is theirs once they copy it. |
+
 ### `audit_entry` (AUD-n)
 
 One sign-in, sign-out or turning an add-on on or off, made from the screens. The engine writes it as it happens; nothing changes it. It never holds a token, a secret or the signed-in account's name.

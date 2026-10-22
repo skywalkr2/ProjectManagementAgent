@@ -5604,3 +5604,95 @@ class StandingYesIn(BaseModel):
     form: Literal["mail", "calendar"]
     account: str = Field(min_length=1)
     template_version: str = Field(min_length=1)
+
+
+class BriefLineView(BaseModel):
+    """One thing in a section of the morning brief, the evening wrap-up or the Monday briefing (design 6.32). The screen
+    words it from its `kind`, with `change` or `state` when the kind has variants. `queue` is the key of the Today line
+    the person opens (the lines that wait for their yes), `link` the record it opens. `ready` says a message is already
+    drafted for it, and `you` that the person themselves owns it or did it."""
+
+    key: str
+    kind: str
+    text: str | None = None
+    person: str | None = None
+    person_name: str | None = None
+    other: str | None = None
+    detail: str | None = None
+    change: str | None = None
+    state: str | None = None
+    day: date | None = None
+    at: str | None = Field(None, description="A time of day on the person's own clock, such as 14:30.")
+    from_day: date | None = None
+    from_at: str | None = None
+    days: int | None = None
+    minutes: int | None = None
+    count: int | None = None
+    queue: str | None = None
+    link: RecordRef | None = None
+    ready: bool = False
+    you: bool = False
+
+
+class BriefSectionView(BaseModel):
+    """A heading and its lines; `more` is how many more there are than the most a section shows."""
+
+    key: str
+    lines: list[BriefLineView]
+    more: int = 0
+
+
+class BriefGoalsView(BaseModel):
+    """The goals for the week from `first` to `last`: the `confirmed` ones the person gave, else the ones `proposed`
+    from what is due and open. Between `fewest` and `most` are kept when confirmed."""
+
+    first: date
+    last: date
+    confirmed: bool
+    goals: list[str]
+    proposed: list[str]
+    fewest: int
+    most: int
+
+
+class BriefMessageView(BaseModel):
+    """Where the message to whoever the person reports to stands: `none` (not asked for), `working` (with the
+    assistant), `needs_go` (held for the person's go, about `estimate_usd`), `draft` (a draft waits, not yet reviewed:
+    its `text`) or `kept` (the person copied it). `to` are the people it is for."""
+
+    state: Literal["none", "working", "needs_go", "draft", "kept"]
+    to: list[OwnerNameView]
+    text: str | None = None
+    estimate_usd: float | None = None
+
+
+class BriefView(BaseModel):
+    """A form of the brief (GET /api/brief). `form` is none when nothing is due yet today; `forms` are the forms that
+    can show now, the one to open with first. `quiet` is a day with nothing to say. `on_today` counts what the Monday
+    briefing left out because Today holds it. `goals` carry the week's goals (the Monday briefing always, the morning
+    brief once they are confirmed); `message` is present when the person reports to someone."""
+
+    form: Literal["morning", "evening", "monday"] | None
+    day: date
+    forms: list[Literal["morning", "evening", "monday"]]
+    sections: list[BriefSectionView]
+    quiet: bool
+    on_today: int = 0
+    goals: BriefGoalsView | None = None
+    message: BriefMessageView | None = None
+
+
+class BriefGoalsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    goals: list[str] = Field(
+        description="The goals for this week in the person's own words; none takes the week's goals back out."
+    )
+
+
+class BriefGoalsKept(BaseModel):
+    previous: list[str] = Field(description="The goals the week held before; sending them again is Undo.")
+
+
+class BriefMessageAsk(BaseModel):
+    note: str | None = Field(None, description="What the person wants from the message, in their own words.")

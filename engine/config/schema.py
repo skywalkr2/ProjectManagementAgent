@@ -3002,6 +3002,66 @@ class SentMatchSettings(ConfigModel):
     )
 
 
+class BriefSettings(ConfigModel):
+    enabled: bool = Field(
+        True,
+        description="Whether Today opens with a card for the morning brief, the evening wrap-up and the Monday "
+        "briefing. You can close the card for the day; it comes back at the next time it is due.",
+    )
+    morning_from: str = Field(
+        "06:00",
+        description="The time the morning brief starts to show on Today. Before it, there is no brief.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    evening_from: str = Field(
+        "17:00",
+        description="The time the evening wrap-up takes the place of the morning brief on Today.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    overnight_from: str = Field(
+        "18:00",
+        description="What changed since this time on the last working day before today is what changed overnight, in "
+        "the morning brief.",
+        json_schema_extra={"choices": "times_of_day"},
+    )
+    weekly_day: Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] = Field(
+        "monday",
+        description="The day of the week the Monday briefing shows, on the first time Today is opened that day. It "
+        "covers this day through the last working day.",
+    )
+    max_lines: int = Field(
+        5,
+        ge=1,
+        le=20,
+        description="The most lines one section of a brief shows. What doesn't fit becomes one line saying how many "
+        "more there are on Today.",
+    )
+    goals_min: int = Field(
+        3, ge=1, le=10, description="The fewest goals for the week you confirm. Fewer is not kept as the week's goals."
+    )
+    goals_max: int = Field(
+        5, ge=1, le=10, description="The most goals for the week you confirm, and how many the briefing proposes."
+    )
+
+    @field_validator("morning_from", "evening_from", "overnight_from", mode="before")
+    @classmethod
+    def _a_time_of_day(cls, value: Any) -> Any:
+        # An unquoted 17:30 is read by a YAML file as the number of minutes it is; give it back as the clock time.
+        if isinstance(value, int) and not isinstance(value, bool) and 0 <= value < 24 * 60:
+            value = f"{value // 60:02d}:{value % 60:02d}"
+        if not isinstance(value, str) or not _CLOCK.match(value):
+            raise ValueError("pick a time of day, such as 09:00")
+        return value
+
+    @model_validator(mode="after")
+    def _goals_make_sense(self) -> BriefSettings:
+        if self.morning_from >= self.evening_from:
+            raise ValueError("the evening wrap-up must start after the morning brief: pick a later evening time")
+        if self.goals_min > self.goals_max:
+            raise ValueError("the fewest goals can't be more than the most: pick a smaller fewest or a larger most")
+        return self
+
+
 class StewardFile(FileModel):
     default_stance: Literal["manage", "alongside", "report_to", "watch"] = Field(
         "alongside",
@@ -3058,6 +3118,11 @@ class StewardFile(FileModel):
         default_factory=SentMatchSettings,
         description="How a message you sent is matched to the one you copied from the app, and when you are asked "
         "whether a copied message went out.",
+    )
+    brief: BriefSettings = Field(
+        default_factory=BriefSettings,
+        description="When the morning brief, the evening wrap-up and the Monday briefing show on Today, and how much "
+        "each shows.",
     )
 
 

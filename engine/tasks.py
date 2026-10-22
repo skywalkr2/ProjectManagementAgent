@@ -164,6 +164,19 @@ TASKS: dict[str, TaskKind] = {
         where={"status": ("open",)},
         defaults={"max_output": 3000, "expected_output": 600},
     ),
+    # The message to whoever the person reports to, from the week's records (engine/week_plan.py): prose filed as a
+    # pending draft of the week's `message` text, unreviewed until the person copies it. It is never sent from here.
+    "monday-message": TaskKind(
+        name="monday-message",
+        ops=("text.draft",),
+        prompt="monday-message",
+        playbook="monday-message",
+        label="Drafting the Monday message",
+        on="week_plan",
+        output="draft",
+        field="message",
+        defaults={"max_output": 2000, "expected_output": 400},
+    ),
     "follow-on": TaskKind(
         name="follow-on",
         ops=FOLLOW_ON_OPS,

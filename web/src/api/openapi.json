@@ -5094,6 +5094,479 @@
         "title": "BlockerView",
         "type": "object"
       },
+      "BriefGoalsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "goals": {
+            "description": "The goals for this week in the person's own words; none takes the week's goals back out.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Goals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "goals"
+        ],
+        "title": "BriefGoalsIn",
+        "type": "object"
+      },
+      "BriefGoalsKept": {
+        "properties": {
+          "previous": {
+            "description": "The goals the week held before; sending them again is Undo.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Previous",
+            "type": "array"
+          }
+        },
+        "required": [
+          "previous"
+        ],
+        "title": "BriefGoalsKept",
+        "type": "object"
+      },
+      "BriefGoalsView": {
+        "description": "The goals for the week from `first` to `last`: the `confirmed` ones the person gave, else the ones `proposed`\nfrom what is due and open. Between `fewest` and `most` are kept when confirmed.",
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "fewest": {
+            "title": "Fewest",
+            "type": "integer"
+          },
+          "first": {
+            "format": "date",
+            "title": "First",
+            "type": "string"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
+          "last": {
+            "format": "date",
+            "title": "Last",
+            "type": "string"
+          },
+          "most": {
+            "title": "Most",
+            "type": "integer"
+          },
+          "proposed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Proposed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "first",
+          "last",
+          "confirmed",
+          "goals",
+          "proposed",
+          "fewest",
+          "most"
+        ],
+        "title": "BriefGoalsView",
+        "type": "object"
+      },
+      "BriefLineView": {
+        "description": "One thing in a section of the morning brief, the evening wrap-up or the Monday briefing (design 6.32). The screen\nwords it from its `kind`, with `change` or `state` when the kind has variants. `queue` is the key of the Today line\nthe person opens (the lines that wait for their yes), `link` the record it opens. `ready` says a message is already\ndrafted for it, and `you` that the person themselves owns it or did it.",
+        "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A time of day on the person's own clock, such as 14:30.",
+            "title": "At"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "from_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From At"
+          },
+          "from_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Day"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "other": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
+          "person_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person Name"
+          },
+          "queue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue"
+          },
+          "ready": {
+            "default": false,
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "you": {
+            "default": false,
+            "title": "You",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "kind"
+        ],
+        "title": "BriefLineView",
+        "type": "object"
+      },
+      "BriefMessageAsk": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person wants from the message, in their own words.",
+            "title": "Note"
+          }
+        },
+        "title": "BriefMessageAsk",
+        "type": "object"
+      },
+      "BriefMessageView": {
+        "description": "Where the message to whoever the person reports to stands: `none` (not asked for), `working` (with the\nassistant), `needs_go` (held for the person's go, about `estimate_usd`), `draft` (a draft waits, not yet reviewed:\nits `text`) or `kept` (the person copied it). `to` are the people it is for.",
+        "properties": {
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Usd"
+          },
+          "state": {
+            "enum": [
+              "none",
+              "working",
+              "needs_go",
+              "draft",
+              "kept"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "to": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerNameView"
+            },
+            "title": "To",
+            "type": "array"
+          }
+        },
+        "required": [
+          "state",
+          "to"
+        ],
+        "title": "BriefMessageView",
+        "type": "object"
+      },
+      "BriefSectionView": {
+        "description": "A heading and its lines; `more` is how many more there are than the most a section shows.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/BriefLineView"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "more": {
+            "default": 0,
+            "title": "More",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "lines"
+        ],
+        "title": "BriefSectionView",
+        "type": "object"
+      },
+      "BriefView": {
+        "description": "A form of the brief (GET /api/brief). `form` is none when nothing is due yet today; `forms` are the forms that\ncan show now, the one to open with first. `quiet` is a day with nothing to say. `on_today` counts what the Monday\nbriefing left out because Today holds it. `goals` carry the week's goals (the Monday briefing always, the morning\nbrief once they are confirmed); `message` is present when the person reports to someone.",
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "enum": [
+                  "morning",
+                  "evening",
+                  "monday"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          },
+          "forms": {
+            "items": {
+              "enum": [
+                "morning",
+                "evening",
+                "monday"
+              ],
+              "type": "string"
+            },
+            "title": "Forms",
+            "type": "array"
+          },
+          "goals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BriefGoalsView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BriefMessageView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "on_today": {
+            "default": 0,
+            "title": "On Today",
+            "type": "integer"
+          },
+          "quiet": {
+            "title": "Quiet",
+            "type": "boolean"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/BriefSectionView"
+            },
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "form",
+          "day",
+          "forms",
+          "sections",
+          "quiet"
+        ],
+        "title": "BriefView",
+        "type": "object"
+      },
       "BusinessIn": {
         "additionalProperties": false,
         "properties": {
@@ -26590,6 +27063,155 @@
           }
         },
         "summary": "Backup Key Set"
+      }
+    },
+    "/api/brief": {
+      "get": {
+        "description": "The form of the brief that is due now, or the one named. `form` is none before the morning time, and when the\nbrief is turned off.",
+        "operationId": "get_brief_api_brief_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "form",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "morning",
+                    "evening",
+                    "monday"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Form"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Brief"
+      }
+    },
+    "/api/brief/goals": {
+      "put": {
+        "description": "Confirm the goals for this week as the person's own, or take them back out with none. Sending the previous\ngoals again is Undo.",
+        "operationId": "put_goals_api_brief_goals_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefGoalsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefGoalsKept"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Goals"
+      }
+    },
+    "/api/brief/message": {
+      "post": {
+        "description": "Ask the assistant to draft this week's message to whoever the person reports to.",
+        "operationId": "ask_for_message_api_brief_message_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefMessageAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandedOver"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask For Message"
+      }
+    },
+    "/api/brief/message/copied": {
+      "post": {
+        "description": "The person copied the message: the draft waiting for review is theirs as it is.",
+        "operationId": "message_copied_api_brief_message_copied_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Message Copied"
       }
     },
     "/api/calendar/meetings": {

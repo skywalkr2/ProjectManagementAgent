@@ -3310,6 +3310,24 @@ people and details, and never acts in their name without their yes on the exact 
   tomorrow and still waiting on others; the Monday briefing opens with a copy-ready message to whoever the person
   reports to, then the week's promises, questions, chases and decisions, and three to five goals the person confirms,
   under the same line rules (6.35; `docs/project/steward-wrapup-samples.md`).
+  **Built (S2, the brief):** `engine/brief.py` makes the three forms by rules, reading Today's own lines, what changed
+  since yesterday, this week's days, the clash finder and `engine/invitation_changes.py`, and repeating none of their
+  logic; nothing in it calls AI. *Morning:* **changed** is what someone else did to the person's own things since the
+  evening of the last working day (`steward.brief.overnight_from`: news, a date that followed its meeting, a close a rule
+  made; never the person's own acts) and what an invitation changed (new, called off, back on, moved, place, title,
+  organizer; never who replied), read from the calendar entries' history; **risk** is the person's own to-dos due today
+  or late (with the time of the meeting one is due at), what others owe them that is late (read from the follow-up
+  lines) and today's meetings that overlap by how much; **yes** is Today's own decision, question, held, reply, send and
+  follow-up lines, each opening that line, with "draft ready" where a message is already written. *Evening:* done today
+  credited to whoever did it, what moved ahead today or is still open today, and what others still owe or haven't
+  answered; it is quiet when nothing moved and nobody is waited on. Each section shows at most `steward.brief.max_lines`
+  and says how many more. The card is at the top of Today from `steward.brief.morning_from`, gives way to the wrap-up from
+  `steward.brief.evening_from` and closes for the day in that browser, which is no signal of anything. **Left:** the
+  capacity line and the moves it proposes (the capacity item, S2); at-risk lines from a date inside a mail or a booking
+  ("the last day to cancel"), from a meeting named only in words, and from a clash after today (only today's meetings are
+  compared, with no travel time); the reminder offer. The sample mornings are cases in both workspaces
+  (`workspaces/*/briefs/`, `engine/brief_cases.py`), each scored exactly with what it still lacks named (`left:`).
+  `tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`.
 - **Adding a to-do yourself (phase S2; designed 2026-10-22).** Today and To-dos have **Add a to-do**: the words, when
   (typed in plain words and read by the due-date rules, said back under the field, or left without a day), who
   (the person by default, picked from the list of people), the project (picked, optional) and Repeats. No AI is
@@ -4086,3 +4104,19 @@ until an event yet; `release_at` is the rule it will use), and Today lines that 
 3. **Goals:** three to five for the week, proposed from what is due and open, which the person confirms, changes or
    drops. Confirmed goals are kept for the week and read by the morning brief.
 Nothing already on Today is repeated in the briefing; it links to Today instead.
+
+**Built (S2, the Monday briefing):** `GET /api/brief` makes it on the configured day (`steward.brief.weekly_day`) and offers
+it beside the morning brief on the later working days of the week until the week's goals are confirmed. *This week* is the
+person's promises through the last working day, what others promised them, the questions held to send, the answers to
+chase and the decisions waiting, overdue first; what Today already has a line for is left out and counted ("N more things
+are already on Today"). *Goals* are kept on a `week_plan` record for the person and the week, which is the person's own
+words and only theirs (`PUT /api/brief/goals`: between `steward.brief.goals_min` and `goals_max`, answered with what it
+replaced, which sending back is Undo); until confirmed, up to the most are proposed from the person's own open to-dos
+due through the week, to confirm in one press or change. The morning brief carries the week's confirmed goals. *The
+message* is the core draft kind `monday-message` on the record's `message` text: asked for with `POST /api/brief/message`,
+estimated and held for the person's go like every draft, written from the week's facts under the draft rules, shown
+as "Draft, not yet reviewed" and made the person's by Copy (`POST /api/brief/message/copied`); setting it aside is a
+signal like any draft's. It is for the people marked "I report to them" and absent when there are none. **Left:** drafting
+the message as an act the person approves (Copy only today), and asking once who it is for when nobody is marked
+(the section is simply absent). `tests/test_brief.py`, `tests/test_brief_week.py`,
+`web/src/components/BriefCard.test.tsx`.
