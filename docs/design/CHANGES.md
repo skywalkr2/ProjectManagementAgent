@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 165. Learning from corrections: misses, declines, drops, and reach; promises owed to the reader (2026-10-22; B-10, built)
+
+- `miss-left-unlearned`: a learning answer with no op to a correction saying something was missed goes back once.
+- The learning packet says what a decline and a drop mean, and, when no run made the corrected work, that a lesson
+  names no kind of work; one that does goes back once.
+- `promise-owed-to-reader`: the sender's own promise in mail, owed to nobody, goes back naming who the mail went to.
+- The From-line checks (`own-promise-missed`, `team-we-one-owner`, `promise-owed-to-reader`) read mail handed in
+  with only a From line.
+- Design 6.22 and 6.33. Built: `tests/test_learn_correction.py`
+  (`test_nothing_learned_from_a_send_back_of_an_answer_that_recorded_nothing_goes_back_once`,
+  `test_a_lesson_from_a_correction_no_run_made_names_no_kind_of_work`), `tests/test_promise_as_fact.py`
+  (`test_the_senders_own_promise_in_mail_owed_to_nobody_is_sent_back_naming_who_it_went_to`)
+
 ## 164. An unclear correction asks the person one question (2026-10-22; owner decision, built)
 
 - The learning step may answer a correction with one question to the person, in place of a lesson, when it can't

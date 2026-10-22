@@ -211,6 +211,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _too_many_ops(cs, ctx)
     problems += _learning_reach(cs, ctx)
     problems += _learning_question(cs, ctx)
+    problems += _miss_left_unlearned(cs, ctx)
     problems += _follow_on_reach(cs, ctx)
     problems += _thread_promise_unanswered(cs, ctx)
     problems += _owner_mail_unanswered(cs, ctx)
@@ -656,6 +657,19 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         i,
                         'the words say "we", not who: leave "owners" empty so the person picks one, unless the '
                         "words name who does it",
+                    )
+                )
+            if readers := _owed_to_readers(op, ctx):
+                names = ", ".join(ctx.people.name(r) for r in readers)
+                ids = ", ".join(f'"{r}"' for r in readers)
+                problems.append(
+                    Problem(
+                        "promise-owed-to-reader",
+                        ctx.cfg.checks.projects.get(op.project or "", {}).get("promise-owed-to-reader")
+                        or ctx.cfg.checks.lints.get("promise-owed-to-reader", "off"),
+                        i,
+                        f"the sender promised this in mail to {names}, so it is owed to them: give "
+                        f'"promised_to" [{ids}]',
                     )
                 )
             if (owed := _possessed_by(op, ctx)) is not None:
@@ -1880,6 +1894,36 @@ def _learning_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     ]
 
 
+def _miss_left_unlearned(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A learning answer that proposes nothing, to a correction that says the assistant missed something (the person
+    said so, or sent back an answer that recorded nothing), is refused, so it gets a fix round: a miss is never nothing
+    to generalize, so the answer proposes the narrow lesson or asks the person what it missed (design 6.22)."""
+    if origin_of(ctx).get("task") != learn.TASK or cs.ops:
+        return []
+    view = ctx.store.read()
+    request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    signal_id = learn.signal_of(request.data) if request is not None else None
+    signal = view.get("signal", signal_id) if signal_id else None
+    if signal is None:
+        return []
+    kind = signal.data.get("kind")
+    if kind == "sent_back":
+        made = view.get("changeset", signal.data["changeset"]) if signal.data.get("changeset") else None
+        if made is None or made.data.get("ops"):
+            return []
+    elif kind != "missed":
+        return []
+    return [
+        Problem(
+            "miss-left-unlearned",
+            "refuse",
+            None,
+            "the person said the assistant missed something here, so this is not nothing to generalize: propose the "
+            "narrowest lesson their words support, or ask them one question about what was missed",
+        )
+    ]
+
+
 def _learning_question(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     """A learning answer may ask one question when it can't tell what a correction means (design 6.22). The question
     goes to the person, who made the correction; and a run learning from the person's answer to the assistant asks no
@@ -2083,10 +2127,11 @@ def _own_promise_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     if "action.add" not in ctx.allowed_ops:
         return []
     view = ctx.store.read()
-    message = reply_lines.read_message(ctx.inputs.raw_input)
-    if message is None or not reply_lines.sent_by_me(view, ctx.cfg, message.sender):
+    # Mail handed in with only a From line counts too: the From line says who wrote it.
+    head = reply_lines.leading_headers(ctx.inputs.raw_input)
+    if head is None or not head[0].get("from") or not reply_lines.sent_by_me(view, ctx.cfg, head[0]["from"]):
         return []
-    promised = _own_promises(message.new_text, ctx)
+    promised = _own_promises(split_message(head[1]).new, ctx)
     if not promised:
         return []
     pm = ctx.people.pm
@@ -2461,6 +2506,38 @@ def _possessed_by(op: ActionAddOp, ctx: Context) -> str | None:
     return None
 
 
+def _owed_to_readers(op: ActionAddOp, ctx: Context) -> list[str]:
+    """The people the `promise-owed-to-reader` lint names for an action, or none when it doesn't apply: the action
+    quotes the sender's own promise ("I'll send it Friday") from mail they wrote, it is the sender's alone, and it says
+    nobody it is owed to; it is owed to the people the mail is addressed to (design 6.33). The person's own note and
+    changes are left alone."""
+    name = "promise-owed-to-reader"
+    level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or ctx.cfg.checks.lints.get(name, "off")
+    evidence = _evidence(op)
+    if level == "off" or evidence is None or ctx.actor == "pm" or ctx.confirmed_by_pm or op.promised_to:
+        return []
+    if not any(scope.has_word(evidence.quote, w) for w in ctx.cfg.language.own_promise_words if w.strip()):
+        return []
+    head = reply_lines.leading_headers(ctx.inputs.raw_input)
+    if head is None or not head[0].get("from"):
+        return []
+    headers = head[0]
+    sender = ctx.people.resolve(headers["from"])
+    if sender.status != "ok" or not sender.person:
+        return []
+    if {ctx.people.resolve(owner).person for owner in op.owners} != {sender.person}:
+        return []
+    # Mail handed in with no To line reached the person, so it was written to them.
+    to = reply_lines._entries(headers["to"]) if headers.get("to") else (ctx.people.pm,)
+    readers = []
+    for entry in to:
+        found = ctx.people.resolve(entry) if entry else None
+        ok = found is not None and found.status == "ok" and found.person
+        if ok and found.person != sender.person and found.person not in readers:
+            readers.append(found.person)
+    return readers
+
+
 def _team_word_one_owner_level(op: ActionAddOp, ctx: Context) -> str:
     """The severity of the `team-we-one-owner` lint for an action, or "off" when it doesn't apply: its evidence quote
     promises for a team (one of the language's team-promise words, "we'll", and none of its own-promise words) and its
@@ -2476,10 +2553,10 @@ def _team_word_one_owner_level(op: ActionAddOp, ctx: Context) -> str:
         return "off"
     if any(scope.has_word(quote, w) for w in language.own_promise_words if w.strip()):
         return "off"
-    message = reply_lines.read_message(ctx.inputs.raw_input)
-    if message is None:
+    head = reply_lines.leading_headers(ctx.inputs.raw_input)
+    if head is None or not head[0].get("from"):
         return "off"
-    sender = ctx.people.resolve(message.sender)
+    sender = ctx.people.resolve(head[0]["from"])
     owner = ctx.people.resolve(op.owners[0])
     if sender.status != "ok" or owner.status != "ok" or sender.person != owner.person:
         return "off"

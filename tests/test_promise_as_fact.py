@@ -284,3 +284,33 @@ def test_news_on_the_promise_or_mail_about_something_else_is_left_alone(env):
     news = {"op": "action.news", "id": action, "text": "No time yet.", "evidence": {"quote": quote}}
     assert answered(env, [news], quote) == []
     assert answered(env, [], "Lovely weather today.") == []
+
+
+# ---- promise-owed-to-reader: the sender's own promise in mail is owed to whoever it went to ------------------------
+
+
+def owed_mail(env, op: dict, body: str) -> list:
+    _, cfg, store = env
+    to = f"{ME['full_name']} <{ME['full_name'].lower().replace(' ', '.')}@example.com>"
+    raw = f"From: {OWER['full_name']} <{OWER['how_to_reach']['email']}>\nTo: {to}\n\n{body}\n"
+    cs = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", "SRC-1", raw, "", "untrusted")
+    )
+    return [p for p in check(cs, ctx) if p.check == "promise-owed-to-reader"]
+
+
+def test_the_senders_own_promise_in_mail_owed_to_nobody_is_sent_back_naming_who_it_went_to(env):
+    quote = "I'll send the figures toward the end of the month."
+    op = {"op": "action.add", "text": "Send the figures", "owners": [OWER["id"]], "evidence": {"quote": quote}}
+    (problem,) = owed_mail(env, op, quote)
+    assert problem.severity == "return" and ME["id"] in problem.message
+
+
+def test_a_promise_already_owed_someone_else_owning_it_or_no_own_promise_words_is_left_alone(env):
+    quote = "I'll send the figures toward the end of the month."
+    op = {"op": "action.add", "text": "Send the figures", "owners": [OWER["id"]], "evidence": {"quote": quote}}
+    assert owed_mail(env, op | {"promised_to": [ME["id"]]}, quote) == []
+    assert owed_mail(env, op | {"owners": [ME["id"]]}, quote) == []
+    plain = "The figures go out toward the end of the month."
+    assert owed_mail(env, op | {"evidence": {"quote": plain}}, plain) == []

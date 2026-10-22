@@ -241,6 +241,12 @@ invariants:
       What is learned from a correction must reach the work that was corrected. Leave applies_to.task_kinds empty
       unless it holds for some kinds of work and not others, and when you name any, include the one the request says
       was corrected.
+  miss-left-unlearned:
+    ops: [lesson.add, lesson.update, glossary.add, routing.add, style.add, rule.add, question.add]
+    line: A correction saying something was missed always teaches something or asks.
+    seed: >-
+      When the person says the assistant missed something, or sends back an answer that recorded nothing, propose the
+      narrowest lesson their words support, or ask them one question about what was missed; never nothing.
   learning-question:
     ops: [question.add]
     line: A question about a correction goes to the person, and only once.

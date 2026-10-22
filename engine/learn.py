@@ -57,9 +57,13 @@ KIND_WORDS = {
     "draft_edited": "The person edited the assistant's draft before using it; the note is the text as they used it.",
     "routed": "The person answered the assistant's question about who someone is or who owns something.",
     "answered_assistant": "The person answered a question the assistant asked them; the note is their answer.",
-    "dropped": "The person dropped a question or an action the assistant filed.",
+    "dropped": "The person dropped a question or an action the assistant filed. Find in the note or the input why: it "
+    "was wrong to file, or the work was called off, done or covered elsewhere since, which the assistant should have "
+    "read from what it had.",
     "reworded": "The person reworded a question the assistant filed; the note is the new wording.",
-    "held_declined": "The person declined something the assistant had held for them.",
+    "held_declined": "The person declined a change the assistant had held for them: that change was the mistake. The "
+    "note below names the change they declined, not what they want; find in the input what the change should have "
+    "been.",
     "edited": "The person changed a field the assistant had set.",
     "no_reply_needed": "The person said no reply was owed for a message the assistant added a reply for.",
     "missed": "The person said the assistant missed something; the note is their sentence, and no run is named.",
@@ -251,7 +255,12 @@ def reach_misses_correction(reader: Any, request_data: Mapping[str, Any], op: An
     if not reach.task_kinds:
         return None
     corrected = corrected_task(reader, signal.data)
-    if corrected is None or corrected in reach.task_kinds:
+    if corrected is None:
+        return (
+            "no run of the assistant made the corrected work, so name no kinds of work: leave applies_to.task_kinds "
+            "empty so it reaches every kind of work"
+        )
+    if corrected in reach.task_kinds:
         return None
     return (
         f'this comes from a correction of "{corrected}" work, so applies_to.task_kinds must include "{corrected}" '
@@ -532,6 +541,11 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
             f'The work corrected is the kind of work "{corrected}": a lesson that names kinds of work in '
             "applies_to.task_kinds includes it."
         )
+    else:
+        parts.append(
+            "No run of the assistant made the work corrected, so a lesson leaves applies_to.task_kinds empty and "
+            "reaches every kind of work."
+        )
 
     records = _record_ids(store, data, changeset)
     items = [_shown(store, k, i) for k, i in records[:12]]
@@ -555,7 +569,9 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     if note and data["kind"] in ("sent_back", "draft_edited", "answered_assistant", "missed"):
         correction.append(f"<note>\n{note}\n</note>")
     elif note:
-        correction.append(f'<untrusted source="the note">\n{_marked(_cut(note, limit))}\n</untrusted>')
+        # A declined change's note is the change's own description, not words the person wrote.
+        source = "the change they declined" if data["kind"] == "held_declined" else "the note"
+        correction.append(f'<untrusted source="{source}">\n{_marked(_cut(note, limit))}\n</untrusted>')
     people = People(store, cfg)
     named = [i for i in data.get("refs") or [] if kind_of_id(store.plugins.records, i) == "person"]
     if named:

@@ -628,3 +628,40 @@ def test_learning_from_the_persons_answer_to_that_question_asks_nothing_more(env
     asked = scripted(ask("me"), NOTHING)
     run_learning(env, again.id)
     assert len(asked) == 2 and "already answered" in asked[1].request
+
+
+def test_nothing_learned_from_a_send_back_of_an_answer_that_recorded_nothing_goes_back_once(env):
+    ws, cfg, store = env
+    _, cs_id = read(env, "Yes, Friday works. I'll have it ready then.", NOTHING)
+    send_back(store, cs_id, "We were discussing the revised proposal. 'It' means that proposal.", now=NOW)
+    (queued,) = learning(store)
+    asked = scripted(NOTHING)
+    run_learning(env, queued.id)
+    assert len(asked) == 2 and "missed something" in asked[1].request
+
+
+def test_nothing_learned_from_a_send_back_of_an_answer_that_recorded_something_stands(env):
+    ws, cfg, store = env
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Typo in the title.", now=NOW)
+    (queued,) = learning(store)
+    asked = scripted(NOTHING)
+    run_learning(env, queued.id)
+    assert len(asked) == 1
+
+
+def test_a_lesson_from_a_correction_no_run_made_names_no_kind_of_work(env):
+    ws, cfg, store = env
+    with store.transaction() as tx:
+        owner = [{"person": person("Editor")["id"]}]
+        action = tx.create(
+            "action", {"text": "Prepare the display boards", "status": "open", "owners": owner}, _TEST
+        ).id
+    signal(store, "dropped", [action], note="I called that work off. Stop chasing them for it.")
+    (queued,) = learning(store)
+    narrow = lesson_answer("I called that work off", applies_to={"task_kinds": ["follow-on"]})
+    everywhere = lesson_answer("I called that work off")
+    asked = scripted(narrow, everywhere)
+    run_learning(env, queued.id)
+    assert "No run of the assistant made the work corrected" in asked[0].request
+    assert len(asked) == 2 and "name no kinds of work" in asked[1].request, "the answer went back once"

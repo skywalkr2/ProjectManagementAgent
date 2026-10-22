@@ -927,6 +927,9 @@ is marked *designed*, with the phase.
 - Mail from someone who owes an open promise, sharing one of its longer words, answered with no op on that promise,
   goes back once to say what it means for it, news that it doesn't answer it included (`owner-mail-unanswered`,
   *built*). This covers a reply that quotes no history, which `thread-promise-unanswered` can't link.
+- The sender's own promise ("I'll send it Friday"), recorded as their action and owed to nobody, goes back once naming
+  the people the mail went to; mail handed in with no To line was written to the person (`promise-owed-to-reader`,
+  *built*). The checks that read the From line also read mail handed in with only a From line.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
@@ -2439,6 +2442,12 @@ It returns **at most one** proposal op, "nothing to generalize", or one question
   saying what it understood and what it needs to know. The person's answer is a correction learned from at once, and
   learning from that answer asks nothing more (`learning-question`, *built*:
   `tests/test_learn_correction.py::test_an_unclear_correction_asks_the_person_one_question_and_never_anyone_else`).
+- A correction that says the assistant missed something (the person said so, or sent back an answer that recorded
+  nothing) is never "nothing to generalize": an answer with no op goes back once (`miss-left-unlearned`, *built*).
+- The packet says what each kind of correction means: a declined change was the wrong change, and its note is the
+  change's own label, not the person's words; a drop asks why, from the note or the input. When no run made the
+  corrected work, the packet says so and a lesson names no kind of work (built:
+  `tests/test_learn_correction.py::test_a_lesson_from_a_correction_no_run_made_names_no_kind_of_work`).
 
 The proposal shows on the correction's own card as one line: "Learned: … · Keep · Edit · Discard" (7.18). It stays there
 until the person decides, and never expires. `GET /api/knowledge/learned` gives each correction's line: still being
