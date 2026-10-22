@@ -27,6 +27,26 @@ These were built tonight as described; each needs a yes or a change.
    the app's record of when it ran has a gap covering the due time; otherwise "overdue". The record can't tell sleep from
    closed, so the words don't claim either.
    - Decides: the wording, and whether the app should tell the two apart (the system's sleep events, in phase I).
+5. **Lines that stop the assistant's work wrap to two lines** (B-8 R3). Every other Today line keeps its meta on one
+   line, and the rest is in the inspector. A stopped-work line (a restart waiting, a provider paused) has no inspector,
+   and its second line says why it waits and until when, which the rules require to be visible. So it wraps.
+   - Choices: (a) keep the wrap, since these lines are rare and must say why and until when; (b) cut the line with an
+     ellipsis and give these lines a small inspector holding the full text; (c) shorten the wording so it fits one line
+     at 1280px.
+   - Proposed: (a), unless the reviewer sees these lines often enough to matter.
+6. **What's left of "every kind of AI account works properly"** (B-11c, part 2). Each needs a call before it's built:
+   - Turning thinking off. The service's model listing has no "can turn thinking off" capability, so `thinking: off` is
+     never sent. Options: leave it unsent until the listing says so, or send it to models the person checked by hand
+     in the account test.
+   - Picking a family's newest model. The preset relies on the order of the model list, which the service's reference
+     doesn't promise (the list has no date field). Options: keep the order with a check that warns when it changes, or
+     ask the person to pick once.
+   - Estimates. Character counts undercount the current models by about a third. The exact count is one count request
+     per model, which costs a call each time. A command-line agent also adds its own overhead to every request (one
+     run counted about 12,000 tokens for a two-word request). Options: one count request when an account is checked,
+     kept as a ratio; or a count before each run above a set size.
+   - Moving a saved account to the native adapter, which waits for the Settings screen in B-11b. Options: move it
+     silently on the next start, or ask once with a read-back.
 
 ## For the owner
 
