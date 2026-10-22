@@ -1027,6 +1027,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 177. The outward act and the publisher, designed (2026-10-22; S1b-1, designed)
+
+- **Design 6.12:** every outward act is one `act` record with states (draft, approved, sending, sent, failed, uncertain,
+  stale, withdrawn, undone), each change an op in the ledger; the yes covers a fingerprint of the content, the resolved
+  target, the channel and the template version, so any change makes it stale; only the person's own click approves;
+  recipients who are new, outside or from untrusted text are called out and acknowledged; outside content can't add a
+  recipient or an act; an attempt key and a status check before any retry mean never twice and never "sent" when
+  unsure; a withdrawn sign-in fails plainly; channels are a plugin extension point (`send`, `status`, `undo`), with the
+  core's `copy` and `fake`. The designer's F7 tests are the acceptance. *Not built yet.*
+
 ## 176. Missed, declined and dropped are three signals (2026-10-22; B-12 batch 3, built)
 
 - **What each teaches (6.22):** the learning packet and prompt say it in words. *Missed*: the assistant failed to find

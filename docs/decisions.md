@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: Every outward act is a record with states, and the person's yes covers a fingerprint
+
+- **Decided (main session, designing S1b-1 from design 6.3 and 6.12 and the designer's F7):** kind of rule: a core concept
+  and a new extension point (channels). An `act` record per outward act with explicit states; the yes covers the content,
+  the resolved recipients, the channel and the template version, so any change needs a new yes; an attempt key and a
+  status check with the service before any retry; plugins add channels and may only draft acts.
+- **Why:** the designer's F7 tests (never twice, never "sent" when unsure, stale approvals, a withdrawn sign-in, outside
+  content that tries to change a recipient) need a state the app can resume from, and an approval that names exactly what
+  was approved.
+- **Impact:** design 6.12; a new core record type and ops (outbound tier); the plugin API gains channels (a minor
+  version); Waiting to go out (7.4) and Today lines. Change log: section 177.
+
 ## 2026-10-22: The gate week comes once the core is built
 
 - **Decided (owner):** "the gate week ... is supposed to come to me after we have implemented the core, and there are still

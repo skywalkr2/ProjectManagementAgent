@@ -1286,6 +1286,46 @@ for it, that nothing goes out without the PM approving that exact content, alrea
   concurrency check when it has one (nobody edited since the pull) and the target's own validation. Pulls skip targets with
   unsent drafts and flag any whose remote copy moved on. Scheduled drafts are approved first and sent at their time; editing a
   scheduled draft clears its approval.
+- **The outward act (phase S1b, designed 2026-10-22; change log 177; *not built yet*).** Everything the app does outside the
+  workspace on the person's behalf (a message sent, a reply, an event created or answered, a file written for someone) is
+  one **act**, a core record (`act`): its channel, its target (the recipients as person ids with the address each resolves
+  to, or the calendar and time, or the folder), its content in named parts, and its status. Its states:
+  `draft` (made by the assistant, a plugin or the person) → `approved` (the person's yes on this exact act) → `sending` →
+  `sent`, or `failed` (with why), or `uncertain` (the service's answer was lost); `stale` when anything the yes covered
+  changed; `withdrawn` when the person takes it back; `undone` where the channel can undo. Every change of state is an op
+  through the applier, so each is in the ledger.
+  - **The yes covers a fingerprint.** Approving records a hash of the content, the target as resolved (each recipient's
+    address, not only their id), the channel and the template version the content was rendered from. The publisher
+    recomputes it at send time; any difference, including an address that re-resolved or a template updated since,
+    makes the act `stale`, and it needs a new yes. Editing the act clears the yes.
+  - **Only the person approves.** Act ops are outbound tier: never applied automatically, never by a rule, never from an
+    input; `act.approve` comes only from the person's own click on that act. The assistant and plugins may only draft.
+  - **Recipients are called out.** Before the yes, the act shows each recipient who is new (never written to before),
+    outside the workspace's people, or taken from untrusted text, and the yes acknowledges each by name. An assistant-drafted
+    act may only address the workspace's known people and the people in the thread it answers; any other address comes from
+    untrusted text and is called out. Content from outside that tries to add a recipient to an act, or to add an act, is
+    refused (an invariant).
+  - **Never twice, never "sent" when unsure.** Before calling the channel, the act moves to `sending` with an attempt key
+    in the same transaction; the channel sends with that key. A clear answer makes it `sent` (with the service's id) or
+    `failed`. A timeout, a lost connection or a closed lid leaves it `sending`; on the next start, or the next try, the
+    publisher first asks the channel what happened to that key. Sent: `sent`. Not there: back to `approved`, so it can go
+    when the person says (never on its own after a restart). A channel that can't say: `uncertain`, and Today asks the
+    person to look ("Check the Sent folder for the message to Ana"), with **It was sent** and **Send it again**.
+  - **A withdrawn sign-in stops it plainly:** the act is `failed` with "Sign in to <account> again", and the sign-in's Today
+    line says so; nothing retries in a loop.
+  - **The name check:** `outward.check_outgoing` runs on every part before the yes is offered and again at send.
+  - **Channels** are an extension point (plugin API): a channel declares what it can do (`send`, `status` by attempt key,
+    `undo`, the target kinds it takes) and is called only by the publisher. The core ships `copy` (the person copies the
+    approved text; Mark sent makes it `sent`, as Copy works today) and `fake` (for tests). Mail and calendar acts are the
+    mail add-on's channels (S1b-2).
+  - **Where the person sees it:** Waiting to go out (7.4) lists acts by state, each with its exact content and target,
+    the callouts and one primary (Approve and send; a send confirms, 7.1); Today has one line per act that is `failed`,
+    `uncertain` or `stale`, starting with the verb.
+  - **The named tests (designer, F7, 2026-10-19):** the exact approved content and recipients go out; a yes goes stale when
+    the draft, a recipient's address or the template changes; a timeout, retry or restart never sends twice; an uncertain
+    answer shows as uncertain, never as sent; a withdrawn sign-in stops the act plainly; outside content that tries to
+    change a recipient or add an act is refused; a closed lid or lost network mid-send is checked with the service before
+    any retry; a yes doesn't survive a restart that changed the act's inputs.
 - Change classification for the review list: real change, order only, layout or format only, columns changed, text the target
   doesn't show. Never show an empty "+0 −0" draft.
 - **The send step refuses the assistant's name** (the owner's lesson from running, 2026-10-20; `engine/outward.py`): content
