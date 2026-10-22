@@ -99,6 +99,11 @@ Built keys, with defaults:
   number, which the rules then offer for that person's record as a held `person.contact` when the answer didn't (6.7).
   **Built (B-10):** `tests/test_signature_contact.py`.
 - `project.completed_status`: the project status that means a project is finished (default `Done`), picked from the project status list on screen. Projects with it are listed under Completed at the end of the Projects table and count as completed in the project record; nothing is removed (7.13). Live.
+- `project.side_words`: `personal` and `business`, each a list of words or phrases (empty by default) that place an item
+  on a side when the people it names don't (6.32). With a business set, an item's text and quote are matched as whole
+  words, whatever the case, against each side's words: these and the names of the projects on that side. Words of exactly
+  one side file it there; words of both sides, or none, leave it for the "Which side?" line. Unused with no business.
+  **Built (S1-4):** `tests/test_sides.py`.
 - `our_accounts`: the names this app uses on watched sources (its own publishes). A watched change by one of them is
   marked `by_us` (6.4, 6.5). Live.
 - `user.accounts`: the person's own names on watched sources. A change by one of them is the person's own work

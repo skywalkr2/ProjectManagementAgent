@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 169. Filing by an item's words when its people don't place it (2026-10-22; S1-4, built)
+
+- With a business set, an item that names no project and whose people don't place it (people on both sides, people not
+  known, or people who disagree) is filed by its words: its text and quote, matched as whole words whatever the case,
+  against each side's words, the names of the projects on that side and the new setting
+  `workspace.project.side_words` (`personal` and `business` lists, empty by default, demo values in both workspaces).
+  Words of exactly one side file it under the one project they name, else the side's top project; words of both sides
+  or of neither leave it for the one batched "Which side?" line. People that place an item still win, and a person with
+  no business is never placed by words. Design 6.32, 4.1. Built: `tests/test_sides.py` (the `words` tests and
+  `::test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks_which_side_once`).
+
 ## 168. The first run says what it reads, and what it didn't (2026-10-22; S1-3, built)
 
 - The walkthrough's first result lists what is read, one row per source: before the Start, the account, the folder and

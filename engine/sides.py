@@ -4,10 +4,14 @@
 parent chain; a person is on a side, both or neither by their own record; an item is on the side of the project it is
 filed under. Filing by people (`file_by_people`) gives an item that names no project the side's top project when every
 person it names, and the one it came from, are on one side; people on both sides, and people not known, don't decide.
+When the people don't place an item and there is a business, its words may: the item's text and quote, matched as whole
+words whatever their case, against each side's words (the names of the projects on that side and the configured
+`project.side_words`); words of exactly one side file it there, under the one project they name, else the side's top.
 Reads only, except `make_personal` and `set_business`, which write the one project each side needs."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -136,20 +140,72 @@ def _named(op: Any) -> list[str]:
     return []
 
 
+def _phrase(words: str) -> re.Pattern[str] | None:
+    """A pattern that finds the words as a whole word or phrase, whatever the case and the spacing between them."""
+    parts = words.split()
+    if not parts:
+        return None
+    return re.compile(r"(?<!\w)" + r"\s+".join(re.escape(p) for p in parts) + r"(?!\w)", re.IGNORECASE)
+
+
+def _words_of(op: Any) -> str:
+    """What an item says that its words are read from: its text (or title and detail) and the quote it rests on."""
+    if isinstance(op, QuestionAddOp):
+        parts = [op.title, op.text]
+    else:
+        parts = [op.text, getattr(getattr(op, "evidence", None), "quote", "")]
+    return "\n".join(p for p in parts if p)
+
+
+def _side_words(view: Any, cfg: Any) -> dict[Side, list[tuple[re.Pattern[str], str | None]]]:
+    """For each side, the patterns that place an item on it, each with the project it names (none for a configured
+    word), in order: the names of the projects on that side, then the configured words."""
+    configured = cfg.workspace.project.side_words
+    found: dict[Side, list[tuple[re.Pattern[str], str | None]]] = {"personal": [], "business": []}
+    for project in view.list("project"):
+        side = side_of_project(view, cfg, project.id)
+        if side and (pattern := _phrase(str(project.data.get("name") or ""))):
+            found[side].append((pattern, project.id))
+    for side, words in (("personal", configured.personal), ("business", configured.business)):
+        found[side] += [(pattern, None) for w in words if (pattern := _phrase(w))]
+    return found
+
+
+def file_by_words(
+    op: Any, view: Any, cfg: Any, words: dict[Side, list[tuple[re.Pattern[str], str | None]]] | None = None
+) -> str | None:
+    """The project an item's words place it under, none when they don't: words of exactly one side give that side's top
+    project, or the one project of that side the words name; words of both sides, or of neither, decide nothing."""
+    text = _words_of(op)
+    matched: dict[Side, list[str | None]] = {}
+    for side, patterns in (words or _side_words(view, cfg)).items():
+        hits = [project for pattern, project in patterns if pattern.search(text)]
+        if hits:
+            matched[side] = hits
+    if len(matched) != 1:
+        return None
+    side, hits = next(iter(matched.items()))
+    top = personal_project(view, cfg) if side == "personal" else business_project(view, cfg)
+    named = {h for h in hits if h}
+    return next(iter(named)) if len(named) == 1 else top
+
+
 def file_by_people(ops: list[Any], view: Any, cfg: Any, people: Any, sender: str | None) -> list[Any]:
     """The ops with every new action, question, fact or note that names no project filed under a side's top project.
     The side is the one every deciding person is on (the people the op names and the input's sender, when a known
     person; those on both sides and those not known don't decide). With no business set an unplaced item goes to the
     personal project when that is the only top-level project (a workspace tracking other work without naming a business
-    keeps its unfiled items for the person to place); with one, an item whose people don't agree, or don't say, stays
-    unfiled for the person to place. A changeset that also proposes a new project is left as it is: adding that project
-    files what the same input made with no project under it.
+    keeps its unfiled items for the person to place); with one, an item whose people don't agree, or don't say, is filed
+    by its words (`file_by_words`) when those place it, else stays unfiled for the person to place. A changeset that
+    also proposes a new project is left as it is: adding that project files what the same input made with no project
+    under it.
     The same ops always give the same result."""
     personal, business = personal_project(view, cfg), business_project(view, cfg)
     if personal is None and business is None:
         return ops
     if any(isinstance(op, ProjectAddOp) for op in ops):
         return ops
+    words = _side_words(view, cfg) if business is not None else None
     only_personal = business is None and personal is not None and _only_top(view, personal)
     out: list[Any] = []
     for op in ops:
@@ -164,7 +220,7 @@ def file_by_people(ops: list[Any], view: Any, cfg: Any, people: Any, sender: str
         elif len(decided) == 1:
             target = business if decided == {"business"} else personal
         else:
-            target = None
+            target = file_by_words(op, view, cfg, words)
         out.append(op.model_copy(update={"project": target}) if target else op)
     return out
 

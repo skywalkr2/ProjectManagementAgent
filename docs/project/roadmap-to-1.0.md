@@ -911,7 +911,12 @@ the code by the main session),** for S1 before the gate week:
   browser; the app's own lines and the Sort line show under every choice; Follow-ups keeps another person's section
   whole (one message, one Mark sent) while any of its items is on the chosen side
   (`tests/test_sides.py::test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_reported`,
-  `web/src/components/SideFilter.test.tsx`). Left: filing by an item's words (only its people decide today).
+  `web/src/components/SideFilter.test.tsx`). *Filing by words, built:* with a business, an item its people don't place is
+  filed by its text and quote against each side's project names and `workspace.project.side_words`; words of one side
+  place it, words of both or neither still go to the one "Which side?" line
+  (`tests/test_sides.py::test_the_words_of_one_side_file_an_item_there_whatever_their_case_and_only_as_whole_words`,
+  `::test_the_words_of_both_sides_or_of_neither_place_nothing`, `::test_people_who_place_an_item_win_over_its_words`,
+  `::test_a_person_with_no_business_is_never_placed_by_words_and_asked_nothing`, and the week of mail). Left: nothing.
 - [x] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
   were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
   looks complete. (`tests/test_first_promises.py::test_before_the_start_it_names_the_account_the_folders_and_the_day_the_read_goes_back_to`,

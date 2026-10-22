@@ -17,6 +17,7 @@ project:
   completed_status: Done   # the status that means a project is finished, listed under Completed
   personal: PRJ-2   # the project that holds the person's own life
   # business: PRJ-1  # the top project of the person's business or job, when they have one (none here: these workspaces track several projects)
+  side_words: {personal: [grocery run], business: [cider press]}   # words that place an item on a side when its people don't (used with a business)
 plugins:
   enabled: [example, kit]
   actions:

@@ -67,6 +67,21 @@ class UserSettings(ConfigModel):
     )
 
 
+class SideWords(ConfigModel):
+    personal: list[str] = Field(
+        default_factory=list,
+        description="Words or phrases that mean something is about your own life (a family name, a club, a street), "
+        "matched as whole words whatever their case. They place an item only when what it says has words of just "
+        "one side.",
+    )
+    business: list[str] = Field(
+        default_factory=list,
+        description="Words or phrases that mean something is about your business or job (a product, a client, a "
+        "team), matched as whole words whatever their case. They place an item only when what it says has words of "
+        "just one side.",
+    )
+
+
 class ProjectSettings(ConfigModel):
     summary_max_lines: int = Field(
         3,
@@ -94,6 +109,11 @@ class ProjectSettings(ConfigModel):
         "the business side is filed under it, and what can't be placed asks which side it belongs to. Empty means "
         "no business, and everything unplaced goes to the personal project.",
         json_schema_extra={"choices": "projects"},
+    )
+    side_words: SideWords = Field(
+        default_factory=SideWords,
+        description="Words that place an item on a side when the people it names don't: the names of the projects "
+        "on each side always count, and these add to them. Used only when you have a business.",
     )
 
 

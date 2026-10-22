@@ -12,6 +12,9 @@ These were built tonight as described; each needs a yes or a change.
    projects on each side, plus a configured list per side (`workspace.project.side_words`). Words of one side place it;
    words of both, or none, go to the one "Which side?" question. People still win.
    - Decides: whether words should place an item at all, and whether project names alone (no list) would be enough.
+   - Note: projects have no aliases, so only their names are matched; a project with a one-word everyday name
+     ("Launch") would match that word anywhere. A minimum of two words for a project name to count, or aliases on
+     projects, would answer it.
 2. **When a correction teaches nothing.** The owner decided an unclear correction asks the person one question. Built
    alongside: a correction saying something was missed (or sending back an answer that recorded nothing) always
    teaches or asks; a lesson from a correction no run made names no kind of work.

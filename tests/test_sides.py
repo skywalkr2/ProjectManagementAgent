@@ -29,7 +29,7 @@ from engine.today_queue import queue
 from engine.unfiled import unfiled
 from engine.workspace import Workspace, init_workspace
 from engine.yaml_load import load_yaml
-from tests.conftest import DEMO_B, fixture_records
+from tests.conftest import DEMO_A, DEMO_B, fixture_records
 
 SIDES_FIXTURES = Path(__file__).parent / "fixtures" / "sides"
 WEEK_PEOPLE = load_yaml((SIDES_FIXTURES / "people.yaml").read_text(encoding="utf-8"))["people"]
@@ -273,8 +273,7 @@ def test_a_persons_side_and_relation_are_set_by_record_set_and_refuse_a_side_tha
 # ---- filing by people first -----------------------------------------------------------------------------------------
 
 
-def new_op(kind="action.add", **fields):
-    quote = "said so"
+def new_op(kind="action.add", quote="said so", **fields):
     base = {
         "action.add": {"text": "Call about it"},
         "question.add": {"title": "Which one?"},
@@ -337,6 +336,67 @@ def test_people_who_disagree_leave_it_unfiled_and_people_on_both_sides_or_not_kn
     # People who don't decide don't veto the ones who do.
     decided = new_op(owners=[name_of(a), name_of(BOTH_PERSON), name_of(NO_SIDE_PERSON), "Somebody Nobody Knows"])
     assert filed(env, [decided]) == [PERSONAL_ID]
+
+
+# ---- filing by words when the people don't place an item (S1-4) ---------------------------------------------------
+
+BUSINESS_PROJECT_NAME = PROJECTS[0]["name"]
+PERSONAL_PROJECT_NAME = PROJECTS[1]["name"]
+SIDE_WORDS = DEMO_CONFIG["side_words"]
+
+
+def test_the_demo_workspaces_name_words_for_each_side():
+    for demo in (DEMO_B, DEMO_A):
+        found = load_yaml((demo / "config" / "workspace.yaml").read_text(encoding="utf-8"))["project"]["side_words"]
+        assert found["personal"] and found["business"]
+
+
+def test_the_words_of_one_side_file_an_item_there_whatever_their_case_and_only_as_whole_words(env):
+    business_name, personal_name = BUSINESS_PROJECT_NAME, PERSONAL_PROJECT_NAME
+    ops = [
+        new_op(text=f"Check on {business_name.upper()} this week"),
+        new_op("question.add", to=name_of(NO_SIDE_PERSON), title=f"When is {personal_name.lower()} due?"),
+        new_op("fact", text="It is so.", quote=f"about the {business_name} plan"),
+        new_op("note", text=f"Remember: {SIDE_WORDS['business'][0].title()}."),
+        new_op(text=f"Ask about {SIDE_WORDS['personal'][0]}"),
+    ]
+    assert filed(env, ops) == [BUSINESS_ID, PERSONAL_ID, BUSINESS_ID, BUSINESS_ID, PERSONAL_ID]
+    inside = [new_op(text=f"Check on x{business_name}y"), new_op(text=f"Check on {business_name}s")]
+    assert filed(env, inside) == [None, None]
+
+
+def test_the_words_of_both_sides_or_of_neither_place_nothing(env):
+    both = new_op(text=f"Compare {BUSINESS_PROJECT_NAME} with {SIDE_WORDS['personal'][0]}")
+    both_by_names = new_op(text=f"Compare {BUSINESS_PROJECT_NAME} with {PERSONAL_PROJECT_NAME}")
+    neither = new_op(text="Call about it")
+    assert filed(env, [both, both_by_names, neither]) == [None, None, None]
+
+
+def test_words_that_name_a_project_under_a_side_file_the_item_under_that_project(env):
+    _, _, store = env
+    under = make_project(store, OTHER_BUSINESS_NAME, parent=BUSINESS_ID)
+    assert filed(env, [new_op(text=f"Send the {OTHER_BUSINESS_NAME} report")]) == [under]
+    both_named = new_op(text=f"Send the {OTHER_BUSINESS_NAME} report for {BUSINESS_PROJECT_NAME}")
+    assert filed(env, [both_named]) == [BUSINESS_ID]  # two projects of the side: the side's top
+    assert filed(env, [new_op(text=f"Send the {SIDE_WORDS['business'][0]} report")]) == [BUSINESS_ID]
+
+
+def test_people_who_place_an_item_win_over_its_words(env):
+    a, _ = PERSONAL_PEOPLE
+    x, _ = BUSINESS_PEOPLE
+    about_business = new_op(text=f"Check on {BUSINESS_PROJECT_NAME}", owners=[name_of(a)])
+    assert filed(env, [about_business]) == [PERSONAL_ID]
+    about_personal = new_op(text=f"Ask about {SIDE_WORDS['personal'][0]}")
+    assert filed(env, [about_personal], sender=x["id"]) == [BUSINESS_ID]
+    # People on both sides don't place it, so its words do.
+    assert filed(env, [about_business.model_copy(update={"owners": [name_of(BOTH_PERSON)]})]) == [BUSINESS_ID]
+
+
+def test_a_person_with_no_business_is_never_placed_by_words_and_asked_nothing(env):
+    other = without(env[0], "business")
+    personal_only(env)
+    about_business = new_op(text=f"Check on {BUSINESS_PROJECT_NAME} and {SIDE_WORDS['business'][0]}")
+    assert filed(env, [about_business], cfg=other) == [PERSONAL_ID]  # as before: everything unplaced is personal
 
 
 def test_with_no_business_set_what_has_no_project_goes_to_personal_whoever_it_names(env):
@@ -402,10 +462,18 @@ def test_the_question_that_asks_who_owns_an_action_sits_under_the_actions_projec
 
 def representative_week() -> list[dict]:
     """The 24 messages take about two seconds each run, so the runs use ten: every message from someone on both
-    sides, three from the business and two personal ones, in the order they came."""
+    sides, three from the business and two personal ones, in the order they came; then one more from someone on
+    both sides whose last line names the business's project, which its words place there."""
     first = {side: [m for m in WEEK["emails"] if m["side"] == side] for side in ("business", "personal", "unclear")}
     chosen = {m["id"] for m in [*first["unclear"], *first["business"][:3], *first["personal"][:2]]}
-    return [m for m in WEEK["emails"] if m["id"] in chosen]
+    by_words = {
+        "id": "mail-by-words",
+        "from": first["unclear"][0]["from"],
+        "subject": "A question about the plan",
+        "side": "business",
+        "body": f"Hi Robin,\nCould you send the latest numbers?\nThey are for {BUSINESS_PROJECT_NAME}.",
+    }
+    return [*(m for m in WEEK["emails"] if m["id"] in chosen), by_words]
 
 
 def mail_text(mail: dict) -> str:
@@ -452,6 +520,9 @@ def test_a_week_of_mail_for_a_person_with_a_business_is_filed_by_people_and_asks
     home = {"business": BUSINESS_ID, "personal": PERSONAL_ID, "unclear": None}
     week = representative_week()
     assert projects == {m["id"]: home[m["side"]] for m in week}
+    from_both_sides = {m["from"] for m in week if m["side"] == "unclear"}
+    by_words = [m["id"] for m in week if m["from"] in from_both_sides and projects[m["id"]] is not None]
+    assert by_words == ["mail-by-words"]  # its people sit on both sides, so its words placed it under the business
     asks = [line for line in lines if line.kind == "unfiled"]
     unclear = sum(m["side"] == "unclear" for m in week)
     assert (
