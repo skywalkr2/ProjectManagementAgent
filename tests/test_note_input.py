@@ -19,6 +19,7 @@ from engine.evaluate import load_cases
 from engine.intake import NOTE_ROUTES, REPORTED_ROUTES, is_bare_confirmation, is_reported_note, note_as_input
 from engine.names import People
 from engine.packet import build
+from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_A, DEMO_B, fixture_records, without_first_go
 
@@ -241,6 +242,7 @@ def test_every_route_a_note_can_be_typed_on_has_its_words_for_the_assistant():
         "answered_for",
         "change_requested",
         "missed_one",
+        "meeting_capture",
     }
 
 
@@ -340,6 +342,14 @@ def type_on(client, base, worker, route: str) -> tuple[str, str | None]:
     action = actions[0]["id"]
     if route == "missed_one":
         return client.post(f"{base}/missed", json={"text": LONG}).json()["request"], None
+    if route == "meeting_capture":
+        with store.transaction() as tx:
+            entry = tx.create(
+                "event",
+                {"title": "Review", "start": "2026-10-19T10:00:00+00:00", "trust": "trusted"},
+                WriteContext("pm", "trusted", "test.note-input"),
+            ).id
+        return client.post(f"{base}/meetings/{entry}/capture", json={"text": LONG}).json()["request"], None
     if route in ("mark_done", "reopened"):
         done = route == "mark_done"
         target = action if done else next(a for a in actions if a.get("status") == "done")["id"]

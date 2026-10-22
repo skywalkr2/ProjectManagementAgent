@@ -4,6 +4,46 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: Prep and people memory are rules; the prep note is the only AI part, a draft on the entry
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings. Prep
+  for a calendar entry and a person's memory are worked out by rules from the records (`engine/meeting_prep.py`,
+  `engine/people_memory.py`), never by AI, and each part carries the words or the record it rests on (the open
+  things carry the exact words they were made from when their record has them). The one AI part is the prep note, a core draft kind
+  `meeting-prep` on a new long-text field `prep` of the calendar entry, so it takes the draft rules unchanged (estimate,
+  the person's go above the configured amount, unreviewed until accepted, a signal when set aside); it is asked for with a
+  button, never on its own. "Last in touch" reads the watched mailboxes' items (the sender and the others on a message
+  matched to people by the rules every screen uses), copied messages and ended entries, because those are the contacts the
+  records hold; "asked by them" is the replies owed to them, since a question has no asker. A person's dates are facts
+  about them with a date word from a setting (`steward.people.date_words`) or a full date still ahead; what matters to
+  them is only what the person kept (never an inference, outside content or what someone else said).
+- **Impact:** design 6.32, 5 (`event` gains `prep` and `captured_at`), 7.7 and 7.14; roadmap S3. Plugin guide regenerated for
+  the new core record fields. No change to scope. Change log: section 193.
+
+## 2026-10-22: Capture after a meeting is a note typed on the entry; its line ends by a mark on the entry
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept. What happened at
+  a meeting is the person's own words handed in through the existing note helper as a new route (`meeting_capture`), so
+  extraction, evidence, review, Undo and the knowledge loop are the ones every note has, and the packet only adds that
+  each item is tied to the entry. The Today line asks for entries with other people on them only, from the end of the
+  entry for `steward.meetings.capture_hours_after`. It goes when the entry's `captured_at` is set, a fixed field only the
+  capture writes: a note that is a bare confirmation, or "nothing to note", makes no request, so a request can't be what
+  ends the line. Saving is not undone from the toast (as with every note, the words are kept); what the assistant made
+  of them is reviewed and undone on its own.
+- **Impact:** design 6.32, 5, 7.7 and 7.14; roadmap S3. Change log: section 193.
+
+## 2026-10-22: A promise gone quiet is its own Today line, apart from the date-based ones
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a setting with a default
+  (`steward.people.quiet_promise_days`, 7; zero is off). The existing promise lines stand for a promise past its day or
+  inside the chase window; this line is for the rest: an open promise to or from someone with no news (news, a notice or a
+  chase) for that many days since it was made or its latest news. It leaves out what already has a line, a promise on hold
+  or with an ending waiting for the person's Keep, a reply owed, a promise made to a third person, the person's own past
+  its day (the overdue line has it), and one from someone the person reports to or only watches (waited on, never
+  chased). The line opens the person's page; the chase buttons stay on the follow-up screens, and snoozing or dismissing it
+  is left until the attention budget decides how dismissals stick.
+- **Impact:** design 6.32 and 7.7; roadmap S3. Change log: section 193.
+
 ## 2026-10-22: The brief is built by rules; the week's goals are a record; the Monday message is a draft kind
 
 - **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings. The

@@ -33,7 +33,8 @@ import { Skeleton } from "../ui/Skeleton";
 import { Parts } from "./Coverage";
 import { TodayEmpty } from "./TodayEmpty";
 import { usePromiseChoices } from "./PromiseLine";
-import { ReminderItems, digestTitle, reminderTitle, useReminderChoices, useReminderNotices } from "./ReminderLine";
+import { ReminderItems, dateAndTime, digestTitle, reminderTitle, useReminderChoices, useReminderNotices } from "./ReminderLine";
+import { CaptureForm } from "./CaptureForm";
 import { ReplyDraft, replyTitle, useReplyChoices } from "./ReplyLine";
 import { sentCheckTitle, useSentCheckChoices } from "./SentCheckLine";
 import { LearnedLine, isLearned } from "./LearnedToday";
@@ -634,6 +635,12 @@ export function useLineTitle(): (line: QueueLine) => string {
         return sentCheckTitle(line, t);
       case "since_yesterday":
         return t("queue.since.title");
+      case "meeting_prep":
+        return t("queue.meeting_prep", { title: line.text ?? "" });
+      case "meeting_capture":
+        return t("queue.meeting_capture", { title: line.text ?? "" });
+      case "quiet_promise":
+        return t("queue.quiet_promise", { name, text: line.text ?? "" });
       case "away":
         return tn("queue.away", line.count);
       default:
@@ -685,6 +692,8 @@ function QueueRow(props: {
   const sentRow = useSentCheckChoices(line);
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null);
   const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
+  // The question of what happened at a meeting opens its box under the row; the cursor goes back to the row when it closes.
+  const [capturing, setCapturing] = useState(false);
 
   const what = titleWords(line.title);
   const title = lineTitle(line);
@@ -945,6 +954,36 @@ function QueueRow(props: {
           primary: { label: t("queue.since.open"), run: () => props.handlers.onOpenView?.("work/since") },
           menu: [],
         };
+      case "meeting_prep": {
+        const names = line.names ?? [];
+        const extra = line.count - names.length;
+        const who = names.length === 0 ? tn("queue.meeting_prep.with_unlisted", line.count) : extra > 0 ? tn("queue.meeting_prep.with_and", extra, { names: names.join(", ") }) : t("queue.meeting_prep.with", { names: names.join(", ") });
+        return {
+          pill: t("queue.pill.meeting_prep"),
+          tone: "neutral",
+          meta: meta(line.at && dateAndTime(line.at), who, (line.open_items ?? 0) > 0 && tn("queue.meeting_prep.open", line.open_items ?? 0)),
+          primary: { label: t("queue.act.prep"), run: () => props.handlers.onOpenRecord?.("event", line.event ?? "") },
+          menu: [],
+        };
+      }
+      case "meeting_capture":
+        return {
+          pill: t("queue.pill.meeting_capture"),
+          tone: "warn",
+          meta: meta(line.at && t("queue.meeting_capture.ended", { when: dateAndTime(line.at) })),
+          primary: { label: t("queue.act.capture"), run: () => setCapturing(true) },
+          menu: [],
+        };
+      case "quiet_promise": {
+        const n = line.waiting_days ?? 0;
+        return {
+          pill: t("queue.pill.quiet_promise"),
+          tone: "warn",
+          meta: meta(t(line.state === "from" ? "queue.quiet_promise.from" : "queue.quiet_promise.to"), tn("queue.quiet_promise.days", n), line.due && t("queue.quiet_promise.due", { date: day(line.due) })),
+          primary: { label: t("queue.act.open_person"), run: () => props.handlers.onOpenRecord?.("person", line.person ?? "") },
+          menu: [],
+        };
+      }
       case "away":
         // A note, not a task: the lines that waited arrive with it, each in its own place, so it has nothing to press.
         return { pill: t("queue.pill.away"), tone: "neutral", meta: undefined, primary: null, menu: [] };
@@ -1030,6 +1069,16 @@ function QueueRow(props: {
     >
       {line.kind === "reminder_digest" && <ReminderItems line={line} />}
       {line.kind === "reminder" && reminderRow.form}
+      {line.kind === "meeting_capture" && capturing && line.event && (
+        <CaptureForm
+          event={line.event}
+          title={line.text ?? ""}
+          onClose={() => {
+            setCapturing(false);
+            ref.current?.focus();
+          }}
+        />
+      )}
       {line.kind === "reply" && (
         <>
           <ReplyDraft line={line} />

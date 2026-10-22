@@ -63,6 +63,12 @@ ROUTES: dict[str, Declared] = {
     "POST /api/actions/{action_id}/hand-over": _to(
         "what the person wants from the work is queued with the request, read as their own note"
     ),
+    "POST /api/meetings/{event_id}/capture": _to(
+        "what happened at a calendar entry is handed in as the person's own note typed on it, through the note helper"
+    ),
+    "POST /api/meetings/{event_id}/prep-note": _to(
+        "what the person wants from the prep note is queued with the request"
+    ),
     "POST /api/brief/message": _to("what the person wants from the week's message is queued with the request"),
     # Local: the text is the person's own record or setting.
     "POST /api/todos": _local(

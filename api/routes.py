@@ -373,7 +373,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         if kind not in shown_kinds():
             raise HTTPException(status_code=404, detail="not found")
         model = store.plugins.records[kind]
-        fixed = set(getattr(model, "fixed_fields", ())) & {"agenda"}
+        fixed = set(getattr(model, "fixed_fields", ())) & {"agenda", "captured_at"}
         texts, refs = long_text_fields(model), dict(ref_fields(model))
         bound = {field: name for field, name, _ in list_fields(model)}
         offered = {r.data["name"]: r.data["values"] for r in store.read().list("value_list")}

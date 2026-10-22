@@ -330,6 +330,14 @@ export const api = {
   askBriefMessage: (body: S["BriefMessageAsk"]) => call<S["HandedOver"]>("POST", "brief/message", body),
   /** The person copied the message: the draft waiting is theirs as it is. */
   briefMessageCopied: () => call<S["Ok"]>("POST", "brief/message/copied"),
+  /** The prep for a calendar entry, by rules: who is coming, what is open with each of them, the last time in touch. */
+  meetingPrep: (entry: string) => call<S["MeetingPrepView"]>("GET", `meetings/${id(entry)}/prep`),
+  /** Write down what happened at an entry, as the person's own words; no words says there is nothing to note. */
+  captureMeeting: (entry: string, text: string) => call<S["MeetingCaptured"]>("POST", `meetings/${id(entry)}/capture`, { text }),
+  /** Ask the assistant to draft a prep note for an entry; it comes back as a draft on the entry's page. */
+  askPrepNote: (entry: string, note?: string) => call<S["HandedOver"]>("POST", `meetings/${id(entry)}/prep-note`, { note: note ?? null }),
+  /** What the records say about one person, each part with the words or record it rests on. */
+  personMemory: (person: string) => call<S["PersonMemoryView"]>("GET", `people/${id(person)}/memory`),
   arrived: () => call<S["InboxView"]>("GET", "today/arrived"),
   checkArrived: () => call<S["InboxCheckView"]>("POST", "today/arrived/check"),
   taskKinds: (kind?: string, record?: string) =>

@@ -33,6 +33,7 @@ from api.data_form_routes import build_data_form_router
 from api.feedback_routes import build_feedback_router
 from api.first_promises_routes import build_first_promises_router
 from api.knowledge_routes import build_knowledge_router
+from api.meeting_routes import build_meeting_router
 from api.notification_routes import build_notification_router
 from api.open_items_routes import build_open_items_router
 from api.pack_routes import build_pack_router
@@ -342,6 +343,7 @@ def create_app(
     inner.include_router(build_reply_router(ws, cfg, store, events, worker))
     inner.include_router(build_action_work_router(ws, cfg, store, events, worker))
     inner.include_router(build_brief_router(ws, cfg, store, events, worker))
+    inner.include_router(build_meeting_router(ws, cfg, store, events, worker))
     inner.include_router(build_calendar_router(ws, cfg, store, events, worker))
     inner.include_router(build_sent_router(cfg, store, events, worker))
     inner.include_router(build_act_router(ws, cfg, store, events, worker))

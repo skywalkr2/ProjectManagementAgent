@@ -57,6 +57,18 @@ def held_endings(changesets: dict[str, dict[str, Any]], live: set[str]) -> set[s
     return found
 
 
+def pending_endings(reader: Any, hidden: frozenset[str] | set[str] = frozenset()) -> set[str]:
+    """The actions an ending waits on for the person's Keep, from the requests still open (`hidden`: requests Today
+    holds back, which leave nothing waiting)."""
+    changesets = {c.id: c.data for c in reader.list("changeset")}
+    live = {
+        str(r.data["changeset"])
+        for r in reader.list("request")
+        if r.data.get("changeset") in changesets and not r.data.get("dismissed") and r.id not in hidden
+    }
+    return held_endings(changesets, live)
+
+
 def late(
     reader: Any, cfg: Any, pm: str | None, today: date, pending: set[str], made: Callable[[str], date | None]
 ) -> list[Late]:
@@ -154,12 +166,6 @@ def waiting_on(store: Any, cfg: Any, today: date, hidden: frozenset[str] | set[s
     from engine.today import zone
 
     reader = store.read()
-    changesets = {c.id: c.data for c in reader.list("changeset")}
-    live = {
-        str(r.data["changeset"])
-        for r in reader.list("request")
-        if r.data.get("changeset") in changesets and not r.data.get("dismissed") and r.id not in hidden
-    }
 
     def made(action_id: str) -> date | None:
         entries = reader.ledger(kind="action", record_id=action_id)
@@ -169,7 +175,7 @@ def waiting_on(store: Any, cfg: Any, today: date, hidden: frozenset[str] | set[s
         at = datetime.fromisoformat(stamp)
         return (at if at.tzinfo else at.replace(tzinfo=UTC)).astimezone(zone(cfg)).date()
 
-    return late(reader, cfg, People(store, cfg).pm, today, held_endings(changesets, live), made)
+    return late(reader, cfg, People(store, cfg).pm, today, pending_endings(reader, hidden), made)
 
 
 def is_follow_up(item: Late) -> bool:

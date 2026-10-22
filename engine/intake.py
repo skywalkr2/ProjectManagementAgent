@@ -120,6 +120,15 @@ NOTE_ROUTES = {
     "answered_for": "recorded the answer of the person the question was asked of",
     "change_requested": "asked for this record to be changed",
     "missed_one": "said the assistant missed something",
+    "meeting_capture": "wrote down what happened at the calendar entry",
+}
+
+#: What a route tells the assistant to do with the note beyond reading it, for the buttons that need it.
+ROUTE_HINTS = {
+    "meeting_capture": (
+        "The note says what happened at the calendar entry in the record. Every action, question or fact it gives came "
+        'out of that meeting: name the entry\'s id in "event" on each, and keep the exact words that justify it.'
+    ),
 }
 
 #: The buttons whose note is the whole point of pressing them, so it is read however short it is.

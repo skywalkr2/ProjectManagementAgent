@@ -177,6 +177,19 @@ TASKS: dict[str, TaskKind] = {
         field="message",
         defaults={"max_output": 2000, "expected_output": 400},
     ),
+    # A note to read before a calendar entry with other people on it, from who is coming and what is open with them
+    # (engine/meeting_prep.py): prose filed as a pending draft of the entry's `prep` text, unreviewed until accepted.
+    "meeting-prep": TaskKind(
+        name="meeting-prep",
+        ops=("text.draft",),
+        prompt="meeting-prep",
+        playbook="meeting-prep",
+        label="Drafting the meeting prep",
+        on="event",
+        output="draft",
+        field="prep",
+        defaults={"max_output": 1500, "expected_output": 350},
+    ),
     "follow-on": TaskKind(
         name="follow-on",
         ops=FOLLOW_ON_OPS,

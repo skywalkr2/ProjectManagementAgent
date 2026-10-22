@@ -6963,6 +6963,64 @@
         "title": "DataLevelAllowed",
         "type": "object"
       },
+      "DatedView": {
+        "description": "A fact about a person that carries a date: `on` the next day it falls on (none when no month and day could be\nread), `yearly` when it comes round every year, with the words it rests on.",
+        "properties": {
+          "fact": {
+            "title": "Fact",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "yearly": {
+            "default": false,
+            "title": "Yearly",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fact",
+          "text"
+        ],
+        "title": "DatedView",
+        "type": "object"
+      },
       "DocumentBlock": {
         "description": "One block of a document panel, drawn by the screens as their own elements (never HTML).",
         "properties": {
@@ -10268,6 +10326,59 @@
         "title": "JobView",
         "type": "object"
       },
+      "KeptView": {
+        "description": "A fact the person kept about someone, with the day it was true as of and the words it rests on.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "fact": {
+            "title": "Fact",
+            "type": "string"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fact",
+          "text"
+        ],
+        "title": "KeptView",
+        "type": "object"
+      },
       "KindView": {
         "description": "What a kind of record holds, for screens that show any record.",
         "properties": {
@@ -11170,6 +11281,44 @@
         "title": "LearnedView",
         "type": "object"
       },
+      "LeftOpenView": {
+        "description": "The last entry before this one that a person was on, `on` the day it ended, with what is still open on it.",
+        "properties": {
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "untrusted": {
+            "default": false,
+            "title": "Untrusted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "event",
+          "title",
+          "on",
+          "items"
+        ],
+        "title": "LeftOpenView",
+        "type": "object"
+      },
       "LeftOutView": {
         "description": "Something that went in the same first message as what a nudge lists and was answered or done since: the nudge\nleaves it out, and the screen says so above the box (\"answered Oct 12, left out\").",
         "properties": {
@@ -11803,6 +11952,45 @@
         "title": "MeetingAdded",
         "type": "object"
       },
+      "MeetingCaptureIn": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "default": "",
+            "description": "What happened at the entry, in the person's own words; empty says there is nothing to note.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "title": "MeetingCaptureIn",
+        "type": "object"
+      },
+      "MeetingCaptured": {
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The request queued to read the words, none when there were none or only a bare confirmation.",
+            "title": "Request"
+          }
+        },
+        "required": [
+          "captured_at"
+        ],
+        "title": "MeetingCaptured",
+        "type": "object"
+      },
       "MeetingIn": {
         "properties": {
           "day": {
@@ -11833,6 +12021,94 @@
           "day"
         ],
         "title": "MeetingIn",
+        "type": "object"
+      },
+      "MeetingPrepView": {
+        "description": "The prep for one calendar entry (GET /api/meetings/{id}/prep), worked out by rules: who is coming, what is open\nwith each of them and the last time in touch. `over` says the entry has ended; `captured_at` is when what happened\nwas written down.",
+        "properties": {
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "coming": {
+            "items": {
+              "$ref": "#/components/schemas/PrepGuestView"
+            },
+            "title": "Coming",
+            "type": "array"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "note": {
+            "$ref": "#/components/schemas/PrepNoteView"
+          },
+          "over": {
+            "default": false,
+            "title": "Over",
+            "type": "boolean"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonPrepView"
+            },
+            "title": "People",
+            "type": "array"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "untrusted": {
+            "default": false,
+            "title": "Untrusted",
+            "type": "boolean"
+          },
+          "where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Where"
+          }
+        },
+        "required": [
+          "event",
+          "title",
+          "start",
+          "coming",
+          "people",
+          "note"
+        ],
+        "title": "MeetingPrepView",
         "type": "object"
       },
       "MissedIn": {
@@ -13137,6 +13413,97 @@
           "owners"
         ],
         "title": "OpenActionView",
+        "type": "object"
+      },
+      "OpenItemView": {
+        "description": "One thing open with a person (design 6.32). `kind`: promised_to (the person promised it to them), promised_by\n(they promised it to the person), asked_of (a question to them), asked_by (a reply the person owes them) or\nleft_open (tied to the last entry with them). `quote` is the exact words it was made from, when the record has\nthem, and `source` the input they came from. `quiet` is the days with no news.",
+        "properties": {
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "promised_to",
+              "promised_by",
+              "asked_of",
+              "asked_by",
+              "left_open"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "quiet": {
+            "default": 0,
+            "title": "Quiet",
+            "type": "integer"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "record": {
+            "enum": [
+              "action",
+              "question"
+            ],
+            "title": "Record",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "record",
+          "id",
+          "text"
+        ],
+        "title": "OpenItemView",
         "type": "object"
       },
       "OpenItemsView": {
@@ -14613,6 +14980,87 @@
         "title": "PersonIn",
         "type": "object"
       },
+      "PersonMemoryView": {
+        "description": "What the records say about one person (GET /api/people/{id}/memory), by rules, each part with the words or the\nrecord it rests on: the last time in touch, what they asked of the person and the person of them, the promises both\nways, how they like to be reached, their dates and what matters to them.",
+        "properties": {
+          "asked_by": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Asked By",
+            "type": "array"
+          },
+          "asked_of": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Asked Of",
+            "type": "array"
+          },
+          "dates": {
+            "items": {
+              "$ref": "#/components/schemas/DatedView"
+            },
+            "title": "Dates",
+            "type": "array"
+          },
+          "last_in_touch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TouchView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "matters": {
+            "items": {
+              "$ref": "#/components/schemas/KeptView"
+            },
+            "title": "Matters",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "promised_by": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Promised By",
+            "type": "array"
+          },
+          "promised_to": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Promised To",
+            "type": "array"
+          },
+          "reach": {
+            "$ref": "#/components/schemas/ReachView"
+          }
+        },
+        "required": [
+          "person",
+          "name",
+          "asked_of",
+          "asked_by",
+          "promised_to",
+          "promised_by",
+          "reach",
+          "dates",
+          "matters"
+        ],
+        "title": "PersonMemoryView",
+        "type": "object"
+      },
       "PersonPatch": {
         "properties": {
           "aliases": {
@@ -14693,6 +15141,82 @@
           }
         },
         "title": "PersonPatch",
+        "type": "object"
+      },
+      "PersonPrepView": {
+        "description": "One person coming: what is open with them, `more` counting what the cap left out, the last time in touch and what\nthe last entry with them left open.",
+        "properties": {
+          "asked_by": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Asked By",
+            "type": "array"
+          },
+          "asked_of": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Asked Of",
+            "type": "array"
+          },
+          "last_in_touch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TouchView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "left_open": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeftOpenView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "more": {
+            "default": 0,
+            "title": "More",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "promised_by": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Promised By",
+            "type": "array"
+          },
+          "promised_to": {
+            "items": {
+              "$ref": "#/components/schemas/OpenItemView"
+            },
+            "title": "Promised To",
+            "type": "array"
+          }
+        },
+        "required": [
+          "person",
+          "name",
+          "asked_of",
+          "asked_by",
+          "promised_to",
+          "promised_by"
+        ],
+        "title": "PersonPrepView",
         "type": "object"
       },
       "PersonView": {
@@ -14868,6 +15392,118 @@
           "state"
         ],
         "title": "PluginStatusView",
+        "type": "object"
+      },
+      "PrepGuestView": {
+        "description": "Someone else on an entry: their person id and name when the workspace knows them, else the name or address as the\ncalendar wrote it, and their answer to the invitation.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          }
+        },
+        "title": "PrepGuestView",
+        "type": "object"
+      },
+      "PrepNoteAsk": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the person wants from the note, in their own words.",
+            "title": "Note"
+          }
+        },
+        "title": "PrepNoteAsk",
+        "type": "object"
+      },
+      "PrepNoteView": {
+        "description": "Where the prep note stands: none, working, needs_go (held for the person's go, about `estimate_usd`), draft (a\ndraft waits for review on the entry's page) or kept.",
+        "properties": {
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate Usd"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request"
+          },
+          "state": {
+            "enum": [
+              "none",
+              "working",
+              "needs_go",
+              "draft",
+              "kept"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "PrepNoteView",
         "type": "object"
       },
       "PriorityLineView": {
@@ -17395,7 +18031,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `account_move` is a saved account\n(`account`, its service's name in `subject`) that uses the generic connection to a service that has its own (the\nread-back is GET /api/ai/accounts/{account}/move, Move is POST to it and Not now POST .../move/not-now);\n`model_watch` is news about an account's models (`account`, the tiers in `names`): with `state` newer, a newer model\nof each tier's own family exists (`candidates`, by tier), `usd_per_day` what it would change in cost per day at\nthe current use (none when a price isn't known), `reason` why it isn't moved to on its own (asks, costs_more,\nprice_unknown, check_failed with `count` cases and `check_failed` when the check couldn't finish, or check_cost\nwith the check's `estimate_usd`); Switch is the settings' own switch with its check and Not now is POST\n/api/ai/model-watch/{account}/{state}/not-now; with `state` price, a tier's current model went up in price by\n`usd_per_day`; `model_moved` is a tier (`tier`) moved on its own to a newer model of its family after a check passed\n(the new `account`, the earlier one in `text`, `usd_per_day` the change in cost; Switch back and Keep are the\nswitch routes above); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered \"Not now\"\nabout reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the\nline goes once the account may see the internal level); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,\n`person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick\nwho is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an\naction, each with Undo; nothing is ever sent); `stale` is the person's own open to-dos nobody has touched for\n`ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;\nLook over opens GET /api/open-items narrowed to them); `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side\nthey belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is\nwaiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,\n`waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup\nthat works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup).",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `account_move` is a saved account\n(`account`, its service's name in `subject`) that uses the generic connection to a service that has its own (the\nread-back is GET /api/ai/accounts/{account}/move, Move is POST to it and Not now POST .../move/not-now);\n`model_watch` is news about an account's models (`account`, the tiers in `names`): with `state` newer, a newer model\nof each tier's own family exists (`candidates`, by tier), `usd_per_day` what it would change in cost per day at\nthe current use (none when a price isn't known), `reason` why it isn't moved to on its own (asks, costs_more,\nprice_unknown, check_failed with `count` cases and `check_failed` when the check couldn't finish, or check_cost\nwith the check's `estimate_usd`); Switch is the settings' own switch with its check and Not now is POST\n/api/ai/model-watch/{account}/{state}/not-now; with `state` price, a tier's current model went up in price by\n`usd_per_day`; `model_moved` is a tier (`tier`) moved on its own to a newer model of its family after a check passed\n(the new `account`, the earlier one in `text`, `usd_per_day` the change in cost; Switch back and Keep are the\nswitch routes above); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered \"Not now\"\nabout reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the\nline goes once the account may see the internal level); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,\n`person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick\nwho is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an\naction, each with Undo; nothing is ever sent); `stale` is the person's own open to-dos nobody has touched for\n`ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;\nLook over opens GET /api/open-items narrowed to them); `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side\nthey belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is\nwaiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,\n`waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup\nthat works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup);\n`meeting_prep` is a calendar entry with other people on it that starts soon (`event`, its title in `text`, `at`\nwhen it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many things\nare open with them; it opens GET /api/meetings/{id}/prep and goes when the entry starts); `meeting_capture` is an\nentry with other people on it that has ended with nothing written down (`event`, `text`, `at` when it ended; it\ngoes when the person writes down what happened or says there is nothing to note, POST /api/meetings/{id}/capture);\n`quiet_promise` is an open promise with no news for `steward.people.quiet_promise_days` (its id in `actions`, its\nwords in `text`, `person` to follow up with, `state` to when the person promised it to them and from when they\npromised it to the person, `due` and `waiting_days` with no news; GET /api/people/{id}/memory says what else is\nopen with them).",
         "properties": {
           "account": {
             "anyOf": [
@@ -17582,6 +18218,18 @@
             "description": "The estimated cost of everything the line starts (first_go, catch_up_go, intake_go), when any has a price.",
             "title": "Estimate Usd"
           },
+          "event": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a meeting_prep or meeting_capture line: the id of the calendar entry; its page is GET /api/meetings/{id}/prep and what happened at it is written down with POST /api/meetings/{id}/capture.",
+            "title": "Event"
+          },
           "expired": {
             "anyOf": [
               {
@@ -17680,7 +18328,10 @@
               "unfiled",
               "moved",
               "since_yesterday",
-              "away"
+              "away",
+              "meeting_prep",
+              "meeting_capture",
+              "quiet_promise"
             ],
             "title": "Kind",
             "type": "string"
@@ -17775,6 +18426,18 @@
             ],
             "description": "The held item's index in its changeset.",
             "title": "Op"
+          },
+          "open_items": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a meeting_prep line: how many things are open with the people coming.",
+            "title": "Open Items"
           },
           "origins": {
             "additionalProperties": {
@@ -18091,7 +18754,9 @@
                   "overdue",
                   "which_side",
                   "newer",
-                  "price"
+                  "price",
+                  "to",
+                  "from"
                 ],
                 "type": "string"
               },
@@ -18099,7 +18764,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them.",
+            "description": "For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person).",
             "title": "State"
           },
           "subject": {
@@ -18241,6 +18906,42 @@
           "count"
         ],
         "title": "QueueLineView",
+        "type": "object"
+      },
+      "ReachView": {
+        "description": "How a person likes to be reached: the ways kept on their record (channel to address), and the channel of the mail\nthey last wrote from, with the input it was read from.",
+        "properties": {
+          "kept": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Kept",
+            "type": "object"
+          },
+          "replies_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies On"
+          },
+          "replies_record": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies Record"
+          }
+        },
+        "title": "ReachView",
         "type": "object"
       },
       "ReadVersion": {
@@ -23515,6 +24216,69 @@
           "coming"
         ],
         "title": "TopPrioritiesView",
+        "type": "object"
+      },
+      "TouchView": {
+        "description": "The last contact with a person: `kind` from (mail from them), to (mail or a copied message to them) or met (an\nentry they were on). `record_kind` and `record` name the record that shows it, `subject` its title and `untrusted`\nsays that title came from outside.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "from",
+              "to",
+              "met"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "on": {
+            "format": "date",
+            "title": "On",
+            "type": "string"
+          },
+          "record": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record"
+          },
+          "record_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Kind"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "untrusted": {
+            "default": false,
+            "title": "Untrusted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "on"
+        ],
+        "title": "TouchView",
         "type": "object"
       },
       "UnconfirmIn": {
@@ -30200,6 +30964,146 @@
         "summary": "Me Save"
       }
     },
+    "/api/meetings/{event_id}/capture": {
+      "post": {
+        "description": "Write down what happened at a calendar entry, as the person's own words typed on it, or say there is nothing\nto note. The words are read like any note; either way the entry's line on Today goes.",
+        "operationId": "capture_api_meetings__event_id__capture_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingCaptureIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingCaptured"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Capture"
+      }
+    },
+    "/api/meetings/{event_id}/prep": {
+      "get": {
+        "description": "The prep for a calendar entry, by rules: who is coming, what is open with each of them, the last time in\ntouch and what the last entry with them left open.",
+        "operationId": "get_prep_api_meetings__event_id__prep_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingPrepView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Prep"
+      }
+    },
+    "/api/meetings/{event_id}/prep-note": {
+      "post": {
+        "description": "Ask the assistant to draft a prep note for a calendar entry. It is filed as a draft on the entry's page,\nestimated and held for the person's go like any draft.",
+        "operationId": "ask_for_prep_note_api_meetings__event_id__prep_note_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepNoteAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandedOver"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask For Prep Note"
+      }
+    },
     "/api/missed": {
       "post": {
         "description": "\"Missed one\" (design 6.32): the person says in a plain sentence what the assistant missed. Records a missed\ncorrection for them and hands the words in as their own note, marked as a miss, so the run adds what was\nmissed. The request's own changes have their own Undo.",
@@ -31150,6 +32054,46 @@
           }
         },
         "summary": "Add Person"
+      }
+    },
+    "/api/people/{person_id}/memory": {
+      "get": {
+        "description": "What the records say about one person, by rules, each part with the words or the record it rests on.",
+        "operationId": "get_memory_api_people__person_id__memory_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonMemoryView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Memory"
       }
     },
     "/api/people/{pid}": {

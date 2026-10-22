@@ -16,7 +16,9 @@ from typing import Any
 from engine import (
     endings,
     held_ask,
+    meeting_prep,
     move_groups,
+    people_memory,
     promises,
     release_hours,
     reminder_lines,
@@ -151,6 +153,14 @@ class Line:
     are past their date and `due` the oldest of those, `waiting_days` the longest wait, `replies` the most replies
     without an answer any of its promises has had, which the line says), opening the one message to them. A promise
     line says its `replies` the same way.
+    meeting_prep (a calendar entry with other people on it that starts soon: its id in `event`, its title in `text`,
+    `at` when it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many
+    things are open with them; it opens the entry's page and goes when the entry starts), meeting_capture (an entry
+    with other people on it that has ended and has nothing written down: `event`, `text` and `at` when it ended; it goes
+    when the person writes down what happened or says there is nothing to note), quiet_promise (an open promise that
+    has had no news for `steward.people.quiet_promise_days`: its id in `actions`, its words in `text`, `person` to
+    follow up with, `state` to when the person promised it to them or from when they promised it to the person, `due`
+    its day when it has one and `waiting_days` the days with no news).
     backup (no backup that works: `state` is unset for none set up, never for none yet, failed for a try that failed and
     none before it, overdue for a last one older than `storage.backups.every_hours` twice over, whose age in hours is
     `age_hours`).
@@ -228,6 +238,8 @@ class Line:
     overdue: int = 0
     replies: int = 0
     age_hours: float | None = None
+    event: str | None = None
+    open_items: int | None = None
     since: str = ""
 
 
@@ -854,6 +866,57 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # Meetings: the prep before an entry with other people on it, and the question of what happened after it ends.
+    for coming in meeting_prep.prep_lines(store, cfg, now):
+        lines.append(
+            Line(
+                key=f"meeting_prep:{coming.event}",
+                group="review",
+                kind="meeting_prep",
+                count=coming.others,
+                text=coming.title,
+                event=coming.event,
+                names=[people.name(p) for p in coming.people],
+                open_items=coming.open,
+                at=coming.start.astimezone(here).isoformat(),
+                untrusted=coming.untrusted,
+                since=coming.start.isoformat(),
+            )
+        )
+    for ended in meeting_prep.capture_lines(store, cfg, now):
+        lines.append(
+            Line(
+                key=f"meeting_capture:{ended.event}",
+                group="review",
+                kind="meeting_capture",
+                count=ended.others,
+                text=ended.title,
+                event=ended.event,
+                names=[people.name(p) for p in ended.people],
+                at=ended.end.astimezone(here).isoformat(),
+                untrusted=ended.untrusted,
+                since=ended.end.isoformat(),
+            )
+        )
+
+    # A promise to or from someone with no news for a while, that has no line of its own already.
+    for gone in people_memory.quiet_promises(store, cfg, today, skip=on_a_line, hidden=hidden):
+        lines.append(
+            Line(
+                key=f"quiet_promise:{gone.action}",
+                group="send",
+                kind="quiet_promise",
+                text=gone.text,
+                person=gone.person,
+                project=gone.project,
+                due=gone.due.isoformat() if gone.due else None,
+                waiting_days=gone.quiet,
+                actions=[gone.action],
+                state=gone.direction,
+                since=gone.since.isoformat(),
+            )
+        )
+
     # A message the person copied that no sent message matched, asked about once, only while a sent folder is read.
     for item in sent_version.unsent(reader, cfg, now):
         lines.append(
@@ -1316,7 +1379,10 @@ _KIND_ORDER = {
     "moved": 6,
     "send": 0,
     "nudge": 1,
+    "quiet_promise": 1.5,
     "escalate": 2,
+    "meeting_prep": 0.5,
+    "meeting_capture": 0.6,
 }
 
 

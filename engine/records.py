@@ -1655,7 +1655,7 @@ class CalendarEntry(Record):
     prefix: ClassVar[str] = "EVT"
     record_label: ClassVar[str] = "calendar entry"
     layout: ClassVar[str | None] = "calendar/{id}"
-    fixed_fields: ClassVar[tuple[str, ...]] = ("agenda",)
+    fixed_fields: ClassVar[tuple[str, ...]] = ("agenda", "captured_at")
 
     title: str = Field(min_length=1, description="What the entry is, in a few words.")
     start: str = Field(
@@ -1715,6 +1715,17 @@ class CalendarEntry(Record):
         ge=0,
         le=40320,
         description="Minutes before the start an alarm rings in the app; 0 rings at the start. None for no alarm.",
+    )
+    captured_at: AwareDatetime | None = Field(
+        None,
+        description="When the person wrote down what happened at it, or said there was nothing to note; the line on "
+        "Today that asks goes once this is set. Set by the screen's capture, never edited.",
+    )
+    prep: Annotated[str | None, LongText("markdown")] = Field(
+        None,
+        description="A note to read before the meeting, when the assistant drafted one at the person's request from "
+        "who is coming and what is open with them. It is long text: a draft waits for the person's review and is "
+        "theirs once they accept it.",
     )
 
     @model_validator(mode="after")

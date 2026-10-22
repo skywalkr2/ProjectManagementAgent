@@ -1215,8 +1215,24 @@ S2. **Time and attention:**
 
 S3. **People and meetings:**
 - [ ] [S3] **Meeting prep and after-meeting capture** for any calendar event, not only a series.
+  **Built so far (S3, change log 193):** for any calendar entry with other people on it, by rules: who is coming (by id,
+  without anyone who declined), what is open with each of them both ways with the exact words it was made from, the last
+  time in touch and what the last entry with them left open, as the entry's page and a Today line
+  `steward.meetings.prep_hours_before` before it starts; an optional prep note as the core draft kind `meeting-prep`
+  (estimated, held for the go, unreviewed until accepted); and after it ends a Today line that opens a note box tied to the
+  entry, whose words are handed in like any note (`engine/meeting_prep.py`, `tests/test_meetings_people.py`,
+  `web/src/components/MeetingPrep.test.tsx`). **Left:** the browser journey (a fictional meeting shows its prep and files
+  its notes) in the end-to-end tests, a capture for an entry nobody else is on, and an undo for "nothing to note".
 - [ ] [S3] **People memory:** last in touch, asked of and by them, what matters to them, how they like to be reached, their
   dates, all with evidence; shown before a meeting, and one line when a promised follow-up has gone quiet.
+  **Built so far (S3, change log 193):** a person's page has What to remember by rules, each part with its evidence: last in
+  touch (their mail, the person's mail to them, a copied message, an ended entry), what is open both ways, how to reach them
+  and the way they last wrote from, their dates (a date word and the next day, or a full date ahead) and the facts the
+  person kept about them; and the Today line "Follow up with <person>: <promise> has gone quiet" after
+  `steward.people.quiet_promise_days` (`engine/people_memory.py`, `tests/test_meetings_people.py`,
+  `web/src/components/MeetingPrep.test.tsx`). **Left:** who asked a question (a question has no asker, so "asked by them"
+  is the replies owed), sending the follow-up from the line, snoozing it, dates from a contact source or in other
+  languages, and the browser journey in the end-to-end tests.
 
 S4. **What arrives, and where it may go:**
 - [ ] [S4] **Dates in documents:** deadlines, renewals, expiries, warranties and bookings become dated facts with a proposed

@@ -1027,6 +1027,27 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 193. Meeting prep, capture after a meeting and people memory (2026-10-22; S3, built in part)
+
+- **Design 6.32 (Promises and people), 7.7 and 7.14:** any calendar entry with other people on it (not only a series'
+  meeting) gets prep by rules: who is coming (by id), what is open with each of them both ways with the exact words it
+  was made from, when they were last in touch and what the last entry with them left open. It is the entry's page and a
+  Today line before it starts. After it ends, a Today line asks what happened; the person's words are handed in as a note
+  typed on the entry, so promises, questions and facts come out through the usual extraction, tied to the entry. A
+  person's page gets **What to remember**: last in touch, what is open both ways, how to reach them (and the way they last
+  wrote from), their dates and what matters to them, each with its evidence. A promise to or from someone with no news for
+  a setting's days is the Today line "Follow up with <person>: <promise> has gone quiet". Left (named in the design):
+  who asked a question, sending a follow-up from the line, snoozing the quiet line, dates from a contact source or in other
+  languages.
+- **New:** `engine/meeting_guests.py`, `engine/meeting_prep.py`, `engine/people_memory.py`; the draft task kind
+  `meeting-prep` with its prompt and guidance; the note route `meeting_capture`; two fields on the calendar entry
+  (`captured_at`, `prep` long text); Today line kinds `meeting_prep`, `meeting_capture` and `quiet_promise` (new fields
+  `event` and `open_items` on the line); routes `GET /api/meetings/{id}/prep`, `POST /api/meetings/{id}/capture`,
+  `POST /api/meetings/{id}/prep-note` and `GET /api/people/{id}/memory`; settings `steward.meetings.*` (prep_hours_before,
+  prep_min_open, capture_hours_after, max_items) and `steward.people.*` (quiet_promise_days, max_facts, date_words), each
+  with a description, a default and demo values in both workspaces.
+- **Built:** `tests/test_meetings_people.py`, `web/src/components/MeetingPrep.test.tsx`.
+
 ## 191. The morning brief, the evening wrap-up and the Monday briefing (2026-10-22; S2, built in part)
 
 - **Design 6.32 (Time) and 7.7:** the brief is built by rules from the records and Today's own lines, as a card at the top

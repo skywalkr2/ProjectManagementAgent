@@ -34,3 +34,12 @@ brief:
   max_lines: 5   # the most lines one section shows; the rest become one line saying how many more
   goals_min: 3   # the fewest goals for the week you confirm
   goals_max: 5   # the most goals for the week
+meetings:
+  prep_hours_before: 24   # the prep for an entry with other people shows on Today this many hours before it starts
+  prep_min_open: 0   # the fewest open things with the people coming that an entry needs for a line on Today; 0 gives every one a line
+  capture_hours_after: 48   # the question of what happened at an entry stays on Today this many hours after it ends
+  max_items: 6   # the most open things the prep shows for each person coming
+people:
+  quiet_promise_days: 7   # a promise to or from someone with no news for this many days gets a line on Today; 0 is off
+  max_facts: 5   # the most facts a person's page shows under what matters to them, and under their dates
+  date_words: [birthday, anniversary]   # words that mark a fact about a person as a date that comes round every year

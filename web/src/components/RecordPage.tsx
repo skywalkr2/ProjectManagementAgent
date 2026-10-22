@@ -21,6 +21,8 @@ import { PersonDrawer } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
 import { AgendaSection } from "./AgendaList";
 import { Attendees } from "./Attendees";
+import { MeetingPrep } from "./MeetingPrep";
+import { PersonMemory } from "./PersonMemory";
 import { useInvitationActs } from "./InvitationActs";
 import { useMessageActs } from "./MessageActs";
 import { ProjectKnows } from "./ProjectKnows";
@@ -149,6 +151,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {kind === "action" && <PromiseWhy action={id} quiet omitOrigin />}
           {kind === "event" && <AgendaSection items={page.data?.agenda ?? []} id="record-agenda" />}
           {kind === "event" && <Attendees fields={data.fields} names={names} />}
+          {kind === "event" && <MeetingPrep entry={id} title={heading} />}
+          {kind === "person" && <PersonMemory person={id} />}
           {page.data && <RecordActivity page={page.data} />}
           {kind === "project" && <ProjectKnows id={id} />}
           {data.long_text.map((field) => (
@@ -213,7 +217,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
 }
 
 /** The fields of a calendar entry the page shows in its own way (its people and its answer), or not at all (its key). */
-const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response", "agenda"]);
+const CALENDAR_LISTED = new Set<string>(["key", "attendees", "organizer", "invitation", "response", "agenda", "captured_at"]);
 
 /** The kinds of record a change can be asked for. */
 const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);

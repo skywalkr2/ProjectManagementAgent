@@ -1609,6 +1609,8 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 | `reminder` | str \| None | `None` | For an entry the engine made as a to-do's reminder: the to-do. The entry follows the reminder: a snooze moves it and a finished, dropped or held to-do removes it. |
 | `alarm_minutes` | int \| None | `None` | Minutes before the start an alarm rings in the app; 0 rings at the start. None for no alarm. |
+| `captured_at` | AwareDatetime \| None | `None` | When the person wrote down what happened at it, or said there was nothing to note; the line on Today that asks goes once this is set. Set by the screen's capture, never edited. |
+| `prep` | str \| None | `None` | A note to read before the meeting, when the assistant drafted one at the person's request from who is coming and what is open with them. It is long text: a draft waits for the person's review and is theirs once they accept it. |
 
 ### `series` (SER-n)
 

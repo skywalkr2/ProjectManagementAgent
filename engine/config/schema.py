@@ -3062,6 +3062,60 @@ class BriefSettings(ConfigModel):
         return self
 
 
+class MeetingSettings(ConfigModel):
+    prep_hours_before: int = Field(
+        24,
+        ge=1,
+        le=168,
+        description="How many hours before a calendar entry with other people on it its prep shows as a line on "
+        "Today: who is coming, what is open with each of them and when you were last in touch. The line goes when "
+        "the entry starts.",
+    )
+    prep_min_open: int = Field(
+        0,
+        ge=0,
+        le=50,
+        description="The fewest open things with the people coming that an entry needs before its prep gets a line "
+        "on Today. Zero gives every entry with other people a line; its page always shows the prep.",
+    )
+    capture_hours_after: int = Field(
+        48,
+        ge=1,
+        le=336,
+        description="How many hours after a calendar entry with other people ends the line asking what happened at it "
+        "stays on Today. It goes at once when you write it down or say there is nothing to note.",
+    )
+    max_items: int = Field(
+        6,
+        ge=1,
+        le=30,
+        description="The most open things the prep shows for each person coming. The rest are counted.",
+    )
+
+
+class PeopleSettings(ConfigModel):
+    quiet_promise_days: int = Field(
+        7,
+        ge=0,
+        le=365,
+        description="A promise to someone, or from someone, with no news for this many days gets a line on Today: "
+        "follow up with them. The days count from when it was made or from its latest news, and a promise already "
+        "on another line, on hold or waiting for your yes is left out. Zero turns the line off.",
+    )
+    max_facts: int = Field(
+        5,
+        ge=1,
+        le=30,
+        description="The most facts a person's page shows under what matters to them, and under their dates.",
+    )
+    date_words: list[str] = Field(
+        default_factory=lambda: ["birthday", "anniversary"],
+        description="Words that mark a fact about a person as a date that comes round every year. A fact about a "
+        "person that has one of these words and a month and day shows under their dates, with the next day it falls "
+        "on.",
+    )
+
+
 class StewardFile(FileModel):
     default_stance: Literal["manage", "alongside", "report_to", "watch"] = Field(
         "alongside",
@@ -3123,6 +3177,16 @@ class StewardFile(FileModel):
         default_factory=BriefSettings,
         description="When the morning brief, the evening wrap-up and the Monday briefing show on Today, and how much "
         "each shows.",
+    )
+    meetings: MeetingSettings = Field(
+        default_factory=MeetingSettings,
+        description="When the prep for a calendar entry with other people, and the question of what happened at it, "
+        "show on Today.",
+    )
+    people: PeopleSettings = Field(
+        default_factory=PeopleSettings,
+        description="What a person's page remembers about them, and when a promise that has gone quiet gets a line "
+        "on Today.",
     )
 
 

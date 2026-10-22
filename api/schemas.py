@@ -2360,7 +2360,16 @@ class QueueLineView(BaseModel):
     they belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is
     waiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,
     `waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup
-    that works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup)."""
+    that works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup);
+    `meeting_prep` is a calendar entry with other people on it that starts soon (`event`, its title in `text`, `at`
+    when it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many things
+    are open with them; it opens GET /api/meetings/{id}/prep and goes when the entry starts); `meeting_capture` is an
+    entry with other people on it that has ended with nothing written down (`event`, `text`, `at` when it ended; it
+    goes when the person writes down what happened or says there is nothing to note, POST /api/meetings/{id}/capture);
+    `quiet_promise` is an open promise with no news for `steward.people.quiet_promise_days` (its id in `actions`, its
+    words in `text`, `person` to follow up with, `state` to when the person promised it to them and from when they
+    promised it to the person, `due` and `waiting_days` with no news; GET /api/people/{id}/memory says what else is
+    open with them)."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -2412,8 +2421,19 @@ class QueueLineView(BaseModel):
         "moved",
         "since_yesterday",
         "away",
+        "meeting_prep",
+        "meeting_capture",
+        "quiet_promise",
     ]
     count: int
+    event: str | None = Field(
+        None,
+        description="For a meeting_prep or meeting_capture line: the id of the calendar entry; its page is GET "
+        "/api/meetings/{id}/prep and what happened at it is written down with POST /api/meetings/{id}/capture.",
+    )
+    open_items: int | None = Field(
+        None, description="For a meeting_prep line: how many things are open with the people coming."
+    )
     overdue: int | None = Field(
         None, description="For a nudge line: how many of its items are past their date; `due` is the oldest of those."
     )
@@ -2506,6 +2526,8 @@ class QueueLineView(BaseModel):
             "which_side",
             "newer",
             "price",
+            "to",
+            "from",
         ]
         | None
     ) = Field(
@@ -2519,7 +2541,8 @@ class QueueLineView(BaseModel):
         "isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a "
         "folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last "
         "one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a "
-        "business is set, so the line asks which side the items belong to, once, for all of them.",
+        "business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise "
+        "line: to (the person promised it to them) or from (they promised it to the person).",
     )
     rules: list[str] = Field(
         default_factory=list, description="For a rule_review line: the ids of the rules flagged, most present first."
@@ -5696,3 +5719,164 @@ class BriefGoalsKept(BaseModel):
 
 class BriefMessageAsk(BaseModel):
     note: str | None = Field(None, description="What the person wants from the message, in their own words.")
+
+
+class OpenItemView(BaseModel):
+    """One thing open with a person (design 6.32). `kind`: promised_to (the person promised it to them), promised_by
+    (they promised it to the person), asked_of (a question to them), asked_by (a reply the person owes them) or
+    left_open (tied to the last entry with them). `quote` is the exact words it was made from, when the record has
+    them, and `source` the input they came from. `quiet` is the days with no news."""
+
+    kind: Literal["promised_to", "promised_by", "asked_of", "asked_by", "left_open"]
+    record: Literal["action", "question"]
+    id: str
+    text: str
+    due: date | None = None
+    quote: str | None = None
+    source: str | None = None
+    quiet: int = 0
+    since: date | None = None
+
+
+class TouchView(BaseModel):
+    """The last contact with a person: `kind` from (mail from them), to (mail or a copied message to them) or met (an
+    entry they were on). `record_kind` and `record` name the record that shows it, `subject` its title and `untrusted`
+    says that title came from outside."""
+
+    kind: Literal["from", "to", "met"]
+    on: date
+    record_kind: str | None = None
+    record: str | None = None
+    subject: str | None = None
+    untrusted: bool = False
+
+
+class PrepGuestView(BaseModel):
+    """Someone else on an entry: their person id and name when the workspace knows them, else the name or address as the
+    calendar wrote it, and their answer to the invitation."""
+
+    person: str | None = None
+    name: str | None = None
+    address: str | None = None
+    response: str | None = None
+
+
+class LeftOpenView(BaseModel):
+    """The last entry before this one that a person was on, `on` the day it ended, with what is still open on it."""
+
+    event: str
+    title: str
+    on: date
+    items: list[OpenItemView]
+    untrusted: bool = False
+
+
+class PersonPrepView(BaseModel):
+    """One person coming: what is open with them, `more` counting what the cap left out, the last time in touch and what
+    the last entry with them left open."""
+
+    person: str
+    name: str
+    asked_of: list[OpenItemView]
+    asked_by: list[OpenItemView]
+    promised_to: list[OpenItemView]
+    promised_by: list[OpenItemView]
+    more: int = 0
+    last_in_touch: TouchView | None = None
+    left_open: LeftOpenView | None = None
+
+
+class PrepNoteView(BaseModel):
+    """Where the prep note stands: none, working, needs_go (held for the person's go, about `estimate_usd`), draft (a
+    draft waits for review on the entry's page) or kept."""
+
+    state: Literal["none", "working", "needs_go", "draft", "kept"]
+    request: str | None = None
+    estimate_usd: float | None = None
+
+
+class MeetingPrepView(BaseModel):
+    """The prep for one calendar entry (GET /api/meetings/{id}/prep), worked out by rules: who is coming, what is open
+    with each of them and the last time in touch. `over` says the entry has ended; `captured_at` is when what happened
+    was written down."""
+
+    event: str
+    title: str
+    start: str
+    end: str | None = None
+    where: str | None = None
+    untrusted: bool = False
+    over: bool = False
+    captured_at: datetime | None = None
+    coming: list[PrepGuestView]
+    people: list[PersonPrepView]
+    note: PrepNoteView
+
+
+class MeetingCaptureIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(
+        "",
+        description="What happened at the entry, in the person's own words; empty says there is nothing to note.",
+    )
+
+
+class MeetingCaptured(BaseModel):
+    request: str | None = Field(
+        None,
+        description="The request queued to read the words, none when there were none or only a bare confirmation.",
+    )
+    captured_at: datetime
+
+
+class PrepNoteAsk(BaseModel):
+    note: str | None = Field(None, description="What the person wants from the note, in their own words.")
+
+
+class ReachView(BaseModel):
+    """How a person likes to be reached: the ways kept on their record (channel to address), and the channel of the mail
+    they last wrote from, with the input it was read from."""
+
+    kept: dict[str, str] = Field(default_factory=dict)
+    replies_on: str | None = None
+    replies_record: str | None = None
+
+
+class DatedView(BaseModel):
+    """A fact about a person that carries a date: `on` the next day it falls on (none when no month and day could be
+    read), `yearly` when it comes round every year, with the words it rests on."""
+
+    fact: str
+    text: str
+    on: date | None = None
+    yearly: bool = False
+    quote: str | None = None
+    source: str | None = None
+
+
+class KeptView(BaseModel):
+    """A fact the person kept about someone, with the day it was true as of and the words it rests on."""
+
+    fact: str
+    text: str
+    as_of: date | None = None
+    quote: str | None = None
+    source: str | None = None
+
+
+class PersonMemoryView(BaseModel):
+    """What the records say about one person (GET /api/people/{id}/memory), by rules, each part with the words or the
+    record it rests on: the last time in touch, what they asked of the person and the person of them, the promises both
+    ways, how they like to be reached, their dates and what matters to them."""
+
+    person: str
+    name: str
+    last_in_touch: TouchView | None = None
+    asked_of: list[OpenItemView]
+    asked_by: list[OpenItemView]
+    promised_to: list[OpenItemView]
+    promised_by: list[OpenItemView]
+    reach: ReachView
+    dates: list[DatedView]
+    matters: list[KeptView]

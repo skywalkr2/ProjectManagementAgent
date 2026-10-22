@@ -3375,6 +3375,48 @@ people and details, and never acts in their name without their yes on the exact 
   (`tests/test_evaluate_harness.py::test_the_repeat_cases_pass_on_their_stub_answers_and_the_repeat_stays_held`).
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
+  **Built (S3, meeting prep, capture and people memory):** all of it by rules from the records, with one draft kind.
+  - *Who is on an entry* (`engine/meeting_guests.py`): the organizer and attendees of a calendar entry without the person
+    and without anyone who declined, each a person id when the workspace knows them (else the name or address as the
+    calendar wrote it, never guessed at), and the known people a plain entry's title names. A cancelled entry, one the
+    person declined and one nobody else is on have nobody to prepare for. Any entry with others is covered, a series' or not.
+  - *Prep* (`engine/meeting_prep.py`): for each known person coming, what is open between them and the person (the
+    person's promises to them, theirs to the person, replies the person owes them, questions the person asked them), each
+    with the exact words it was made from when its record carries them; when they were last in touch; and what the last
+    ended entry with them left open (open actions and questions tied to it that aren't already listed with them). At most
+    `steward.meetings.max_items` are listed for a person, in that order, and the rest are counted, never hidden. A promise
+    someone made to a third person is not open between the two. It is the entry's page, and a line on Today
+    `steward.meetings.prep_hours_before` before the entry starts (soonest first; it goes when the entry starts; with
+    `steward.meetings.prep_min_open` it can be left for entries with something open). A **prep note** is the one AI part:
+    the core draft kind `meeting-prep` on the entry's `prep` text, asked for with a button, written from the same facts
+    (marked as from outside), estimated and held for the person's go above the configured amount like every draft, shown as
+    "Draft, not yet reviewed", accepted or set aside on the entry's page (setting it aside is a signal like any draft's).
+  - *Capture:* after an entry with others ends, a Today line (`steward.meetings.capture_hours_after`) asks what happened.
+    The person's words are handed in as a note typed on the entry (`engine.intake.note_as_input`, the route
+    `meeting_capture`), trusted and authored by the person, so what comes out of them (promises, questions, facts, with the
+    exact words as evidence) follows the usual extraction, review and Undo; the packet tells the run to tie each item to
+    the entry. "Nothing to note", or a bare confirmation, makes no run. Either way the entry's `captured_at` is set and
+    the line goes; it is never edited by hand. The question isn't asked for an entry nobody else is on.
+  - *People memory* (`engine/people_memory.py`), on a person's page, each part with the words or the record it rests on:
+    **last in touch** is the latest of mail from them and mail the person sent them (read from the watched mailboxes' items,
+    the sender and the others on it matched to people by the rules every screen uses), a message the person copied to send
+    them, or an entry they were on that has ended, with its day and what it was (a mail's subject is outside text, marked);
+    **open with them** as in the prep, both ways; **how they like to be reached** is the ways kept on their record and the
+    one they last wrote from (the channel whose address the latest mail from them came from); **their dates** are facts
+    about them with a date word (`steward.people.date_words`, a birthday) and the next day it falls on, and facts about them
+    with a full date still ahead; **what matters to them** is the facts the person kept about them (never one the assistant
+    only inferred, one from outside content, one someone else said, or one a newer fact replaced), newest first, at most
+    `steward.people.max_facts` of each. A fact belongs to a person when the same name rules find them in its words.
+  - *A promise gone quiet:* a Today line "Follow up with <person>: <promise> has gone quiet" for an open promise to or from
+    someone with no news (news, a notice or a chase) for `steward.people.quiet_promise_days` (zero is off), counted from
+    when it was made or its latest news. Left out: a promise that already has a line (the date-based promise lines, the
+    person's own past its day), one on hold or with an ending waiting for the person's Keep, a reply owed, a promise made to
+    a third person, and one from someone the person reports to or only watches (waited on, never chased).
+  - **Left:** asking "who asked this" of a question (a question has no asker, so "asked by them" is the replies owed);
+    sending a follow-up from the line (the line opens the person's page, and the chase buttons stay on the follow-up
+    screens); snoozing or dismissing a quiet line; a capture for an entry nobody else is on; birthdays from a contact
+    source; dates written in languages other than English. `tests/test_meetings_people.py`,
+    `web/src/components/MeetingPrep.test.tsx`.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
   connection); areas of life with their own data level and allowed accounts; capture from anywhere, voice included
   through an adapter capability.
