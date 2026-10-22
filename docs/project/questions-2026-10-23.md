@@ -57,6 +57,19 @@ These were built tonight as described; each needs a yes or a change.
      the design?
    - *Holding a question for the weekly note* (Follow-ups' Later). The weekly note is the Monday briefing, which is in
      phase S2, so this waits for S2 unless the weekly note should come earlier on its own.
+8. **A sender's limit and a held message** (S1-2, built; change log 170). A fact, action or question made from a limited
+   source carries that source's limit, worked out from its sources each time it is read rather than copied, so widening
+   the source widens everything made from it. A draft to someone outside the limit is refused, and its packet leaves out
+   what they may not see. A whole message on Follow-ups can be held for a day or a meeting in one choice; a to-do told in
+   it isn't held and stays to send.
+   - Decides: whether the limit should also hold back a to-do in a held message, and whether singling out one reader
+     in a group draft (which waits for drafts to several people, S1b) needs anything sooner.
+9. **List | detail on What changed and Follow-ups** (B-6b, built; change log 171, decisions 2026-10-22). Beside the
+   pane the first item (or the first asking a question) opens by itself; below 1024px nothing opens until a row is
+   picked. Copy on a person whose message isn't open shows the message first, and the next Copy copies. A message not
+   yet sent shows no age on its line.
+   - Decides: whether Copy should copy at once (the person would then copy a message they haven't seen), and whether a
+     message to send should show an age (the server would need to keep when its oldest ask became ready to send).
 
 ## For the owner
 
