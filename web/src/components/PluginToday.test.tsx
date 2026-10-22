@@ -1,7 +1,7 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import { Refuse, besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
@@ -182,6 +182,7 @@ test("review of a record's own draft opens the record's page", async () => {
 
 test("review of the assistant's answer opens that answer's review in What changed, whatever its filter", async () => {
   const user = userEvent.setup();
+  besidePane();
   const open = vi.fn();
   const reviewed = change({
     id: "REQ-8",
@@ -207,8 +208,9 @@ test("review of the assistant's answer opens that answer's review in What change
   // Finished work is not in the default list.
   await screen.findByText("Nothing needs your attention.");
   await user.click(await screen.findByRole("button", { name: "Review" }));
+  // The line is chosen and has the cursor, and its detail stands beside the list.
   const row = await screen.findByRole("listitem", { name: "Email from the printer" });
-  expect(within(row).getByText("One thing was filed.")).toBeInTheDocument();
+  expect(within(await screen.findByRole("complementary", { name: "Email from the printer" })).getByText("One thing was filed.")).toBeInTheDocument();
   await waitFor(() => expect(row).toHaveFocus());
   expect(open).not.toHaveBeenCalled();
 });
@@ -255,6 +257,7 @@ test("go on a request that no longer waits just opens it", async () => {
 
 test("answer opens the question where the questions list shows it", async () => {
   const user = userEvent.setup();
+  besidePane();
   const open = vi.fn();
   const sections: S["FollowupSection"][] = [
     {

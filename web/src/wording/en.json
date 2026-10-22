@@ -306,6 +306,8 @@
   "review.looks_good": "Looks good",
   "review.next": "Next",
   "review.done": "Nothing left to look at.",
+  "followups.review.start": "Send one at a time",
+  "followups.review.progress": "{n} of {total} to send",
   "changes.reopen": "Take another look",
   "changes.send_back": "Send back with a note",
   "changes.send_back_label": "What should {assistant} do differently?",

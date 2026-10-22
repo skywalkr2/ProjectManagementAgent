@@ -1,8 +1,12 @@
-// Follow-ups grouped by project (design 7.5): the same open questions and to-dos as the groups by person, each project's
-// together with who each is with and where it stands. A row's button goes to that person's group, where Copy, Mark sent and
-// Record reply are.
+// Follow-ups grouped by project (design 7.5, 7.13): the same open questions and to-dos as the groups by person, one line per
+// project; choosing it shows that project's items in the detail, with who each is with and where it stands. An item's button
+// goes to that person's group, where Copy, Mark sent and Record reply are.
+import { useRef } from "react";
 import type { S } from "../lib/api";
+import { useRowKeys } from "../lib/keys";
+import { useListChoice, type ListChoice } from "../lib/list-choice";
 import { useWords } from "../lib/wording";
+import { ListDetail } from "../ui/ListDetail";
 import { OriginLink } from "./Origin";
 
 type Section = S["FollowupSection"];
@@ -59,42 +63,72 @@ export function groupByProject(sections: Section[], w: Words, compact = false): 
     }));
 }
 
-export function FollowUpsByProject(props: { sections: Section[]; compact: boolean; onOpenPerson: (person: string) => void }) {
+type Group = { project: string; items: Item[] };
+
+/** The width the list needs beside the pane: a project's name and how many are open. */
+const BY_PROJECT_FIT = 420;
+
+export function FollowUpsByProject(props: { sections: Section[]; compact: boolean; beside?: boolean; onOpenPerson: (person: string) => void }) {
   const words = useWords();
   const { t } = words;
-  const Heading = props.compact ? "h4" : "h3";
   const groups = groupByProject(props.sections, words, props.compact);
+  const keyOf = (g: Group) => g.project || "none";
+  const choice = useListChoice({ keys: groups.map(keyOf), beside: !!props.beside });
+  const selected = groups.find((g) => keyOf(g) === choice.chosen) ?? null;
+  const title = (g: Group) => g.project || t("followups.by_project.none");
   return (
-    <ol className="queue" aria-label={t("followups.by_project.list")}>
-      {groups.map((g) => (
-        <li key={g.project || "none"} className="line" data-project-group={g.project}>
-          <div className="row single">
-            <div className="text">
-              <Heading className="name">{g.project || t("followups.by_project.none")}</Heading>
-              <span className="sub">{words.tn("followups.by_project.count", g.items.length)}</span>
-            </div>
+    <ListDetail
+      title={selected ? title(selected) : ""}
+      onClose={choice.close}
+      fit={BY_PROJECT_FIT}
+      detail={selected ? <ProjectItems group={selected} onOpenPerson={props.onOpenPerson} /> : null}
+    >
+      <ol className="queue" aria-label={t("followups.by_project.list")}>
+        {groups.map((g) => (
+          <ProjectLine key={keyOf(g)} group={g} id={keyOf(g)} title={title(g)} choice={choice} />
+        ))}
+      </ol>
+    </ListDetail>
+  );
+}
+
+function ProjectLine(props: { group: Group; id: string; title: string; choice: ListChoice }) {
+  const { tn } = useWords();
+  const { choice } = props;
+  const ref = useRef<HTMLLIElement>(null);
+  useRowKeys(ref, { toggle: () => choice.enter(props.id) });
+  return (
+    <li className="line" ref={ref} aria-label={props.title} data-project-group={props.group.project} {...choice.rowProps(props.id)}>
+      <div className="row single">
+        <button type="button" className="expander text" aria-expanded={choice.chosen === props.id} onClick={() => choice.choose(props.id)}>
+          <strong>{props.title}</strong>
+          <span className="sub">{tn("followups.by_project.count", props.group.items.length)}</span>
+        </button>
+      </div>
+    </li>
+  );
+}
+
+/** A project's items, each with who it is with and the button that goes to that person's group. */
+function ProjectItems(props: { group: Group; onOpenPerson: (person: string) => void }) {
+  const { t } = useWords();
+  return (
+    <ul className="children">
+      {props.group.items.map((item) => (
+        <li key={item.id} className="child" data-row tabIndex={-1}>
+          <div>
+            <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
+            <div className="title">{item.title}</div>
+            <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].filter(Boolean).join(" · ")}</div>
+            <OriginLink origin={item.origin} />
           </div>
-          <div className="body">
-            <ul className="children">
-              {g.items.map((item) => (
-                <li key={item.id} className="child" data-row tabIndex={-1}>
-                  <div>
-                    <div className="what">{t(item.kind === "question" ? "followups.question" : "followups.by_project.to_do")}</div>
-                    <div className="title">{item.title}</div>
-                    <div className="meta">{[item.mine ? t("followups.you") : item.name, item.state].filter(Boolean).join(" · ")}</div>
-                    <OriginLink origin={item.origin} />
-                  </div>
-                  <div className="acts">
-                    <button type="button" className="btn" aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
-                      {t("followups.by_project.open")}
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <div className="acts">
+            <button type="button" className="btn" aria-label={t("followups.by_project.open_named", { name: item.mine ? t("followups.you") : item.name })} onClick={() => props.onOpenPerson(item.person)}>
+              {t("followups.by_project.open")}
+            </button>
           </div>
         </li>
       ))}
-    </ol>
+    </ul>
   );
 }

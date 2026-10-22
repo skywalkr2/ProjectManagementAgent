@@ -342,8 +342,15 @@ From the original designer's lessons of 2026-10-14:
   (`tests/test_to_send_marker.py`, `web/src/components/OpenItems.test.tsx`, `web/src/components/WhatChanged.test.tsx`); a
   source's row saying why some of its mail wasn't sorted (`tests/test_mail_sorting.py`,
   `web/src/components/Sources.test.tsx`); Waiting to go out as a designed empty state
-  (`web/src/components/WaitingToGoOut.test.tsx`). *Left:* What changed and Follow-ups as list | detail: their rows
-  still open in place, and only Projects and People use the shared detail pane (design 7.17).
+  (`web/src/components/WaitingToGoOut.test.tsx`). *Built (list | detail):* What changed and Follow-ups
+  as one line per change or person with the chosen one's detail beside the list (a drawer below 1024px), the first (or the one
+  asking a question) chosen as the list opens beside it, Up and Down moving the choice, Enter into the detail and Escape back
+  to the line, every button and menu item of an open row in the detail
+  (`web/src/components/WhatChangedListDetail.test.tsx`, `web/src/components/FollowUpsListDetail.test.tsx`,
+  `web/src/components/WhatChanged.test.tsx`, `web/src/components/WhatChangedFold.test.tsx`,
+  `web/src/components/FollowUps.test.tsx`). *Left:* the browser tests on the new layout (`acceptance.spec.ts`,
+  `late-evening.spec.ts`, `journeys.spec.ts`, `panes.spec.ts`, `shell.spec.ts`, `layout.spec.ts`, `a11y.spec.ts`), written but
+  not yet run; a Follow-ups line says no age on To send, because the server holds none for a message not yet sent.
 - [ ] [B-6a] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
   *Built (wave 3):* nav, saved as made with Undo, "Changed · Reset", help beside the field, `Settings.test.tsx`, `shell.spec.ts`. Left: the contrast warning in Appearance and the pickers for money and dates, to check and finish in wave 6.
@@ -367,8 +374,10 @@ From the original designer's lessons of 2026-10-14:
 - [ ] [B-6b] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
   *Built (B-6b):* the stages board (`web/src/components/StagesBoard.test.tsx`, `tests/test_stage_cards.py`), the hand-in as a
   drawer and Ask as a pane from 1440px (`web/src/components/AskPane.test.tsx`), and the phone's review mode on What
-  changed (`web/src/components/WhatChanged.test.tsx`: "review mode on a phone"). *Left:* the review mode on the other Work
-  lists, which comes with them becoming list | detail (the "Work" item above).
+  changed (`web/src/components/WhatChanged.test.tsx`: "review mode on a phone"). The same mode for Follow-ups' messages to send, one person at a time
+  with the message's own Copy and Mark sent and Next in the bar (`web/src/components/FollowUpsListDetail.test.tsx`: "review mode
+  on a phone"; `web/e2e/panes.spec.ts`, not yet run). The review-mode browser tests no longer skip: each hands in its own item.
+  *Left:* the review mode on Waiting to go out, which waits for the publisher (7.4).
 - [ ] [B-6b] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
   empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
   Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.

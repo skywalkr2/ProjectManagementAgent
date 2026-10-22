@@ -87,6 +87,17 @@ main p { max-width: var(--measure); }
 .expander { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%; }
 .expander:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
 .expander:hover strong { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+/* A change or a person's message in the detail pane of a list | detail view: no frame of its own inside the pane's. */
+.detail-queue { border: 0; border-radius: 0; background: none; overflow: visible; }
+.detail-queue > .line { background: none; border: 0; }
+.in-pane .body { border-top: 0; padding: var(--space-3) 0 0; }
+.in-pane[data-row]:focus-visible { box-shadow: none; outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+.in-pane .learned-inset, .in-pane .made { padding-inline: 0; }
+.detail-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-3); }
+.detail-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+.detail-state .sub, .detail-notes .sub, .row-notes .sub { color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.detail-notes { display: grid; gap: var(--space-1); padding-bottom: var(--space-2); }
+.row-notes { display: grid; gap: var(--space-1); padding: 0 var(--row-px) var(--space-3); }
 /* Text from outside breaks anywhere rather than widen the screen: a line's open body and its children share this. */
 .body { border-top: 1px solid var(--border); padding: var(--space-3) var(--space-4) var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); overflow-wrap: anywhere; }
 .your-note { border-left: 3px solid var(--accent); padding-left: var(--space-3); }

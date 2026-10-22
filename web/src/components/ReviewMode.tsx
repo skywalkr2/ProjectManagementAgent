@@ -12,8 +12,13 @@ export function ReviewMode<T extends { id: string }>(props: {
   items: T[];
   /** The item in full, as its list row shows it opened. */
   render: (item: T) => ReactNode;
-  /** Whether Send back can be used on the item. */
-  canSendBack: (item: T) => boolean;
+  /** Whether Send back can be used on the item (a mode that has Looks good and Send back). */
+  canSendBack?: (item: T) => boolean;
+  /** The item has buttons of its own for what to do with it (a message to copy and mark sent): the bar then holds only Next, and
+   * the item's own primary button stays in view. */
+  own?: boolean;
+  /** The words for "2 of 5": the wording key, with `n` and `total`. */
+  progress?: string;
   onClose: () => void;
 }) {
   const { t } = useWords();
@@ -56,22 +61,26 @@ export function ReviewMode<T extends { id: string }>(props: {
     <section className={styles.mode} aria-labelledby="review-title">
       <div className={styles.top}>
         <h2 id="review-title" className={styles.heading} tabIndex={-1}>
-          {t("review.progress", { n: index + 1, total: items.length })}
+          {t(props.progress ?? "review.progress", { n: index + 1, total: items.length })}
         </h2>
         <Button variant="ghost" size="sm" onClick={props.onClose}>
           {t("review.back")}
         </Button>
       </div>
-      <ol className={styles.item} ref={body}>
+      <ol className={[styles.item, props.own ? styles.own : ""].filter(Boolean).join(" ")} ref={body}>
         {props.render(item)}
       </ol>
-      <div className={styles.bar} role="group" aria-label={t("review.actions")}>
-        <Button disabled={!props.canSendBack(item)} onClick={() => press("send_back")}>
-          {t("review.send_back")}
-        </Button>
-        <Button variant="primary" onClick={() => press("primary")}>
-          {t("review.looks_good")}
-        </Button>
+      <div className={[styles.bar, props.own ? styles.single : ""].filter(Boolean).join(" ")} role="group" aria-label={t("review.actions")}>
+        {!props.own && (
+          <Button disabled={!props.canSendBack?.(item)} onClick={() => press("send_back")}>
+            {t("review.send_back")}
+          </Button>
+        )}
+        {!props.own && (
+          <Button variant="primary" onClick={() => press("primary")}>
+            {t("review.looks_good")}
+          </Button>
+        )}
         <Button disabled={items.length < 2} onClick={() => setCurrentId(items[(index + 1) % items.length].id)}>
           {t("review.next")}
         </Button>

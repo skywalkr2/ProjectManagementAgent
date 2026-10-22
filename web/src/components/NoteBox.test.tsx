@@ -1,11 +1,16 @@
+import { vi } from "vitest";
 // The note box on the action buttons: each button still acts at once; its menu's "Add a note" opens a box that sends
 // the note on the same route. No note sends none.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import { besidePane, Refuse, fakeApi, renderApp } from "../test-utils";
 import { AskChooser } from "./AskChooser";
 import { FollowUps } from "./FollowUps";
+
+// The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 const NOTE = "The printer moved the proof to Friday.";
 

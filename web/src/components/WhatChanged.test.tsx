@@ -4,8 +4,15 @@ import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { revealOrKeep } from "../lib/reveal";
 import { day } from "../lib/dates";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { ChangeRow, WhatChanged } from "./WhatChanged";
+
+// The window is wide, so a change's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
+
+/** The detail pane beside the list: the chosen change in full. */
+const findPane = () => screen.findByRole("complementary");
 
 function change(id: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem"] {
   return {
@@ -153,8 +160,8 @@ test("when nothing was recorded, the assistant's summary says why", async () => 
   fakeApi({ "GET changes": () => [item] });
   renderApp(<WhatChanged />);
   expect(await screen.findByText(item.changeset!.summary)).toBeInTheDocument();
-  expect(screen.getByText("Helper says")).toBeInTheDocument();
-  expect(screen.getByText(/Nothing recorded/)).toBeInTheDocument();
+  expect(within(await findPane()).getByText("Helper says")).toBeInTheDocument();
+  expect(within(await findPane()).getByText(/Nothing recorded/)).toBeInTheDocument();
 });
 
 test("a change's line says what was done, as what it was, not as a count of things", async () => {
@@ -250,12 +257,13 @@ test("a review row has no Dismiss, and a dismissed hand-in leaves Needs attentio
   expect(screen.queryByRole("menuitem", { name: "Dismiss" })).toBeNull();
   await user.keyboard("{Escape}");
   await user.click(screen.getByRole("button", { name: "Done" }));
-  expect(await screen.findByText("Dismissed")).toBeInTheDocument();
-  expect(screen.getByText(/you dismissed it/)).toBeInTheDocument();
+  // The dismissed hand-in is the first in Done, so its detail stands beside the list as well.
+  expect((await screen.findAllByText("Dismissed")).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/you dismissed it/).length).toBeGreaterThan(0);
   expect(screen.queryByText("Email from the printer")).toBeNull();
   await user.click(screen.getByRole("button", { name: "All" }));
-  expect(screen.getByText("Dismissed")).toBeInTheDocument();
-  expect(screen.getByText("Email from the printer")).toBeInTheDocument();
+  expect(screen.getAllByText("Dismissed").length).toBeGreaterThan(0);
+  expect(screen.getByRole("listitem", { name: "Email from the printer" })).toBeInTheDocument();
 });
 
 const gated = (extra: Partial<S["ChangeItem"]> = {}) =>
@@ -300,7 +308,8 @@ test("a cost-held row can be dismissed from its menu, which has nothing else", a
   );
 });
 
-test("a second opinion is labeled in words, by where it came from", async () => {
+test("a second opinion is labeled in words, by where it came from, in the change's detail", async () => {
+  const user = userEvent.setup();
   const other = change("REQ-1", { source_title: "From another account" });
   other.changeset!.second_opinion = "other_account";
   const same = change("REQ-2", { source_title: "From the same account" });
@@ -308,19 +317,23 @@ test("a second opinion is labeled in words, by where it came from", async () => 
   const plain = change("REQ-3", { source_title: "No second opinion" });
   fakeApi({ "GET changes": () => [other, same, plain] });
   renderApp(<WhatChanged />);
-  await screen.findByText("From another account");
-  const row = (title: string) => screen.getByText(title).closest("li")!;
-  expect(within(row("From another account")).getByText("Second opinion from another account")).toBeInTheDocument();
-  expect(within(row("From the same account")).getByText("Second opinion from the same account, starting fresh")).toBeInTheDocument();
-  expect(within(row("No second opinion")).queryByText(/Second opinion/)).toBeNull();
+  // The first change is chosen as the list opens; the others by a click on their line.
+  expect(await within(await findPane()).findByText("Second opinion from another account")).toBeInTheDocument();
+  await user.click(screen.getByRole("listitem", { name: "From the same account" }));
+  expect(await within(await findPane()).findByText("Second opinion from the same account, starting fresh")).toBeInTheDocument();
+  expect(within(await findPane()).queryByText("Second opinion from another account")).toBeNull();
+  await user.click(screen.getByRole("listitem", { name: "No second opinion" }));
+  await within(await findPane()).findByRole("heading", { name: "No second opinion" });
+  expect(within(await findPane()).queryByText(/Second opinion/)).toBeNull();
+  // A line itself says only what was done.
+  expect(within(screen.getByRole("listitem", { name: "From the same account" })).queryByText(/Second opinion/)).toBeNull();
 });
 
 test("work a plugin did in answer to a change says which change it followed", async () => {
   const after = change("REQ-1", { source_title: "Chapter updates", follows: "CS-3", follows_summary: "Accept chapter 4" });
   fakeApi({ "GET changes": () => [after] });
   renderApp(<WhatChanged />);
-  const title = await screen.findByText("Chapter updates");
-  expect(within(title.closest("li")!).getByText("After: Accept chapter 4")).toBeInTheDocument();
+  expect(await within(await findPane()).findByText("After: Accept chapter 4")).toBeInTheDocument();
 });
 
 test("a refused request offers Send to another account, with Try again and Dismiss in its menu", async () => {
@@ -335,7 +348,9 @@ test("a refused request offers Send to another account, with Try again and Dismi
   });
   renderApp(<WhatChanged />);
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
-  await user.click(await screen.findByRole("button", { name: "Send to another account" }));
+  // The line's one action opens the choice in the change's detail.
+  const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
+  await user.click(within(row).getByRole("button", { name: "Send to another account" }));
   const chooser = await screen.findByRole("group", { name: "Choose an account to try it with." });
   expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Work account", "Second account", "Cancel"]);
   await waitFor(() => expect(within(chooser).getByRole("button", { name: "Work account" })).toHaveFocus());
@@ -343,7 +358,7 @@ test("a refused request offers Send to another account, with Try again and Dismi
   expect(await screen.findByText("Sent to Second account.")).toBeInTheDocument();
   expect(calls.find((c) => c.route === "POST requests/REQ-9/retry")?.body).toEqual({ use: "second/model-b" });
   await waitFor(() => expect(screen.queryByRole("group", { name: "Choose an account to try it with." })).toBeNull());
-  await user.click(screen.getByRole("button", { name: /More actions for/ }));
+  await user.click(within(row).getByRole("button", { name: /More actions for/ }));
   expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["Try again", "Dismiss"]);
   await user.click(screen.getByRole("menuitem", { name: "Try again" }));
   await waitFor(() => expect(calls.filter((c) => c.route === "POST requests/REQ-9/retry")).toHaveLength(2));
@@ -354,7 +369,8 @@ test("with no other account, the chooser says so and points to the AI settings",
   const user = userEvent.setup();
   fakeApi({ "GET changes": () => [stopped({ refused: true })], "GET requests/REQ-9/accounts": () => [] });
   renderApp(<WhatChanged />);
-  await user.click(await screen.findByRole("button", { name: "Send to another account" }));
+  const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
+  await user.click(within(row).getByRole("button", { name: "Send to another account" }));
   expect(await screen.findByText("No other account can do this. Add one in AI accounts.")).toBeInTheDocument();
   const chooser = screen.getByRole("group", { name: /No other account/ });
   expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel"]);
@@ -398,7 +414,7 @@ test("a request waiting for the person to be named offers Say who you are, which
   renderApp(<WhatChanged onOpenGuide={open} />);
   const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
   expect(within(row).queryByRole("button", { name: "Try again" })).toBeNull();
-  expect(within(row).getByText("Say who you are first")).toBeInTheDocument();
+  expect(await within(await findPane()).findByText("Say who you are first")).toBeInTheDocument();
   await user.click(within(row).getByRole("button", { name: "Say who you are" }));
   expect(open).toHaveBeenCalledWith("workspace");
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
@@ -413,8 +429,8 @@ test("a change asked for before this screen opened is opened once its list has l
   // The person chose "Where it came from" on another screen, which then opened this one.
   expect(revealOrKeep("changeset", "CS-REQ-2")).toBe(false);
   renderApp(<WhatChanged />);
-  expect(await screen.findByText("Added the action about the proofs.")).toBeInTheDocument();
-  // Only the first item and the one asked for are open.
+  // The change asked for is the one chosen, so its detail stands beside the list; the first change is not.
+  expect(await within(await findPane()).findByText("Added the action about the proofs.")).toBeInTheDocument();
   expect(screen.queryByText("Another summary, not asked for.")).toBeNull();
 });
 
@@ -484,7 +500,7 @@ test("a Today line for a new source's intake narrows the list to what that intak
   expect(await screen.findByText("Another source's thing")).toBeInTheDocument();
   revealOrKeep("intake", "m");
   await waitFor(() => expect(screen.queryByText("Another source's thing")).toBeNull());
-  expect(screen.getByText("What the inbox found")).toBeInTheDocument();
+  expect(screen.getByRole("listitem", { name: "What the inbox found" })).toBeInTheDocument();
   expect(screen.queryByText("A pasted note's thing")).toBeNull();
   expect(await screen.findByText("Found in Inbox")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Show everything" }));
@@ -530,14 +546,18 @@ test("rows that arrive while the list shows others still wait behind N new", asy
   expect(screen.getAllByText("Proof copies ship Nov 5")).toHaveLength(1);
 });
 
-test("every row that holds a question for the person starts open, whatever its state", async () => {
+test("a change that holds a question for the person is the one chosen first, and every such change shows it in its detail", async () => {
+  const user = userEvent.setup();
   fakeApi({
-    "GET changes": () => [asking("REQ-1", "Robin"), asking("REQ-2", "Sam")],
+    "GET changes": () => [change("REQ-0", { source_title: "Nothing asked here" }), asking("REQ-1", "Robin"), asking("REQ-2", "Sam")],
     "GET people": () => [{ id: "PER-2", name: "Robin Sample", role: "Editor" }],
   });
   renderApp(<WhatChanged />);
-  expect(await screen.findByRole("combobox", { name: "Who is “Robin”?" })).toBeInTheDocument();
-  expect(screen.getByRole("combobox", { name: "Who is “Sam”?" })).toBeInTheDocument();
+  // The first change is not chosen, because the second holds a question.
+  expect(await within(await findPane()).findByRole("combobox", { name: "Who is “Robin”?" })).toBeInTheDocument();
+  expect(document.querySelector("[aria-current]")?.getAttribute("data-choice")).toBe("REQ-1");
+  await user.click(screen.getByRole("listitem", { name: "Nothing asked here" }));
+  expect(within(await findPane()).queryByRole("combobox")).toBeNull();
 });
 
 // The phone's review mode (design 7.1): the items waiting for a look, one at a time, with Looks good, Send back and Next.
@@ -704,9 +724,10 @@ test("a change made from what the person typed is titled Your note, with their w
   const item = change("REQ-6", { source: null, source_title: null, note: "Mark 'Settle the endpaper color' closed; the Print sync will cover it." });
   fakeApi({ "GET changes": () => [item] });
   renderApp(<WhatChanged />);
-  const row = await screen.findByRole("listitem", { name: "Your note" });
-  expect(within(row).getByText("Mark 'Settle the endpaper color' closed; the Print sync will cover it.")).toBeInTheDocument();
-  expect(within(row).getByText("Your note", { selector: ".what" })).toBeInTheDocument();
+  // The line is titled Your note; their words are under it in the change's detail.
+  await screen.findByRole("listitem", { name: "Your note" });
+  expect(await within(await findPane()).findByText("Mark 'Settle the endpaper color' closed; the Print sync will cover it.")).toBeInTheDocument();
+  expect(within(await findPane()).getByText("Your note", { selector: ".what" })).toBeInTheDocument();
 });
 
 test("a change from an email is titled by Today's rule, never by the first line of what came in", async () => {

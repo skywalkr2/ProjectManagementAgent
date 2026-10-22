@@ -241,12 +241,15 @@ test.describe.serial("journeys", () => {
         .poll(async () => (await lines.allInnerTexts()).some((line) => !before.includes(line)), { timeout: 30_000 })
         .toBe(true);
       await page.getByRole("link", { name: /^What changed/ }).first().click();
-      // What changed is newest first and titles a change as Today does, so the change just handed in is the top row.
-      const row = page.getByRole("main").locator("li.line").first();
-      await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 30_000 });
-      const expander = row.locator(".expander").first();
+      // What changed is newest first and titles a change as Today does, so the change just handed in is the top line.
+      // Choosing the line shows the whole change in the detail pane beside the list, which is what the steps read.
+      const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
+      await expect(line.locator(".kind").first()).toHaveText(/Review/i, { timeout: 30_000 });
+      const expander = line.locator(".expander").first();
       if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
-      return row;
+      const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
+      await expect(detail).toBeVisible();
+      return detail;
     };
     type Person = { id: string; name: string };
     const people = async () => (await json<Person[]>("api/people")).map((p) => p.name);

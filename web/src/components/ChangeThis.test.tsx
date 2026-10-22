@@ -1,10 +1,15 @@
+import { vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { person } from "../lib/learned-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 import { RecordPage } from "./RecordPage";
+
+// The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 const posted = (calls: { route: string; body: unknown }[], route: string) => calls.find((c) => c.route === route)?.body;
 

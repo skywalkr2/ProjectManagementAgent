@@ -11,5 +11,6 @@
   padding: var(--space-3) 0; background: var(--canvas); border-top: 1px solid var(--border); z-index: 5;
 }
 .bar > * { width: 100%; white-space: normal; height: auto; min-height: var(--tap-min); }
-/* The bar has Looks good, so the row's own copy of it is not shown beside it. */
-.item :global(.acts .btn.primary) { display: none; }
+/* The bar has Looks good, so the row's own copy of it is not shown beside it. An item with buttons of its own keeps them. */
+.item:not(.own) :global(.acts .btn.primary) { display: none; }
+.single { grid-template-columns: minmax(0, 1fr); }

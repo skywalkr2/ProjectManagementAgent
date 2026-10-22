@@ -1,9 +1,14 @@
+import { vi } from "vitest";
 // "Where it came from" on Follow-ups rows: the original page with its real domain, else the saved text, else the change.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
+
+// The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 const PAGE = "https" + "://pages.example.com/notes/42";
 

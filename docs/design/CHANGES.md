@@ -1027,6 +1027,24 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 171. What changed and Follow-ups as list | detail, and the phone's review mode for messages to send (2026-10-22; B-6b, built)
+
+- **What changed (7.3, 7.13):** one line per change (state, title, one line of what was done, the one primary, the rest in the
+  menu); the chosen change is shown in full in the detail beside the list from 1024px, as a drawer below it. The first change,
+  or the first one that holds a question for the person, is chosen as the list opens beside the pane (nothing opens by
+  itself below 1024px); Up and Down move the choice, Enter moves the cursor into the detail, Escape closes it and returns to the
+  line. A menu item that needs a form (Send back with a note, the other account) chooses the change and opens it in the detail.
+  What is being learned from a change and the drafts and files it made stay on its line.
+- **Follow-ups (7.5, 7.13):** one line per person, or per project when grouped by project: who, how many asks, on Waiting on
+  them the longest wait, and on To send the one primary, Copy. The detail holds the numbered asks, the message with Copy and
+  Mark sent, the holds and each ask's own menu. Copy on a line whose message is not shown shows it with the cursor in it; the
+  next Copy copies, and once copied the line and the detail both say Mark sent. A message not yet sent has no age on its
+  line: the server keeps none for it.
+- **Phone (7.1):** Follow-ups' messages to send go through one person at a time (`ReviewMode` with the message's own buttons and
+  Next); the review-mode browser tests hand in their own items, so they never skip.
+- Built: `web/src/components/WhatChangedListDetail.test.tsx`, `web/src/components/FollowUpsListDetail.test.tsx`,
+  `web/src/components/WhatChanged.test.tsx`, `web/src/components/FollowUps.test.tsx`; browser tests written, not yet run.
+
 ## 170. A message held for a later batch, and a limit carried by what is made from a source (2026-10-22; S1-2, built)
 
 - A person's whole message on Follow-ups can be held for a day or a meeting as one choice ("Hold this message for later…",

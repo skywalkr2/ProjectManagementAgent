@@ -6,9 +6,12 @@ import type { S } from "../lib/api";
 import { setSideChoice } from "../lib/sides";
 import { forgetLine } from "../lib/today";
 import { RestartProvider } from "../lib/restart";
-import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
+import { besidePane, fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { FollowUps } from "./FollowUps";
 import { Today } from "./Today";
+
+// The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
 
 // The All / Personal / <business> filter on Today and Follow-ups (design 6.32, S1-4b). The names are made up here.
 const BUSINESS = "Example Works";

@@ -48,12 +48,13 @@ test.describe("Late evening", () => {
 
     await openView(page, "Follow-ups");
     await expect(page.getByRole("heading", { name: "Follow-ups", exact: true })).toBeVisible();
-    const card = page.locator("li.line", { has: page.locator("strong", { hasText: new RegExp(`^${name}$`) }) });
+    // A person is one line of the list; choosing it shows their message in the detail pane beside the list.
+    const card = page.getByRole("listitem", { name, exact: true });
     await expectNoNegativeDays(page);
 
-    // Copy opens the message, the second Copy puts it on the clipboard, and Mark sent records it.
-    await card.getByRole("button", { name: `Copy ${toSend}` }).click();
-    await expect(card.getByRole("textbox").first()).toBeVisible();
+    // Choosing the person shows the message, Copy puts it on the clipboard, and Mark sent records it.
+    await card.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+    await expect(page.locator("aside[data-detail-pane]").getByRole("textbox").first()).toBeVisible();
     await card.getByRole("button", { name: `Copy ${toSend}` }).click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain(sent[0].text);
     await card.getByRole("button", { name: "Mark sent" }).first().click();
@@ -62,7 +63,8 @@ test.describe("Late evening", () => {
 
     // Under Waiting on them it was sent today, and no wait shows yet.
     await page.getByRole("button", { name: "Waiting on them" }).click();
-    const waiting = page.locator("li.line", { has: page.getByRole("heading", { name }) });
+    await page.getByRole("listitem", { name, exact: true }).getByRole("button", { name: new RegExp(`^${name}`) }).click();
+    const waiting = page.locator("aside[data-detail-pane]", { has: page.getByRole("heading", { name }) });
     const item = waiting.locator("li.child", { hasText: sent[0].text });
     await expect(item).toContainText("sent today");
     await expect(item).not.toContainText(/waiting \d+ days?/);

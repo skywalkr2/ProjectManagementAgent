@@ -117,12 +117,15 @@ async function handIn(page: Page, c: Case) {
     .poll(async () => (await made.allInnerTexts()).some((line) => !before.includes(line)), { timeout: 20_000 })
     .toBe(true);
   await go(page, "What changed");
-  // What changed is newest first and titles a change as Today does, so the change just handed in is the top row.
-  const row = page.getByRole("main").locator("li.line").first();
-  await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 20_000 });
-  const expander = row.locator(".expander").first();
+  // What changed is newest first and titles a change as Today does, so the change just handed in is the top line. Choosing
+  // the line shows the whole change in the detail pane beside the list, which is what the steps read.
+  const line = page.getByRole("main").locator("li.line:not(.in-pane)").first();
+  await expect(line.locator(".kind").first()).toHaveText(/Review/i, { timeout: 20_000 });
+  const expander = line.locator(".expander").first();
   if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
-  return row;
+  const detail = page.locator("aside[data-detail-pane] li.line.in-pane");
+  await expect(detail).toBeVisible();
+  return detail;
 }
 
 /** Opens a view from the sidebar, or on a phone from the bottom bar's sheets. */
@@ -565,9 +568,10 @@ test.describe.serial("acceptance scenario", () => {
     const sections = await getJson<Section[]>(page, "api/followups");
     const target = sections.find((s) => !s.is_pm && s.to_send > 0);
     expect(target, "someone with something to send").toBeTruthy();
-    const card = page.locator("li.line", { has: page.locator("strong", { hasText: new RegExp(`^${target!.name}$`) }) });
-    await card.getByRole("button", { name: `Copy ${target!.to_send}` }).click();
-    const box = card.getByRole("textbox").first();
+    // The person's line chooses them: their message is in the detail pane beside the list, and the line's Copy copies it.
+    const card = page.getByRole("listitem", { name: target!.name, exact: true });
+    await card.getByRole("button", { name: new RegExp(`^${target!.name}`) }).click();
+    const box = page.locator("aside[data-detail-pane]").getByRole("textbox").first();
     // Text that would be markup if it were not escaped, added to what is shown.
     const hostile = `<img src=x onerror="window.pasted=1"> & "quoted"`;
     await box.fill(`${target!.message}\n\n${hostile}`);
@@ -607,7 +611,10 @@ test.describe.serial("acceptance scenario", () => {
     await go(page, "Follow-ups");
     await expect(page.getByRole("heading", { name: "Follow-ups", exact: true })).toBeVisible();
     const sections = await getJson<Section[]>(page, "api/followups");
-    const sectionOf = (name: string) => page.locator("li.line", { has: page.locator("strong", { hasText: new RegExp(`^${name}$`) }) });
+    // A person is one line of the list; choosing it shows their message in the detail pane beside the list.
+    const sectionOf = (name: string) => page.getByRole("listitem", { name, exact: true });
+    const pane = page.locator("aside[data-detail-pane]");
+    const choose = (name: string) => sectionOf(name).getByRole("button", { name: new RegExp(`^${name}`) }).click();
 
     // Each contributor to the check-in has exactly one section, on the server and on the screen.
     const contributors = [...new Set(byId("production-checkin").expect!.flatMap((e) => e.owners as string[]))];
@@ -627,9 +634,9 @@ test.describe.serial("acceptance scenario", () => {
       const s = sections.find((x) => x.person === id)!;
       const { questions, actions } = toSend(s);
       const card = sectionOf(s.name);
-      // The first Copy opens the message it will copy (design 7.5); the second puts it on the clipboard.
-      await card.getByRole("button", { name: `Copy ${s.to_send}` }).click();
-      await expect(card.getByRole("textbox").first()).toBeVisible();
+      // The message is on screen before it is copied (design 7.5): choosing the person shows it; Copy puts it on the clipboard.
+      await choose(s.name);
+      await expect(pane.getByRole("textbox").first()).toBeVisible();
       await card.getByRole("button", { name: `Copy ${s.to_send}` }).click();
       // Copy writes the formatted and the plain message together, which finishes a moment after the click.
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(s.message);
@@ -662,8 +669,8 @@ test.describe.serial("acceptance scenario", () => {
     const target = withQuestions[0];
     const { questions, actions } = toSend(target);
     const card = sectionOf(target.name);
-    await card.getByRole("button", { name: `Copy ${target.to_send}` }).click();
-    await expect(card.getByRole("textbox").first()).toBeVisible();
+    await choose(target.name);
+    await expect(pane.getByRole("textbox").first()).toBeVisible();
     await card.getByRole("button", { name: `Copy ${target.to_send}` }).click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(target.message);
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
@@ -683,7 +690,8 @@ test.describe.serial("acceptance scenario", () => {
     // Sent items leave "To send" and wait under "Waiting on them", one line each.
     await expect(card).toHaveCount(0);
     await page.getByRole("button", { name: "Waiting on them" }).click();
-    const waiting = page.locator("li.line", { has: page.getByRole("heading", { name: target.name }) });
+    await choose(target.name);
+    const waiting = page.locator("aside[data-detail-pane]", { has: page.getByRole("heading", { name: target.name }) });
     await expect(waiting).toContainText(/sent (today|.* \(\d+ days?\))/);
     await expect(waiting.locator("li.child")).toHaveCount(questions.length + actions.length);
     await expect(waiting.getByRole("button", { name: "Mark their work done" }).first()).toBeVisible();
@@ -706,10 +714,10 @@ test.describe.serial("acceptance scenario", () => {
     // Before the undo the fact is there to be read.
     await getJson(page, `api/record?kind=fact&id=${factId}`);
 
-    const row = page.locator(`li.line[data-changeset="${changeset}"]`);
-    // Only the first change is open on What changed: open this one to see what it did.
-    const expander = row.locator(".expander").first();
+    // Only the chosen change shows its details, in the pane beside the list: choose this one to see what it did.
+    const expander = page.locator(`li.line[data-changeset="${changeset}"]:not(.in-pane)`).locator(".expander").first();
     if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
+    const row = page.locator(`li.line.in-pane[data-changeset="${changeset}"]`);
     await row.getByRole("button", { name: /More actions for/ }).first().click();
     await page.getByRole("menuitem", { name: "Undo everything it did" }).click();
     await expect(row.locator("li.child .pill")).toHaveText(/Undone/i);

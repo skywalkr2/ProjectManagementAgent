@@ -1,10 +1,15 @@
+import { vi } from "vitest";
 // Learning on What changed (design 7.18): the Learned line on a card, and which knowledge shaped the work.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { learnedLine, project } from "../lib/learned-fixtures";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { besidePane, fakeApi, renderApp, type Routes } from "../test-utils";
 import { WhatChanged } from "./WhatChanged";
+
+// The window is wide, so a change's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 const RULE = "Questions about release dates go to the schedule, not to people.";
 

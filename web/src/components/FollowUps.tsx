@@ -9,7 +9,9 @@ import { useAct } from "../lib/act";
 import { copyBoth, copyMessage, copyPlain, type CopyResult } from "../lib/copy";
 import { day, localDate, monthDay } from "../lib/dates";
 import { tablesOf, toHtml, toTsv, type TableWords } from "../lib/followup-table";
-import { useRowKeys } from "../lib/keys";
+import { sendKeyTo, useRowKeys, type RowKey } from "../lib/keys";
+import { choiceRow, useListChoice, type ListChoice } from "../lib/list-choice";
+import { useIsNarrow, useMediaQuery } from "../lib/media";
 import { showRow, useReveal } from "../lib/reveal";
 import { onSide, useSideFilter, type SideChoice } from "../lib/sides";
 import { useToasts } from "../lib/toasts";
@@ -29,11 +31,13 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
 import { Button } from "../ui/Button";
+import { ListDetail } from "../ui/ListDetail";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Skeleton } from "../ui/Skeleton";
 import { FollowUpTables, tableBar, tableHint } from "./FollowUpTable";
 import { SideFilter } from "./SideFilter";
 import { FollowUpsByProject } from "./FollowUpsByProject";
+import { ReviewMode } from "./ReviewMode";
 
 type Group = "person" | "project";
 type Filter = "send" | "later" | "waiting";
@@ -79,33 +83,27 @@ export function FollowUps(props: { compact?: boolean }) {
   const [revealed, setRevealed] = useState<{ id: string; n: number } | null>(null);
   const latest = useRef(followups.data);
   latest.current = followups.data;
+  // A row the person is sent to (a question to answer, a person's group): once the list shows it, it is chosen and in view.
+  const [picked, setPicked] = useState<{ key: string; n: number; focus: boolean } | null>(null);
   useReveal("question", (question) => {
-    if (!latest.current?.some((s) => s.is_pm && s.questions.some((q) => q.id === question))) return false;
+    const mine = latest.current?.find((s) => s.is_pm && s.questions.some((q) => q.id === question));
+    if (!mine) return false;
     setGroup("person");
     setFilter("send");
     setRevealed({ id: question, n: Date.now() });
+    setPicked({ key: mine.person, n: Date.now(), focus: false });
     return true;
   });
   // A link to a person's group (a to-do that waits on them): the filter that shows them is chosen, and their group is looked at.
-  const [seeking, setSeeking] = useState<{ id: string; n: number } | null>(null);
   const seek = (person: string) => {
     const found = latest.current?.find((s) => !s.is_pm && s.person === person);
     if (!found) return false;
     setGroup("person");
     setFilter(waitingQuestions(found).length + waitingActions(found).length > 0 ? "waiting" : "send");
-    setSeeking({ id: person, n: Date.now() });
+    setPicked({ key: person, n: Date.now(), focus: true });
     return true;
   };
   useReveal("person", seek);
-  useEffect(() => {
-    if (!seeking) return;
-    const group = document.getElementById(`w-${seeking.id}`) ?? document.getElementById(`p-${seeking.id}`);
-    const row = group?.closest<HTMLElement>("li");
-    if (row) {
-      showRow(row);
-      setSeeking(null);
-    }
-  }, [seeking, filter, group, followups.data]);
   const present = (followups.data ?? []).filter(
     (s) => s.questions.length || (s.later ?? []).length || (s.actions.length && !(compact && s.is_pm)),
   );
@@ -118,6 +116,39 @@ export function FollowUps(props: { compact?: boolean }) {
         ? (s.later ?? []).length > 0
         : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
   );
+  // The list | detail choice (design 7.13): beside the list the first row is chosen as the list opens; below 1024px a row opens
+  // its detail as a drawer.
+  const beside = useMediaQuery("(min-width: 1024px)") && !compact;
+  const choice = useListChoice({ keys: shown.map((s) => s.person), beside, reset: `${group}|${filter}|${side.choice}` });
+  useEffect(() => {
+    if (!picked) return;
+    choice.choose(picked.key);
+    // A question goes on to take the cursor in its own answer box; a person's line takes it here.
+    if (picked.focus) showRow(choiceRow(picked.key) ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked]);
+  const selected = shown.find((s) => s.person === choice.chosen) ?? null;
+  // What a person's message keeps while it is shown on the line and in the detail.
+  const [messages, setMessages] = useState<Record<string, MessageState>>({});
+  const sharedMessage = (person: string) => ({
+    state: messages[person] ?? { draft: null, copied: false },
+    set: (patch: Partial<MessageState>) => setMessages((all) => ({ ...all, [person]: { ...(all[person] ?? { draft: null, copied: false }), ...patch } })),
+  });
+  // On a phone the messages to send can be gone through one at a time (design 7.1).
+  const phone = useIsNarrow() && !compact;
+  const [reviewing, setReviewing] = useState(false);
+  const reviewable = filter === "send" && group === "person" ? shown.filter((s) => !s.is_pm).map((s) => ({ id: s.person, section: s })) : [];
+  const detailOf = (s: S["FollowupSection"]) =>
+    filter === "later" ? (
+      <LaterSection section={s} pane />
+    ) : s.is_pm ? (
+      <YourSection section={s} compact={compact} reveal={revealed} pane />
+    ) : filter === "send" ? (
+      <PersonSection section={s} pane shared={sharedMessage(s.person)} />
+    ) : (
+      <WaitingSection section={s} compact={compact} pane />
+    );
+
   return (
     <section className={compact ? "panel-section compact" : "panel-section"} aria-labelledby="followups-title">
       <div className="heading">
@@ -156,51 +187,138 @@ export function FollowUps(props: { compact?: boolean }) {
       ) : sections.length === 0 ? (
         <p className="empty">{present.length > 0 ? t("sides.empty.followups", { side: side.named }) : t("followups.empty")}</p>
       ) : group === "project" ? (
-        <FollowUpsByProject sections={sections} compact={compact} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
+        <FollowUpsByProject sections={sections} compact={compact} beside={beside} onOpenPerson={(person) => void (seek(person) || (setGroup("person"), setFilter("send")))} />
       ) : shown.length === 0 ? (
         <p className="empty">{t(`followups.empty_${filter}`)}</p>
+      ) : reviewing && phone && reviewable.length > 0 ? (
+        <ReviewMode
+          own
+          progress="followups.review.progress"
+          items={reviewable}
+          render={(item) => <PersonSection key={item.id} section={item.section} open />}
+          onClose={() => setReviewing(false)}
+        />
       ) : (
-        <ol className="queue">
-          {shown.map((s) =>
-            filter === "later" ? (
-              <LaterSection key={s.person} section={s} />
-            ) : s.is_pm ? (
-              <YourSection key={s.person} section={s} compact={compact} reveal={revealed} />
-            ) : filter === "send" ? (
-              <PersonSection key={s.person} section={s} />
-            ) : (
-              <WaitingSection key={s.person} section={s} compact={compact} />
-            ),
-          )}
-        </ol>
+        <ListDetail
+          title={selected ? (selected.is_pm ? t("followups.you") : selected.name) : ""}
+          onClose={choice.close}
+          fit={FOLLOWUPS_FIT}
+          detail={selected ? <ol className="queue detail-queue">{detailOf(selected)}</ol> : null}
+        >
+          <ol className="queue">
+            {phone && reviewable.length > 0 && (
+              <li className="review-start">
+                <button type="button" className="btn primary" onClick={() => setReviewing(true)}>
+                  {t("followups.review.start")}
+                </button>
+              </li>
+            )}
+            {shown.map((s) => (
+              <FollowListRow key={s.person} section={s} kind={filter === "later" ? "later" : s.is_pm ? "you" : filter} choice={choice} compact={compact} copied={sharedMessage(s.person).state.copied} />
+            ))}
+          </ol>
+        </ListDetail>
       )}
     </section>
   );
 }
 
-function YourSection(props: { section: S["FollowupSection"]; compact: boolean; reveal: { id: string; n: number } | null }) {
+/** What the person's own section says it holds: decisions, questions and to-dos. */
+function yourCounts(s: S["FollowupSection"], compact: boolean, tn: Tn): string {
+  const decisions = s.questions.filter((q) => q.kind === "decision").length;
+  const asked = s.questions.length - decisions;
+  const actions = compact ? 0 : s.actions.length;
+  return [decisions ? tn("followups.decisions", decisions) : "", asked ? tn("followups.questions", asked) : "", actions ? tn("followups.your_actions", actions) : ""]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** The width the list needs beside the pane: a name, one line under it and the primary. */
+const FOLLOWUPS_FIT = 420;
+
+/** The cursor goes to the message in the detail once it is on screen (a drawer takes a moment to open). */
+function focusMessage(tries = 12): void {
+  const box = document.querySelector<HTMLTextAreaElement>("[data-detail-pane] textarea.msg, [data-modal-open] textarea.msg");
+  if (box) box.focus();
+  else if (tries > 0) window.requestAnimationFrame(() => focusMessage(tries - 1));
+}
+
+/** One person as a line of the list (design 7.13): who, how many asks and how long the oldest has waited, and on To send the
+ * one primary, Copy. Choosing the line shows the person's message and asks in the detail; Copy on a line whose detail is not
+ * shown shows it first, and the next Copy is the one that copies. */
+function FollowListRow(props: { section: S["FollowupSection"]; kind: "you" | "send" | "later" | "waiting"; choice: ListChoice; compact: boolean; copied: boolean }) {
+  const { t, tn } = useWords();
+  const { section: s, choice, kind } = props;
+  const ref = useRef<HTMLLIElement>(null);
+  const questions = waitingQuestions(s);
+  const actions = waitingActions(s);
+  // The longest anyone has waited, and whether it is time to follow up.
+  const days = [...questions.map((q) => q.waiting_days), ...actions.map((a) => a.told_days)].filter((d): d is number => d !== null);
+  const oldest = days.length ? Math.max(...days) : null;
+  const chase = questions.some((q) => q.chase_due) || actions.some((a) => a.chase_due);
+  const name = kind === "you" ? t("followups.you") : s.name;
+  const sub =
+    kind === "you"
+      ? yourCounts(s, props.compact, tn)
+      : kind === "send"
+        ? tn("followups.to_send", s.to_send)
+        : kind === "later"
+          ? tn("followups.later_count", (s.later ?? []).length)
+          : tn("followups.waiting_count", questions.length + actions.length);
+  // The line's keys and button reach the person's message in the detail once it is shown there. Until then they show it, with
+  // the cursor in the message, and the next press is the one that acts.
+  const toDetail = (key: RowKey) => {
+    const detail = choice.chosen === s.person ? document.querySelector<HTMLElement>("[data-detail-pane] [data-row], [data-modal-open] [data-row]") : null;
+    if (detail) {
+      sendKeyTo(detail, key);
+      return;
+    }
+    choice.choose(s.person);
+    if (kind === "send") focusMessage();
+  };
+  useRowKeys(ref, {
+    toggle: () => choice.enter(s.person),
+    primary: kind === "send" ? () => toDetail("primary") : undefined,
+    copy: kind === "send" ? () => toDetail("copy") : undefined,
+    edit: kind === "send" ? () => toDetail("edit") : undefined,
+  });
+  return (
+    <li className="line" ref={ref} aria-label={name} {...choice.rowProps(s.person)}>
+      <div className="row pair">
+        <button type="button" className="expander text" aria-expanded={choice.chosen === s.person} onClick={() => choice.choose(s.person)}>
+          <strong>{name}</strong>
+          <span className="sub">
+            {sub}
+            {kind === "waiting" && <WaitingPill days={oldest} chase={chase} />}
+          </span>
+        </button>
+        {kind === "send" && (
+          <div className="acts">
+            <button type="button" className="btn primary" onClick={() => toDetail("primary")}>
+              {props.copied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
+            </button>
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function YourSection(props: { section: S["FollowupSection"]; compact: boolean; reveal: { id: string; n: number } | null; pane?: boolean }) {
   const { t, tn } = useWords();
   const s = props.section;
   const actions = props.compact ? [] : s.actions;
   const Heading = props.compact ? "h4" : "h3";
-  const decisions = s.questions.filter((q) => q.kind === "decision").length;
-  const asked = s.questions.length - decisions;
   return (
-    <li className="line">
-      <div className="row single">
-        <div className="text">
-          <Heading className="name">{t("followups.you")}</Heading>
-          <span className="sub">
-            {[
-              decisions ? tn("followups.decisions", decisions) : "",
-              asked ? tn("followups.questions", asked) : "",
-              actions.length ? tn("followups.your_actions", actions.length) : "",
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
+    <li className={props.pane ? "line in-pane" : "line"}>
+      {!props.pane && (
+        <div className="row single">
+          <div className="text">
+            <Heading className="name">{t("followups.you")}</Heading>
+            <span className="sub">{yourCounts(s, props.compact, tn)}</span>
+          </div>
         </div>
-      </div>
+      )}
       <div className="body">
         {s.questions.length > 0 && (
           <ul className="children">
@@ -346,17 +464,31 @@ function actionMeta(a: S["FollowupAction"], t: T): string {
   return [a.project_name, a.due ? t(a.due_check ? "op.meta.due_check" : "op.meta.due", { date: day(a.due) }) : ""].filter(Boolean).join(" · ");
 }
 
-/** One person's message to send. `open` shows the message box from the start (the Today inspector). */
-export function PersonSection(props: { section: S["FollowupSection"]; open?: boolean }) {
+/** What a person's message keeps while the list shows them and the detail edits them: the words as edited, and whether the
+ * message has been copied (so its button says Mark sent). The screen holds it, so the list's line and the detail agree. */
+export interface MessageState {
+  draft: string | null;
+  copied: boolean;
+}
+
+/** One person's message to send. `open` shows the message box from the start (the Today inspector). `pane` is the detail
+ * beside the list: the person's name is the pane's heading and the message is always shown. `shared` holds the message's
+ * state for a screen that shows it in two places. */
+export function PersonSection(props: { section: S["FollowupSection"]; open?: boolean; pane?: boolean; shared?: { state: MessageState; set: (patch: Partial<MessageState>) => void } }) {
   const { t, tn } = useWords();
   const act = useAct();
   const { push } = useToasts();
   const s = props.section;
   const ref = useRef<HTMLLIElement>(null);
   const area = useRef<HTMLTextAreaElement>(null);
-  const [open, setOpen] = useState(!!props.open);
-  const [draft, setDraft] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(!!props.open || !!props.pane);
+  const [ownDraft, setOwnDraft] = useState<string | null>(null);
+  const [ownCopied, setOwnCopied] = useState(false);
+  const { shared } = props;
+  const draft = shared ? shared.state.draft : ownDraft;
+  const copied = shared ? shared.state.copied : ownCopied;
+  const setDraft = (value: string | null) => (shared ? shared.set({ draft: value }) : setOwnDraft(value));
+  const setCopied = (value: boolean) => (shared ? shared.set({ copied: value }) : setOwnCopied(value));
   const [view, setView] = useState<"message" | "table">("message");
   const message = draft ?? s.message;
   const questions = toSendQuestions(s);
@@ -471,26 +603,38 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
     { id: "mark-sent", label: t("followups.mark_sent"), run: () => void markSent() },
   ];
   useRowKeys(ref, {
-    toggle: () => setOpen((v) => !v),
+    toggle: props.pane ? undefined : () => setOpen((v) => !v),
     primary,
     copy: copyShown,
     edit,
   });
 
+  const buttons = (
+    <div className="acts">
+      <button type="button" className="btn primary" onClick={primary}>
+        {copied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
+      </button>
+      <RowMenu label={s.name} actions={menu} />
+    </div>
+  );
   return (
-    <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={`p-${s.person}`}>
-      <div className="row pair">
-        <button type="button" className="expander text" aria-expanded={open} onClick={() => setOpen(!open)}>
-          <strong id={`p-${s.person}`}>{s.name}</strong>
-          <span className="sub">{tn("followups.to_send", s.to_send)}</span>
-        </button>
-        <div className="acts">
-          <button type="button" className="btn primary" onClick={primary}>
-            {copied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
-          </button>
-          <RowMenu label={s.name} actions={menu} />
+    <li className={props.pane ? "line in-pane" : "line"} data-row tabIndex={-1} ref={ref} aria-labelledby={props.pane ? undefined : `p-${s.person}`}>
+      {props.pane ? (
+        <div className="detail-top">
+          <div className="detail-state">
+            <span className="sub">{tn("followups.to_send", s.to_send)}</span>
+          </div>
+          {buttons}
         </div>
-      </div>
+      ) : (
+        <div className="row pair">
+          <button type="button" className="expander text" aria-expanded={open} onClick={() => setOpen(!open)}>
+            <strong id={`p-${s.person}`}>{s.name}</strong>
+            <span className="sub">{tn("followups.to_send", s.to_send)}</span>
+          </button>
+          {buttons}
+        </div>
+      )}
       {hold.form}
       {open && (
         <div className="body">
@@ -570,20 +714,22 @@ export function PersonSection(props: { section: S["FollowupSection"]; open?: boo
 }
 
 // Questions held for a meeting or a day, per person: out of To send until that day, with the way to send one now.
-function LaterSection(props: { section: S["FollowupSection"] }) {
+function LaterSection(props: { section: S["FollowupSection"]; pane?: boolean }) {
   const { tn } = useWords();
   const s = props.section;
   const later = s.later ?? [];
   return (
-    <li className="line" aria-labelledby={`l-${s.person}`}>
-      <div className="row pair">
-        <div className="text">
-          <strong id={`l-${s.person}`}>{s.name}</strong>
-          <span className="sub">{tn("followups.later_count", later.length)}</span>
+    <li className={props.pane ? "line in-pane" : "line"} aria-labelledby={props.pane ? undefined : `l-${s.person}`}>
+      {!props.pane && (
+        <div className="row pair">
+          <div className="text">
+            <strong id={`l-${s.person}`}>{s.name}</strong>
+            <span className="sub">{tn("followups.later_count", later.length)}</span>
+          </div>
         </div>
-      </div>
+      )}
       <div className="body">
-        <ul className="plain-list" aria-labelledby={`l-${s.person}`}>
+        <ul className="plain-list" aria-label={s.name}>
           {later.map((q) => (
             <LaterQuestion key={q.id} question={q} />
           ))}
@@ -610,22 +756,24 @@ function LaterQuestion(props: { question: S["FollowupQuestion"] }) {
 }
 
 // What each person has already been sent or told, one line each, with the step that closes it.
-export function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean; nudgeOpen?: boolean }) {
+export function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean; nudgeOpen?: boolean; pane?: boolean }) {
   const { tn } = useWords();
   const s = props.section;
   const Heading = props.compact ? "h4" : "h3";
   const questions = waitingQuestions(s);
   const actions = waitingActions(s);
   return (
-    <li className="line" tabIndex={-1} aria-labelledby={`w-${s.person}`}>
-      <div className="row single">
-        <div className="text">
-          <Heading className="name" id={`w-${s.person}`}>
-            {s.name}
-          </Heading>
-          <span className="sub">{tn("followups.waiting_count", questions.length + actions.length)}</span>
+    <li className={props.pane ? "line in-pane" : "line"} tabIndex={-1} aria-labelledby={props.pane ? undefined : `w-${s.person}`}>
+      {!props.pane && (
+        <div className="row single">
+          <div className="text">
+            <Heading className="name" id={`w-${s.person}`}>
+              {s.name}
+            </Heading>
+            <span className="sub">{tn("followups.waiting_count", questions.length + actions.length)}</span>
+          </div>
         </div>
-      </div>
+      )}
       <div className="body">
         {s.nudge && <NudgeCard section={s} nudge={s.nudge} start={!!props.nudgeOpen} />}
         <ul className="children">

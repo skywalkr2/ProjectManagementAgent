@@ -1,9 +1,14 @@
+import { vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
+
+// The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 const question: S["FollowupQuestion"] = {
   id: "Q-8",

@@ -1,10 +1,15 @@
+import { vi } from "vitest";
 // A limited message (design 6.35): the saved text says who it is limited to and why, and Widen adds a person from the
 // list or removes the limit, each with an Undo toast.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
+
+// The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 const limit: S["SourceLimit"] = {
   people: [

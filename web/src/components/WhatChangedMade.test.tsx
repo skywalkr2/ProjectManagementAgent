@@ -1,7 +1,12 @@
+import { vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { WhatChanged } from "./WhatChanged";
+
+// The window is wide, so a change's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 function changeWith(made: S["MadeView"][]): S["ChangeItem"] {
   return {

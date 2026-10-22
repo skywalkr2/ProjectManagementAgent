@@ -1,8 +1,16 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { FollowUps } from "./FollowUps";
+
+// The window is wide, so a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
+
+/** The detail pane beside the list: the chosen person's message and asks. */
+const findPane = () => screen.findByRole("complementary");
 
 /** Made-up addresses are built from this, so no address is written out whole. */
 const WEB = "https" + "://";
@@ -33,9 +41,11 @@ const sections: S["FollowupSection"][] = [
 test("the PM comes first, then each person with Copy", async () => {
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />);
-  const items = await screen.findAllByRole("listitem");
-  expect(within(items[0]).getByRole("heading", { name: "You" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Copy 2" })).toBeInTheDocument();
+  const you = await screen.findByRole("listitem", { name: "You" });
+  const robin = screen.getByRole("listitem", { name: "Robin Sample" });
+  expect(you.compareDocumentPosition(robin) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(within(robin).getByRole("button", { name: "Copy 2" })).toBeInTheDocument();
+  expect(within(you).queryByRole("button", { name: /^Copy/ })).toBeNull();
 });
 
 const markSentRoutes = {
@@ -157,8 +167,9 @@ test("after copying, the card's primary and the button under the box become Mark
   fakeApi(markSentRoutes);
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
-  await user.click(screen.getByRole("button", { name: "Copy 2" }));
-  expect(await screen.findAllByRole("button", { name: "Mark sent" })).toHaveLength(2);
+  await user.click(within(await findPane()).getByRole("button", { name: "Copy 2" }));
+  // The line, the detail's primary and the button under the box all say it now.
+  expect(await screen.findAllByRole("button", { name: "Mark sent" })).toHaveLength(3);
   expect(screen.queryByRole("button", { name: "Copy 2" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Copy message" })).toBeNull();
 });
@@ -187,6 +198,7 @@ test("the row menu's Mark sent works without copying", async () => {
   const user = userEvent.setup();
   const calls = fakeApi(markSentRoutes);
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   await user.click(await screen.findByRole("menuitem", { name: "Mark sent" }));
   await waitFor(() =>
@@ -258,9 +270,13 @@ test("the default view hides what was already sent; Waiting on them shows it, on
   expect(screen.queryByText("Is the index final?")).toBeNull();
   expect(screen.queryByRole("button", { name: /Copy/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Waiting on them" }));
+  // The line says who and how many; the detail beside it has one line for each.
   const card = screen.getByRole("listitem", { name: "Robin Sample" });
   expect(within(card).getByText("2 waiting")).toBeInTheDocument();
-  const rows = within(card).getAllByRole("listitem");
+  expect(within(card).getByText("waiting 2 days")).toBeInTheDocument();
+  const rows = within(await findPane())
+    .getAllByRole("listitem")
+    .filter((li) => li.classList.contains("child"));
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent(/Is the index final\?/);
   expect(rows[0]).toHaveTextContent(/sent .* \(2 days\)/);
@@ -406,10 +422,13 @@ test("a waiting pill says how long, and says follow up in words as well as color
   fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
-  const calm = screen.getByText("waiting 3 days");
+  const pane = await findPane();
+  const calm = within(pane).getByText("waiting 3 days");
   expect(calm).toHaveClass("k-wait");
-  const late = screen.getByText("waiting 6 days · follow up");
+  const late = within(pane).getByText("waiting 6 days · follow up");
   expect(late).toHaveClass("k-risk");
+  // The person's line carries the longest wait.
+  expect(within(screen.getByRole("listitem", { name: "Robin Sample" })).getByText("waiting 6 days · follow up")).toHaveClass("k-risk");
 });
 
 test("one day of waiting is singular, in the pill and with follow up", async () => {
@@ -421,8 +440,9 @@ test("one day of waiting is singular, in the pill and with follow up", async () 
   fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
-  expect(screen.getByText("waiting 1 day")).toHaveClass("k-wait");
-  expect(screen.getByText("waiting 1 day · follow up")).toHaveClass("k-risk");
+  const pane = await findPane();
+  expect(within(pane).getByText("waiting 1 day")).toHaveClass("k-wait");
+  expect(within(pane).getByText("waiting 1 day · follow up")).toHaveClass("k-risk");
   expect(document.body).not.toHaveTextContent("1 days");
 });
 
@@ -697,9 +717,11 @@ test("a link to a person's group opens the list that shows them, with the cursor
   act(() => {
     expect(reveal("person", "PER-3")).toBe(true);
   });
-  expect(await screen.findByRole("heading", { name: "Quinn Sample" })).toBeInTheDocument();
+  const row = await screen.findByRole("listitem", { name: "Quinn Sample" });
   expect(screen.getByRole("button", { name: "Waiting on them" })).toHaveAttribute("aria-pressed", "true");
-  await waitFor(() => expect(screen.getByRole("heading", { name: "Quinn Sample" }).closest("li")).toHaveFocus());
+  // Their line has the cursor and is the one chosen, so their detail stands beside the list.
+  await waitFor(() => expect(row).toHaveFocus());
+  expect(await screen.findByRole("complementary", { name: "Quinn Sample" })).toBeInTheDocument();
 });
 
 const waitingQuestion = (extra: Partial<S["FollowupQuestion"]> = {}): S["FollowupQuestion"] => ({
@@ -822,7 +844,9 @@ test("Later lists the questions held for a meeting or a day, per person, and To 
   await user.click(screen.getByRole("button", { name: "Later" }));
   const card = screen.getByRole("listitem", { name: "Robin Sample" });
   expect(within(card).getByText("2 for later")).toBeInTheDocument();
-  const rows = within(card).getAllByRole("listitem");
+  const rows = within(await findPane())
+    .getAllByRole("listitem")
+    .filter((li) => li.parentElement?.tagName === "UL");
   expect(rows[0]).toHaveTextContent(/Is the index final\?/);
   expect(rows[0]).toHaveTextContent(/Waiting until .*20/);
   expect(rows[1]).toHaveTextContent(/Is the cover final\?/);
@@ -862,6 +886,7 @@ test("Hold for later on a card holds a question for a day, with the cursor in th
     "POST questions/Q-1/held-for": () => ({ ok: "Q-1", previous: null }),
   });
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
   const choice = screen.getByRole("combobox", { name: "Hold it for" });
@@ -889,6 +914,7 @@ test("Hold for later offers the meetings the calendar keeps entries for, a serie
     "POST questions/Q-1/held-for": () => ({ ok: "Q-1", previous: null }),
   });
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   await user.click(await screen.findByRole("menuitem", { name: "Hold for later…" }));
   const choice = await screen.findByRole("combobox", { name: "Hold it for" });
@@ -925,6 +951,7 @@ test("a message with several questions can be held whole: one choice, with the c
     "POST followups/PER-2/held-for/restore": () => ({ ok: "PER-2" }),
   });
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   await user.click(await screen.findByRole("menuitem", { name: "Hold this message for later…" }));
   // the whole message is held, so no question is picked
@@ -945,6 +972,7 @@ test("a message with one question offers only the one hold, not a second choice 
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => sections, "GET people": () => [], "GET today/agenda": () => [] });
   renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
   expect(await screen.findByRole("menuitem", { name: "Hold for later…" })).toBeInTheDocument();
   expect(screen.queryByRole("menuitem", { name: "Hold this message for later…" })).toBeNull();
@@ -969,11 +997,14 @@ test("a switch groups the open items by project, each saying who it is with and 
   expect(screen.getByRole("radio", { name: "By person" })).toBeChecked();
   await user.click(screen.getByRole("radio", { name: "By project" }));
   const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
-  expect(within(list).getAllByRole("heading").map((h) => h.textContent)).toEqual(["Book", "Cover"]);
-  const book = within(list).getByRole("heading", { name: "Book" }).closest("li")!;
+  // One line per project, how many are open; the first project is chosen, and its items are in the detail beside the list.
+  expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "Cover"]);
+  expect(within(list).getByRole("listitem", { name: "Book" })).toHaveTextContent("2 open");
+  const book = await screen.findByRole("complementary", { name: "Book" });
   expect(within(book).getByText("You · Yours")).toBeInTheDocument();
   expect(within(book).getByText("Robin Sample · To send")).toBeInTheDocument();
-  expect(within(list).getByText("Robin Sample · waiting 5 days · follow up")).toBeInTheDocument();
+  await user.click(within(list).getByRole("listitem", { name: "Cover" }));
+  expect(within(await screen.findByRole("complementary", { name: "Cover" })).getByText("Robin Sample · waiting 5 days · follow up")).toBeInTheDocument();
   // The by-person filters are not shown for a grouping they don't apply to.
   expect(screen.queryByRole("group", { name: "Show" })).toBeNull();
 });
@@ -985,7 +1016,7 @@ test("an item with no project is gathered under No project, after the projects",
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("radio", { name: "By project" }));
   const list = await screen.findByRole("list", { name: "Open follow-ups by project" });
-  expect(within(list).getAllByRole("heading").map((h) => h.textContent)).toEqual(["Book", "No project"]);
+  expect(within(list).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Book", "No project"]);
 });
 
 test("a row's Open goes to that person's group, on the list that holds what is waiting on them", async () => {

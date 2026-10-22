@@ -1,11 +1,16 @@
+import { vi } from "vitest";
 // The obvious next step as one click: "Add a new person" on a "Who is this?" question (prefilled, the cursor in its first
 // field, Undo), and the three choices on a project the assistant found.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { AskChooser } from "./AskChooser";
 import { WhatChanged } from "./WhatChanged";
+
+// The window is wide, so a change's or a person's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 const prefill: S["NewPersonPrefillView"] = {
   full_name: "Jordan Pike",

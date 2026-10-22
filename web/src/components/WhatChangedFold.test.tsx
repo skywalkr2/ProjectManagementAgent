@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 // What changed opens the first item only, the rest one line each, and a to-do's owner, promise and day are edited in its
 // meta line, each part a button that opens a small popover (design 7.3; finding 3.6).
 import "@testing-library/jest-dom/vitest";
@@ -5,8 +6,12 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { day } from "../lib/dates";
-import { fakeApi, renderApp } from "../test-utils";
+import { besidePane, fakeApi, renderApp } from "../test-utils";
 import { WhatChanged } from "./WhatChanged";
+
+// The window is wide, so a change's detail stands beside the list (design 7.13).
+beforeEach(() => besidePane());
+afterEach(() => vi.unstubAllGlobals());
 
 function change(id: string, title: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem"] {
   return {
@@ -87,7 +92,7 @@ function show(items: S["ChangeItem"][], extra: Record<string, (b: unknown) => un
 
 const rowButton = (title: string) => screen.getByRole("button", { name: new RegExp(`^${title}`) });
 
-test("only the first item is open; the others are one line each, with nothing of their details", async () => {
+test("only the first item is chosen, so its details are shown; the others are one line each, with nothing of their details", async () => {
   show([change("A", "First thing"), change("B", "Second thing"), change("C", "Third thing")]);
   renderApp(<WhatChanged />);
   expect(await screen.findByText("Summary of First thing.")).toBeInTheDocument();
@@ -96,22 +101,24 @@ test("only the first item is open; the others are one line each, with nothing of
   expect(rowButton("Third thing")).toHaveAttribute("aria-expanded", "false");
   expect(screen.queryByText("Summary of Second thing.")).toBeNull();
   expect(screen.queryByText("Summary of Third thing.")).toBeNull();
-  // The rows still say what is to be looked at: each line keeps its primary action.
-  expect(screen.getAllByRole("button", { name: "Looks good" })).toHaveLength(3);
+  // The rows still say what is to be looked at: each line keeps its primary action (and the detail has its own).
+  expect(screen.getAllByRole("button", { name: "Looks good" })).toHaveLength(4);
+  expect(within(screen.getByRole("complementary")).getAllByRole("button", { name: "Looks good" })).toHaveLength(1);
 });
 
-test("a closed item opens by its line, and the first can be closed", async () => {
+test("another item is chosen by its line, and its details replace the first's", async () => {
   const user = userEvent.setup();
   show([change("A", "First thing"), change("B", "Second thing")]);
   renderApp(<WhatChanged />);
   await screen.findByText("Summary of First thing.");
   await user.click(rowButton("Second thing"));
   expect(await screen.findByText("Summary of Second thing.")).toBeInTheDocument();
-  await user.click(rowButton("First thing"));
   expect(screen.queryByText("Summary of First thing.")).toBeNull();
+  expect(rowButton("Second thing")).toHaveAttribute("aria-expanded", "true");
+  expect(rowButton("First thing")).toHaveAttribute("aria-expanded", "false");
 });
 
-test("a row that holds a question for the person still starts open, whichever place it has", async () => {
+test("a row that holds a question for the person is the one chosen first, whichever place it has", async () => {
   const asking = change("B", "Second thing", { state: "done" });
   asking.changeset!.ops[0] = {
     ...asking.changeset!.ops[0],

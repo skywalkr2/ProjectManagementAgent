@@ -1,6 +1,7 @@
 // Rendering components against a fake API: routes map "METHOD path" to a handler that returns the JSON body.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
+import { vi } from "vitest";
 import type { S } from "./lib/api";
 import type { ReactNode } from "react";
 import { ToastProvider } from "./lib/toasts";
@@ -126,4 +127,10 @@ export function setupView(
     local: over.local ?? true,
     walkthrough: { open: false, step: "you", closed: false, finished: false, ...over.walkthrough },
   };
+}
+
+/** The window is wide enough (1024px or more) for a list's detail to stand beside it, as the list | detail views lay it out.
+ * Stubs the media queries; call `vi.unstubAllGlobals()` after the test (the views' tests do it in `afterEach`). */
+export function besidePane(): void {
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: /min-width:\s*1024px/.test(query), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
 }

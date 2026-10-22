@@ -8,7 +8,7 @@ import type { S } from "../lib/api";
 import { RestartProvider } from "../lib/restart";
 import { forgetMoves } from "../lib/moves";
 import { forgetLine } from "../lib/today";
-import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
+import { besidePane, fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { Today } from "./Today";
 
 // One decision is one Today line (design 7.6, 7.7, 7.14): a held op is asked once, under Decide, and its details hold only
@@ -194,6 +194,7 @@ test("a held op the engine doesn't shape as a question opens as its own row, lab
 });
 
 test("a held op's label on its change's card says what it would do, and the op that was done says what it did", async () => {
+  besidePane();
   const { WhatChanged } = await import("./WhatChanged");
   fakeApi({ "GET changes": () => [change()] });
   renderApp(<WhatChanged />);

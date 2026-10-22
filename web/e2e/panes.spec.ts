@@ -129,13 +129,45 @@ test.describe("the stages board", () => {
   });
 });
 
+/** Hands in a note, so a change waits for a look whatever the other tests did before: the server's stand-in assistant files
+ * it, and the change is in the list once the server says it is waiting for review. */
+async function somethingToLookAt(page: Page) {
+  const handed = await page.request.post("api/handin", { data: { note: `Check the proof copies before the phone review (${Date.now()}).` } });
+  expect(handed.ok()).toBe(true);
+  await expect
+    .poll(async () => ((await (await page.request.get("api/changes")).json()) as Array<{ state: string }>).some((c) => c.state === "review"), { timeout: 30_000 })
+    .toBe(true);
+}
+
+/** Makes sure someone has a message waiting to be sent. The demo holds to-dos for people already; when the other tests used
+ * them up, the production check-in notes are handed in again, which files to-dos for the people named in them. */
+async function somethingToSend(page: Page, baseURL: string) {
+  const waiting = async () => ((await (await page.request.get("api/followups")).json()) as Array<{ is_pm: boolean; to_send: number }>).some((s) => !s.is_pm && s.to_send > 0);
+  if (await waiting()) return;
+  const cases = (await (await page.request.get(`${new URL(baseURL).origin}/__e2e/cases`)).json()) as Array<{ id: string; pasted?: string }>;
+  const notes = cases.find((c) => c.id === "production-checkin")!;
+  const handed = await page.request.post("api/handin", { data: { pasted: `${notes.pasted}\n(Handed in again for the phone review.)` } });
+  expect(handed.ok()).toBe(true);
+  await expect.poll(waiting, { timeout: 30_000 }).toBe(true);
+}
+
+/** Opens a screen after something was handed in, from a fresh load, so its list starts with what the server holds. */
+async function openFresh(page: Page, hash: string) {
+  await page.evaluate((h) => {
+    window.location.hash = h;
+  }, hash);
+  await page.reload();
+}
+
 test.describe("the phone's review mode", () => {
   test("goes through the items waiting for a look one at a time, with Looks good, Send back and Next across the bottom", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await signIn(page, "work/changed");
+    await signIn(page);
+    await somethingToLookAt(page);
+    await openFresh(page, "work/changed");
     await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
     const start = page.getByRole("button", { name: "Review one at a time" });
-    test.skip((await start.count()) === 0, "the workspace has nothing waiting for a look");
+    await expect(start).toBeVisible();
     await start.click();
     const bar = page.getByRole("group", { name: "What to do with this one" });
     await expect(bar).toBeVisible();
@@ -145,6 +177,31 @@ test.describe("the phone's review mode", () => {
     expect(box.x + box.width).toBeLessThanOrEqual(390);
     expect(box.y + box.height).toBeLessThanOrEqual(844);
     for (const name of ["Send back", "Looks good", "Next"]) await expect(bar.getByRole("button", { name })).toBeVisible();
+    expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0);
+    await page.getByRole("button", { name: "Back to the list" }).click();
+    await expect(start).toBeVisible();
+  });
+
+  test("goes through the messages waiting to be sent one person at a time, with the message's own Copy and Next across the bottom", async ({ page, baseURL }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signIn(page);
+    await somethingToSend(page, baseURL!);
+    await openFresh(page, "work/followups");
+    await expect(page.getByRole("heading", { level: 1, name: "Follow-ups" })).toBeVisible();
+    const start = page.getByRole("button", { name: "Send one at a time" });
+    await expect(start).toBeVisible();
+    await start.click();
+    // One person at a time: their message, with its own Copy, and only Next in the bar.
+    await expect(page.getByRole("textbox", { name: /^Message to / })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy message" })).toBeVisible();
+    const bar = page.getByRole("group", { name: "What to do with this one" });
+    await expect(bar).toBeVisible();
+    const box = (await bar.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    expect(box.y + box.height).toBeLessThanOrEqual(844);
+    await expect(bar.getByRole("button", { name: "Next" })).toBeVisible();
+    await expect(bar.getByRole("button", { name: "Looks good" })).toHaveCount(0);
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0);
     await page.getByRole("button", { name: "Back to the list" }).click();
     await expect(start).toBeVisible();

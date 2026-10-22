@@ -9,7 +9,7 @@ import { useShortcuts } from "../lib/keys";
 import { RestartProvider } from "../lib/restart";
 import { forgetLine } from "../lib/today";
 import { sweep } from "../test-sweep";
-import { fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
+import { besidePane, fakeApi, renderApp, statusFixture, type Routes } from "../test-utils";
 import { Today } from "./Today";
 import { Addons } from "./Addons";
 import { Files } from "./Files";
@@ -257,7 +257,8 @@ function change(id: string, over: Partial<S["ChangeItem"]> = {}, ops: S["OpView"
   };
 }
 
-test("What changed, with its first item open and the others closed, says names, dates and words", async () => {
+test("What changed, with its first change chosen and the others one line, says names, dates and words", async () => {
+  besidePane();
   const ops = [
     op(0, "action.add", "applied", "Send two spine options", { owners: ["Robin Sample"], due: "2026-10-16", to_send: true, project: "Spring book" }, { record: { kind: "action", id: "ACT-7" }, evidence: { quote: "please send two spine options" } }),
     op(1, "action.add", "applied", "Check the cover", { owners: [], due: null }, { record: { kind: "action", id: "ACT-8" } }),
@@ -359,7 +360,8 @@ const followSections: S["FollowupSection"][] = [
   },
 ];
 
-test("Follow-ups, by person on each tab and by project, with a person's message open, says names, dates and words", async () => {
+test("Follow-ups, by person on each tab and by project, with a person's message in the detail, says names, dates and words", async () => {
+  besidePane();
   fakeApi({
     "GET followups": () => followSections,
     "GET people": () => [],
@@ -374,9 +376,13 @@ test("Follow-ups, by person on each tab and by project, with a person's message 
   sweep(view.container);
   await user.click(screen.getByRole("button", { name: "Waiting on them" }));
   await screen.findByText("Who prints the cover?");
-  for (const open of screen.queryAllByRole("button", { name: /^(Robin Sample|Dana Whitlock)/ })) await user.click(open);
-  sweep(view.container);
-  await user.click(screen.getByRole("button", { name: "Draft a nudge" }));
+  // Each person's line chooses them, and the detail beside the list is swept for each.
+  for (const open of screen.queryAllByRole("button", { name: /^(Dana Whitlock|Robin Sample)/ })) {
+    await user.click(open);
+    sweep(view.container);
+  }
+  await user.click(screen.getByRole("button", { name: /^Robin Sample/ }));
+  await user.click(await screen.findByRole("button", { name: "Draft a nudge" }));
   await screen.findByRole("textbox", { name: /nudge|Message/i });
   sweep(view.container);
   await user.click(screen.getByRole("button", { name: "Later" }));
