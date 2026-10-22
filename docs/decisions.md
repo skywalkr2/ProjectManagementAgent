@@ -4,6 +4,31 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: The functional designer's answers on the 2026-10-23 questions
+
+- **Decided (functional designer, through the owner):** yes as built or proposed to the reminders' wording (4), the
+  stopped-work lines' wrap (5), US dollars labeled plainly and no second line on Top priorities (7), and the held message
+  with its to-dos not held (8). Changes:
+  - *Filing by words* (concept, core; a setting already exists): words propose, never file silently, and say why on the
+    item; signals ranked people with the sender's domain, then identifiers and project aliases, then multi-word project
+    names, then side words; a one-word everyday name never counts alone. Projects gain aliases.
+  - *Corrections* (concept, core): missed, declined and dropped are three signals with three lessons; a drop teaches
+    nothing unless its words give a general reason; Quality counts them apart.
+  - *Time zones* (setting): the plain zone names read like the abbreviations; an ambiguous abbreviation comes from the
+    setting or the sender's zone, else is marked to check.
+  - *AI accounts* (concept, core): thinking off only where listed; a newer model asked about once and watched weekly,
+    never switched silently; estimates calibrated at the account check and corrected from reported usage, with a
+    command-line agent's fixed overhead; a saved account moves to a native adapter only on a yes with an identity
+    read-back.
+  - *Later* (concept, core): "Hold until next Monday" now, taken over by the Monday briefing in S2.
+  - *List | detail* (concept, core): Copy copies at once when the message was already seen unchanged; a message to send
+    says "ready since <day>".
+- **Why:** the designer's running version showed display-name matching is fragile, drops are not mistakes, CST is
+  written all year, a silent model or identity switch changes cost and quality unseen, and a second click on every row
+  each morning is friction. The two that matter most are filing by words and the AI accounts.
+- **Impact:** design 4 (the date reader's setting), 6.16, 6.20, 6.22, 6.32, 7.5, 7.7, 7.9, 7.13; new record field
+  `aliases` on projects; new Quality counts; the roadmap's S1-4, B-6a, B-6b, B-11c and S1-3 items. Change log: section 174.
+
 ## 2026-10-22: In list | detail, what opens by itself and what Copy does on a line
 
 - **Decided (main session, roadmap B-6b, building design 7.13):** kind of rule: a core concept (screen behavior), no

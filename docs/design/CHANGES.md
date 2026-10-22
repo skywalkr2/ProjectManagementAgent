@@ -1027,6 +1027,31 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 174. The functional designer's answers on the 2026-10-23 questions (2026-10-22; designed)
+
+- **Filing by words (6.32):** signals ranked people (with the sender's domain), then distinctive identifiers (codes, ticket
+  keys, project aliases), then multi-word project names, then side words; a one-word everyday project name never counts
+  alone; projects get aliases; words propose, never file silently: the item says why it was filed, and moving it is one
+  click that teaches. *Not built yet.*
+- **Missed, declined, dropped (6.22, 6.20):** three meanings kept apart: missed teaches extraction or asks, declined teaches
+  relevance or routing, dropped teaches nothing unless the person's words give a general reason; the Quality measures count
+  them apart. *Not built yet.*
+- **Time zones (4, the date reader):** abbreviations and the plain names read as the zone's local time on the date; an
+  ambiguous one ("IST") from the workspace's setting or the sender's zone, else marked to check. Calendar days for "within
+  <n> days" and the weekend as a range are confirmed. *The plain names and the sender's zone are not built yet.*
+- **Reminders' running record (6.32):** confirmed as built; telling sleep from closed waits for phase I.
+- **Stopped-work lines (7.7):** keep their second line.
+- **AI accounts (6.16):** thinking off only where the listing says so; a newer model is asked about once and watched weekly,
+  never switched to silently; estimates from one count request at the account check, kept as a ratio and corrected from
+  every run's reported usage, plus a measured fixed overhead for a command-line agent; a saved account moves to a native
+  adapter only on a yes with a read-back of the identity it signs in as. *Not built yet.*
+- **Small screen items (7.9, 7.7, 7.5):** US dollars, labeled plainly; no second line on Top priorities (who suggested it
+  is in the inspector); "Hold until next Monday" in Later now. *Not built yet.*
+- **A held message (6.35, 7.5):** confirmed as built: a to-do in a held message isn't held (the limit governs who may see
+  it, not when it is done); singling one reader out of a group draft waits for S1b.
+- **List | detail (7.13):** Copy copies at once when the person has seen this exact message unchanged, and shows it first
+  only when it is new or changed; a message to send says "ready since <day>". *Not built yet.*
+
 ## 173. Every view swept for internal words, a throttled read says until when, and three screen fixes (2026-10-22; B-7, S1-3, built)
 
 - **The sweep reaches every view (7.14):** a second sweep draws Today (its inspector on each kind of line, and the rail),

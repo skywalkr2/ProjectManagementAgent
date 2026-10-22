@@ -886,6 +886,23 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
   no packet text, secret or address. *Built:*
   `tests/test_problems.py::test_a_failed_calls_report_holds_the_parameters_and_the_error_and_no_packet_text_secret_or_address`;
   a request's settings are shown as configured when the report is made.
+- [ ] [B-12] **The functional designer's answers on the 2026-10-23 questions** (received 2026-10-22; `docs/decisions.md`,
+  design change log 174). Built in batches, the two that matter most first. Each sub-item is done when its test passes:
+  - *Batch 1, filing by words (S1-4):* signals ranked people with the sender's domain, then identifiers and project
+    aliases, then multi-word project names, then side words; a one-word everyday name never counts alone (a list per
+    language); `aliases` on projects (record, form, export); the item says why words filed it, and moving it is one click
+    that records a correction.
+  - *Batch 2, AI accounts (B-11c):* estimates calibrated by one count request at the account check, kept as a ratio and
+    corrected from every run's reported usage; a command-line agent's measured fixed overhead per request; a saved account
+    moved to the native adapter only on a yes with a read-back of the identity it signs in as; a newer model in a family
+    asked about once and watched weekly, never switched silently; `thinking: off` only where the listing says so (true
+    today: a test pins it).
+  - *Batch 3, corrections:* missed, declined and dropped kept apart in the learning packet and in the Quality measures; a
+    drop with no note is not learned from.
+  - *Batch 4, smaller ones:* the plain time zone names and an ambiguous abbreviation from the setting or the sender's zone
+    (S1-3); US dollars labeled plainly (B-6a); Top priorities' "who suggested it" in the inspector (B-6b); "Hold until next
+    Monday" in Later (B-6a); Copy at once on a message already seen unchanged, and "ready since <day>" on a message to send
+    (B-6b).
 - [ ] [B-11] **A recommended setup per AI service, out of the box, measured to stay current** (split, owner
   2026-10-21, so the steward starts the next day: **B-11a** first, the three tiers, the presets, effort as an adapter
   capability, the fallback by price and setup loading it all with no question; **B-11b** later, beside I-0, the Settings

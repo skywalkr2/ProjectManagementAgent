@@ -6,70 +6,8 @@ this file.
 
 ## For the functional designer
 
-These were built tonight as described; each needs a yes or a change.
-
-1. **Filing by words (S1-4).** When an item's people don't place it, its words may: the names and aliases of the
-   projects on each side, plus a configured list per side (`workspace.project.side_words`). Words of one side place it;
-   words of both, or none, go to the one "Which side?" question. People still win.
-   - Decides: whether words should place an item at all, and whether project names alone (no list) would be enough.
-   - Note: projects have no aliases, so only their names are matched; a project with a one-word everyday name
-     ("Launch") would match that word anywhere. A minimum of two words for a project name to count, or aliases on
-     projects, would answer it.
-2. **When a correction teaches nothing.** The owner decided an unclear correction asks the person one question. Built
-   alongside: a correction saying something was missed (or sending back an answer that recorded nothing) always
-   teaches or asks; a lesson from a correction no run made names no kind of work.
-   - Decides: whether "missed" should also cover a decline and a drop, which the packet now explains but doesn't force.
-3. **The deadline words' readings** (S1-3): "within <n> days" counts calendar days (only "working days" skips
-   weekends, and holidays are never skipped); "this weekend" is Saturday and Sunday, read as a range; midnight is always
-   doubtful; CST is read as US Central time by default (it is ambiguous elsewhere, and a workspace can change it).
-   - Decides: whether any of these should read differently.
-4. **Reminders and the app's own running record** (S1-3): a late reminder says "while the app wasn't running" only when
-   the app's record of when it ran has a gap covering the due time; otherwise "overdue". The record can't tell sleep from
-   closed, so the words don't claim either.
-   - Decides: the wording, and whether the app should tell the two apart (the system's sleep events, in phase I).
-5. **Lines that stop the assistant's work wrap to two lines** (B-8 R3). Every other Today line keeps its meta on one
-   line, and the rest is in the inspector. A stopped-work line (a restart waiting, a provider paused) has no inspector,
-   and its second line says why it waits and until when, which the rules require to be visible. So it wraps.
-   - Choices: (a) keep the wrap, since these lines are rare and must say why and until when; (b) cut the line with an
-     ellipsis and give these lines a small inspector holding the full text; (c) shorten the wording so it fits one line
-     at 1280px.
-   - Proposed: (a), unless the reviewer sees these lines often enough to matter.
-6. **What's left of "every kind of AI account works properly"** (B-11c, part 2). Each needs a call before it's built:
-   - Turning thinking off. The service's model listing has no "can turn thinking off" capability, so `thinking: off` is
-     never sent. Options: leave it unsent until the listing says so, or send it to models the person checked by hand
-     in the account test.
-   - Picking a family's newest model. The preset relies on the order of the model list, which the service's reference
-     doesn't promise (the list has no date field). Options: keep the order with a check that warns when it changes, or
-     ask the person to pick once.
-   - Estimates. Character counts undercount the current models by about a third. The exact count is one count request
-     per model, which costs a call each time. A command-line agent also adds its own overhead to every request (one
-     run counted about 12,000 tokens for a two-word request). Options: one count request when an account is checked,
-     kept as a ratio; or a count before each run above a set size.
-   - Moving a saved account to the native adapter, which waits for the Settings screen in B-11b. Options: move it
-     silently on the next start, or ask once with a read-back.
-7. **Three small phase B items, each waiting on a call** (B-6a, B-6b):
-   - *A currency setting* (Settings' money list). Every cost comes from the AI services' prices, which are in US
-     dollars, so showing another currency needs a rate. Options: (a) keep dollars and label them plainly as US dollars;
-     (b) a currency setting with a rate the person enters, said as approximate; (c) a rate looked up online, which adds a
-     network call the app doesn't make today. Proposed: (a) for 1.0.
-   - *"Who suggested it" on Top priorities* ("The assistant suggests · no answer yet" as a second line). Since the
-     reviewer's R11 each row is one line of context with no buttons. Is the second line still wanted, or does it leave
-     the design?
-   - *Holding a question for the weekly note* (Follow-ups' Later). The weekly note is the Monday briefing, which is in
-     phase S2, so this waits for S2 unless the weekly note should come earlier on its own.
-8. **A sender's limit and a held message** (S1-2, built; change log 170). A fact, action or question made from a limited
-   source carries that source's limit, worked out from its sources each time it is read rather than copied, so widening
-   the source widens everything made from it. A draft to someone outside the limit is refused, and its packet leaves out
-   what they may not see. A whole message on Follow-ups can be held for a day or a meeting in one choice; a to-do told in
-   it isn't held and stays to send.
-   - Decides: whether the limit should also hold back a to-do in a held message, and whether singling out one reader
-     in a group draft (which waits for drafts to several people, S1b) needs anything sooner.
-9. **List | detail on What changed and Follow-ups** (B-6b, built; change log 171, decisions 2026-10-22). Beside the
-   pane the first item (or the first asking a question) opens by itself; below 1024px nothing opens until a row is
-   picked. Copy on a person whose message isn't open shows the message first, and the next Copy copies. A message not
-   yet sent shows no age on its line.
-   - Decides: whether Copy should copy at once (the person would then copy a message they haven't seen), and whether a
-     message to send should show an age (the server would need to keep when its oldest ask became ready to send).
+Answered on 2026-10-22: recorded in `docs/decisions.md` ("The functional designer's answers on the 2026-10-23 questions"),
+written into the design (change log 174) and planned as roadmap item B-12.
 
 ## For the owner
 

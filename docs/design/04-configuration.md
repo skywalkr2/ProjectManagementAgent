@@ -337,7 +337,12 @@ Built keys:
 - `project_start_words` (starting, launching, kicking off, start, launch, kick off): what the `project-start-as-fact`
   lint reads (6.33): before a name in capitals no project has, in a fact with no project proposed, the words go back
   to propose the project.
-- `due_phrase_words`, `due_number_words`, `time_zone_abbreviations` and `holiday_calendar`: what the date reader reads
+- `due_phrase_words`, `due_number_words`, `time_zone_abbreviations` and `holiday_calendar`: what the date reader reads.
+  An abbreviation names a zone, never a fixed offset, so "CST" in July is Central time on that date, as people write it all
+  year; the plain names ("Central", "Eastern", "Mountain", "Pacific") read the same way. An ambiguous abbreviation ("IST":
+  India, Israel or Irish) is read from this setting when the workspace names it, else from the sender's known zone when it
+  shares the abbreviation, else marked to check (designer, 2026-10-22; change log 174; *the plain names and the sender's
+  zone are not built yet*)
   beyond dates and weekdays (6.33): "day after tomorrow", "later today", "tonight", "noon", "midnight", "first thing
   Monday", "end of the month", "this weekend", "within 48 hours", a time with a zone ("5pm ET"), and named days ("by
   Thanksgiving") from the calendar for the workspace's language (`engine/defaults/holidays.yaml`). A year-less

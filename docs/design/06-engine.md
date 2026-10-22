@@ -1678,6 +1678,17 @@ A person who adds an account gets every tier filled in, so routine work never la
   person accepts or not. Cost is measured, not read from the price list, because a higher effort writes more tokens: a
   low-cost model at high effort may or may not beat a stronger one at low effort, and only the run says which. A measurement older than
   the service's newest listed model is offered again.
+- **A newer model is asked about, never switched to** (designer, 2026-10-22; change log 174; *not built yet*): the preset
+  asks once which model of the family to use, and a weekly check of the service's models and prices asks before any
+  switch, with what it would change in cost; it never switches by itself.
+- **Thinking off** is sent only to a model whose listing says it supports it; it is never inferred from a hand test.
+- **Estimates learn from use** (*not built yet*): when an account is checked, one token-count request per tier's model
+  gives the ratio of real tokens to the app's own count, kept with the account; every run's reported usage then corrects
+  it, with no extra call. A command-line agent's account also keeps a measured fixed overhead per request (one run used
+  about 12,000 tokens for a two-word request), which is added to every estimate.
+- **A saved account moves to a native adapter only on the person's yes** (*not built yet*): asked once, with a read-back
+  of which identity the new connection signs in as, since a connection quietly running as another, older identity is
+  the worst account failure there is.
 - Where it shows (owner, 2026-10-21): setup asks nothing about tiers; adding an account loads its preset silently and
   setup says only that it is ready. Settings holds the rest: the three tiers in plain words with an estimated cost per
   day, each changeable, and "Measure", which offers the measured recommendation. The model's name shows only in
@@ -2450,7 +2461,13 @@ It returns **at most one** proposal op, "nothing to generalize", or one question
 - A correction that says the assistant missed something (the person said so, or sent back an answer that recorded
   nothing) is never "nothing to generalize": an answer with no op goes back once (`miss-left-unlearned`, *built*).
 - The packet says what each kind of correction means: a declined change was the wrong change, and its note is the
-  change's own label, not the person's words; a drop asks why, from the note or the input. When no run made the
+  change's own label, not the person's words; a drop asks why, from the note or the input.
+- **Missed, declined and dropped are three signals, never one** (designer, 2026-10-22; change log 174; *not built yet*):
+  *missed* means the assistant failed to find something, and teaches extraction or asks; *declined* means not the
+  person's, or not a promise, and teaches relevance or routing; *dropped* means no longer needed, and teaches nothing
+  unless the person's own words give a reason that generalizes (a drop with no note is not learned from at all). The
+  Quality measures (6.20) count the three apart, so a week of drops never reads as a week of misses, and a drop never
+  counts as a correction of the assistant. When no run made the
   corrected work, the packet says so and a lesson names no kind of work (built:
   `tests/test_learn_correction.py::test_a_lesson_from_a_correction_no_run_made_names_no_kind_of_work`).
 
@@ -2958,9 +2975,15 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
   second side, a business or a job as the person chose at setup (a top-level project, its projects under it; a
   setting, `workspace.project.business`, names it). Today and Follow-ups get an "All / Personal / <business>" filter (*built*; a follow-up section for
   another person stays whole while any of its items is on the chosen side, since it is one message). Filing reads the
-  people first, since each person belongs to a side, then the item's words (*built*): its text and quote against the names of
-  the projects on each side and a setting's list of words per side (`workspace.project.side_words`), as whole words in any
-  case, where words of exactly one side file it there, under the one project they name; only an item neither its people nor its words place is asked
+  signals in this order (designer, 2026-10-22; change log 174; *built so far:* people, then project names and the side words,
+  all of them as one rank): **people first**, since each person belongs to a side, **including the sender's domain** (an
+  organization's domain on one side is a stronger signal than any word in the body); then **distinctive identifiers**
+  (codes and ticket keys a project records, and a project's aliases, which projects carry as people do); then
+  **multi-word project names**; last, the configured **side words** (`workspace.project.side_words`). Words are matched as
+  whole words in any case. A project's name counts on its own only when it has two or more words or isn't an everyday word
+  (a list per language); "Launch" counts only through an alias such as "Spring launch" or a code. Words **propose, never
+  file silently**: an item words placed says so on the item ("Filed under <side>: it names <project>"), and moving it is one
+  click that records a correction to learn from. Only an item neither its people nor its words place is asked
   about, and those are asked together in one "Which side?" question, never one each. A person with no business is never
   asked: what the assistant can't place goes to Personal while Personal is the only top-level project (its areas and
   projects under it); a workspace that tracks other work at the top without naming a business keeps such items unfiled
