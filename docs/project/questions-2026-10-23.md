@@ -47,6 +47,16 @@ These were built tonight as described; each needs a yes or a change.
      kept as a ratio; or a count before each run above a set size.
    - Moving a saved account to the native adapter, which waits for the Settings screen in B-11b. Options: move it
      silently on the next start, or ask once with a read-back.
+7. **Three small phase B items, each waiting on a call** (B-6a, B-6b):
+   - *A currency setting* (Settings' money list). Every cost comes from the AI services' prices, which are in US
+     dollars, so showing another currency needs a rate. Options: (a) keep dollars and label them plainly as US dollars;
+     (b) a currency setting with a rate the person enters, said as approximate; (c) a rate looked up online, which adds a
+     network call the app doesn't make today. Proposed: (a) for 1.0.
+   - *"Who suggested it" on Top priorities* ("The assistant suggests · no answer yet" as a second line). Since the
+     reviewer's R11 each row is one line of context with no buttons. Is the second line still wanted, or does it leave
+     the design?
+   - *Holding a question for the weekly note* (Follow-ups' Later). The weekly note is the Monday briefing, which is in
+     phase S2, so this waits for S2 unless the weekly note should come earlier on its own.
 
 ## For the owner
 
