@@ -2209,7 +2209,7 @@ class Act(Record):
     approved onward."""
 
     record_kind: ClassVar[str] = "act"
-    prefix: ClassVar[str] = "OUT"
+    prefix: ClassVar[str] = "XACT"
     record_label: ClassVar[str] = "act"
 
     channel: str = Field(min_length=1, description="The channel that carries it out: `copy`, or a plugin's.")

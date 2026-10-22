@@ -676,7 +676,7 @@ def test_the_api_lists_reads_approves_and_sends_an_act_after_the_yes(api):
     assert api.get(f"/api/acts/{act_id}").json()["status"] == "sent"
     assert [a["id"] for a in api.get("/api/acts", params={"status": "sent"}).json()["acts"]] == [act_id]
     assert api.fake.delivered[0][0].recipients[0].address == "api.recipient@example.com"
-    assert api.get("/api/acts/OUT-99").status_code == 404
+    assert api.get("/api/acts/XACT-99").status_code == 404
 
 
 def test_the_api_withdraws_an_act_and_takes_the_persons_answers_for_one_it_cannot_confirm(api):

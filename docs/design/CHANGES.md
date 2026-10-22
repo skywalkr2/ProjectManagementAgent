@@ -1044,7 +1044,7 @@ yet follow, that it is *designed*, with its phase.
   confirm are two ops, `act.confirm_sent` and `act.resend`, with Undo; the publisher's `act.reopen` returns an attempt the
   service never saw to `approved`; and the template's current version is read from the act's channel
   (`registrar.channel(..., template_version=)`), since the core has no template store.
-- **Data (5.1):** the `act` record (prefix `OUT`) is in the record table.
+- **Data (5.1):** the `act` record (prefix `XACT`, distinctive so no add-on's record type collides with it) is in the record table.
 - **Plugin API 0.3.87 (3.x):** `registrar.channel`, `provides.channels`, the result types `ChannelSent`, `ChannelFailed`,
   `ChannelNotSent`, `ChannelUnknown` and the call's `OutgoingAct` and `OutgoingRecipient`.
 - **Invariants (6.7):** `act-approval`, `act-publisher-only`, `act-from-outside` and `act-recipient`.

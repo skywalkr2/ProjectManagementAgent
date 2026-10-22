@@ -2115,7 +2115,7 @@ A message the person copied to send, kept exactly as copied: who it was for, whe
 | `settled` | Literal['sent_another_way', 'not_sent'] \| None | `None` | The person's own answer to whether it went out, when no sent message was found. |
 | `ask_again_at` | datetime \| None | `None` | When to ask again whether it went out, after the person said it is still to send. |
 
-### `act` (OUT-n)
+### `act` (XACT-n)
 
 One thing the app does outside the workspace on the person's behalf (design 6.12): a message, a calendar change or a file for someone. It moves draft, approved (the person's yes on this exact act), sending, then sent, failed or uncertain; stale when what the yes covered changed, withdrawn when the person takes it back. Every change of state is an outbound-tier op, so each is in the ledger; only the person approves, and only the publisher moves it from approved onward.
 
