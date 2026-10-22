@@ -1047,8 +1047,8 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Add a project" }).click();
     const drawer = page.getByRole("dialog", { name: "Add a project" });
     const form = drawer.locator("form.setup-form");
-    await expect(form.getByRole("textbox", { name: "Name" })).toBeFocused();
-    await form.getByRole("textbox", { name: "Name" }).fill("Listed project");
+    await expect(form.getByRole("textbox", { name: "Name", exact: true })).toBeFocused();
+    await form.getByRole("textbox", { name: "Name", exact: true }).fill("Listed project");
     const status = form.getByRole("combobox", { name: "Status" });
     await expect(status.locator("option")).toContainText(["Not set", "Add to the list…"]);
     await status.selectOption({ label: "Add to the list…" });

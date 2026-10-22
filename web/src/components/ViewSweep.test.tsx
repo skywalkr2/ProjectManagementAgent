@@ -706,6 +706,7 @@ test("Quality, with every measure filled, says names, dates and words", async ()
         { person: "PER-1", person_name: "Casey Example", week: "2026-10-12", week_end: "2026-10-18", count: 1 },
       ],
       replays: { count: 2, last_run: at("2026-10-09", 9) },
+      apart: { missed: 3, declined: 1, dropped: 2, weeks: [{ week: "2026-10-05", week_end: "2026-10-11", missed: 3, declined: 1, dropped: 2 }] },
     }),
   });
   const view = renderApp(<Quality onBack={vi.fn()} />);

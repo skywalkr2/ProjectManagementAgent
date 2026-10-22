@@ -939,8 +939,9 @@ class EstimateSettings(ConfigModel):
         20,
         ge=1,
         le=200,
-        description="How many of an account's latest runs its estimates are corrected from: each run that reports how "
-        "many tokens it read moves the account's estimate toward the real count, by the average of this many runs.",
+        description="How many of an account's latest runs its estimates are corrected from: each run whose service "
+        "says how much it read moves the account's estimate toward what was really used, by the average of this many "
+        "runs.",
     )
 
 

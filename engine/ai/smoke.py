@@ -171,7 +171,8 @@ def smoke_test(
                 locked.add(ref)
                 results.extend(_lockdown(tier_name, ref, position == 0, settings, model_id, env, adapter_factory))
                 results.extend(_identity(tier_name, ref, position == 0, settings, env, adapter_factory))
-                if refusal is None:
+                # Calibrate only an account that answered: an offline or refused check measures nothing.
+                if refusal is None and answered:
                     results.extend(
                         _calibration(
                             tier_name, ref, position == 0, settings, model_id, env, adapter_factory, first_report
