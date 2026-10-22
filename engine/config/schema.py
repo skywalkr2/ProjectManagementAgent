@@ -53,7 +53,7 @@ class FileModel(ConfigModel):
 class UserSettings(ConfigModel):
     person: str | None = Field(
         None,
-        description="The PM's own person record id, e.g. PER-1. Their name and other names live on that record only.",
+        description="Your own person record id, e.g. PER-1. Your name and other names live on that record only.",
         json_schema_extra={"choices": "people"},
     )
     timezone: str = Field(
@@ -225,7 +225,7 @@ class PluginSettings(ConfigModel):
 class WorkspaceFile(FileModel):
     name: str = Field("Workspace", description="The workspace's display name.")
     assistant_name: str = Field("Assistant", description="The assistant's display name; the only name people see.")
-    user: UserSettings = Field(default_factory=UserSettings, description="Who the PM is.")
+    user: UserSettings = Field(default_factory=UserSettings, description="Who you are.")
     owner_format: str = Field(
         "{full_name}",
         description='How an action owner is shown: {full_name} and, if you like, {team}, e.g. "{team} ({full_name})". '
@@ -1279,6 +1279,13 @@ class KnowledgeSettings(ConfigModel):
         description="How many days back the quality figures look: how often the assistant's work used what it was "
         "given, how many corrections repeated a mistake it had already been taught about, and how many closes nobody "
         "saw out of all closes.",
+    )
+    review_visit_max_seconds: int = Field(
+        1800,
+        ge=60,
+        le=86400,
+        description="The most seconds one visit to a screen that looks over the assistant's work counts toward the "
+        "time you spend reviewing. A screen left open for hours doesn't add more than this.",
     )
     min_corrections_per_week: int = Field(
         10,
@@ -3207,6 +3214,66 @@ class ImportanceSettings(ConfigModel):
         le=1,
         description="How much it matters to be offered an area of your life for items that keep coming up.",
     )
+    pattern: float = Field(
+        0.5,
+        ge=0,
+        le=1,
+        description="How much it matters to be offered a choice about something you keep putting off, such as a to-do "
+        "you have moved again and again or replies you owe the same person.",
+    )
+
+
+class PatternSettings(ConfigModel):
+    moved_times: int = Field(
+        3,
+        ge=0,
+        le=50,
+        description="A to-do of yours whose day has been moved this many times gets one suggestion with choices: drop "
+        "it, make it weekly or leave it. Zero turns the suggestion off.",
+    )
+    redated_times: int = Field(
+        3,
+        ge=0,
+        le=50,
+        description="A promise you made whose day has been moved this many times gets one suggestion with choices: "
+        "drop it, put it on hold or leave it. Zero turns the suggestion off.",
+    )
+    owed_replies: int = Field(
+        2,
+        ge=0,
+        le=50,
+        description="When you owe the same person this many replies, you get one suggestion with choices: say none is "
+        "needed or leave it. Zero turns the suggestion off.",
+    )
+    snooze_days: int = Field(
+        7,
+        ge=1,
+        le=365,
+        description="How many days a to-do nothing has touched stays out of Today after you choose to snooze it.",
+    )
+
+
+class ConversationSettings(ConfigModel):
+    recent_turns: int = Field(
+        4,
+        ge=0,
+        le=20,
+        description="How many of the latest exchanges in a conversation on a to-do, question, person, project or "
+        "meeting are sent to the assistant word for word. Older ones are sent as one short line each.",
+    )
+    older_turn_chars: int = Field(
+        120,
+        ge=20,
+        le=1000,
+        description="How many characters of an older question in a conversation are sent as its short line.",
+    )
+    record_chars: int = Field(
+        3000,
+        ge=200,
+        le=20000,
+        description="The most characters of what is written on the record a conversation is about that are sent with "
+        "each message.",
+    )
 
 
 class AttentionSettings(ConfigModel):
@@ -3405,6 +3472,15 @@ class StewardFile(FileModel):
         default_factory=CaptureSettings,
         description="How voice notes dropped in a capture folder or handed in are sized before they are turned into "
         "text.",
+    )
+    conversation: ConversationSettings = Field(
+        default_factory=ConversationSettings,
+        description="How much of a conversation on a record, and of the record itself, is sent with each message.",
+    )
+    patterns: PatternSettings = Field(
+        default_factory=PatternSettings,
+        description="When the app offers you a choice about something you keep putting off, and how long a snoozed "
+        "to-do stays away.",
     )
 
 

@@ -17,6 +17,10 @@ const ask = (id: string, extra: Partial<AskItem> = {}): AskItem => ({
   answer: null,
   proposals: [],
   reports: [],
+  version: 1,
+  waiting_for_go: false,
+  reviewed: false,
+  ops: [],
   ...extra,
 });
 

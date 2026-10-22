@@ -181,6 +181,9 @@ class Context:
     data_level: str = "restricted"  # the most sensitive material a search may quote back, for an AI run
     reporter: str | None = None  # who reported a held ending, as worked out when it was held; set when it is kept
     run: str | None = None  # the AI run that wrote the changeset, set by `apply_changeset`
+    # Whether the person's own drop writes the correction a drop is. Off for a choice made on a suggestion line, which
+    # records its own signal and says nothing about the assistant's work.
+    corrections: bool = True
 
 
 # ---- checks ----------------------------------------------------------------------------------------------------------
@@ -700,7 +703,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 lint(
                     i,
                     "question-without-stake",
-                    "a question to someone else names which of the PM's decisions, designs or dated items depends on "
+                    "a question to someone else names which of the user's decisions, designs or dated items depends on "
                     "the answer (matters_for); without one, record it as a fact and say so in the change's note",
                 )
             if lints.get("near-duplicate-question", "off") != "off":
@@ -1116,7 +1119,7 @@ def resolve_setting(store: Store, handle: str) -> tuple[Any, str | None]:
     except config_screens.SettingsError as err:
         return None, str(err)
     if not setting.editable:
-        return None, "that isn't a setting the PM can change from the screens"
+        return None, "that isn't a setting you can change from the screens"
     return setting, None
 
 
@@ -3402,7 +3405,7 @@ def _apply_op(
         for draft in endings.called_off_notices(tx, ctx, cur):
             # Whoever was already told gets one line, drafted for the person to send; nothing goes out by itself.
             made("question", tx.create("question", draft, w).id)
-        if ctx.actor == "pm":
+        if ctx.actor == "pm" and ctx.corrections:
             # Dropping a reply the assistant said was owed says none was: its own kind of correction.
             _record_dropped(
                 tx, ctx, "action", op.id, reason, "no_reply_needed" if cur.data.get("reply_owed") else "dropped"
@@ -4408,10 +4411,11 @@ def apply_as_person(
     note: str = "",
     *,
     all_or_nothing: bool = False,
+    corrections: bool = True,
 ) -> str:
     """Apply ops the person made on screen (an edit, a review's choices) as theirs. Returns the changeset id. `note` is
     words the person wrote with the change, which an op may quote as its evidence. With `all_or_nothing`, one op the
-    applier refuses leaves every op of the change unapplied."""
+    applier refuses leaves every op of the change unapplied. With `corrections` off, a drop writes no correction."""
     from engine.names import People
     from engine.ops import CHANGESET
 
@@ -4430,6 +4434,7 @@ def apply_as_person(
         Inputs(request.id, None, "", note, "trusted"),
         confirmed_by_pm=True,
         actor="pm",
+        corrections=corrections,
     )
     cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"reviewed": True}, all_or_nothing=all_or_nothing)
     refused = [o for o in store.read().get("changeset", cs_id).data["ops"] if o["status"] == "refused"]

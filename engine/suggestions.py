@@ -9,7 +9,8 @@ records, and records a "Not now". Everything else on Today is never held back he
 
 "Not now" is a `suggestion_dismissed` signal whose note names the line and what it was when put off. It stays off until
 something about the suggestion changes (its change key), and taking it back makes it show again. The day's cap counts
-what shows and what the person put off today.
+what shows and what the person put off or chose something about today. A pattern line and a stale line carry choices
+(`engine.patterns`); "Leave it" keeps a line off the way "Not now" does.
 """
 
 from __future__ import annotations
@@ -19,12 +20,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, time
 from typing import Any
 
-from engine import attention
+from engine import attention, patterns
 from engine.storage import WriteContext
 from engine.today import zone
 
 #: The kinds of Today line that are suggestions, in the settings' own names (`steward.attention.importance`).
-KINDS = ("escalate", "stale", "unfiled", "learned", "catch_up", "area")
+KINDS = ("escalate", "stale", "unfiled", "learned", "catch_up", "area", "pattern")
 TAKEN_BACK = "taken back"
 
 
@@ -42,7 +43,7 @@ def change_key(line: Any) -> str:
         return f"{','.join(sorted([*line.questions, *line.actions]))}:{line.count}"
     if line.kind == "stale":
         return ",".join(sorted(line.actions))
-    return str(line.count)
+    return str(line.count)  # a pattern: how many times it has happened
 
 
 def importance(cfg: Any, kind: str) -> float:
@@ -56,7 +57,7 @@ def _note(line: Any) -> str:
 def dismissed(view: Any) -> dict[tuple[str, str], str]:
     """What the person put off and hasn't taken back: (kind, line key) to the change key it had."""
     found: dict[tuple[str, str], str] = {}
-    for signal in sorted(view.list("signal"), key=lambda s: s.id):
+    for signal in sorted(view.list("signal"), key=lambda s: int(s.id.rpartition("-")[2])):
         if signal.data["kind"] != "suggestion_dismissed" or signal.data.get("note") in (None, TAKEN_BACK):
             continue
         try:
@@ -64,7 +65,8 @@ def dismissed(view: Any) -> dict[tuple[str, str], str]:
             found[(said["kind"], said["subject"])] = said["change"]
         except (ValueError, KeyError, TypeError):
             continue
-    return found
+    # A choice to leave a suggestion keeps it away the same way.
+    return {**found, **patterns.stays_off(view)}
 
 
 def _put_off_today(view: Any, cfg: Any, now: datetime) -> tuple[datetime, ...]:
@@ -72,7 +74,10 @@ def _put_off_today(view: Any, cfg: Any, now: datetime) -> tuple[datetime, ...]:
     today = now.astimezone(here).date()
     moments = []
     for signal in view.list("signal"):
-        if signal.data["kind"] != "suggestion_dismissed" or signal.data.get("note") == TAKEN_BACK:
+        if (
+            signal.data["kind"] not in ("suggestion_dismissed", "suggestion_chosen")
+            or signal.data.get("note") == TAKEN_BACK
+        ):
             continue
         at = datetime.fromisoformat(str(signal.data["at"]))
         at = at if at.tzinfo else at.replace(tzinfo=UTC)
@@ -131,7 +136,7 @@ def take_back(store: Any, signal_id: str) -> bool:
     there was one to take back."""
     found = store.read().get("signal", signal_id)
     if found is None or found.data["kind"] != "suggestion_dismissed" or found.data.get("note") == TAKEN_BACK:
-        return False
+        return False  # a choice is taken back with `patterns.undo`
     with store.transaction() as tx:
         tx.update(
             "signal",

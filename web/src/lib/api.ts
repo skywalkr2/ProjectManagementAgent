@@ -126,7 +126,12 @@ export const api = {
 
   ask: (question: string) => call<S["Created"]>("POST", "ask", { question }),
   asks: () => call<S["AskView"][]>("GET", "asks"),
+  /** The conversation kept on a record, and saying something in it. */
+  conversation: (kind: string, record: string) => call<S["ConversationView"]>("GET", `records/${id(kind)}/${id(record)}/conversation`),
+  say: (kind: string, record: string, message: string) => call<S["Created"]>("POST", `records/${id(kind)}/${id(record)}/conversation`, { message }),
   quality: () => call<S["QualityView"]>("GET", "quality"),
+  /** How long a screen that looks over the assistant's work was open and in view on one visit. */
+  reviewTime: (body: S["ReviewTimeIn"]) => call<S["ReviewTimeSaved"]>("POST", "quality/review-time", body),
   /** The last failures Send feedback may add to a message, already masked by the server. */
   feedbackProblems: () => call<S["FeedbackProblems"]>("GET", "feedback/problems"),
   /** Save, or correct, the person's own count for a day: what Undo takes comes back as `previous`. */
@@ -388,6 +393,9 @@ export const api = {
   /** "Not now" on a suggestion line: it stays off until something about it changes. */
   notNowSuggestion: (key: string) => call<S["NotNowDone"]>("POST", "suggestions/not-now", { key }),
   undoNotNowSuggestion: (signal: string) => call<S["Ok"]>("POST", `suggestions/not-now/${id(signal)}/undo`),
+  /** A choice on a suggestion line, done at once; Undo takes it and what it changed back. */
+  chooseSuggestion: (body: S["ChooseIn"]) => call<S["ChooseDone"]>("POST", "suggestions/choose", body),
+  undoChoice: (signal: string) => call<S["Ok"]>("POST", `suggestions/choose/${id(signal)}/undo`),
   /** Why a promise exists: its words, who owes it to whom, its day, how it is known and what was heard since. */
   remind: (action: string, body: S["ReminderIn"]) => call<S["Applied"]>("POST", `reminders/${id(action)}`, body),
   promise: (action: string) => call<S["PromiseView"]>("GET", `promises/${id(action)}`),

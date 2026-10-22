@@ -612,7 +612,7 @@ def test_an_add_ons_settings_are_a_form_group_saved_to_its_own_file(tmp_path):
     wrong = c.post(
         f"{api}/settings", json={"changes": {"plugins/example.ask_on_add": "maybe"}, "fingerprint": fingerprint}
     )
-    assert wrong.status_code >= 400 and "File a question for the PM" in wrong.text
+    assert wrong.status_code >= 400 and "File a question for you" in wrong.text
     unknown = c.post(f"{api}/settings", json={"changes": {"plugins/nobody.thing": 1}, "fingerprint": fingerprint})
     assert unknown.status_code >= 400
 

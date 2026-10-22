@@ -331,7 +331,7 @@ class RecordLogOp(OpModel):
 
 class ActionAddOp(OpModel):
     """A new action: something a person will do. Owners are people (name or id); leave empty if nobody is named.
-    With no owner the action is held and the PM is asked to pick one. Evidence is required."""
+    With no owner the action is held and the user is asked to pick one. Evidence is required."""
 
     op: Literal["action.add"]
     text: str = Field(
@@ -340,7 +340,7 @@ class ActionAddOp(OpModel):
     owners: list[str] = Field(
         default_factory=list,
         description="The people who do it, each by name or id; empty if nobody is named. A name that isn't one "
-        "known person waits for the PM to say who.",
+        "known person waits for the user to say who.",
     )
     due: date | None = Field(None, description="The day it is due, if one is stated.")
     due_words: str | None = Field(
@@ -606,7 +606,7 @@ class ActionNewsOp(OpModel):
 
 
 class QuestionAddOp(OpModel):
-    """A question for a person, written for its reader. A decision is a question to whoever decides, the PM when
+    """A question for a person, written for its reader. A decision is a question to whoever decides, the user when
     nobody is named. A question to anyone else needs at least one link the recipient can open."""
 
     op: Literal["question.add"]
@@ -630,14 +630,14 @@ class QuestionAddOp(OpModel):
     )
     kind: Literal["question", "decision"] = Field(
         "question",
-        description="question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is "
+        description="question: an ordinary question. decision: a choice for whoever decides, the user when nobody is "
         "named.",
     )
     matters_for: str | None = Field(
         None,
-        description="For a question to anyone but the PM: which of the PM's decisions, designs or dated items depends "
-        "on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say "
-        "so in the change's note.",
+        description="For a question to anyone but the user: which of the user's decisions, designs or dated items "
+        "depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead "
+        "and say so in the change's note.",
     )
 
 
@@ -709,7 +709,7 @@ class QuestionDoneOp(OpModel):
 
 
 class PersonAddOp(OpModel):
-    """Someone the input names who isn't on file yet. From outside content it waits for the PM to confirm."""
+    """Someone the input names who isn't on file yet. From outside content it waits for the user to confirm."""
 
     op: Literal["person.add"]
     full_name: str = Field(min_length=1, description="The person's full name.")
@@ -973,11 +973,11 @@ class TextDraftOp(OpModel):
 
 
 class AnswerOp(OpModel):
-    """Answer the PM's question from the material given: the user guide, the settings, what this install can do and
+    """Answer the user's question from the material given: the user guide, the settings, what this install can do and
     the records. Every claim the answer makes cites the exact words it comes from. Creates an answer record."""
 
     op: Literal["answer"]
-    text: str = Field(min_length=1, max_length=4000, description="The answer, in plain words, for the PM.")
+    text: str = Field(min_length=1, max_length=4000, description="The answer, in plain words, for the user.")
     cites: list[EvidenceIn] = Field(
         min_length=1, max_length=10, description="The exact words from the material that the answer rests on."
     )
@@ -987,7 +987,7 @@ class AnswerOp(OpModel):
 
 
 class SettingProposeOp(OpModel):
-    """Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM
+    """Propose a change to one setting, when the answer is a setting the user can change. Nothing changes until the user
     applies it. The setting is named by its setting code from the settings list."""
 
     op: Literal["setting.propose"]
@@ -1139,8 +1139,8 @@ class RuleRetireOp(OpModel):
 
 
 class ReportDraftOp(OpModel):
-    """Draft a report to the product's maintainers when the PM asks for something the product can't do: what was
-    wanted, what happens now, and why it would help. The PM reviews and sends it."""
+    """Draft a report to the product's maintainers when the user asks for something the product can't do: what was
+    wanted, what happens now, and why it would help. The user reviews and sends it."""
 
     op: Literal["report.draft"]
     title: str = Field(min_length=1, max_length=120, description="One line naming what is missing.")

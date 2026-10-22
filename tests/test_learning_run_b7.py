@@ -249,7 +249,7 @@ def test_a_lessons_breadth_is_read_from_the_persons_words_and_a_mistake_always_t
     and a correction too small to generalize still proposes the narrow lesson (design 6.22)."""
     prompt = resources.files("engine.prompts").joinpath("learn-correction.md").read_text(encoding="utf-8")
     playbook = resources.files("engine.playbook.guidance").joinpath("learn-correction.md").read_text(encoding="utf-8")
-    assert "Read the breadth from the PM's words" in prompt and 'only "always", "every" or "never"' in prompt
+    assert "Read the breadth from the user's words" in prompt and 'only "always", "every" or "never"' in prompt
     assert "propose the narrow lesson" in prompt and "only about this one item" not in prompt
     assert "The person's words set the breadth" in playbook and "still teaches the narrow lesson" in playbook
 
@@ -265,9 +265,9 @@ def test_the_prompt_says_who_owns_shared_work_and_where_a_direct_choice_and_a_di
     )
     assert "Work two people do together" in prompt and 'one action with both as owners and no "promised_to"' in prompt
     assert "Work two people do together is one action with both as owners" in playbook
-    assert "is a reply the PM owes (below), not a decision question" in prompt
-    assert "a choice someone asks the PM directly, which is a reply the PM owes" in playbook
-    assert "are a follow-up to the person quoted as saying it, not a question to the PM" in prompt
+    assert "is a reply the user owes (below), not a decision question" in prompt
+    assert "a choice someone asks the user directly, which is a reply the user owes" in playbook
+    assert "are a follow-up to the person quoted as saying it, not a question to the user" in prompt
     assert "a colon inside an item" in prompt
 
 

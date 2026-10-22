@@ -2094,7 +2094,7 @@ class PluginHost:
                 else:
                     pm = self.cfg.workspace.user.person
                     if not pm or tx.get("person", pm) is None:
-                        raise StoreError("no configured PM to receive the question")
+                        raise StoreError("no person is set up to receive the question")
                     data = {**data, "to": pm}
                 tx.create(kind, data, context)
 

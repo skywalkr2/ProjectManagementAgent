@@ -1073,8 +1073,8 @@ def _draft_changeset(
 
 
 REPEATED = (
-    "This answer is the same as the one the PM sent back. The PM's note in this request is an instruction: act on it. "
-    "If the note shows the request was based on a misunderstanding, record what the PM said instead of repeating."
+    "This answer is the same as the one the user sent back. The user's note in this request is an instruction: act on "
+    "it. If the note shows the request was based on a misunderstanding, record what the user said instead of repeating."
 )
 
 
@@ -1558,7 +1558,7 @@ def send_back(
     with store.transaction() as tx:
         r = tx.get("request", old.id)
         tx.update("request", old.id, {"state": "done", "waiting": None}, _PM, read_version=r.version)
-        combined = "\n\n".join(x for x in (old.data.get("note"), f"Sent back by the PM: {note.strip()}") if x)
+        combined = "\n\n".join(x for x in (old.data.get("note"), f"Sent back by the user: {note.strip()}") if x)
         return tx.create(
             "request",
             {

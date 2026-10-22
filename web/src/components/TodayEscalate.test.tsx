@@ -133,7 +133,7 @@ test("the stale to-dos are one line that opens the list narrowed to them", async
 
 test("one stale to-do is titled by its own words", async () => {
   show([line("stale", { key: "stale", count: 1, actions: ["A-1"], waiting_days: 30, subject: "Tidy the style sheet" })]);
-  expect(await screen.findByText("Keep or drop: Tidy the style sheet")).toBeInTheDocument();
+  expect(await screen.findByText("Decide whether you are still doing: Tidy the style sheet")).toBeInTheDocument();
 });
 
 test("a stale line holding none is not shown, so no line says zero", async () => {

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from engine import repeats
+from engine import patterns, repeats
 from engine.applier import _similar, apply_as_person
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.firm_due import firm_due
@@ -122,6 +122,7 @@ def open_actions(
     changed = view.last_changes("action")
     created = view.creators("action")
     stale_after = cfg.ui.today.stale_after_days
+    kept = patterns.marks(view) if stale_after else {}
     me = cfg.workspace.user.person
     asking_owner = {
         (q.data.get("resolves") or {}).get("action"): q.id
@@ -151,7 +152,13 @@ def open_actions(
             )
             for o in d.get("owners") or []
         ]
-        untouched = (now - _moment(changed[a.id])).days if a.id in changed else None
+        # What the person said about a stale line (kept it, snoozed it) counts as a touch, and a snooze waits.
+        mark = kept.get(a.id)
+        touched = _moment(changed[a.id]) if a.id in changed else None
+        if mark is not None and (touched is None or mark.at > touched):
+            touched = mark.at
+        untouched = (now - touched).days if touched is not None else None
+        snoozed = mark is not None and mark.until is not None and mark.until > now
         own = bool(me) and any(o["person"] == me for o in d.get("owners") or [])
         if d["status"] == "held":
             state = "no_owner"
@@ -165,6 +172,7 @@ def open_actions(
             and due is None
             and not d.get("remind_at")
             and not d.get("reply_owed")
+            and not snoozed
             and untouched is not None
             and untouched >= stale_after
         ):

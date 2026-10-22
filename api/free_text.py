@@ -57,6 +57,9 @@ ROUTES: dict[str, Declared] = {
     "POST /api/handin": _to("the person's note and pasted material become an input"),
     "POST /api/missed": _to("the sentence saying what the assistant missed is handed in as the person's own note"),
     "POST /api/ask": _to("a question to the assistant is queued as an ask"),
+    "POST /api/records/{kind}/{record_id}/conversation": _to(
+        "a message about a record is queued as an ask about it, read as the person's own words"
+    ),
     "POST /api/changesets/{cs_id}/send-back": _to("the note on the changes sent back is queued with the new run"),
     "POST /api/questions/{qid}/reply": _to("a pasted reply is handed in with a note saying which question it answers"),
     "POST /api/task-kinds/{name}/start": _to("the note on a started piece of work is queued with it"),
@@ -71,6 +74,10 @@ ROUTES: dict[str, Declared] = {
     ),
     "POST /api/brief/message": _to("what the person wants from the week's message is queued with the request"),
     # Local: the text is the person's own record or setting.
+    "POST /api/suggestions/choose": _local(
+        "the wording of a choice on a suggestion line, taken from the wording sheet and kept as a to-do's reason, what "
+        "it waits for or how it repeats; the person typed nothing"
+    ),
     "POST /api/todos": _local(
         "the words of a to-do the person adds by hand, kept as its text with its day, owners and repeat; no assistant "
         "reads anything and it is not a note"

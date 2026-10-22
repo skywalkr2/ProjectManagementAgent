@@ -2,7 +2,7 @@
 
 ## What this app is
 
-An assistant for the person who runs projects. You hand in notes, minutes and messages; the assistant reads each one and
+An assistant for anyone juggling work and commitments. You hand in notes, minutes and messages; the assistant reads each one and
 proposes what to record: actions with owners and dates, questions for people, facts and notes. You look over what it did
 and keep it, change it, send it back with a note, or undo it. Nothing goes to another person until you approve the exact
 words, and nothing is sent by the app itself: you copy messages and send them from your own mail or chat.
@@ -92,6 +92,16 @@ You can ask the assistant about the app or about your work. It answers only from
 keys), what this install can do, and your own records, and it shows the words its answer rests on. If the answer is a
 setting you can change, it suggests the change and you apply it with one click, with Undo. If you ask for something the
 app can't do, it drafts a short report to the app's maintainers that you can review and send.
+
+You can also talk to the assistant about one thing. A to-do, question, person, project or meeting has a box on its page:
+ask what it is waiting on, or ask for something to be done to it. The assistant sees that record and what you said
+before. What it answers is kept on the record. A change it proposes is listed under its answer, and you keep or drop each
+one there. If the work would cost more than the amount you chose to be asked about, it waits for your go first.
+
+Now and then the assistant also offers a choice about something you keep putting off: a to-do whose day has moved again
+and again, a promise whose day keeps changing, replies you owe the same person, or a to-do nothing has touched for a
+while. Each is one line on Today with two or three choices, such as drop it, make it weekly or leave it. A choice acts at
+once and has Undo, and nothing is closed or sent for you.
 
 ## Settings
 

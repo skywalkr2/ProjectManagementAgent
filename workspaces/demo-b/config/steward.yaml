@@ -62,6 +62,7 @@ attention:
     learned: 0.3
     catch_up: 0.2
     area: 0.3
+    pattern: 0.6
 dates:
   bookings_to_calendar: true   # a booking confirmation with structured details becomes an entry in the app's own calendar
   suggest_reminders: true   # a reminder is offered with a deadline, renewal, expiry, warranty end or bill an input states
@@ -76,3 +77,12 @@ areas:
 capture:
   audio_kbps: 48   # the bit rate assumed for a voice note, to estimate its length before it is turned into text
   max_audio_mb: 25   # the largest voice note handed in
+patterns:
+  moved_times: 4   # a to-do whose day has moved this many times gets a suggestion with choices; 0 is off
+  redated_times: 2   # a promise you made whose day has moved this many times gets a suggestion with choices; 0 is off
+  owed_replies: 3   # replies you owe the same person that bring a suggestion with choices; 0 is off
+  snooze_days: 5   # days a snoozed to-do stays out of Today
+conversation:
+  recent_turns: 3   # exchanges of a conversation on a record sent word for word; older ones are one short line each
+  older_turn_chars: 100   # characters of an older question kept as its short line
+  record_chars: 2000   # the most characters of the record a conversation is about sent with each message

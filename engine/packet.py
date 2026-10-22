@@ -463,11 +463,19 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
     """An ask (design 6.25): the stable part holds the op reference, what this install can do, the settings and the
     records; the request holds the guide sections chosen for the question, then the question. All of the material
     may be quoted, and an answer's quotes must come from it."""
+    from engine import conversation
     from engine.help import capability_lines, chosen_sections, settings_lines
 
     question = req.data.get("note") or ""
     people = People(store, cfg)
     about_project = req.data.get("project")
+    # A conversation on a record: the record is in view, and what was said before is part of the request.
+    place = conversation.about(req)
+    record_block = conversation.record_text(store, cfg, *place) if place else ""
+    earlier_block = conversation.earlier(store, cfg, req) if place else ""
+    if place and not about_project:
+        found = store.read().get(*place)
+        about_project = found.id if place[0] == "project" else (found.data.get("project") if found else None)
     learned = _learned(
         store,
         cfg,
@@ -475,7 +483,7 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
         people,
         projects=[about_project] if about_project else [],
         source=None,
-        text=question,
+        text=f"{question}\n{record_block}",
         today=today,
         learns=request_learns(store, req.data),
     )
@@ -510,10 +518,12 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
             f"Today is {today.isoformat()} ({today.strftime('%A')}).",
             *((learned.per_input,) if learned.per_input else ()),
             "# From the user guide\n" + sections,
+            *((f"# The record this conversation is about\n{record_block}",) if record_block else ()),
+            *((f"# Earlier in this conversation\n{earlier_block}",) if earlier_block else ()),
             f"<question>\n{question}\n</question>",
         )
     )
-    material = "\n\n".join((install, configured, records, sections))
+    material = "\n\n".join((install, configured, records, sections, record_block, earlier_block))
     task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=learned.log.model_dump())
     return Packet(
         task, material, Cleaned("", 0, 0, False, 0), question, too_long=False, cites="help", knowledge=learned.log
@@ -856,21 +866,21 @@ def _people(store: Store, cfg: Config) -> str:
         if d.get("org"):
             bits.append("org: " + orgs.get(d["org"], d["org"]))
         if p.id == pm:
-            bits.append("this is the PM")
+            bits.append("this is the user")
         else:
             bits.append(_STANCE_WORDS[stance_of(store.read(), cfg.steward, p.id)])
         lines.append("- " + " | ".join(bits))
     if not lines:
         return "(none)"
-    return "\n".join([f"The PM tracks: {', '.join(cfg.steward.tracks)}.", *lines])
+    return "\n".join([f"The user tracks: {', '.join(cfg.steward.tracks)}.", *lines])
 
 
 #: How each stance (design 6.34) reads in the people list of a packet.
 _STANCE_WORDS = {
-    "manage": "the PM manages them",
-    "alongside": "the PM works alongside them",
-    "report_to": "the PM reports to them: ask them nothing unless the PM says to",
-    "watch": "the PM only watches them: ask them nothing",
+    "manage": "the user manages them",
+    "alongside": "the user works alongside them",
+    "report_to": "the user reports to them: ask them nothing unless the user says to",
+    "watch": "the user only watches them: ask them nothing",
 }
 
 

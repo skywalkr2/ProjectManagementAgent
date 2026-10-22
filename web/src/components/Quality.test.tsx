@@ -25,6 +25,7 @@ const quality = (over: Partial<View> = {}): View => ({
   endings: { made: 0, wrong: 0, declined: 0, undone: 0, reopened: 0, days: [] },
   counts: { person: "PER-1", present: 0, missed: 0, entered: 0, days: [] },
   replays: { count: 0, last_run: null },
+  outcome: { promises_found: 0, promises_kept: 0, dismissed: 0, corrected: 0, review_seconds: 0, review_visits: 0, follow_ups_completed: 0, weeks: [] },
   ...over,
 });
 
@@ -46,6 +47,19 @@ const FULL = quality({
     ],
   },
   replays: { count: 2, last_run: null },
+  outcome: {
+    promises_found: 9,
+    promises_kept: 6,
+    dismissed: 2,
+    corrected: 1,
+    review_seconds: 1500,
+    review_visits: 12,
+    follow_ups_completed: 3,
+    weeks: [
+      { week: "2026-10-12", week_end: "2026-10-18", promises_found: 4, promises_kept: 2, dismissed: 1, corrected: 0, review_seconds: 600, review_visits: 5, follow_ups_completed: 1 },
+      { week: "2026-10-19", week_end: "2026-10-25", promises_found: 5, promises_kept: 4, dismissed: 1, corrected: 1, review_seconds: 900, review_visits: 7, follow_ups_completed: 2 },
+    ],
+  },
 });
 
 function show(view: View, routes: Routes = {}, onBack = () => undefined) {
@@ -65,6 +79,7 @@ test("the screen has a section for each measure and shows the window's dates", a
   expect(await screen.findByText("Counting from Sep 21 to Oct 19.")).toBeInTheDocument();
   const titles = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
   expect(titles).toEqual([
+    "What the assistant's work came to",
     "Closes you didn't see",
     "Wrong endings",
     "Promises the app missed",
@@ -121,9 +136,21 @@ test("missed, declined and dropped are three lines of their own, so a week of dr
   expect(apart.queryByText(/Oct 12 to Oct 18/)).not.toBeInTheDocument();
 });
 
+test("the outcome is each measure on its own line, then each week's numbers in words", async () => {
+  show(FULL);
+  await loaded();
+  const found = section("quality-outcome");
+  expect(within(found).getByText("Promises found: it found 9 promises of yours, and you kept 6 of the promises it had found.")).toBeInTheDocument();
+  expect(within(found).getByText("False alerts: suggestions you left as they were, 2; its work you corrected, 1.")).toBeInTheDocument();
+  expect(within(found).getByText("Looking its work over: 25 min in 12 visits.")).toBeInTheDocument();
+  expect(within(found).getByText("Follow-ups completed: 3 things you chased were settled.")).toBeInTheDocument();
+  expect(within(found).getByText("Oct 19 to Oct 25: found 5, kept 4; false alerts 2; looked over 15 min; follow-ups completed 2.")).toBeInTheDocument();
+});
+
 test("a screen with nothing to show says so in plain words in every section", async () => {
   show(quality());
   await loaded();
+  expect(within(section("quality-outcome")).getByText("Nothing to count yet in this window.")).toBeInTheDocument();
   expect(within(section("quality-closes")).getByText("Nothing was closed in this window.")).toBeInTheDocument();
   expect(within(section("quality-endings")).getByText("The assistant hasn't ended anything in this window.")).toBeInTheDocument();
   expect(within(section("quality-counts")).getByText("You haven't entered a count in this window.")).toBeInTheDocument();

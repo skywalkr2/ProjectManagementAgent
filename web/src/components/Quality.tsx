@@ -35,6 +35,11 @@ function Empty(props: { text: string }) {
   return <p className="empty">{props.text}</p>;
 }
 
+/** Seconds as whole minutes, never below one for any time at all. */
+function minutesOf(seconds: number): number {
+  return seconds <= 0 ? 0 : Math.max(1, Math.round(seconds / 60));
+}
+
 function Days(props: { label: string; rows: string[] }) {
   if (props.rows.length === 0) return null;
   return (
@@ -157,6 +162,38 @@ export function Quality(props: { onBack: () => void }) {
           </p>
           <p className="hint">{t("quality.intro")}</p>
           <div className={styles.sections}>
+            <Section id="quality-outcome" title={t("quality.outcome.title")} hint={t("quality.outcome.hint")}>
+              {view.outcome.promises_found + view.outcome.promises_kept + view.outcome.dismissed + view.outcome.corrected + view.outcome.review_seconds + view.outcome.follow_ups_completed === 0 ? (
+                <Empty text={t("quality.outcome.empty")} />
+              ) : (
+                <>
+                  <Days
+                    label={t("quality.outcome.title")}
+                    rows={[
+                      tn("quality.outcome.found", view.outcome.promises_found, { kept: view.outcome.promises_kept }),
+                      t("quality.outcome.false", { dismissed: view.outcome.dismissed, corrected: view.outcome.corrected }),
+                      tn("quality.outcome.review", view.outcome.review_visits, { minutes: minutesOf(view.outcome.review_seconds) }),
+                      tn("quality.outcome.follow_ups", view.outcome.follow_ups_completed),
+                    ]}
+                  />
+                  <Days
+                    label={t("quality.day_list")}
+                    rows={view.outcome.weeks.map((w) =>
+                      t("quality.outcome.week", {
+                        from: monthDay(w.week),
+                        to: monthDay(w.week_end),
+                        found: w.promises_found,
+                        kept: w.promises_kept,
+                        alerts: w.dismissed + w.corrected,
+                        minutes: minutesOf(w.review_seconds),
+                        follow_ups: w.follow_ups_completed,
+                      }),
+                    )}
+                  />
+                </>
+              )}
+            </Section>
+
             <Section id="quality-closes" title={t("quality.closes.title")} hint={t("quality.closes.hint")}>
               {view.closes.total === 0 ? (
                 <Empty text={t("quality.closes.empty")} />

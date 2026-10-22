@@ -327,7 +327,7 @@ test("removing a project acts at once and Undo restores it", async () => {
 test("an empty workspace says so and offers to add a project", async () => {
   api([]);
   renderApp(<Projects />);
-  expect(await screen.findByText(/No projects yet/)).toBeInTheDocument();
+  expect(await screen.findByText(/Nothing here yet\. Add a project/)).toBeInTheDocument();
   expect(screen.getAllByRole("button", { name: "Add a project" })).toHaveLength(2);
 });
 

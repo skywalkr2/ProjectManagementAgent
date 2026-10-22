@@ -563,7 +563,7 @@ Raise an event of an interface this plugin provides ("<interface>.<event>"), aft
 
 #### `context.file_question(title: str, text: str = '') -> None`
 
-File a question for the configured PM; sending is never part of handling an event.
+File a question for the person this workspace belongs to; sending is never part of handling an event.
 
 ## Stages
 
@@ -1362,7 +1362,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 
 ### `question` (Q-n)
 
-A question for a person; a decision is a question to the PM. Added by `question.add` or by the engine, closed by `question.done`; the person sends, drops or answers them in the app.
+A question for a person; a decision is a question to the person. Added by `question.add` or by the engine, closed by `question.done`; the person sends, drops or answers them in the app.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1372,7 +1372,7 @@ A question for a person; a decision is a question to the PM. Added by `question.
 | `links` | list[Link] | `[]` | Pages the reader can open to see what it is about. |
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open. |
-| `kind` | Literal['question', 'decision', 'action-notice', 'routing', 'impact'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. action-notice: tells someone about an action. routing: asks the PM who or what something is. impact: asks another area's contact how a change affects them. |
+| `kind` | Literal['question', 'decision', 'action-notice', 'routing', 'impact'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the person when nobody is named. action-notice: tells someone about an action. routing: asks the person who or what something is. impact: asks another area's contact how a change affects them. |
 | `projects` | list[str] | `[]` | The ids of the projects it is about. |
 | `filed_by` | FiledBy \| None | see below | Why the assistant filed it under its project, when it chose the project itself (design 6.32): the signal, the word or domain that matched and the project. Set once by the applier; none for an item the person or the input placed. |
 | `filed_by.by` | Literal['people', 'domain', 'alias', 'name', 'word'] | required | The signal that decided. |
@@ -1477,9 +1477,9 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `retries` | int | `0` | How many times it was tried again by itself after a run that gave no usable answer. |
 | `created_at` | datetime | required | When the request was made. |
 | `changeset` | str \| None | `None` | The id of the changeset the assistant proposed for it. |
-| `previous` | str \| None | `None` | The request this one redoes after the PM sent it back. |
+| `previous` | str \| None | `None` | The request this one redoes after the person sent it back. |
 | `superseded_by` | str \| None | `None` | The later request that redid this one and applied, which retired this attempt: it is done, its held items and open proposals are closed, and nothing is run or shown for it again. |
-| `dismissed` | bool | `False` | The PM set this aside without trying again; it no longer counts as needing attention. |
+| `dismissed` | bool | `False` | The person set this aside without trying again; it no longer counts as needing attention. |
 | `dismissed_from` | Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed'] \| None | `None` | The state the request was in when it was dismissed, put back by undoing the dismissal. |
 
 ### `changeset` (CS-n)
@@ -1853,11 +1853,11 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 
 ### `signal` (SIG-n)
 
-A correction by the PM, the measure of how well the assistant does. The engine records one when the person sends work back, undoes it, edits a draft or similar; nothing changes it.
+A correction by the person, the measure of how well the assistant does. The engine records one when the person sends work back, undoes it, edits a draft or similar; nothing changes it.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited', 'not_now', 'no_reply_needed', 'missed', 'suggestion_dismissed'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what); not_now, put off the rules review line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the assistant thought was owed is not; missed, said in a sentence what the assistant missed (the note is their words); suggestion_dismissed, said "Not now" to a suggestion line on Today (the note says which line and what it was when put off, so it stays off until something about it changes; it is not a correction). |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited', 'not_now', 'no_reply_needed', 'missed', 'suggestion_dismissed', 'suggestion_chosen', 'review_time'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what); not_now, put off the rules review line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the assistant thought was owed is not; missed, said in a sentence what the assistant missed (the note is their words); suggestion_dismissed, said "Not now" to a suggestion line on Today (the note says which line and what it was when put off, so it stays off until something about it changes; it is not a correction); suggestion_chosen, picked one of the choices a suggestion line offered (the note says which line, the choice and what the line was; it is not a correction); review_time, the seconds spent looking over the assistant's work on one screen (the note says which screen and how long; it is a measure, not a correction). |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `run` | str \| None | `None` | The id of the AI run whose work was corrected, when there was one. |
 | `changeset` | str \| None | `None` | The id of the changeset the correction is about, when there is one. |
@@ -1978,7 +1978,7 @@ One sign-in, sign-out or turning an add-on on or off, made from the screens. The
 
 ### `answer` (ANS-n)
 
-The assistant's answer to a question the PM asked, with the words it rests on.
+The assistant's answer to a question the person asked, with the words it rests on.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1990,7 +1990,7 @@ The assistant's answer to a question the PM asked, with the words it rests on.
 
 ### `setting_proposal` (SETPROP-n)
 
-A setting change the assistant suggested in an answer; the PM applies it or sets it aside.
+A setting change the assistant suggested in an answer; the person applies it or sets it aside.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1998,18 +1998,18 @@ A setting change the assistant suggested in an answer; the PM applies it or sets
 | `key` | str | required | The setting's dotted key. |
 | `value` | Any | `None` | The suggested value. |
 | `why` | str | required | Why it answers the question. |
-| `status` | Literal['open', 'applied', 'dismissed'] | `'open'` | open: waiting for the PM. applied: saved. dismissed: set aside. |
+| `status` | Literal['open', 'applied', 'dismissed'] | `'open'` | open: waiting for the person. applied: saved. dismissed: set aside. |
 
 ### `report` (RPT-n)
 
-A report to the product's maintainers the assistant drafted for something the product can't do (design 6.13). The PM reviews it and sends it themselves.
+A report to the product's maintainers the assistant drafted for something the product can't do (design 6.13). The person reviews it and sends it themselves.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `request` | str | required | The ask it came from. |
 | `title` | str | required | What is missing, in one line. |
 | `text` | str | required | The report. |
-| `status` | Literal['draft', 'sent', 'dismissed'] | `'draft'` | draft: not yet reviewed. sent: the PM sent it. dismissed: set aside. |
+| `status` | Literal['draft', 'sent', 'dismissed'] | `'draft'` | draft: not yet reviewed. sent: the person sent it. dismissed: set aside. |
 
 ### `snapshot` (SNAP-n)
 
@@ -2460,13 +2460,13 @@ The person takes an act back: it will not go. Only the person uses it; Undo brin
 
 ### `action.add`
 
-A new action: something a person will do. Owners are people (name or id); leave empty if nobody is named. With no owner the action is held and the PM is asked to pick one. Evidence is required.
+A new action: something a person will do. Owners are people (name or id); leave empty if nobody is named. With no owner the action is held and the user is asked to pick one. Evidence is required.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `text` | str | required | A verb that does something, e.g. 'Send the final file to the printer'. |
-| `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the PM to say who. |
+| `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the user to say who. |
 | `due` | date \| None | `None` | The day it is due, if one is stated. |
 | `due_words` | str \| None | `None` | The exact words the date comes from ('by Friday', 'early next week'), copied from the input. The rules read the date from them, and their date wins over `due`. |
 | `promised_to` | list[str] | `[]` | For a promise: the people it was promised to, each by name or id (the person this app is for, when someone else promised them something). Empty for a plain to-do. |
@@ -2618,12 +2618,12 @@ Put an action, a question or a note on a meeting's agenda, linked to it, when th
 
 ### `answer`
 
-Answer the PM's question from the material given: the user guide, the settings, what this install can do and the records. Every claim the answer makes cites the exact words it comes from. Creates an answer record.
+Answer the user's question from the material given: the user guide, the settings, what this install can do and the records. Every claim the answer makes cites the exact words it comes from. Creates an answer record.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
-| `text` | str | required | The answer, in plain words, for the PM. |
+| `text` | str | required | The answer, in plain words, for the user. |
 | `cites` | list[EvidenceIn] | required | The exact words from the material that the answer rests on. |
 | `cites[].quote` | str | required | The exact words from the input that justify this op. |
 
@@ -2863,7 +2863,7 @@ Keep something from the input that isn't a fact, action or question. Creates a n
 
 ### `person.add`
 
-Someone the input names who isn't on file yet. From outside content it waits for the PM to confirm.
+Someone the input names who isn't on file yet. From outside content it waits for the user to confirm.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -2932,7 +2932,7 @@ Set a person's part in a project: they run it, design for it, or only watch it. 
 
 ### `question.add`
 
-A question for a person, written for its reader. A decision is a question to whoever decides, the PM when nobody is named. A question to anyone else needs at least one link the recipient can open.
+A question for a person, written for its reader. A decision is a question to whoever decides, the user when nobody is named. A question to anyone else needs at least one link the recipient can open.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -2951,8 +2951,8 @@ A question for a person, written for its reader. A decision is a question to who
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `asks_about` | Literal['date', 'decision', 'design', 'mistake', 'other'] | `'other'` | What the question asks about: date (chasing when something will be done, or a promise), decision, design (how they do their own work, or its detail), mistake (an apparent contradiction with a recorded decision or fact: link both sides), or other. |
-| `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. |
-| `matters_for` | str \| None | `None` | For a question to anyone but the PM: which of the PM's decisions, designs or dated items depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say so in the change's note. |
+| `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the user when nobody is named. |
+| `matters_for` | str \| None | `None` | For a question to anyone but the user: which of the user's decisions, designs or dated items depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say so in the change's note. |
 
 ### `question.done`
 
@@ -3070,7 +3070,7 @@ The engine keeps a to-do's reminder on the app's own calendar: with a time it ma
 
 ### `report.draft`
 
-Draft a report to the product's maintainers when the PM asks for something the product can't do: what was wanted, what happens now, and why it would help. The PM reviews and sends it.
+Draft a report to the product's maintainers when the user asks for something the product can't do: what was wanted, what happens now, and why it would help. The user reviews and sends it.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -3161,7 +3161,7 @@ Make an existing calendar entry an instance of a series, or take it out of its s
 
 ### `setting.propose`
 
-Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM applies it. The setting is named by its setting code from the settings list.
+Propose a change to one setting, when the answer is a setting the user can change. Nothing changes until the user applies it. The setting is named by its setting code from the settings list.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|

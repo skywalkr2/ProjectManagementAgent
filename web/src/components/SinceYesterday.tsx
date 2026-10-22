@@ -2,6 +2,7 @@
 // in the assistant's own words with the quote it rested on and who said it. A close nobody has seen says so in words.
 // Open (the record) is the row's one action; Undo is in its menu. Opening the list is what marks it seen, as drawn: the
 // line on Today goes until something new happens. The list is kept as it was drawn while the screen is open.
+import { useReviewTime } from "../lib/review-time";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
@@ -53,6 +54,7 @@ type Drawn = { status: "loading" } | { status: "failed" } | { status: "ready"; a
 
 export function SinceYesterday(props: { onOpenRecord: (kind: string, id: string) => void }) {
   const { t } = useWords();
+  useReviewTime("since");
   const client = useQueryClient();
   const heading = useRef<HTMLHeadingElement>(null);
   const [drawn, setDrawn] = useState<Drawn>({ status: "loading" });

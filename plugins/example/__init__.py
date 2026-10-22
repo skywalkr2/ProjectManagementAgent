@@ -26,8 +26,8 @@ class Config(Settings):
     ready_label: str = Field("Ready for review", description="Default wording for the review stage.")
     check_pass: str = Field("The reminder has text.", description="Reason shown when the entry check passes.")
     check_fail: str = Field("Add text to the reminder first.", description="Reason shown when the entry check fails.")
-    ask_on_add: bool = Field(True, description="File a question for the PM when a reminder is added.")
-    question: str = Field("Review the new reminder?", description="Title of the question filed for the PM.")
+    ask_on_add: bool = Field(True, description="File a question for you when a reminder is added.")
+    question: str = Field("Review the new reminder?", description="Title of the question filed for you.")
     note_action_label: str = Field(
         "Make a note from this file", description="Name of the action that makes a note from a text file."
     )

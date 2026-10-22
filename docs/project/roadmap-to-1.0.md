@@ -131,7 +131,7 @@ keep each item's full text.
     - *Covers:* *Dates in documents*; *Areas of life*; *Capture from anywhere* (S4).
     - *Exit:* a fictional booking and bill become dated facts with proposed reminders; each area says which account reads it and whether anything leaves the computer; a forwarded item arrives.
 
-15. **S5 Manner and proof** (4 open items; size: about a day)
+15. **S5 Manner and proof** (3 open items; size: about a day)
     - *Covers:* *Gentle suggestions with choices*; *Talking to Reginald*; *The core reads as a daily assistant*; *The outcome, measured* (S5).
     - *Exit:* phase S's exit test: the Quality screen shows the outcome measures from the owner's measured week.
 
@@ -1306,13 +1306,31 @@ S4. **What arrives, and where it may go:**
 S5. **Manner and proof:**
 - [ ] [S5] **Gentle suggestions with choices** on patterns, each choice recorded as a signal, within the attention budget; the
   governor's stale sweep for the person's own items is brought forward from phase E.
+  **Built so far (S5, change log 195):** a to-do moved `steward.patterns.moved_times` times, a promise re-dated
+  `redated_times` times and a person owed `owed_replies` replies are each one suggestion line with choices, and the
+  stale line carries Keep, Drop and Snooze for one to-do (Keep them and Snooze them for several); each choice acts at
+  once, records a `suggestion_chosen` signal and has Undo, inside the attention budget (`tests/test_patterns.py`,
+  `web/src/components/SuggestionChoices.test.tsx`). **Left:** a separate stale line for each of several to-dos.
 - [ ] [S5] **Talking to Reginald:** the conversation on a record (plugin question 190) as the way to ask for anything, every
   proposed change kept or dropped inline.
-- [ ] [S5] **The core reads as a daily assistant:** screens, prompts and help audited for project-manager wording; what is
-  PM-only is listed for the PM pack (phase P).
+  **Built so far (S5, change log 195):** a box on a to-do, question, person, project or calendar entry: each message an
+  ask about the record with the earlier exchanges, estimated and held for the go, answered with prose and the changes
+  listed under it, each kept or dropped there; kept on the record (`tests/test_conversation.py`,
+  `web/src/components/RecordConversation.test.tsx`). **Left:** the core's search (plugin question 207) bringing older
+  history in, and the box on every screen of a record.
+- [x] [S5] **The core reads as a daily assistant:** screens, prompts and help audited for project-manager wording; what is
+  PM-only is listed for the PM pack (phase P). **Built (S5, change log 195):** the wording sheet, the prompts, the
+  playbook guidance, the guide and the settings descriptions say "you", "the user" or "the person"; the PM-only concepts
+  are in `docs/project/pm-pack-items.md`
+  (`tests/test_wording.py::test_no_screen_wording_talks_to_a_project_manager`,
+  `tests/test_wording.py::test_the_settings_prompts_and_guide_a_person_or_the_assistant_reads_say_the_user_not_a_project_manager`).
 - [ ] [S5] **The outcome, measured** on the Quality screen (6.20): open promises found that the person kept, false alerts
   (dismissed or corrected), time spent reviewing, and follow-ups completed. The exit test reads these from the owner's
   week.
+  **Built so far (S5, change log 195):** the four measures per week and for the window on `GET /api/quality` and the
+  Quality screen (`tests/test_outcome.py`, `web/src/components/Quality.test.tsx`, `web/src/lib/review-time.test.tsx`).
+  **Left:** review time from screens beyond review mode, What changed and Since yesterday; the exit is the owner's
+  measured week.
 
 Decided by the owner (2026-10-17): approved mail and calendar management in 1.0 (S1b); reminders reach a sleeping
 person through their own calendar or a mail to themselves, no third-party push, a companion phone app after 1.0; the

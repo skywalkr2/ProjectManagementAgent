@@ -2,6 +2,7 @@
 // source, then Looks good, Send back and Next as full-width buttons at the bottom, so a review is finished with no sideways
 // scrolling and no menu. The buttons press the item's own actions (the same ones its keys use), so what they do and what
 // they record is what the row's own buttons do. When an item leaves the list (it was approved) the next one takes its place.
+import { useReviewTime } from "../lib/review-time";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { sendKeyTo } from "../lib/keys";
 import { useWords } from "../lib/wording";
@@ -23,6 +24,7 @@ export function ReviewMode<T extends { id: string }>(props: {
 }) {
   const { t } = useWords();
   const { items } = props;
+  useReviewTime("review");
   const [currentId, setCurrentId] = useState<string | null>(items[0]?.id ?? null);
   const lastIndex = useRef(0);
   const body = useRef<HTMLOListElement>(null);

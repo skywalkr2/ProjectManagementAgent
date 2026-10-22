@@ -522,7 +522,7 @@ def _digest(c: _Day) -> list[Line]:
         Line(
             f"digest:{q.key}",
             "digest",
-            change=q.kind,
+            change=f"pattern_{q.state}" if q.kind == "pattern" else q.kind,
             text=q.text,
             person=q.person,
             person_name=c.name(q.person),

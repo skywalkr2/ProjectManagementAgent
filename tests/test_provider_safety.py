@@ -148,7 +148,7 @@ def test_the_same_answer_after_a_send_back_is_refused(env):
     cs = process(ws, store, cfg, Router(cfg, store, env={}), req, now=NOW)
     again = send_back(store, cs, "I meant the bookshop, not the library", now=NOW)
     assert process(ws, store, cfg, Router(cfg, store, env={}), again, now=NOW) is None
-    assert any("same as the one the PM sent back" in r for r in asked)
+    assert any("same as the one the user sent back" in r for r in asked)
     assert "same answer again" in store.read().get("request", again).data["waiting"]
 
 

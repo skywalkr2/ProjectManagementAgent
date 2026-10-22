@@ -2397,7 +2397,10 @@ class QueueLineView(BaseModel):
     travel, `minutes`, `text` and `other` the two titles, `due` the day and `at` the later one's start,
     `entry` the entry to open); `stale` is the person's own open to-dos nobody has touched for
     `ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;
-    Look over opens GET /api/open-items narrowed to them); `unfiled` is
+    Look over opens GET /api/open-items narrowed to them); `pattern` is
+    something the person keeps putting off (`state` moved, redated or replies; `count` how many times or how many
+    replies, `text` the first to-do's words, `person` who the replies are owed to, the to-dos' ids in `actions`) with
+    its `choices`; a `stale` line also carries `choices`; `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
     by GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side
     they belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is
@@ -2471,6 +2474,7 @@ class QueueLineView(BaseModel):
         "quiet_promise",
         "date_reminder",
         "area",
+        "pattern",
     ]
     count: int
     fact: str | None = Field(
@@ -2601,6 +2605,9 @@ class QueueLineView(BaseModel):
             "expiry",
             "warranty",
             "bill",
+            "moved",
+            "redated",
+            "replies",
         ]
         | None
     ) = Field(
@@ -2618,7 +2625,15 @@ class QueueLineView(BaseModel):
         "folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last "
         "one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a "
         "business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise "
-        "line: to (the person promised it to them) or from (they promised it to the person).",
+        "line: to (the person promised it to them) or from (they promised it to the person). For a pattern line: "
+        "moved (one of the person's own to-dos whose day has moved again and again), redated (a promise they made, "
+        "moved the same way) or replies (the same person was owed `count` replies).",
+    )
+    choices: list[str] = Field(
+        default_factory=list,
+        description="For a pattern line and a stale line: the choices it offers, in order, each acting at once with "
+        "Undo (POST /api/suggestions/choose, which names the line's key and the choice): drop, weekly, hold, "
+        "no_reply, leave, keep or snooze. The first is the line's main button.",
     )
     rules: list[str] = Field(
         default_factory=list, description="For a rule_review line: the ids of the rules flagged, most present first."
@@ -3957,6 +3972,7 @@ class AskView(BaseModel):
     """One question the PM asked and what came of it."""
 
     id: str
+    version: int = Field(1, description="The request's version, sent back with the go when it waits for one.")
     question: str
     state: Literal["queued", "running", "review", "done", "needs_you", "failed"]
     waiting: ScreenText | None = None
@@ -3965,6 +3981,37 @@ class AskView(BaseModel):
     answer: AnswerView | None = None
     proposals: list[SettingProposalView] = Field(default_factory=list)
     reports: list[ReportView] = Field(default_factory=list)
+    about: RecordRef | None = Field(
+        None, description="For a message in a conversation on a record: the record it is about."
+    )
+    waiting_for_go: bool = Field(
+        False, description="The work is estimated and waits for the person's go (Today has its line)."
+    )
+    estimate_usd: float | None = Field(None, description="What the work was estimated to cost, when it waits for a go.")
+    reviewed: bool = Field(
+        False, description="The person has kept what the assistant changed (Keep all, or looked it over)."
+    )
+    ops: list[OpView] = Field(
+        default_factory=list,
+        description="The changes the assistant proposed with its answer, other than the answer itself, a suggested "
+        "setting and a drafted report, each kept or dropped by the person: an applied one is dropped with POST "
+        "/api/changesets/{id}/undo naming its index; one held for the person is kept with POST "
+        "/api/changesets/{id}/ops/{index}/release or dropped with .../decline.",
+    )
+
+
+class ConversationIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=4000, description="What the person says about the record.")
+
+
+class ConversationView(BaseModel):
+    """The conversation kept on one record: each message and what came of it, oldest first."""
+
+    kind: str
+    id: str
+    turns: list[AskView]
 
 
 class ProposalApply(BaseModel):
@@ -5165,6 +5212,56 @@ class QualityCountUndo(BaseModel):
     previous: QualityCountBefore | None = Field(None, description="What `previous` was in the save to undo.")
 
 
+class QualityOutcomeWeek(BaseModel):
+    """What the assistant's work came to in one week (design 6.20, 6.32 "Measured"). Each figure is its own count."""
+
+    week: date = Field(description="The Monday of the week, in the person's time zone.")
+    week_end: date = Field(description="The Sunday of the week.")
+    promises_found: int = Field(description="Promises of the person's the assistant found this week.")
+    promises_kept: int = Field(
+        description="Promises the assistant had found, from any week, that the person closed as done this week."
+    )
+    dismissed: int = Field(description="Suggestions the person left or kept as they were this week: false alerts.")
+    corrected: int = Field(
+        description="Work the person declined, undid, pulled back, edited or said needed no reply this week: false "
+        "alerts."
+    )
+    review_seconds: int = Field(
+        description="Seconds the screens that look over the assistant's work were open and in view this week."
+    )
+    review_visits: int = Field(description="How many visits those seconds were spread over.")
+    follow_ups_completed: int = Field(
+        description="Things the person chased that were settled this week: a promise someone owed that was followed "
+        "up and then done, a question that was followed up and then answered."
+    )
+
+
+class QualityOutcome(BaseModel):
+    """The outcome measures over the window and for each week, readable for the gate week's exit. The totals are the
+    weeks added up, each measure on its own."""
+
+    promises_found: int
+    promises_kept: int
+    dismissed: int
+    corrected: int
+    review_seconds: int
+    review_visits: int
+    follow_ups_completed: int
+    weeks: list[QualityOutcomeWeek] = Field(description="Each week of the window, oldest first.")
+
+
+class ReviewTimeIn(BaseModel):
+    screen: Literal["review", "changes", "since"] = Field(
+        description="The screen that looks over the assistant's work: review (the review mode), changes (what changed) "
+        "or since (since yesterday)."
+    )
+    seconds: int = Field(ge=0, le=86400, description="How long the screen was open and in view on this visit.")
+
+
+class ReviewTimeSaved(BaseModel):
+    seconds: int = Field(description="The seconds recorded, held to the configured most for one visit; 0 when none.")
+
+
 class QualityView(BaseModel):
     """The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week, the weekly
     missing-op list and "Missed one" for each person and week, over the configured window."""
@@ -5188,6 +5285,7 @@ class QualityView(BaseModel):
     endings: QualityEndings
     counts: QualityCounts
     replays: QualityReplays
+    outcome: QualityOutcome
 
 
 class OwnerNameView(BaseModel):
@@ -5997,6 +6095,26 @@ class CapacityView(BaseModel):
 
 class NotNowIn(BaseModel):
     key: str = Field(description="The key of the suggestion line on Today that the person puts off.")
+
+
+class ChooseIn(BaseModel):
+    key: str = Field(description="The key of the suggestion line on Today the choice is about.")
+    choice: Literal["drop", "weekly", "hold", "no_reply", "leave", "keep", "snooze"] = Field(
+        description="One of the choices the line lists."
+    )
+    reason: str = Field(
+        "", description="For drop and no_reply: why, in the person's wording, kept as the to-do's reason."
+    )
+    waiting: str = Field("", description="For hold: what the promise waits for, in the person's wording.")
+    weekly: str = Field("", description="For weekly: the words of the repeat, such as 'every week'.")
+
+
+class ChooseDone(BaseModel):
+    """A choice made and done. Undo is POST /api/suggestions/choose/{signal}/undo, which also takes back the change
+    it made, when it made one (`changeset`)."""
+
+    signal: str
+    changeset: str | None = None
 
 
 class NotNowDone(BaseModel):

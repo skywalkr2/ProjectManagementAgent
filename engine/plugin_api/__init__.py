@@ -195,7 +195,7 @@ class ReadView:
     #: Set by the host: the items of an interface this plugin uses.
     read_interface: Callable[..., list[Any]] | None = None
     find_interface_about: Callable[..., Any] | None = None
-    #: Set by the host: the id of the person this workspace belongs to (the PM), when set up.
+    #: Set by the host: the id of the person this workspace belongs to, when set up.
     user: str | None = None
     #: Set by the host: the settings the wording of a history row's source follows.
     source_cfg: Any = None
@@ -597,7 +597,7 @@ class EventContext(ReadView):
         self.commands.append(("emit", {"event": event, "payload": dict(payload)}))
 
     def file_question(self, title: str, text: str = "") -> None:
-        """File a question for the configured PM; sending is never part of handling an event."""
+        """File a question for the person this workspace belongs to; sending is never part of handling an event."""
         self.commands.append(("question", {"title": title, "text": text}))
 
 

@@ -29,6 +29,7 @@ import { ProjectKnows } from "./ProjectKnows";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
 import { ProjectPicker } from "./ProjectPicker";
+import { CONVERSATION_KINDS, RecordConversation } from "./RecordConversation";
 import { RecordActivity } from "./RecordActivity";
 import { RefreshedLines } from "./RefreshedLines";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -153,6 +154,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           {kind === "event" && <Attendees fields={data.fields} names={names} />}
           {kind === "event" && <MeetingPrep entry={id} title={heading} />}
           {kind === "person" && <PersonMemory person={id} />}
+          {CONVERSATION_KINDS.has(kind) && <RecordConversation kind={kind} id={id} />}
           {page.data && <RecordActivity page={page.data} />}
           {kind === "project" && <ProjectKnows id={id} />}
           {data.long_text.map((field) => (

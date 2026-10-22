@@ -15,6 +15,7 @@ import { useFirstGoText } from "../lib/first-go";
 import { durationWords } from "../lib/duration";
 import { useRowKeys } from "../lib/keys";
 import { SUGGESTION_KINDS, useNotNow } from "../lib/not-now";
+import { useChoices } from "../lib/suggestion-choices";
 import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
 import { useHeldAnswers } from "../lib/held-answers";
@@ -615,6 +616,10 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.escalate", { text: (line.text ?? "").replace(/[?.!\s]+$/, "") });
       case "stale":
         return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: line.subject }) : tn("queue.stale", line.count);
+      case "pattern": {
+        const vars = { text: line.text ?? "", name };
+        return tn(`queue.pattern.${line.state ?? "moved"}`, line.count, vars);
+      }
       case "capacity": {
         const time = durationWords(line.minutes ?? 0, tn);
         return line.count > 0 ? tn("queue.capacity", line.count, { time }) : t("queue.capacity.none", { time });
@@ -719,6 +724,7 @@ function QueueRow(props: {
         },
       }),
     );
+  const choices = useChoices(line);
   const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
   // The question of what happened at a meeting opens its box under the row; the cursor goes back to the row when it closes.
   const [capturing, setCapturing] = useState(false);
@@ -947,7 +953,34 @@ function QueueRow(props: {
           primary: line.entry && props.handlers.onOpenRecord ? { label: t("queue.clash.open"), run: () => props.handlers.onOpenRecord?.("event", line.entry ?? "") } : null,
           menu: [],
         };
-      case "stale":
+      case "pattern": {
+        // The choices the line offers: the first is the main button, the second sits beside it, the rest are in the menu.
+        const [first, second, ...rest] = choices;
+        const open: MenuAction[] =
+          line.person && props.handlers.onOpenRecord ? [{ id: "open-person", label: t("queue.pattern.open_person", { name: line.person_name ?? "" }), run: () => props.handlers.onOpenRecord?.("person", line.person ?? "") }] : [];
+        return {
+          pill: t(`queue.pill.pattern.${line.state ?? "moved"}`),
+          tone: "neutral",
+          meta: undefined,
+          primary: first ? { label: first.label, run: first.run } : null,
+          other: second ? { label: second.label, run: second.run } : undefined,
+          menu: [...rest.map((c) => ({ id: c.id, label: c.label, run: c.run })), ...open],
+        };
+      }
+      case "stale": {
+        // One to-do: Keep, Drop and Snooze right on the line. Several: Look over opens them, and Keep and Snooze are in
+        // the menu, for all of them.
+        const [first, second, ...rest] = choices;
+        if (line.count === 1 && first) {
+          return {
+            pill: t("queue.pill.stale"),
+            tone: "neutral",
+            meta: tn("queue.stale.meta", line.waiting_days ?? 0),
+            primary: { label: first.label, run: first.run },
+            other: second ? { label: second.label, run: second.run } : undefined,
+            menu: rest.map((c) => ({ id: c.id, label: c.label, run: c.run })),
+          };
+        }
         return {
           pill: t("queue.pill.stale"),
           tone: "neutral",
@@ -959,8 +992,9 @@ function QueueRow(props: {
               props.handlers.onOpenView?.("work/open");
             },
           },
-          menu: [],
+          menu: choices.map((c) => ({ id: c.id, label: c.label, run: c.run })),
         };
+      }
       case "promise": {
         const days = line.waiting_days ?? 0;
         // A date still ahead and no date at all are the waiting-ons that ask for a nudge early; only a passed date is late.

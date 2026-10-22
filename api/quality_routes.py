@@ -3,7 +3,8 @@ records alone."""
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
@@ -25,17 +26,48 @@ from api.schemas import (
     QualityMissedWeek,
     QualityMissingGroup,
     QualityMissingWeek,
+    QualityOutcome,
+    QualityOutcomeWeek,
     QualityRepeatWeek,
     QualityReplays,
     QualityView,
+    ReviewTimeIn,
+    ReviewTimeSaved,
 )
-from engine import gate_measures, quality
+from engine import gate_measures, outcome, quality
 from engine.config import Config
 from engine.names import People
 from engine.storage import Store, StoreError
 from engine.today import zone
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
+
+
+def _outcome(view: Any, person: str | None, now: datetime, days: int, here: Any) -> QualityOutcome:
+    weeks = outcome.per_week(view, person, now, days, here)
+    return QualityOutcome(
+        promises_found=sum(w.found for w in weeks),
+        promises_kept=sum(w.kept for w in weeks),
+        dismissed=sum(w.dismissed for w in weeks),
+        corrected=sum(w.corrected for w in weeks),
+        review_seconds=sum(w.review_seconds for w in weeks),
+        review_visits=sum(w.review_visits for w in weeks),
+        follow_ups_completed=sum(w.follow_ups for w in weeks),
+        weeks=[
+            QualityOutcomeWeek(
+                week=w.week,
+                week_end=w.week + timedelta(days=6),
+                promises_found=w.found,
+                promises_kept=w.kept,
+                dismissed=w.dismissed,
+                corrected=w.corrected,
+                review_seconds=w.review_seconds,
+                review_visits=w.review_visits,
+                follow_ups_completed=w.follow_ups,
+            )
+            for w in weeks
+        ],
+    )
 
 
 def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
@@ -85,6 +117,7 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
                 days=[QualityCountDay(day=d.day, present=d.present, missed=d.missed) for d in counted.days],
             ),
             replays=QualityReplays(count=gate_measures.replay_count(ws.root)),
+            outcome=_outcome(view, person, now, days, here),
             days=days,
             min_corrections_per_week=settings.min_corrections_per_week,
             knowledge_used=[
@@ -148,6 +181,16 @@ def build_quality_router(ws: Workspace, cfg: Config, store: Store, events: Event
                 for w in quality.missed_per_week(view, now, days, here)
             ],
         )
+
+    @r.post("/quality/review-time")
+    def review_time(body: ReviewTimeIn) -> ReviewTimeSaved:
+        """Record how long a screen that looks over the assistant's work was open and in view on one visit, for the
+        time spent reviewing. A visit counts for at most the configured seconds."""
+        try:
+            counted = outcome.record_review_time(store, cfg, body.screen, body.seconds, worker.now())
+        except StoreError as err:
+            raise HTTPException(status_code=422, detail=str(err)) from None
+        return ReviewTimeSaved(seconds=counted)
 
     @r.put("/quality/counts/{day}")
     def save_count(day: date, body: QualityCountIn) -> QualityCountSaved:

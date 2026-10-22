@@ -655,8 +655,8 @@ class HeldFor(BaseModel):
 
 
 class Question(Record):
-    """A question for a person; a decision is a question to the PM. Added by `question.add` or by the engine, closed by
-    `question.done`; the person sends, drops or answers them in the app."""
+    """A question for a person; a decision is a question to the person. Added by `question.add` or by the engine,
+    closed by `question.done`; the person sends, drops or answers them in the app."""
 
     record_kind: ClassVar[str] = "question"
     prefix: ClassVar[str] = "Q"
@@ -669,8 +669,8 @@ class Question(Record):
     kind: Literal["question", "decision", "action-notice", "routing", "impact"] = Field(
         "question",
         description=(
-            "question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. "
-            "action-notice: tells someone about an action. routing: asks the PM who or what something is. impact: "
+            "question: an ordinary question. decision: a choice for whoever decides, the person when nobody is named. "
+            "action-notice: tells someone about an action. routing: asks the person who or what something is. impact: "
             "asks another area's contact how a change affects them."
         ),
     )
@@ -867,7 +867,7 @@ class Cite(BaseModel):
 
 
 class Answer(Record):
-    """The assistant's answer to a question the PM asked, with the words it rests on."""
+    """The assistant's answer to a question the person asked, with the words it rests on."""
 
     record_kind: ClassVar[str] = "answer"
     prefix: ClassVar[str] = "ANS"
@@ -878,7 +878,7 @@ class Answer(Record):
 
 
 class SettingProposal(Record):
-    """A setting change the assistant suggested in an answer; the PM applies it or sets it aside."""
+    """A setting change the assistant suggested in an answer; the person applies it or sets it aside."""
 
     record_kind: ClassVar[str] = "setting_proposal"
     prefix: ClassVar[str] = "SETPROP"
@@ -888,13 +888,13 @@ class SettingProposal(Record):
     value: Any = Field(None, description="The suggested value.")
     why: str = Field(description="Why it answers the question.")
     status: Literal["open", "applied", "dismissed"] = Field(
-        "open", description="open: waiting for the PM. applied: saved. dismissed: set aside."
+        "open", description="open: waiting for the person. applied: saved. dismissed: set aside."
     )
 
 
 class Report(Record):
     """A report to the product's maintainers the assistant drafted for something the product can't do (design
-    6.13). The PM reviews it and sends it themselves."""
+    6.13). The person reviews it and sends it themselves."""
 
     record_kind: ClassVar[str] = "report"
     prefix: ClassVar[str] = "RPT"
@@ -903,7 +903,7 @@ class Report(Record):
     title: str = Field(description="What is missing, in one line.")
     text: str = Field(description="The report.")
     status: Literal["draft", "sent", "dismissed"] = Field(
-        "draft", description="draft: not yet reviewed. sent: the PM sent it. dismissed: set aside."
+        "draft", description="draft: not yet reviewed. sent: the person sent it. dismissed: set aside."
     )
 
 
@@ -1395,14 +1395,14 @@ class Request(Record):
     )
     created_at: datetime = Field(description="When the request was made.")
     changeset: str | None = Field(None, description="The id of the changeset the assistant proposed for it.")
-    previous: str | None = Field(None, description="The request this one redoes after the PM sent it back.")
+    previous: str | None = Field(None, description="The request this one redoes after the person sent it back.")
     superseded_by: str | None = Field(
         None,
         description="The later request that redid this one and applied, which retired this attempt: it is done, its "
         "held items and open proposals are closed, and nothing is run or shown for it again.",
     )
     dismissed: bool = Field(
-        False, description="The PM set this aside without trying again; it no longer counts as needing attention."
+        False, description="The person set this aside without trying again; it no longer counts as needing attention."
     )
     dismissed_from: Literal["queued", "running", "review", "done", "needs_you", "failed"] | None = Field(
         None, description="The state the request was in when it was dismissed, put back by undoing the dismissal."
@@ -2104,7 +2104,7 @@ class Run(Record):
 
 
 class Signal(Record):
-    """A correction by the PM, the measure of how well the assistant does. The engine records one when the person
+    """A correction by the person, the measure of how well the assistant does. The engine records one when the person
     sends work back, undoes it, edits a draft or similar; nothing changes it."""
 
     record_kind: ClassVar[str] = "signal"
@@ -2134,6 +2134,8 @@ class Signal(Record):
         "no_reply_needed",
         "missed",
         "suggestion_dismissed",
+        "suggestion_chosen",
+        "review_time",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -2147,7 +2149,10 @@ class Signal(Record):
         "line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the "
         "assistant thought was owed is not; missed, said in a sentence what the assistant missed (the note is their "
         'words); suggestion_dismissed, said "Not now" to a suggestion line on Today (the note says which line and '
-        "what it was when put off, so it stays off until something about it changes; it is not a correction)."
+        "what it was when put off, so it stays off until something about it changes; it is not a correction); "
+        "suggestion_chosen, picked one of the choices a suggestion line offered (the note says which line, the choice "
+        "and what the line was; it is not a correction); review_time, the seconds spent looking over the assistant's "
+        "work on one screen (the note says which screen and how long; it is a measure, not a correction)."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")

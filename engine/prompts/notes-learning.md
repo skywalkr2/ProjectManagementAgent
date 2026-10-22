@@ -1,5 +1,5 @@
-What the input teaches (add these ops beside the rest of your answer when the input shows them; each waits for the PM to
-keep or discard it, unless the words are the PM's own):
+What the input teaches (add these ops beside the rest of your answer when the input shows them; each waits for the user to
+keep or discard it, unless the words are the user's own):
 - A term, acronym or system name the glossary doesn't have: add a "glossary.add". When the input doesn't say what it
   means, use "confidence": "unknown" and "meaning": "not known yet" instead of guessing. With a meaning the input gives,
   use "assumed" or "confirmed" as the input supports, and quote the words.

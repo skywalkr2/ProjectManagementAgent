@@ -192,7 +192,7 @@ test("the next days' dated to-dos follow the lines", async () => {
 
 test("with nothing pressing it says so, and when it can't load it offers Try again", async () => {
   open(priorities({ lines: [] }));
-  expect(await screen.findByText("Nothing is pressing across your projects.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing is pressing right now.")).toBeInTheDocument();
 });
 
 test("a list that can't load says so and tries again", async () => {

@@ -1735,7 +1735,7 @@ order, each line with a kind:
 |---|---|
 | **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; built, `tests/test_silent_stops.py::test_the_restart_line_comes_before_the_first_go_and_before_decisions`); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`, shaped as a question with two answers when it rests on an inference or drops something that reached someone, `engine/held_ask.py`, 7.6); the questions a follow-on run asked about one move, as one group (`moved`, `engine/move_groups.py`, 7.7; a group of one stays a `decision` or `question` carrying `after_move`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
 | **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); work that has waited for the network longer than `dispatch.offline_line_after_minutes`, one line with the count and since when (`offline`, built, `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line, leaving out any on hold (`overdue`); no backup that works: none set up, none yet, the last one failed or the last one overdue, with the one button that mends it (`backup`, "Back up your work", 7.7; the header chip says it too; batch B-7, `tests/test_follow_up_lines.py`) |
-| **Review** | the person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`, one line (`stale`, 6.9; its action opens To-dos and questions on the stale ones); the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); what the assistant filed under no project, one line with the count while there is any (`unfiled`, `engine/unfiled.py`, 7.14); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
+| **Review** | the person's own open to-dos with no date that nothing has changed for `ui.today.stale_after_days`, one line (`stale`, 6.9; its action opens To-dos and questions on the stale ones, and it carries Keep, Drop and Snooze for one to-do, Keep them and Snooze them for several); something the person keeps putting off, one line each with its choices (`pattern`, 6.32); the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); what the assistant filed under no project, one line with the count while there is any (`unfiled`, `engine/unfiled.py`, 7.14); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
 | **Send** | messages to send, one line per person (`send`); one line per person who is due a follow-up (`nudge`: questions sent, actions told by the rule in 6.9, and the promises they owe that 6.33 says are late with nothing heard, with how many are overdue and the oldest date, 4.11; a promise owed by someone the person reports to keeps its own `promise` line); the one thing a person still hasn't answered after `ui.followups.escalate_after_chases` follow-ups, as a suggestion to ask someone else (`escalate`, 6.8; never sent; the same thing is not also in the person's nudge line) |
 
 Within a group, a kind has a fixed place (decisions first, then who-is, owner, held, go, refused, questions), then the line that
@@ -3126,6 +3126,18 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
 - **Changes** the question asks for (a new action, a decision, a note) come as ops in a changeset under the usual tiers and
   checks (6.7), with the ops reading notes uses; a draft for someone else waits for approval like any other. Plugins' ops are
   not offered to asks.
+- **A conversation on a record** (plugin question 190, S5; change log 195): a to-do, question, person, project or
+  calendar entry has a box, "Talk to the assistant", on its page. A message is an ask whose request names the record
+  (`about`), so the same packet answers it with one more section, what is written on the record
+  (`steward.conversation.record_chars`), and the earlier exchanges (the latest `steward.conversation.recent_turns` word
+  for word, each older one as a short line of its question). It is estimated and held for the go above the configured
+  amount like every ask, and writes the knowledge log. The answer is prose with its cited words; the changes it proposes are
+  listed under it, each kept or dropped there: an applied one is dropped with Undo of that op, a held one is kept or
+  dropped (so every drop records its signal), and Keep all marks the whole change looked over. The conversation is kept on
+  the record (`GET /api/records/{kind}/{id}/conversation`, oldest first) and is not in the general Ask list. There is no
+  new write path: the ask's changeset goes through the applier. **Left:** the core's search (plugin question 207)
+  bringing older history in, and the box on every screen of a record. `tests/test_conversation.py`,
+  `web/src/components/RecordConversation.test.tsx`.
 - **A question handed in as a note becomes an ask.** When the person's own note, with nothing pasted, is a question to the
   assistant, the notes run answers `"ask": true` with no ops, and the same request becomes an ask. Only a trusted request
   with no source qualifies; pasted or outside material never turns into an ask.
@@ -3495,6 +3507,26 @@ people and details, and never acts in their name without their yes on the exact 
     mail; speech-to-text on the native and command-line adapters.
 - **Manner:** suggestions on patterns, each a line with choices recorded as signals; talking to the assistant as the way
   to ask for anything, every proposed change kept or dropped inline.
+  **Built (S5, change log 195):**
+  - *Choices on patterns* (`engine/patterns.py`): by rules from the records, one suggestion line each, inside the attention
+    budget (`steward.attention.importance.pattern`). A to-do of the person's own, not a promise, whose day has moved
+    `steward.patterns.moved_times` times: Drop it, Make it weekly, Leave it. A promise they made moved
+    `redated_times` times: Drop it, Put it on hold, Leave it. A person owed `owed_replies` replies: No reply needed, Leave
+    it. A move is a day changed from one day to another in the ledger; a repeating, held, someone else's or closed to-do
+    is never a pattern; zero turns a pattern off. A choice acts at once (`POST /api/suggestions/choose`) and records one
+    `suggestion_chosen` signal. One that changes records is the person's own change through the applier, and its Undo is
+    the change's (`POST /api/suggestions/choose/{signal}/undo`); Leave it, Keep and Snooze change nothing, and their Undo
+    marks the signal taken back. Leave it keeps the line off until the pattern changes (a further move, another reply
+    owed), as Not now does. A drop made from a suggestion writes no `dropped` correction, so it teaches nothing; No
+    reply needed is the `no_reply_needed` correction it is. The words a choice writes (a reason, what a hold waits for,
+    "every week") come from the wording sheet through the request. *The stale sweep* is the existing line, with choices: for one
+    to-do Keep, Drop, Snooze ("Still doing this?"); for several, Look over and, in the menu, Keep them and Snooze them. Keep
+    and Snooze are marks, not changes to the record: Keep starts the quiet clock again, Snooze holds the to-do out of the
+    sweep for `steward.patterns.snooze_days`; nothing is ever closed on its own. A line saved for the brief is a digest
+    line worded by its pattern. `tests/test_patterns.py`, `web/src/components/SuggestionChoices.test.tsx`.
+  - *Talking to the assistant on a record:* see 6.25. `tests/test_conversation.py`,
+    `web/src/components/RecordConversation.test.tsx`.
+  - **Left:** a separate stale line for each of several to-dos.
 - **Promises come first** (2026-10-17): dependable memory for commitments is the reason to choose the product. A promise
   is found with its evidence and its basis (said or inferred), and its end is proposed the same way: done, date
   changed, called off, partly delivered, or answered without an answer; never closed silently.
@@ -3503,6 +3535,17 @@ people and details, and never acts in their name without their yes on the exact 
   scheduling. Reminders that came due while the computer slept show at once on waking, marked late.
 - **Measured:** promises found and kept, false alerts, time spent reviewing and follow-ups completed, on the Quality
   screen (6.20).
+  **Built (S5, change log 195):** `engine/outcome.py`, on `GET /api/quality` as `outcome` and on the Quality screen
+  first, per week and for the window, each measure on its own (never added together): *promises found* (the person's
+  own promises the assistant made from an input, by the week it made them) and *kept* (promises it had found that the
+  person closed as done that week; a drop is not kept); *false alerts* (a suggestion left or kept as it was, and work
+  declined, undone, pulled back, edited or said to need no reply, by the week; "Not now" is timing and does not count);
+  *time spent reviewing* (the seconds the review screens were open and in view, which each screen counts itself and
+  says once when the person leaves, as a `review_time` signal at most `dispatch.knowledge.review_visit_max_seconds` a
+  visit; nothing is measured outside the app); *follow-ups completed* (another person's promise or a question that was
+  chased and then done or answered, by the week). The gate week reads these from the week's rows.
+  `tests/test_outcome.py`, `web/src/components/Quality.test.tsx`, `web/src/lib/review-time.test.tsx`. **Left:** review
+  time from screens beyond review mode, What changed and Since yesterday.
 - **Acting after a yes** (owner, 2026-10-17): mail (reply, forward, send, archive, move, label, mark read) and calendar
   (create, move, cancel, accept, decline, propose a time) through the publisher (6.3, 6.12), each act shown exactly,
   approved, carried out with a visible status and written to the ledger. A reminder can reach a sleeping person as an

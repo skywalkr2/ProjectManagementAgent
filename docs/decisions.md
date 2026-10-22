@@ -4,6 +4,44 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: Manner and proof (S5): choices on patterns, a conversation on a record, a core without PM wording, the outcome measured
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings.
+  *Patterns* are found by rules from the records, each one suggestion line (so inside the attention budget) with two or
+  three choices. A to-do of the person's own, not a promise, whose day moved `steward.patterns.moved_times` (3) times:
+  Drop it, Make it weekly, Leave it. A promise the person made whose day moved `redated_times` (3) times: Drop it, Put it
+  on hold, Leave it. The same person owed `owed_replies` (2) replies: No reply needed (drops each, which is the
+  existing `no_reply_needed` correction because the assistant thought a reply was owed), Leave it. A move is a change
+  of a day from one day to another read from the ledger; a first day or taking one off is not one. A repeating, held,
+  someone else's or closed to-do is never a pattern. Each choice is one `suggestion_chosen` signal naming the line, the
+  choice and the line's change key; one that changes records is the person's own change through the applier (Undo is the
+  change's Undo), one that doesn't ("Leave it", Keep, Snooze) changes nothing and its Undo marks the signal taken back.
+  "Leave it" keeps the line off until its change key changes, as "Not now" does; a choice counts toward the day's cap like
+  a put-off. A drop made from a suggestion writes no `dropped` correction (the choice is its own signal and says nothing
+  about the assistant), so it queues no learning run. *The stale sweep* is the existing `stale` line, now with choices:
+  for one to-do Keep, Drop, Snooze; for several, Look over stays the button and Keep them and Snooze them are in its
+  menu. Keep and Snooze are marks, not changes to the to-do: a Keep starts its quiet clock again, a Snooze holds it out
+  of the sweep for `steward.patterns.snooze_days` (7) and then the clock runs, and neither touches the record's history.
+  *Talking about a record* is the ask (6.25) with the record in the request's `about`; its packet adds what is written on
+  the record (cut at `steward.conversation.record_chars`) and the earlier exchanges: the latest
+  `steward.conversation.recent_turns` word for word, each older one as one short line of its question (a rule, not an
+  AI summary). It is estimated and held for the go like any ask. The assistant's changes come back listed with the
+  answer, each dropped with Undo of that op, or kept or dropped for one held for the person; conversations on records
+  are left out of the general Ask list. *The core's words:* the wording sheet, the prompts, the playbook guidance, the
+  guide and the settings descriptions say "you", "the user" (what the assistant is sent) or "the person"; a test fails on
+  "PM" or "project manager" in them, with the product's own name as the one exception until phase I. What is
+  project-management-only is listed in `docs/project/pm-pack-items.md` for phase P. *The outcome* is measured per week
+  from the records: promises the assistant found that were the person's, and how many it had found the person closed as
+  done that week; false alerts (a suggestion left or kept as it was, and work declined, undone, pulled back, edited or
+  said to need no reply; "Not now" is timing, not a false alert); the seconds the review screens were open and in view,
+  from the screens' own timing, at most `dispatch.knowledge.review_visit_max_seconds` (1800) a visit; and follow-ups
+  completed (another person's promise or a question that was chased and then done or answered).
+- **Left, said in the design:** a separate stale line for each of several to-dos; the core's search (plugin question
+  207) bringing older history into a conversation, and the conversation from every screen of a record; review time from
+  screens beyond review mode, What changed and Since yesterday.
+- **Impact:** design 6.20, 6.25, 6.32 and 7.7, 4.0 (the settings). Plugin guide regenerated (two signal kinds, op and
+  record descriptions). No change to scope. Change log: section 195.
+
 ## 2026-10-22: A date in a document is a fact with its day; its reminder is a held proposal, never the assistant's own
 
 - **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings.

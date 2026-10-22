@@ -106,7 +106,7 @@ def week_of(moment: datetime, here: tzinfo) -> date:
     return day - timedelta(days=day.weekday())
 
 
-def _weeks_in(now: datetime, days: int, here: tzinfo) -> list[date]:
+def weeks_in(now: datetime, days: int, here: tzinfo) -> list[date]:
     """The weeks (their Mondays) that overlap the window, oldest first."""
     first = week_of(now - timedelta(days=days), here)
     last = week_of(now, here)
@@ -237,7 +237,7 @@ def repeat_corrections(
     correction the person took back within its undo time (its learning was netted out) is not counted, and neither is
     one of something no run made. A week has a rate only with at least `minimum` corrections of that kind of work."""
     start = now - timedelta(days=days)
-    weeks = _weeks_in(now, days, here)
+    weeks = weeks_in(now, days, here)
     total: dict[tuple[str, date], int] = defaultdict(int)
     repeated: dict[tuple[str, date], int] = defaultdict(int)
     for signal in view.list("signal"):
@@ -276,7 +276,7 @@ def missed_per_week(view: Any, now: datetime, days: int, here: tzinfo) -> list[M
     week first. A person with any in the window has a row for every week of it, so a week with none reads as zero. A
     signal that names no person is counted for nobody."""
     start = now - timedelta(days=days)
-    weeks = _weeks_in(now, days, here)
+    weeks = weeks_in(now, days, here)
     counts: dict[tuple[str, date], int] = defaultdict(int)
     for signal in view.list("signal"):
         person = signal.data.get("person")
@@ -306,7 +306,7 @@ def apart_per_week(view: Any, now: datetime, days: int, here: tzinfo) -> list[Ap
     week first. The three are never added together: a week of drops is not a week of misses."""
     start = now - timedelta(days=days)
     by_kind = {kind: name for name, kind in APART.items()}
-    counts: dict[date, dict[str, int]] = {w: dict.fromkeys(APART, 0) for w in _weeks_in(now, days, here)}
+    counts: dict[date, dict[str, int]] = {w: dict.fromkeys(APART, 0) for w in weeks_in(now, days, here)}
     for signal in view.list("signal"):
         name = by_kind.get(signal.data["kind"])
         when = at_of(signal.data["at"])

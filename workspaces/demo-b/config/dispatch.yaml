@@ -40,4 +40,5 @@ knowledge:
   learn_later_inputs: 5
   new_terms_per_input: 3
   quality_window_days: 28
+  review_visit_max_seconds: 900   # the most seconds one visit to a review screen counts toward your review time
   min_corrections_per_week: 10

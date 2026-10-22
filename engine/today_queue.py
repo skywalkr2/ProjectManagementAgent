@@ -22,6 +22,7 @@ from engine import (
     held_ask,
     meeting_prep,
     move_groups,
+    patterns,
     people_memory,
     promises,
     release_hours,
@@ -254,6 +255,8 @@ class Line:
     entry: str | None = None
     #: For a date_reminder line: the dated fact it is about (`due` is its day, `state` its kind, `at` the reminder).
     fact: str | None = None
+    #: For a pattern line, a stale line and the like: the choices the line offers, in order, as ids the screen words.
+    choices: list[str] = field(default_factory=list)
     since: str = ""
 
 
@@ -1037,7 +1040,25 @@ def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[st
                 actions=[r.id for r in stale],
                 waiting_days=stale[0].untouched_days,
                 subject=stale[0].text if len(stale) == 1 else None,
+                choices=list(patterns.STALE_ONE if len(stale) == 1 else patterns.STALE_MANY),
                 since=min(r.since for r in stale),
+            )
+        )
+
+    # Review: something the person keeps putting off, one line each with its choices (design 6.32, Manner).
+    for found in patterns.all_found(store, cfg):
+        lines.append(
+            Line(
+                key=f"pattern:{found.state}:{found.subject}",
+                group="review",
+                kind="pattern",
+                count=found.count,
+                text=found.text,
+                state=found.state,
+                person=found.person,
+                actions=list(found.actions),
+                choices=list(patterns.CHOICES[found.state]),
+                since="",
             )
         )
 
@@ -1484,6 +1505,7 @@ _KIND_ORDER = {
     "unfiled": 4,
     "area": 4.5,
     "stale": 5,
+    "pattern": 5.5,
     "moved": 6,
     "send": 0,
     "nudge": 1,

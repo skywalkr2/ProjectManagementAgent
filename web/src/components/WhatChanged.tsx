@@ -1,4 +1,5 @@
 // What changed (design 7.3): one row per thing handed in, with what the assistant did nested inside it.
+import { useReviewTime } from "../lib/review-time";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
@@ -48,6 +49,7 @@ export function needsAttention(c: S["ChangeItem"]): boolean {
 export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: string) => void }) {
   const Heading = props.compact ? "h3" : "h1";
   const { t, tn, has } = useWords();
+  useReviewTime("changes", !props.compact);
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
   const own = useOwnRequests();
   const stageToday = useStageToday();

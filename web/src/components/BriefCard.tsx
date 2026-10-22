@@ -143,6 +143,7 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
     case "capacity":
       return t("brief.line.capacity", { needed: durationWords(line.needed_minutes ?? 0, tn), free: durationWords(line.minutes ?? 0, tn) });
     case "digest":
+      if (line.change?.startsWith("pattern_")) return tn(`brief.line.digest.${line.change}`, line.count ?? 1, { name, text });
       return line.change === "escalate" ? t("brief.line.digest.escalate", { name, text }) : tn(`brief.line.digest.${line.change}`, line.count ?? 1);
     case "yes":
       if (line.change === "reminder_offer") return t("brief.line.reminder_offer", { text, date, time: clock(line.at) });

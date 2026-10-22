@@ -1027,6 +1027,33 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 195. Manner and proof: choices on patterns, a conversation on a record, a core without PM wording, the outcome measured (2026-10-22; S5, built in part)
+
+- **Design 6.32 (Manner, Measured), 6.25, 6.20 and 7.7:** patterns the rules find (a to-do moved again and again, a
+  promise re-dated again and again, replies owed to one person) and the stale sweep become one suggestion line each with
+  two or three choices; each acts at once, records a `suggestion_chosen` signal and has Undo, within the attention
+  budget. A conversation on a to-do, question, person, project or calendar entry: the ask with the record in view and
+  the earlier exchanges, answered with prose and a changeset listed under it, each change kept or dropped there. The
+  core's wording, prompts, guidance, guide and settings descriptions no longer say "PM" or "project manager" (a test
+  holds it), and what is PM-only is listed for phase P. The Quality screen gets the outcome measures per week:
+  promises found and kept, false alerts, time spent reviewing and follow-ups completed.
+- **New:** `engine/patterns.py`, `engine/conversation.py`, `engine/outcome.py`; the signal kinds `suggestion_chosen` and
+  `review_time`; the Today line kind `pattern` and the field `choices` on a line (stale lines carry it too); routes
+  `POST /api/suggestions/choose` and its undo, `GET` and `POST /api/records/{kind}/{id}/conversation`,
+  `POST /api/quality/review-time`; `outcome` on `GET /api/quality`; `ops`, `about`, `reviewed`, `waiting_for_go`,
+  `estimate_usd` and `version` on an ask; settings `steward.patterns.*`, `steward.conversation.*`,
+  `steward.attention.importance.pattern` and `dispatch.knowledge.review_visit_max_seconds`, each with a description, a
+  default and demo values in both workspaces; the `ask` prompt reads a record and the earlier exchanges;
+  `docs/project/pm-pack-items.md`.
+- **Changed:** the stale line's one-to-do title reads "Still doing this?"; the packet and prompts call the person "the
+  user"; Today's empty top-priorities line and the empty Projects line no longer speak of projects only.
+- **Built:** `tests/test_patterns.py`, `tests/test_conversation.py`, `tests/test_outcome.py`, `tests/test_wording.py`,
+  `web/src/components/SuggestionChoices.test.tsx`, `web/src/components/RecordConversation.test.tsx`,
+  `web/src/components/Quality.test.tsx`, `web/src/lib/review-time.test.tsx`.
+- **Left:** a separate stale line for each of several to-dos; the core's search (plugin question 207) in a
+  conversation; the conversation box from every screen of a record; review time from screens beyond review mode, What
+  changed and Since yesterday.
+
 ## 194. Dates in documents, areas of life and capture from anywhere (2026-10-22; S4, built in part)
 
 - **Design 6.32 (What arrives; Personal life), 4.0, 6.16 and 7.14:** a booking an input carries as structured data becomes
