@@ -912,9 +912,12 @@ the code by the main session),** for S1 before the gate week:
   whole (one message, one Mark sent) while any of its items is on the chosen side
   (`tests/test_sides.py::test_each_line_and_follow_up_row_says_which_side_it_is_on_and_a_business_is_reported`,
   `web/src/components/SideFilter.test.tsx`). Left: filing by an item's words (only its people decide today).
-- [ ] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
+- [x] [S1-3] The first run's coverage: before Start, which account, folders and dates will be read; after it, which
   were read; and a missing sent folder said plainly on the first promise list, so an incomplete first result never
-  looks complete.
+  looks complete. (`tests/test_first_promises.py::test_before_the_start_it_names_the_account_the_folders_and_the_day_the_read_goes_back_to`,
+  `::test_after_a_read_with_one_folder_failed_that_folder_is_named_as_not_read_and_the_result_is_not_complete`,
+  `::test_a_mail_source_with_no_sent_folder_says_so_and_is_never_complete`,
+  `web/src/components/FirstPromises.test.tsx` "what it reads". Left: a sent folder offered by a sign-in itself, 6.33.)
 - [x] [S1-3] A date marked "check this" is never a firm deadline: no reminder, at-risk line or overdue from it until the
   person confirms it. **Built:** `tests/test_due_check.py` (one reading, `engine/firm_due.py`, wherever a due date
   becomes urgency).

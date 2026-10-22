@@ -6273,6 +6273,65 @@
         "title": "FingerprintIn",
         "type": "object"
       },
+      "FirstFolder": {
+        "description": "One source the first result reads: its `name` (its label), the mailbox `folder` its settings name, whether it\nholds the person's own `sent` mail, how its latest try went (`outcome`: read, failed, offline, throttled or\nnot_yet) and the day mail is read from (`from_date`, none for a source that isn't mail).",
+        "properties": {
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder"
+          },
+          "from_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Date"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "read",
+              "failed",
+              "offline",
+              "throttled",
+              "not_yet"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "name",
+          "sent",
+          "outcome"
+        ],
+        "title": "FirstFolder",
+        "type": "object"
+      },
       "FirstFollowUp": {
         "description": "The one follow-up ready to copy on the first-result screen: whom it is to (`person`, a person id), and the\nmessage the Follow-ups screen composes for them. Copying it is POST /api/followups/{person}/mark-sent.",
         "properties": {
@@ -6349,6 +6408,49 @@
         "title": "FirstGoStarted",
         "type": "object"
       },
+      "FirstPlace": {
+        "description": "The sources of one kind read as one account on the first-result screen: `account` is its label (none when it\nisn't known), and `missing_sent` says a mail account reads no sent folder, so promises made in mail the person sent\ncan't be found until one is added (Connections: POST /api/watch/{source}/sent-folder).",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "folders": {
+            "items": {
+              "$ref": "#/components/schemas/FirstFolder"
+            },
+            "title": "Folders",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "mail",
+              "calendar",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "missing_sent": {
+            "title": "Missing Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "folders",
+          "missing_sent"
+        ],
+        "title": "FirstPlace",
+        "type": "object"
+      },
       "FirstPromise": {
         "description": "One open promise on the walkthrough's first-result screen: its words, who owes it (in the owner format, `mine`\nwhen the person does), to whom, its day and the exact words it was read from.",
         "properties": {
@@ -6412,10 +6514,23 @@
       "FirstPromisesView": {
         "description": "Where the walkthrough's first result stands. `stage`: no_mail (no mail or calendar is read), no_ai (no AI\naccount is chosen), reading (the first read hasn't happened), offer (the look back over the last `days` of mail is\nheld for the person's go: `count` items, about `estimate_usd`, `unpriced` of them with no price), working\n(`finished` of `count` done) or ready (up to the setting's number of `promises` and the `more` that aren't shown,\nwith one `follow_up` ready when there is someone to send it to). The go is POST /api/setup/first-promises/go.",
         "properties": {
+          "complete": {
+            "description": "Every source was read and no mail account lacks its sent folder; false whenever the list could be missing something.",
+            "title": "Complete",
+            "type": "boolean"
+          },
           "count": {
             "description": "The items the look back takes in.",
             "title": "Count",
             "type": "integer"
+          },
+          "coverage": {
+            "description": "What is read, by kind and account, from the settings the reads use, with how each source went.",
+            "items": {
+              "$ref": "#/components/schemas/FirstPlace"
+            },
+            "title": "Coverage",
+            "type": "array"
           },
           "days": {
             "anyOf": [
@@ -6497,6 +6612,8 @@
         "required": [
           "stage",
           "sources",
+          "coverage",
+          "complete",
           "count",
           "finished",
           "unpriced",

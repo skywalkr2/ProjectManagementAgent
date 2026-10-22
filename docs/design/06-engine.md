@@ -3068,7 +3068,12 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   `ui.walkthrough.first_promises` (5) open promises (design 6.33's view: who owes each to whom, its day and its exact words)
   and one follow-up ready to copy, the one the Follow-ups screen composes, copied and kept by the same route (6.35); with no
   promise found it says so and offers "Missed one". Nothing is spent before the Start; with the built-in stand-in the
-  figure shown is "less than a cent". Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`,
+  figure shown is "less than a cent". **Coverage**: the screen lists what is read, one row per source: before the Start the
+  account, folder and day it reads from, from the same settings the read uses (no call to a service); after it, how each
+  source went, in words. A source that wasn't read is said beside it, a mail account with no sent folder gets one plain
+  line and the action that adds it (promises made in mail the person sent can't be found until it is), and "none found"
+  never says the mail held none while something wasn't read, so an incomplete first result never looks complete (change
+  log 168; `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`). Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`,
   journeys J2 (nothing found) and J6 (a promise found). *Not built:* a sent folder offered by a sign-in itself (6.33), so the
   look back reads it only when the person added it.
 - **Coverage on Today.** "Couldn't read" and "read, nothing new" are different words and never share a color. A source that

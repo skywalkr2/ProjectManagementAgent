@@ -20,7 +20,7 @@ import { useMissedOne } from "./MissedOne";
 type Result = S["FirstPromisesView"];
 
 /** The first-result screen's body. `go` moves the walkthrough to another screen (to finish what the first result needs). */
-export function FirstPromises(props: { go: (screen: Screen) => void }) {
+export function FirstPromises(props: { go: (screen: Screen) => void; onOpenSources: () => void }) {
   const { t } = useWords();
   const result = useQuery({
     queryKey: ["first-promises"],
@@ -42,15 +42,16 @@ export function FirstPromises(props: { go: (screen: Screen) => void }) {
         </p>
       );
     case "offer":
-      return <Offer data={data} />;
+      return <Offer data={data} onOpenSources={props.onOpenSources} />;
     case "working":
       return (
-        <p role="status" data-first-promises="working">
-          {t("walkthrough.promises.working", { finished: data.finished, count: data.count })}
-        </p>
+        <div data-first-promises="working">
+          <p role="status">{t("walkthrough.promises.working", { finished: data.finished, count: data.count })}</p>
+          <ReadList data={data} done={false} onOpenSources={props.onOpenSources} />
+        </div>
       );
     default:
-      return <Found data={data} />;
+      return <Found data={data} onOpenSources={props.onOpenSources} />;
   }
 }
 
@@ -66,7 +67,7 @@ function Needs(props: { text: string; label: string; run: () => void }) {
 }
 
 /** The look back, offered with its estimate before anything is read: one total and one Go. */
-function Offer(props: { data: Result }) {
+function Offer(props: { data: Result; onOpenSources: () => void }) {
   const { t, tn } = useWords();
   const act = useAct();
   const estimate = useEstimate();
@@ -82,6 +83,7 @@ function Offer(props: { data: Result }) {
     <div className="field" data-first-promises="offer">
       <h3 id="first-promises-offer">{title}</h3>
       <p role="status">{tn("walkthrough.promises.offer.found", data.count, { cost: costWords(data, estimate, t) })}</p>
+      <ReadList data={data} done={false} plan onOpenSources={props.onOpenSources} />
       <div className="row-end">
         <Button variant="primary" loading={busy} onClick={() => void go()}>
           {t("walkthrough.promises.go")}
@@ -92,15 +94,17 @@ function Offer(props: { data: Result }) {
 }
 
 /** What was found: the promises, one follow-up ready to copy, or the plain empty case with "Missed one". */
-function Found(props: { data: Result }) {
+function Found(props: { data: Result; onOpenSources: () => void }) {
   const { t, tn } = useWords();
   const missed = useMissedOne();
   const { data } = props;
+  const list = <ReadList data={data} done onOpenSources={props.onOpenSources} />;
   if (data.promises.length === 0) {
     return (
       <div className="field" data-first-promises="none">
-        <p>{t("walkthrough.promises.none")}</p>
+        <p>{t(data.coverage.length > 0 && !data.complete ? "walkthrough.promises.none_partial" : "walkthrough.promises.none")}</p>
         <p className="hint">{t("walkthrough.promises.none_hint")}</p>
+        {list}
         <div className="row-end">
           <Button onClick={missed}>{t("missed.open")}</Button>
         </div>
@@ -123,7 +127,53 @@ function Found(props: { data: Result }) {
       </ul>
       {data.more > 0 && <p className="hint">{tn("walkthrough.promises.more", data.more)}</p>}
       {data.follow_up && <FollowUpReady followUp={data.follow_up} />}
+      {list}
     </div>
+  );
+}
+
+type Place = Result["coverage"][number];
+type Folder = Place["folders"][number];
+
+/** What is read, one row per source: before the Start the account, the folder and the day it reads from; after it how
+ * each one went, said in words. A source that wasn't read, or a mail account with no sent folder, is said plainly
+ * beside it, so a list made from less than everything never reads as complete. */
+function ReadList(props: { data: Result; done: boolean; plan?: boolean; onOpenSources: () => void }) {
+  const { t } = useWords();
+  const { data, plan } = props;
+  if (data.coverage.length === 0) return null;
+  const missing = data.coverage.filter((p) => p.missing_sent);
+  const place = (p: Place) => t(`walkthrough.coverage.${p.kind}${p.account ? "_at" : ""}`, { account: p.account ?? "" });
+  const named = (f: Folder) => (f.folder && f.folder.toLowerCase() !== f.name.toLowerCase() ? t("walkthrough.coverage.folder_named", { name: f.name, folder: f.folder }) : f.name);
+  const row = (p: Place, f: Folder) => {
+    const vars = { place: place(p), name: named(f), date: f.from_date ? day(f.from_date) : "" };
+    if (plan) return t(f.from_date ? "walkthrough.coverage.plan_from" : "walkthrough.coverage.plan", vars);
+    return t(f.outcome === "read" && f.from_date ? "walkthrough.coverage.read_from" : `walkthrough.coverage.${f.outcome}`, vars);
+  };
+  return (
+    <section className="field" data-coverage={props.done ? (data.complete ? "complete" : "partial") : "plan"} aria-labelledby="first-promises-read">
+      <h3 id="first-promises-read">{t(plan ? "walkthrough.coverage.title_plan" : "walkthrough.coverage.title_read")}</h3>
+      <ul className="plain-list" aria-labelledby="first-promises-read">
+        {data.coverage.flatMap((p) =>
+          p.folders.map((f) => (
+            <li key={f.source} data-source={f.source} data-outcome={plan ? undefined : f.outcome}>
+              {row(p, f)}
+            </li>
+          )),
+        )}
+        {missing.map((p) => (
+          <li key={`sent:${p.kind}:${p.account ?? ""}`} data-missing-sent="">
+            {t(p.account ? "walkthrough.coverage.no_sent_at" : "walkthrough.coverage.no_sent", { account: p.account ?? "" })}
+          </li>
+        ))}
+      </ul>
+      {props.done && <p className="hint">{t(data.complete ? "walkthrough.coverage.complete" : "walkthrough.coverage.partial")}</p>}
+      {missing.length > 0 && (
+        <div className="row-end">
+          <Button onClick={props.onOpenSources}>{t("walkthrough.coverage.add_sent")}</Button>
+        </div>
+      )}
+    </section>
   );
 }
 

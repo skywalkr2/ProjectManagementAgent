@@ -1027,6 +1027,22 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 168. The first run says what it reads, and what it didn't (2026-10-22; S1-3, built)
+
+- The walkthrough's first result lists what is read, one row per source: before the Start, the account, the folder and
+  the day the read goes back to ("Your mail at <account>: Inbox, from <day>"); after it, how each source went in words
+  (read, couldn't be reached, no internet connection, the service asked to wait, not read yet). The day is the one the
+  first read noted, or, before it, today less the source's `first_run_days`; none for a source whose first read isn't
+  the quiet look back. The account is a mailbox's user name, else the account the source names, else the only account
+  signed in for its add-on. The app makes no call to learn folders: a source is one place, named by its label (and a
+  mailbox's `folder` setting, shown when it differs). A mail source whose author is the person is their sent folder.
+- A mail account with no enabled sent folder gets one plain line (promises made in mail the person sent can't be found
+  until its Sent folder is added) and one action that opens Connections. The result is `complete` only when every source
+  was read and no mail account lacks its sent folder; otherwise it says it may be missing promises, and "none found" no
+  longer says the mail held none. Design 6.32 and 7.8. `GET /api/setup/first-promises` gains `coverage` and `complete`.
+  Built: `tests/test_first_promises.py` (the coverage tests and `test_the_route_says_where_it_stands_and_its_go_starts_the_look_back_once`),
+  `web/src/components/FirstPromises.test.tsx` ("what it reads")
+
 ## 167. The deadline words people use every day are read by the rules (2026-10-22; S1-3, built)
 
 - The date reader reads numeric dates in the language's order, "day after tomorrow", "later today", "tonight",

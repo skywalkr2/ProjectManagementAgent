@@ -193,6 +193,7 @@ const handlers = () => ({
   onOpenAddons: vi.fn(),
   onHandIn: vi.fn(),
   onChooseSource: vi.fn(),
+  onOpenSources: vi.fn(),
   onFinishLater: vi.fn(),
   onDone: vi.fn(),
 });

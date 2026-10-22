@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { day } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
 import { fakeApi, renderApp, setupStep, setupView, statusFixture } from "../test-utils";
 import { FirstPromises } from "./FirstPromises";
@@ -21,8 +22,13 @@ const view = (over: Partial<S["FirstPromisesView"]> = {}): S["FirstPromisesView"
   unpriced: 0,
   promises: [],
   more: 0,
+  coverage: [],
+  complete: true,
   ...over,
 });
+
+const folder = (name: string, over: Partial<S["FirstFolder"]> = {}): S["FirstFolder"] => ({ source: name.toLowerCase(), name, sent: false, outcome: "read", ...over });
+const place = (folders: S["FirstFolder"][], over: Partial<S["FirstPlace"]> = {}): S["FirstPlace"] => ({ kind: "mail", account: "work@example.com", folders, missing_sent: false, ...over });
 
 const promise = (id: string, over: Partial<S["FirstPromise"]> = {}): S["FirstPromise"] => ({
   action: id,
@@ -35,11 +41,11 @@ const promise = (id: string, over: Partial<S["FirstPromise"]> = {}): S["FirstPro
 
 const noop = () => undefined;
 
-function show(first: S["FirstPromisesView"], routes: Parameters<typeof fakeApi>[0] = {}, go: (screen: S["WalkthroughView"]["step"]) => void = noop) {
+function show(first: S["FirstPromisesView"], routes: Parameters<typeof fakeApi>[0] = {}, go: (screen: S["WalkthroughView"]["step"]) => void = noop, openSources: () => void = noop) {
   const calls = fakeApi({ "GET setup/first-promises": () => first, ...routes });
   renderApp(
     <MissedOneProvider>
-      <FirstPromises go={go} />
+      <FirstPromises go={go} onOpenSources={openSources} />
     </MissedOneProvider>,
   );
   return calls;
@@ -187,6 +193,85 @@ describe("what was found", () => {
   });
 });
 
+describe("what it reads", () => {
+  const from = "2026-10-05";
+  const planned = view({
+    stage: "offer",
+    count: 4,
+    days: 14,
+    complete: true,
+    coverage: [place([folder("Inbox", { from_date: from }), folder("Sent", { sent: true, from_date: from })])],
+  });
+  const dated = day(from);
+
+  test("before the Start it names the account, each folder and the day it reads from, one row each", async () => {
+    show(planned);
+    const list = await screen.findByRole("list", { name: "What it will read" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows.map((r) => r.textContent)).toEqual([`Your mail at work@example.com: Inbox, from ${dated}`, `Your mail at work@example.com: Sent, from ${dated}`]);
+    expect(screen.queryByRole("button", { name: "Add your Sent folder" })).toBeNull();
+  });
+
+  test("a mailbox folder that differs from its name is named beside it; a source with no known account says only mail", async () => {
+    show(view({ ...planned, coverage: [place([folder("Work mail", { folder: "Sent Items", from_date: from })], { account: null })] }));
+    expect(await screen.findByText(`Your mail: Work mail (folder Sent Items), from ${dated}`)).toBeInTheDocument();
+  });
+
+  test("a mail account with no sent folder says what can't be found, with the one action that adds it", async () => {
+    const user = userEvent.setup();
+    const open = vi.fn();
+    show(view({ ...planned, complete: false, coverage: [place([folder("Inbox", { from_date: from })], { missing_sent: true })] }), {}, noop, open);
+    expect(await screen.findByText("The mail you sent from work@example.com isn't being read, so promises you made in it can't be found until you add its Sent folder.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add your Sent folder" }));
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  test("after the read each source is said as read, and a list of everything read says so", async () => {
+    show(view({ coverage: [place([folder("Inbox", { from_date: from }), folder("Sent", { sent: true, from_date: from })])], promises: [promise("ACT-2", { mine: true })] }));
+    const list = await screen.findByRole("list", { name: "What was read" });
+    expect(within(list).getAllByRole("listitem").map((r) => r.textContent)).toEqual([`Your mail at work@example.com: Inbox, read from ${dated}`, `Your mail at work@example.com: Sent, read from ${dated}`]);
+    expect(screen.getByText("Everything listed was read.")).toBeInTheDocument();
+  });
+
+  test("a folder that wasn't read is named in words beside it and the list is not called complete", async () => {
+    show(
+      view({
+        complete: false,
+        coverage: [place([folder("Inbox", { from_date: from }), folder("Sent", { sent: true, outcome: "failed", from_date: from })])],
+        promises: [promise("ACT-2", { mine: true })],
+      }),
+    );
+    expect(await screen.findByText("Your mail at work@example.com: Sent wasn't read. It couldn't be reached. Open Connections to see why.")).toBeInTheDocument();
+    expect(screen.getByText("Not everything was read, so this list may be missing promises.")).toBeInTheDocument();
+    expect(screen.queryByText("Everything listed was read.")).toBeNull();
+  });
+
+  test("offline, throttled and not yet tried each have their own words", async () => {
+    show(
+      view({
+        complete: false,
+        coverage: [place([folder("Inbox", { outcome: "offline" }), folder("Sent", { outcome: "throttled" }), folder("Archive", { outcome: "not_yet" })])],
+        promises: [promise("ACT-2", { mine: true })],
+      }),
+    );
+    expect(await screen.findByText(/Inbox wasn't read\. There was no internet connection\./)).toBeInTheDocument();
+    expect(screen.getByText(/Sent wasn't read yet\. The service asked to wait\./)).toBeInTheDocument();
+    expect(screen.getByText("Your mail at work@example.com: Archive hasn't been read yet.")).toBeInTheDocument();
+  });
+
+  test("with none found and a source not read it does not say the mail held none", async () => {
+    show(view({ complete: false, coverage: [place([folder("Inbox", { outcome: "failed" })])] }));
+    expect(await screen.findByText(/No open promises found in what was read\. Some of what you connected wasn't read/)).toBeInTheDocument();
+    expect(screen.queryByText("No open promises found in the mail it looked over.")).toBeNull();
+  });
+
+  test("while it works it shows how far it is and which sources were read", async () => {
+    show(view({ stage: "working", count: 4, finished: 1, coverage: [place([folder("Inbox", { from_date: from })])] }));
+    expect(await screen.findByText("Looking over your mail: 1 of 4 done.")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "What was read" })).toBeInTheDocument();
+  });
+});
+
 describe("in the walkthrough", () => {
   const CORE = ["workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons"];
   const shell = (step: S["WalkthroughView"]["step"]) => {
@@ -207,7 +292,7 @@ describe("in the walkthrough", () => {
     });
     renderApp(
       <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
-        <Walkthrough at={null} onOpenPeople={noop} onOpenAddons={noop} onHandIn={noop} onChooseSource={noop} onFinishLater={noop} onDone={noop} />
+        <Walkthrough at={null} onOpenPeople={noop} onOpenAddons={noop} onHandIn={noop} onChooseSource={noop} onOpenSources={noop} onFinishLater={noop} onDone={noop} />
       </RestartProvider>,
     );
     return calls;

@@ -2444,6 +2444,30 @@ class FirstFollowUp(BaseModel):
     to_send: int
 
 
+class FirstFolder(BaseModel):
+    """One source the first result reads: its `name` (its label), the mailbox `folder` its settings name, whether it
+    holds the person's own `sent` mail, how its latest try went (`outcome`: read, failed, offline, throttled or
+    not_yet) and the day mail is read from (`from_date`, none for a source that isn't mail)."""
+
+    source: str
+    name: str
+    folder: str | None = None
+    sent: bool
+    outcome: Literal["read", "failed", "offline", "throttled", "not_yet"]
+    from_date: date | None = None
+
+
+class FirstPlace(BaseModel):
+    """The sources of one kind read as one account on the first-result screen: `account` is its label (none when it
+    isn't known), and `missing_sent` says a mail account reads no sent folder, so promises made in mail the person sent
+    can't be found until one is added (Connections: POST /api/watch/{source}/sent-folder)."""
+
+    kind: Literal["mail", "calendar", "other"]
+    account: str | None = None
+    folders: list[FirstFolder]
+    missing_sent: bool
+
+
 class FirstPromisesView(BaseModel):
     """Where the walkthrough's first result stands. `stage`: no_mail (no mail or calendar is read), no_ai (no AI
     account is chosen), reading (the first read hasn't happened), offer (the look back over the last `days` of mail is
@@ -2453,6 +2477,13 @@ class FirstPromisesView(BaseModel):
 
     stage: Literal["no_mail", "no_ai", "reading", "offer", "working", "ready"]
     sources: list[str] = Field(description="What is read, by its label.")
+    coverage: list[FirstPlace] = Field(
+        description="What is read, by kind and account, from the settings the reads use, with how each source went."
+    )
+    complete: bool = Field(
+        description="Every source was read and no mail account lacks its sent folder; false whenever the list could "
+        "be missing something."
+    )
     days: int | None = Field(None, description="How many days of mail the look back covers; none without mail.")
     count: int = Field(description="The items the look back takes in.")
     finished: int = Field(description="How many of them are done.")

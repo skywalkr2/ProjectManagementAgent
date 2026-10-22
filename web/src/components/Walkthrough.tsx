@@ -32,6 +32,8 @@ export function Walkthrough(
   props: Handlers & {
     /** Open at this screen, when a line elsewhere sent the person to a step; `n` tells one request from the next. */
     at?: { screen: Screen; n: number } | null;
+    /** The first result asks to add a source (the sent folder): open Connections. */
+    onOpenSources: () => void;
     /** Finish later was chosen, and kept. */
     onFinishLater: () => void;
     /** The last button was pressed, and kept. */
@@ -275,7 +277,7 @@ export function Walkthrough(
               {hasMailSteps && <StepList include={(s) => s.group === "mail" && !!s.plugin && !s.sign_in} {...handlers} />}
             </>
           )}
-          {current === "promises" && <FirstPromises go={go} />}
+          {current === "promises" && <FirstPromises go={go} onOpenSources={props.onOpenSources} />}
           {current === "backup" && <WelcomeBackup local={data.local} />}
           {current === "people" && (
             <div className="row-end">

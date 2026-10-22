@@ -12,9 +12,11 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from engine import first_promises, setup
+from engine.config.schema import WatchSource
 from engine.names import People
 from engine.storage import WriteContext
 from tests.conftest import DEMO_B, fixture_records
+from tests.test_calendar_mail import N
 from tests.test_source_intake import NOW, mail, make, read, requests_of, with_changeset
 
 TOKEN = "first-promises-token"
@@ -239,6 +241,136 @@ def test_with_no_promises_it_is_ready_and_empty(env):
     assert (shown.stage, shown.promises, shown.more, shown.follow_up) == ("ready", [], 0, None)
 
 
+# ---- what is read: the account, the folders, the day, and what wasn't ----------------------------------------
+
+
+def with_account(cfg, *, sent: dict | None = None) -> str:
+    """The test source reads as the person's account; `sent` adds a second source that is the person's own sent mail."""
+    account = cfg.workspace.user.accounts[0]
+    cfg.watch.sources[0].account = account
+    if sent is not None:
+        cfg.watch.sources.append(
+            WatchSource(
+                id="s", connector="fake", label="Sent", account=account, author=cfg.workspace.user.person, settings=sent
+            )
+        )
+    return account
+
+
+def finish(env):
+    """Every intake request has its result, as when the assistant has done the look back."""
+    ws, cfg, store = env
+    first_promises.go(ws, store, cfg)
+    for r in requests_of(store, intake="m") + requests_of(store, intake="s"):
+        with_changeset(store, r.id, [("note", "applied")])
+
+
+def test_before_the_start_it_names_the_account_the_folders_and_the_day_the_read_goes_back_to(env):
+    ws, cfg, store = env
+    account = with_account(cfg, sent={"items": [mail("out", 3)]})
+    from engine.watch import refresh
+
+    read(env)
+    refresh(ws, store, cfg, "s", NOW)
+    shown = stage(env)
+    assert shown.stage == "offer"
+    (place,) = shown.coverage
+    back = (NOW - timedelta(days=cfg.watch.sources[0].first_run_days)).date()
+    assert (place.kind, place.account, place.missing_sent) == ("mail", account, False)
+    assert [(f.source, f.name, f.sent, f.from_date) for f in place.folders] == [
+        ("m", "Inbox", False, back),
+        ("s", "Sent", True, back),
+    ]
+    assert shown.complete  # every source was read and the sent mail is among them
+
+
+def test_the_day_it_goes_back_to_follows_the_sources_own_setting_even_before_it_is_first_read(env):
+    ws, cfg, store = env
+    cfg.watch.sources[0].first_run_days = 5
+    shown = stage(env)
+    assert shown.stage == "reading"
+    (place,) = shown.coverage
+    assert place.folders[0].from_date == NOW.date() - timedelta(days=5) and place.folders[0].outcome == "not_yet"
+    assert not shown.complete
+
+
+def test_a_source_whose_first_read_is_not_the_quiet_look_back_has_no_day(env):
+    ws, cfg, store = env
+    cfg.watch.sources[0].first_run = "baseline"
+    assert stage(env).coverage[0].folders[0].from_date is None
+
+
+def test_a_mailbox_is_named_by_its_user_and_its_folder(env):
+    ws, cfg, store = env
+    person = cfg.workspace.user.person
+    box = WatchSource(
+        id="box",
+        connector="mailbox",
+        label="Work mail",
+        author=person,
+        settings={"host": N["mail_host"], "user": N["mail_user"], "folder": "Sent Items"},
+    )
+    (place,) = first_promises._places(ws, store, cfg, [box], NOW.date())
+    assert (place.kind, place.account, place.missing_sent) == ("mail", N["mail_user"], False)
+    (folder,) = place.folders
+    assert (folder.name, folder.folder, folder.sent) == ("Work mail", "Sent Items", True)
+
+
+def test_after_a_read_with_one_folder_failed_that_folder_is_named_as_not_read_and_the_result_is_not_complete(env):
+    ws, cfg, store = env
+    with_account(cfg, sent={"error": "outage"})
+    from engine.watch import refresh
+
+    read(env)
+    refresh(ws, store, cfg, "s", NOW)
+    finish(env)
+    shown = stage(env)
+    assert shown.stage == "ready"
+    (place,) = shown.coverage
+    assert {f.name: f.outcome for f in place.folders} == {"Inbox": "read", "Sent": "failed"}
+    assert not place.missing_sent  # a sent folder is set up; it just wasn't read
+    assert not shown.complete
+
+
+def test_a_folder_not_tried_yet_is_not_read_and_the_result_is_not_complete(env):
+    ws, cfg, store = env
+    with_account(cfg, sent={"items": [mail("out", 3)]})
+    read(env)  # the sent source has not been read
+    finish(env)
+    shown = stage(env)
+    assert {f.name: f.outcome for f in shown.coverage[0].folders} == {"Inbox": "read", "Sent": "not_yet"}
+    assert not shown.complete
+
+
+def test_a_mail_source_with_no_sent_folder_says_so_and_is_never_complete(env):
+    ws, cfg, store = env
+    account = with_account(cfg)
+    read(env)
+    finish(env)
+    shown = stage(env)
+    assert shown.stage == "ready"
+    (place,) = shown.coverage
+    assert (place.account, place.missing_sent) == (account, True)
+    assert not shown.complete
+
+
+def test_a_sent_folder_that_is_switched_off_counts_as_missing(env):
+    ws, cfg, store = env
+    with_account(cfg, sent={"items": []})
+    cfg.watch.sources[1].enabled = False
+    assert stage(env).coverage[0].missing_sent
+
+
+def test_with_nothing_to_read_there_is_no_coverage(tmp_path):
+    ws, cfg, store = make(tmp_path, [])
+    try:
+        cfg.watch.sources.clear()
+        shown = first_promises.where(ws, store, cfg)
+        assert shown.coverage == [] and not shown.complete
+    finally:
+        store.close()
+
+
 # ---- the routes --------------------------------------------------------------------------------------------
 
 
@@ -249,6 +381,12 @@ def test_the_route_says_where_it_stands_and_its_go_starts_the_look_back_once(api
     offer = client.get("/api/setup/first-promises").json()
     assert (offer["stage"], offer["count"], offer["days"], offer["sources"]) == ("offer", 2, 14, ["Inbox"])
     assert offer["estimate_usd"] > 0 and offer["promises"] == [] and offer["follow_up"] is None
+    (place,) = offer["coverage"]
+    back = (datetime.now(UTC).date() - timedelta(days=14)).isoformat()
+    assert (place["kind"], place["missing_sent"], offer["complete"]) == ("mail", True, False)
+    assert [(f["name"], f["outcome"], f["sent"], f["from_date"]) for f in place["folders"]] == [
+        ("Inbox", "read", False, back)
+    ]
     assert client.post("/api/setup/first-promises/go").json() == {"started": 2}
     assert client.post("/api/setup/first-promises/go").json() == {"started": 0}
     assert client.get("/api/setup/first-promises").json()["stage"] == "working"

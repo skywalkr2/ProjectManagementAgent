@@ -309,6 +309,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             setHandIn(true);
           }}
           onChooseSource={openAddSource}
+          onOpenSources={() => setView("sources")}
           onFinishLater={() => setView("today")}
           onDone={() => {
             setView("today");

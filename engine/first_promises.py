@@ -12,14 +12,15 @@ through the same route, so nothing new is kept.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
-from engine import followups, promises, source_intake
+from engine import followups, promises, source_intake, watch
 from engine.blocked import standing_hold
 from engine.connectors import CORE, declared_reads, reads
 from engine.dispatcher import waits_on_first_go
 from engine.names import People
+from engine.sign_in_sources import accounts_of
 from engine.storage import WriteContext
 
 _GO = WriteContext(actor="pm", trust="trusted", op="intake.go")
@@ -51,15 +52,50 @@ class FollowUp:
     to_send: int
 
 
+#: How a source's latest try went, for the first result's coverage: read, or one of the ways it wasn't (the watch run's
+#: own outcomes), or not tried yet.
+OUTCOMES = ("read", "failed", "offline", "throttled", "not_yet")
+
+
+@dataclass
+class Folder:
+    """One source the first result reads, as the person knows it: `name` is its label, `folder` the mailbox folder its
+    settings name (none for a source that has none), `sent` whether it holds the person's own sent mail (its author is
+    the person), `outcome` how its latest try went and `from_date` the day mail is read from (none for a source that
+    isn't mail, or whose first read isn't the quiet look back)."""
+
+    source: str
+    name: str
+    folder: str | None = None
+    sent: bool = False
+    outcome: str = "not_yet"
+    from_date: date | None = None
+
+
+@dataclass
+class Place:
+    """The sources of one kind read as one account: `kind` is mail, calendar or other; `account` is its label (none
+    when the source names none and more than one is signed in); `missing_sent` says a mail account reads no sent
+    folder, so promises the person made in mail they sent can't be found."""
+
+    kind: str
+    account: str | None = None
+    folders: list[Folder] = field(default_factory=list)
+    missing_sent: bool = False
+
+
 @dataclass
 class FirstPromises:
     """Where the first result stands. `stage`: no_mail (nothing to read yet), no_ai (no AI account chosen), reading
     (the first read hasn't happened), offer (the look back is held for the person's go: `count` items, about
     `estimate_usd`, `unpriced` with no price, `days` of mail), working (`finished` of `count` done) or ready (the
-    promises found, up to the limit; `more` are not shown)."""
+    promises found, up to the limit; `more` are not shown). `coverage` is what is read, by account, and `complete`
+    is true only when every one of those sources was read and no mail account lacks its sent folder."""
 
     stage: str
     sources: list[str] = field(default_factory=list)
+    coverage: list[Place] = field(default_factory=list)
+    complete: bool = False
     days: int | None = None
     count: int = 0
     finished: int = 0
@@ -78,13 +114,84 @@ def _sources(store: Any, cfg: Any) -> list[Any]:
     return [s for s in cfg.watch.sources if s.enabled and (reads(s.connector, said) or s.id in taken)]
 
 
+def _account(ws: Any, store: Any, source: Any) -> str | None:
+    """The account a source reads as: a mailbox's user name, else the address the source names, else the only account
+    signed in for its add-on."""
+    if source.connector == "mailbox":
+        return str(source.settings.get("user") or "") or None
+    if source.account:
+        return str(source.account)
+    if "/" not in source.connector:
+        return None
+    signed = accounts_of(ws, store, source.connector.split("/", 1)[0]) or []
+    return signed[0] if len(signed) == 1 else None
+
+
+def _outcome(store: Any, source_id: str) -> str:
+    """How the source's latest try went: read, failed, offline, throttled, or not tried yet."""
+    run = watch.last_run(store, source_id)
+    if run is None:
+        return "not_yet"
+    return "read" if run.data["outcome"] in ("ok", "baseline") else run.data["outcome"]
+
+
+def _from_date(view: Any, source: Any, today: date) -> date | None:
+    """The day a mail source's first read looks back to: the day it noted, or, before it has read, the day the
+    setting gives. None when its first read isn't the quiet look back."""
+    if source.first_run != "intake":
+        return None
+    return source_intake.back_to_of(view, source.id) or today - timedelta(days=source.first_run_days)
+
+
+def _places(ws: Any, store: Any, cfg: Any, sources: list[Any], today: date) -> list[Place]:
+    """What the first result reads, by kind and account, from the same settings the reads use. Nothing is asked of a
+    service: the folders are the ones the settings name."""
+    said = declared_reads({**CORE, **store.plugins.connectors()})
+    view = store.read()
+    person = cfg.workspace.user.person
+    places: dict[tuple[str, str | None], Place] = {}
+    for s in sources:
+        kind = (reads(s.connector, said) or ["other"])[0]
+        account = _account(ws, store, s) if kind != "other" else None
+        place = places.setdefault((kind, account), Place(kind, account))
+        place.folders.append(
+            Folder(
+                source=s.id,
+                name=s.label or s.id,
+                folder=(str(s.settings.get("folder") or "") or None) if s.connector == "mailbox" else None,
+                sent=kind == "mail" and bool(person) and s.author == person,
+                outcome=_outcome(store, s.id),
+                from_date=_from_date(view, s, today) if kind == "mail" else None,
+            )
+        )
+    for place in places.values():
+        place.missing_sent = place.kind == "mail" and not any(f.sent for f in place.folders)
+    return list(places.values())
+
+
+def _complete(places: list[Place]) -> bool:
+    return (
+        bool(places)
+        and all(f.outcome == "read" for p in places for f in p.folders)
+        and not any(p.missing_sent for p in places)
+    )
+
+
 def _held(request: dict[str, Any]) -> bool:
     """Whether an intake request waits for the person: its own go, or the workspace's first go."""
     return source_intake.waits_on_go(request) or (bool(request.get("intake")) and waits_on_first_go(request))
 
 
-def where(ws: Any, store: Any, cfg: Any, router: Any = None) -> FirstPromises:
-    """Where the first result stands now. Reads only."""
+def where(ws: Any, store: Any, cfg: Any, router: Any = None, today: date | None = None) -> FirstPromises:
+    """Where the first result stands now, with what it reads and how each source went. Reads only."""
+    state = _where(ws, store, cfg, router)
+    if state.sources:
+        state.coverage = _places(ws, store, cfg, _sources(store, cfg), today or date.today())
+        state.complete = _complete(state.coverage)
+    return state
+
+
+def _where(ws: Any, store: Any, cfg: Any, router: Any) -> FirstPromises:
     if not any(tier.use for tier in cfg.ai.tiers.values()):
         return FirstPromises("no_ai")
     sources = _sources(store, cfg)
@@ -194,7 +301,7 @@ def found(store: Any, cfg: Any, limit: int, today: date | None = None) -> FirstP
 
 def view(ws: Any, store: Any, cfg: Any, router: Any = None, today: date | None = None) -> FirstPromises:
     """The whole first result: where it stands, and once it is ready the promises and the follow-up."""
-    state = where(ws, store, cfg, router)
+    state = where(ws, store, cfg, router, today)
     if state.stage != "ready":
         return state
     result = found(store, cfg, cfg.ui.walkthrough.first_promises, today)
