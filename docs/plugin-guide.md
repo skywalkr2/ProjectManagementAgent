@@ -18,7 +18,7 @@ For a plugin's own tests, install the host from its repository without the web s
 
 One distribution may ship several plugins. They may share a helper package of their own (a module neither plugin registers from); what a plugin may not do is import another plugin's registered package or read its records.
 
-Import everything from `engine.plugin_api`: `Change`, `ChannelContext`, `ChannelFailed`, `ChannelNotSent`, `ChannelSent`, `ChannelUnknown`, `OutgoingAct`, `OutgoingRecipient`, `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `ItemFile`, `ExtractError`, `EventDetails`, `EventOccurrence`, `EventPerson`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `TODAY_GROUPS`, `PacketContext`, `LongText`, `Unit`, `Part`, `KnowledgeParts`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
+Import everything from `engine.plugin_api`: `Change`, `ChannelContext`, `ChannelFailed`, `ChannelNotSent`, `ChannelSent`, `ChannelUndone`, `ChannelUnknown`, `OutgoingAbout`, `OutgoingAct`, `OutgoingRecipient`, `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `ItemFile`, `ExtractError`, `EventDetails`, `EventOccurrence`, `EventPerson`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `TODAY_GROUPS`, `PacketContext`, `LongText`, `Unit`, `Part`, `KnowledgeParts`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
 
 ## The manifest: plugin.yaml
 
@@ -1130,6 +1130,17 @@ What a channel is handed to carry out: exactly what the person approved. `kind` 
 | `proposed_start` | str \| None | `None` |
 | `proposed_end` | str \| None | `None` |
 
+### OutgoingAbout
+
+One record an act is about, with the service's own id of it as it resolves now: `id` is the record's id in the workspace; `service_id` is what the service calls the saved message or calendar entry; `uid` and `sequence` are a calendar entry's, where the source gave them.
+
+| Field | Type | Default |
+|---|---|---|
+| `id` | str | required |
+| `service_id` | str \| None | `None` |
+| `uid` | str \| None | `None` |
+| `sequence` | int \| None | `None` |
+
 ### OutgoingRecipient
 
 One recipient of a message, with the address as the act resolved it now.
@@ -1167,6 +1178,13 @@ A status answer: the service has nothing for that attempt key, so it never went 
 ### ChannelUnknown
 
 The channel can't say what happened: a send that got no clear answer, or a status it can't read.
+
+| Field | Type | Default |
+|---|---|---|
+
+### ChannelUndone
+
+The answer to `undo` when the service took the act back.
 
 | Field | Type | Default |
 |---|---|---|

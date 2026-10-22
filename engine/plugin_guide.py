@@ -398,11 +398,13 @@ def build() -> str:
                 + _table(["Field", "Type", "Default"], _dataclass_rows(cls))
                 for cls in (
                     api.OutgoingAct,
+                    api.OutgoingAbout,
                     api.OutgoingRecipient,
                     api.ChannelSent,
                     api.ChannelFailed,
                     api.ChannelNotSent,
                     api.ChannelUnknown,
+                    api.ChannelUndone,
                 )
             ),
         ),

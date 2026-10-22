@@ -19,6 +19,8 @@ Manifests stay `'>=0.3,<0.4'`. A channel written for 0.3.88 keeps working for th
 `status(attempt_key)` and `undo(act, service_id)` are still called without a context. Those signatures are deprecated
 and are removed in the next release.
 
+- `ChannelUndone` (the answer to `undo`) and `OutgoingAbout` (each item of an act's `about`) are exported from
+  `engine.plugin_api`, so a channel and its tests build them from the public API.
 - **A context for channels:** `send(act, attempt_key, context)`, `status(attempt_key, context)` and
   `undo(act, service_id, context)` get a `ChannelContext`, built for each call for the act's own account and built the
   way a connector's context is. `context.web` is limited to the hosts in the plugin's `requires.network` (None when it
