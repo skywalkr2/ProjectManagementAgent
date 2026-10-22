@@ -27,7 +27,7 @@ interface Section {
   message: string;
   to_send: number;
   questions: Array<{ id: string; title: string; text: string; links: Array<{ label: string; url: string }>; status: string; sent: string | null }>;
-  actions: Array<{ id: string; text: string; due: string | null; project_name: string; told: string | null }>;
+  actions: Array<{ id: string; text: string; due: string | null; project_name: string; told: string | null; version?: number | null }>;
 }
 interface ChangeOp {
   op: string;
@@ -626,7 +626,12 @@ test.describe.serial("acceptance scenario", () => {
     }
 
     // Copy builds one clean message per person: their open questions, then their actions, and nothing else.
-    const toSend = (s: Section) => ({ questions: s.questions.filter((q) => q.status === "open"), actions: s.actions.filter((a) => a.told === null) });
+    // What is still to send, by content: an action's version is left out, since the worker may still be filing earlier
+    // hand-ins onto the same records while this test runs.
+    const toSend = (s: Section) => ({
+      questions: s.questions.filter((q) => q.status === "open"),
+      actions: s.actions.filter((a) => a.told === null).map(({ version: _version, ...rest }) => rest),
+    });
     const withQuestions = sections.filter((s) => !s.is_pm && toSend(s).questions.length && toSend(s).actions.length);
     expect(withQuestions.length, "someone with both questions and actions to send").toBeGreaterThan(0);
     const everyone = [...new Set([...contributors, ...withQuestions.map((s) => s.person)])];
@@ -1107,7 +1112,8 @@ test.describe.serial("acceptance scenario", () => {
     await go(page, "Stages");
     // Stages opens as a board; these rows are on its list, one switch away (the choice is remembered).
     await page.getByRole("radio", { name: "List", exact: true }).or(page.getByRole("button", { name: "List", exact: true })).first().click();
-    await expect(page.locator("li.line", { hasText: item.title }).first()).toBeVisible();
+    // The list loads while the server may still be filing what earlier tests handed in, so its first row gets longer.
+    await expect(page.locator("li.line", { hasText: item.title }).first()).toBeVisible({ timeout: 20_000 });
     await checkAccessibility(page);
     const row = page.locator("li.line", { hasText: item.title }).first();
     await expect(row.locator(".kind")).toHaveText(item.current_label ?? "Not started");
