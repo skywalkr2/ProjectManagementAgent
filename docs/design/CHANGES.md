@@ -1027,6 +1027,28 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 178. Newer models, and a saved account's move to its service's own connection (2026-10-22; B-12 batch 2b, built)
+
+- **One rule for "newest" (6.16):** the family a tier's model belongs to is the catalog's own word; among a family's
+  models the newest is decided by the listing's release date, else the version in the id compared by number (5.5 over
+  4.5, 10 over 9), else the list's order, which never claims a model is newer. The preset that fills a new account's
+  tiers and the weekly look both use it (`engine/ai/family.py`); a model of another family is never taken. The preset
+  now takes the newest of the family, not the first listed. Model listings carry `released` where the service gives a
+  date.
+- **The weekly look (6.16):** `ai.models.check_every_days` (7), `ai.models.use_days` (7) and `ai.models.follow_newest`
+  (on). Each account's models and prices are listed; Today gets one line per account: "Look at a newer model for <work>"
+  with the change in cost per day at the current use, and Switch (the settings' own switch with its check) and Not now,
+  or, for a price rise of the current model, the increase and no switch. With the setting on, a newer model that costs the
+  same or less (price known) is checked first, held for the person's go above the configured amount, and moved to only
+  after the check passes, through the settings save; Today says what moved with Keep it and Switch back. More
+  expensive, price unknown, a check above the amount, or a failed check: the tier never moves on its own.
+- **A saved account's move (6.16):** an account on the generic connection to a service that has its own gets one Today
+  line, Move or Not now; Move shows the identity the new connection signs in as (key by its last four characters, address,
+  account name) and, on the yes, runs the account check on the new connection before anything is written, then saves with
+  Undo. Not now is remembered.
+- Built: `tests/test_family.py`, `tests/test_model_watch.py`, `tests/test_native_move.py`. Thinking off was already sent
+  only where the listing says so: `tests/test_anthropic_messages.py::test_thinking_off_is_sent_only_where_the_listed_capabilities_accept_it_at_the_tiers_effort`.
+
 ## 177. The outward act and the publisher, designed (2026-10-22; S1b-1, designed)
 
 - **Design 6.12:** every outward act is one `act` record with states (draft, approved, sending, sent, failed, uncertain,

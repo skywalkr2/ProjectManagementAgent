@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ipaddress
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -116,6 +117,7 @@ class OpenAICompatibleAdapter:
                     input_per_million=_per_million(pricing.get("prompt")),
                     output_per_million=_per_million(pricing.get("completion")),
                     cached_input_per_million=_per_million(pricing.get("input_cache_read")),
+                    released=_released(item.get("created")),
                 )
             if more is None or more == after or len(out) == before:
                 break
@@ -140,6 +142,16 @@ class OpenAICompatibleAdapter:
         except (ValueError, AttributeError):
             raise AiError("invalid_output", "the model list wasn't in the expected format") from None
         return (items if isinstance(items, list) else []), more
+
+
+def _released(value: Any) -> str | None:
+    """The moment the list says a model was made (seconds since 1970) as ISO text, or None when it gives none."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        return None
+    try:
+        return datetime.fromtimestamp(value, UTC).isoformat()
+    except (OverflowError, OSError, ValueError):
+        return None
 
 
 def _int(value: Any) -> int | None:

@@ -22,12 +22,13 @@ import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
 import { MenuButton } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
+import { AccountMoveLine, ModelMovedLine, ModelWatchLine } from "./ModelLines";
 import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
 /** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
-export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
+export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "no_account", "offline", "handover", "account_check", "switch_failed", "account_move", "model_watch", "model_moved", "identity", "work_access", "extractor", "source_unread", "rule_review", "catch_up_go", "intake_go"];
 
 export function isHeld(line: Line): boolean {
   return HELD_KINDS.includes(line.kind);
@@ -59,6 +60,12 @@ export function HeldLine(props: {
       return <AccountCheckLine line={line} />;
     case "switch_failed":
       return <SwitchFailedLine line={line} />;
+    case "account_move":
+      return <AccountMoveLine line={line} />;
+    case "model_watch":
+      return <ModelWatchLine line={line} />;
+    case "model_moved":
+      return <ModelMovedLine line={line} />;
     case "identity":
       return <IdentityLine line={line} onOpenAiAccounts={props.onOpenAiAccounts} />;
     case "work_access":

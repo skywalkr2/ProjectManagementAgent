@@ -1701,7 +1701,9 @@ A person who adds an account gets every tier filled in, so routine work never la
 - Three tiers: everyday, stronger and hardest. Each kind of work names its tier; most work is everyday.
 - Each entry in the catalog of AI services (`catalog/ai-endpoints.yaml`, data) carries its preset: for each tier, a model
   family to look for among the models the service lists for the person's key, and an effort (low, medium or high).
-  The catalog names families, never exact ids, so a newer model of the same family is picked up with no change; this
+  The catalog names families, never exact ids, so a newer model of the same family is picked up with no change; the
+  preset takes the newest of the family (by the listing's release date, else the version in the id, else the list's
+  order, `engine/ai/family.py`; `tests/test_family.py`); this
   is the one place a model's name carries meaning, and it is data, never code.
 - Effort is set per tier (low, medium or high) and reaches the service only through the account's own setting for it:
   `effort_param` (the request field a chat-format service takes), `effort_option` (the arguments a command-line agent
@@ -1718,19 +1720,27 @@ A person who adds an account gets every tier filled in, so routine work never la
   person accepts or not. Cost is measured, not read from the price list, because a higher effort writes more tokens: a
   low-cost model at high effort may or may not beat a stronger one at low effort, and only the run says which. A measurement older than
   the service's newest listed model is offered again.
-- **A newer model of the same family** (designer and owner, 2026-10-22; change log 174; *not built yet*). Setup
-  asks nothing (owner, 2026-10-22): a new account's tier takes the newest model of its family, decided from the listing's
-  release date, else the version in the model's id compared as numbers, never the list's order, and never a model of
-  another family. After setup the model never changes on its own: the person changes it in Settings (owner, 2026-10-21 and 2026-10-22). A weekly check of the service's models and
-  prices finds a newer model of the same family. Its prices are compared with the current model's (from the service's listing or `ai.prices`;
-  a maintainers' price list fetched weekly comes with the release feed, phase I). With `ai.models.follow_newest` on (the
-  default) and the new price known and the same or lower, the tier moves to it after the switch's check passes (estimated, and waiting for the go above the configured amount), and Today says what
-  moved and the cost change, with Keep and Switch back; a failed check moves nothing and says why. When the new model costs
-  more or its price isn't known, or with the setting off, Today tells the person (the increase in dollars a day at current
-  use, or "price not known yet") with Switch and Not now, and nothing moves; a price rise on a tier's current model is
-  reported the same way. A model of another family is never moved to on its own, and any switch is the same
-  change as Settings.
-- **Thinking off** is sent only to a model whose listing says it supports it; it is never inferred from a hand test.
+- **A newer model is asked about, and moved to only by the person's setting, after a check** (designer, 2026-10-22;
+  owner, 2026-10-22; change log 174 and 178; *built*, `tests/test_model_watch.py`, `tests/test_family.py`): the preset
+  takes the newest model of the family, and setup asks nothing (owner, 2026-10-22); a check every `ai.models.check_every_days` days (default 7) lists each account's
+  models and prices and keeps, per account, one Today line. "Newer" is one rule (`engine/ai/family.py`) shared with the
+  preset: only a model of the tier's own family (the family word of the catalog's preset for the service) counts, and
+  it is newer by the listing's own release date when every model of the family has one, else by the version in the
+  model's id compared number by number (5.5 over 4.5, 10 over 9; a long run of digits is a date stamp, not a version),
+  else the list's order, which never says a model is newer, so nothing is offered on it. The line says what it would
+  change in cost per day at the current use (the last `ai.models.use_days` days of runs priced at the two models'
+  prices, resolved as the router does: the price in the settings over the service's listing; a maintainers' price
+  list fetched weekly comes with the release feed, phase I). With
+  `ai.models.follow_newest` off, the line says it and offers **Switch** (the settings' own switch with its check) and
+  **Not now** (kept until a different newer model, or price, appears). With it on (the default), a newer model whose
+  price is known and the same or lower in and out is checked first on a copy of the settings (the check estimated
+  first, and held for the person's go above `ai.budgets.confirm_above_usd`) and only a passed check writes the
+  change, through the settings save; Today then says what moved, with the cost change, **Keep it** and **Switch
+  back** (the earlier model, with Undo). A model that costs more, one whose price isn't known, a check above the
+  amount, and a failed check never move a tier: the line says why, with Switch and Not now. A price rise on the
+  tier's current model is a line of its own with the increase and no switch. A model of another family is never
+  moved to. *Built, with the move's own tests:* `tests/test_model_watch.py`.
+- **Thinking off** (*built*, `tests/test_anthropic_messages.py::test_thinking_off_is_sent_only_where_the_listed_capabilities_accept_it_at_the_tiers_effort`) is sent only to a model whose listing says it supports it; it is never inferred from a hand test.
 - **Estimates learn from use** (*built*, `tests/test_estimate_calibration.py`, change log 175): when an account is
   checked, one token-count request per tier's model (for an adapter that can count without running; the adapter
   interface's optional `count_tokens`) gives the ratio of real tokens to the app's own count, kept with the account and
@@ -1741,9 +1751,16 @@ A person who adds an account gets every tier filled in, so routine work never la
   The native adapter counts through its service's own count request: the request's model, system prompt and messages,
   and nothing that only matters for a run (`tests/test_anthropic_messages.py::test_the_count_request_sends_only_what_is_counted_and_reads_the_input_tokens`).
   *Left:* the evaluation and switch estimates, which price a practice workspace with no kept measurements.
-- **A saved account moves to a native adapter only on the person's yes** (*not built yet*): asked once, with a read-back
-  of which identity the new connection signs in as, since a connection quietly running as another, older identity is
-  the worst account failure there is.
+- **A saved account moves to a native adapter only on the person's yes** (*built*, `tests/test_native_move.py`, change
+  log 176): an account whose address is a catalog service that names another adapter than the account uses (the
+  account is on the generic connection) gets one Today line, "Move <account> to its service's own connection", with
+  **Move** and **Not now** (remembered for the account; the line never comes back unasked). Move first shows what the
+  new connection signs in as, from what is known without a call: the key (its last four characters, and plainly whether
+  it is another key than the account uses now), the address, and the account's name. On the yes the account check (one
+  call per tier and kind of work with its exact parameters, the learning round-trip) runs on the new connection; only a
+  passed check writes the change, through the settings save, with Undo; a failed check, or no network, leaves the
+  account as it was and says why. What the person set on the account stays; only the adapter, the service's own address
+  and settings the account never set change.
 - Where it shows (owner, 2026-10-21): setup asks nothing about tiers; adding an account loads its preset silently and
   setup says only that it is ready. Settings holds the rest: the three tiers in plain words with an estimated cost per
   day, each changeable, and "Measure", which offers the measured recommendation. The model's name shows only in

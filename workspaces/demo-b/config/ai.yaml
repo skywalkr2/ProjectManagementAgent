@@ -79,6 +79,7 @@ evaluation: {runs: 3, min_score: 0.9, extra_allowance: 1.0}
 skills: {min_score: 0.8, stale_days: 60}   # what a model must score for a skill to count as able, and how long a measurement is trusted
 rate_limits: {tries: 3, max_wait_seconds: 30, pause_seconds: 600}
 estimates: {calibration_runs: 20}   # an account's estimates are corrected from the average of this many latest runs
+models: {follow_newest: true, check_every_days: 7, use_days: 7}   # a tier moves to a newer model of its own family after a check; how often to look; how many days of use the cost change is worked out from
 catalog_refresh_hours: 24
 borrow_other_tier: ask      # ask: Today asks before another kind of work's account fills in for a paused one; never: the work waits
 credential_warn_days: 7     # Today says this many days before a key or sign-in with a known end date stops working

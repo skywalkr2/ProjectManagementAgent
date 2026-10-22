@@ -8,6 +8,7 @@ and model ids, all from config.
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -159,6 +160,7 @@ class AnthropicMessagesAdapter:
                     max_output_tokens=_int(item.get("max_tokens")),
                     efforts=efforts,
                     adaptive_thinking=adaptive,
+                    released=_released(item.get("created_at")),
                 )
             if more is None or more == after or len(out) == before:
                 break
@@ -183,6 +185,16 @@ class AnthropicMessagesAdapter:
         except (ValueError, AttributeError):
             raise AiError("invalid_output", "the model list wasn't in the expected format") from None
         return (items if isinstance(items, list) else []), more
+
+
+def _released(value: Any) -> str | None:
+    """The date and time the list says a model was made, as ISO text, or None when it gives none or not a date."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC).isoformat()
+    except ValueError:
+        return None
 
 
 def _supported(node: Any) -> bool | None:

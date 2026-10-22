@@ -2146,7 +2146,18 @@ class QueueLineView(BaseModel):
     `places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model
     whose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`
     of what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST
-    /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `identity` is a command-line agent
+    /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `account_move` is a saved account
+    (`account`, its service's name in `subject`) that uses the generic connection to a service that has its own (the
+    read-back is GET /api/ai/accounts/{account}/move, Move is POST to it and Not now POST .../move/not-now);
+    `model_watch` is news about an account's models (`account`, the tiers in `names`): with `state` newer, a newer model
+    of each tier's own family exists (`candidates`, by tier), `usd_per_day` what it would change in cost per day at
+    the current use (none when a price isn't known), `reason` why it isn't moved to on its own (asks, costs_more,
+    price_unknown, check_failed with `count` cases and `check_failed` when the check couldn't finish, or check_cost
+    with the check's `estimate_usd`); Switch is the settings' own switch with its check and Not now is POST
+    /api/ai/model-watch/{account}/{state}/not-now; with `state` price, a tier's current model went up in price by
+    `usd_per_day`; `model_moved` is a tier (`tier`) moved on its own to a newer model of its family after a check passed
+    (the new `account`, the earlier one in `text`, `usd_per_day` the change in cost; Switch back and Keep are the
+    switch routes above); `identity` is a command-line agent
     account (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in
     `subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set
     for the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels
@@ -2220,6 +2231,9 @@ class QueueLineView(BaseModel):
         "sent_check",
         "account_check",
         "switch_failed",
+        "account_move",
+        "model_watch",
+        "model_moved",
         "identity",
         "work_access",
         "credential",
@@ -2321,14 +2335,27 @@ class QueueLineView(BaseModel):
     )
     state: (
         Literal[
-            "diverged", "chosen", "elsewhere", "changed", "level", "unset", "never", "failed", "overdue", "which_side"
+            "diverged",
+            "chosen",
+            "elsewhere",
+            "changed",
+            "level",
+            "unset",
+            "never",
+            "failed",
+            "overdue",
+            "which_side",
+            "newer",
+            "price",
         ]
         | None
     ) = Field(
         None,
-        description="For a handover line: diverged (this computer and the synced folder each changed; the person "
-        "chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened "
-        "the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an "
+        description="For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's "
+        "current model went up in price). For a handover line: diverged (this computer and the synced folder each "
+        "changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere "
+        "(another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other "
+        "computer's name. For an "
         "identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in "
         "isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a "
         "folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last "
@@ -2409,6 +2436,21 @@ class QueueLineView(BaseModel):
         None,
         description="For an account_check line: true when the account's last check failed, false when it was never "
         "checked for that work. For a switch_failed line: true when the check couldn't finish.",
+    )
+    usd_per_day: float | None = Field(
+        None,
+        description="For a model_watch or model_moved line: what the change costs per day at the current use, in US "
+        "dollars (below zero: less); none when a price isn't known.",
+    )
+    reason: str | None = Field(
+        None,
+        description="For a model_watch line of a newer model: why it isn't moved to on its own (asks, costs_more, "
+        "price_unknown, check_failed or check_cost).",
+    )
+    candidates: dict[str, str] = Field(
+        default_factory=dict,
+        description="For a model_watch line of a newer model: the newer model of each tier's family, by tier, to send "
+        "with Switch; never shown.",
     )
     suggestion: OwnerSuggestionView | None = Field(
         None,
@@ -3441,6 +3483,31 @@ class AiSwitched(BaseModel):
     checking: bool = Field(
         description="A check of the new choice is running in the background; a failure comes to Today."
     )
+
+
+class AiMoveReadback(BaseModel):
+    """What a saved account's move to its service's own connection would sign in as, from what is known without a
+    call, so the person sees it before saying yes."""
+
+    account: str = Field(description="The account's name as the person knows it; it doesn't change.")
+    service: str = Field(description="The service's name.")
+    key_ending: str = Field(
+        description="The last four characters of the key the new connection would use; empty when it can't be read or "
+        "is too short to show any."
+    )
+    key_known: bool = Field(description="Whether the key could be read now.")
+    key_differs: bool = Field(description="The new connection would use another key than the account does now.")
+    address: str = Field(description="The new connection's host.")
+    address_was: str = Field(description="The host the account uses now.")
+    address_differs: bool = Field(description="The new connection's host isn't the one used now.")
+
+
+class AiMoved(BaseModel):
+    moved: bool = Field(description="The account now uses its service's own connection.")
+    detail: str | None = Field(
+        None, description="When it didn't move: why, from the check's own words. The account is as it was."
+    )
+    saved: SettingsSaved | None = Field(None, description="What changed in the settings, for the read-back and Undo.")
 
 
 class AiBorrowAnswer(BaseModel):

@@ -23,6 +23,9 @@ from engine.state_file import changing, write_whole
 
 STATE_FILE = "ai-switches.json"
 CHECKING, PASSED, FAILED = "checking", "passed", "failed"
+#: A switch made on its own after a passed check (a newer model of the tier's family), waiting for the person's Keep or
+#: Switch back.
+MOVED = "moved"
 #: The most failed cases a Today line names.
 NAMED = 5
 
@@ -134,6 +137,31 @@ def failed(store: Any) -> dict[str, dict[str, Any]]:
     return {tier: entry for tier, entry in read(store).items() if entry.get("state") == FAILED}
 
 
+def keep_moved(
+    store: Any, switch: Switch, saved_changes: list[dict[str, Any]], usd_per_day: float | None = None
+) -> None:
+    """Keep a switch made on its own after its check passed: Switch back restores what the tier had, Keep clears it.
+    Any earlier entry of the tier is superseded."""
+    with changing(path_of(store)):
+        data = read(store)
+        data[switch.tier] = {
+            "state": MOVED,
+            "before": switch.before,
+            "after": switch.after,
+            "restore": restore_of(switch.tier, saved_changes),
+            "failed": [],
+            "unfinished": False,
+            "usd_per_day": usd_per_day,
+            "at": datetime.now(UTC).isoformat(),
+        }
+        _write(store, data)
+
+
+def moved(store: Any) -> dict[str, dict[str, Any]]:
+    """The tiers moved on their own that the person hasn't decided about."""
+    return {tier: entry for tier, entry in read(store).items() if entry.get("state") == MOVED}
+
+
 def waiting(store: Any) -> list[str]:
     """The tiers whose check is still to run."""
     return [tier for tier, entry in read(store).items() if entry.get("state") == CHECKING]
@@ -152,10 +180,18 @@ def _template() -> Path:
 PAIR_CALLS = 3
 
 
-def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str], most_private: str | None = None) -> Any:
+def evaluate_on(
+    account: str,
+    cfg: Config,
+    ws: Any,
+    env: Mapping[str, str],
+    most_private: str | None = None,
+    ai_config: Path | None = None,
+) -> Any:
     """The report of the golden cases, the plugins' own cases and the learning pairs on one choice, with the person's
     accounts: what `cockpit evaluate` and `cockpit evaluate --pairs` run, as one report. With `most_private`, only the
-    ones whose material is no more private than that run (measuring an account that may not see the rest)."""
+    ones whose material is no more private than that run (measuring an account that may not see the rest). `ai_config`
+    is the accounts file to run with (the saved one unless a change isn't saved yet)."""
     from engine.ai.matrix import record_report
     from engine.evaluate import Report, evaluate
     from engine.pairs import evaluate_pairs
@@ -165,7 +201,7 @@ def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str], most
         _template(),
         account=account,
         runs=runs,
-        ai_config=ws.config_dir / "ai.yaml",
+        ai_config=ai_config or ws.config_dir / "ai.yaml",
         packs_of=ws.root,
         env=env,
         most_private=most_private,
@@ -174,7 +210,7 @@ def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str], most
         _template(),
         account=account,
         runs=runs,
-        ai_config=ws.config_dir / "ai.yaml",
+        ai_config=ai_config or ws.config_dir / "ai.yaml",
         env=env,
         most_private=most_private,
     )
@@ -232,6 +268,19 @@ def estimate(
     return price + price / count * PAIR_CALLS * pairs, count + pairs
 
 
+def judge(ws: Any, cfg: Config, report: Any) -> dict[str, Any]:
+    """The verdict on a report of a check: passed when the score reaches the configured one, failed with the names of
+    the cases that didn't come out right, or failed as unfinished when nothing could run."""
+    called = titles(ws)
+    ran = [r for r in report.results if not r.not_run]
+    names = [called.get(c, c) for c in report.cases() if any(not r.passed for r in ran if r.case == c)]
+    if not ran:
+        return {"state": FAILED, "failed": [], "unfinished": True}
+    if report.pass_rate() >= cfg.ai.evaluation.min_score:
+        return {"state": PASSED, "failed": [], "unfinished": False}
+    return {"state": FAILED, "failed": names, "unfinished": False}
+
+
 def run_waiting(
     ws: Any,
     store: Any,
@@ -249,19 +298,9 @@ def run_waiting(
         entry = read(store).get(tier)
         if entry is None or entry.get("state") != CHECKING:
             continue
-        verdict: dict[str, Any]
         try:
             cfg = load_config(ws.config_dir, env=dict(env))
-            report = run(entry["after"], cfg, ws, env)
-            called = titles(ws)
-            ran = [r for r in report.results if not r.not_run]
-            names = [called.get(c, c) for c in report.cases() if any(not r.passed for r in ran if r.case == c)]
-            if not ran:
-                verdict = {"state": FAILED, "failed": [], "unfinished": True}
-            elif report.pass_rate() >= cfg.ai.evaluation.min_score:
-                verdict = {"state": PASSED, "failed": [], "unfinished": False}
-            else:
-                verdict = {"state": FAILED, "failed": names, "unfinished": False}
+            verdict = judge(ws, cfg, run(entry["after"], cfg, ws, env))
         except Exception:  # a check that can't run is shown as one that didn't finish, never as a pass
             verdict = {"state": FAILED, "failed": [], "unfinished": True}
         with changing(path_of(store)):

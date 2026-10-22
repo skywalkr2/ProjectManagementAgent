@@ -276,6 +276,7 @@ class Worker:
         self._backups: threading.Thread | None = None
         self._sync: threading.Thread | None = None
         self._jobs: threading.Thread | None = None
+        self._model_watch: threading.Thread | None = None
         self._switching: threading.Thread | None = None
         self._measuring: threading.Thread | None = None
         self._swept_on: date | None = None
@@ -652,6 +653,38 @@ class Worker:
         self._switching.start()
         return self._switching
 
+    def watch_models_if_due(self) -> threading.Thread | None:
+        """Every `ai.models.check_every_days`, look at each account's models and prices (read as the files hold them)
+        on a thread of its own, since a check of a newer model can take long: keep what Today is to say about newer
+        models and price rises and, with `ai.models.follow_newest` on, move a tier to a newer model of its own family
+        after the check passes. Returns the thread, or None when nothing is due or one is running."""
+        from engine.ai import model_watch
+        from engine.config import ConfigError, load_config
+
+        if self._model_watch is not None and self._model_watch.is_alive():
+            return None
+        try:
+            cfg = load_config(self.ws.config_dir, env=dict(os.environ))
+        except ConfigError:
+            cfg = self.cfg
+        now = self.now()
+        if not model_watch.due(self.store, cfg, now):
+            return None
+
+        def run() -> None:
+            try:
+                model_watch.run(self.ws, self.store, cfg, os.environ, now=now)
+            except Exception:  # the look is made again the next time it is due; nothing here may stop the app
+                log.exception("looking at the accounts' models failed")
+                self._problem("look at newer models")
+            self.apply_live()  # a tier moved on its own is a live setting: the running app takes it in now
+            self.events.changed()
+            self.poke()
+
+        self._model_watch = threading.Thread(target=run, name="cockpit-model-watch", daemon=True)
+        self._model_watch.start()
+        return self._model_watch
+
     def measure_soon(self) -> threading.Thread | None:
         """Run the measurings the person asked for that are still waiting (an account's cases and pairs, added to the
         capability matrix), on one thread of their own so a long one never holds up other work. One cut short by a
@@ -821,6 +854,10 @@ class Worker:
                 self.run_due_watches()
             except Exception:  # a failed read is recorded on its run; nothing here may stop the thread
                 log.exception("reading watched sources failed")
+            try:
+                self.watch_models_if_due()
+            except Exception:  # the look is made again the next time round; nothing here may stop the thread
+                log.exception("starting the look at newer models failed")
             try:
                 self.export_if_due()
             except Exception:  # a failed export is logged by the export; nothing here may stop the thread

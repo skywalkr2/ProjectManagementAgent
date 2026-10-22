@@ -46,8 +46,8 @@ def preset_kind(cli: bool = False):
 
 
 def ids_for(kind, *, leave_out=(), per_family=2):
-    """Model ids built from the catalog's own family words, each family twice (older one listed first), plus a decoy
-    that matches none, in an order that doesn't follow the tiers."""
+    """Model ids built from the catalog's own family words, each family twice (the older, numbered 0, listed first),
+    plus a decoy that matches none, in an order that doesn't follow the tiers."""
     families = {t: p["family"] for t, p in kind["tier_presets"].items() if t not in leave_out}
     ids = ["decoy-model"]
     for tier in reversed(list(families)):
@@ -103,8 +103,11 @@ def test_the_catalog_sets_an_effort_setting_only_where_the_services_documentatio
         assert has is confirmed, kind["id"]
 
 
-def test_a_family_matches_without_regard_to_case_and_the_first_listed_wins():
+def test_a_family_matches_without_regard_to_case_and_the_newest_wins():
+    # More in tests/test_family.py: by the listing's date, else the version in the id, else the list's order.
     assert match_family("Alpha", ["x", "the-ALPHA-2", "alpha-1"]) == "the-ALPHA-2"
+    assert match_family("Alpha", ["x", "alpha-1", "the-ALPHA-2"]) == "the-ALPHA-2"
+    assert match_family("Alpha", ["x", "alpha", "ALPHA-preview"]) == "alpha"
     assert match_family("alpha", ["x", "y"]) is None
     assert clean_presets({"routine": {"family": "a", "effort": "bogus"}, "deep": {"effort": "low"}, "x": 3}) == {
         "routine": {"family": "a", "effort": ""}
@@ -114,13 +117,13 @@ def test_a_family_matches_without_regard_to_case_and_the_first_listed_wins():
 # ---- the planner, with a preset -------------------------------------------------------------------------------------
 
 
-def test_every_tier_takes_the_first_listed_model_of_its_family_and_deep_escalates_to_the_hardest():
+def test_every_tier_takes_the_newest_model_of_its_family_and_deep_escalates_to_the_hardest():
     kind = preset_kind()
     models = short_names(ids_for(kind))
     got = plan(kind, models)
     for tier_name, preset in kind["tier_presets"].items():
-        first_listed = next(k for k, i in models.items() if preset["family"].lower() in i.lower())
-        assert got.use[tier_name] == first_listed and models[first_listed].endswith("-0"), tier_name
+        newest = next(k for k, i in models.items() if preset["family"].lower() in i.lower() and i.endswith("-1"))
+        assert got.use[tier_name] == newest, tier_name
     assert got.escalate_to == {"deep": "hardest"}  # routine already escalates to deep
     assert got.unmatched == [] and got.by_price == [] and got.new_models == {}
 

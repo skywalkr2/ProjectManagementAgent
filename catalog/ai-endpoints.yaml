@@ -27,8 +27,8 @@
 #   tier_presets       the recommended setup, by tier name (routine, deep, hardest): `family`, a word matched without
 #                      regard to case against the model ids the service lists for the person's key (for a
 #                      command-line agent, against model_examples), and `effort` (low, medium or high; optional).
-#                      Adding an account with no choice of tiers fills each tier with the first model of its family
-#                      and its effort; hardest is made when the settings have no such tier. A family no model matches
+#                      Adding an account with no choice of tiers fills each tier with the newest model of its family
+#                      (by the listing's release date, else the version in the id, else the list's order) and its effort; hardest is made when the settings have no such tier. A family no model matches
 #                      leaves its tier as it would be without a preset. Names families, never ids, so a newer model of
 #                      the family is picked up with no change here. An entry with no preset gets its tiers by price.
 #   effort_param, effort_option (provider and agent settings): how a service takes an effort. Each is set on an

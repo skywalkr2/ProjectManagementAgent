@@ -26,6 +26,9 @@ class Adapter(Protocol):
     def run(self, task: AiTask, model: str) -> AiResult: ...
 
 
+#: The adapter for a service that has none of its own: any endpoint that takes the common chat format.
+GENERIC_ADAPTER = OpenAICompatibleAdapter.name
+
 ADAPTERS: dict[str, type[Any]] = {
     StubAdapter.name: StubAdapter,
     OpenAICompatibleAdapter.name: OpenAICompatibleAdapter,

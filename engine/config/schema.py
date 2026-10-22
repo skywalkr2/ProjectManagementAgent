@@ -944,6 +944,28 @@ class EstimateSettings(ConfigModel):
     )
 
 
+class ModelSettings(ConfigModel):
+    follow_newest: bool = Field(
+        True,
+        description="Move a tier to a newer model of the same family when one appears, after checking it",
+    )
+    check_every_days: int = Field(
+        7,
+        ge=1,
+        le=90,
+        description="How many days apart the check of each account's models and prices is made, to find a newer model "
+        "of the same family as a tier's, or a changed price. Whether one is moved to on its own is set by "
+        "follow_newest; a move to another family is never made on its own.",
+    )
+    use_days: int = Field(
+        7,
+        ge=1,
+        le=90,
+        description="How many days of the assistant's own use the cost change of a newer model is worked out from "
+        "(what the same work would have cost on it, per day).",
+    )
+
+
 class RouteRule(ConfigModel):
     when: RouteWhen = Field(default_factory=RouteWhen, description="What the request must match; all given parts.")
     tier: str = Field("deep", description="The tier that does the work when the rule matches.")
@@ -972,6 +994,10 @@ class AiFile(FileModel):
     )
     estimates: EstimateSettings = Field(
         default_factory=EstimateSettings, description="How the cost estimates of AI work are corrected from use."
+    )
+    models: ModelSettings = Field(
+        default_factory=ModelSettings,
+        description="Whether a tier follows the newest model of its family, and how often newer models are looked for.",
     )
     catalog_refresh_hours: float = Field(
         24, ge=0, description="How often each account's model list and prices are fetched again from the provider."

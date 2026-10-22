@@ -4,6 +4,27 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: A tier follows the newest model of its family only by the person's setting, after a check, and never to one that costs more
+
+- **Decided (owner, through the coordinator):** kind of rule: a setting (`ai.models.follow_newest`, on by default, editable
+  in Settings), a core concept for the rest. After setup a tier's model changes only in Settings, or by the weekly look
+  when the setting is on and the newer model is of the same family, its price is known and the same or lower than the
+  current model's (in and out, from the adapter's listing or `ai.prices`, as the router resolves them), and the switch's
+  check (estimated first, held for the person's go above `ai.budgets.confirm_above_usd`) passed; Today then says what
+  moved with Keep it and Switch back. A model that costs more, one with no known price, another family, a check above
+  the amount or a failed check never moves a tier: Today says why, with Switch and Not now, and a price rise on the
+  current model is a line of its own. Newest is decided from what the service states (release date, else the version in
+  the id, else the list's order, which never makes a model newer), by one function the preset and the weekly look share.
+  A saved account moves to its service's own connection only on a yes, with a read-back of the identity it signs in as
+  and a check before anything is written.
+- **Why:** a silent model or identity switch changes cost and quality unseen; the check and the price rule keep the
+  convenience of following a family without that.
+- **Impact:** design 6.16; new settings `ai.models.follow_newest`, `ai.models.check_every_days`, `ai.models.use_days`, with
+  demo values in both workspaces; model listings carry a release date; API: `account_move`, `model_watch` and
+  `model_moved` Today lines, `GET/POST /api/ai/accounts/{name}/move`, `POST .../move/not-now`,
+  `POST /api/ai/model-watch/{account}/{state}/not-now`; Switch back and Keep it also settle a move made on its own.
+  Change log: section 178.
+
 ## 2026-10-22: Every outward act is a record with states, and the person's yes covers a fingerprint
 
 - **Decided (main session, designing S1b-1 from design 6.3 and 6.12 and the designer's F7):** kind of rule: a core concept

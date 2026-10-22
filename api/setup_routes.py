@@ -33,6 +33,8 @@ from api.schemas import (
     AiModelSkills,
     AiModelsView,
     AiModelView,
+    AiMoved,
+    AiMoveReadback,
     AiRouteRuleView,
     AiRoutingView,
     AiRuleSuggestion,
@@ -1308,6 +1310,77 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         events.changed()
         return Ok(ok=name)
 
+    def native_move_of(name: str) -> tuple[Config, Any, Any]:
+        """The settings, the account and the catalog entry of its service's own connection, or 404 when the account has
+        none to move to (or it was put off)."""
+        from engine.ai import native_move
+
+        now = current()
+        provider = now.ai.providers.get(name)
+        if provider is None:
+            raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
+        entry = native_move.service_of(provider, setup.known_endpoints())
+        if entry is None:
+            raise HTTPException(status_code=404, detail="This account has no connection of its own to move to.")
+        return now, provider, entry
+
+    @r.get("/ai/accounts/{name}/move")
+    def ai_account_move_readback(name: str) -> AiMoveReadback:
+        """Which identity the account's service's own connection would sign in as: its key (its last four characters,
+        and whether it is the one in use now), its address and its name. Nothing is called or changed."""
+        from engine.ai import native_move
+
+        now, provider, entry = native_move_of(name)
+        found = native_move.readback(provider, name, entry, os.environ)
+        return AiMoveReadback(
+            account=found.account,
+            service=found.service,
+            key_ending=found.key_ending,
+            key_known=found.key_known,
+            key_differs=found.key_differs,
+            address=found.address,
+            address_was=found.address_was,
+            address_differs=found.address_differs,
+        )
+
+    @r.post("/ai/accounts/{name}/move")
+    def ai_account_move(name: str, body: FingerprintIn) -> AiMoved:
+        """Move the account to its service's own connection, on the person's yes: the account check (one call per tier
+        and kind of work with its exact parameters) runs on the new connection first, and only a check that passed
+        writes the change, through the settings save, with Undo. A failed check leaves the account as it was."""
+        from engine.ai import native_move
+        from engine.ai.checked import remember
+
+        now, provider, entry = native_move_of(name)
+        checked = native_move.check(now, os.environ, name, entry, store)
+        if not checked.ok:
+            return AiMoved(moved=False, detail=checked.detail)
+        changes = {f"ai.providers.{name}.{key}": value for key, value in native_move.planned(provider, entry).items()}
+        done = save(changes, [], body.fingerprint, allow=("ai.providers.",))
+        remember(ws, checked.cfg, checked.results)
+        return AiMoved(moved=True, saved=saved(done))
+
+    @r.post("/ai/accounts/{name}/move/not-now")
+    def ai_account_move_not_now(name: str) -> Ok:
+        """Put the move off for good: its line on Today never comes back unasked."""
+        from engine.ai import native_move
+
+        native_move_of(name)
+        native_move.not_now(store, name)
+        events.changed()
+        return Ok(ok=name)
+
+    @r.post("/ai/model-watch/{account}/{state}/not-now")
+    def ai_model_watch_not_now(account: str, state: str) -> Ok:
+        """Put off what a line about an account's models says (`state` newer or price), until a different newer model
+        or a different price rise appears."""
+        from engine.ai import model_watch
+
+        if not model_watch.not_now(store, current(), account, state):
+            raise HTTPException(status_code=404, detail="There is nothing about this account's models to put off.")
+        events.changed()
+        return Ok(ok=account)
+
     switch_estimates: dict[tuple[Any, ...], tuple[float | None, int]] = {}
 
     def account_plan(name: str, body: AiAccountChange) -> tuple[dict[str, Any], list[str], tuple[str, str] | None]:
@@ -1459,10 +1532,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/ai/switch/{tier}/back")
     def ai_switch_back(tier: str, body: FingerprintIn) -> SettingsSaved:
-        """Put a tier back as it was before the switch whose check didn't pass, with Undo."""
+        """Put a tier back as it was before the switch whose check didn't pass, or before a move made on its own, with
+        Undo."""
         from engine.ai import switch_check
 
-        entry = switch_check.failed(store).get(tier)
+        entry = switch_check.failed(store).get(tier) or switch_check.moved(store).get(tier)
         if entry is None:
             raise HTTPException(status_code=404, detail="There is no switch to go back on.")
         restore = entry["restore"]
@@ -1473,10 +1547,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/ai/switch/{tier}/keep")
     def ai_switch_keep(tier: str) -> Ok:
-        """Keep a switch whose check didn't pass: the line goes."""
+        """Keep a switch whose check didn't pass, or a move made on its own: the line goes."""
         from engine.ai import switch_check
 
-        if switch_check.failed(store).get(tier) is None:
+        if switch_check.failed(store).get(tier) is None and switch_check.moved(store).get(tier) is None:
             raise HTTPException(status_code=404, detail="There is no switch to keep.")
         switch_check.clear(store, tier)
         events.changed()
@@ -1608,7 +1682,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         # Unless the person said what it is for, the service's recommended setup (or, with none, a split by price)
         # fills the tiers still on the stand-in.
         plan = (
-            plan_tiers(kind, models, now.tiers, stand_in, listed_prices)
+            plan_tiers(kind, models, now.tiers, stand_in, listed_prices, listed_prices)
             if kind is not None and not chosen
             else TierPlan()
         )

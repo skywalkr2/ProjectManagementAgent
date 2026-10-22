@@ -467,6 +467,16 @@ export const api = {
   /** Puts a tier back as it was before the switch whose check didn't pass. */
   switchBack: (tier: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `ai/switch/${id(tier)}/back`, { fingerprint } satisfies S["FingerprintIn"]),
+  /** What an account's move to its service's own connection would sign in as, from what is known without a call. */
+  accountMoveReadback: (name: string) => call<S["AiMoveReadback"]>("GET", `ai/accounts/${id(name)}/move`),
+  /** Moves the account after the check on the new connection passed; a failed check leaves it as it was. */
+  moveAccount: (name: string, fingerprint: string) =>
+    call<S["AiMoved"]>("POST", `ai/accounts/${id(name)}/move`, { fingerprint } satisfies S["FingerprintIn"]),
+  /** Puts the move off for good: the line never comes back unasked. */
+  moveAccountNotNow: (name: string) => call<S["Ok"]>("POST", `ai/accounts/${id(name)}/move/not-now`),
+  /** Puts off a line about an account's models (newer or price) until a different one appears. */
+  modelWatchNotNow: (account: string, state: string) =>
+    call<S["Ok"]>("POST", `ai/model-watch/${id(account)}/${id(state)}/not-now`),
   /** Keeps a switch whose check didn't pass. */
   keepSwitch: (tier: string) => call<S["Ok"]>("POST", `ai/switch/${id(tier)}/keep`),
   /** Keeps the sign-in an agent account now runs as, in place of the one recorded. */

@@ -91,6 +91,7 @@ class ModelInfo:
     efforts: list[str] | None = None  # the effort levels the model takes; an empty list means it takes no effort
     adaptive_thinking: bool | None = None  # whether the model can think on its own, where the service says so
     thinking_off_efforts: list[str] | None = None  # the efforts at which its thinking can be turned off; [] never
+    released: str | None = None  # when the service says the model was made (ISO date and time), where its listing does
 
 
 class AiError(Exception):

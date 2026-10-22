@@ -15,6 +15,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from engine.ai.family import newest_of_family
 from engine.ai.task import ModelInfo
 
 EFFORTS = ("low", "medium", "high")
@@ -46,10 +47,11 @@ def clean_presets(raw: Any) -> dict[str, dict[str, str]]:
     return found
 
 
-def match_family(family: str, ids: list[str]) -> str | None:
-    """The first of the ids, in the order given, that contains the family word, ignoring case."""
-    word = family.casefold()
-    return next((i for i in ids if word in i.casefold()), None)
+def match_family(family: str, ids: list[str], info: Mapping[str, ModelInfo] | None = None) -> str | None:
+    """The newest of the ids that contain the family word, ignoring case, by the one rule the weekly check of newer
+    models uses too (`engine/ai/family.py`): the listing's own date, else the version in the id, else the list's order.
+    A model of another family is never picked."""
+    return newest_of_family(family, ids, info)[0]
 
 
 def _price(info: ModelInfo | None) -> float | None:
@@ -65,13 +67,16 @@ def plan_tiers(
     tiers: Mapping[str, Any],
     stand_in: set[str],
     prices: Callable[[], Mapping[str, ModelInfo]],
+    listed: Callable[[], Mapping[str, ModelInfo]] | None = None,
 ) -> TierPlan:
     """The tiers a new account of this kind fills when the person didn't say what it is for.
 
     `models` is the account's models by short name; `tiers` the tiers as they stand and `stand_in` the names of those
     still on the stand-in account (the only ones a new account takes over). With presets, each preset tier takes the
-    first model whose id holds its family word; a command-line agent that lists no models is matched against the
-    entry's examples. Without presets, the cheapest priced model goes to `routine` and the dearest to `deep` when
+    newest model whose id holds its family word, by what the service states (`engine/ai/family.py`: the listing's
+    release date, else the version in the id, else the order of `models`); `listed` is the service's listing, asked
+    once and only when a family has more than one model. A command-line agent that lists no models is matched against
+    the entry's examples. Without presets, the cheapest priced model goes to `routine` and the dearest to `deep` when
     those are on the stand-in; `prices` is only called then. A preset tier that is not in the settings is made when
     its family matches, and the tier before it escalates to it when that tier was filled here and names none.
     """
@@ -81,13 +86,22 @@ def plan_tiers(
         ids = list(models.values())
         if entry.get("adapter") == "cli-agent" and entry.get("model_examples"):
             ids = [str(m) for m in entry["model_examples"]]
+        info: Mapping[str, ModelInfo] | None = None
+
+        def dates() -> Mapping[str, ModelInfo]:
+            nonlocal info
+            if info is None:
+                info = listed() if listed is not None else {}
+            return info
+
         previous = ""
         for tier, preset in presets.items():
             exists = tier in tiers
             if exists and tier not in stand_in:
                 previous = ""  # on another account the person chose: it stays where they put it
                 continue
-            hit = match_family(preset["family"], ids)
+            several = len([i for i in ids if preset["family"].casefold() in i.casefold()]) > 1
+            hit = match_family(preset["family"], ids, dates() if several else None)
             if hit is None:
                 plan.unmatched.append(tier)
                 previous = ""

@@ -94,6 +94,17 @@ class Line:
     switch_failed (a switch of the `tier`'s account or model whose check found problems, or couldn't finish: the new
     `account`, the earlier one in `text`, `count` cases that didn't come out right with the first of them in `names`,
     and `check_failed` when the check couldn't finish),
+    account_move (a saved account that uses the generic connection to a service that has its own: its `account`, the
+    service's name in `subject`; Move shows the identity the new connection signs in as and checks it first, Not now
+    puts it off for good),
+    model_watch (an account whose tiers have news about their models: `names` the tiers, `account`; with `state` newer,
+    a newer model of the tier's own family exists, `candidates` maps each such tier to it, `usd_per_day` is what it
+    would change in cost per day at the current use (none when a price isn't known), `reason` why it isn't moved to on
+    its own: asks, costs_more, price_unknown, check_failed (`count` cases that didn't come out right, `check_failed`
+    when the check couldn't finish) or check_cost (its check's `estimate_usd` is above the amount asked about); with
+    `state` price, a tier's current model went up in price by `usd_per_day`),
+    model_moved (a tier moved on its own to a newer model of its family after a check passed: the new `account`, the
+    earlier one in `text`, `usd_per_day` the change in cost; Keep clears it, Switch back restores the earlier model),
     credential (a key or sign-in that stops working on `due`, or already has: `credential_kind` is account or
     sign_in, `credential_name` its name, `waiting_days` the days left, below zero once it has passed, and `places`
     every place the same credential is used),
@@ -199,6 +210,9 @@ class Line:
     credential_name: str | None = None
     places: list[str] = field(default_factory=list)
     names: list[str] = field(default_factory=list)
+    usd_per_day: float | None = None
+    reason: str | None = None
+    candidates: dict[str, str] = field(default_factory=dict)
     at: str | None = None
     late: bool | None = None
     #: For a late reminder, or a line of the ones that were missed: the app knows it was not running when each came due
@@ -215,6 +229,69 @@ class Line:
     replies: int = 0
     age_hours: float | None = None
     since: str = ""
+
+
+def _model_lines(store: Any, cfg: Any) -> list[Line]:
+    """Lines about the accounts' models: a tier moved on its own that waits for Keep or Switch back, an account that
+    could move to its service's own connection, and the news the weekly look kept (a newer model, a price rise)."""
+    from engine.ai import model_watch, native_move, switch_check
+
+    lines: list[Line] = []
+    for tier, entry in sorted(switch_check.moved(store).items()):
+        tiers = cfg.ai.tiers.get(tier)
+        if tiers is None or tiers.use != entry.get("after"):
+            continue  # the person has changed the tier since: there is nothing to keep or switch back
+        lines.append(
+            Line(
+                key=f"model_moved:{tier}",
+                group="decide",
+                kind="model_moved",
+                text=str(entry["before"]).partition("/")[0],
+                account=str(entry["after"]).partition("/")[0],
+                tier=tier,
+                usd_per_day=entry.get("usd_per_day"),
+                since=str(entry.get("at") or ""),
+            )
+        )
+    if any(p.adapter == native_move.GENERIC and p.base_url for p in cfg.ai.providers.values()):
+        from engine.setup import known_endpoints
+
+        for move in native_move.candidates(cfg, known_endpoints(), store):
+            lines.append(
+                Line(
+                    key=f"account_move:{move.account}",
+                    group="decide",
+                    kind="account_move",
+                    account=move.account,
+                    subject=move.service,
+                )
+            )
+    for (account, state), offers in model_watch.shown_offers(cfg, store).items():
+        tiers = sorted(offers)
+        deltas = [
+            offers[t].get("usd_per_day") if state == model_watch.NEWER else offers[t]["price_rise"]["usd_per_day"]
+            for t in tiers
+        ]
+        reasons = [model_watch.reason_of(offers[t]) for t in tiers] if state == model_watch.NEWER else []
+        checks = [offers[t].get("check_usd") for t in tiers]
+        failed = [offers[t].get("check") or {} for t in tiers]
+        lines.append(
+            Line(
+                key=f"model_watch:{account}:{state}",
+                group="decide",
+                kind="model_watch",
+                account=account,
+                state=state,
+                names=tiers,
+                candidates={t: offers[t]["candidate"] for t in tiers} if state == model_watch.NEWER else {},
+                usd_per_day=None if any(d is None for d in deltas) else round(sum(deltas), 4),
+                reason=next((r for r in model_watch.REASON_ORDER if r in reasons), None),
+                estimate_usd=None if any(c is None for c in checks) else round(sum(checks), 4),
+                count=sum(int(c.get("count") or 0) for c in failed) or 1,
+                check_failed=any(c.get("state") == "unfinished" for c in failed) or None,
+            )
+        )
+    return lines
 
 
 def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> list[Line]:
@@ -570,6 +647,8 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 since=str(entry.get("at") or ""),
             )
         )
+
+    lines.extend(_model_lines(store, cfg))
 
     # Decide: an account the person said "Not now" about reading their work mail and notes, until they allow it (the
     # line goes the moment the account may see the internal level, however that came about).
@@ -1218,6 +1297,9 @@ _KIND_ORDER = {
     "away": -1.5,
     "account_check": 1,
     "switch_failed": 1,
+    "account_move": 2,
+    "model_watch": 2,
+    "model_moved": 2,
     "identity": 0,
     "work_access": 1,
     "credential": 1,

@@ -900,9 +900,13 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     corrected from every run's reported usage; a command-line agent's measured fixed overhead per request (*built, 2a:*
     `tests/test_estimate_calibration.py`, the native adapter's count in `tests/test_anthropic_messages.py`; left: the
     evaluation and switch estimates, which price a practice workspace); a saved account
-    moved to the native adapter only on a yes with a read-back of the identity it signs in as; a newer model in a family
-    asked about once and watched weekly, never switched silently; `thinking: off` only where the listing says so (true
-    today: a test pins it).
+    moved to the native adapter only on a yes with a read-back of the identity it signs in as (*built, 2b:*
+    `tests/test_native_move.py`); a newer model in a family watched weekly, with the cost change per day at the current
+    use, switched to only by the person's Switch or, with `ai.models.follow_newest` on, after a check and only when it
+    costs the same or less (*built, 2b:* `tests/test_model_watch.py`, with the shared rule for the newest model in
+    `tests/test_family.py`; the preset takes the newest of the family); `thinking: off` only where the listing says so
+    (*built:* `tests/test_anthropic_messages.py::test_thinking_off_is_sent_only_where_the_listed_capabilities_accept_it_at_the_tiers_effort`).
+    *Left in batch 2:* the evaluation and switch estimates.
   - *Batch 3, corrections:* **built** (`tests/test_learn_correction.py`, `tests/test_quality.py`,
     `tests/test_action_work.py`, `web/src/components/Quality.test.tsx`): missed, declined and dropped kept apart in the
     learning packet and prompt and in the Quality measures (`apart`, window and weeks; a drop is not a correction and

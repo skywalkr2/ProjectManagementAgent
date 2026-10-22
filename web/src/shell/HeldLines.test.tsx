@@ -669,3 +669,234 @@ test("Allow gives the yes with the current settings, says so, the line goes and 
   );
   expect(await screen.findByRole("region", { name: "Access" })).toBeInTheDocument();
 });
+
+// ---- the lines about accounts' models and connections --------------------------------------------------------------
+
+const accountMove = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("account_move", { key: "account_move:main", group: "decide", account: "main", subject: "Service", ...over });
+const readback = (over: Partial<S["AiMoveReadback"]> = {}): S["AiMoveReadback"] => ({
+  account: "main", service: "Service", key_ending: "wxyz", key_known: true, key_differs: false, address: "api.example.com", address_was: "api.example.com", address_differs: false, ...over,
+});
+
+test("an account that could move offers Move and Not now, and Move shows what the new connection signs in as before anything runs", async () => {
+  const user = userEvent.setup();
+  const { calls } = show([accountMove()], { "GET ai/accounts/main/move": () => readback() });
+  const row = await screen.findByRole("region", { name: "Account connection" });
+  expect(row).toHaveTextContent("Move main to its service's own connection");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Move", "Not now"]);
+  expect(calls.some((c) => c.route.startsWith("GET ai/accounts/main/move"))).toBe(false);
+  await user.click(within(row).getByRole("button", { name: "Move main to its service's own connection" }));
+  const list = await within(row).findByRole("list", { name: "What the new connection would sign in as" });
+  expect(within(list).getAllByRole("listitem").map((i) => i.textContent)).toEqual(["The same key, ending wxyz", "The same address, api.example.com", "The same account name, main"]);
+  expect(calls.some((c) => c.route === "POST ai/accounts/main/move")).toBe(false);
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Check and move", "Not yet"]);
+});
+
+test("the read-back says plainly when the key or the address would differ, or the key can't be read", async () => {
+  const user = userEvent.setup();
+  let body = readback({ key_differs: true, key_ending: "abcd", address_differs: true, address: "new.example.com", address_was: "old.example.com" });
+  show([accountMove()], { "GET ai/accounts/main/move": () => body });
+  const row = await screen.findByRole("region", { name: "Account connection" });
+  await user.click(within(row).getByRole("button", { name: /^Move main/ }));
+  const items = async () => (await within(row).findAllByRole("listitem")).map((i) => i.textContent);
+  expect(await items()).toEqual(["Not the key main uses now: a different one, ending abcd", "The address new.example.com, not old.example.com", "The same account name, main"]);
+});
+
+test("a key that can't be read is said so, and a key too short to show shows none of itself", async () => {
+  const user = userEvent.setup();
+  show([accountMove()], { "GET ai/accounts/main/move": () => readback({ key_known: false, key_ending: "" }) });
+  const row = await screen.findByRole("region", { name: "Account connection" });
+  await user.click(within(row).getByRole("button", { name: /^Move main/ }));
+  expect((await within(row).findAllByRole("listitem"))[0]).toHaveTextContent("A key that can't be read right now");
+});
+
+test("the yes runs the check and a passed one moves the account, with Undo", async () => {
+  const user = userEvent.setup();
+  let lines = [accountMove()];
+  const changes = [{ key: "ai.providers.main.adapter", before: "generic", after: "own", was_default: false, is_default: false }];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET ai/accounts/main/move": () => readback(),
+    "POST ai/accounts/main/move": () => {
+      lines = [];
+      return { moved: true, saved: { changes, fingerprint: "fp-2", needs_restart: false } };
+    },
+    "POST settings": () => {
+      lines = [accountMove()];
+      return { changes: [], fingerprint: "fp-3", needs_restart: false };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Account connection" });
+  await user.click(within(row).getByRole("button", { name: /^Move main/ }));
+  await user.click(await within(row).findByRole("button", { name: "Check main on the new connection and move it" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/main/move")?.body).toEqual({ fingerprint: "fp-1" }));
+  expect(await screen.findByText("main now uses its service's own connection.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Account connection" })).toBeNull());
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { "ai.providers.main.adapter": "generic" }, reset: [], fingerprint: "fp-2" }));
+  expect(await screen.findByRole("region", { name: "Account connection" })).toBeInTheDocument();
+});
+
+test("a failed check leaves the account as it was, says why, and the line stays", async () => {
+  const user = userEvent.setup();
+  show([accountMove()], {
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET ai/accounts/main/move": () => readback(),
+    "POST ai/accounts/main/move": () => ({ moved: false, detail: "the service didn't accept the key", saved: null }),
+  });
+  const row = await screen.findByRole("region", { name: "Account connection" });
+  await user.click(within(row).getByRole("button", { name: /^Move main/ }));
+  await user.click(await within(row).findByRole("button", { name: /^Check main/ }));
+  expect(await within(row).findByRole("status")).toHaveTextContent("main stays as it was. The check said: the service didn't accept the key");
+  expect(within(row).getByRole("button", { name: /^Check main/ })).toBeEnabled();
+});
+
+test("Not now puts the move off and the line goes", async () => {
+  const user = userEvent.setup();
+  let lines = [accountMove()];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST ai/accounts/main/move/not-now": () => {
+      lines = [];
+      return { ok: "main" };
+    },
+  });
+  await user.click(within(await screen.findByRole("region", { name: "Account connection" })).getByRole("button", { name: "Don't move main now" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/main/move/not-now")).toBe(true));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Account connection" })).toBeNull());
+});
+
+const modelWatch = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("model_watch", { key: "model_watch:main:newer", group: "decide", account: "main", state: "newer", names: ["routine"], candidates: { routine: "model-new" }, reason: "asks", usd_per_day: -0.4, ...over });
+const accountsWith = () => [
+  { name: "main", label: "", kind: null, adapter: "x", models: { default: "model-old", harder: "model-big" }, used_for: [], backup_for: [], has_key: true, key_state: "saved", key_ending: false, spent_today_usd: 0 },
+];
+
+test.each([
+  [{ reason: "asks", usd_per_day: -0.4 }, "It would cost about $0.40 a day less at your current use."],
+  [{ reason: "asks", usd_per_day: 0 }, "It would cost about the same at your current use."],
+  [{ reason: "costs_more", usd_per_day: 1.25 }, "It costs about $1.25 a day more at your current use, so it isn't switched to on its own."],
+  [{ reason: "price_unknown", usd_per_day: null }, "Its price isn't known yet, so it isn't switched to on its own."],
+  [{ reason: "check_failed", count: 2 }, "Its check found 2 cases that didn't come out right, so it wasn't switched to."],
+  [{ reason: "check_failed", check_failed: true }, "Its check couldn't finish, so it wasn't switched to."],
+  [{ reason: "check_cost", estimate_usd: 5 }, "Its check costs about $5.00, which is above the amount you asked to be asked about. Switch to go ahead."],
+])("a newer model says what it would change in cost and why it isn't switched to on its own (%j)", async (over, sub) => {
+  show([modelWatch(over as Partial<S["QueueLineView"]>)], { "GET ai/accounts": accountsWith, "GET ai/endpoints": () => [] });
+  const row = await screen.findByRole("region", { name: "Newer model" });
+  expect(row).toHaveTextContent("Look at a newer model for everyday work");
+  expect(row).toHaveTextContent(sub);
+  expect(row).not.toHaveTextContent("model-new");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Switch", "Not now"]);
+});
+
+test("Switch goes through the settings' own switch with its check, for every tier the line names, and nothing is sent before it", async () => {
+  const user = userEvent.setup();
+  let lines = [modelWatch({ names: ["routine", "deep"], candidates: { routine: "model-new", deep: "model-big" } })];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET ai/accounts": accountsWith,
+    "GET ai/endpoints": () => [],
+    "POST ai/accounts/main/switch-check": () => {
+      lines = [];
+      return { saved: { changes: [], fingerprint: "fp-2", needs_restart: false }, checking: true };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Newer model" });
+  expect(row).toHaveTextContent("everyday work and harder work");
+  expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
+  await user.click(await within(row).findByRole("button", { name: "Switch everyday work and harder work to the newer model" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST ai/accounts/main/switch-check")?.body).toEqual({
+      fingerprint: "fp-1",
+      models: { default: "model-old", harder: "model-big", "model-new": "model-new" },
+      use: { routine: "model-new", deep: "harder" },
+    }),
+  );
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Newer model" })).toBeNull());
+});
+
+test("Not now on a newer model puts it off for that kind of line", async () => {
+  const user = userEvent.setup();
+  let lines = [modelWatch()];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "GET ai/accounts": accountsWith,
+    "GET ai/endpoints": () => [],
+    "POST ai/model-watch/main/newer/not-now": () => {
+      lines = [];
+      return { ok: "main" };
+    },
+  });
+  await user.click(await within(await screen.findByRole("region", { name: "Newer model" })).findByRole("button", { name: "Not now for the newer model for everyday work" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/model-watch/main/newer/not-now")).toBe(true));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Newer model" })).toBeNull());
+});
+
+test("a price rise on the current model says the increase and offers no switch", async () => {
+  const user = userEvent.setup();
+  let lines = [modelWatch({ key: "model_watch:main:price", state: "price", candidates: {}, reason: null, usd_per_day: 0.6 })];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST ai/model-watch/main/price/not-now": () => {
+      lines = [];
+      return { ok: "main" };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Price change" });
+  expect(row).toHaveTextContent("The model for everyday work costs more now");
+  expect(row).toHaveTextContent("The same work now costs about $0.60 a day more.");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Got it"]);
+  await user.click(within(row).getByRole("button", { name: /^Got it/ }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/model-watch/main/price/not-now")).toBe(true));
+});
+
+const modelMoved = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("model_moved", { key: "model_moved:routine", group: "decide", account: "main", text: "main", tier: "routine", usd_per_day: -0.4, ...over });
+
+test("a tier moved on its own says what moved and what it changes in cost, with Keep it and Switch back", async () => {
+  show([modelMoved()]);
+  const row = await screen.findByRole("region", { name: "Moved to a newer model" });
+  expect(row).toHaveTextContent("everyday work moved to a newer model after its check passed");
+  expect(row).toHaveTextContent("It costs about $0.40 a day less at your current use.");
+  expect(row).not.toHaveTextContent("model-");
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Keep it", "Switch back"]);
+});
+
+test("Switch back restores the earlier model through the switch route, with Undo, and Keep it clears the line", async () => {
+  const user = userEvent.setup();
+  let lines = [modelMoved()];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST ai/switch/routine/back": () => {
+      lines = [];
+      return { changes: [{ key: "ai.tiers.routine.use", before: "main/new", after: "main/default", was_default: false, is_default: false }], fingerprint: "fp-2", needs_restart: false };
+    },
+    "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
+  });
+  await user.click(within(await screen.findByRole("region", { name: "Moved to a newer model" })).getByRole("button", { name: "Switch everyday work back to its earlier model" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/switch/routine/back")?.body).toEqual({ fingerprint: "fp-1" }));
+  expect(await screen.findByText("everyday work is back on its earlier model.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { "ai.tiers.routine.use": "main/new" }, reset: [], fingerprint: "fp-2" }));
+});
+
+test("Keep it on a moved tier clears the line and nothing else changes", async () => {
+  const user = userEvent.setup();
+  let lines = [modelMoved({ usd_per_day: null })];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST ai/switch/routine/keep": () => {
+      lines = [];
+      return { ok: "routine" };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Moved to a newer model" });
+  expect(row).toHaveTextContent("It costs about the same at your current use.");
+  await user.click(within(row).getByRole("button", { name: "Keep the newer model for everyday work" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/switch/routine/keep")).toBe(true));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Moved to a newer model" })).toBeNull());
+  expect(calls.filter((c) => c.route.startsWith("POST")).map((c) => c.route)).toEqual(["POST ai/switch/routine/keep"]);
+});
