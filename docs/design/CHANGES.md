@@ -1027,6 +1027,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 158. Someone's dated promise recorded as a fact goes back to be their action (2026-10-22; B-10, built)
+
+- `promise-as-fact`: a fact whose words are a named person promising something by a date goes back once to be that
+  person's action, also for someone not on file yet (proposed with person.add, then asked about). States, watched
+  projects and other teams' promises stay facts. Settings `language.promise_words` and
+  `language.promise_state_words`. Design 4 (language settings) and 6.33. Built: `tests/test_promise_as_fact.py`
+
 ## 157. A command-line agent can take the instructions as its own system instructions (2026-10-22; B-10, built)
 
 - `agent.system_option`: the arguments that hand a program its system instructions from a file (`{system}`). When set,

@@ -319,6 +319,9 @@ Built keys:
   sent back once. **Built (B-10):** `tests/test_own_request_lint.py`.
 - `team_promise_words` (we'll, we will, we're going to): what the `team-we-one-owner` lint reads (6.33): an action
   quoting one, owned by the message's sender alone when the words don't name them, goes back to leave its owners empty.
+- `promise_words` (will, is going to, are going to) and `promise_state_words` (be): what the `promise-as-fact` lint
+  reads (6.33): a fact quoting a named person, a promise word not followed by a state word, and a date goes back to
+  be recorded as that person's action.
 - `asking_words` (when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about,
   confirm): words that frame a question rather than say what it is about. The `already-known` check leaves them out and
   compares the rest in folded form (plurals, "ing", "ed"), so "Can you tell me when the proofs will ship?" is answered

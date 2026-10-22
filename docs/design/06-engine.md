@@ -903,6 +903,11 @@ is marked *designed*, with the phase.
   theirs quoting it goes back once (`own-promise-missed`, *built*; the words are `language.own_promise_words`). A
   team's "we'll" made the sender's alone, when the words don't name the sender, goes back once to leave the owners
   empty (`team-we-one-owner`, *built*; `language.team_promise_words`).
+- Someone's promise with a date ("Riley will drive the audit by the 20th"), recorded as a fact rather than as their
+  action, goes back once to be their action, including for someone not on file yet, who is proposed and asked about
+  (`promise-as-fact`, *built*; `language.promise_words`, `language.promise_state_words`). A rule on the words: a
+  promise word after a named person and before a date the rules read. A state ("will be away on the 20th"), a
+  project the person only watches and a promise by someone on file on another team stay facts.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.

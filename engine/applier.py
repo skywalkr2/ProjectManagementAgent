@@ -213,6 +213,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _follow_on_reach(cs, ctx)
     problems += _thread_promise_unanswered(cs, ctx)
     problems += _own_promise_missed(cs, ctx)
+    problems += _promise_as_fact(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -1994,6 +1995,124 @@ def _own_promise_missed(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             "record it as the person's own action, owed to whoever they wrote to",
         )
     ]
+
+
+#: The instant a promise's due words are read against when the check only asks whether they name a date at all.
+_ANY_DAY = datetime(2000, 1, 3, 12, tzinfo=UTC)
+
+
+def _names_a_date(text: str, ctx: Context) -> bool:
+    """Whether words after one of the language's due lead words ("by", "on") read as a date by the rules."""
+    from engine.due_phrases import resolve
+
+    language = (ctx.cfg.workspace.language or "en-US").replace("_", "-")
+    if not language.lower().startswith("en"):
+        return False
+    locale = "en_US" if language.lower().startswith("en-us") else "en_GB"
+    settings = ctx.cfg.language
+    words = text.split()
+    leads = {w.strip().lower() for w in settings.due_lead_words if w.strip() and " " not in w.strip()}
+    for i, word in enumerate(words):
+        if word.lower().strip(",.;:") not in leads:
+            continue
+        for size in range(1, 5):
+            phrase = " ".join(words[i : i + 1 + size]).strip(",.;:!?")
+            found = resolve(
+                phrase,
+                _ANY_DAY,
+                UTC,
+                locale=locale,
+                lead_words=settings.due_lead_words,
+                ordinal_suffixes=settings.due_ordinal_suffixes,
+            )
+            if found.start is not None or found.end is not None:
+                return True
+    return False
+
+
+def _promiser(before: str, cs: ChangesetIn, ctx: Context) -> str | None:
+    """The person the words before a promise word name, as a person id or, for someone proposed in the same answer, the
+    name given: a person on file named in full or by an alias, the first word as a name the directory resolves, or
+    the full or first name of a person.add. None when the words name nobody."""
+    for op in cs.ops:
+        if isinstance(op, PersonAddOp):
+            names = [op.full_name, op.first_name or op.full_name.split()[0]]
+            if any(n and scope.has_word(before, n) for n in names):
+                return op.full_name
+    mentioned = ctx.people.mentioned_in(before)
+    if mentioned:
+        return sorted(mentioned)[0]
+    first = before.strip().split()[:1]
+    if first:
+        found = ctx.people.resolve(first[0].strip(",.;:"))
+        if found.status == "ok" and found.person:
+            return found.person
+    return None
+
+
+def _promise_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A fact whose evidence is someone named promising to do something by a date ("Riley will drive the audit by the
+    20th") is sent back once to be recorded as that person's action: a promise with a date is a to-do to follow up,
+    whoever made it. A rule on the words with no AI: one of the language's promise words, not followed by one of its
+    state words ("will be away"), after words naming a person on file or one the answer proposes, and before a date the
+    rules read. Left alone: a fact on a project the person only watches, a promise by someone on file on another team,
+    a promise an op of the answer already quotes, and the person's own note and changes."""
+    name = "promise-as-fact"
+    lints = ctx.cfg.checks.lints
+    if (
+        lints.get(name, "off") == "off"
+        or ctx.actor == "pm"
+        or ctx.confirmed_by_pm
+        or "action.add" not in ctx.allowed_ops
+    ):
+        return []
+    language = ctx.cfg.language
+    promise_words = [w.strip() for w in language.promise_words if w.strip()]
+    state_words = [w.strip() for w in language.promise_state_words if w.strip()]
+    if not promise_words:
+        return []
+    view = ctx.store.read()
+    quoted = [
+        normalize(e.quote)
+        for op in cs.ops
+        if not isinstance(op, FactOp) and (e := _evidence(op)) is not None and e.quote
+    ]
+    pm = ctx.people.pm
+    team = scope._team_of(ctx.people, pm) if pm else None
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if not isinstance(op, FactOp) or not op.evidence.quote.strip():
+            continue
+        level = ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or lints.get(name, "off")
+        if level == "off" or (op.project and scope.role_of(view, op.project, pm) == "watch"):
+            continue
+        quote = op.evidence.quote
+        if any(q and (q in normalize(quote) or normalize(quote) in q) for q in quoted):
+            continue
+        pattern = "|".join(re.escape(w) for w in promise_words)
+        for found in re.finditer(rf"(?<!\w)(?:{pattern})(?!\w)", quote, re.IGNORECASE):
+            after = quote[found.end() :].split()
+            if after and after[0].lower().strip(",.;:") in {w.lower() for w in state_words}:
+                continue
+            who = _promiser(quote[: found.start()], cs, ctx)
+            if who is None or not _names_a_date(quote[found.end() :], ctx):
+                continue
+            if who in ctx.people.records and team is not None and not scope._inside(view, ctx.people, team, who):
+                continue
+            problems.append(
+                Problem(
+                    name,
+                    level,
+                    i,
+                    f"the words {quote!r} say {ctx.people.name(who) if who in ctx.people.records else who} will do "
+                    "something by a date: record it as an action they own (action.add with the due words and these "
+                    "words as evidence), not as a fact. Someone not on file yet still owns it: propose them with "
+                    "person.add and name them as the owner",
+                    quote,
+                )
+            )
+            break
+    return problems
 
 
 def _asked_subject(op: OpModel, name: str) -> str | None:

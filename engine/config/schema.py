@@ -1290,6 +1290,7 @@ def _default_lints() -> dict[str, Severity]:
         "own-request-not-promise": "return",
         "own-promise-missed": "return",
         "team-we-one-owner": "return",
+        "promise-as-fact": "return",
     }
 
 
@@ -1805,6 +1806,17 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["I'll", "I will"],
         description="Words that make a sentence the person's own promise even when it also asks something: a request "
         "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
+    )
+    promise_words: list[str] = Field(
+        default_factory=lambda: ["will", "is going to", "are going to"],
+        description='Words that make a sentence someone\'s promise to do something ("Riley will send it by Friday"). '
+        "Such words after a name and before a date, recorded as a fact rather than as that person's action, are sent "
+        "back once. Matched as whole words, ignoring case.",
+    )
+    promise_state_words: list[str] = Field(
+        default_factory=lambda: ["be"],
+        description='Words that, right after a promise word, make it a state rather than a promise ("will be away on '
+        'the 20th"): such a sentence stays a fact. Matched as whole words, ignoring case.',
     )
     team_promise_words: list[str] = Field(
         default_factory=lambda: ["we'll", "we will", "we're going to"],
