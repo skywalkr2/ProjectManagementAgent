@@ -1314,7 +1314,9 @@ for it, that nothing goes out without the PM approving that exact content, alrea
   - **A withdrawn sign-in stops it plainly:** the act is `failed` with "Sign in to <account> again", and the sign-in's Today
     line says so; nothing retries in a loop.
   - **The name check:** `outward.check_outgoing` runs on every part before the yes is offered and again at send.
-  - **Channels** are an extension point (plugin API): a channel declares what it can do (`send`, `status` by attempt key,
+  - **Channels** are an extension point (plugin API): each call gets a context with web access limited to the add-on's
+    declared hosts and the sign-in token of the act's own account (0.3.89, `tests/test_channel_context.py`); a channel
+    declares what it can do (`send`, `status` by attempt key,
     `undo`, the target kinds it takes) and is called only by the publisher. The core ships `copy` (the person copies the
     approved text; Mark sent makes it `sent`, as Copy works today) and `fake` (for tests). Mail and calendar acts are the
     mail add-on's channels (S1b-2).

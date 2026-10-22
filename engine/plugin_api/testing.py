@@ -1,5 +1,5 @@
-"""Testing a plugin: part of the plugin API, for plugins' own tests. A connector without a network
-(`connector_context`, `read`), and everything else in a throwaway workspace (`plugin_workspace`).
+"""Testing a plugin: part of the plugin API, for plugins' own tests. A connector or a channel without a network
+(`connector_context`, `channel_context`, `read`), and everything else in a throwaway workspace (`plugin_workspace`).
 
     from engine.plugin_api.testing import Reply, connector_context, read
 
@@ -35,12 +35,14 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 import httpx
 
+from engine.channels import ChannelContext
 from engine.connectors import ConnectorContext, ConnectorError, Poll, checked_poll
 
 __all__ = [
     "Asked",
     "Reply",
     "connector_context",
+    "channel_context",
     "read",
     "plugin_workspace",
     "PluginWorkspace",
@@ -89,22 +91,9 @@ class Reply:
     headers: dict[str, str] = field(default_factory=dict)
 
 
-def connector_context(
-    service: Callable[[Asked], Reply],
-    *,
-    network: list[str],
-    secrets: dict[str, str] | None = None,
-    tokens: dict[str, str] | None = None,
-    granted: dict[str, set[str]] | None = None,
-    account: str | None = None,
-    workspace_root: Path | str = ".",
-) -> ConnectorContext:
-    """A connector's context whose web client is answered by `service`. `kept` secrets land in `secrets`."""
+def _web(service: Callable[[Asked], Reply], network: list[str]) -> Any:
+    """A web client limited to `network` whose requests are answered by `service`."""
     from engine.net import WebClient
-
-    kept = secrets if secrets is not None else {}
-    signed_in = dict(tokens or {})
-    allowed = {name: set(scopes) for name, scopes in (granted or {}).items()}
 
     def answer(request: httpx.Request) -> httpx.Response:
         parts = urlsplit(str(request.url))
@@ -124,6 +113,24 @@ def connector_context(
             return httpx.Response(reply.status, json=reply.json, headers=reply.headers)
         return httpx.Response(reply.status, text=reply.text or "", headers=reply.headers)
 
+    return WebClient(list(network), transport=httpx.MockTransport(answer))
+
+
+def connector_context(
+    service: Callable[[Asked], Reply],
+    *,
+    network: list[str],
+    secrets: dict[str, str] | None = None,
+    tokens: dict[str, str] | None = None,
+    granted: dict[str, set[str]] | None = None,
+    account: str | None = None,
+    workspace_root: Path | str = ".",
+) -> ConnectorContext:
+    """A connector's context whose web client is answered by `service`. `kept` secrets land in `secrets`."""
+    kept = secrets if secrets is not None else {}
+    signed_in = dict(tokens or {})
+    allowed = {name: set(scopes) for name, scopes in (granted or {}).items()}
+
     def access_token(name: str) -> str:
         if name not in signed_in:
             raise ConnectorError("auth", f"Sign in to {name} first.")
@@ -131,12 +138,36 @@ def connector_context(
 
     return ConnectorContext(
         workspace_root=Path(workspace_root),
-        web=WebClient(list(network), transport=httpx.MockTransport(answer)),
+        web=_web(service, network),
         secret=kept.get,
         keep_secret=kept.__setitem__,
         access_token=access_token,
         granted=(lambda name: set(allowed.get(name, set()))) if granted is not None else None,
         account=account,
+    )
+
+
+def channel_context(
+    service: Callable[[Asked], Reply],
+    *,
+    network: list[str],
+    account: str | None = None,
+    token: str | None = None,
+    granted: set[str] | frozenset[str] | None = None,
+) -> ChannelContext:
+    """A channel's context whose web client is answered by `service`, as in `connector_context`: only hosts in
+    `network` are reached. `account` is the act's account id, `token` what `access_token()` gives (None, as for a plain
+    mailbox, when left out) and `granted` the scopes the account's sign-in holds.
+
+        context = channel_context(service, network=["api.example.com"], account="myplugin/signin:me@example.com",
+                                  token="token", granted={"Mail.Send"})
+        answer = my_send(act, "attempt-key", context)
+    """
+    return ChannelContext(
+        web=_web(service, network),
+        access_token=lambda: token,
+        account=account,
+        granted=frozenset(granted or ()),
     )
 
 

@@ -28,6 +28,7 @@ from typing import Any
 
 from engine import act_accounts, itip
 from engine.channels import (
+    ChannelContext,
     ChannelFailed,
     ChannelRegistration,
     ChannelSent,
@@ -129,7 +130,7 @@ class MailboxChannel:
 
     # ---- sending -----------------------------------------------------------------------------------------------------
 
-    def send(self, act: OutgoingAct, attempt_key: str) -> Any:
+    def send(self, act: OutgoingAct, attempt_key: str, context: ChannelContext | None = None) -> Any:
         try:
             settings = self._settings(act)
             if act.kind == "mailbox":
@@ -321,7 +322,7 @@ class MailboxChannel:
 
     # ---- what happened to an attempt ---------------------------------------------------------------------------------
 
-    def status(self, attempt_key: str) -> Any:
+    def status(self, attempt_key: str, context: ChannelContext | None = None) -> Any:
         """Found in the sent folder of a mailbox acting is on for: sent. Anything else: unknown."""
         for account in self.acting_accounts():
             settings = self.settings_of(account)
@@ -374,7 +375,7 @@ class MailboxChannel:
             _close(server)
         return ChannelSent(", ".join(ids))
 
-    def undo(self, act: OutgoingAct, service_id: str) -> Any:
+    def undo(self, act: OutgoingAct, service_id: str, context: ChannelContext | None = None) -> Any:
         """Put a mailbox act back: moved messages go back to their folder, a label or the read mark is removed."""
         try:
             if act.kind != "mailbox" or act.action not in ACTIONS["mailbox"]:

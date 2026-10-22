@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 197. A channel gets a context (2026-10-22; plugin API 0.3.89, built)
+
+- **Design 6.12, channels:** an add-on's channel is handed a context on send, status and undo, like a connector's: web
+  access limited to its declared hosts, the sign-in token of the act's own account (only when that account is one of the
+  add-on's own sign-ins), the account, and the scopes that sign-in holds. Older two-argument channels still work for one
+  release. Part names for messages and answers are written in the plugin notes. Built:
+  `tests/test_channel_context.py`.
+
 ## 196. The cleanup before the gate week (2026-10-22; built)
 
 - **Design 6.35 (limits and group drafts):** a follow-up message leaves out what its reader is outside the limit of and says

@@ -4,6 +4,13 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: A channel is handed a context limited to its own hosts and its act's own account
+
+- **Decided (main session, from the mail add-on builder's round 8):** kind of rule: an extension point (plugin API
+  0.3.89). An add-on that sends through a web service needs its web client and the account's sign-in token; the core
+  gives them per call and never another add-on's account or an undeclared host.
+- **Impact:** design 6.12 (channels), plugin guide. No change to scope. Change log: section 197.
+
 ## 2026-10-22: One family of follow-up timing settings; what a group message never carries; the cleanup batch's skips
 
 - **Decided (main session's brief, details by the builder, for review):** kind of rule for each:

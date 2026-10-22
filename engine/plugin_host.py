@@ -12,6 +12,7 @@ import sys
 import threading
 import uuid
 from collections import deque
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
@@ -135,6 +136,11 @@ EVENTS = set(EVENT_SPECS)
 #: Events whose payload names a kind, so a subscription can be limited to kinds (file kinds for file.added).
 EVENTS_WITH_KIND = {"record.changed", "stage.moved", "file.added", "text.accepted"}
 log = logging.getLogger(__name__)
+
+
+def _no_token() -> str | None:
+    """The token of an account with no sign-in behind it (a plain mailbox, or no account): there is none."""
+    return None
 
 
 @dataclass
@@ -911,6 +917,47 @@ class PluginHost:
             access_token=token if own_sign_ins else None,
             granted=allowed if own_sign_ins else None,
             account=account or self._only_account(plugin, own_sign_ins, keys),
+        )
+
+    def channel_context(self, channel: str, account: str | None, workspace_root: Any) -> Any:
+        """What a channel's `send`, `status` and `undo` get for one act: a web client for the plugin's declared hosts
+        and, when the act's account is one of the plugin's own sign-ins' accounts, its current token and granted scopes.
+        Nothing else is reachable: a core channel has no web client, and an account of any other kind has no token."""
+        from engine import act_accounts
+        from engine.channels import ChannelContext
+        from engine.net import WebClient
+        from engine.sign_in import granted
+
+        plugin = channel.split("/", 1)[0] if "/" in channel else None
+        if plugin is None or plugin not in self.manifests:
+            return ChannelContext(account=account, log=logging.getLogger(f"engine.channels.{channel}"))
+        requires = self.manifests[plugin].requires
+        web = WebClient(list(requires.network)) if requires.network else None
+        own = self.registrars[plugin].sign_ins if plugin in self.registrars else {}
+        kind = act_accounts.kind_of(account) if account else None
+        address = act_accounts.name_of(account) if account else ""
+        sign_in = own.get(kind) if kind else None
+        scopes: frozenset[str] = frozenset()
+        token: Callable[[], str | None] = _no_token
+        if sign_in is not None and address:
+            keys = Path(workspace_root) / ".cockpit" / "keys" / plugin
+            sign_in_name = sign_in.name
+
+            def renewed() -> str | None:
+                return self.sign_in_token(sign_in_name, workspace_root, address)
+
+            token = renewed
+
+            try:
+                scopes = frozenset(granted(keys, sign_in, address))
+            except OSError:
+                scopes = frozenset()
+        return ChannelContext(
+            web=web,
+            access_token=token,
+            account=account,
+            granted=scopes,
+            log=logging.getLogger(f"engine.channels.{channel}"),
         )
 
     def _only_account(self, plugin: str, own_sign_ins: set[str], keys: Path) -> str | None:

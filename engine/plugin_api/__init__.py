@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.88"
+PLUGIN_API_VERSION = "0.3.89"
 
 
 class Settings(BaseModel):
@@ -1863,9 +1863,10 @@ class Registrar:
         they turn it on: until then a draft for the account is carried out by Copy, so a channel is never called for an
         account that isn't switched on.
 
-        `send(act, attempt_key)` gets an `OutgoingAct` (exactly what the person approved, each recipient's address as it
-        resolves now) and the attempt key the core recorded before calling, which the channel should hand to the service
-        so it can tell a repeat from a new send. It returns `ChannelSent(service_id)` when it went out,
+        `send(act, attempt_key, context)` gets an `OutgoingAct` (exactly what the person approved, each recipient's
+        address as it resolves now), the attempt key the core recorded before calling, which the channel should hand to
+        the service so it can tell a repeat from a new send, and a `ChannelContext` built for that call. It returns
+        `ChannelSent(service_id)` when it went out,
         `ChannelFailed(kind, reason)` when it is sure it didn't (`kind` is `auth`, `refused`, `outage` or `offline`,
         decided from status codes and error codes, never from message text; for `auth` the reason says which account to
         sign in to again), or `ChannelUnknown()` when it can't tell. A timeout or a raised exception also leaves the act
@@ -1878,17 +1879,27 @@ class Registrar:
         `declined` or `propose`), `proposed_start` and `proposed_end`; an answer's recipient is the organizer, which
         the core called out to the person like any recipient.
 
-        `status(attempt_key)` says what happened to an attempt: `ChannelSent(service_id)`, `ChannelNotSent()` (the
-        service has nothing for that key) or `ChannelUnknown()`. A channel with no `status` can't be asked, so an
-        attempt whose answer was lost is shown to the person as uncertain, never as sent. `undo(act, service_id)` takes
-        a sent act back where the service can: only a mailbox act (moved back, the label removed, marked unread) and
-        a calendar `create` (the event deleted) are ever asked, never a sent message, and never a move, a cancel or an
-        answer that others were told of. It is called once, only after the person asked, and returns
-        `ChannelUndone()` or `ChannelFailed(kind, reason)`; an exception counts as a failure with no clear answer, so
-        the act stays sent and the person looks in the service. `template_version(name)` returns the version a
-        template has now (None when it is gone), so a yes given to content rendered from an older one goes stale. A
-        channel never writes records; it sees only the act it is handed. Draft acts with the core op `act.draft` from
-        a person action."""
+        `ChannelContext` is built by the core for the act's own account and reaches nothing else: `web` is a client
+        limited to the hosts in the plugin's `requires.network` (None when it declares none); `access_token()` gives a
+        current token of the act's account when it is an account of one of the plugin's own sign-ins (renewed by the
+        core; it raises `ConnectorError` of kind `auth` or `no_access`, which the channel answers as
+        `ChannelFailed("auth", ...)`), and None for a plain mailbox or an act with no account; `account` is the act's
+        account id; `granted` the scopes that sign-in holds for the account (empty when it has none); `log` a logger.
+        A channel written for 0.3.88 with `send(act, attempt_key)`, `status(attempt_key)` and `undo(act, service_id)`
+        is still called without a context; those signatures are deprecated and go in the next release. Test a channel
+        with `engine.plugin_api.testing.channel_context`.
+
+        `status(attempt_key, context)` says what happened to an attempt: `ChannelSent(service_id)`, `ChannelNotSent()`
+        (the service has nothing for that key) or `ChannelUnknown()`. A channel with no `status` can't be asked, so an
+        attempt whose answer was lost is shown to the person as uncertain, never as sent.
+        `undo(act, service_id, context)` takes a sent act back where the service can: only a mailbox act (moved back,
+        the label removed, marked unread) and a calendar `create` (the event deleted) are ever asked, never a sent
+        message, and never a move, a cancel or an answer that others were told of. It is called once, only after the
+        person asked, and returns `ChannelUndone()` or `ChannelFailed(kind, reason)`; an exception counts as a failure
+        with no clear answer, so the act stays sent and the person looks in the service. `template_version(name)`
+        returns the version a template has now (None when it is gone), so a yes given to content rendered from an older
+        one goes stale. A channel never writes records; it sees only the act it is handed. Draft acts with the core op
+        `act.draft` from a person action."""
         self._name(name)
         if name in self.channels or not callable(send):
             raise ValueError("duplicate channel or invalid send function")
@@ -2208,6 +2219,7 @@ class Registrar:
 
 
 from engine.channels import (  # noqa: E402 - part of the plugin API
+    ChannelContext,
     ChannelFailed,
     ChannelNotSent,
     ChannelSent,
@@ -2230,6 +2242,7 @@ from engine.net import retry_after  # noqa: E402 - part of the plugin API
 
 __all__ = [
     "Change",
+    "ChannelContext",
     "ChannelFailed",
     "ChannelNotSent",
     "ChannelSent",

@@ -3,8 +3,10 @@
 An act goes out only when the person approved it and what the approval covered is the same now. `send` refuses an act
 that isn't approved, recomputes the fingerprint (a difference makes the act stale and stops), runs the name check on
 every part, and then, in one transaction, moves the act to `sending` with a fresh attempt key. Only after that is the
-channel called, with that key. A clear answer makes the act `sent` (with the service's id) or `failed` (with the
-reason the channel gave, classified by the channel). A timeout, a lost connection or a closed lid leaves it `sending`.
+channel called, with that key, and a context built for the act's own account (the plugin's declared hosts, and the
+account's token and scopes; a channel written without a context parameter is called without it). A clear answer makes
+the act `sent` (with the service's id) or `failed` (with the reason the channel gave, classified by the channel). A
+timeout, a lost connection or a closed lid leaves it `sending`.
 
 `resume` asks the channel what happened to every act left `sending`: sent becomes `sent`; the service has nothing
 for the key, so the act is `approved` again and is never sent by itself; a channel that can't say, or isn't there,
@@ -18,16 +20,17 @@ in the ledger; nothing here writes a record any other way.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
 from engine import acts, outward
 from engine.applier import apply_for_publisher
-from engine.channels import ChannelFailed, ChannelNotSent, ChannelSent, ChannelUndone
+from engine.channels import ChannelFailed, ChannelNotSent, ChannelSent, ChannelUndone, call_channel
 from engine.config import Config
 from engine.storage import Store, StoreError
 
@@ -71,6 +74,16 @@ class Publisher:
 
     def _stale(self, act_id: str, why: list[str]) -> None:
         self._op({"op": "act.stale", "id": act_id, "why": why}, "A yes no longer covers an act")
+
+    @contextlib.contextmanager
+    def _context(self, channel: Any, account: str | None) -> Iterator[Any]:
+        """The context for one call to a channel: built for the act's own account, and its web client closed after."""
+        context = self.store.plugins.channel_context(channel.name, account, self.store.path.parent)
+        try:
+            yield context
+        finally:
+            if context.web is not None:
+                context.web.close()
 
     # ---- sending -----------------------------------------------------------------------------------------------------
 
@@ -119,7 +132,8 @@ class Publisher:
         )
         outgoing = acts.outgoing(self.store.read(), act_id, data)
         try:
-            answer = channel.send(outgoing, key)
+            with self._context(channel, data.get("account")) as context:
+                answer = call_channel(channel.send, (outgoing, key), context)
         except Exception as err:  # a timeout or a lost connection: the act stays `sending` until the service is asked
             log.warning("the channel %s gave no answer for act %s: %s", channel.name, act_id, type(err).__name__)
             return SendResult(act_id, "sending")
@@ -169,7 +183,8 @@ class Publisher:
         outgoing = acts.outgoing(view, act_id, data)
         at = self.now().isoformat()
         try:
-            answer = channel.undo(outgoing, data["service_id"])
+            with self._context(channel, data.get("account")) as context:
+                answer = call_channel(channel.undo, (outgoing, data["service_id"]), context)
         except Exception as err:  # no clear answer: the act stays sent and the person looks in the service
             log.warning("the channel %s gave no answer to undoing act %s: %s", channel.name, act_id, type(err).__name__)
             answer = None
@@ -217,7 +232,8 @@ class Publisher:
             self._op({"op": "act.uncertain", "id": act_id, "why": why, "at": at}, "An act may or may not have gone out")
             return SendResult(act_id, "uncertain")
         try:
-            answer = channel.status(key)
+            with self._context(channel, data.get("account")) as context:
+                answer = call_channel(channel.status, (key,), context)
         except Exception as err:
             log.warning(
                 "the channel %s couldn't say what happened to act %s: %s", channel.name, act_id, type(err).__name__

@@ -10,6 +10,28 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.89 adds
+
+Manifests stay `'>=0.3,<0.4'`. A channel written for 0.3.88 keeps working for this release: `send(act, attempt_key)`,
+`status(attempt_key)` and `undo(act, service_id)` are still called without a context. Those signatures are deprecated
+and are removed in the next release.
+
+- **A context for channels:** `send(act, attempt_key, context)`, `status(attempt_key, context)` and
+  `undo(act, service_id, context)` get a `ChannelContext`, built for each call for the act's own account and built the
+  way a connector's context is. `context.web` is limited to the hosts in the plugin's `requires.network` (None when it
+  declares none); `context.access_token()` is a current token of the act's account when it is an account of one of the
+  plugin's own sign-ins, renewed by the core (it raises `ConnectorError` of kind `auth` or `no_access`, which the
+  channel answers as `ChannelFailed("auth", ...)`), and None for a plain mailbox; `context.account` is the act's account
+  id; `context.granted` the scopes that sign-in holds for it; `context.log` a logger. It reaches nothing else: not
+  another plugin's sign-in, and not another account.
+- **Testing:** `engine.plugin_api.testing.channel_context(service, network=[...], account=..., token=..., granted=...)`
+  gives a context with recorded replies, like `connector_context`.
+- **Part names for message acts** (conventions a channel reads from `act.parts`): `subject` and `body` (plain text) for
+  a message; an answer to an invitation may carry an optional `comment`. A forward's `body` is the person's own note,
+  and the channel attaches the original message from `about` (or the message the reply is `in_reply_to`).
+- **Declare only what the service does:** an action the service can't do is left out of the channel's declared
+  `actions`, so it is never offered and a draft for it is refused.
+
 ## What 0.3.88 adds
 
 Manifests stay `'>=0.3,<0.4'`. A channel written for 0.3.87 keeps working: it takes the first action of each kind it
