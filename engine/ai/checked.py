@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from engine.ai import identity
+from engine.ai import calibration, identity
 from engine.ai.smoke import SmokeResult, _params_for_tier
 from engine.ai.task import AgentIdentity, IdentityUnknown
 from engine.config import Config
@@ -67,6 +67,7 @@ def remember(ws: Workspace, cfg: Config, results: list[SmokeResult]) -> None:
             by_ref.setdefault(r.ref, []).append(r)
     kept = _read(ws)
     _take_in_identities(ws, results)
+    _take_in_calibration(ws, results)
     for ref, found in by_ref.items():
         fingerprint = account_fingerprint(cfg, ref)
         if fingerprint is None or any(r.offline for r in found):
@@ -104,6 +105,31 @@ def _take_in_identities(ws: Workspace, results: list[SmokeResult]) -> None:
             else AgentIdentity(said.get("account", ""), said.get("how_read", ""))
         )
         identity.observe(ws, r.provider, found)
+
+
+def _take_in_calibration(ws: Workspace, results: list[SmokeResult]) -> None:
+    """Keep what each account's check measured for its estimates (design 6.16): the ratio of real tokens to the app's
+    own count for the model it counted, and a program's fixed overhead per request. A check that only found no network
+    measured nothing. The overhead is read once per account."""
+    offline = {r.ref for r in results if r.offline}
+    seen: set[str] = set()
+    for r in results:
+        found = r.calibration
+        if r.part != "calibration" or not found or r.ref in offline or not r.provider:
+            continue
+        if "counted" in found:
+            calibration.record_check(
+                ws,
+                r.provider,
+                str(found.get("model", "")),
+                counted=found["counted"],
+                sample_chars=found["sample_chars"],
+            )
+        if "reported" in found and r.provider not in seen:
+            seen.add(r.provider)
+            calibration.record_overhead(
+                ws, r.provider, reported=found["reported"], text_tokens=found.get("text_tokens", 0)
+            )
 
 
 def checked_at(ws: Workspace | Folder, cfg: Config, ref: str) -> datetime | None:

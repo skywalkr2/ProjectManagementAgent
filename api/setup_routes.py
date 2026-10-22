@@ -1013,7 +1013,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     identity_changed_to=now_state.identity.changed_to,
                     identity_level=p.identity_level,
                     accepted_unchecked=p.accepted_unchecked,
-                    check_usd=check_cost.cost(current(), name, catalogs),
+                    check_usd=check_cost.cost(current(), name, catalogs, ws),
                 )
             )
         return found

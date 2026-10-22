@@ -18,12 +18,14 @@ from urllib.parse import urlsplit
 
 from engine.ai import learning_check
 from engine.ai.adapters import make_adapter
+from engine.ai.calibration import SAMPLE_INSTRUCTIONS, SAMPLE_REQUEST, estimate_tokens
 from engine.ai.task import (
     NO_WORK_KINDS,
     UNSUPPORTED_ADVICE,
     UNSUPPORTED_PLAIN,
     AiError,
     AiTask,
+    CountNotOffered,
     IdentityUnknown,
     ModelInfo,
     provider_reason,
@@ -51,11 +53,14 @@ class SmokeResult:
     answered: bool = False  # the account's call went through, whatever it said
     offline: bool = False  # no connection could be made at all: the test says nothing about the account
     ref: str = ""  # the "account/model" the result is about
-    part: str = "call"  # call (one kind of work's parameters), lockdown, learning or identity
+    part: str = "call"  # call (one kind of work's parameters), lockdown, learning, identity or calibration
     params: list[Any] = field(default_factory=list)  # for a call: the kind of work, temperature and most output
     identity: dict[str, str] | None = None  # for identity: {account, how_read}, or {unknown: the reason}
     error_kind: str = ""  # when the call failed: the kind the call itself gave (never read from the account's words)
     error_detail: str = ""  # when the call failed: the service's own error text, for a report of the failure
+    # For a calibration: what the check measured for the estimates (a counted sample, and the input tokens the check's
+    # first call reported with what its own text counts).
+    calibration: dict[str, Any] | None = None
 
 
 def _params_for_tier(cfg: Config, tier: str) -> list[tuple[Any, ...]]:
@@ -93,6 +98,7 @@ def smoke_test(
             provider_name, _, model_key = ref.partition("/")
             settings = cfg.ai.providers[provider_name]
             model_id = settings.models.get(model_key, model_key)
+            first_report: dict[str, int] | None = None  # the first call's reported input tokens, for the overhead
             if provider_name not in refused:
                 refused[provider_name] = _refused_on_listing(settings, env, adapter_factory)
             refusal = refused[provider_name]
@@ -123,6 +129,8 @@ def smoke_test(
                         task = replace(task, model_info=listed[provider_name].get(model_id))
                     reply = adapter.run(task, model_id)
                     detail = "answered" if _is_ok(reply.text) else "answered, but not with the requested JSON"
+                    if first_report is None and reply.input_tokens is not None:
+                        first_report = {"reported": reply.input_tokens, "text": estimate_tokens(task.size)}
                     notes = adapter.capability_notes(task) if hasattr(adapter, "capability_notes") else []
                     if notes:
                         detail += "; " + "; ".join(notes)
@@ -163,6 +171,12 @@ def smoke_test(
                 locked.add(ref)
                 results.extend(_lockdown(tier_name, ref, position == 0, settings, model_id, env, adapter_factory))
                 results.extend(_identity(tier_name, ref, position == 0, settings, env, adapter_factory))
+                if refusal is None:
+                    results.extend(
+                        _calibration(
+                            tier_name, ref, position == 0, settings, model_id, env, adapter_factory, first_report
+                        )
+                    )
                 if refusal is None:
                     results.append(
                         _learning(tier_name, ref, position == 0, cfg, settings, model_id, env, adapter_factory, store)
@@ -368,6 +382,62 @@ def _identity(
             ref=ref,
             part="identity",
             identity=said,
+        )
+    ]
+
+
+def _calibration(
+    tier: str,
+    ref: str,
+    main: bool,
+    settings: Any,
+    model_id: str,
+    env: Mapping[str, str],
+    adapter_factory: Callable[[str, Any, str | None], Any],
+    first_report: dict[str, int] | None,
+) -> list[SmokeResult]:
+    """How this account counts, for the estimates (design 6.16): where the adapter can count a request without running
+    it, one count of a fixed sample gives the ratio of real tokens to the app's own count; where the adapter adds its
+    own text to every request, the check's first call gives the fixed overhead. Nothing here is a failure of the
+    account: an adapter that can't count, or a count that fails, leaves the ratio at 1, and says so."""
+    try:
+        adapter = adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, env))
+    except (SecretError, AiError, ValueError):
+        return []  # the connection test above already says why
+    start = time.monotonic()
+    measured: dict[str, Any] = {"model": model_id}
+    said: list[str] = []
+    counter = getattr(adapter, "count_tokens", None)
+    if callable(counter):
+        sample = AiTask("calibration", SAMPLE_INSTRUCTIONS, "", SAMPLE_REQUEST, {})
+        try:
+            measured["counted"] = int(counter(sample, model_id))
+            measured["sample_chars"] = sample.size
+            said.append("counted a sample")
+        except CountNotOffered:
+            said.append("the service's count isn't offered, so the app's own count is used")
+        except AiError as err:
+            said.append(f"the count request failed ({err.kind}), so the app's own count is used")
+    else:
+        said.append("this account doesn't count a request without running it")
+    if getattr(adapter, "adds_overhead", False):
+        if first_report is None:
+            said.append("the program didn't report how much it read, so no fixed overhead is known")
+        else:
+            measured.update(reported=first_report["reported"], text_tokens=first_report["text"])
+            said.append("measured the program's fixed overhead")
+    return [
+        SmokeResult(
+            tier,
+            f"{ref} (estimates)",
+            main,
+            True,
+            "; ".join(said),
+            time.monotonic() - start,
+            provider=ref.partition("/")[0],
+            ref=ref,
+            part="calibration",
+            calibration=measured,
         )
     ]
 

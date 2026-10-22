@@ -1027,6 +1027,25 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 175. Estimates learn from use (2026-10-22; B-12 batch 2a, built)
+
+- **Calibrated per account (6.16):** the app's own count (about four characters to a token) is corrected by a ratio of real
+  tokens to that count, kept per account and model with when it was measured, and by a fixed overhead per request for an
+  adapter whose program adds its own text. Every estimate of a price (a run's, a request's token count, the cost of an
+  account check) multiplies by the ratio and adds the overhead; an account that can't count and reports nothing stays at
+  ratio 1 with no overhead.
+- **Measured at the account check:** an adapter that can count a request without running it (a new optional
+  `count_tokens` capability on the adapter interface; no method means not offered) counts one fixed sample for each
+  tier's model; an adapter that says it adds overhead (`adds_overhead`) has its first small call's reported input tokens,
+  less what its text counts, kept as the account's overhead. The native adapter counts through its service's own count
+  request, sending only the model, the system prompt and the messages.
+- **Corrected from use:** every finished run whose service reported its input tokens moves the account model's ratio, after
+  the overhead is taken off, as a running average over the last `ai.estimates.calibration_runs` runs (default 20); no extra
+  call. A ratio outside 0.2 to 10 is a measurement gone wrong and is not kept.
+- Built: `tests/test_estimate_calibration.py`, `tests/test_anthropic_messages.py` (the count request). Not built: evaluation and switch
+  estimates (they price a practice workspace, which has no kept measurements) and the fit-to-context test still use the
+  app's own count.
+
 ## 174. The functional designer's answers on the 2026-10-23 questions (2026-10-22; designed)
 
 - **Filing by words (6.32):** signals ranked people (with the sender's domain), then distinctive identifiers (codes, ticket

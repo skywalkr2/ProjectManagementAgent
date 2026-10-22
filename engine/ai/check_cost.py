@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from engine.ai.calibration import lookup, scaled
 from engine.config import Config
 
 # One call of the check reads about this many tokens and writes about this many.
@@ -35,9 +36,10 @@ def size(cfg: Config) -> Size:
     return Size(calls, calls * CALL_INPUT_TOKENS, calls * CALL_OUTPUT_TOKENS)
 
 
-def cost(cfg: Config, name: str, catalogs: Any) -> float | None:
+def cost(cfg: Config, name: str, catalogs: Any, where: Any = None) -> float | None:
     """What checking the account would cost on its dearest model, or None when a price isn't known. `catalogs` is the
-    kept catalog (read only here: nothing is fetched)."""
+    kept catalog (read only here: nothing is fetched). With `where` (the workspace's private folder), each call's size
+    is corrected by what the account's model was measured to count and the fixed overhead its program adds."""
     provider = cfg.ai.providers.get(name)
     if provider is None or not provider.models:
         return None
@@ -52,6 +54,11 @@ def cost(cfg: Config, name: str, catalogs: Any) -> float | None:
             read, write = (info.input_per_million, info.output_per_million) if info else (None, None)
         if read is None or write is None:
             return None
-        usd = (found.input_tokens * read + found.output_tokens * write) / 1e6
+        reads = found.input_tokens
+        if where is not None:
+            reads = found.calls * scaled(
+                CALL_INPUT_TOKENS, lookup(where, name, model_id, cfg.ai.estimates.calibration_runs)
+            )
+        usd = (reads * read + found.output_tokens * write) / 1e6
         dearest = usd if dearest is None else max(dearest, usd)
     return dearest

@@ -107,6 +107,29 @@ class AnthropicMessagesAdapter:
         nothing about the model, which is sent as asked)."""
         return capability_notes(task)
 
+    def count_tokens(self, task: AiTask, model: str) -> int:
+        """The tokens the service would count for this request, without running it: its count request takes the
+        model, the system prompt and the messages of the request the run would send, and answers with the input
+        tokens. Nothing but what is counted is sent: no answer limit, temperature, effort or cache marker."""
+        body = request_body(task, model, send_temperature=False)
+        system = [{"type": "text", "text": block["text"]} for block in body["system"]]
+        count = {"model": model, "messages": body["messages"], **({"system": system} if system else {})}
+        try:
+            response = self._client.post("/v1/messages/count_tokens", json=count)
+        except httpx.TimeoutException as err:
+            raise AiError("timeout", str(err)) from None
+        except httpx.TransportError as err:
+            raise transport_error(err, self.settings.base_url) from None
+        if response.status_code >= 400:
+            raise classify_http_error(response)
+        try:
+            tokens = _int(response.json().get("input_tokens"))
+        except (ValueError, AttributeError):
+            tokens = None
+        if tokens is None:
+            raise AiError("invalid_output", "the count wasn't in the expected format")
+        return tokens
+
     def identity(self) -> None:
         """Not applicable: the account is a key, not a sign-in of a person."""
         return None

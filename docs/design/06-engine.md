@@ -1682,10 +1682,16 @@ A person who adds an account gets every tier filled in, so routine work never la
   asks once which model of the family to use, and a weekly check of the service's models and prices asks before any
   switch, with what it would change in cost; it never switches by itself.
 - **Thinking off** is sent only to a model whose listing says it supports it; it is never inferred from a hand test.
-- **Estimates learn from use** (*not built yet*): when an account is checked, one token-count request per tier's model
-  gives the ratio of real tokens to the app's own count, kept with the account; every run's reported usage then corrects
-  it, with no extra call. A command-line agent's account also keeps a measured fixed overhead per request (one run used
-  about 12,000 tokens for a two-word request), which is added to every estimate.
+- **Estimates learn from use** (*built*, `tests/test_estimate_calibration.py`, change log 175): when an account is
+  checked, one token-count request per tier's model (for an adapter that can count without running; the adapter
+  interface's optional `count_tokens`) gives the ratio of real tokens to the app's own count, kept with the account and
+  model in the private folder; every run's reported usage then corrects it, with no extra call (a running average over
+  `ai.estimates.calibration_runs`). An adapter whose program adds its own text (`adds_overhead`, the command-line agent)
+  also keeps a measured fixed overhead per request (one run used about 12,000 tokens for a two-word request), taken from
+  the check's small call and added to every estimate. An account that can't count and reports nothing stays at ratio 1.
+  The native adapter counts through its service's own count request: the request's model, system prompt and messages,
+  and nothing that only matters for a run (`tests/test_anthropic_messages.py::test_the_count_request_sends_only_what_is_counted_and_reads_the_input_tokens`).
+  *Left:* the evaluation and switch estimates, which price a practice workspace with no kept measurements.
 - **A saved account moves to a native adapter only on the person's yes** (*not built yet*): asked once, with a read-back
   of which identity the new connection signs in as, since a connection quietly running as another, older identity is
   the worst account failure there is.

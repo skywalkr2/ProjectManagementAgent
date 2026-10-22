@@ -75,6 +75,8 @@ COMMON_ERRORS: dict[str, tuple[str, ...]] = {
 
 class CliAgentAdapter:
     name = "cli-agent"
+    #: The program adds its own instructions to every request, so the account check measures that fixed overhead.
+    adds_overhead = True
 
     def __init__(self, settings: Any, secret: str | None = None, *, runner: Runner = subprocess.run):
         agent = getattr(settings, "agent", None)

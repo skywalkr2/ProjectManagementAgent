@@ -706,3 +706,32 @@ def test_a_list_that_cannot_be_read_leaves_the_smoke_test_sending_what_it_sent_b
     calls = [r for r in smoke_test(cfg, {"MAIN_KEY": "k", "BACKUP_KEY": "k"}, factory) if r.part == "call"]
     assert calls and all(r.ok and r.detail == "answered" for r in calls)
     assert {b.get("output_config", {}).get("effort") for b in seen} == {"high", None}
+
+
+def test_the_count_request_sends_only_what_is_counted_and_reads_the_input_tokens():
+    seen = {}
+
+    def handler(request):
+        seen["path"], seen["body"] = request.url.path, json.loads(request.content)
+        return httpx.Response(200, json={"input_tokens": 321})
+
+    assert adapter_with(handler, send_temperature=True).count_tokens(TASK, MODEL) == 321
+    assert seen["path"].endswith("/count_tokens")
+    body = seen["body"]
+    assert body["model"] == MODEL and body["messages"] == [{"role": "user", "content": TASK.request}]
+    assert [b["text"] for b in body["system"]] == [TASK.instructions, TASK.stable]
+    # Nothing that only matters for a real run: no answer limit, temperature, effort or cache marker.
+    assert not {"max_tokens", "temperature", "output_config", "thinking"} & set(body)
+    assert all("cache_control" not in b for b in body["system"])
+
+
+def test_a_count_that_fails_is_classified_like_a_run_and_one_without_a_number_is_invalid_output():
+    refused = adapter_with(
+        lambda request: httpx.Response(401, json={"type": "error", "error": {"type": "authentication_error"}})
+    )
+    with pytest.raises(AiError) as failed:
+        refused.count_tokens(TASK, MODEL)
+    assert failed.value.kind == "auth"
+    with pytest.raises(AiError) as odd:
+        adapter_with(lambda request: httpx.Response(200, json={"tokens": "many"})).count_tokens(TASK, MODEL)
+    assert odd.value.kind == "invalid_output"

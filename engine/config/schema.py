@@ -933,6 +933,16 @@ class RouteWhen(ConfigModel):
     )
 
 
+class EstimateSettings(ConfigModel):
+    calibration_runs: int = Field(
+        20,
+        ge=1,
+        le=200,
+        description="How many of an account's latest runs its estimates are corrected from: each run that reports how "
+        "many tokens it read moves the account's estimate toward the real count, by the average of this many runs.",
+    )
+
+
 class RouteRule(ConfigModel):
     when: RouteWhen = Field(default_factory=RouteWhen, description="What the request must match; all given parts.")
     tier: str = Field("deep", description="The tier that does the work when the rule matches.")
@@ -958,6 +968,9 @@ class AiFile(FileModel):
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings, description="How models are compared.")
     skills: SkillSettings = Field(
         default_factory=SkillSettings, description="How measurements of what each model can do are judged."
+    )
+    estimates: EstimateSettings = Field(
+        default_factory=EstimateSettings, description="How the cost estimates of AI work are corrected from use."
     )
     catalog_refresh_hours: float = Field(
         24, ge=0, description="How often each account's model list and prices are fetched again from the provider."

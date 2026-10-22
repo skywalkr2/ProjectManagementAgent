@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import time
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, replace
@@ -10,6 +11,7 @@ from typing import Any
 
 from engine.ai.adapters import Adapter, make_adapter
 from engine.ai.borrow import Borrowed, borrowed_path, chain
+from engine.ai.calibration import Calibration, estimate_tokens, learn_from_run, lookup, scaled, tokens_for
 from engine.ai.catalog import Catalogs
 from engine.ai.checked import folder_of
 from engine.ai.pauses import Pauses, pauses_path, waiting_text
@@ -203,11 +205,6 @@ def _identity_stop(provider: Any, name: str, data_level: str, identity_held: Map
             level=data_level,
         )
     return None
-
-
-def estimate_tokens(chars: int) -> int:
-    """A rough token count from characters: about four characters per token in English text, rounded up."""
-    return -(-chars // 4)
 
 
 def route(
@@ -574,7 +571,8 @@ class Router:
         if info.input_per_million is None or info.output_per_million is None:
             return None
         output = task.expected_output or self.typical_output(task.kind)
-        return (estimate_tokens(task.size) * info.input_per_million + output * info.output_per_million) / 1e6
+        read = tokens_for(task.size, self.calibration(choice))
+        return (read * info.input_per_million + output * info.output_per_million) / 1e6
 
     def estimate_for(
         self, kind: str, input_tokens: int, output_tokens: int | None = None, *, data_level: str = "internal"
@@ -592,7 +590,29 @@ class Router:
         if info.input_per_million is None or info.output_per_million is None:
             return None
         output = self.typical_output(kind) if output_tokens is None else output_tokens
-        return (max(0, input_tokens) * info.input_per_million + max(0, output) * info.output_per_million) / 1e6
+        read = scaled(input_tokens, self.calibration(options[0]))
+        return (read * info.input_per_million + max(0, output) * info.output_per_million) / 1e6
+
+    def calibration(self, choice: Choice) -> Calibration:
+        """How this account's model counts compared with the app's own count, and the fixed tokens its adapter adds to
+        every request, as kept on this computer (ratio 1 and no overhead until something was measured). Read at the
+        moment of use, so a check or a run's report applies to the next estimate."""
+        return lookup(folder_of(self.store), choice.provider, choice.model_id, self.cfg.ai.estimates.calibration_runs)
+
+    def _learn(self, choice: Choice, task: AiTask, result: AiResult | None) -> None:
+        """A finished run whose service reported its input tokens moves the account model's ratio. A failure to keep it
+        never fails the run."""
+        if result is None or result.input_tokens is None:
+            return
+        with contextlib.suppress(OSError):
+            learn_from_run(
+                folder_of(self.store),
+                choice.provider,
+                choice.model_id,
+                input_chars=task.size,
+                input_tokens=result.input_tokens,
+                now=self.now(),
+            )
 
     def typical_output(self, kind: str) -> int:
         """The average answer size of the last runs of this kind, or the kind's configured typical size."""
@@ -729,4 +749,6 @@ class Router:
             "knowledge": task.knowledge,
         }
         with self.store.transaction() as tx:
-            return tx.create("run", data, _SYSTEM).id
+            run_id = tx.create("run", data, _SYSTEM).id
+        self._learn(choice, task, result)
+        return run_id

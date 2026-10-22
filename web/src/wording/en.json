@@ -1650,6 +1650,7 @@
   "settings.group.ai.evaluation": "AI performance tests",
   "settings.group.ai.skills": "What each AI model can do",
   "settings.group.ai.rate_limits": "AI usage limits",
+  "settings.group.ai.estimates": "Cost estimates",
   "settings.group.dispatch": "What the assistant is given to read",
   "settings.group.dispatch.cleaning": "Tidying incoming text",
   "settings.group.language": "Wording rules",

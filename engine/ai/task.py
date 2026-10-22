@@ -104,6 +104,12 @@ class AiError(Exception):
         super().__init__(f"{kind}: {self.detail}" if self.detail else kind)
 
 
+class CountNotOffered(Exception):
+    """The adapter has the token-count capability on its interface but its service's count request isn't available
+    (not built, or the service doesn't offer it for this model). It is no failure of the account: the app keeps its own
+    count for it."""
+
+
 @dataclass(frozen=True)
 class AgentIdentity:
     """The account a command-line agent runs as, as the program itself says: `account` is what it printed and

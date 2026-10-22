@@ -893,7 +893,9 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     language); `aliases` on projects (record, form, export); the item says why words filed it, and moving it is one click
     that records a correction.
   - *Batch 2, AI accounts (B-11c):* estimates calibrated by one count request at the account check, kept as a ratio and
-    corrected from every run's reported usage; a command-line agent's measured fixed overhead per request; a saved account
+    corrected from every run's reported usage; a command-line agent's measured fixed overhead per request (*built, 2a:*
+    `tests/test_estimate_calibration.py`, the native adapter's count in `tests/test_anthropic_messages.py`; left: the
+    evaluation and switch estimates, which price a practice workspace); a saved account
     moved to the native adapter only on a yes with a read-back of the identity it signs in as; a newer model in a family
     asked about once and watched weekly, never switched silently; `thinking: off` only where the listing says so (true
     today: a test pins it).
