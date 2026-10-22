@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.86"
+PLUGIN_API_VERSION = "0.3.87"
 
 
 class Settings(BaseModel):
@@ -1175,6 +1175,7 @@ class Registrar:
         self.jobs: dict[str, JobRegistration] = {}
         self.setup_steps: dict[str, SetupStepRegistration] = {}
         self.connectors: dict[str, Any] = {}
+        self.channels: dict[str, Any] = {}
         self.triage_matchers: dict[str, Callable] = {}
         self.scorers: dict[str, Callable] = {}
         self.value_lists: dict[str, dict[str, Any]] = {}
@@ -1833,6 +1834,55 @@ class Registrar:
 
         self.connectors[name] = Connector(name, " ".join(str(label).split()) or name, settings, poll, reads=reads)
 
+    def channel(
+        self,
+        name: str,
+        label: str,
+        kinds: Sequence[str],
+        send: Callable,
+        status: Callable | None = None,
+        undo: Callable | None = None,
+        *,
+        template_version: Callable | None = None,
+    ) -> None:
+        """A way an approved act is carried out (listed in `provides.channels`): a message sent, an event written, a
+        file put in a folder, on the person's behalf. `kinds` are the kinds of target it takes: `message`, `calendar`,
+        `file`. The core calls it only for an act the person approved, whose approval still covers the act, and never
+        twice for one attempt.
+
+        `send(act, attempt_key)` gets an `OutgoingAct` (exactly what the person approved, each recipient's address as it
+        resolves now) and the attempt key the core recorded before calling, which the channel should hand to the service
+        so it can tell a repeat from a new send. It returns `ChannelSent(service_id)` when it went out,
+        `ChannelFailed(kind, reason)` when it is sure it didn't (`kind` is `auth`, `refused`, `outage` or `offline`,
+        decided from status codes and error codes, never from message text; for `auth` the reason says which account to
+        sign in to again), or `ChannelUnknown()` when it can't tell. A timeout or a raised exception also leaves the act
+        waiting: the core asks `status` before anything is sent again.
+
+        `status(attempt_key)` says what happened to an attempt: `ChannelSent(service_id)`, `ChannelNotSent()` (the
+        service has nothing for that key) or `ChannelUnknown()`. A channel with no `status` can't be asked, so an
+        attempt whose answer was lost is shown to the person as uncertain, never as sent. `undo(service_id)` takes a
+        sent act back where the service can. `template_version(name)` returns the version a template has now (None
+        when it is gone), so a yes given to content rendered from an older one goes stale. A channel never writes
+        records; it sees only the act it is handed. Draft acts with the core op `act.draft` from a person action."""
+        self._name(name)
+        if name in self.channels or not callable(send):
+            raise ValueError("duplicate channel or invalid send function")
+        if not kinds or not set(kinds) <= {"message", "calendar", "file"}:
+            raise ValueError("a channel takes message, calendar or file targets")
+        if any(fn is not None and not callable(fn) for fn in (status, undo, template_version)):
+            raise ValueError("a channel's status, undo and template_version are functions")
+        from engine.channels import ChannelRegistration
+
+        self.channels[name] = ChannelRegistration(
+            name,
+            " ".join(str(label).split()) or name,
+            tuple(dict.fromkeys(kinds)),
+            send,
+            status,
+            undo,
+            template_version,
+        )
+
     def sign_in(
         self,
         name: str,
@@ -2107,6 +2157,14 @@ class Registrar:
         self.handlers[event] = fn
 
 
+from engine.channels import (  # noqa: E402 - part of the plugin API
+    ChannelFailed,
+    ChannelNotSent,
+    ChannelSent,
+    ChannelUnknown,
+    OutgoingAct,
+    OutgoingRecipient,
+)
 from engine.connectors import (  # noqa: E402 - part of the plugin API
     ConnectorError,
     EventDetails,
@@ -2122,6 +2180,12 @@ from engine.net import retry_after  # noqa: E402 - part of the plugin API
 
 __all__ = [
     "Change",
+    "ChannelFailed",
+    "ChannelNotSent",
+    "ChannelSent",
+    "ChannelUnknown",
+    "OutgoingAct",
+    "OutgoingRecipient",
     "ConnectorError",
     "retry_after",
     "Poll",

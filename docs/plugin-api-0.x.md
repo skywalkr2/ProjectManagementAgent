@@ -10,6 +10,24 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.87 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.
+
+- **Channels:** `registrar.channel(name, label, kinds, send, status=None, undo=None, template_version=None)`, listed in
+  `provides.channels`, is how an approved act is carried out: a message sent, an event written, a file put in a folder.
+  The core calls `send(act, attempt_key)` only from its publisher, only for an act the person approved whose approval
+  still covers it, and records `sending` with the key first, so a lost answer is asked about with `status(attempt_key)`
+  before anything is sent again. `send` and `status` return `ChannelSent(service_id)`, `ChannelFailed(kind, reason)`
+  (`auth`, `refused`, `outage` or `offline`), `ChannelNotSent()` (status only) or `ChannelUnknown()`; `OutgoingAct` is
+  what `send` is handed. A channel never writes records. The core ships the `copy` channel (the person copies the
+  approved text and marks it sent).
+- **Core record `act`** and the core ops `act.draft`, `act.edit`, `act.approve`, `act.withdraw`, `act.confirm_sent`,
+  `act.resend`, `act.sending`, `act.sent`, `act.failed`, `act.uncertain`, `act.stale` and `act.reopen`, all outbound tier.
+  A person action may propose only `act.draft`; the rest are the person's own clicks or the publisher's. A task kind may
+  use only `act.draft`, and from outside content it is refused. No validator or lint may target what the publisher
+  records (`act.sending`, `act.sent`, `act.failed`, `act.uncertain`, `act.stale`, `act.reopen`).
+
 ## What 0.3.86 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.

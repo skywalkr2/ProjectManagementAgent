@@ -142,6 +142,10 @@ class Provides(Strict):
         "walkthrough offers an add-on that signs in and reads mail or a calendar as a service to connect, also "
         "before it is installed. A connector left out is told apart by its name.",
     )
+    channels: list[str] = Field(
+        default_factory=list,
+        description="Ways an approved act is carried out: a message sent, an event written, a file put in a folder.",
+    )
     triage_matchers: list[str] = Field(default_factory=list, description="Rule kinds for triaging watched changes.")
     scorers: list[str] = Field(
         default_factory=list,

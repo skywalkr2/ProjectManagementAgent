@@ -1027,6 +1027,24 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 180. The outward act and the publisher, built in part (2026-10-22; S1b-1a, built)
+
+- **Design 6.12:** the `act` record, its outbound-tier ops, the fingerprint, the callouts, the publisher with its attempt
+  key and its start-up `resume`, the core's `copy` channel and `FakeChannel`, and the API are built and tested (the
+  named tests are listed under "Built so far" in 6.12). Where design 177 left it open, the build chose: an assistant's
+  `act.draft` is *held* for the person (never applied on its own) and outside content that adds an act or a recipient
+  is *refused*; an add-on's person action may propose only `act.draft`; the person's answers for an act the app can't
+  confirm are two ops, `act.confirm_sent` and `act.resend`, with Undo; the publisher's `act.reopen` returns an attempt the
+  service never saw to `approved`; and the template's current version is read from the act's channel
+  (`registrar.channel(..., template_version=)`), since the core has no template store.
+- **Data (5.1):** the `act` record (prefix `OUT`) is in the record table.
+- **Plugin API 0.3.87 (3.x):** `registrar.channel`, `provides.channels`, the result types `ChannelSent`, `ChannelFailed`,
+  `ChannelNotSent`, `ChannelUnknown` and the call's `OutgoingAct` and `OutgoingRecipient`.
+- **Invariants (6.7):** `act-approval`, `act-publisher-only`, `act-from-outside` and `act-recipient`.
+- **API (7):** `GET /api/acts`, `GET /api/acts/{id}` and `POST` approve, withdraw, send and settle. No screen yet.
+- **Not built:** Waiting to go out and the Today lines (S1b-1b), mail and calendar channels (S1b-2), an op that undoes a
+  sent act through a channel.
+
 ## 179. The smaller answers: time zone names, US dollars, Hold until next Monday, Copy at once, ready since (2026-10-22; B-12 batch 4, built except "who suggested it")
 
 - **Time zone names (4, the date reader):** the setting `language.time_zone_abbreviations` also names the plain words

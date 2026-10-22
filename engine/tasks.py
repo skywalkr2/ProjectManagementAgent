@@ -9,7 +9,7 @@ from dataclasses import field as _field
 from pathlib import Path
 from typing import Any
 
-from engine.ops import KNOWLEDGE_OPS, OP_MODELS, PERSON_ONLY_OPS
+from engine.ops import ACT_OPS, KNOWLEDGE_OPS, OP_MODELS, PERSON_ONLY_OPS
 
 #: The knowledge ops reading notes offers, as the learning from an input that is part of its own run (design 6.22): a
 #: term or name the input uses that isn't in the glossary can be recorded, or marked unknown, and who answers a kind of
@@ -35,6 +35,9 @@ NOT_FROM_NOTES = (
         "setting.propose",
         "report.draft",
     }
+    # Drafting something to send is the person's, or an add-on's action they apply; outward acts are never offered to
+    # the assistant's reading of notes (design 6.12).
+    | ACT_OPS
 )
 #: Ops reading notes is offered that an ask is not: a project the input names, which waits for the person as a
 #: system op, a person's part in a project, which waits the same way, and a contact detail from a signature, which

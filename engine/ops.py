@@ -11,11 +11,20 @@ import types
 from datetime import date
 from typing import Annotated, Any, Literal, Union, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic.json_schema import SkipJsonSchema
 
 from engine.id_words import KNOWLEDGE_KINDS, named, named_one_of, named_text_of
-from engine.records import FiledBy, RefTo, Scope, canonical_time, entry_problem
+from engine.records import ActTemplate, FiledBy, RefTo, Scope, canonical_time, entry_problem
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -1203,6 +1212,204 @@ class KnowledgeRetireOp(OpModel):
         return f"Retire {named_one_of(view, KNOWLEDGE_KINDS, self.id)}"
 
 
+class ActRecipientIn(BaseModel):
+    """Someone an act goes to: a known person (by name or id) with `kind`, which of the ways of reaching them to use, or
+    an address alone for someone who isn't a known person. An address no known person holds is called out to the person
+    before their yes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    person: str | None = Field(None, description="A known person, by name or id.")
+    address: str | None = Field(None, description="An address, for someone who isn't a known person.")
+    kind: str | None = Field(
+        None, description="Which of the person's ways of reaching them to use (a key of their how_to_reach)."
+    )
+    role: Literal["to", "cc"] = Field("to", description="to: addressed to them; cc: copied to them.")
+    called_out: bool = Field(False, description="True to ask the person to look at this recipient before their yes.")
+    from_text: bool = Field(False, description="True when the address was taken from text that came from outside.")
+
+    @model_validator(mode="after")
+    def _names_someone(self) -> ActRecipientIn:
+        if not (self.person or "").strip() and not (self.address or "").strip():
+            raise ValueError("name a person or give an address")
+        return self
+
+
+class ActTargetIn(BaseModel):
+    """Where an act goes: a message's recipients, an event's calendar and time, or a file's folder."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["message", "calendar", "file"] = Field(description="message, calendar or file.")
+    recipients: list[ActRecipientIn] = Field(default_factory=list, description="Who a message goes to.")
+    calendar: str | None = Field(None, description="The calendar an event goes on.")
+    when: str | None = Field(None, description="The day or time of an event.")
+    folder: str | None = Field(None, description="The folder a file is written to.")
+
+    @model_validator(mode="after")
+    def _complete(self) -> ActTargetIn:
+        if self.kind == "message" and not any(r.role == "to" for r in self.recipients):
+            raise ValueError("a message goes to at least one person")
+        if self.kind == "calendar" and not ((self.calendar or "").strip() and (self.when or "").strip()):
+            raise ValueError("a calendar act names the calendar and the time")
+        if self.kind == "file" and not (self.folder or "").strip():
+            raise ValueError("a file act names the folder")
+        return self
+
+
+class ActDraftOp(OpModel):
+    """Draft something to go outside the workspace on the person's behalf: a message, a calendar change or a file, on a
+    channel, with its content in named parts. It sends nothing: it waits for the person's yes on this exact content. It
+    is an outbound op, so from the assistant or an add-on it waits for the person, and from outside content it is
+    refused. Undo takes the draft away while it is still a draft."""
+
+    op: Literal["act.draft"] = "act.draft"
+    channel: str = Field(min_length=1, description="The channel that will carry it out.")
+    target: ActTargetIn = Field(description="Where it goes.")
+    parts: dict[str, str] = Field(description="The content in named parts, exactly as it will go.")
+    template: ActTemplate | None = Field(None, description="The template the content was rendered from, if any.")
+    sources: list[str] = Field(default_factory=list, description="Ids of the saved inputs the content draws on.")
+    in_reply_to: str | None = Field(None, description="The id of the saved message it answers, if it does.")
+    project: str | None = Field(None, description="The id of the project it is about, if any.")
+
+    @field_validator("parts", mode="after")
+    @classmethod
+    def _has_content(cls, value: dict[str, str]) -> dict[str, str]:
+        if not any(str(v).strip() for v in value.values()):
+            raise ValueError("an act has some content")
+        return value
+
+    def describe(self, view: Any = None) -> str | None:
+        return "Draft something to send"
+
+
+class ActEditOp(OpModel):
+    """The person's change to a draft's content or recipients. It clears their yes: the act is a draft again and
+    needs a new one. Only the person uses it; Undo puts the old content back."""
+
+    op: Literal["act.edit"] = "act.edit"
+    id: str = Field(description="The id of the act.")
+    read_version: int = Field(ge=1, description="The version of the act the person was looking at.")
+    parts: dict[str, str] | None = Field(None, description="The content, replacing the parts now there.")
+    recipients: list[ActRecipientIn] | None = Field(None, description="Who it goes to, replacing the list now there.")
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> ActEditOp:
+        if self.parts is None and self.recipients is None:
+            raise ValueError("name what to change")
+        return self
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Change {named(view, 'act', self.id)}"
+
+
+class ActApproveOp(OpModel):
+    """The person's yes on one exact act: the fingerprint their screen showed, and the recipients called out that they
+    acknowledged. Refused when what the yes covers is different now, or when a recipient called out isn't
+    acknowledged. Only the person's own click makes it; nothing else may. Undo takes the yes back while nothing has been
+    sent."""
+
+    op: Literal["act.approve"] = "act.approve"
+    id: str = Field(description="The id of the act.")
+    fingerprint: str = Field(min_length=1, description="The fingerprint the person's screen showed.")
+    acknowledged: list[str] = Field(
+        default_factory=list, description="The recipients called out that the person acknowledged, by key."
+    )
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Approve {named(view, 'act', self.id)}"
+
+
+class ActWithdrawOp(OpModel):
+    """The person takes an act back: it will not go. Only the person uses it; Undo brings it back as it was."""
+
+    op: Literal["act.withdraw"] = "act.withdraw"
+    id: str = Field(description="The id of the act.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Take back {named(view, 'act', self.id)}"
+
+
+class ActConfirmSentOp(OpModel):
+    """The person says an act went out: the message they copied, or the one the app could not confirm. Only the person
+    uses it; Undo puts the act back as it was."""
+
+    op: Literal["act.confirm_sent"] = "act.confirm_sent"
+    id: str = Field(description="The id of the act.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Mark {named(view, 'act', self.id)} as sent"
+
+
+class ActResendOp(OpModel):
+    """The person says to send an act again that the app could not confirm went out. It becomes approved again, if what
+    their yes covered is the same, and goes when the person sends it. Only the person uses it; Undo puts it back."""
+
+    op: Literal["act.resend"] = "act.resend"
+    id: str = Field(description="The id of the act.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Send {named(view, 'act', self.id)} again"
+
+
+class ActSendingOp(OpModel):
+    """The publisher is about to call the channel, with the attempt key it will use. Only the publisher writes it."""
+
+    op: Literal["act.sending"] = "act.sending"
+    id: str = Field(description="The id of the act.")
+    attempt_key: str = Field(min_length=1, description="The key the channel is called with.")
+    fingerprint: str = Field(min_length=1, description="What the publisher found the yes covers now.")
+    at: AwareDatetime = Field(description="When the attempt started.")
+
+
+class ActSentOp(OpModel):
+    """The channel said it went out. Only the publisher writes it."""
+
+    op: Literal["act.sent"] = "act.sent"
+    id: str = Field(description="The id of the act.")
+    attempt_key: str = Field(min_length=1, description="The key of the attempt.")
+    service_id: str = Field(description="The id the service gave it.")
+    at: AwareDatetime = Field(description="When it went out.")
+
+
+class ActFailedOp(OpModel):
+    """The channel said it did not go out, and why. Only the publisher writes it."""
+
+    op: Literal["act.failed"] = "act.failed"
+    id: str = Field(description="The id of the act.")
+    attempt_key: str = Field(min_length=1, description="The key of the attempt.")
+    kind: Literal["auth", "refused", "outage", "offline"] = Field(description="How the channel classified it.")
+    reason: str = Field(description="Why, in plain words for the person.")
+    at: AwareDatetime = Field(description="When it failed.")
+
+
+class ActUncertainOp(OpModel):
+    """The service's answer was lost and the channel can't say what happened. Only the publisher writes it."""
+
+    op: Literal["act.uncertain"] = "act.uncertain"
+    id: str = Field(description="The id of the act.")
+    why: str = Field(description="A code for why it is uncertain: lost_answer, no_status or no_channel.")
+    at: AwareDatetime = Field(description="When the publisher gave up asking.")
+
+
+class ActStaleOp(OpModel):
+    """What the person's yes covered changed, so it needs a new one. Only the publisher writes it."""
+
+    op: Literal["act.stale"] = "act.stale"
+    id: str = Field(description="The id of the act.")
+    why: list[str] = Field(description="What changed: content, recipients, template or channel.")
+
+
+class ActReopenOp(OpModel):
+    """The channel says an attempt never reached the service, so the act is approved again; it is never sent again by
+    itself. Only the publisher writes it."""
+
+    op: Literal["act.reopen"] = "act.reopen"
+    id: str = Field(description="The id of the act.")
+    attempt_key: str = Field(min_length=1, description="The key of the attempt.")
+    at: AwareDatetime = Field(description="When the channel said so.")
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -1260,7 +1467,19 @@ Op = Annotated[
     | StyleAddOp
     | KnowledgeRetireOp
     | RuleAddOp
-    | RuleRetireOp,
+    | RuleRetireOp
+    | ActDraftOp
+    | ActEditOp
+    | ActApproveOp
+    | ActWithdrawOp
+    | ActConfirmSentOp
+    | ActResendOp
+    | ActSendingOp
+    | ActSentOp
+    | ActFailedOp
+    | ActUncertainOp
+    | ActStaleOp
+    | ActReopenOp,
     Field(discriminator="op"),
 ]
 
@@ -1322,7 +1541,27 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "routing.add": RoutingAddOp,
     "style.add": StyleAddOp,
     "knowledge.retire": KnowledgeRetireOp,
+    "act.draft": ActDraftOp,
+    "act.edit": ActEditOp,
+    "act.approve": ActApproveOp,
+    "act.withdraw": ActWithdrawOp,
+    "act.confirm_sent": ActConfirmSentOp,
+    "act.resend": ActResendOp,
+    "act.sending": ActSendingOp,
+    "act.sent": ActSentOp,
+    "act.failed": ActFailedOp,
+    "act.uncertain": ActUncertainOp,
+    "act.stale": ActStaleOp,
+    "act.reopen": ActReopenOp,
 }
+
+#: The outward act's ops that only the publisher writes: the states from sending onward (design 6.12).
+ACT_PUBLISHER_OPS = frozenset({"act.sending", "act.sent", "act.failed", "act.uncertain", "act.stale", "act.reopen"})
+#: The outward act's ops only the person makes: their yes, a change, a take-back and their answers about what went out.
+#: Approving has its own invariant (`act-approval`); the rest are in `PERSON_ONLY_OPS`.
+ACT_PERSON_OPS = frozenset({"act.edit", "act.withdraw", "act.confirm_sent", "act.resend"})
+#: Every op of the outward act. All are outbound tier: none is applied on its own, by a rule or from an input.
+ACT_OPS = frozenset({"act.draft", "act.approve"}) | ACT_PERSON_OPS | ACT_PUBLISHER_OPS
 
 #: The ops that keep what the assistant learned (design 6.22).
 KNOWLEDGE_OPS = {
@@ -1349,6 +1588,7 @@ PERSON_ONLY_OPS = {
     "question.move",
     "question.mark_sent",
     "source.widen",
+    *ACT_PERSON_OPS,
 }
 
 TIERS: dict[str, Tier] = (
@@ -1368,6 +1608,7 @@ TIERS: dict[str, Tier] = (
         "agenda.add": "system",
     }
     | {name: "system" for name in KNOWLEDGE_OPS}
+    | {name: "outbound" for name in ACT_OPS}
 )
 
 #: Ops whose evidence is required (record.set requires it for the fields in EVIDENCE_FIELDS).

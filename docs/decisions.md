@@ -37,6 +37,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 - **Impact:** design 6.12; a new core record type and ops (outbound tier); the plugin API gains channels (a minor
   version); Waiting to go out (7.4) and Today lines. Change log: section 177.
 
+## 2026-10-22: The publisher's first build chooses how a draft waits and where a template's version comes from
+
+- **Decided (main session's brief, built by a subagent):** kind of rule: a core concept, no new setting. An assistant's
+  `act.draft` is held for the person, as an outbound op, rather than applied as a draft; outside content that adds an act
+  or a recipient is refused; the person's answers for an uncertain act are `act.confirm_sent` and `act.resend`; the
+  publisher's `act.reopen` returns an attempt the service never saw to approved; and a channel says what version a
+  template has now (`registrar.channel(..., template_version=)`), because the core keeps no templates.
+- **Why:** "never applied automatically" read literally; the F7 tests need a state the app can resume from; the template
+  version has to come from whoever renders it.
+- **Impact:** design 6.12 ("Built so far"), 5.1, plugin API 0.3.87. Change log: section 180.
+
 ## 2026-10-22: The gate week comes once the core is built
 
 - **Decided (owner):** "the gate week ... is supposed to come to me after we have implemented the core, and there are still

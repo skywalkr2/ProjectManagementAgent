@@ -16,8 +16,8 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import agenda as agenda_module
 from engine import (
+    acts,
     audience,
     draft_checks,
     endings,
@@ -31,6 +31,7 @@ from engine import (
     sides,
     signature_contact,
 )
+from engine import agenda as agenda_module
 from engine import search as workspace_search
 from engine import series as series_module
 from engine.blocked import blocker_problem
@@ -42,12 +43,17 @@ from engine.intake import is_reported, source_text
 from engine.learning import request_learns
 from engine.names import People
 from engine.ops import (
+    ACT_OPS,
+    ACT_PUBLISHER_OPS,
     EVIDENCE_FIELDS,
     KNOWLEDGE_ADD_OPS,
     KNOWLEDGE_OPS,
     NEEDS_EVIDENCE,
     PERSON_ONLY_OPS,
     SETTABLE,
+    ActApproveOp,
+    ActDraftOp,
+    ActEditOp,
     ActionAddOp,
     ActionCloseOp,
     ActionDropOp,
@@ -158,13 +164,15 @@ class Context:
     inputs: Inputs
     hidden_words: list[str] = field(default_factory=list)
     confirmed_by_pm: bool = False
-    actor: Literal["assistant", "pm"] = "assistant"  # "pm" for a person action, whose exact proposal the person saw
+    # "pm" for a person action, whose exact proposal the person saw; "publisher" for the publisher's own state changes
+    actor: Literal["assistant", "pm", "publisher"] = "assistant"
     via: str | None = None  # "handler" or "job" for ops a plugin staged; otherwise worked out from the inputs
     # For an AI run: whether it searched the workspace before answering. None for anything that isn't one, which the
     # search-first check leaves alone.
     searched: bool | None = None
     data_level: str = "restricted"  # the most sensitive material a search may quote back, for an AI run
     reporter: str | None = None  # who reported a held ending, as worked out when it was held; set when it is kept
+    run: str | None = None  # the AI run that wrote the changeset, set by `apply_changeset`
 
 
 # ---- checks ----------------------------------------------------------------------------------------------------------
@@ -257,6 +265,40 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if name not in ctx.allowed_ops:
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
+        # The outward act (design 6.12): only the person says yes, only the publisher records what happened outside,
+        # and content from outside never adds an act or a recipient.
+        if name in ACT_OPS:
+            if isinstance(op, ActApproveOp) and ctx.actor != "pm":
+                refuse(
+                    i,
+                    "act-approval",
+                    "only the person's own yes approves an act; the assistant and add-ons may only draft",
+                )
+                continue
+            if name in ACT_PUBLISHER_OPS and ctx.via != "publisher":
+                refuse(i, "act-publisher-only", f"{name} is the publisher's alone: it records what happened to an act")
+                continue
+            if name in ("act.draft", "act.edit") and ctx.actor != "pm" and ctx.inputs.trust == "untrusted":
+                refuse(
+                    i,
+                    "act-from-outside",
+                    "content from outside never adds an act or a recipient: the person drafts it, or says to",
+                )
+                continue
+            if isinstance(op, ActDraftOp) and ctx.actor != "pm" and (why := acts.stranger_problem(ctx, op)) is not None:
+                refuse(i, "act-recipient", why)
+                continue
+            if isinstance(op, (ActDraftOp, ActEditOp)):
+                held = view.get("act", op.id) if isinstance(op, ActEditOp) else None
+                drawn = (
+                    [*op.sources, *([op.in_reply_to] if op.in_reply_to else [])]
+                    if isinstance(op, ActDraftOp)
+                    else (held.data["sources"] if held is not None else [])
+                )
+                who = acts.op_recipients(op)
+                if who and (why := acts.audience_problem(view, ctx.people, drawn, who)) is not None:
+                    refuse(i, "audience", why)
+                    continue
         # The person's own note saying they already asked is theirs to file; outside content never is.
         if name in PERSON_ONLY_OPS and ctx.actor != "pm" and not (name == "question.mark_sent" and _from_pm(view, ctx)):
             refuse(i, "person-only", f"only the person can use {name}")
@@ -783,6 +825,14 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             else:
                 held = why if reported else "changes how the product behaves; needs your confirmation"
             problems.append(Problem("tier", "hold", i, held))
+        # An outbound op is never applied on its own: from the assistant it waits for the person.
+        if (
+            ctx.store.plugins.tiers.get(name) == "outbound"
+            and name not in ACT_PUBLISHER_OPS
+            and ctx.actor != "pm"
+            and not ctx.confirmed_by_pm
+        ):
+            problems.append(Problem("tier", "hold", i, ACT_WAITS))
     problems += _inference_holds(cs, ctx, view)
     # An ending held for a more particular reason says that reason alone.
     held_else = {p.op for p in problems if p.severity == "hold" and p.check != "ending-confirm"}
@@ -801,6 +851,8 @@ STANCE_PLAIN = {
 }
 #: Why a contact detail or a project the assistant found waits, as the held line says it.
 CONTACT_WAITS = "A way to reach someone waits for your confirmation."
+#: Why an act the assistant drafted waits: nothing goes out, and nothing is even drafted, until the person says so.
+ACT_WAITS = "Something to send waits for your confirmation; nothing goes out until you say yes."
 REACHED_WAITS = "Someone has already been sent this: look at it before dropping it."
 PROJECT_WAITS = "A project the workspace doesn't have yet: add it, or say where this belongs?"
 
@@ -1630,6 +1682,7 @@ def apply_changeset(
     """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id. With `all_or_nothing`,
     one refused op rolls everything back, and the changeset is recorded as rejected with every op refused."""
     now = now or datetime.now(UTC)
+    ctx.run = run
     cs = endings.read_endings(restatements(cs, ctx), ctx)
     # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
     problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
@@ -2623,6 +2676,8 @@ def origin_of(ctx: Context) -> dict[str, Any]:
     }
     if ctx.actor == "pm":
         return {"actor": "pm", "trust": "trusted", "via": "action", **run}
+    if ctx.actor == "publisher":
+        return {"actor": "rule", "trust": "trusted", "via": "rule", **run}
     if ctx.confirmed_by_pm:
         return {"actor": "pm", "trust": "trusted", "via": "screen", **run}
     via = ctx.via or ("input" if ctx.inputs.source else "task" if ctx.inputs.trust == "untrusted" else "note")
@@ -2692,7 +2747,7 @@ def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 def _rule_problems(tx: Tx, ctx: Context, i: int, op: OpModel, refs: list[dict[str, Any]]) -> list[Problem]:
     """Each active rule whose check fails on what the op wrote (design 6.22): sent back to the assistant once and then
     held for the person, or refused for an outward act. A change the person makes or confirms is theirs to make."""
-    if ctx.actor == "pm" or ctx.confirmed_by_pm or not refs:
+    if ctx.actor in ("pm", "publisher") or ctx.confirmed_by_pm or not refs:
         return []
     written = [found for ref in refs if (found := tx.get(ref.get("kind", ""), ref.get("id", ""))) is not None]
     severity: Severity = "refuse" if ctx.store.plugins.tiers.get(op.op) == "outbound" else "return"
@@ -2765,6 +2820,8 @@ def _apply_op(
 
         # The workspace is the folder that holds the store's database.
         return set_aside.restore_in(tx, ctx.store, Workspace(ctx.store.path.parent), ctx.cfg, op.snapshot, w), None
+    if op.op in ACT_OPS:
+        return acts.apply(tx, op, ctx, w), None
     if isinstance(op, (QuestionUpdateOp, QuestionMoveOp, QuestionDropOp, QuestionMarkSentOp)):
         return _correct_question(tx, op, ctx, w), None
     if isinstance(op, ActionReplyOp):
@@ -3947,7 +4004,7 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
             members = groups[group]
             idx = {o["index"] for o in members}
             mine = _with_answers(store, tx, [e for e in entries if _op_index(e["op"]) in idx])
-            conflict = _conflict(tx, mine) or _breaks_rules(store, tx, mine)
+            conflict = acts.undo_problem(tx, mine) or _conflict(tx, mine) or _breaks_rules(store, tx, mine)
             if conflict:
                 report.skipped.append({"ops": sorted(idx), "reason": conflict})
                 continue
@@ -4163,6 +4220,44 @@ def apply_as_person(
             request.id,
             {"changeset": cs_id},
             WriteContext("engine", "trusted", "screen.request"),
+            read_version=current.version,
+        )
+    return cs_id
+
+
+def apply_for_publisher(store: Store, cfg: Config, op: dict[str, Any], summary: str) -> str:
+    """Apply one state change of an outward act as the publisher's own (design 6.12): a changeset in the ledger like any
+    other, whose op only the publisher may write. Returns the changeset id; raises StoreError when the op is refused,
+    and the act is left as it was."""
+    from engine.ops import CHANGESET
+
+    changeset = CHANGESET.validate_python({"summary": summary, "ops": [op]}, context={"op_models": store.plugins.ops})
+    with store.transaction() as tx:
+        request = tx.create(
+            "request",
+            {"task": "notes", "origin": "schedule", "state": "done", "note": summary, "created_at": store.clock()},
+            WriteContext("publisher", "trusted", "publisher.request"),
+        )
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        tuple(sorted(ACT_PUBLISHER_OPS)),
+        Inputs(request.id, None, "", "", "trusted"),
+        actor="publisher",
+        via="publisher",
+    )
+    cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"reviewed": False})
+    outcome = store.read().get("changeset", cs_id).data["ops"][0]
+    if outcome["status"] != "applied":
+        raise StoreError(outcome.get("reason") or "that couldn't be done")
+    with store.transaction() as tx:
+        current = tx.get("request", request.id)
+        tx.update(
+            "request",
+            request.id,
+            {"changeset": cs_id},
+            WriteContext("publisher", "trusted", "publisher.request"),
             read_version=current.version,
         )
     return cs_id

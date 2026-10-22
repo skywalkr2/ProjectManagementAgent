@@ -27,7 +27,7 @@ from pydantic import ValidationError
 
 from engine.annotations import local_annotations
 from engine.config.stages import validate_rules, validate_stages
-from engine.ops import OP_MODELS, TIERS
+from engine.ops import ACT_OPS, ACT_PUBLISHER_OPS, OP_MODELS, TIERS
 from engine.plugin_api import (
     PLUGIN_API_VERSION,
     EventContext,
@@ -158,6 +158,10 @@ class PluginHost:
         self.ops = dict(OP_MODELS)
         self.tiers = dict(TIERS)
         self.tasks = dict(TASKS)
+        from engine.channels import COPY
+
+        #: The channels the core itself carries: `copy`. Tests add a `FakeChannel` here; a plugin's are its own.
+        self.core_channels: dict[str, Any] = {COPY.name: COPY}
         self.stage_checks = {}
         self.stages = cfg.stages.model_copy(deep=True)
         self._in_stage_check = False
@@ -741,6 +745,18 @@ class PluginHost:
             for plugin, registrar in sorted(self.registrars.items())
             if self.active(plugin)
             for name, entry in registrar.value_lists.items()
+        }
+
+    def channels(self) -> dict[str, Any]:
+        """Every channel an act can be carried out by: the core's, then each running plugin's, by name."""
+        return {
+            **self.core_channels,
+            **{
+                name: channel
+                for plugin, registrar in sorted(self.registrars.items())
+                if self.active(plugin)
+                for name, channel in registrar.channels.items()
+            },
         }
 
     def triage_matchers(self) -> dict[str, Any]:
@@ -1436,6 +1452,7 @@ class PluginHost:
             ("jobs", registrar.jobs),
             ("setup_steps", registrar.setup_steps),
             ("connectors", registrar.connectors),
+            ("channels", registrar.channels),
             ("triage_matchers", registrar.triage_matchers),
             ("scorers", registrar.scorers),
             ("sign_ins", registrar.sign_ins),
@@ -1547,12 +1564,18 @@ class PluginHost:
         allowed_ops = set(OP_MODELS) | set(registrar.ops)
         if not set(registrar.validators) <= allowed_ops:
             raise ValueError("validators may target only core or own ops")
+        if set(registrar.validators) & ACT_PUBLISHER_OPS:
+            raise ValueError("what happened to an act is recorded by the publisher alone; no validator may refuse it")
         for lint in registrar.lints.values():
             if not set(lint.ops) <= allowed_ops:
                 raise ValueError(f"lint {lint.name} may check only core or own ops")
+            if set(lint.ops) & ACT_PUBLISHER_OPS:
+                raise ValueError(f"lint {lint.name} may not check what the publisher records")
         for task in registrar.tasks.values():
             if not set(task.ops) <= allowed_ops:
                 raise ValueError("task may use only core or own ops")
+            if set(task.ops) & (ACT_OPS - {"act.draft"}):
+                raise ValueError("a task may only draft an act: the person's yes and the publisher's states are theirs")
             if "file.add" in task.ops:
                 raise ValueError("file.add is made only by person actions, never by a task")
             if task.on is not None and task.on not in REGISTRY and task.on not in registrar.records:

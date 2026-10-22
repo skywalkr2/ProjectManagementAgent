@@ -23,6 +23,7 @@ from starlette.exceptions import HTTPException
 from starlette.routing import Mount
 from starlette.types import ASGIApp
 
+from api.act_routes import build_act_router
 from api.action_work_routes import build_action_work_router
 from api.ask_routes import build_ask_router
 from api.calendar_routes import build_calendar_router
@@ -337,6 +338,7 @@ def create_app(
     inner.include_router(build_action_work_router(ws, cfg, store, events, worker))
     inner.include_router(build_calendar_router(ws, cfg, store, events, worker))
     inner.include_router(build_sent_router(cfg, store, events, worker))
+    inner.include_router(build_act_router(cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))

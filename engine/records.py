@@ -2046,7 +2046,6 @@ class Signal(Record):
     at: datetime = Field(description="When the correction was made.")
 
 
-#: Record kind to its model. The order is the export order.
 class Copy(Record):
     """A message the person copied to send, kept exactly as copied: who it was for, when, and the questions and actions
     it covered. It is what the sent message is matched against (6.35): the difference between the two is what the person
@@ -2128,6 +2127,135 @@ class ValueList(Record):
         return self
 
 
+class ActRecipient(BaseModel):
+    """One person or address a message act goes to: the known person (an id) with the address their record gave when
+    the act was made, or an address alone for someone who isn't a known person."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    person: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The known person it goes to, as an id; none for an address no known person holds."
+    )
+    address: str = Field(min_length=1, description="The address it goes to, as the act resolved it when it was made.")
+    kind: str | None = Field(
+        None,
+        description="Which way of reaching the person the address is (a key of their `how_to_reach`); the publisher "
+        "reads that key again from the person's record to see whether the address moved.",
+    )
+    role: Literal["to", "cc"] = Field("to", description="to: addressed to them; cc: copied to them.")
+    from_text: bool = Field(
+        False, description="True when the address was taken from text that came from outside, which is called out."
+    )
+    called_out: bool = Field(
+        False, description="True when whoever made the act asks the person to look at this recipient before the yes."
+    )
+
+
+class ActTarget(BaseModel):
+    """Where an act goes: a message's recipients, a calendar's name and time, or a file's folder."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["message", "calendar", "file"] = Field(description="message, calendar or file.")
+    recipients: list[ActRecipient] = Field(default_factory=list, description="Who a message goes to.")
+    calendar: str | None = Field(None, description="The calendar an event goes on, as the channel names it.")
+    when: str | None = Field(None, description="The time or day of an event, as canonical time text.")
+    folder: str | None = Field(None, description="The folder a file is written to, as the channel names it.")
+
+
+class ActTemplate(BaseModel):
+    """The template an act's content was rendered from, with the version it had then."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, description="The template's name.")
+    version: str = Field(min_length=1, description="The template's version when the content was rendered from it.")
+
+
+class ActApproval(BaseModel):
+    """The person's yes on one exact act: what it covered, who gave it and when, and the recipients they
+    acknowledged."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fingerprint: str = Field(description="The hash of what the yes covers (see `engine/acts.py`).")
+    covers: dict[str, str] = Field(
+        default_factory=dict,
+        description="The hash of each part the yes covers (channel, target, content, template), so a difference can "
+        "say which part changed.",
+    )
+    by: Annotated[str, RefTo("person")] = Field(description="The person who said yes.")
+    at: AwareDatetime = Field(description="When they said it.")
+    acknowledged: list[str] = Field(
+        default_factory=list, description="The recipients called out that the yes acknowledged, by key."
+    )
+
+
+class ActFailure(BaseModel):
+    """Why an act did not go out, as the channel classified it, never read from a service's own words."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["auth", "refused", "outage", "offline"] = Field(description="How it failed.")
+    reason: str = Field(description="Why, in plain words for the person.")
+    at: AwareDatetime = Field(description="When it failed.")
+
+
+class Act(Record):
+    """One thing the app does outside the workspace on the person's behalf (design 6.12): a message, a calendar change
+    or a file for someone. It moves draft, approved (the person's yes on this exact act), sending, then sent, failed or
+    uncertain; stale when what the yes covered changed, withdrawn when the person takes it back. Every change of state
+    is an outbound-tier op, so each is in the ledger; only the person approves, and only the publisher moves it from
+    approved onward."""
+
+    record_kind: ClassVar[str] = "act"
+    prefix: ClassVar[str] = "OUT"
+    record_label: ClassVar[str] = "act"
+
+    channel: str = Field(min_length=1, description="The channel that carries it out: `copy`, or a plugin's.")
+    target: ActTarget = Field(description="Where it goes.")
+    parts: dict[str, str] = Field(
+        default_factory=dict, description="The content in named parts (a subject, a body), exactly as it will go."
+    )
+    template: ActTemplate | None = Field(None, description="The template the content was rendered from, if any.")
+    status: Literal["draft", "approved", "sending", "sent", "failed", "uncertain", "stale", "withdrawn", "undone"] = (
+        Field("draft", description="Where it stands.")
+    )
+    approved: ActApproval | None = Field(
+        None, description="The person's yes; cleared by an edit or when it goes stale."
+    )
+    attempt_key: str | None = Field(None, description="The key the channel was called with for the latest attempt.")
+    attempt_at: AwareDatetime | None = Field(None, description="When the latest attempt started.")
+    service_id: str | None = Field(None, description="The id the service gave the sent act.")
+    failure: ActFailure | None = Field(None, description="Why it failed, when it did.")
+    sent_at: AwareDatetime | None = Field(None, description="When it went out, or the person said it did.")
+    sent_by: Literal["publisher", "person"] | None = Field(
+        None, description="publisher: the channel confirmed it; person: they said it was sent."
+    )
+    made_by: Literal["assistant", "person"] = Field(
+        "person",
+        description="What made the draft: the assistant, or the person (an add-on's proposal the person applies is "
+        "theirs).",
+    )
+    run: Annotated[str | None, RefTo("run")] = Field(None, description="The AI run that wrote the draft, if one did.")
+    sources: list[Annotated[str, RefTo("source")]] = Field(
+        default_factory=list, description="The saved inputs the content draws on."
+    )
+    in_reply_to: Annotated[str | None, RefTo("source")] = Field(
+        None, description="The message this answers; the people in that thread are people it may address."
+    )
+    project: Annotated[str | None, RefTo("project")] = Field(None, description="The project it is about, if any.")
+    sensitivity: Literal["open", "internal", "restricted"] = Field(
+        "internal", description="The most sensitive level of what it draws on."
+    )
+    why: list[str] = Field(
+        default_factory=list,
+        description="Codes for why it is stale (content, target, template or channel) or uncertain (lost_answer, "
+        "no_status or no_channel); the screens word them.",
+    )
+
+
+#: Record kind to its model. The order is the export order.
 REGISTRY: dict[str, type[Record]] = {
     model.record_kind: model
     for model in (
@@ -2167,6 +2295,7 @@ REGISTRY: dict[str, type[Record]] = {
         WorkingCopy,
         ValueList,
         Copy,
+        Act,
     )
 }
 
@@ -2204,6 +2333,14 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "look": [("person", "person")],
     "promise_count": [("person", "person")],
     "copy": [("person", "person"), ("questions[]", "question"), ("actions[]", "action"), ("sent_source", "source")],
+    "act": [
+        ("target.recipients[].person", "person"),
+        ("approved.by", "person"),
+        ("run", "run"),
+        ("sources[]", "source"),
+        ("in_reply_to", "source"),
+        ("project", "project"),
+    ],
     "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],
     "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],

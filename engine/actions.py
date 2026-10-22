@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from engine.config import Config
-from engine.ops import CHANGESET, EVIDENCE_UNLESS_PERSON, KNOWLEDGE_OPS, NEEDS_EVIDENCE, OP_MODELS
+from engine.ops import ACT_OPS, CHANGESET, EVIDENCE_UNLESS_PERSON, KNOWLEDGE_OPS, NEEDS_EVIDENCE, OP_MODELS
 from engine.storage import Store, StoreError, WriteContext
 from engine.text_shape import error_problem
 from engine.texts import text_presence
@@ -28,12 +28,14 @@ PREVIEW_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "text/pla
 #: Core ops an action may propose. Ops that must cite evidence need an input to quote, which an action doesn't have
 #: (except those the person is exempt from, like a drop);
 #: file.add is the host's own, made from the proposal's files. The ops that keep what the assistant learned belong to
-#: the person's own screens and the learning work, never to a plugin's action.
+#: the person's own screens and the learning work, never to a plugin's action. Of the outward act's ops an action may
+#: propose only `act.draft`: the person's yes, their answers and the publisher's states are never an add-on's.
 ACTION_CORE_OPS = (
     frozenset(OP_MODELS)
     - (NEEDS_EVIDENCE - EVIDENCE_UNLESS_PERSON)
     - KNOWLEDGE_OPS
     - {"file.add", "text.accept", "text.discard", "text.draft"}
+    - (ACT_OPS - {"act.draft"})
 )
 _PLACEHOLDER = "$file:"
 

@@ -1064,7 +1064,12 @@ management (not just read only) lets do it"):
   with why, undone where the service allows) and written to the ledger. Recipient checks: a new or outside recipient,
   or one taken from untrusted text, is called out before the yes. It calls `outward.check_outgoing` on every draft before
   the yes, so nothing that still names the assistant goes out (design 6.12; the function is built and tested in B-7,
-  `tests/test_outward_never_names_assistant.py`, and nothing calls it yet).
+  `tests/test_outward_never_names_assistant.py`).
+  **Built so far (S1b-1a, change log 180):** the `act` record and its states, the outbound-tier ops, the fingerprint, the
+  callouts, the publisher with its attempt key and its start-up `resume`, the core's `copy` channel, `registrar.channel`
+  (plugin API 0.3.87) and the API; `tests/test_publisher.py` holds the designer's eight named tests and the guards
+  (design 6.12, "Built so far"). **Left (S1b-1b):** Waiting to go out and the Today lines (failed, uncertain, stale),
+  each act's exact content and target on screen, and Undo of a sent act where a channel can.
 - [ ] [S1b-2] **Mail:** reply, reply all, forward and send a drafted message; archive, move, label and mark read, one at a time
   or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
@@ -1085,6 +1090,13 @@ management (not just read only) lets do it"):
   with the guide, so the mail add-on's builder builds against it.
 - [ ] [S1b-1] **Nothing on its own:** the assistant drafts every act; none runs without the person's yes on that exact act, and
   rules may only suggest (an outbound op is never applied automatically, design 6.7).
+  **Built so far (S1b-1a):** an outbound op from the assistant is held, never applied; only the person's own click
+  approves (`act-approval`); only the publisher records what happened (`act-publisher-only`); outside content never adds
+  an act or a recipient (`act-from-outside`):
+  `tests/test_publisher.py::test_only_the_person_approves_and_an_outbound_op_is_never_applied_automatically`,
+  `tests/test_publisher.py::test_outside_content_that_tries_to_change_a_recipient_or_add_an_act_is_refused`.
+  **Left:** the rule check that a standing rule can only suggest an act has no case yet (no rule produces acts), and the
+  screens.
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*

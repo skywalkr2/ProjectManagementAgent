@@ -20,6 +20,441 @@
         "title": "AccountChoice",
         "type": "object"
       },
+      "ActApproveIn": {
+        "description": "The person's yes: the fingerprint their screen showed and the recipients called out that they acknowledged.",
+        "properties": {
+          "acknowledged": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Acknowledged",
+            "type": "array"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "ActApproveIn",
+        "type": "object"
+      },
+      "ActFailureView": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "auth",
+              "refused",
+              "outage",
+              "offline"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "reason",
+          "at"
+        ],
+        "title": "ActFailureView",
+        "type": "object"
+      },
+      "ActListView": {
+        "description": "GET /api/acts: the acts, newest first, optionally of one state.",
+        "properties": {
+          "acts": {
+            "items": {
+              "$ref": "#/components/schemas/ActView"
+            },
+            "title": "Acts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acts"
+        ],
+        "title": "ActListView",
+        "type": "object"
+      },
+      "ActRecipientView": {
+        "description": "A recipient of an act as the person sees it before their yes: who, the address as it resolves now and, when they\nmust be acknowledged, why (`new`, `outside`, `untrusted`, `flagged`).",
+        "properties": {
+          "address": {
+            "description": "The address as it resolves now.",
+            "title": "Address",
+            "type": "string"
+          },
+          "key": {
+            "description": "What the yes names this recipient by: the person's id, else the lowercased address.",
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "description": "The person's name, or the address when no known person holds it.",
+            "title": "Name",
+            "type": "string"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The known person's id; none for an address no known person holds.",
+            "title": "Person"
+          },
+          "reasons": {
+            "description": "Why they are called out; empty when nothing about them needs a look.",
+            "items": {
+              "enum": [
+                "new",
+                "outside",
+                "untrusted",
+                "flagged"
+              ],
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "role": {
+            "enum": [
+              "to",
+              "cc"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "address",
+          "role"
+        ],
+        "title": "ActRecipientView",
+        "type": "object"
+      },
+      "ActResultView": {
+        "description": "What happened to an act after the person's choice: its state now and, for a failure, the channel's reason.",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change the person's own choice made, which Undo takes.",
+            "title": "Changeset"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "approved",
+              "sending",
+              "sent",
+              "failed",
+              "uncertain",
+              "stale",
+              "withdrawn",
+              "undone"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "ActResultView",
+        "type": "object"
+      },
+      "ActSettleIn": {
+        "description": "The person's answer for an act the app can't confirm went out, or one they carried out themselves: `sent` (it\nwas sent) or `again` (send it again).",
+        "properties": {
+          "answer": {
+            "enum": [
+              "sent",
+              "again"
+            ],
+            "title": "Answer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "ActSettleIn",
+        "type": "object"
+      },
+      "ActView": {
+        "description": "One outward act: its exact content and target, its state, the fingerprint a yes would cover and the recipients\ncalled out.",
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the person whose yes stands.",
+            "title": "Approved By"
+          },
+          "calendar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "channel_label": {
+            "description": "What the channel is called, or its name when its add-on isn't running.",
+            "title": "Channel Label",
+            "type": "string"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActFailureView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fingerprint": {
+            "description": "What a yes would cover now; approving names it, and a different one is refused.",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "message",
+              "calendar",
+              "file"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "made_by": {
+            "enum": [
+              "assistant",
+              "person"
+            ],
+            "title": "Made By",
+            "type": "string"
+          },
+          "parts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The content exactly as it will go, by part.",
+            "title": "Parts",
+            "type": "object"
+          },
+          "recipients": {
+            "items": {
+              "$ref": "#/components/schemas/ActRecipientView"
+            },
+            "title": "Recipients",
+            "type": "array"
+          },
+          "sensitivity": {
+            "enum": [
+              "open",
+              "internal",
+              "restricted"
+            ],
+            "title": "Sensitivity",
+            "type": "string"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "sent_by": {
+            "anyOf": [
+              {
+                "enum": [
+                  "publisher",
+                  "person"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent By"
+          },
+          "service_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Id"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "approved",
+              "sending",
+              "sent",
+              "failed",
+              "uncertain",
+              "stale",
+              "withdrawn",
+              "undone"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the template the content was rendered from.",
+            "title": "Template"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When"
+          },
+          "why": {
+            "description": "Codes for why it is stale or uncertain.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Why",
+            "type": "array"
+          },
+          "withheld": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the content isn't offered to approve or send: a part still names the assistant.",
+            "title": "Withheld"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "channel",
+          "channel_label",
+          "kind",
+          "status",
+          "parts",
+          "fingerprint",
+          "made_by",
+          "sensitivity"
+        ],
+        "title": "ActView",
+        "type": "object"
+      },
       "ActionApplied": {
         "properties": {
           "applied": {
@@ -22721,6 +23156,283 @@
           }
         },
         "summary": "Work Copied"
+      }
+    },
+    "/api/acts": {
+      "get": {
+        "description": "The acts, newest first; with `status`, only those in that state (Waiting to go out reads draft, approved,\nstale, failed and uncertain).",
+        "operationId": "list_acts_api_acts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActListView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Acts"
+      }
+    },
+    "/api/acts/{act_id}": {
+      "get": {
+        "description": "One act: its exact content and target, the fingerprint a yes would cover and the recipients called out.",
+        "operationId": "read_act_api_acts__act_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "act_id",
+            "required": true,
+            "schema": {
+              "title": "Act Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Act"
+      }
+    },
+    "/api/acts/{act_id}/approve": {
+      "post": {
+        "description": "The person's yes on this exact act: the fingerprint their screen showed and the recipients called out they\nacknowledged. Nothing is sent. A different fingerprint, or a recipient not acknowledged, is refused.",
+        "operationId": "approve_api_acts__act_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "act_id",
+            "required": true,
+            "schema": {
+              "title": "Act Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActResultView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve"
+      }
+    },
+    "/api/acts/{act_id}/send": {
+      "post": {
+        "description": "Approve and send in one, after the yes. An act already approved is sent as it stands, and only when the\nfingerprint named is the one the yes covers. The publisher checks again at send time.",
+        "operationId": "send_api_acts__act_id__send_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "act_id",
+            "required": true,
+            "schema": {
+              "title": "Act Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActResultView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send"
+      }
+    },
+    "/api/acts/{act_id}/settle": {
+      "post": {
+        "description": "The person's answer for an act the app can't confirm went out (or one they carried out themselves): `sent`\nmarks it sent; `again` approves it again as it is and sends it, or, when what the yes covered changed, makes it\nstale and needs a new yes. Undo takes `sent` back.",
+        "operationId": "settle_api_acts__act_id__settle_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "act_id",
+            "required": true,
+            "schema": {
+              "title": "Act Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActSettleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActResultView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settle"
+      }
+    },
+    "/api/acts/{act_id}/withdraw": {
+      "post": {
+        "description": "Take an act back: it will not go. Undo brings it back as it was.",
+        "operationId": "withdraw_api_acts__act_id__withdraw_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "act_id",
+            "required": true,
+            "schema": {
+              "title": "Act Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActResultView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Withdraw"
       }
     },
     "/api/addon-secrets": {

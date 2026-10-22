@@ -395,6 +395,7 @@ class Worker:
         self.check_readers()
         if any(requeue_interrupted(self.store)):
             self.events.changed()
+        self.settle_acts()
         self._thread = threading.Thread(target=self._loop, name="cockpit-worker", daemon=True)
         self._thread.start()
         self._backups = threading.Thread(target=self._backup_loop, name="cockpit-backups", daemon=True)
@@ -405,6 +406,19 @@ class Worker:
         self._jobs.start()
         self.check_switch_soon()
         self.measure_soon()
+
+    def settle_acts(self) -> None:
+        """Once at start: ask the channel what happened to every act a stop left `sending`, and mark an approved act
+        stale when what its yes covered changed while the app was closed. Nothing is sent. A failure is logged and
+        never stops the worker."""
+        from engine.publisher import Publisher
+
+        try:
+            if Publisher(self.store, self.cfg, now=self.now).resume():
+                self.events.changed()
+        except Exception:
+            log.exception("Couldn't settle the acts left sending")
+            self._problem("acts waiting to go out")
 
     def stop(self) -> None:
         self._stop.set()

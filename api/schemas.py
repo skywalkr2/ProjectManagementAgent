@@ -5155,3 +5155,88 @@ class ThisWeekView(BaseModel):
     due: list[WeekDueView]
     waiting: list[WeekWaitingView]
     meetings: list[AgendaItemView]
+
+
+# ---- the outward act and the publisher (design 6.12) -----------------------------------------------------------------
+
+
+class ActRecipientView(BaseModel):
+    """A recipient of an act as the person sees it before their yes: who, the address as it resolves now and, when they
+    must be acknowledged, why (`new`, `outside`, `untrusted`, `flagged`)."""
+
+    key: str = Field(description="What the yes names this recipient by: the person's id, else the lowercased address.")
+    person: str | None = Field(None, description="The known person's id; none for an address no known person holds.")
+    name: str = Field(description="The person's name, or the address when no known person holds it.")
+    address: str = Field(description="The address as it resolves now.")
+    role: Literal["to", "cc"]
+    reasons: list[Literal["new", "outside", "untrusted", "flagged"]] = Field(
+        default_factory=list, description="Why they are called out; empty when nothing about them needs a look."
+    )
+
+
+class ActFailureView(BaseModel):
+    kind: Literal["auth", "refused", "outage", "offline"]
+    reason: str
+    at: datetime
+
+
+class ActView(BaseModel):
+    """One outward act: its exact content and target, its state, the fingerprint a yes would cover and the recipients
+    called out."""
+
+    id: str
+    version: int
+    channel: str
+    channel_label: str = Field(description="What the channel is called, or its name when its add-on isn't running.")
+    kind: Literal["message", "calendar", "file"]
+    status: Literal["draft", "approved", "sending", "sent", "failed", "uncertain", "stale", "withdrawn", "undone"]
+    parts: dict[str, str] = Field(description="The content exactly as it will go, by part.")
+    recipients: list[ActRecipientView] = Field(default_factory=list)
+    calendar: str | None = None
+    when: str | None = None
+    folder: str | None = None
+    template: str | None = Field(None, description="The name of the template the content was rendered from.")
+    fingerprint: str = Field(
+        description="What a yes would cover now; approving names it, and a different one is refused."
+    )
+    approved_by: str | None = Field(None, description="The id of the person whose yes stands.")
+    approved_at: datetime | None = None
+    withheld: str | None = Field(
+        None, description="Why the content isn't offered to approve or send: a part still names the assistant."
+    )
+    failure: ActFailureView | None = None
+    why: list[str] = Field(default_factory=list, description="Codes for why it is stale or uncertain.")
+    service_id: str | None = None
+    sent_at: datetime | None = None
+    sent_by: Literal["publisher", "person"] | None = None
+    made_by: Literal["assistant", "person"]
+    sensitivity: Literal["open", "internal", "restricted"]
+
+
+class ActListView(BaseModel):
+    """GET /api/acts: the acts, newest first, optionally of one state."""
+
+    acts: list[ActView]
+
+
+class ActApproveIn(BaseModel):
+    """The person's yes: the fingerprint their screen showed and the recipients called out that they acknowledged."""
+
+    fingerprint: str
+    acknowledged: list[str] = Field(default_factory=list)
+
+
+class ActSettleIn(BaseModel):
+    """The person's answer for an act the app can't confirm went out, or one they carried out themselves: `sent` (it
+    was sent) or `again` (send it again)."""
+
+    answer: Literal["sent", "again"]
+
+
+class ActResultView(BaseModel):
+    """What happened to an act after the person's choice: its state now and, for a failure, the channel's reason."""
+
+    id: str
+    status: Literal["draft", "approved", "sending", "sent", "failed", "uncertain", "stale", "withdrawn", "undone"]
+    reason: str | None = None
+    changeset: str | None = Field(None, description="The change the person's own choice made, which Undo takes.")

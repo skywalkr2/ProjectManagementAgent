@@ -387,6 +387,26 @@ def build() -> str:
             ),
         ),
         _section(
+            "Channels",
+            "What `registrar.channel`'s `send` is handed and what `send` and `status` return. A channel is called "
+            "only by the core's publisher, for an act the person approved. The act, its states and the ops that change "
+            "them are under Core records and Core ops (`act`, `act.draft` and the rest); a person action may propose "
+            "only `act.draft`, and the core ships the `copy` channel, whose send is the person's own.",
+            "\n\n".join(
+                _join(f"### {cls.__name__}", _para(_doc(cls)))
+                + "\n\n"
+                + _table(["Field", "Type", "Default"], _dataclass_rows(cls))
+                for cls in (
+                    api.OutgoingAct,
+                    api.OutgoingRecipient,
+                    api.ChannelSent,
+                    api.ChannelFailed,
+                    api.ChannelNotSent,
+                    api.ChannelUnknown,
+                )
+            ),
+        ),
+        _section(
             "Errors",
             _table(
                 ["Error", "Meaning"],

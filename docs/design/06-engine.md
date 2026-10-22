@@ -1286,7 +1286,7 @@ for it, that nothing goes out without the PM approving that exact content, alrea
   concurrency check when it has one (nobody edited since the pull) and the target's own validation. Pulls skip targets with
   unsent drafts and flag any whose remote copy moved on. Scheduled drafts are approved first and sent at their time; editing a
   scheduled draft clears its approval.
-- **The outward act (phase S1b, designed 2026-10-22; change log 177; *not built yet*).** Everything the app does outside the
+- **The outward act (phase S1b, designed 2026-10-22; change log 177; built in part, S1b-1a, change log 180: see "Built so far" below).** Everything the app does outside the
   workspace on the person's behalf (a message sent, a reply, an event created or answered, a file written for someone) is
   one **act**, a core record (`act`): its channel, its target (the recipients as person ids with the address each resolves
   to, or the calendar and time, or the folder), its content in named parts, and its status. Its states:
@@ -1326,6 +1326,40 @@ for it, that nothing goes out without the PM approving that exact content, alrea
     answer shows as uncertain, never as sent; a withdrawn sign-in stops the act plainly; outside content that tries to
     change a recipient or add an act is refused; a closed lid or lost network mid-send is checked with the service before
     any retry; a yes doesn't survive a restart that changed the act's inputs.
+  - **Built so far (S1b-1a, change log 180: the engine, the API and the plugin API 0.3.87; the screens are S1b-1b).**
+    - **The record and the ops:** `act` (`engine/records.py`) with its states, `engine/acts.py` and the outbound-tier ops
+      `act.draft`, `act.edit`, `act.approve`, `act.withdraw`, the person's two answers `act.confirm_sent` ("It was sent")
+      and `act.resend` ("Send it again"), and the publisher's `act.sending`, `act.sent`, `act.failed`, `act.uncertain`,
+      `act.stale` and `act.reopen` (an attempt the service never saw is `approved` again). An assistant's `act.draft`
+      waits for the person (held, never applied on its own); an add-on's person action may propose only `act.draft`.
+      The invariants `act-approval`, `act-publisher-only`, `act-from-outside` and `act-recipient` are in
+      `engine/defaults/invariants.yaml`; the audience limit (6.35) applies to an act's recipients through the existing
+      `audience` invariant, at the draft, the edit and the yes. Undo takes back the person's own ops and never what the
+      publisher recorded. Where the template's version now comes from is the channel's (`template_version`).
+      `tests/test_publisher.py::test_only_the_person_approves_and_an_outbound_op_is_never_applied_automatically`,
+      `tests/test_publisher.py::test_an_act_may_not_address_someone_outside_the_limit_of_what_it_draws_on`.
+    - **The yes and the callouts:** `tests/test_publisher.py::test_a_recipient_called_out_must_be_acknowledged_by_name`,
+      `tests/test_publisher.py::test_the_name_check_refuses_a_part_that_names_the_assistant` (before the yes and again at
+      send).
+    - **The publisher** (`engine/publisher.py`; `Worker.settle_acts` runs `resume` at start): the eight named tests are
+      `tests/test_publisher.py::test_the_exact_approved_content_and_recipients_go_out`,
+      `::test_a_yes_goes_stale_when_the_draft_a_recipients_address_or_the_template_changes`,
+      `::test_a_timeout_retry_or_restart_never_sends_twice`,
+      `::test_an_uncertain_answer_shows_as_uncertain_never_as_sent`,
+      `::test_a_withdrawn_sign_in_stops_the_act_plainly`,
+      `::test_outside_content_that_tries_to_change_a_recipient_or_add_an_act_is_refused`,
+      `::test_a_closed_lid_or_lost_network_mid_send_is_checked_with_the_service_before_any_retry` and
+      `::test_a_yes_does_not_survive_a_restart_that_changed_the_acts_inputs`.
+    - **Channels:** `registrar.channel` and `provides.channels` (plugin API 0.3.87), the core's `copy` (`tests/test_publisher.py::test_the_copy_channel_goes_sent_only_by_the_persons_mark_sent`) and
+      `FakeChannel` for tests (`tests/test_publisher.py::test_a_plugins_channel_is_registered_by_name_and_the_core_ships_copy`).
+    - **The records survive export and import:** `tests/test_publisher.py::test_an_acts_records_survive_export_and_import`.
+    - **The API** (`api/act_routes.py`): `GET /api/acts`, `GET /api/acts/{id}`, `POST /api/acts/{id}/approve`, `/withdraw`,
+      `/send` and `/settle`: `tests/test_publisher.py::test_the_api_lists_reads_approves_and_sends_an_act_after_the_yes`,
+      `::test_the_api_withdraws_an_act_and_takes_the_persons_answers_for_one_it_cannot_confirm`.
+    - **Not built (S1b-1b and S1b-2):** Waiting to go out and the Today lines, a channel from a mail or calendar add-on,
+      undoing a sent act through a channel's `undo` (the `undone` state exists; no op reaches it yet), the follow-up
+      message moving onto acts (Copy still works as it did), and calling `outward.check_outgoing` for the first export a
+      person hands to someone else.
 - Change classification for the review list: real change, order only, layout or format only, columns changed, text the target
   doesn't show. Never show an empty "+0 −0" draft.
 - **The send step refuses the assistant's name** (the owner's lesson from running, 2026-10-20; `engine/outward.py`): content
@@ -1333,8 +1367,8 @@ for it, that nothing goes out without the PM approving that exact content, alrea
   to Ana"). Today that is Copy: the follow-up message and the drafted follow-up are not offered (`FollowupSection.withheld`,
   `NudgeView.withheld`, with the reason in `language.messages.withheld_name`, and Copy is disabled), and marking one sent
   with text that holds a name is refused (409). **The publisher must call `outward.check_outgoing` on every draft before
-  it sends or publishes anything**, with a label for each part; the publisher is not built, so nothing calls it for a
-  channel yet. The readable export (`data/`, the synced folder, backups) is the person's own complete record and is not
+  it sends or publishes anything**, with a label for each part; the act publisher does (at the yes, at Mark sent for a copied act and again at
+  send), and the older publish targets above are still not built. The readable export (`data/`, the synced folder, backups) is the person's own complete record and is not
   outward; the first export a person hands to someone else (for example their lessons) must call the same function.
   **Built so far (B-7):** `tests/test_outward_never_names_assistant.py::test_the_send_step_refuses_what_still_names_the_assistant_and_says_where`,
   `web/src/components/FollowUps.test.tsx` ("a message that still names the assistant shows why it is held back and cannot be copied").
