@@ -2431,10 +2431,14 @@ back, draft edited, held op declined, or the person's answer to a question the a
 - the knowledge entries the original run was given;
 - the active lessons and rules.
 
-It returns **at most one** proposal op, or "nothing to generalize":
+It returns **at most one** proposal op, "nothing to generalize", or one question to the person:
 - a new lesson, rule, fact, glossary entry, routing entry or style note;
 - or `lesson.update`, when an existing lesson should have caught it but didn't. A repeat means the guard was wrong, and fixing
-  it beats adding a second one.
+  it beats adding a second one;
+- or, when it can't tell what the correction means (what was wrong, or what to do instead), one question to the person
+  saying what it understood and what it needs to know. The person's answer is a correction learned from at once, and
+  learning from that answer asks nothing more (`learning-question`, *built*:
+  `tests/test_learn_correction.py::test_an_unclear_correction_asks_the_person_one_question_and_never_anyone_else`).
 
 The proposal shows on the correction's own card as one line: "Learned: … · Keep · Edit · Discard" (7.18). It stays there
 until the person decides, and never expires. `GET /api/knowledge/learned` gives each correction's line: still being

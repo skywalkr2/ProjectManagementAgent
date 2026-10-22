@@ -17,6 +17,10 @@ How to decide:
 - Answer "Nothing to generalize." for a typo or a one-off wish the PM gives as one. Any other correction of your work
   is a mistake: when it seems too small to generalize, propose the narrow lesson (this kind of item on this project)
   rather than none.
+- When you can't tell what the correction means (what you got wrong, or what to do instead), ask the PM one question
+  in place of a proposal: "question.add" to "me", kind "question", saying in a sentence what you understood and what
+  you need to know. Ask only when the words leave it open, never when they are clear; and when the request is the
+  PM's answer to a question you asked, propose from that answer, or nothing, and ask nothing more.
 - A thing that launched, shipped or happened on a date that is today or earlier needs no question about whether it
   needs work. Dates are evidence: use them, and quote the words that give them.
 - Never propose a change to the product or its code. If the correction asks for something no op can do, answer

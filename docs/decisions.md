@@ -4,6 +4,19 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: An unclear correction is answered with a question to the person, not a forced lesson
+
+- **Decided (owner):** a correction need not always produce a lesson: "even humans sometimes need to ask again. so if
+  i say something and the ai doesnt understand they can ask for clarification", and "creating open issues/questions is
+  a key component of this software".
+- **Also decided (main session):** kind of rule: a core concept. A correction ends in the narrowest lesson the
+  person's words support, in nothing when there is nothing to generalize (a typo, the world changed), or in one
+  question to the person when the assistant can't tell what the correction means. The person's answer is itself a
+  correction the assistant learns from at once; learning from that answer asks nothing more. This amends F31, which
+  said a correction with no lesson still proposes the narrow one.
+- **Impact:** design 6.22 (the learning step's outcomes), the `learn-correction` task kind and its prompt. Change log:
+  section 164.
+
 ## 2026-10-22: A command-line agent takes the app's instructions as its own, where its docs allow
 
 - **Decided (main session):** kind of rule: a setting per agent (`agent.system_option`), set in the catalog only where

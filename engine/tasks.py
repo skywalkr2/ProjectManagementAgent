@@ -131,11 +131,12 @@ TASKS: dict[str, TaskKind] = {
         label="Sort mail",
         defaults={"max_output": 2000, "expected_output": 400},
     ),
-    # Learning from one correction (design 6.22): at most one proposal, or none. A bad lesson is in every later packet,
+    # Learning from one correction (design 6.22): at most one proposal, none, or one question to the person when the
+    # correction's meaning is unclear. A bad lesson is in every later packet,
     # so this is the stronger tier's work (engine/learn.py).
     "learn-correction": TaskKind(
         name="learn-correction",
-        ops=LEARN_OPS,
+        ops=(*LEARN_OPS, "question.add"),
         prompt="learn-correction",
         playbook="learn-correction",
         label="Learning from a correction",

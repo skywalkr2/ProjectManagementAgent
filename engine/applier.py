@@ -210,6 +210,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
     problems += _learning_reach(cs, ctx)
+    problems += _learning_question(cs, ctx)
     problems += _follow_on_reach(cs, ctx)
     problems += _thread_promise_unanswered(cs, ctx)
     problems += _owner_mail_unanswered(cs, ctx)
@@ -1877,6 +1878,39 @@ def _learning_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         for i, op in enumerate(cs.ops)
         if (why := learn.reach_misses_correction(view, request.data, op)) is not None
     ]
+
+
+def _learning_question(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A learning answer may ask one question when it can't tell what a correction means (design 6.22). The question
+    goes to the person, who made the correction; and a run learning from the person's answer to the assistant asks no
+    further question, so a correction is clarified once. Either is refused, so it gets a fix round."""
+    if origin_of(ctx).get("task") != learn.TASK:
+        return []
+    asks = [(i, op) for i, op in enumerate(cs.ops) if isinstance(op, QuestionAddOp)]
+    if not asks:
+        return []
+    view = ctx.store.read()
+    request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    signal_id = learn.signal_of(request.data) if request is not None else None
+    signal = view.get("signal", signal_id) if signal_id else None
+    problems: list[Problem] = []
+    for i, op in asks:
+        if ctx.people.resolve(op.to).person != ctx.people.pm:
+            problems.append(
+                Problem(
+                    "learning-question", "refuse", i, "a question about a correction goes to the person who made it"
+                )
+            )
+        elif signal is not None and signal.data.get("kind") == "answered_assistant":
+            problems.append(
+                Problem(
+                    "learning-question",
+                    "refuse",
+                    i,
+                    "the person already answered a question about this: propose from their answer, or nothing",
+                )
+            )
+    return problems
 
 
 def _follow_on_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:

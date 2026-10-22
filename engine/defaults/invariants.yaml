@@ -241,6 +241,12 @@ invariants:
       What is learned from a correction must reach the work that was corrected. Leave applies_to.task_kinds empty
       unless it holds for some kinds of work and not others, and when you name any, include the one the request says
       was corrected.
+  learning-question:
+    ops: [question.add]
+    line: A question about a correction goes to the person, and only once.
+    seed: >-
+      When learning from a correction, ask a question only when you can't tell what the correction means, and ask the
+      person who made it. Once the person has answered a question about it, propose from their answer, or nothing.
   follow-on-reach:
     ops: [record.set, question.add]
     line: A run that follows a moved date never changes an action's day or words; it asks whoever decides, and drafts corrections only for people a tied item already reached.

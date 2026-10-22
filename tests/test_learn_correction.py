@@ -218,7 +218,7 @@ def test_silent_corrections_wait_for_the_next_batch_and_run_together(env):
     assert {r.data["state"] for r in learning(store)} == {"done"}
 
 
-def test_learning_offers_the_knowledge_ops_a_rule_and_a_stance_but_never_a_report_and_takes_settings_at_once():
+def test_learning_offers_knowledge_ops_a_rule_a_stance_and_a_question_never_a_report_and_takes_settings_at_once():
     from engine.worker import is_live
 
     ops = set(task_kind(learn.TASK).ops)
@@ -230,6 +230,7 @@ def test_learning_offers_the_knowledge_ops_a_rule_and_a_stance_but_never_a_repor
         "style.add",
         "rule.add",
         "person.stance",
+        "question.add",
     }
     assert task_kind(learn.TASK).max_ops == 1
     assert is_live("dispatch.knowledge.learn") and is_live("dispatch.knowledge.learn_every_minutes")
@@ -589,3 +590,41 @@ def test_a_lesson_may_reach_a_project_the_persons_own_words_name(env):
     assert len(asked) == 1, "accepted at once"
     (lesson,) = store.read().list("lesson")
     assert lesson.data["applies_to"]["projects"] == [other_id]
+
+
+def ask(to: str) -> dict:
+    question = {"op": "question.add", "to": to, "kind": "question", "title": "What should I do instead with these?"}
+    return {"summary": "Asking what the correction means.", "topic": "interior files", "ops": [question]}
+
+
+def test_an_unclear_correction_asks_the_person_one_question_and_never_anyone_else(env):
+    ws, cfg, store = env
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Not like that.", now=NOW)
+    (queued,) = learning(store)
+    scripted(ask("me"))
+    run_learning(env, queued.id)
+    assert [o["status"] for o in ops_of(store, queued.id)] == ["applied"]
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Not like that either.", now=NOW)
+    (queued,) = [r for r in learning(store) if r.data["state"] != "done"]
+    asked = scripted(ask(person("Editor")["full_name"]))
+    run_learning(env, queued.id)
+    assert len(asked) == 2 and "goes to the person who made it" in asked[1].request
+
+
+def test_learning_from_the_persons_answer_to_that_question_asks_nothing_more(env):
+    from engine.corrections import answered_assistant
+
+    ws, cfg, store = env
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Not like that.", now=NOW)
+    (queued,) = learning(store)
+    scripted(ask("me"))
+    run_learning(env, queued.id)
+    (question,) = [q for q in store.read().list("question") if q.data["title"].startswith("What should I do instead")]
+    assert answered_assistant(store, cfg, question.id, "They go to the editor before the printer.")
+    (again,) = [r for r in learning(store) if r.data["state"] != "done"]
+    asked = scripted(ask("me"), NOTHING)
+    run_learning(env, again.id)
+    assert len(asked) == 2 and "already answered" in asked[1].request

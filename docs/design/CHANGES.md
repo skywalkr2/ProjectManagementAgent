@@ -1027,6 +1027,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 164. An unclear correction asks the person one question (2026-10-22; owner decision, built)
+
+- The learning step may answer a correction with one question to the person, in place of a lesson, when it can't
+  tell what the correction means. A question to anyone else, or a second one after the person answered, is refused.
+  This amends F31. Design 6.22. Built:
+  `tests/test_learn_correction.py::test_an_unclear_correction_asks_the_person_one_question_and_never_anyone_else`,
+  `tests/test_learn_correction.py::test_learning_from_the_persons_answer_to_that_question_asks_nothing_more`
+
 ## 163. Mail from whoever owes a promise, about it, answered with nothing on it goes back (2026-10-22; B-10, built)
 
 - `owner-mail-unanswered`: mail whose sender owes an open promise and shares one of its longer words, answered with
