@@ -1027,6 +1027,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 162. A question about someone's claim goes to them (2026-10-22; B-10, built)
+
+- `claim-asked-of-the-person`: a question to the person about something another person on file is said to have
+  stated goes back once to ask that person. Setting `language.claim_words`. Design 4 (language settings) and 6.33.
+  Built: `tests/test_promise_as_fact.py::test_a_question_to_the_person_about_someones_claim_is_sent_back_to_ask_them`
+
 ## 161. Three more answers go back once: a finished action's date, an owed-to left out, a new project kept as a fact (2026-10-22; B-10, built)
 
 - A due date set on an action that is no longer open is refused, so a note on a finished action moves the open one.

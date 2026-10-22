@@ -1295,6 +1295,7 @@ def _default_lints() -> dict[str, Severity]:
         "due-move-missed": "return",
         "owed-to-missing": "return",
         "project-start-as-fact": "return",
+        "claim-asked-of-the-person": "return",
     }
 
 
@@ -1810,6 +1811,12 @@ class LanguageFile(FileModel):
         default_factory=lambda: ["I'll", "I will"],
         description="Words that make a sentence the person's own promise even when it also asks something: a request "
         "holding one of them is not counted as the person asking someone else. Matched as whole words, ignoring case.",
+    )
+    claim_words: list[str] = Field(
+        default_factory=lambda: ["told me", "told us", "said that", "says that", "tells me", "claims"],
+        description="Words that, right after a person's name, say that person stated something (\"Kit told me it ships "
+        'on the 10th"). A question to you about it is sent back once to ask that person instead. Matched as whole '
+        "words, ignoring case.",
     )
     project_start_words: list[str] = Field(
         default_factory=lambda: ["starting", "launching", "kicking off", "start", "launch", "kick off"],

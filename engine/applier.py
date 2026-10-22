@@ -216,6 +216,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _promise_as_fact(cs, ctx)
     problems += _due_move_missed(cs, ctx)
     problems += _project_start_as_fact(cs, ctx)
+    problems += _claim_asked_of_the_person(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -2231,6 +2232,66 @@ def _project_start_as_fact(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 )
             )
             break
+    return problems
+
+
+def _claimant(sentence: str, words: list[str], ctx: Context) -> str | None:
+    """The person on file a sentence says stated something ("Kit told me it ships on the 10th"): a name, or a bare
+    first name only one person has, right before one of the claim words. None for the person themselves."""
+    pattern = "|".join(re.escape(w) for w in words)
+    for found in re.finditer(rf"((?:[A-Z][\w-]*\s+)?[A-Z][\w-]*)\s+(?i:{pattern})(?!\w)", sentence):
+        names = found.group(1).split()
+        for candidate in (" ".join(names), names[-1]):
+            who = ctx.people.resolve(candidate)
+            person = who.person if who.status == "ok" else (who.candidates[0] if len(who.candidates) == 1 else None)
+            if person and person != ctx.people.pm:
+                return person
+    return None
+
+
+def _claim_asked_of_the_person(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A question to the person about something the input says another person stated ("Kit told me it ships on the
+    10th, but the quote says the 30th") is sent back once: whoever made the claim is the one who can say whether it
+    holds. A rule on the words with no AI: one of the language's claim words after a name on file, and a question to
+    the person sharing at least two of that sentence's longer words."""
+    name = "claim-asked-of-the-person"
+    level = ctx.cfg.checks.lints.get(name, "off")
+    pm = ctx.people.pm
+    if level == "off" or ctx.actor == "pm" or ctx.confirmed_by_pm or not pm:
+        return []
+    words = [w.strip() for w in ctx.cfg.language.claim_words if w.strip()]
+    if not words:
+        return []
+    text = "\n".join(t for t in (ctx.inputs.raw_input, ctx.inputs.note) if t.strip())
+    claims = []
+    for sentence in (s.strip() for s in re.split(r"(?<=[.!?\u3002\uff01\uff1f])\s+|\n+", text)):
+        who = _claimant(sentence, words, ctx) if sentence else None
+        if who is not None:
+            claims.append((sentence, who))
+    if not claims:
+        return []
+
+    def long_words(value: str) -> set[str]:
+        return {w for w in _WORD.findall(normalize(without_links(value)).lower()) if len(w) >= 4}
+
+    problems: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if not isinstance(op, QuestionAddOp) or ctx.people.resolve(op.to).person != pm:
+            continue
+        asked = long_words(f"{op.title} {op.text}")
+        for sentence, who in claims:
+            if len(asked & long_words(sentence)) >= 2:
+                problems.append(
+                    Problem(
+                        name,
+                        ctx.cfg.checks.projects.get(op.project or "", {}).get(name) or level,
+                        i,
+                        f'the words say {ctx.people.name(who)} stated it: ask {ctx.people.name(who)} ("to": '
+                        f'"{who}") whether it holds, not the person',
+                        sentence,
+                    )
+                )
+                break
     return problems
 
 

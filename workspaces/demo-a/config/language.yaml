@@ -21,6 +21,8 @@ unassigned_words: [someone, somebody, anyone, anybody, nobody, no one]
 due_move_words: [is now due, can wait until, moved to, pushed to, postponed to, push it to]
 # Words that start a new piece of work; before a name in capitals no project has, recorded only as a fact, they go back once.
 project_start_words: [starting, launching, kicking off, start, launch, kick off]
+# Words that, right after a name, say that person stated something; a question to you about it goes back once to ask them.
+claim_words: [told me, told us, said that, says that, tells me, claims]
 # Words that frame a question rather than say what it is about; left out when checking whether a recorded fact already answers it.
 asking_words: [when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about, confirm]
 # Phrases that make a draft report to the maintainers a standing rule, to be proposed as a rule instead.

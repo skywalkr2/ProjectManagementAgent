@@ -330,6 +330,9 @@ Built keys:
 - `project_start_words` (starting, launching, kicking off, start, launch, kick off): what the `project-start-as-fact`
   lint reads (6.33): before a name in capitals no project has, in a fact with no project proposed, the words go back
   to propose the project.
+- `claim_words` (told me, told us, said that, says that, tells me, claims): what the `claim-asked-of-the-person` lint
+  reads (6.33): right after a name, they say that person stated something, so a question to the person about it
+  goes back to ask them.
 - `asking_words` (when, what, which, where, will, would, could, should, tell, know, does, have, there, please, about,
   confirm): words that frame a question rather than say what it is about. The `already-known` check leaves them out and
   compares the rest in folded form (plurals, "ing", "ed"), so "Can you tell me when the proofs will ship?" is answered

@@ -921,6 +921,9 @@ is marked *designed*, with the phase.
 - A fact quoting the start of something named that no project has ("we are starting the Depot Scanner Pilot"), with no
   project proposed, goes back once to propose it (`project-start-as-fact`, *built*; `language.project_start_words`). A
   name inside a project's own counts as that project.
+- A question to the person about something the input says another person stated ("Jun told me it arrives on the
+  10th, but the quote says the 30th") goes back once to ask whoever made the claim (`claim-asked-of-the-person`,
+  *built*; `language.claim_words`).
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.

@@ -217,3 +217,33 @@ def test_a_known_project_a_proposed_one_or_a_start_with_no_name_is_left_alone(en
     proposed = {"op": "project.add", "name": START["name"], "evidence": START["evidence"]}
     assert started(env, [proposed, fact(f"We are {START['evidence']['quote']}.")]) == []
     assert started(env, [fact("We are starting the pilot next month.")]) == []
+
+
+# ---- claim-asked-of-the-person: a question about someone's claim goes to them ---------------------------------------
+
+
+def claimed(env, ops: list[dict], raw: str) -> list:
+    _, cfg, store = env
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", "SRC-1", raw, "", "untrusted")
+    )
+    return [p for p in check(cs, ctx) if p.check == "claim-asked-of-the-person"]
+
+
+CLAIM = f"{TEAMMATE['full_name']} told me the stock arrives on November 10, but the quote says October 30."
+
+
+def question(to: str) -> dict:
+    title = "Does the stock arrive on November 10 or October 30?"
+    return {"op": "question.add", "to": to, "kind": "question", "title": title, "text": "The quote disagrees."}
+
+
+def test_a_question_to_the_person_about_someones_claim_is_sent_back_to_ask_them(env):
+    (problem,) = claimed(env, [question(ME["id"])], CLAIM)
+    assert problem.severity == "return" and TEAMMATE["id"] in problem.message
+
+
+def test_a_question_to_the_claimant_or_one_with_no_claim_in_the_words_is_left_alone(env):
+    assert claimed(env, [question(TEAMMATE["id"])], CLAIM) == []
+    assert claimed(env, [question(ME["id"])], "The stock arrives on November 10, but the quote says October 30.") == []
