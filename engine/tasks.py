@@ -190,6 +190,16 @@ TASKS: dict[str, TaskKind] = {
         field="prep",
         defaults={"max_output": 1500, "expected_output": 350},
     ),
+    # A voice note turned into text (engine/transcribe.py): the sound in, the words out, on an account whose model is
+    # listed as taking speech. It has no packet and no ops; the words go on to the notes work as the person's own.
+    "transcribe": TaskKind(
+        name="transcribe",
+        ops=(),
+        prompt="transcribe",
+        playbook="transcribe",
+        label="Turning a voice note into text",
+        defaults={"max_output": 4000, "expected_output": 500},
+    ),
     "follow-on": TaskKind(
         name="follow-on",
         ops=FOLLOW_ON_OPS,

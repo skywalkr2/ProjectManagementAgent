@@ -143,6 +143,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     """The packet for one run. Stable first: the instructions, the practice, what has been learned, the people and the
     projects. Then the request: the action as it is now (data, marked as from outside), the text kept so far when there
     is one, and the person's note."""
+    from engine import areas
     from engine.cleaning import Cleaned
     from engine.dispatcher import _data_level
     from engine.names import People
@@ -177,7 +178,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
             "# Practice\n" + _guidance(kind),
             learned.stable,
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store),
+            "# Projects\n" + _projects(store, None, areas.reach(store.read(), [found.data.get("project")])),
         )
         if part.strip()
     )

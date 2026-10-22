@@ -77,6 +77,17 @@ class IdentityHeld(NoProvider):
         self.why = why
 
 
+class CannotTranscribe(NoProvider):
+    """No account that may take the work is listed as turning speech into text. The message says so in plain words."""
+
+
+#: What the person reads when no account can turn a voice note into text.
+CANNOT_TRANSCRIBE = (
+    "This account can't transcribe: none of your AI accounts lists a model that turns speech into text. Type or paste "
+    "what the voice note says, or list such a model under the account's settings."
+)
+
+
 class AccountPaused(NoProvider):
     """Every account that could take the work is paused until a usage limit resets. `account` is the one that resets
     first and `until` when; `tier` is the tier whose work waits; the message is what the work waits on, in plain
@@ -342,7 +353,7 @@ class Router:
             unchecked=self._unchecked(),
             identity_held=self._identity_held(task.kind, tier, use),
         )
-        options = self._that_fit(task, list(picked))
+        options = self._that_transcribe(picked) if task.audio is not None else self._that_fit(task, list(picked))
         paused: dict[str, datetime] = {}
         offline = 0  # accounts that could not be reached at all
         over: list[Choice] = []  # accounts in line that would cost more than the person allowed
@@ -568,6 +579,11 @@ class Router:
     def _price_of(self, task: AiTask, choice: Choice) -> float | None:
         """What this task would cost in USD on this account, or None when its price isn't known."""
         info = self.model_info(choice)
+        if task.audio is not None:
+            if info.audio_per_minute is None:
+                return None
+            kbps = self.cfg.steward.capture.audio_kbps
+            return len(task.audio.data) * 8 / (kbps * 1000) / 60 * info.audio_per_minute
         if info.input_per_million is None or info.output_per_million is None:
             return None
         output = task.expected_output or self.typical_output(task.kind)
@@ -662,6 +678,22 @@ class Router:
         if day >= budgets.per_day_usd:
             raise BudgetReached(f"Paused until tomorrow: today's AI budget (${budgets.per_day_usd:.2f}) is used up.")
 
+    def _that_transcribe(self, options: list[Choice]) -> list[Choice]:
+        """Keep only the accounts whose model is listed as turning speech into text, by the model's catalog entry or
+        by the account's own list of such models. A model is never assumed to from its name."""
+        able = [choice for choice in options if self.model_info(choice).transcribes]
+        if not able:
+            raise CannotTranscribe(CANNOT_TRANSCRIBE)
+        return able
+
+    def transcribers(
+        self, kind: str, data_level: str = "internal", content: frozenset[str] = frozenset()
+    ) -> list[Choice]:
+        """The accounts that may read material at this level and are listed as turning speech into text, in the order
+        the work's tier tries them. Raises `CannotTranscribe` when none is, and `NoProvider` when no account may see
+        the material at all."""
+        return self._that_transcribe(choices(self.cfg, kind, data_level, content=content, unchecked=self._unchecked()))
+
     def _that_fit(self, task: AiTask, options: list[Choice]) -> list[Choice]:
         """Drop accounts whose model can't hold this request plus its answer, by the catalog's context size.
         A model with no known context size is kept."""
@@ -695,6 +727,10 @@ class Router:
             info.input_per_million = price.input_per_million
             info.output_per_million = price.output_per_million
             info.cached_input_per_million = price.cached_input_per_million
+            if price.audio_per_minute is not None:
+                info.audio_per_minute = price.audio_per_minute
+        if {choice.model_key, choice.model_id} & set(settings.transcribe_models):
+            info.transcribes = True  # the account lists this model as taking speech; nothing else is assumed
         return info
 
     def _cost(self, choice: Choice, result: AiResult | None) -> float | None:

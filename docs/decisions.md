@@ -4,6 +4,60 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: A date in a document is a fact with its day; its reminder is a held proposal, never the assistant's own
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings.
+  A fact carries the day it is for (`on`) and what kind of day it is (`on_kind`: deadline, renewal, expiry, warranty or
+  bill). The assistant writes both only from a full date its quote states, and the applier checks that the quote does
+  (`explicit_dates`), because a date that must be worked out or guessed is how a wrong reminder gets made; with a
+  language the rules don't read, the check is skipped. The reminder is not asked of the assistant: the rules add one
+  `record.set` of `remind_at` to the changeset after the fact (or the to-do) is made, because the rules know the
+  working hours and the lead for each kind and the assistant does not, and because the new record has no id for the
+  assistant to name. It is held, since only the person sets a reminder. A to-do gets one only when its due day is a day
+  its input labels in a sentence the rules are sure of; a to-do added from a vague word gets none. Bills are reminders
+  only: no amount, balance, account or bank connection is kept, whatever the input says. A booking becomes a calendar
+  entry by rules and not by the assistant, with the same evidence rule: the confirmation's code, else the provider, else
+  the place, as written in the input.
+- **Left, said in the design:** a booking in mail read through a connector, dated facts by rules alone, and a fact's
+  reminder delivered through the person's own calendar or mail.
+- **Impact:** design 6.32 (What arrives); roadmap S4. Plugin guide regenerated for the new fact and project fields and the
+  held field. No change to scope. Change log: section 194.
+
+## 2026-10-22: A capture folder is the person's own words; a voice note is its own request and a model never assumed to transcribe
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings.
+  The capture folder is a kind of source (the core's `capture` connector), not a flag on any folder, so adding one
+  uses the same form as any source. Everything in it is handed in as the person's own words (a trusted source authored
+  by them, marked reported when it repeats what someone else said), because the brief makes the folder the person's
+  own inbox; everything already in it is taken in the first time, and a file is handed in again when it changes. A
+  voice note is stored as the person's upload and a `transcribe` request is queued about it, so it takes the usual
+  estimate, go, budget and run record; its words go on as a new trusted source and the usual notes request, so a voice
+  note does anything a typed note does and nothing more. A model takes speech only when its account lists it
+  (`transcribe_models`) or its service's listing says so; nothing is inferred from a name or a vendor. The estimate is the
+  file's size at an assumed bit rate (`steward.capture.audio_kbps`) times the model's price per minute; with no price the
+  run waits for a go when unpriced runs need one. No account able to transcribe is a plain line on the request, never a
+  silent wait. The native and command-line adapters refuse a voice note rather than guess. The phone's capture box is the
+  Hand in sheet, which already takes a drop of a voice note.
+- **Left, said in the design:** the forward-to address and the global shortcut wait for phase I.
+- **Impact:** design 6.32 (What arrives) and 6.16 (the adapter capability); roadmap S4. Change log: section 194.
+
+## 2026-10-22: An area's reach stops at the area, and an area is offered from a shared word, never from a word list
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with a setting.
+  The reach of a draft or an input about a project in an area is the area, the projects inside it and the projects above
+  it; everything filed under another project is left out of its packet (facts, open items, projects) and what is scoped
+  to another area never passes the scope check. A record naming no project is not an area's. An input about no project,
+  or one in no area, is unchanged, so the assistant can still see every area when it files a message it can't place.
+  An area's privacy is its content levels and those above it, matched to what each account takes, so there is one way to
+  say who reads what. The offer reads the open items filed directly under Personal for a word shared by at least
+  `steward.areas.propose_after` of them (whole words, stems folded, never a word the language uses every day or one a
+  project already names), so no word list sits in the code; the proposed name is the word, and the person can rename the
+  area on its page. It is a suggestion line (importance, daily cap and Not now like the others), and keeping it files the
+  items as the person's own edits so each move teaches the next filing.
+- **Left, said in the design:** the meeting-prep and people-memory drafts do not read the reach yet, setup's tick boxes for
+  common areas, and one Today tagged by area.
+- **Impact:** design 6.32 (Personal life); roadmap S4. Change log: section 194.
+
 ## 2026-10-22: The capacity check, clashes from today on, the attention budget and the reminder offer
 
 - **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings.

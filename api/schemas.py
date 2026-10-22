@@ -1493,6 +1493,35 @@ class KnowsUnknown(BaseModel):
     question: KnowsQuestion | None = Field(None, description="The open question that asks about it, if one does.")
 
 
+class AreaKeep(BaseModel):
+    word: str = Field(min_length=1, description="The word the offered area is for (the line's `subject`).")
+
+
+class AreaKept(BaseModel):
+    """What keeping an offered area did: the area it started, and the two changes (filing, then starting) that Undo
+    takes back in that order."""
+
+    project: str
+    filed: str
+    started: str
+
+
+class ProjectReader(BaseModel):
+    account: str = Field(description="The account's short name.")
+    name: str = Field(description="The name the person gave the account, as it is shown.")
+    leaves: bool = Field(description="Whether reading the material sends it away from this computer to reach it.")
+
+
+class ProjectReading(BaseModel):
+    """Who may read a project's material (design 6.32): `state` is none (no account may), local (each that may runs
+    on this computer) or away (at least one sends what it reads away from this computer). `levels` are the content
+    levels the material carries, its own and those of the projects above it."""
+
+    state: Literal["none", "local", "away"]
+    levels: list[str]
+    readers: list[ProjectReader]
+
+
 class ProjectKnowsView(BaseModel):
     """What the assistant knows about one project (design 7.18), for its page."""
 
@@ -1503,6 +1532,8 @@ class ProjectKnowsView(BaseModel):
     terms: list[KnowsTerm] = Field(description="The glossary terms used there.")
     routing: list[KnowsRouting] = Field(description="Who answers what, for work on it.")
     unknown: list[KnowsUnknown] = Field(description="What is still unknown.")
+    area: bool = Field(False, description="Whether the project is an area of life, which has no end day.")
+    reading: ProjectReading = Field(description="Which accounts read the project's material and where it goes.")
 
 
 class RepeatShapeView(BaseModel):
@@ -2115,19 +2146,21 @@ class HeldAsk(BaseModel):
     """A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change
     its date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a
     promise, move its date or record a part delivered, or keep a guess at how long it takes (`effort`, with the minutes
-    in `value`); `ending`: the words said only that it is closed, so the person
-    is asked whether it is done by its owners or no longer needed), `item` the words of what it is about, `value` and
-    `from_value` the new and the present date, `to_name` the person it would go to, `told` the people a drop would
-    leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action
-    also carries what the input says happened: the action's id in `record`, its `owners` in the owner format,
-    `reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier words
-    (`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the title
-    and the answers from these."""
+    in `value`), or keep a reminder proposed for a dated fact or a to-do (`remind`, with the moment in `value`, the day
+    it is for in `day` and the reminder it has now in `from_value`); `ending`: the words said only that it is closed,
+    so the person is asked whether it is done by its owners or no longer needed), `item` the words of what it is about,
+    `value` and `from_value` the new and the present date, `to_name` the person it would go to, `told` the people a
+    drop would leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of
+    an action also carries what the input says happened: the action's id in `record`, its `owners` in the owner
+    format, `reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier
+    words (`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the
+    title and the answers from these."""
 
-    ask: Literal["close", "date", "owner", "routing", "drop", "move", "part", "ending", "effort"]
+    ask: Literal["close", "date", "owner", "routing", "drop", "move", "part", "ending", "effort", "remind"]
     item: str
     value: str | None = None
     from_value: str | None = None
+    day: str | None = None
     to_name: str | None = None
     told: list[str] = Field(default_factory=list)
     told_on: str | None = None
@@ -2436,8 +2469,15 @@ class QueueLineView(BaseModel):
         "meeting_prep",
         "meeting_capture",
         "quiet_promise",
+        "date_reminder",
+        "area",
     ]
     count: int
+    fact: str | None = Field(
+        None,
+        description="For a date_reminder line: the id of the dated fact it is about; `due` is its day, `state` its "
+        "kind (deadline, renewal, expiry, warranty or bill), `at` the moment of the reminder and `text` the fact.",
+    )
     event: str | None = Field(
         None,
         description="For a meeting_prep or meeting_capture line: the id of the calendar entry; its page is GET "
@@ -2556,11 +2596,17 @@ class QueueLineView(BaseModel):
             "from",
             "overlap",
             "travel",
+            "deadline",
+            "renewal",
+            "expiry",
+            "warranty",
+            "bill",
         ]
         | None
     ) = Field(
         None,
-        description="For a clash line: overlap (the two meetings overlap) or travel (they are in different places with "
+        description="For a date_reminder line: the kind of day, deadline, renewal, expiry, warranty or bill. For a "
+        "clash line: overlap (the two meetings overlap) or travel (they are in different places with "
         "less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's "
         "family exists) or price (a tier's current model went up in price). For a handover line: diverged (this "
         "computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice "

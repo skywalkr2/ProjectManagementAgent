@@ -189,3 +189,29 @@ test("the note about a picture goes when words are typed after it", async () => 
   await user.type(box, "What it said");
   expect(screen.queryByText(/A picture can't be read yet/)).toBeNull();
 });
+
+// A voice note dropped on the box (design 6.32): it is handed in at once as its own request, to be turned into text, and
+// the words in the box stay as they were; a file that is neither text nor sound is still left out, and says so.
+
+const voice = () => new File(["sound"], "walk.m4a", { type: "audio/mp4" });
+
+test("a voice note dropped on the box is handed in as sound, and the box keeps its words", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ "POST handin": handed, "POST handin/audio?name=walk.m4a": () => ({ request: "REQ-7", source: null }), "GET projects": () => PROJECTS });
+  renderApp(<HandIn onClose={vi.fn()} />);
+  const box = screen.getByRole("textbox", { name: "Paste or type it here" });
+  await user.type(box, "Notes so far");
+  fireEvent.drop(box, { dataTransfer: { files: [voice()] } });
+  expect(await screen.findByText("Voice note walk.m4a handed in. It is turned into text first.")).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST handin/audio?name=walk.m4a" && c.headers && (c.headers as Record<string, string>)["content-type"] === "audio/mp4")).toBe(true);
+  expect(box).toHaveValue("Notes so far");
+  expect(screen.queryByText(/Only text files/)).toBeNull();
+});
+
+test("a dropped file that is neither text nor sound is left out and the box says so", async () => {
+  const { user } = await setup();
+  const box = screen.getByRole("textbox", { name: "Paste or type it here" });
+  await user.click(box);
+  fireEvent.drop(box, { dataTransfer: { files: [new File(["x"], "plan.zip", { type: "application/zip" })] } });
+  expect(await screen.findByText("Only text files and voice notes were added. Other files were left out.")).toBeInTheDocument();
+});

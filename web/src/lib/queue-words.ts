@@ -2,7 +2,7 @@
 // 7.7). The title is the item as a question with the item named in quotes; the primary button names what it does, and the
 // other answer is as specific, so nobody has to read the title again to know what they are agreeing to.
 import type { S } from "./api";
-import { day } from "./dates";
+import { day, wallWhen } from "./dates";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Tn = (key: string, n: number, vars?: Record<string, string | number>) => string;
@@ -54,6 +54,8 @@ export function heldTitle(held: S["HeldAsk"], t: T): string {
       return t("queue.held.q.part", { item });
     case "effort":
       return t("queue.held.q.effort", { item, time: effortTime(held, t) });
+    case "remind":
+      return t("queue.held.q.remind", { item, day: held.day ? day(held.day) : "" });
     default:
       return item;
   }
@@ -88,6 +90,8 @@ export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other:
       return { primary: t("queue.held.a.part"), other: t("queue.held.k.part") };
     case "effort":
       return { primary: t("queue.held.a.effort", { time: effortTime(held, t) }), other: held.from_value ? t("queue.held.k.effort", { time: effortTime({ ...held, value: held.from_value }, t) }) : t("queue.held.k.same") };
+    case "remind":
+      return { primary: t("queue.held.a.remind", { when: held.value ? wallWhen(held.value) : "" }), other: held.from_value ? t("queue.held.k.remind", { when: wallWhen(held.from_value) }) : t("queue.held.k.no_remind") };
     default:
       return { primary: t("queue.held.a.close"), other: t("queue.held.k.close") };
   }

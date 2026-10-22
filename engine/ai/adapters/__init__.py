@@ -19,7 +19,12 @@ class Adapter(Protocol):
     Two capabilities serve the estimates (`engine/ai/calibration.py`): `count_tokens(task, model)` returns the tokens
     the service counts for a request without running it, and raises `CountNotOffered` when it can't; an adapter with no
     such method doesn't offer it (the app's own count stands). `adds_overhead = True` says the adapter's program adds
-    its own text to every request, so the account check measures that fixed overhead from its small call."""
+    its own text to every request, so the account check measures that fixed overhead from its small call.
+
+    Speech-to-text is the capability of `run` on a task whose `audio` is set: the answer is the words spoken. A model
+    takes it only when its catalog entry says so (`ModelInfo.transcribes`) or its account lists it
+    (`transcribe_models`); the router never gives a voice note to any other, and an adapter that cannot do it raises
+    `AiError` rather than guess."""
 
     name: str
 

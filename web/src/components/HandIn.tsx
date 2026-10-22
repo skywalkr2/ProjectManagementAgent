@@ -35,6 +35,8 @@ export function useAddOwnRequest(): (id: string) => void {
 }
 
 const TEXT_FILE = /^text\/|\/(json|xml)$|message\/rfc822/;
+/** A voice note: a sound file, kept and turned into text by an account that takes speech once it runs. */
+const SOUND_FILE = /^audio\/|\.(m4a|mp3|wav|ogg|oga|opus|webm|flac|aac)$/i;
 
 type Whose = "others" | "mine";
 /** How sensitive the person says it is: the usual sends nothing, so the workspace's own rules decide. */
@@ -88,10 +90,20 @@ export function HandIn(props: { onClose: () => void }) {
     const files = Array.from(event.dataTransfer.files);
     if (!files.length) return;
     event.preventDefault();
-    const readable = files.filter((f) => TEXT_FILE.test(f.type) || /\.(txt|md|eml|csv)$/i.test(f.name));
-    setDropProblem(readable.length < files.length ? t("handin.drop_text_only") : "");
+    const sounds = files.filter((f) => SOUND_FILE.test(f.type) || SOUND_FILE.test(f.name));
+    const readable = files.filter((f) => !sounds.includes(f) && (TEXT_FILE.test(f.type) || /\.(txt|md|eml|csv)$/i.test(f.name)));
+    setDropProblem(readable.length + sounds.length < files.length ? t("handin.drop_text_only") : "");
     const texts = await Promise.all(readable.map((f) => f.text()));
     if (texts.length) setText((prev) => [prev, ...texts].filter(Boolean).join("\n\n"));
+    // A voice note goes in at once, as its own hand-in: the words are not there to read until an account has turned
+    // them into text, which the request says when it waits for the person's go.
+    for (const sound of sounds) {
+      const handed = await act(
+        () => api.handInAudio(sound, project || undefined),
+        () => ({ message: t("toast.voice_handed_in", { name: sound.name }) }),
+      );
+      if (handed) own.add(handed.request);
+    }
   };
 
   return (

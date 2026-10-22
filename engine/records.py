@@ -434,6 +434,12 @@ class Project(Record):
     parent: str | None = Field(
         None, description="The id of the project this one belongs to (a book in its series); never itself or below it."
     )
+    area: bool = Field(
+        False,
+        description="An area of life (health, home, money): ongoing and never finished, so it has no target day and is "
+        "never behind. A project has a goal and an end and is followed like any other; either may sit under an area "
+        "or under the personal project. What a draft for an area draws on stops at the area (design 6.32).",
+    )
     language: str | None = Field(
         None,
         pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
@@ -452,6 +458,12 @@ class Project(Record):
         description="Each person's part in the project (run, design or watch); `project.role` sets one. A person "
         "with no entry runs it.",
     )
+
+    @model_validator(mode="after")
+    def _an_area_has_no_end(self) -> Project:
+        if self.area and self.target is not None:
+            raise ValueError("an area has no target day; a project with an end is not an area")
+        return self
 
 
 class Repeat(BaseModel):
@@ -476,8 +488,9 @@ class Action(Record):
     record_kind: ClassVar[str] = "action"
     prefix: ClassVar[str] = "ACT"
     layout: ClassVar[str | None] = "actions/{id}"
-    #: The assistant's guess at the effort waits for the person's yes, as a project's priority does.
-    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"effort_minutes": ()}
+    #: The assistant's guess at the effort, and its proposal of a reminder, wait for the person's yes, as a project's
+    #: priority does.
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"effort_minutes": (), "remind_at": ()}
 
     project: str | None = Field(None, description="The id of the project it belongs to.")
     text: str = Field(min_length=1, description="What is to be done, starting with a verb.")
@@ -526,7 +539,8 @@ class Action(Record):
     remind_at: AwareDatetime | None = Field(
         None,
         description="When to remind the person of it, as a moment with its time zone. The person sets it, and moves it "
-        "when they snooze; the reminder is a line on Today while the action is open and not on hold, and it is never a "
+        "when they snooze; the assistant may propose one for a to-do whose day an input labels, which waits for the "
+        "person's yes. The reminder is a line on Today while the action is open and not on hold, and it is never a "
         "correction of the assistant's work.",
     )
     on_hold: OnHold | None = Field(
@@ -1453,11 +1467,14 @@ class Changeset(Record):
 
 class Fact(Record):
     """Something recorded as true, with the words that show it. Added by `fact` and by `question.done`; never
-    edited, except that `record.set` names the calendar entry or series it belongs to."""
+    edited, except that `record.set` names the calendar entry or series it belongs to and proposes the day it is to be
+    reminded of (which waits for the person's yes)."""
 
     record_kind: ClassVar[str] = "fact"
     prefix: ClassVar[str] = "FACT"
     layout: ClassVar[str | None] = "facts/{id}"
+    #: The assistant's proposal of a reminder waits for the person's yes.
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"remind_at": ()}
 
     text: str = Field(min_length=1, description="The fact, as a statement.")
     project: str | None = Field(None, description="The id of the project it is about, if any.")
@@ -1503,6 +1520,20 @@ class Fact(Record):
         False,
         description="True for a fact about a project that holds for the projects inside it too (a series' fact for "
         "each of its books): it goes into the packets of those projects as well.",
+    )
+    on: date | None = Field(
+        None,
+        description="For a dated fact: the day a deadline, renewal, expiry, warranty end or bill falls on, as the "
+        "input states it. Nothing is worked out or guessed: an input that gives no full date makes no dated fact.",
+    )
+    on_kind: Literal["deadline", "renewal", "expiry", "warranty", "bill"] | None = Field(
+        None, description="With `on`: what kind of day it is. A bill is a reminder only: no amount is kept."
+    )
+    remind_at: AwareDatetime | None = Field(
+        None,
+        description="When to remind the person of a dated fact, as a moment with its time zone. The rules propose it "
+        "from the day and the settings; it waits for the person's yes, and the person may set or move it. The "
+        "reminder is a line on Today from that moment until the day has passed.",
     )
     fixed_fields: ClassVar[tuple[str, ...]] = ("supersedes", "basis", "said_by")
 

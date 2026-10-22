@@ -24,7 +24,7 @@ from engine.storage import WriteContext
 from engine.today import zone
 
 #: The kinds of Today line that are suggestions, in the settings' own names (`steward.attention.importance`).
-KINDS = ("escalate", "stale", "unfiled", "learned", "catch_up")
+KINDS = ("escalate", "stale", "unfiled", "learned", "catch_up", "area")
 TAKEN_BACK = "taken back"
 
 

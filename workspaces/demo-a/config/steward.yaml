@@ -61,3 +61,18 @@ attention:
     stale: 0.4
     learned: 0.3
     catch_up: 0.2
+    area: 0.3
+dates:
+  bookings_to_calendar: true   # a booking confirmation with structured details becomes an entry in the app's own calendar
+  suggest_reminders: true   # a reminder is offered with a deadline, renewal, expiry, warranty end or bill an input states
+  lead_days:
+    deadline: 3   # days before the day that the offered reminder falls
+    renewal: 14
+    expiry: 14
+    warranty: 30
+    bill: 3
+areas:
+  propose_after: 4   # items under the personal project sharing a word before an area is offered; 0 never offers one
+capture:
+  audio_kbps: 64   # the bit rate assumed for a voice note, to estimate its length before it is turned into text
+  max_audio_mb: 25   # the largest voice note handed in

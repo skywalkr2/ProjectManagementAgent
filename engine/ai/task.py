@@ -35,6 +35,15 @@ NO_WORK_KINDS = ("offline", "no_work")
 
 
 @dataclass(frozen=True)
+class Audio:
+    """A voice note handed to a model that turns speech into text: its bytes, its media type and its file name."""
+
+    data: bytes
+    media_type: str
+    name: str
+
+
+@dataclass(frozen=True)
 class AiTask:
     """One call: what kind of work, the packet split into its stable part and its request part, and limits."""
 
@@ -55,6 +64,9 @@ class AiTask:
     # What the provider's catalog says about the model this call runs on, for an adapter whose service lists
     # capabilities; None when it isn't known.
     model_info: ModelInfo | None = None
+    # A voice note to turn into text (the kind "transcribe"): only an account whose model is listed as taking audio
+    # is ever given it, and the answer is the words spoken.
+    audio: Audio | None = None
 
     @property
     def size(self) -> int:
@@ -92,6 +104,10 @@ class ModelInfo:
     adaptive_thinking: bool | None = None  # whether the model can think on its own, where the service says so
     thinking_off_efforts: list[str] | None = None  # the efforts at which its thinking can be turned off; [] never
     released: str | None = None  # when the service says the model was made (ISO date and time), where its listing does
+    # Whether the model turns speech into text, where the service or the account says so; None means nobody said, and
+    # a model is never assumed to from its name or its vendor.
+    transcribes: bool | None = None
+    audio_per_minute: float | None = None  # what it costs a minute of speech in USD, where that is known
 
 
 class AiError(Exception):

@@ -14,7 +14,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from engine import follow_on, learn, new_terms, quality
+from engine import booking_entries, follow_on, learn, new_terms, quality, transcribe
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -142,6 +142,9 @@ def process(
         from engine.stages import wording
 
         return needs_you(store, request_id, wording(cfg, "waiting"))
+    if req.data["task"] == transcribe.TASK:
+        # A voice note: its own estimate, go and call, and its words go on as the person's own note.
+        return transcribe.process(ws, store, cfg, router, request_id, now=now)
     if not person_is_set(store, cfg):
         # Nothing is estimated or asked before the person is named: the assistant's work needs someone to address.
         return needs_you(store, request_id, SAY_WHO_FIRST, cause={"kind": "no_person"})
@@ -389,6 +392,9 @@ def process(
         _set(store, request_id, task="ask", state="queued", waiting="With the assistant, starting now")
         return None
     changeset = changeset.model_copy(update={"ops": localize_ops(changeset.ops, cfg)})
+    if kind.name == "notes":
+        # A booking the input carries as structured data becomes the app's own calendar entry, by rules.
+        changeset = booking_entries.add_to(changeset, cfg, store.read(), ctx.inputs.raw_input)
     extra = quality.claims(store, run_id, changeset.applied, changeset.missing)
     if outcome.fallback is not None and quality.first_run_on(store, run_id) == outcome.fallback:
         extra["first_on_account"] = outcome.fallback

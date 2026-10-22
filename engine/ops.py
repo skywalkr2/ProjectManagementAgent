@@ -144,6 +144,16 @@ class FactOp(OpModel):
         description="True only for a fact about a project that holds for every project inside it too (a fact about a "
         "series that is true of each of its books); needs the project. Left false, it is about that project alone.",
     )
+    on: date | None = Field(
+        None,
+        description="For a dated fact: the day a deadline, renewal, expiry, warranty end or bill falls on, written "
+        "YYYY-MM-DD, only when the input states a full date for it (its year included). Never worked out from other "
+        "words and never guessed: with no full date, leave it out. A bill is a reminder only; never record an amount "
+        "owed or a balance.",
+    )
+    on_kind: Literal["deadline", "renewal", "expiry", "warranty", "bill"] | None = Field(
+        None, description="With `on`: deadline, renewal, expiry, warranty (its end) or bill (a payment's due day)."
+    )
 
 
 class EventAddOp(OpModel):
@@ -292,11 +302,12 @@ class AgendaAddOp(OpModel):
 class RecordSetOp(OpModel):
     """Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent
     (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id);
-    action text, due, notes and effort_minutes (about how long it takes, in whole minutes; it waits for the person's
-    yes); the entry (event) or series an action, question or fact belongs to (an id, or null);
+    action text, due, notes, effort_minutes (about how long it takes, in whole minutes; it waits for the person's
+    yes) and remind_at (when to remind the person of a to-do or a dated fact, an ISO 8601 date-time with its offset;
+    it waits for the person's yes); the entry (event) or series an action, question or fact belongs to (an id, or null);
     question title and text; person role, org, why_they_matter, side (personal, business or both) and relation
-    (how they relate to the person, such as "my sister"). The new value must
-    be valid for the field. Evidence is required for due, status, owners, target, owner and effort_minutes."""
+    (how they relate to the person, such as "my sister"). The new value must be valid for the field. Evidence is
+    required for due, status, owners, target, owner, effort_minutes and remind_at."""
 
     op: Literal["record.set"]
     kind: Literal["project", "action", "question", "person", "fact"] = Field(
@@ -823,6 +834,11 @@ class ProjectAddOp(OpModel):
         default_factory=list,
         description="Ids of existing projects to move inside the new one (books into a new series), in the same op.",
     )
+    area: bool = Field(
+        False,
+        description="True for an area of life that never finishes (health, home, money) and so has no end day; left "
+        "false for a project with a goal and an end.",
+    )
     status: str | None = Field(
         None,
         description="Where the project stands, only when the input states it, with those words as evidence. A status "
@@ -840,7 +856,7 @@ class ProjectAddOp(OpModel):
     )
 
     def describe(self) -> str | None:
-        return f"Start the project {self.name}"
+        return f"Start the area {self.name}" if self.area else f"Start the project {self.name}"
 
 
 class ProjectRoleOp(OpModel):
@@ -1938,14 +1954,14 @@ EVIDENCE_UNLESS_PERSON = {
     "action.part",
     "question.drop",
 }
-EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner", "event", "series", "effort_minutes"}
+EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner", "event", "series", "effort_minutes", "remind_at"}
 
 #: Fields record.set may change, per kind.
 SETTABLE: dict[str, set[str]] = {
     "project": {"status", "phase", "target", "priority", "summary", "parent", "language", "owner"},
-    "action": {"text", "due", "notes", "event", "series", "effort_minutes"},
+    "action": {"text", "due", "notes", "event", "series", "effort_minutes", "remind_at"},
     "question": {"title", "text", "event", "series"},
-    "fact": {"event", "series"},
+    "fact": {"event", "series", "remind_at"},
     "person": {"role", "org", "why_they_matter", "side", "relation"},
 }
 

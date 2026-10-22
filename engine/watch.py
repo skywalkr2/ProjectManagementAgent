@@ -253,10 +253,17 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     read_before = any(
         r.data["outcome"] in ("ok", "baseline") for r in store.read().find("watch_run", {"source": source.id})
     )
-    taking_in = not read_before and source.first_run == "intake"
-    baseline = not read_before and source.first_run in ("baseline", "recent", "intake")
+    from engine import capture
+
+    # A capture folder holds the person's own words: everything in it is handed in, the first read included.
+    own = capture.is_capture(source)
+    taking_in = not read_before and not own and source.first_run == "intake"
+    baseline = not read_before and not own and source.first_run in ("baseline", "recent", "intake")
     recent = timedelta(hours=source.first_run_hours) if baseline and source.first_run == "recent" else None
-    result = _compare(ws, store, cfg, source, poll, now, baseline, recent, router)
+    if own:
+        result = capture.compare(ws, store, cfg, source, poll, now)
+    else:
+        result = _compare(ws, store, cfg, source, poll, now, baseline, recent, router)
     from engine import source_entries, source_intake
 
     source_entries.keep(store, cfg, source, poll.items, now)

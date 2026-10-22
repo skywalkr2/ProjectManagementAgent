@@ -306,3 +306,64 @@ def missed_note(ws: Workspace, store: Store, cfg: Config, *, text: str, now: dat
             ctx,
         )
     return request.id
+
+
+def own_words_in(
+    ws: Workspace,
+    store: Store,
+    cfg: Config,
+    *,
+    text: str,
+    title: str,
+    kind: str,
+    project: str | None = None,
+    data_level: str | None = None,
+    now: datetime | None = None,
+) -> HandedIn:
+    """Hand in words the person put there themselves (a file dropped in a capture folder, a voice note turned into
+    text): saved as a trusted source authored by the person, with the usual notes work queued about it under the usual
+    cost rules. Words that repeat what someone else said are marked as reported, as in any note, so what they say about
+    others is never the person's own word. Returns the request and its source."""
+    words = text.strip()
+    if not words:
+        raise IntakeError("Nothing to hand in: there are no words in it.")
+    now = now or datetime.now(UTC)
+    digest = hashlib.sha256(words.encode("utf-8")).hexdigest()
+    ws.sources_dir.mkdir(parents=True, exist_ok=True)
+    path = ws.sources_dir / f"{digest}.txt"
+    if not path.exists():
+        path.write_text(words, encoding="utf-8")
+    ctx = WriteContext(actor="pm", trust="trusted", op=f"capture.{kind}")
+    author = People(store, cfg).pm
+    reported = repeats_someone(words, cfg.language.reported_speech)
+    with store.transaction() as tx:
+        source = tx.create(
+            "source",
+            {
+                "received_at": now.isoformat(),
+                "kind": f"capture:{kind}",
+                "title": " ".join(title.split())[:120] or "Captured words",
+                "content_hash": digest,
+                "trust": "trusted",
+                "projects": [project] if project else [],
+                "sensitivity": data_level or "internal",
+                **({"author": author} if author else {}),
+                **({"reported": True} if reported else {}),
+            },
+            ctx,
+        )
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "source": source.id,
+                "origin": "pm",
+                "state": "queued",
+                "waiting": "With the assistant, starting now",
+                "created_at": now.isoformat(),
+                **({"sensitivity": data_level} if data_level else {}),
+                **({"project": project} if project else {}),
+            },
+            ctx,
+        )
+    return HandedIn(request.id, source.id)

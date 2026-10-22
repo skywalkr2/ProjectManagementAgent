@@ -90,6 +90,8 @@ class CliAgentAdapter:
     # ---- running ----------------------------------------------------------------------------------------------------
 
     def run(self, task: AiTask, model: str) -> AiResult:
+        if task.audio is not None:
+            raise AiError("other", "this adapter doesn't turn speech into text")
         answer_name = "answer.json" if task.output == "json" else "answer.md"
         with _scratch() as scratch:
             outbox = scratch / "outbox"

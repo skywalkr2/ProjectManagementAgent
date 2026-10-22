@@ -1,0 +1,30 @@
+id: renewal-date-is-a-dated-fact
+title: A renewal date an input states in full becomes a dated fact, and its reminder waits for the person's yes
+skills: [evidence]
+received: '2026-10-14'
+# The day is recorded as stated; the reminder is a suggestion held for the person to keep, and nothing else changes.
+pasted: |-
+  From: Tobias Wren
+
+  Your studio membership renews on March 3, 2027. The fee is collected that morning.
+expect:
+- op: fact
+  text_has:
+  - membership
+  - renew
+  "on": '2027-03-03'
+  on_kind: renewal
+- held: record.set
+  text_has:
+  - remind_at
+forbid:
+- op: action.close
+stub_answer:
+  summary: The studio membership renews on March 3, 2027.
+  ops:
+  - op: fact
+    text: The studio membership renews on March 3, 2027
+    "on": '2027-03-03'
+    on_kind: renewal
+    evidence:
+      quote: Your studio membership renews on March 3, 2027

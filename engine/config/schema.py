@@ -432,8 +432,16 @@ class FileLimits(ConfigModel):
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "audio/mp4",
+            "audio/mpeg",
+            "audio/wav",
+            "audio/ogg",
+            "audio/webm",
+            "audio/flac",
+            "audio/aac",
         ],
-        description="The kinds of file that may be added; a file kind can narrow this further.",
+        description="The kinds of file that may be added; a file kind can narrow this further. Sound files are voice "
+        "notes, which are handed in to be turned into text.",
         json_schema_extra={"choices": "media_types"},
     )
     read_max_mb: float = Field(
@@ -690,6 +698,12 @@ class ProviderSettings(ConfigModel):
         None,
         description="The content levels this account takes (those defined for AI); unset means it takes every level.",
     )
+    transcribe_models: list[str] = Field(
+        default_factory=list,
+        description="The models of this account that turn a voice note into text, by the short names under models "
+        "(or their ids). The app never assumes a model can; with none listed, and none the service says can, this "
+        "account is never given a voice note.",
+    )
     identity_level: list[DataLevel] | None = Field(
         None,
         description="For a command-line agent: the data levels the sign-in it runs as may see, such as a personal "
@@ -867,6 +881,12 @@ class Price(ConfigModel):
         None,
         ge=0,
         description="Price per million input tokens served from the provider's cache; empty means the input price.",
+    )
+    audio_per_minute: float | None = Field(
+        None,
+        ge=0,
+        description="Price in USD per minute of speech, for a model that turns a voice note into text; empty means "
+        "the price isn't known, and the run waits for your go first.",
     )
 
 
@@ -3181,6 +3201,12 @@ class ImportanceSettings(ConfigModel):
         le=1,
         description="How much it matters to look over what the assistant learned from your corrections.",
     )
+    area: float = Field(
+        0.3,
+        ge=0,
+        le=1,
+        description="How much it matters to be offered an area of your life for items that keep coming up.",
+    )
 
 
 class AttentionSettings(ConfigModel):
@@ -3207,6 +3233,75 @@ class AttentionSettings(ConfigModel):
         default_factory=ImportanceSettings,
         description="How much each kind of suggestion matters, from 0 to 1, which decides what is shown first and what "
         "waits when there are more than the day's cap.",
+    )
+
+
+class LeadDaysSettings(ConfigModel):
+    deadline: int = Field(
+        3, ge=0, le=365, description="How many days before a deadline the reminder offered for it falls."
+    )
+    renewal: int = Field(
+        14, ge=0, le=365, description="How many days before a renewal the reminder offered for it falls."
+    )
+    expiry: int = Field(
+        14, ge=0, le=365, description="How many days before something expires the reminder offered for it falls."
+    )
+    warranty: int = Field(
+        30, ge=0, le=365, description="How many days before a warranty ends the reminder offered for it falls."
+    )
+    bill: int = Field(
+        3,
+        ge=0,
+        le=365,
+        description="How many days before a bill is due the reminder offered for it falls. Bills are reminders only: "
+        "the app keeps no amount, balance or bank connection.",
+    )
+
+
+class DatesSettings(ConfigModel):
+    bookings_to_calendar: bool = Field(
+        True,
+        description="Whether a booking confirmation (a flight, a stay, a table, a rental car, a train, an event) that "
+        "carries its details as structured data becomes an entry in the app's own calendar, with the confirmation's "
+        "words as its evidence. Nothing is sent to any calendar service.",
+    )
+    suggest_reminders: bool = Field(
+        True,
+        description="Whether a deadline, renewal, expiry, warranty end or bill an input names gets a reminder offered "
+        "with it. The offer waits for your yes; the day it falls on is kept either way.",
+    )
+    lead_days: LeadDaysSettings = Field(
+        default_factory=LeadDaysSettings,
+        description="How long before each kind of day the offered reminder falls. It falls on the morning your "
+        "working hours start (set under Reminders); one that would already be past is not offered.",
+    )
+
+
+class AreasSettings(ConfigModel):
+    propose_after: int = Field(
+        4,
+        ge=0,
+        le=50,
+        description="How many items filed under your personal project must share a word before the assistant offers "
+        "an area of your life for them (health, home, money). Nothing is moved until you say yes. Zero never offers "
+        "one.",
+    )
+
+
+class CaptureSettings(ConfigModel):
+    audio_kbps: int = Field(
+        64,
+        ge=8,
+        le=1024,
+        description="How many thousand bits a second a voice note is assumed to take, to estimate its length, and "
+        "so what turning it into text costs, from the size of the file before anything is sent.",
+    )
+    max_audio_mb: float = Field(
+        25,
+        gt=0,
+        le=500,
+        description="The largest voice note, in megabytes, that is handed in; a larger file is named as too large "
+        "and not read.",
     )
 
 
@@ -3296,6 +3391,20 @@ class StewardFile(FileModel):
         default_factory=AttentionSettings,
         description="How much the app interrupts you with suggestions: quiet hours, the most in a day, and how "
         "important one must be to show.",
+    )
+    dates: DatesSettings = Field(
+        default_factory=DatesSettings,
+        description="What happens to the days that documents and bookings state: calendar entries from bookings, and "
+        "the reminders offered for deadlines, renewals, expiries, warranties and bills.",
+    )
+    areas: AreasSettings = Field(
+        default_factory=AreasSettings,
+        description="When the assistant offers an area of your life for items filed under your personal project.",
+    )
+    capture: CaptureSettings = Field(
+        default_factory=CaptureSettings,
+        description="How voice notes dropped in a capture folder or handed in are sized before they are turned into "
+        "text.",
     )
 
 

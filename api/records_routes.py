@@ -5,8 +5,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import Applied, ProjectKnowsView, SeriesPageView, UnfiledFile, UnfiledItem, UnfiledView
-from engine import project_knows, series_page
+from api.schemas import (
+    Applied,
+    AreaKeep,
+    AreaKept,
+    ProjectKnowsView,
+    SeriesPageView,
+    UnfiledFile,
+    UnfiledItem,
+    UnfiledView,
+)
+from engine import areas, project_knows, series_page
 from engine import unfiled as unfiled_module
 from engine.applier import apply_as_person
 from engine.config import Config
@@ -49,6 +58,17 @@ def build_records_router(cfg: Config, store: Store, events: Events, worker: Work
             raise HTTPException(status_code=409, detail=str(err)) from None
         events.changed()
         return Applied(changeset=cs_id)
+
+    @r.post("/areas/keep")
+    def keep_area(body: AreaKeep) -> AreaKept:
+        """Keep the area offered for a word: start it under the personal project and file the items that share the
+        word under it, as the person's own edits with Undo (two changes, filing first)."""
+        try:
+            kept = areas.keep(store, cfg, body.word)
+        except (StoreError, ValueError) as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return AreaKept(project=kept.project, filed=kept.filed, started=kept.started)
 
     @r.get("/series/{series_id}/page")
     def series(series_id: str) -> SeriesPageView:

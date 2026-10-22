@@ -14,6 +14,8 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine import (
+    areas,
+    dated_facts,
     day_capacity,
     day_clashes,
     endings,
@@ -250,6 +252,8 @@ class Line:
     needed_minutes: int | None = None
     other: str | None = None
     entry: str | None = None
+    #: For a date_reminder line: the dated fact it is about (`due` is its day, `state` its kind, `at` the reminder).
+    fact: str | None = None
     since: str = ""
 
 
@@ -870,6 +874,25 @@ def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[st
                 )
             )
 
+    # A dated fact the person asked to be reminded of (a renewal, an expiry, a warranty end, a bill): a line from its
+    # reminder until its day has passed.
+    for fact in dated_facts.coming(reader, cfg, now):
+        lines.append(
+            Line(
+                key=f"date_reminder:{fact.id}",
+                group="risk",
+                kind="date_reminder",
+                text=fact.data["text"],
+                subject=fact.data["text"],
+                project=fact.data.get("project"),
+                due=str(fact.data["on"]),
+                state=fact.data.get("on_kind"),
+                at=datetime.fromisoformat(str(fact.data["remind_at"])).astimezone(here).isoformat(),
+                fact=fact.id,
+                since=str(fact.data["remind_at"]),
+            )
+        )
+
     # Send and follow up: a reply the person owes, one line each, with the draft and its choices (design 6.35). The
     # oldest message comes first.
     for owed in reply_lines.plan(ws, reader):
@@ -1172,6 +1195,22 @@ def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[st
             )
         )
 
+    # An area of life offered for items under the personal project that share a word: one line each, a suggestion the
+    # person keeps or puts off.
+    for offer in areas.proposals(reader, cfg):
+        lines.append(
+            Line(
+                key=f"area:{offer.word}",
+                group="review",
+                kind="area",
+                text=offer.name,
+                subject=offer.word,
+                count=len(offer.items),
+                names=[text for *_, text in offer.items[:3]],
+                since=offer.word,
+            )
+        )
+
     # Send and follow up: who has something to send, then who hasn't answered for a while.
     for s in sections(store, cfg, today, covered):
         if s.is_pm:
@@ -1421,6 +1460,7 @@ _KIND_ORDER = {
     "promise": 2,
     "reminder": 0,
     "reminder_digest": 1,
+    "date_reminder": 1,
     "reply": -1,
     "sent_check": 2,
     "since_yesterday": 3,
@@ -1442,6 +1482,7 @@ _KIND_ORDER = {
     "learned": 2,
     "catch_up": 3,
     "unfiled": 4,
+    "area": 4.5,
     "stale": 5,
     "moved": 6,
     "send": 0,

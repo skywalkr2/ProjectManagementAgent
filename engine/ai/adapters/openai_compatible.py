@@ -34,6 +34,8 @@ class OpenAICompatibleAdapter:
         )
 
     def run(self, task: AiTask, model: str) -> AiResult:
+        if task.audio is not None:
+            return self.transcribe(task, model)
         body: dict[str, Any] = {
             "model": model,
             "messages": [
@@ -86,6 +88,33 @@ class OpenAICompatibleAdapter:
     def identity(self) -> None:
         """Not applicable: the account is a key, not a sign-in of a person."""
         return None
+
+    def transcribe(self, task: AiTask, model: str) -> AiResult:
+        """Turn the task's voice note into text through the endpoint's speech-to-text path. Only called for a model the
+        account lists as taking speech (`transcribe_models`); the answer is the words spoken."""
+        audio = task.audio
+        assert audio is not None
+        started = time.monotonic()
+        try:
+            response = self._client.post(
+                "/audio/transcriptions",
+                data={"model": model, "response_format": "json"},
+                files={"file": (audio.name, audio.data, audio.media_type)},
+            )
+        except httpx.TimeoutException as err:
+            raise AiError("timeout", str(err)) from None
+        except httpx.TransportError as err:
+            raise transport_error(err, self.settings.base_url) from None
+        seconds = time.monotonic() - started
+        if response.status_code >= 400:
+            raise classify_http_error(response, self.settings)
+        try:
+            text = response.json()["text"]
+        except (ValueError, KeyError, TypeError):
+            raise AiError("invalid_output", "the response wasn't in the expected format") from None
+        if not isinstance(text, str):
+            raise AiError("invalid_output", "the response wasn't in the expected format")
+        return AiResult(text=text.strip(), model_served=model, seconds=seconds)
 
     def catalog(self) -> dict[str, ModelInfo]:
         """The account's model list, with context size and prices where the endpoint publishes them; empty when it

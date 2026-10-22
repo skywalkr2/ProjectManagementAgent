@@ -639,6 +639,12 @@ export function useLineTitle(): (line: QueueLine) => string {
         return reminderTitle(line, t);
       case "reminder_digest":
         return digestTitle(line, t);
+      case "date_reminder": {
+        const key = `queue.date_reminder.${line.state ?? ""}`;
+        return t(has(key) ? key : "queue.date_reminder", { text: line.text ?? "", date: day(line.due) });
+      }
+      case "area":
+        return tn("queue.area", line.count, { name: line.text ?? "" });
       case "reply":
         return replyTitle(line, t);
       case "sent_check":
@@ -702,6 +708,17 @@ function QueueRow(props: {
   const sentRow = useSentCheckChoices(line);
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null);
   const notNow = useNotNow();
+  const keepArea = () =>
+    void act(
+      () => api.keepArea(line.subject ?? ""),
+      (kept) => ({
+        message: tn("queue.area.kept", line.count, { name: line.text ?? "" }),
+        undo: async () => {
+          await api.undo(kept.filed);
+          await api.undo(kept.started);
+        },
+      }),
+    );
   const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
   // The question of what happened at a meeting opens its box under the row; the cursor goes back to the row when it closes.
   const [capturing, setCapturing] = useState(false);
@@ -968,6 +985,22 @@ function QueueRow(props: {
         };
       case "reminder_digest":
         return { pill: t("queue.pill.reminder"), tone: "neutral", meta: undefined, primary: null, menu: [] };
+      case "date_reminder":
+        return {
+          pill: t("queue.pill.date_reminder"),
+          tone: "warn",
+          meta: meta(t("queue.date_reminder.on", { date: day(line.due) })),
+          primary: line.fact ? { label: t("queue.act.open_fact"), run: () => props.handlers.onOpenRecord?.("fact", line.fact ?? "") } : null,
+          menu: [],
+        };
+      case "area":
+        return {
+          pill: t("queue.pill.area"),
+          tone: "neutral",
+          meta: meta((line.names ?? []).join("; ")),
+          primary: { label: t("queue.area.keep", { name: line.text ?? "" }), run: keepArea },
+          menu: [],
+        };
       case "reply":
         return { pill: t("queue.pill.reply"), tone: "warn", meta: meta(), primary: replyRow.primary, menu: replyRow.menu };
       case "sent_check":

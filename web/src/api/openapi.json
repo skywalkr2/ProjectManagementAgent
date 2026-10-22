@@ -4335,6 +4335,45 @@
         "title": "AppliedEntryView",
         "type": "object"
       },
+      "AreaKeep": {
+        "properties": {
+          "word": {
+            "description": "The word the offered area is for (the line's `subject`).",
+            "minLength": 1,
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word"
+        ],
+        "title": "AreaKeep",
+        "type": "object"
+      },
+      "AreaKept": {
+        "description": "What keeping an offered area did: the area it started, and the two changes (filing, then starting) that Undo\ntakes back in that order.",
+        "properties": {
+          "filed": {
+            "title": "Filed",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "started": {
+            "title": "Started",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "filed",
+          "started"
+        ],
+        "title": "AreaKept",
+        "type": "object"
+      },
       "ArrivedView": {
         "description": "A message from a watched mailbox, received within the configured hours.",
         "properties": {
@@ -9619,7 +9658,7 @@
         "type": "object"
       },
       "HeldAsk": {
-        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered, or keep a guess at how long it takes (`effort`, with the minutes\nin `value`); `ending`: the words said only that it is closed, so the person\nis asked whether it is done by its owners or no longer needed), `item` the words of what it is about, `value` and\n`from_value` the new and the present date, `to_name` the person it would go to, `told` the people a drop would\nleave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action\nalso carries what the input says happened: the action's id in `record`, its `owners` in the owner format,\n`reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier words\n(`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the title\nand the answers from these.",
+        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered, or keep a guess at how long it takes (`effort`, with the minutes\nin `value`), or keep a reminder proposed for a dated fact or a to-do (`remind`, with the moment in `value`, the day\nit is for in `day` and the reminder it has now in `from_value`); `ending`: the words said only that it is closed,\nso the person is asked whether it is done by its owners or no longer needed), `item` the words of what it is about,\n`value` and `from_value` the new and the present date, `to_name` the person it would go to, `told` the people a\ndrop would leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of\nan action also carries what the input says happened: the action's id in `record`, its `owners` in the owner\nformat, `reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier\nwords (`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the\ntitle and the answers from these.",
         "properties": {
           "ask": {
             "enum": [
@@ -9631,10 +9670,22 @@
               "move",
               "part",
               "ending",
-              "effort"
+              "effort",
+              "remind"
             ],
             "title": "Ask",
             "type": "string"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
           },
           "delivered": {
             "anyOf": [
@@ -16109,6 +16160,12 @@
       "ProjectKnowsView": {
         "description": "What the assistant knows about one project (design 7.18), for its page.",
         "properties": {
+          "area": {
+            "default": false,
+            "description": "Whether the project is an area of life, which has no end day.",
+            "title": "Area",
+            "type": "boolean"
+          },
           "facts": {
             "description": "Its facts that nothing replaces, key ones first, then newest.",
             "items": {
@@ -16124,6 +16181,10 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "reading": {
+            "$ref": "#/components/schemas/ProjectReading",
+            "description": "Which accounts read the project's material and where it goes."
           },
           "routing": {
             "description": "Who answers what, for work on it.",
@@ -16165,7 +16226,8 @@
           "facts",
           "terms",
           "routing",
-          "unknown"
+          "unknown",
+          "reading"
         ],
         "title": "ProjectKnowsView",
         "type": "object"
@@ -16329,6 +16391,67 @@
           }
         },
         "title": "ProjectPatch",
+        "type": "object"
+      },
+      "ProjectReader": {
+        "properties": {
+          "account": {
+            "description": "The account's short name.",
+            "title": "Account",
+            "type": "string"
+          },
+          "leaves": {
+            "description": "Whether reading the material sends it away from this computer to reach it.",
+            "title": "Leaves",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name the person gave the account, as it is shown.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account",
+          "name",
+          "leaves"
+        ],
+        "title": "ProjectReader",
+        "type": "object"
+      },
+      "ProjectReading": {
+        "description": "Who may read a project's material (design 6.32): `state` is none (no account may), local (each that may runs\non this computer) or away (at least one sends what it reads away from this computer). `levels` are the content\nlevels the material carries, its own and those of the projects above it.",
+        "properties": {
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "readers": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectReader"
+            },
+            "title": "Readers",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "none",
+              "local",
+              "away"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "levels",
+          "readers"
+        ],
+        "title": "ProjectReading",
         "type": "object"
       },
       "ProjectRoleIn": {
@@ -18430,6 +18553,18 @@
             "description": "For a learned line: how many proposals from inputs expired unreviewed since the person last looked at what was learned.",
             "title": "Expired"
           },
+          "fact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a date_reminder line: the id of the dated fact it is about; `due` is its day, `state` its kind (deadline, renewal, expiry, warranty or bill), `at` the moment of the reminder and `text` the fact.",
+            "title": "Fact"
+          },
           "file_kind": {
             "anyOf": [
               {
@@ -18521,7 +18656,9 @@
               "away",
               "meeting_prep",
               "meeting_capture",
-              "quiet_promise"
+              "quiet_promise",
+              "date_reminder",
+              "area"
             ],
             "title": "Kind",
             "type": "string"
@@ -18984,7 +19121,12 @@
                   "to",
                   "from",
                   "overlap",
-                  "travel"
+                  "travel",
+                  "deadline",
+                  "renewal",
+                  "expiry",
+                  "warranty",
+                  "bill"
                 ],
                 "type": "string"
               },
@@ -18992,7 +19134,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a clash line: overlap (the two meetings overlap) or travel (they are in different places with less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person).",
+            "description": "For a date_reminder line: the kind of day, deadline, renewal, expiry, warranty or bill. For a clash line: overlap (the two meetings overlap) or travel (they are in different places with less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person).",
             "title": "State"
           },
           "subject": {
@@ -27927,6 +28069,45 @@
         "summary": "Ai Test"
       }
     },
+    "/api/areas/keep": {
+      "post": {
+        "description": "Keep the area offered for a word: start it under the personal project and file the items that share the\nword under it, as the person's own edits with Undo (two changes, filing first).",
+        "operationId": "keep_area_api_areas_keep_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AreaKeep"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaKept"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Keep Area"
+      }
+    },
     "/api/ask": {
       "post": {
         "operationId": "ask_api_ask_post",
@@ -30123,6 +30304,83 @@
           }
         },
         "summary": "Handin"
+      }
+    },
+    "/api/handin/audio": {
+      "post": {
+        "description": "Hand in a voice note: the request body is the sound, its Content-Type the type. It is kept as the person's\nown upload and a request to turn it into text is queued; nothing is sent anywhere until it runs, and it waits\nfor the person's go under the usual cost rules. Refused in plain words when the file isn't sound or is too\nlarge.",
+        "operationId": "handin_audio_api_handin_audio_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          },
+          {
+            "in": "query",
+            "name": "data_level",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "internal",
+                    "restricted"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Data Level"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Handed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handin Audio"
       }
     },
     "/api/health": {

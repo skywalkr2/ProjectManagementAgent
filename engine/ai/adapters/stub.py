@@ -31,6 +31,8 @@ class StubAdapter:
     def run(self, task: AiTask, model: str) -> AiResult:
         if _responder is not None:
             return AiResult(text=_responder(task), model_served="stub", seconds=0.0)
+        if task.audio is not None:
+            return AiResult(text=f"Stand-in transcript of {task.audio.name}.", model_served="stub", seconds=0.0)
         first = _first_line(task.request)
         if task.output == "text":
             return AiResult(

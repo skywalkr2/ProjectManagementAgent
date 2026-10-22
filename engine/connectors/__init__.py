@@ -384,6 +384,21 @@ class FolderSettings(BaseModel):
     )
     subfolders: bool = Field(True, description="Read the folders inside it too.")
     max_kb: int = Field(512, ge=1, description="Files larger than this are listed as too large and not read.")
+    max_audio_mb: float = Field(
+        25, gt=0, description="Voice notes (sound files) larger than this, in megabytes, are listed as too large."
+    )
+
+
+class CaptureFolderSettings(FolderSettings):
+    patterns: list[str] = Field(
+        default_factory=lambda: ["*.txt", "*.md", "*.m4a", "*.mp3", "*.wav", "*.ogg", "*.webm", "*.flac", "*.aac"],
+        description="Which files to take in, as name patterns. Notes and documents are read as your own words; a "
+        "sound file is a voice note, turned into text by an account that takes speech.",
+    )
+
+
+#: The connector whose items are the person's own: what lands in a capture folder is handed in as their words.
+CAPTURE = "capture"
 
 
 def _read_folder(settings: FolderSettings, state: dict[str, Any], context: ConnectorContext) -> Poll:
@@ -402,12 +417,34 @@ def _read_folder(settings: FolderSettings, state: dict[str, Any], context: Conne
             key = path.relative_to(folder).as_posix()
             stat = path.stat()
             modified = datetime.fromtimestamp(stat.st_mtime, UTC).isoformat()
-            if stat.st_size > settings.max_kb * 1024:
+            media = media_type_of(path.name, None)
+            sound = media.startswith("audio/")
+            if sound and stat.st_size > settings.max_audio_mb * 1024 * 1024:
+                items.append(
+                    SourceItem(
+                        key, path.name, f"(not read: larger than {settings.max_audio_mb:g} MB)", changed_at=modified
+                    )
+                )
+                continue
+            if not sound and stat.st_size > settings.max_kb * 1024:
                 items.append(
                     SourceItem(key, path.name, f"(not read: larger than {settings.max_kb} KB)", changed_at=modified)
                 )
                 continue
-            media = media_type_of(path.name, None)
+            if media.startswith("audio/"):
+                # A voice note: handed over as bytes. It is not text, so it is turned into words by an account that
+                # takes speech when it is handed in, never read here.
+                try:
+                    data = path.read_bytes()
+                except OSError:
+                    items.append(
+                        SourceItem(key, path.name, "(not read: the file can't be opened)", changed_at=modified)
+                    )
+                    continue
+                items.append(
+                    SourceItem(key, path.name, "", changed_at=modified, files=(ItemFile(path.name, media, data),))
+                )
+                continue
             reader = reader_for(media)
             if reader is not None and reader.kind != "text":
                 # A document, spreadsheet, presentation or PDF: handed over as bytes, read by the core.
@@ -482,6 +519,7 @@ def _core() -> dict[str, Connector]:
 
     return {
         "folder": Connector("folder", "A folder", FolderSettings, _read_folder),
+        CAPTURE: Connector(CAPTURE, "A capture folder", CaptureFolderSettings, _read_folder),
         "feed": Connector("feed", "A news feed (RSS or Atom)", FeedSettings, read_feed, network=True),
         "calendar": Connector(
             "calendar", "A calendar (its private link)", CalendarSettings, read_calendar, True, reads="calendar"

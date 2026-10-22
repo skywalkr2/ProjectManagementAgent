@@ -20,6 +20,8 @@ const knows = (over: Partial<View> = {}): View => ({
   terms: [],
   routing: [],
   unknown: [],
+  area: false,
+  reading: { state: "none", levels: [], readers: [] },
   ...over,
 });
 
@@ -63,7 +65,7 @@ test("a section for each part, headed by what the assistant knows, each row one 
   expect(await screen.findByRole("heading", { level: 2, name: "What Helper knows" })).toBeInTheDocument();
   await section("Sources");
   const titles = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-  expect(titles).toEqual(["Sources", "Facts", "Terms used here", "Who answers what", "Still unknown"]);
+  expect(titles).toEqual(["Who reads it", "Sources", "Facts", "Terms used here", "Who answers what", "Still unknown"]);
 });
 
 test("each source says how many inputs it gave and the last one, which opens", async () => {
@@ -171,4 +173,26 @@ test("a load that fails says so with Try again", async () => {
   fail = false;
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await section("Sources")).toBeInTheDocument();
+});
+
+test("the page says in words which accounts read the project and whether anything leaves the computer", async () => {
+  show(knows({ area: true, reading: { state: "local", levels: ["private"], readers: [{ account: "localbox", name: "Local server", leaves: false }] } }));
+  const part = await section("Who reads it");
+  expect(within(part).getByText("An area of your life: it never finishes, so it has no end day and is never behind.")).toBeInTheDocument();
+  expect(within(part).getByText("Read by Local server, which runs on this computer: nothing from it leaves this computer.")).toBeInTheDocument();
+  expect(within(part).getByText("Its material is marked private.")).toBeInTheDocument();
+  expect(within(part).getByText("Runs on this computer")).toBeInTheDocument();
+});
+
+test("an account that sends what it reads away is named as such, and no account at all says nothing is sent", async () => {
+  show(knows({ reading: { state: "away", levels: [], readers: [{ account: "hosted", name: "Hosted service", leaves: true }] } }));
+  const part = await section("Who reads it");
+  expect(within(part).getByText("Read by Hosted service. What it reads is sent away from this computer to reach it.")).toBeInTheDocument();
+  expect(within(part).getByText("Sent away from this computer")).toBeInTheDocument();
+});
+
+test("when no account may read it, the page says nothing from it is sent anywhere", async () => {
+  show(knows({ reading: { state: "none", levels: ["private"], readers: [] } }));
+  const part = await section("Who reads it");
+  expect(within(part).getByText("No AI account of yours may read this, so nothing from it is sent anywhere.")).toBeInTheDocument();
 });

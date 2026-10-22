@@ -932,6 +932,13 @@ def _fact_problem(op: FactOp, ctx: Context) -> str | None:
     """Why a fact's `basis`, `said_by` and `reaches_children` don't fit with the rest, or None."""
     if op.reaches_children and not op.project:
         return "a fact that reaches the projects inside one needs the project it is about"
+    if (op.on is None) != (op.on_kind is None):
+        return "a dated fact needs both on (the day) and on_kind (what kind of day it is)"
+    if op.on is not None:
+        from engine.dated_facts import states_the_day
+
+        if not states_the_day(ctx.cfg, op.evidence.quote, op.on):
+            return f"the quote doesn't state {op.on.isoformat()} as a full date; quote the words that give the day"
     if op.said_by is None:
         return None
     if op.basis != "said":
@@ -1866,6 +1873,10 @@ def apply_changeset(
                 if outcome.status == "held" and isinstance(op, ENDING_OPS):
                     outcome.reporter = _reporter(ctx)
                 outcomes.append(outcome)
+                if outcome.status == "applied":
+                    proposed = _proposed_reminder(tx, op, outcome.records, ctx, now)
+                    if proposed is not None:
+                        cs.ops.append(proposed)  # read as the next op: a reminder waits for the person's yes
             status = "held" if any(o.status == "held" for o in outcomes) else "applied"
             if whole:
                 status = "rejected"
@@ -1967,6 +1978,39 @@ def _stands_alone(text: str, ctx: Context) -> bool:
     # Or the last word, when it stands where that word would ("ask the editor about it"); one that ends a clause about
     # something already named ("unless she withdraws it") is not that.
     return not (words[-1] in single and (len(words) - 2 == 0 or words[-2] in leads))
+
+
+def _proposed_reminder(
+    tx: Tx, op: OpModel, records: list[dict[str, str]], ctx: Context, now: datetime
+) -> OpModel | None:
+    """The `record.set` that proposes a reminder for the dated fact or the to-do an op just made (`engine.dated_facts`),
+    or None. It is added to the changeset as one more op, which waits for the person's yes like any proposed
+    reminder; the person's own changes never get one."""
+    if ctx.actor == "pm" or not records:
+        return None
+    from engine import dated_facts
+
+    made = records[0]["id"]
+    found: dict[str, Any] | None = None
+    if isinstance(op, FactOp) and op.on is not None and records[0]["kind"] == "fact":
+        stored = tx.get("fact", made)
+        if stored is not None:
+            found = dated_facts.fact_reminder(
+                ctx.cfg, {**stored.data, "quote": op.evidence.quote, "on": op.on}, made, now
+            )
+    elif isinstance(op, ActionAddOp) and records[0]["kind"] == "action":
+        stored = tx.get("action", made)
+        due = stored.data.get("due") if stored is not None else None
+        if stored is not None and due:
+            found = dated_facts.action_reminder(
+                ctx.cfg,
+                ctx.inputs.raw_input,
+                made,
+                date.fromisoformat(str(due)),
+                stored.data.get("remind_at"),
+                now,
+            )
+    return RecordSetOp.model_validate(found) if found is not None else None
 
 
 def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
@@ -3063,7 +3107,13 @@ def _apply_op(
         _record_draft_correction(tx, ctx, pending, "dropped", None)
         return [{"kind": "text_version", "id": op.version}], None
     if isinstance(op, ProjectAddOp):
-        data = {"name": op.name.strip(), "summary": op.summary, "parent": op.parent, "language": op.language}
+        data = {
+            "name": op.name.strip(),
+            "summary": op.summary,
+            "parent": op.parent,
+            "language": op.language,
+            "area": op.area,
+        }
         if op.status is not None:
             data["status"] = op.status
         if op.link:
@@ -3171,6 +3221,8 @@ def _apply_op(
             "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
             "series": op.series,
             "reaches_children": op.reaches_children,
+            "on": op.on.isoformat() if op.on else None,
+            "on_kind": op.on_kind,
         }
         made("fact", tx.create("fact", data, w).id)
     elif isinstance(op, EventAddOp):

@@ -19,7 +19,8 @@ for a promise (design 6.33), `promised_to` (the people it is owed to), `due_word
 `on_hold` (true when it starts on hold, waiting for those words, as a condition that waits for something does; false
 when it doesn't).
 An expected `action.move`, `action.part` or `action.news` names the action's `id`, and may name `due_words` (a move) or
-`text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title); an
+`text_has` (words in the op's own fields), and an expected `question.add` may name `text_has` (words in its title), and
+an expected `fact` may name `as_of`, or `on` and `on_kind` (the day of a dated fact and what kind of day it is); an
 ending or a repeat that waits only for the person's Keep counts as made, for what a case expects and for what it
 forbids. A case may name the `project` its input is about (as the person does when handing it in), or give `watched`
 (title, change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may
@@ -754,6 +755,8 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             f
             and _has_words(f["text"], e.get("text_has", []))
             and ("as_of" not in e or f.get("as_of") == str(e["as_of"]))
+            and ("on" not in e or f.get("on") == str(e["on"]))
+            and ("on_kind" not in e or f.get("on_kind") == e["on_kind"])
         )
     if op == "routing.add":
         entry = _record(store, o, "routing_entry")

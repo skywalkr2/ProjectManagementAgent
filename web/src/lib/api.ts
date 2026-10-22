@@ -154,6 +154,17 @@ export const api = {
     call<S["Ok"]>("POST", `requests/${id(request)}/go`, { read_version: readVersion }),
 
   handIn: (body: S["HandIn"]) => call<S["Handed"]>("POST", "handin", body),
+  /** Hand in a voice note: the sound itself, kept and queued to be turned into text (nothing is sent until it runs). */
+  handInAudio: (file: Blob & { name: string }, project?: string) => {
+    const query = new URLSearchParams({ name: file.name });
+    if (project) query.set("project", project);
+    return send<S["Handed"]>("POST", `handin/audio?${query.toString()}`, {
+      headers: { "content-type": file.type || "application/octet-stream" },
+      body: file,
+    });
+  },
+  /** Keep the area offered for a word: start it and file the items that share the word under it. */
+  keepArea: (word: string) => call<S["AreaKept"]>("POST", "areas/keep", { word }),
   looksGood: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/looks-good`),
   reopen: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/reopen`),
   undo: (cs: string, ops?: number[]) => call<S["UndoReport"]>("POST", `changesets/${id(cs)}/undo`, { ops: ops ?? null }),

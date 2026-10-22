@@ -32,6 +32,19 @@ EXTENSIONS = {
     ".html": "text/html",
     ".htm": "text/html",
 }
+#: What a sound file's ending says its type is. Sound is not read as text; it is turned into text by an account that
+#: takes speech (`engine/transcribe.py`), so these are for naming a file's type only.
+AUDIO_EXTENSIONS = {
+    ".m4a": "audio/mp4",
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".ogg": "audio/ogg",
+    ".oga": "audio/ogg",
+    ".opus": "audio/ogg",
+    ".webm": "audio/webm",
+    ".flac": "audio/flac",
+    ".aac": "audio/aac",
+}
 GENERIC = ("", "application/octet-stream", "binary/octet-stream", "application/x-download")
 
 #: What a reader says when a file has no text in it, by kind.
@@ -106,7 +119,8 @@ def media_type_of(name: str, declared: str | None) -> str:
     or generic, the one its name's ending says (the declared one stays when the ending says nothing)."""
     declared = (declared or "").split(";", 1)[0].strip().lower()
     if declared in GENERIC:
-        return EXTENSIONS.get(posixpath.splitext(name)[1].lower(), declared)
+        ending = posixpath.splitext(name)[1].lower()
+        return EXTENSIONS.get(ending) or AUDIO_EXTENSIONS.get(ending) or declared
     return declared
 
 

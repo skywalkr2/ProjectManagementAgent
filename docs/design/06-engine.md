@@ -3450,6 +3450,49 @@ people and details, and never acts in their name without their yes on the exact 
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank
   connection); areas of life with their own data level and allowed accounts; capture from anywhere, voice included
   through an adapter capability.
+  - **Built (S4; change log 194):**
+    - *Bookings.* An input that carries a booking as structured data (`engine/bookings.py`) makes the app's own calendar
+      entry by rules, never an act and never a message to a calendar service: titled by its kind and place (the words
+      from the wording sheet), with its start and end as stated (a start with no zone stays in the person's), and with
+      the confirmation's code, provider or place as its evidence. A booking with no start, or none of those words in the
+      input, makes no entry and is listed on the changeset as what the run lacked. The assistant's own entry for the same
+      start is dropped, and an entry with the same title and start is never made twice. `steward.dates.bookings_to_calendar`
+      turns it off. `tests/test_booking_entries.py`.
+    - *Dated facts.* A deadline, renewal, expiry, warranty end or bill an input states with a full date is a `fact`
+      with `on` (the day) and `on_kind`; the applier refuses it unless its quote states that day as a full date
+      (`engine/document_dates.explicit_dates`), so nothing is worked out or guessed. A bill is a reminder only: no
+      amount, balance or account is kept. One prompt line asks for it, and each fictional workspace has an evaluation
+      case (`renewal-date-is-a-dated-fact`).
+    - *The proposed reminder.* The rules add one `record.set` of `remind_at` to the changeset, held because only the
+      person sets a reminder (a person-only field, as an effort is): at the morning the working hours start,
+      `steward.dates.lead_days.<kind>` days before the day (the working day before when that one is not a working day;
+      the next working morning when it has passed and the day is still ahead; none for a day that is today or past, and
+      none when `steward.dates.suggest_reminders` is off). The same is added for a to-do whose due day is a day its
+      input labels in a sentence the rules are sure of (`engine/document_dates.find_dates`). The person's own changes
+      get none. It reaches them as the held question "Remind you about '<item>' before <day>?" (`held_ask` `remind`);
+      keeping it sets the fact's or the to-do's `remind_at`, leaving it is the `held_declined` signal. A kept fact
+      reminder is the Today line `date_reminder` from its moment until its day has passed; a to-do's is the usual
+      reminder line. `tests/test_dated_facts.py`.
+    - *Capture.* A source of the core's `capture` connector is a folder whose contents are the person's own: a note or a
+      document is handed in like a note they type (a trusted source authored by them, marked reported when it repeats
+      what someone else said), the first read included, with nothing triaged or set aside. A sound file there, or dropped
+      on the Hand in drawer, is a voice note: a `file` kept as the person's own upload and a `transcribe` request about
+      it. The request is estimated from the file's size (`steward.capture.audio_kbps`) and the model's price per minute,
+      held for the person's go above the configured amount or when the price is unknown and unpriced runs need a go,
+      recorded as a run, and stopped with "This account can't transcribe" when no account is listed as taking speech.
+      Its words become a trusted source of the person's own and queue the usual notes work. Speech-to-text takes only
+      sound and returns only words, so it has no knowledge section; the notes work that follows has it.
+      `engine/capture.py`, `engine/transcribe.py`, `tests/test_capture.py`.
+    - *The adapter capability.* `AiTask.audio` carries the sound; `ModelInfo.transcribes` says a model takes speech and
+      is set only by a service's own listing or by the account's `transcribe_models`, never from a model's name or its
+      vendor; the router gives a voice note only to such accounts (`CannotTranscribe` otherwise). The OpenAI-compatible
+      adapter sends it to the speech path of the endpoint; the native and command-line adapters refuse it.
+    - *The phone.* The Hand in sheet from the + already is the phone's capture box (7.6), and it takes a dropped voice
+      note too.
+  - **Left:** the forward-to address and the global shortcut wait for phase I; a booking in mail read through a connector
+    (connectors hand over plain text, so only markup in a pasted or dropped message is read until one carries it); dated
+    facts by rules alone when the assistant misses one; a fact's reminder delivered through the person's own calendar or
+    mail; speech-to-text on the native and command-line adapters.
 - **Manner:** suggestions on patterns, each a line with choices recorded as signals; talking to the assistant as the way
   to ask for anything, every proposed change kept or dropped inline.
 - **Promises come first** (2026-10-17): dependable memory for commitments is the reason to choose the product. A promise
@@ -3512,6 +3555,23 @@ project, so they would otherwise sit unfiled, and "Set aside: personal" (6.5) me
 - **Privacy per area** with the project's content levels (3.3): an area such as health or money can be more private than
   the rest, and its material then reaches only the accounts allowed for that level; Personal itself follows the
   person's general setting. Personal and everything under it stay out of work reports and status pages.
+  - **Built (S4; change log 194):** `Project.area` marks an area (it has no target day, so it is never behind, and the
+    unknown fields on its page leave the target out); `project.add` takes `area`. A project's page says in words which
+    accounts may read its material (the content levels of the project and of every project above it, matched with what
+    each account takes), where each runs and whether reading it sends anything away from the computer, or that no
+    account may read it, so nothing from it is sent anywhere (`engine/areas.reading`, `ProjectKnowsView.reading`).
+    *The reach:* a packet for an input or a draft about a project in an area leaves out the facts, lessons, glossary and
+    routing entries scoped to another area, and the open actions, open questions and projects of every project outside
+    the area, the projects inside it and the projects above it (`engine/areas.reach`, used by `_learned`, the notes
+    packet and the action-work packet). A record that names no project is not an area's and is not left out. The
+    meeting-prep and people-memory drafts do not read it yet. `tests/test_areas.py`.
+  - **Offering an area:** when `steward.areas.propose_after` (4; zero is off) open items filed under the Personal project
+    itself share a word (matched whole, stems folded, never a word the language uses every day, never one a project
+    already names), one Today suggestion offers a new area named for the word ("File 4 items under a new area,
+    Dentist?"). It is a suggestion line like the others: its importance is `steward.attention.importance.area`, it can be
+    put off with Not now, and what waits for the brief is one line there. Start makes the area under Personal and files
+    the items as the person's own `record.edit`s, so each move is a correction the assistant learns from, in two changes
+    that Undo takes back together. Nothing is moved before the yes. `tests/test_areas.py`.
 - **One Today:** a bill due Friday sits beside a work deadline, tagged by its area.
 
 ### Dependability, from the designer's answers (2026-10-19)

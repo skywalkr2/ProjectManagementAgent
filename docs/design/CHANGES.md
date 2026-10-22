@@ -1027,6 +1027,34 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 194. Dates in documents, areas of life and capture from anywhere (2026-10-22; S4, built in part)
+
+- **Design 6.32 (What arrives; Personal life), 4.0, 6.16 and 7.14:** a booking an input carries as structured data becomes
+  the app's own calendar entry by rules, with the confirmation's words as evidence. A deadline, renewal, expiry, warranty
+  end or bill stated with a full date is a fact carrying its day and kind (refused unless its quote states that day), and
+  the rules propose a reminder for it that waits for the person's yes; the same for a to-do due on a labeled day. A kept
+  reminder of a fact is a Today line until its day has passed. An area of life is a project with no end day; a draft or an
+  input about a project in an area leaves out what belongs to every other area; a project's page says which accounts read
+  it and whether anything leaves the computer; items under Personal that share a word get one offered area, kept with one
+  press and Undo. A capture folder hands in what lands there as the person's own words, and a voice note is turned into
+  text by an account that is listed as taking speech, estimated and held like other AI work. Left (named in the design): the
+  forward-to address and the global shortcut (phase I), a booking read through a connector, dated facts by rules alone, a
+  fact's reminder through the person's own calendar or mail, speech-to-text on the native and command-line adapters, the
+  meeting-prep and people-memory drafts reading the area reach.
+- **New:** `engine/booking_entries.py`, `engine/dated_facts.py`, `engine/areas.py`, `engine/capture.py`,
+  `engine/transcribe.py`; fact fields `on`, `on_kind` and `remind_at`; `remind_at` is person-only on facts and actions and
+  settable by `record.set` (held); `fact` takes `on` and `on_kind`; project field `area` and `project.add` takes `area`;
+  held question kind `remind`; Today line kinds `date_reminder` and `area` (new field `fact` on the line, new `state`
+  values for the kind of day); core task kind `transcribe`; `AiTask.audio`, `ModelInfo.transcribes` and
+  `ModelInfo.audio_per_minute`; account setting `transcribe_models` and price `audio_per_minute`; the core connector
+  `capture`; sound types in the accepted file types; routes `POST /api/handin/audio` and `POST /api/areas/keep`;
+  `ProjectKnowsView` gains `area` and `reading`; settings `steward.dates.*` (bookings_to_calendar, suggest_reminders,
+  lead_days), `steward.areas.propose_after`, `steward.capture.*` (audio_kbps, max_audio_mb) and
+  `steward.attention.importance.area`, each with a description, a default and demo values in both workspaces.
+- **Built:** `tests/test_booking_entries.py`, `tests/test_dated_facts.py`, `tests/test_areas.py`, `tests/test_capture.py`,
+  `web/src/components/TodayArrives.test.tsx`, `web/src/components/ProjectKnows.test.tsx`,
+  `web/src/lib/queue-words.test.ts`.
+
 ## 192. The capacity check, clashes from today on, the attention budget and the reminder offer (2026-10-22; S2, built)
 
 - **Design 6.32 (Time) and 7.7:** an optional effort on a to-do (minutes), set by the person in the edit form and in Add a

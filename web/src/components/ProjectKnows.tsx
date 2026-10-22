@@ -31,6 +31,32 @@ function Part(props: { id: string; title: string; empty: string; count: number; 
   );
 }
 
+/** Which accounts may read the project's material, and whether reading it sends anything away from this computer (design
+ * 6.32). It says so in words, and each account says where it runs, so nothing rests on a color. */
+function Reading(props: { reading: S["ProjectReading"]; area: boolean }) {
+  const { t } = useWords();
+  const { reading } = props;
+  const names = reading.readers.map((r) => r.name).join(", ");
+  const summary = reading.state === "none" ? t("knows.reading.none") : t(reading.state === "local" ? "knows.reading.local" : "knows.reading.away", { names });
+  return (
+    <section aria-labelledby="knows-reading" className="record-section" data-reading={reading.state}>
+      <div className="heading">
+        <h3 id="knows-reading">{t("knows.reading")}</h3>
+      </div>
+      {props.area && <p className="hint">{t("knows.area")}</p>}
+      <p>{summary}</p>
+      {reading.levels.length > 0 && <p className="hint">{t("knows.reading.levels", { levels: reading.levels.join(", ") })}</p>}
+      {reading.readers.length > 0 && (
+        <ul className="queue">
+          {reading.readers.map((r) => (
+            <Row key={r.account} title={r.name} meta={t(r.leaves ? "knows.reading.sent_away" : "knows.reading.on_this_computer")} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function Sources(props: { rows: S["KnowsSource"][] }) {
   const { t, tn } = useWords();
   return (
@@ -137,6 +163,7 @@ export function ProjectKnows(props: { id: string }) {
       {knows.isError && <LoadFailed message={t("knows.load_failed")} onRetry={() => void knows.refetch()} />}
       {data && (
         <>
+          <Reading reading={data.reading} area={data.area} />
           <Sources rows={data.sources} />
           <Facts rows={data.facts} />
           <Terms rows={data.terms} />

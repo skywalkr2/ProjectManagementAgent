@@ -1216,7 +1216,7 @@ Files, in `config/storage.yaml`. A file kind keeps only the media types listed h
 |---|---|---|---|
 | `storage.files.max_file_mb` | float | `50` | The largest single file that can be added, in megabytes. |
 | `storage.files.max_total_mb` | float | `2000` | The most all added files may take together, in megabytes. |
-| `storage.files.accepted_types` | list[str] | `['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/epub+zip', 'font/otf', 'font/ttf', 'font/woff', 'font/woff2', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']` | The kinds of file that may be added; a file kind can narrow this further. |
+| `storage.files.accepted_types` | list[str] | `['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/epub+zip', 'font/otf', 'font/ttf', 'font/woff', 'font/woff2', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/flac', 'audio/aac']` | The kinds of file that may be added; a file kind can narrow this further. Sound files are voice notes, which are handed in to be turned into text. |
 | `storage.files.read_max_mb` | float | `25` | The largest file whose text is read, in megabytes. A larger attachment or watched file is named as not read. |
 | `storage.files.read_max_chars` | int | `30000` | The most text taken from one file. A file with more is cut there, with a mark saying so. |
 
@@ -1286,6 +1286,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 | `tags` | list[str] | `[]` | Free labels for finding the project. |
 | `content_levels` | list[str] | `[]` | Content levels (those defined for AI) its material carries, set by the person; AI work on it goes only to accounts that take them all. |
 | `parent` | str \| None | `None` | The id of the project this one belongs to (a book in its series); never itself or below it. |
+| `area` | bool | `False` | An area of life (health, home, money): ongoing and never finished, so it has no target day and is never behind. A project has a goal and an end and is followed like any other; either may sit under an area or under the personal project. What a draft for an area draws on stops at the area (design 6.32). |
 | `language` | str \| None | `None` | The language tag work on it is written in; unset means its parent's, else the workspace's. |
 | `budget_usd` | float \| None | `None` | The most AI work on it and everything in it may cost, set by the person; none for no cap. |
 | `log` | list[LogEntry] | `[]` | The update log, oldest first; `record.log` adds a line dated that day. |
@@ -1316,7 +1317,7 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `reply_owed` | bool | `False` | The action is a reply the person owes: someone's message asked them something and nothing has answered it yet (design 6.35). It is a line on Today with the drafted reply under it, and it ends when the person sends a reply, says it was answered another way, or says none is needed. |
 | `replies_to` | str \| None | `None` | For a reply owed: the id of the source (the message) that asked, whose date orders the line. |
 | `asker` | str \| None | `None` | For a reply owed: the id of the person the reply is to, when the message's sender is known. |
-| `remind_at` | AwareDatetime \| None | `None` | When to remind the person of it, as a moment with its time zone. The person sets it, and moves it when they snooze; the reminder is a line on Today while the action is open and not on hold, and it is never a correction of the assistant's work. |
+| `remind_at` | AwareDatetime \| None | `None` | When to remind the person of it, as a moment with its time zone. The person sets it, and moves it when they snooze; the assistant may propose one for a to-do whose day an input labels, which waits for the person's yes. The reminder is a line on Today while the action is open and not on hold, and it is never a correction of the assistant's work. |
 | `on_hold` | OnHold \| None | see below | Set while the action waits for something outside the person's control; the person sets and clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due date for when it comes off hold. |
 | `on_hold.waiting_for` | str | required | What it waits for, in plain words. |
 | `on_hold.since` | date | required | The day it was put on hold. |
@@ -1506,7 +1507,7 @@ What the assistant proposed for one request, how it was checked and what was app
 
 ### `fact` (FACT-n)
 
-Something recorded as true, with the words that show it. Added by `fact` and by `question.done`; never edited, except that `record.set` names the calendar entry or series it belongs to.
+Something recorded as true, with the words that show it. Added by `fact` and by `question.done`; never edited, except that `record.set` names the calendar entry or series it belongs to and proposes the day it is to be reminded of (which waits for the person's yes).
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1529,6 +1530,9 @@ Something recorded as true, with the words that show it. Added by `fact` and by 
 | `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
 | `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `reaches_children` | bool | `False` | True for a fact about a project that holds for the projects inside it too (a series' fact for each of its books): it goes into the packets of those projects as well. |
+| `on` | date \| None | `None` | For a dated fact: the day a deadline, renewal, expiry, warranty end or bill falls on, as the input states it. Nothing is worked out or guessed: an input that gives no full date makes no dated fact. |
+| `on_kind` | Literal['deadline', 'renewal', 'expiry', 'warranty', 'bill'] \| None | `None` | With `on`: what kind of day it is. A bill is a reminder only: no amount is kept. |
+| `remind_at` | AwareDatetime \| None | `None` | When to remind the person of a dated fact, as a moment with its time zone. The rules propose it from the day and the settings; it waits for the person's yes, and the person may set or move it. The reminder is a line on Today from that moment until the day has passed. |
 
 ### `rule` (RULE-n)
 
@@ -2674,6 +2678,8 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `reaches_children` | bool | `False` | True only for a fact about a project that holds for every project inside it too (a fact about a series that is true of each of its books); needs the project. Left false, it is about that project alone. |
+| `on` | date \| None | `None` | For a dated fact: the day a deadline, renewal, expiry, warranty end or bill falls on, written YYYY-MM-DD, only when the input states a full date for it (its year included). Never worked out from other words and never guessed: with no full date, leave it out. A bill is a reminder only; never record an amount owed or a balance. |
+| `on_kind` | Literal['deadline', 'renewal', 'expiry', 'warranty', 'bill'] \| None | `None` | With `on`: deadline, renewal, expiry, warranty (its end) or bill (a payment's due day). |
 
 ### `file.add`
 
@@ -2905,6 +2911,7 @@ Start a new project, optionally inside another (a book in its series). A system 
 | `parent` | str \| None | `None` | The id of the project it belongs to, if any. |
 | `language` | str \| None | `None` | Its language tag, if it differs from its parent's or the workspace's. |
 | `children` | list[str] | `[]` | Ids of existing projects to move inside the new one (books into a new series), in the same op. |
+| `area` | bool | `False` | True for an area of life that never finishes (health, home, money) and so has no end day; left false for a project with a goal and an end. |
 | `status` | str \| None | `None` | Where the project stands, only when the input states it, with those words as evidence. A status nobody stated is left out and stays unknown: never write "not started" or a guess. |
 | `link` | str \| None | `None` | The page the project was added from, when the input gave one. It is kept as a link on the project; the project's details are filled from it only when something set up can read it. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that name the project, when an input is where it came from; required when a status is given, and then the words that state the status. |
@@ -3039,7 +3046,7 @@ Add a dated line to a project's update log. The line is dated the day it is appl
 
 ### `record.set`
 
-Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id); action text, due, notes and effort_minutes (about how long it takes, in whole minutes; it waits for the person's yes); the entry (event) or series an action, question or fact belongs to (an id, or null); question title and text; person role, org, why_they_matter, side (personal, business or both) and relation (how they relate to the person, such as "my sister"). The new value must be valid for the field. Evidence is required for due, status, owners, target, owner and effort_minutes.
+Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id); action text, due, notes, effort_minutes (about how long it takes, in whole minutes; it waits for the person's yes) and remind_at (when to remind the person of a to-do or a dated fact, an ISO 8601 date-time with its offset; it waits for the person's yes); the entry (event) or series an action, question or fact belongs to (an id, or null); question title and text; person role, org, why_they_matter, side (personal, business or both) and relation (how they relate to the person, such as "my sister"). The new value must be valid for the field. Evidence is required for due, status, owners, target, owner, effort_minutes and remind_at.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|

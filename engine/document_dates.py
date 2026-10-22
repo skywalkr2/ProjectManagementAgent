@@ -69,6 +69,35 @@ def _parse_date(words: str, locale: str) -> tuple[date | None, str]:
         return None, "The stated date is invalid; it was not corrected."
 
 
+_MONTH = (
+    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?"
+)
+_DAY = r"\d{1,2}(?:st|nd|rd|th)?"
+_YEAR = r"(?:,?\s+\d{4})?"
+_DATE_PATTERN = (
+    rf"(?<![\w/.-])(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}([/.-])\d{{1,2}}(?:\1\d{{2,4}})?|"
+    rf"{_MONTH}\s+{_DAY}{_YEAR}|{_DAY}\s+{_MONTH}{_YEAR})(?![\w/-]|\.\d)"
+)
+
+
+def explicit_dates(text: str, locale: str) -> list[date]:
+    """Every full calendar date (its year included) a text states, in the order it states them. A date with no year,
+    an abbreviated year or an impossible day is not one, and a numeric date is read in the order the text itself
+    names (month/day/year or day/month/year) or else the locale's (en-US or en-GB; any other locale reads none)."""
+    locale = locale.replace("_", "-").casefold()
+    if re.search(r"\bday/month/year\b|\bdd/mm/yyyy\b", text, re.IGNORECASE):
+        locale = "en-gb"
+    elif re.search(r"\bmonth/day/year\b|\bmm/dd/yyyy\b", text, re.IGNORECASE):
+        locale = "en-us"
+    found = []
+    for match in re.finditer(_DATE_PATTERN, text, re.IGNORECASE):
+        value, _ = _parse_date(match.group(0), locale)
+        if value is not None:
+            found.append(value)
+    return found
+
+
 def find_dates(text: str, received: datetime, tz: tzinfo, locale: str) -> list[DateFinding]:
     """Find labeled English date statements, retaining uncertainty and relative anchors."""
 
@@ -91,16 +120,7 @@ def find_dates(text: str, received: datetime, tz: tzinfo, locale: str) -> list[D
         locale = "en-gb"
     elif re.search(r"\bmonth/day/year\b|\bmm/dd/yyyy\b", text, re.IGNORECASE):
         locale = "en-us"
-    month = (
-        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
-        r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?"
-    )
-    day = r"\d{1,2}(?:st|nd|rd|th)?"
-    year = r"(?:,?\s+\d{4})?"
-    date_pattern = (
-        rf"(?<![\w/.-])(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}([/.-])\d{{1,2}}(?:\1\d{{2,4}})?|"
-        rf"{month}\s+{day}{year}|{day}\s+{month}{year})(?![\w/-]|\.\d)"
-    )
+    date_pattern = _DATE_PATTERN
     relative_pattern = (
         r"\b(?:(?:in|within)\s+\d+\s+(?:calendar\s+|working\s+|business\s+)?(?:days?|weeks?|months?|years?)|"
         r"(?:within\s+)?\d+\s+(?:calendar\s+|working\s+|business\s+)?(?:days?|weeks?|months?|years?)"

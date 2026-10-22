@@ -1259,6 +1259,19 @@ S4. **What arrives, and where it may go:**
   Bill dates by rules (`engine/bill_dates.py`, `tests/test_bill_dates.py`): a day of the month (the 31st becomes the
   month's last day), the last day, the nth weekday, every N weeks or yearly, moved to the previous or next business
   day around weekends and the person's holidays, each with reminders some days before.
+  **Built so far (S4, change log 194):** a booking an input carries as structured data becomes the app's own calendar
+  entry by rules (local, never an act), titled by its kind and place, with the confirmation's code, provider or place as
+  its evidence, and with what could not be made listed on the changeset; the assistant's own entry for the same booking
+  is not added twice (`engine/booking_entries.py`, `tests/test_booking_entries.py`). A deadline, renewal, expiry, warranty
+  end or bill an input states with a full date becomes a fact with its day and kind, refused unless its quote states that
+  day, with a reminder proposed by the rules for the working morning `steward.dates.lead_days` before it, held for the
+  person's yes (also for a to-do due on a day its input labels); a kept reminder shows on Today from its moment until the
+  day has passed; one prompt line and one evaluation case in each fictional workspace
+  (`engine/dated_facts.py`, `tests/test_dated_facts.py`, `web/src/lib/queue-words.test.ts`,
+  `web/src/components/TodayArrives.test.tsx`). **Left:** a booking in mail read through a connector (the connectors hand
+  over plain text, so only markup in a pasted or dropped message is read until a connector carries it), dated facts by
+  rules alone when the assistant misses one, delivering a fact's reminder through the person's own calendar or mail,
+  and a bill's amount (never: bills are reminders only).
 - [ ] [S4] **Areas of life** (work, home, a side project) with their own data level and allowed AI accounts, one Today across
   them, and **the separation visible:** each area says which account reads it and whether anything leaves the
   computer, and a draft for one area never draws on another area's knowledge (the packet's reach stops at the area).
@@ -1266,8 +1279,29 @@ S4. **What arrives, and where it may go:**
   date) and personal projects (with an end) under it, proposed by the assistant once several items share a theme and
   confirmed by the person; a move teaches the next filing; privacy per area through content levels; Personal left out
   of work reports. First five minutes: one Personal project and no questions until a pattern shows.
+  **Built so far (S4, change log 194):** a project is an area (`area`, no end day, so never behind) or a project with an
+  end, under Personal or an area; a draft or an input about a project in an area leaves out the facts, lessons, open
+  items and projects of every other area (the packet's reach stops at the area); a project's page says which accounts
+  may read it (its content levels and those above it), where each runs, and whether anything is sent away from the
+  computer, or that no account may read it; when `steward.areas.propose_after` items filed under Personal itself share a
+  word, one Today suggestion offers an area for them and Start files them as the person's own edits (each a correction)
+  with Undo (`engine/areas.py`, `tests/test_areas.py`, `web/src/components/TodayArrives.test.tsx`,
+  `web/src/components/ProjectKnows.test.tsx`). **Left:** setup's tick boxes for common areas, a per-area allowed-account
+  picker on the page (the levels are set where content levels are), the meeting-prep and people-memory drafts reading the
+  same reach, and the filter "one Today across them, tagged by area".
 - [ ] [S4] **Capture from anywhere:** a forward-to address or watched folder, voice notes transcribed through a new adapter
   capability, the phone page's capture box; the global shortcut with phase I's menu bar and tray app.
+  **Built so far (S4, change log 194):** a capture folder is a source of the core's `capture` kind: what lands in it is
+  handed in as the person's own words (a trusted source authored by them, like a typed note), the first read included; a
+  sound file dropped there, or on the Hand in drawer, is a voice note, kept and turned into text through the adapter
+  capability `transcribe` (a model is listed as taking speech by its account's `transcribe_models` or its catalog entry,
+  never assumed), estimated from the file's size, held for the person's go above the configured amount, recorded as a run,
+  and stopped with "This account can't transcribe" when no account can; its words go on as the person's own note. The
+  phone already has a capture box: the full-screen Hand in sheet from the + (`engine/capture.py`, `engine/transcribe.py`,
+  `tests/test_capture.py`, `web/src/lib/queue-words.test.ts`). **Left, waiting for phase I:** the forward-to address and the
+  global shortcut with the menu bar and tray app. **Left:** speech-to-text on the native and command-line adapters (they
+  refuse a voice note, and only the common OpenAI-compatible path takes one), and a browser journey in the end-to-end
+  tests.
 
 S5. **Manner and proof:**
 - [ ] [S5] **Gentle suggestions with choices** on patterns, each choice recorded as a signal, within the attention budget; the

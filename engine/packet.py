@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from datetime import date
 from html import escape
 
-from engine import audience
+from engine import areas, audience
 from engine.ai.task import AiTask
 from engine.blocked import standing_hold
 from engine.cleaning import Cleaned, clean
@@ -133,8 +133,14 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     # A reply or question this run drafts may go to the input's sender: records made from a message limited to people
     # the sender isn't among stay out of the packet (design 6.35).
     sender = audience.sender_reader(people, raw)
-    out = audience.left_out_for(store.read(), people, [sender] if sender is not None else [])
     about_project = store.read().get("project", req.data["project"]) if req.data.get("project") else None
+    out = audience.left_out_for(store.read(), people, [sender] if sender is not None else [])
+    # When the input is about a project in an area, the lists of open items and projects stop at the area too.
+    reach = areas.reach(
+        store.read(),
+        [req.data.get("project"), *(saved.data.get("projects", []) if saved is not None else [])],
+    )
+    out = areas.either(out, areas.outside(reach))
     learned = _learned(
         store,
         cfg,
@@ -159,7 +165,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             "# Open actions\n" + _open_actions(store, people, out),
             "# Open questions\n" + _open_questions(store, people, out),
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store, people.pm),
+            "# Projects\n" + _projects(store, people.pm, reach),
         )
         if part.strip()
     )
@@ -256,6 +262,8 @@ def _learned(
     view = store.read()
     named = [*projects, *(source.data.get("projects", []) if source is not None else [])]
     in_input = [p for p in dict.fromkeys(named) if view.get("project", p) is not None]
+    # What a draft about an area draws on stops at that area (design 6.32): a sibling area's facts are left out.
+    hide = areas.either(hide, areas.outside(areas.reach(view, in_input)))
     stable = stable_section(view, kind.name, settings)
     from engine.today import zone
 
@@ -888,15 +896,18 @@ def _value_lists(store: Store) -> str:
     )
 
 
-def _projects(store: Store, pm: str | None = None) -> str:
+def _projects(store: Store, pm: str | None = None, reach: frozenset[str] | None = None) -> str:
     """The projects, each with its links and, when it isn't one the person runs, the person's part in it, so a project
-    they only watch gets facts, not actions or questions to others, from the first answer."""
+    they only watch gets facts, not actions or questions to others, from the first answer. With a `reach` (the
+    projects a draft about an area may draw on), only those are listed."""
     from engine.scope import DEFAULT_ROLE, role_of
 
     view = store.read()
     lines = []
     for p in view.list("project"):
         d = p.data
+        if reach is not None and p.id not in reach:
+            continue
         links = "; ".join(f"{link['label']}: {link['url']}" for link in d.get("links", []))
         role = role_of(view, p.id, pm)
         part = f" | the person's part: {role}" + (" (record facts only)" if role == "watch" else "")

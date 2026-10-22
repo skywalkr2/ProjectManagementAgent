@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from engine import areas
 from engine.config import Config
 from engine.knowledge_section import (
     _active,
@@ -167,6 +168,16 @@ def _question_for(view: Any, project_id: str, term: str) -> dict[str, Any] | Non
     }
 
 
+def _reading(view: Any, cfg: Config, project_id: str) -> dict[str, Any]:
+    """Which accounts may read the project's material and whether reading it sends anything away from this computer."""
+    found = areas.reading(view, cfg, project_id)
+    return {
+        "state": found.state,
+        "levels": list(found.levels),
+        "readers": [{"account": r.account, "name": r.name, "leaves": r.leaves} for r in found.readers],
+    }
+
+
 def knows(view: Any, project_id: str, cfg: Config) -> dict[str, Any] | None:
     """What is known about the project, or None when there is no such project."""
     project = view.get("project", project_id)
@@ -184,7 +195,7 @@ def knows(view: Any, project_id: str, cfg: Config) -> dict[str, Any] | None:
     unknown: list[dict[str, Any]] = [
         {"kind": "field", "field": f, "term": None, "entry": None, "question": None}
         for f in UNKNOWN_FIELDS
-        if project.data.get(f) in (None, "")
+        if project.data.get(f) in (None, "") and not (f == "target" and project.data.get("area"))
     ]
     unknown += [
         {
@@ -207,4 +218,6 @@ def knows(view: Any, project_id: str, cfg: Config) -> dict[str, Any] | None:
         ],
         "routing": _routing(view, chain),
         "unknown": unknown,
+        "area": bool(project.data.get("area")),
+        "reading": _reading(view, cfg, project_id),
     }

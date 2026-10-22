@@ -1379,6 +1379,36 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         worker.poke()
         return Handed(request=handed.request, source=handed.source)
 
+    @r.post("/handin/audio")
+    async def handin_audio(
+        request: Request,
+        name: str,
+        project: str | None = None,
+        data_level: Literal["open", "internal", "restricted"] | None = None,
+    ) -> Handed:
+        """Hand in a voice note: the request body is the sound, its Content-Type the type. It is kept as the person's
+        own upload and a request to turn it into text is queued; nothing is sent anywhere until it runs, and it waits
+        for the person's go under the usual cost rules. Refused in plain words when the file isn't sound or is too
+        large."""
+        from engine import transcribe
+
+        cap = cfg.steward.capture.max_audio_mb * 1024 * 1024
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > cap:
+            raise HTTPException(
+                status_code=413, detail=f"{name} is larger than {cfg.steward.capture.max_audio_mb:g} MB"
+            )
+        data = await request.body()
+        media_type = (request.headers.get("content-type") or "").split(";")[0].strip()
+        handed = guard(
+            lambda: transcribe.hand_in(
+                store, cfg, data, name=name, media_type=media_type, project=project, data_level=data_level
+            )
+        )
+        changed()
+        worker.poke()
+        return Handed(request=handed, source=None)
+
     @r.get("/changes")
     def changes() -> list[ChangeItem]:
         from engine.titles import head_of, subject_of, title_for

@@ -5,7 +5,7 @@ import { useAct } from "./act";
 import { useWords } from "./wording";
 
 /** The kinds of Today line that are suggestions, which the engine may hold back for the brief. */
-export const SUGGESTION_KINDS: ReadonlySet<string> = new Set(["escalate", "stale", "unfiled", "learned", "catch_up"]);
+export const SUGGESTION_KINDS: ReadonlySet<string> = new Set(["escalate", "stale", "unfiled", "learned", "catch_up", "area"]);
 
 export function useNotNow(): (key: string) => void {
   const { t } = useWords();

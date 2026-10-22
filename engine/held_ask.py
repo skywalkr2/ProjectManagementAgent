@@ -10,6 +10,8 @@ from typing import Any
 CLOSE, DATE, OWNER, ROUTING, DROP, MOVE, PART = "close", "date", "owner", "routing", "drop", "move", "part"
 #: A guess at how long a to-do takes, held for the person to keep.
 EFFORT = "effort"
+#: A reminder proposed for a dated fact or a to-do, held for the person to keep.
+REMIND = "remind"
 #: An ending whose words say only "closed": the person is asked whether it is done by its owners or no longer needed.
 ENDING = "ending"
 
@@ -94,6 +96,20 @@ def describe(
             return None
         shown = {"ask": CLOSE, "item": _text(found), "quote": quote}
         return shown | _ending(people, found, op, reporter) if kind == "action" else shown
+    if name == "record.set" and op.get("kind") in ("fact", "action") and op.get("field") == "remind_at":
+        found = view.get(op["kind"], op.get("id", ""))
+        if found is None:
+            return None
+        before = found.data.get("remind_at")
+        day = found.data.get("on") or found.data.get("due")
+        return {
+            "ask": REMIND,
+            "item": _text(found),
+            "value": str(op.get("value")),
+            "from_value": str(before) if before else None,
+            "day": str(day) if day else None,
+            "quote": quote,
+        }
     if name == "record.set" and op.get("kind") == "action" and op.get("field") == "effort_minutes":
         found = view.get("action", op.get("id", ""))
         if found is None:

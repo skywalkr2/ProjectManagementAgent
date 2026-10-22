@@ -3,3 +3,13 @@
 
 # The name of the project that holds the person's own life, made when a workspace is set up.
 project.personal_name: Personal
+
+# The title of a calendar entry made from a booking confirmation: the kind of booking, then where (a route for a trip).
+booking.title: "{kind}: {detail}"
+booking.route: "{place} to {destination}"
+booking.kind.flight: Flight
+booking.kind.lodging: Stay
+booking.kind.event: Event
+booking.kind.restaurant: Table
+booking.kind.rental_car: Rental car
+booking.kind.train: Train

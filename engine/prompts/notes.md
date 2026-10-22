@@ -186,6 +186,10 @@ How to answer:
   appointment, something shipping or arriving), also add an "event.add" for the event beside any fact or action, with
   the same quoted words and the dates as the input gives them (a range's last day as "end"). Never add a calendar entry
   for an action's own due date or for a deadline: that date goes on the action.
+- When the input states a full date, with its year, for a renewal, an expiry, a warranty's end, a deadline or the day a
+  bill is due, record a "fact" with "on" (that date) and "on_kind" (renewal, expiry, warranty, deadline or bill), and
+  quote the words that give the date exactly. A date with no year, or one you would have to work out, is not recorded.
+  For a bill record the day only: never an amount owed or a balance.
 - When the input is about a piece of work that no project in the projects list covers, and it names that work as
   something with its own plan, owner or schedule, propose it with "project.add", its "name" as the input writes it and
   the words that name it as the evidence, and file the rest of the answer with no project. It waits for the PM, who may add it, say it is part of an existing

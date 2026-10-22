@@ -46,3 +46,17 @@ test("a held guess at how long a to-do takes is a question with the length in wo
   expect(heldAnswers(held, t)).toEqual({ primary: "Keep 1 hour 30 minutes", other: "Keep it as it is" });
   expect(heldAnswers({ ...held, from_value: "45" }, t).other).toBe("Keep it at 45 minutes");
 });
+
+test("a held reminder for a dated item is a question naming the day, with answers that name the moment or no reminder", () => {
+  const held = { ask: "remind", item: "The plan renews", value: "2026-12-01T09:00:00+00:00", from_value: null, day: "2026-12-15" } as const;
+  expect(heldTitle(held, t)).toMatch(/^Remind you about 'The plan renews' before .*15\?$/);
+  const answers = heldAnswers(held, t);
+  expect(answers.primary).toMatch(/^Remind me .*9:00/);
+  expect(answers.other).toBe("No reminder");
+  expect(heldAnswers({ ...held, from_value: "2026-12-05T09:00:00+00:00" }, t).other).toMatch(/^Keep the reminder at .*9:00/);
+});
+
+test("a voice note waiting to be turned into text is titled by the file it is about", () => {
+  expect(titleWords({ ...base, kind: "task", task: "transcribe", subject: "walk.m4a" }, t, has)).toBe("Turn the voice note 'walk.m4a' into text");
+  expect(titleWords({ ...base, kind: "task", task: "transcribe" }, t, has)).toBe("Turning a voice note into text");
+});

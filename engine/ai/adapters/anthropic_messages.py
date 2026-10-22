@@ -57,6 +57,8 @@ class AnthropicMessagesAdapter:
         )
 
     def run(self, task: AiTask, model: str) -> AiResult:
+        if task.audio is not None:
+            raise AiError("other", "this adapter doesn't turn speech into text")
         body = request_body(
             task,
             model,
