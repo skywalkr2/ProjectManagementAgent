@@ -13,7 +13,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from engine import agenda as agenda_module
-from engine import entry_rules
+from engine import entry_rules, repeats
 from engine.blocked import Blocker, blocker_of, own_wait
 from engine.connectors import moment
 from engine.firm_due import firm_due
@@ -299,6 +299,8 @@ class Todo:
     blocker: Blocker | None = None
     #: Its date is one the rules couldn't read for certain: shown to be checked, never a deadline.
     due_check: bool = False
+    #: How it repeats, when it does: the words, the rule, the first day and the shape the screen says back.
+    repeat: dict[str, Any] | None = None
 
 
 def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
@@ -338,6 +340,7 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
                 else None,
                 blocker=blocker,
                 due_check=bool(data.get("due_check")) and due is not None,
+                repeat=repeats.view_of(data.get("repeat")),
             )
         )
     unblocked = lambda t: not (t.blocker is not None and t.blocker.resolved)  # noqa: E731

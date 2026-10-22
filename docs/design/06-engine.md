@@ -3217,7 +3217,13 @@ people and details, and never acts in their name without their yes on the exact 
   (typed in plain words and read by the due-date rules, said back under the field, or left without a day), who
   (the person by default, picked from the list of people), the project (picked, optional) and Repeats. No AI is
   involved: it applies at once as the person's own, with Undo, and the cursor starts in the words. The hand-in box stays
-  the way to hand in something to be read.
+  the way to hand in something to be read. **Built (S2):** the form is a drawer opened by one quiet button in Today's
+  header and by the To-dos header (its primary when nothing is open), with the cursor in the words; the day is read by
+  `POST /api/todos/day` and said back, the person is the default owner, who and the project are lists, and Repeats says
+  back as in the edit form; `POST /api/todos` reads the day and the repeat first (nothing is kept when either isn't
+  clear or the repeat doesn't fall on the day) and applies the to-do, then its repeat, as the person's own, answering
+  with both changes so the toast's Undo takes them back last first (`engine/add_todo.py`, `tests/test_add_todo.py`,
+  `web/src/components/AddTodo.test.tsx`).
 - **Repeating to-dos (phase S2; designed 2026-10-22).** A to-do repeats when the person says how, in their own words
   ("every other Tuesday", "the 1st and 15th"), read by the repeat grammar (`engine/repeat_phrases.py`) into a standard
   repeat rule and said back from the wording sheet, so the person sees what was understood before it is kept; a phrase
@@ -3235,8 +3241,11 @@ people and details, and never acts in their name without their yes on the exact 
   checked as the person types (`POST /api/repeats/check`), said back from data under the Repeats field of the edit
   form, a repeat mark on the row, Stop repeating in its menu and the earlier occurrences on the to-do's page
   (`web/src/components/RepeatingTodos.test.tsx`). A phrase that carries the to-do's own words ("water the plants every
-  day") is declined, since the field holds the repeat only. **Left:** a form to add a to-do by hand, teaching the
-  assistant to propose `action.repeat` from an input, and the mark on Today's rows.
+  day") is declined, since the field holds the repeat only. The same field is on the form that adds a to-do by hand,
+  and Today's to-do rows carry the repeat mark in words (`web/src/components/AddTodo.test.tsx`,
+  `tests/test_add_todo.py`). **Left:** teaching the assistant to propose `action.repeat` from an input. It needs a
+  decision first: the op needs the id of an existing action and a rule and start the assistant can't write, so it
+  must be able to name a to-do made in the same answer and give only the person's words for the engine to read.
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank

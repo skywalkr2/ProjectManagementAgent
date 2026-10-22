@@ -1576,6 +1576,38 @@ class RepeatSetIn(BaseModel):
     )
 
 
+class TodoDayCheckIn(BaseModel):
+    words: str = Field(description="The words typed for a to-do's day, such as 'next Friday'.")
+
+
+class TodoDayView(BaseModel):
+    """What words typed for a to-do's day say (POST /api/todos/day). `ok`: `day` is the day. `unclear`: the rules
+    decline the words and nothing is guessed. `none`: no words, so the to-do has no day."""
+
+    status: Literal["ok", "unclear", "none"]
+    day: date | None = None
+
+
+class TodoAddIn(BaseModel):
+    text: str = Field(min_length=1, max_length=300, description="What to do, in the person's words.")
+    when: str | None = Field(
+        None, max_length=120, description="The day in plain words; left out, the to-do has no day."
+    )
+    owners: list[str] = Field(description="The people who do it, by person id.")
+    project: str | None = Field(None, description="The project it belongs to, by id.")
+    repeat: str | None = Field(
+        None, max_length=120, description="How it repeats, in plain words; left out, it doesn't."
+    )
+
+
+class TodoAdded(BaseModel):
+    """The to-do added by hand: its `action` and the `changesets` made (the to-do, then its repeat when it has one).
+    Undo takes them back from the last to the first."""
+
+    action: str
+    changesets: list[str]
+
+
 class RecordPageView(BaseModel):
     """A record's page (design 7.14): its name, details in declared order with names resolved, what is open with
     it, and its activity, newest first."""
@@ -2071,6 +2103,7 @@ class TodoView(BaseModel):
     remind_at: datetime | None = Field(
         None, description="When the person asked to be reminded of it, on their own clock (their time zone)."
     )
+    repeat: RepeatView | None = Field(None, description="How it repeats, when it does, said back from data.")
 
 
 class HeldAsk(BaseModel):

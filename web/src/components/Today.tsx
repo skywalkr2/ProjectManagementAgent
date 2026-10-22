@@ -10,6 +10,8 @@ import { useQueue, useTodayCount } from "../lib/today";
 import { settingsView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { SetupLine } from "../shell/SetupLine";
+import { Button } from "../ui/Button";
+import { useAddTodo } from "./AddTodo";
 import { CoverageLine, useNoneText } from "./Coverage";
 import { SideFilter } from "./SideFilter";
 import { opensItems } from "./TodayDetail";
@@ -40,6 +42,7 @@ export function Today(props: {
   const count = useTodayCount(filter.choice);
   const none = useNoneText();
   const [selected, setSelected] = useState<Selection | null>(null);
+  const addTodo = useAddTodo();
 
   // Another part of the screen asks for an answer or a question to be looked at: its line opens, with the cursor on it.
   const [shown, setShown] = useState<string | null>(null);
@@ -90,6 +93,10 @@ export function Today(props: {
       <div className={styles.head}>
         <h1>{t("nav.home")}</h1>
         <SideFilter />
+        <Button variant="ghost" size="sm" icon="plus" onClick={addTodo.open}>
+          {t("addtodo.open")}
+        </Button>
+        {addTodo.form}
         <p>
           {[longDay(new Date()), count === null ? "" : count === 0 ? (filter.choice === "all" ? none : t("sides.today.none", { side: filter.named })) : tn("today.needs.count", count)]
             .filter(Boolean)

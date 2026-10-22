@@ -1142,11 +1142,17 @@ S2. **Time and attention:**
   and stop routes and the views' `repeat` and earlier occurrences (`tests/test_repeating_todos.py::test_checking_a_phrase_says_what_was_understood_or_that_it_is_not_clear`);
   and the screens: the Repeats field in the edit form with its said-back words, the row's repeat mark, Stop repeating
   and the page's earlier occurrences (`web/src/components/RepeatingTodos.test.tsx`, `web/src/lib/repeat.test.ts`).
-  **Left:** there is no form for adding a to-do by hand yet, so the Repeats field is on the edit form only; the
-  assistant is not yet taught to propose `action.repeat` from a sentence like "I send the report every Friday" (no
-  prompt line or extraction case); the repeat mark is on the open-items row only, not on Today's to-do rows.
-- [ ] [S2] **Adding a to-do yourself** (design 6.32; found while building repeating to-dos): Add a to-do on Today and
-  To-dos, no AI, at once with Undo.
+  The Repeats field is also on the form that adds a to-do by hand, and Today's to-do rows carry the repeat mark in
+  words (`tests/test_add_todo.py`, `web/src/components/AddTodo.test.tsx`).
+  **Left:** the assistant is not yet taught to propose `action.repeat` from a sentence like "I send the report every
+  Friday" (no prompt line or extraction case). The op needs an existing action's id and a rule and start the assistant
+  can't write, so it first needs a way to name a to-do made in the same answer and to carry only the person's words
+  (a design decision).
+- [x] [S2] **Adding a to-do yourself** (design 6.32; found while building repeating to-dos): Add a to-do on Today and
+  To-dos, no AI, at once with Undo. Built: `POST /api/todos/day` and `POST /api/todos`, with a day in words, none, for
+  someone else, with a repeat, Undo and what isn't clear said back (`tests/test_add_todo.py`); the drawer with the
+  cursor in the words, the said-back day and repeat, the lists and the Undo toast, on Today and To-dos
+  (`web/src/components/AddTodo.test.tsx`). The to-do and its repeat are two changes in order, undone last first.
 - [ ] [S2] **What changed in an invitation** is computed as data (`engine/invitation_changes.py`,
   `tests/test_invitation_changes.py`): moved, end changed, cancelled or restored, title, place, organizer, and who was
   added, removed or replied, each a kind with its values for the wording sheet; it feeds the brief's "changed

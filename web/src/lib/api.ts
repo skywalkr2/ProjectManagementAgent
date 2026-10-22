@@ -340,6 +340,10 @@ export const api = {
   setRepeat: (a: string, body: S["RepeatSetIn"]) => call<S["Applied"]>("POST", `actions/${id(a)}/repeat`, body),
   /** Stop a to-do repeating, with Undo; it stays as it is. */
   stopRepeat: (a: string) => call<S["Applied"]>("POST", `actions/${id(a)}/repeat/stop`),
+  /** What words typed for a to-do's day are read as; nothing is kept. */
+  checkTodoDay: (body: S["TodoDayCheckIn"]) => call<S["TodoDayView"]>("POST", "todos/day", body),
+  /** Add a to-do by hand as the person's own; the changes made are undone last first. */
+  addTodo: (body: S["TodoAddIn"]) => call<S["TodoAdded"]>("POST", "todos", body),
   /** Why a promise exists: its words, who owes it to whom, its day, how it is known and what was heard since. */
   remind: (action: string, body: S["ReminderIn"]) => call<S["Applied"]>("POST", `reminders/${id(action)}`, body),
   promise: (action: string) => call<S["PromiseView"]>("GET", `promises/${id(action)}`),

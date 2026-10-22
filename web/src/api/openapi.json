@@ -22097,6 +22097,136 @@
         "title": "TodayLineView",
         "type": "object"
       },
+      "TodoAddIn": {
+        "properties": {
+          "owners": {
+            "description": "The people who do it, by person id.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The project it belongs to, by id.",
+            "title": "Project"
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How it repeats, in plain words; left out, it doesn't.",
+            "title": "Repeat"
+          },
+          "text": {
+            "description": "What to do, in the person's words.",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day in plain words; left out, the to-do has no day.",
+            "title": "When"
+          }
+        },
+        "required": [
+          "text",
+          "owners"
+        ],
+        "title": "TodoAddIn",
+        "type": "object"
+      },
+      "TodoAdded": {
+        "description": "The to-do added by hand: its `action` and the `changesets` made (the to-do, then its repeat when it has one).\nUndo takes them back from the last to the first.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "changesets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changesets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "action",
+          "changesets"
+        ],
+        "title": "TodoAdded",
+        "type": "object"
+      },
+      "TodoDayCheckIn": {
+        "properties": {
+          "words": {
+            "description": "The words typed for a to-do's day, such as 'next Friday'.",
+            "title": "Words",
+            "type": "string"
+          }
+        },
+        "required": [
+          "words"
+        ],
+        "title": "TodoDayCheckIn",
+        "type": "object"
+      },
+      "TodoDayView": {
+        "description": "What words typed for a to-do's day say (POST /api/todos/day). `ok`: `day` is the day. `unclear`: the rules\ndecline the words and nothing is guessed. `none`: no words, so the to-do has no day.",
+        "properties": {
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "unclear",
+              "none"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "TodoDayView",
+        "type": "object"
+      },
       "TodoView": {
         "description": "One of the person's own open actions.",
         "properties": {
@@ -22191,6 +22321,17 @@
             ],
             "description": "When the person asked to be reminded of it, on their own clock (their time zone).",
             "title": "Remind At"
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepeatView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How it repeats, when it does, said back from data."
           },
           "text": {
             "title": "Text",
@@ -33984,6 +34125,84 @@
           }
         },
         "summary": "Week"
+      }
+    },
+    "/api/todos": {
+      "post": {
+        "description": "Add a to-do as the person's own, with Undo. Words, a day or a repeat that aren't clear, or a repeat that\ndoesn't fall on the day, are refused in plain words and nothing is kept.",
+        "operationId": "add_api_todos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoAddIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoAdded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add"
+      }
+    },
+    "/api/todos/day": {
+      "post": {
+        "description": "What the words typed for a to-do's day are read as, from today on the person's own clock. Nothing is kept.",
+        "operationId": "check_day_api_todos_day_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoDayCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoDayView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Day"
       }
     },
     "/api/unfiled": {

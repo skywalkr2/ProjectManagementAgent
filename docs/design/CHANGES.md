@@ -1045,6 +1045,9 @@ yet follow, that it is *designed*, with its phase.
 - **Design 6.32, "Adding a to-do yourself":** Add a to-do on Today and To-dos, with the words, when, who, project and
   Repeats, applying at once as the person's own with Undo and no AI. Found while building repeating to-dos: a person
   could add a to-do only through the hand-in box or a meeting entry.
+- **Built (S2):** `POST /api/todos/day` and `POST /api/todos` (`engine/add_todo.py`); the to-do and its repeat are two
+  changes, returned in order, and the toast's Undo takes them back last first. The drawer on Today and To-dos
+  (`web/src/components/AddTodo.tsx`). Tests: `tests/test_add_todo.py`, `web/src/components/AddTodo.test.tsx`.
 
 ## 185. Mail and calendar acts, built in part (2026-10-22; S1b-2a, engine, API and plugin API 0.3.88)
 
@@ -1072,8 +1075,10 @@ yet follow, that it is *designed*, with its phase.
   (`tests/test_repeat_phrases.py`, `tests/test_phrase_cases.py`); `action.repeat`, the `repeat` and `occurrence_of`
   fields and the next occurrence made with the ending (`tests/test_repeating_todos.py`); the routes
   `POST /api/repeats/check`, `POST /api/actions/{id}/repeat` and `.../repeat/stop`; the Repeats field, the row's mark,
-  Stop repeating and the page's earlier occurrences (`web/src/components/RepeatingTodos.test.tsx`). Left: adding a
-  to-do by hand (no form yet), teaching the assistant to propose a repeat from an input, the mark on Today's rows.
+  Stop repeating and the page's earlier occurrences (`web/src/components/RepeatingTodos.test.tsx`). Then
+  (section 186): adding a to-do by hand with the same Repeats field, and the repeat mark on Today's to-do rows
+  (`TodoView.repeat`; `web/src/components/AddTodo.test.tsx`). Left: teaching the assistant to propose a repeat from an
+  input, which needs the op to be able to name a to-do made in the same answer and to carry only the person's words.
 
 ## 183. Mail and calendar acts, designed (2026-10-22; S1b-2, designed)
 

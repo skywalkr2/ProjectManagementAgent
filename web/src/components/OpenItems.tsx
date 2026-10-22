@@ -29,7 +29,9 @@ import { Skeleton } from "../ui/Skeleton";
 import { AskChooser } from "./AskChooser";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { useDropAction } from "./DropAction";
+import { useAddTodo } from "./AddTodo";
 import { useEditAction } from "./EditAction";
+import { Button } from "../ui/Button";
 import { useStopRepeat } from "./StopRepeat";
 import { NoteBox, useNoted } from "./NoteBox";
 import { HoldNote, useHold } from "./OnHold";
@@ -52,6 +54,7 @@ export function OpenItems() {
   const [tab, setTab] = useState<Tab>("actions");
   const [filters, setFilters] = useState<Filters>(takeFilters);
   const ids = useId();
+  const addTodo = useAddTodo();
   const actions = items.data?.actions ?? [];
   const questions = items.data?.questions ?? [];
 
@@ -87,7 +90,13 @@ export function OpenItems() {
             {t("open.tab.questions", { n: questions.length })}
           </button>
         </div>
+        {!items.isPending && actions.length + questions.length > 0 && (
+          <Button variant="secondary" size="sm" icon="plus" onClick={addTodo.open}>
+            {t("addtodo.open")}
+          </Button>
+        )}
       </div>
+      {addTodo.form}
       {items.isPending ? (
         <Skeleton />
       ) : items.isError ? (
@@ -98,7 +107,12 @@ export function OpenItems() {
           </button>
         </p>
       ) : actions.length + questions.length === 0 ? (
-        <p className="empty">{t("open.empty")}</p>
+        <div className="empty">
+          <p>{t("open.empty")}</p>
+          <Button variant="primary" icon="plus" onClick={addTodo.open}>
+            {t("addtodo.open")}
+          </Button>
+        </div>
       ) : (
         <>
           <div className={styles.bar} role="group" aria-label={t("open.filters")}>

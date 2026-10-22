@@ -64,6 +64,10 @@ ROUTES: dict[str, Declared] = {
         "what the person wants from the work is queued with the request, read as their own note"
     ),
     # Local: the text is the person's own record or setting.
+    "POST /api/todos": _local(
+        "the words of a to-do the person adds by hand, kept as its text with its day, owners and repeat; no assistant "
+        "reads anything and it is not a note"
+    ),
     "POST /api/followups/{person}/mark-sent": _local(
         "the message as sent, compared with the draft for a quality signal; not a note"
     ),

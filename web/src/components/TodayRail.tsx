@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
+import { useSaid } from "../lib/repeat";
 import { useSetAside } from "../lib/set-aside";
 import { anyReading, failedReads, latestRead, readProblem } from "../lib/sources";
 import { useWords } from "../lib/wording";
@@ -430,6 +431,7 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
   const [noting, setNoting] = useState(false);
   const [ticked, setTicked] = useState(false);
   const { item } = props;
+  const said = useSaid();
   const hold = useHold({ id: item.action, on_hold: item.on_hold, blocker: item.blocker });
   const change = useChangeThis({ kind: "action", id: item.action }, () => row.current?.focus());
   const drop = useDropAction({ id: item.action }, () => row.current?.focus());
@@ -467,7 +469,17 @@ export function TodoRow(props: { item: Todo; project: string; showDue: boolean }
           {item.text}
           <HoldNote on_hold={item.on_hold} blocker={item.blocker} due={item.due} />
         </div>
-        {meta && <div className="tb-meta">{meta}</div>}
+        {(meta || item.repeat) && (
+          <div className="tb-meta">
+            {meta}
+            {item.repeat && meta ? " · " : ""}
+            {item.repeat && (
+              <span data-repeat="" title={said(item.repeat)}>
+                {t("repeat.mark")}
+              </span>
+            )}
+          </div>
+        )}
         <OriginLink origin={item.origin} />
       </div>
       <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, ...remind.entries, hold.entry, change.entry, drop.entry]} />
