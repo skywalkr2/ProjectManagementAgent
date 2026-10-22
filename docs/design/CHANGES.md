@@ -1027,6 +1027,25 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 173. Every view swept for internal words, a throttled read says until when, and three screen fixes (2026-10-22; B-7, S1-3, built)
+
+- **The sweep reaches every view (7.14):** a second sweep draws Today (its inspector on each kind of line, and the rail),
+  What changed, Follow-ups, Connections, Settings, Since yesterday, Knowledge, Files, Handover, Quality, Stages, Add-ons and a
+  draft's versions from server-shaped data, and fails on an id, a stored date, an empty separator or a choice's stored
+  word. It found the add-on catalog's date shown as stored; it is now formatted.
+- **A throttled read (7.15):** a source the service asked to wait on says "Not read yet: the service asked to wait until
+  <time>. It is tried again then" (or "… It is tried again by itself" when no time was given), never "Couldn't be read", so
+  it says why it waits and until when.
+- **A Today line's title** may hold paragraphs (a plugin's or a stage's line): the title is no longer a paragraph itself, so
+  the page stays valid.
+- **The first promise list (6.32):** with only the sent folder missing, it says everything listed was read but not the mail
+  the person sent, instead of saying something connected wasn't read (found by journey J2).
+- **The header (7.1):** a long assistant line is cut short with an ellipsis instead of pushing the appearance menu past
+  the window at 1440px (CI had caught it about 2px over).
+- Built: `web/src/components/ViewSweep.test.tsx`, `web/src/components/Addons.test.tsx`,
+  `web/src/components/Sources.test.tsx`, `web/src/components/FirstPromises.test.tsx` ("with only the sent folder missing…"),
+  `web/e2e/journeys-mail.spec.ts` (J2), `web/e2e/shell.spec.ts` ("the header never wraps, with plugin panels present").
+
 ## 172. An action's project with its parent and its notes on Follow-ups and Today, and Reassign on Waiting on them (2026-10-22; B-6a, built)
 
 - **Follow-ups (7.5):** an ask that is an action names its project as the shared project tag, with the project it is part of
@@ -1043,7 +1062,9 @@ yet follow, that it is *designed*, with its phase.
   the Today queue line (`QueueLineView`) gains `parent_name` and `notes` (the notes only for a line about exactly one action).
 - Built: `tests/test_action_row_details.py` (the payloads), `web/src/components/FollowUps.test.tsx` (tag with parent, notes on
   hover, focus and for a screen reader, the phone's second line, Reassign with Undo, a shared ask),
-  `web/src/components/Today.test.tsx` (tag with parent, notes on hover and opened).
+  `web/src/components/Today.test.tsx` (tag with parent, notes on hover and opened). To-dos and questions use the same
+  notes component, so their notes are a second line on a phone too. Today's lines that open no detail (a reminder, a
+  reply) keep one line on a phone, so their notes reach only a screen reader there. The browser tests pass at `ad31ac4`.
 
 ## 171. What changed and Follow-ups as list | detail, and the phone's review mode for messages to send (2026-10-22; B-6b, built)
 
@@ -1061,7 +1082,9 @@ yet follow, that it is *designed*, with its phase.
 - **Phone (7.1):** Follow-ups' messages to send go through one person at a time (`ReviewMode` with the message's own buttons and
   Next); the review-mode browser tests hand in their own items, so they never skip.
 - Built: `web/src/components/WhatChangedListDetail.test.tsx`, `web/src/components/FollowUpsListDetail.test.tsx`,
-  `web/src/components/WhatChanged.test.tsx`, `web/src/components/FollowUps.test.tsx`; browser tests written, not yet run.
+  `web/src/components/WhatChanged.test.tsx`, `web/src/components/FollowUps.test.tsx`; the browser tests on the new layout,
+  passing at `a79141c` (`web/e2e/panes.spec.ts` with both phone review modes, `acceptance.spec.ts`, `journeys.spec.ts`,
+  `late-evening.spec.ts`).
 
 ## 170. A message held for a later batch, and a limit carried by what is made from a source (2026-10-22; S1-2, built)
 

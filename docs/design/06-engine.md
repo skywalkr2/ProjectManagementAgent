@@ -3074,8 +3074,9 @@ in running. Phase S builds them with named tests; an item says "Built" only wher
   account, folder and day it reads from, from the same settings the read uses (no call to a service); after it, how each
   source went, in words. A source that wasn't read is said beside it, a mail account with no sent folder gets one plain
   line and the action that adds it (promises made in mail the person sent can't be found until it is), and "none found"
-  never says the mail held none while something wasn't read, so an incomplete first result never looks complete (change
-  log 168; `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`). Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`,
+  never says the mail held none while something wasn't read, so an incomplete first result never looks complete; when the
+  only gap is a missing sent folder, the list says everything listed was read but not the mail the person sent, never that
+  something connected wasn't read (change log 168, 173; `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`). Built: `tests/test_first_promises.py`, `web/src/components/FirstPromises.test.tsx`,
   journeys J2 (nothing found) and J6 (a promise found). *Not built:* a sent folder offered by a sign-in itself (6.33), so the
   look back reads it only when the person added it.
 - **Coverage on Today.** "Couldn't read" and "read, nothing new" are different words and never share a color. A source that

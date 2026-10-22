@@ -4,6 +4,16 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: In list | detail, what opens by itself and what Copy does on a line
+
+- **Decided (main session, roadmap B-6b, building design 7.13):** kind of rule: a core concept (screen behavior), no
+  setting. Beside the pane (from 1024px), the first item, or the first holding a question for the person, is chosen as the
+  list opens; below 1024px nothing opens until the person picks a row, so a drawer never covers the screen on every load.
+  On Follow-ups, Copy on a line whose message isn't shown shows it first with the cursor in it, and the next Copy copies,
+  so nobody copies a message they haven't seen (the person approves the exact content, 6.3). A message not yet sent has
+  no age on its line, since the server keeps none for it.
+- **Impact:** design 7.3, 7.5 and 7.13 say it; no API or setting changes. Change log: section 171.
+
 ## 2026-10-22: A screen says only what the app knows about dates, lateness and unread sources
 
 - **Decided (main session, roadmap S1-3):** kind of rule: a core concept, with one setting. A date marked "check this" is
