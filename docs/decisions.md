@@ -4,6 +4,23 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: Mail and calendar acts name their action and account; acting is a switch per account; reminders may have a standing yes
+
+- **Decided (main session, from the owner's 2026-10-17 list of acts and 2026-10-20 reminders that reach a sleeping
+  person):** kind of rule: a core concept (the act's action, `about` and account; the `mailbox` act kind), an extension
+  point (a channel declares the actions it can carry out, plugin API), a setting per account that only the person
+  changes (**Let {assistant} act after your yes**, off by default, asking the service for the wider access when turned
+  on), and one core channel for a plain mailbox (sending through its outgoing server, the rest over IMAP; an invitation
+  answered by mail). Undo reaches a sent act where the channel can take it back. A reminder may go out by a **standing
+  yes**, which the person gives once per account and which covers only reminder acts to the person themselves, rendered
+  from the reminder template at the version it recorded; anything else still needs the yes on that act.
+- **Why:** each act must be shown exactly, so the act has to say what it does and to what, and the service's ids are
+  part of what the yes covers. Acting off by default keeps reading-only sign-ins as they are, and an account that can't
+  act still gets drafts through Copy. The standing yes is the owner's own option for reminders; it is held to acts that
+  reach only the person, so it never becomes a way for anything to go to someone else without a yes.
+- **Impact:** design 6.12 (the new bullet "Mail and calendar acts"), roadmap S1b-2, plugin API 0.3.88. No change to
+  scope. Change log: section 183.
+
 ## 2026-10-22: A tier follows the newest model of its family only by the person's setting, after a check, and never to one that costs more
 
 - **Decided (owner, through the coordinator):** kind of rule: a setting (`ai.models.follow_newest`, on by default, editable

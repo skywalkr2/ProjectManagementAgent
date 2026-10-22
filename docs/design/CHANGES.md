@@ -1027,6 +1027,17 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 183. Mail and calendar acts, designed (2026-10-22; S1b-2, designed)
+
+- **Design 6.12, the new bullet "Mail and calendar acts":** an act names its action (send, reply, reply all, forward;
+  archive, move, label, mark read on a new `mailbox` kind; create, move, cancel or answer an event), what it acts on
+  (`about`, whose service ids the fingerprint covers) and the account that carries it. Acting is a switch per account,
+  off by default, that only the person turns on, asking the service for the wider access. Channels declare the actions
+  they carry out (plugin API). Undo reaches a sent act where the channel can take it back. A plain mailbox acts through
+  its own servers (sending through its outgoing server, the rest over IMAP, an invitation answered by mail). A reminder
+  can reach a sleeping person as an event with an alarm or a mail to themselves, approved once or by a standing yes
+  that covers only reminder acts to the person, from the reminder template at the version it recorded.
+
 ## 182. Waiting to go out and the acts' Today lines, built (2026-10-22; S1b-1b, built)
 
 - **Design 6.12 and 7.4:** Waiting to go out lists the acts that wait as list | detail, one line each with its state as a

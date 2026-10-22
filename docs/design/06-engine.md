@@ -1318,6 +1318,63 @@ for it, that nothing goes out without the PM approving that exact content, alrea
     `undo`, the target kinds it takes) and is called only by the publisher. The core ships `copy` (the person copies the
     approved text; Mark sent makes it `sent`, as Copy works today) and `fake` (for tests). Mail and calendar acts are the
     mail add-on's channels (S1b-2).
+  - **Mail and calendar acts (S1b-2; designed 2026-10-22).** One act is one thing done outside, on one account, after
+    one yes. The act says what it does (`action`) on what (`about`), and which of the person's accounts carries it.
+    - **What an act can do.** A `message` act: `send` (a new message), `reply`, `reply_all` or `forward`, the last three
+      naming the saved message they answer (`in_reply_to`); the service's own id of that message is read from the saved
+      input when the act is sent, and is part of the fingerprint. A `mailbox` act (a new target kind, no recipients and no
+      content): `archive`, `move` (to a folder), `label` (with a label) or `mark_read`, on one saved message or an approved
+      list of them (`about`: the inputs' ids); the detail shows each message's sender, subject and date. A `calendar` act:
+      `create` (an event or a hold: calendar, start, end, title, and an alarm before the start when asked), `move` or
+      `cancel` (an event the person organizes, named by its calendar entry), or `answer` (accept, tentative, decline, or
+      propose a new time, to an invitation named by its calendar entry). An answer goes to the organizer, so the organizer
+      is its recipient and is called out like any other; `engine/itip.py` prepares the reply. The act's list line and
+      detail name the event or the message (the invitation's own title: "Answer to <event>").
+    - **Which account carries it.** An act names the account (`account`: the sign-in or mailbox connector it goes
+      through) and the channel that account's kind provides. A reply, a mailbox act or an answer defaults to the account
+      the message or invitation came in on; a new message to the account the person picked last. Changing the account
+      clears the yes.
+    - **Acting is the person's switch, per account, off by default.** Reading needs only read access; acting needs more
+      (send, change messages, write events). Each account has **Let {assistant} act after your yes** in Settings; turning
+      it on asks the service for the wider access through the account's own sign-in page (a sign-in declares its
+      `acting_scopes` beside its reading ones), and turning it off gives the access back where the service allows. An
+      account that can't act still gets drafts, carried out by Copy. Nothing about this switch is ever proposed by a rule
+      or an input; it is a setting only the person changes.
+    - **Channels declare what they can do.** `registrar.channel(...)` takes `actions`, by target kind
+      (`{"message": ["send", "reply", ...], "mailbox": [...], "calendar": [...]}`), and the account kinds it serves. A
+      draft whose action the account's channel doesn't declare is refused at the draft, with the reason in plain words.
+      `OutgoingAct` carries `action`, `about` (each item's service id and, for a calendar entry, its UID and sequence)
+      and the event fields (`start`, `end`, `title`, `alarm`, `answer`, `proposed`).
+    - **Undo where the channel can.** A `mailbox` act and a `calendar` `create` can be taken back (moved back, the label
+      removed, marked unread, the event deleted); a sent message, a move or cancel others were told of, and an answer
+      can't. `act.undo` is the person's op on a `sent` act whose channel declares `undo`; the publisher calls the channel
+      and records `undone` (or `failed` with the reason). The undo toast after the send offers it while the act is the
+      last thing done; Waiting to go out's sent list offers it after.
+    - **A plain mailbox acts through its own servers (the core's `mailbox` channel).** Sending goes through the
+      account's outgoing server (SMTP with TLS, port 465 or STARTTLS on 587; host, port and the same password reference
+      as the mailbox, each a setting with a default from the incoming host). The Message-ID is made from the attempt key,
+      so `status` asks the Sent folder for that Message-ID over IMAP: found is `sent`; not found is `unknown`, never
+      "not sent", because a server may not keep a copy (so nothing is sent twice). After sending, the channel saves a copy
+      to the Sent folder unless the setting says the server does it. Archive, move, label (an IMAP keyword) and mark read
+      go over IMAP, by Message-ID. An answer to an invitation goes as mail to the organizer with the iTIP reply attached,
+      which is how a plain mailbox answers. Creating, moving or cancelling events needs a calendar service: a subscribed
+      calendar link is read-only, so those acts are offered only on an account whose add-on declares them.
+    - **A reminder that reaches a sleeping person** (owner, 2026-10-17 and 2026-10-20). A reminder can go out as an event
+      with an alarm in the person's own calendar, or as a mail to their own address, so their phone rings without the app
+      running. Each is an act like any other, drafted by the engine from the core's reminder template, addressed only to
+      the person themselves. The person approves it once per reminder, or gives a **standing yes for reminders**: one
+      choice in Settings ("Put my reminders in my calendar" or "Mail my reminders to me"), on one account, which approves
+      every reminder act that (a) goes only to the person's own address or own calendar on that account, (b) is rendered
+      from the reminder template at the version the standing yes recorded, and (c) carries no other content than the
+      template's. Anything else waits for a yes as usual. The standing yes is a record (`standing_yes`) that only the
+      person's own click makes or ends; its approvals are written to the ledger as the person's, naming the standing yes.
+      A change of the template's version, the account or the person's own address makes the standing yes stale and asks
+      again; no rule, input or add-on can make, widen or renew one. The reminder's words follow the notification rule
+      (7.19): when the item's data level is above what that account is allowed, the event's title and the mail say only
+      "A reminder from {app}" with the time, and the content stays in the app.
+    - **The invariants** stay: only the person approves (now: their click on the act, or their standing yes when the act
+      matches it exactly, `act-approval`); nothing from outside adds an act or a recipient; a mailbox act never deletes a
+      message (there is no delete action, only archive).
   - **Where the person sees it:** Waiting to go out (7.4) lists acts by state, each with its exact content and target,
     the callouts and one primary (Approve and send; a send confirms, 7.1); Today has one line per act that is `failed`,
     `uncertain` or `stale`, starting with the verb.

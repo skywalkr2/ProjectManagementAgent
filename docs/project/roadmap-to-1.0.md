@@ -1031,8 +1031,8 @@ proves it on a week of real use, and only then goes on:
   days are measured first and the thresholds set from what was seen, then the counted week. Pass on the owner's
   thresholds for the measures in design 6.32. The testers are held to the thresholds this week sets for missed out of present, silent closes and wrong endings: those numbers come from real use, and per-tester thresholds would move the bar to fit. Counts that depend on how much mail a person gets are reported, not gated. The "Missed one" trend from week one to week two is the one measure only the testers have.
 - **The freeze:** What is measured is frozen during the counted week: Today, the promise lines, the prompts and the model choices don't change. Fixes found during the week go into `docs/project/gate-week-fixes.md` (created when the week starts) and land after it. The one exception is anything that loses a promise or closes one wrongly: it is fixed at once, and the day is noted in the week's log so the measures before and after it can be told apart.
-- **Behind the gate:** S1b (sending and calendar acts: the riskiest part, so it waits), the brief, meeting prep, people
-  memory, areas of life, capture from anywhere and the conversation.
+- **When the gate week runs** (owner, 2026-10-22): once the core is built, after S5 and before phase I; S1b and the
+  rest of phase S are built first.
 
 S1. **Promises, and how they end:**
 - [ ] [S1-2] **What a draft to someone else carries** (the designer's notes, 2026-10-19; design 6.35): lints on every draft
