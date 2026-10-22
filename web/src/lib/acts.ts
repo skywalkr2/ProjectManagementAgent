@@ -76,6 +76,7 @@ export function useDraftAct() {
       const made = await run(
         () => api.draftAct(body),
         (a) => ({
+          key: `act:${a.id}`,
           message: t(a.copied_because ? "acts.drafted_copy" : "acts.drafted", { what: actPhrase(a, t) }),
           undo: () => api.withdrawAct(a.id),
         }),
@@ -249,7 +250,7 @@ export function useOutgoing() {
           const fresh = result.status === "sent" ? await api.readAct(a.id).catch(() => null) : null;
           return { result, undoable: !!fresh?.undoable };
         },
-        ({ result, undoable }) => ({ message: said(a, result), undo: undoable ? () => takeBack(a) : undefined }),
+        ({ result, undoable }) => ({ key: `act:${a.id}`, message: said(a, result), undo: undoable ? () => takeBack(a) : undefined }),
       ),
     [run, said, takeBack],
   );

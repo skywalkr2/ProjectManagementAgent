@@ -217,3 +217,30 @@ test("F6 moves the cursor to the newest toast, and Escape puts it away and gives
   expect(within(region()).queryByText("Fixed")).toBeNull();
   expect(opener).toHaveFocus();
 });
+
+test("a newer toast with the same key replaces the one showing, and that one's Undo goes with it", async () => {
+  const first = vi.fn();
+  const second = vi.fn();
+  function Push() {
+    const { push, undoLast } = useToasts();
+    return (
+      <>
+        <button type="button" onClick={() => push({ key: "thing", message: "Drafted it", undo: first })}>one</button>
+        <button type="button" onClick={() => push({ key: "thing", message: "Sent it", undo: second })}>two</button>
+        <button type="button" onClick={undoLast}>last</button>
+      </>
+    );
+  }
+  render(
+    <ToastProvider seconds={0}>
+      <Push />
+    </ToastProvider>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "one" }));
+  await userEvent.click(screen.getByRole("button", { name: "two" }));
+  expect(within(region()).queryByText("Drafted it")).toBeNull();
+  expect(within(region()).getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+  await userEvent.click(screen.getByRole("button", { name: "last" }));
+  expect(second).toHaveBeenCalledTimes(1);
+  expect(first).not.toHaveBeenCalled();
+});

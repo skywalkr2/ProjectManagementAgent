@@ -15,6 +15,8 @@ export interface ToastInput {
   more?: Array<{ label: string; run: () => Promise<unknown> | void }>;
   /** What the message says when the same one has been pushed `n` times in a row; without it the count follows the message. */
   many?: (n: number) => string;
+  /** One thing's toasts share a key: a newer one replaces the one showing, and that one's Undo goes with it. */
+  key?: string;
 }
 
 interface Toast extends ToastInput {
@@ -76,7 +78,11 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   const push = useCallback((toast: ToastInput) => {
     const token = toast.undo ? nextToken.current++ : 0;
     if (toast.undo) undos.current.push({ token, run: toast.undo });
-    setToasts((all) => {
+    setToasts((shown) => {
+      const replaced = toast.key ? shown.filter((x) => x.key === toast.key) : [];
+      const gone = new Set(replaced.flatMap((x) => x.undoTokens));
+      if (gone.size) undos.current = undos.current.filter((u) => !gone.has(u.token));
+      const all = replaced.length ? shown.filter((x) => !replaced.includes(x)) : shown;
       const last = all[all.length - 1];
       if (last && last.message === toast.message && !toast.action && !last.action) {
         const merged: Toast = { ...last, many: toast.many ?? last.many, count: last.count + 1, undoTokens: token ? [...last.undoTokens, token] : last.undoTokens };

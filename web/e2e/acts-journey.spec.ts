@@ -212,7 +212,8 @@ test.describe("mail and calendar acts", () => {
     await expect(pane.getByRole("region", { name: "The event" })).toContainText("Your answer: maybe");
     expect((await seeded(page)).delivered).toHaveLength(before);
 
-    // Taking it back is in its menu: it will not go.
+    // Taking it back is in its row's menu, once the detail that opened over the list is closed: it will not go.
+    await pane.getByRole("button", { name: "Close" }).click();
     await waiting(page).filter({ hasText: title }).getByRole("button", { name: /More actions for/ }).click();
     await page.getByRole("menuitem", { name: "Take it back" }).click();
     await expect(waiting(page).filter({ hasText: title })).toHaveCount(0);
