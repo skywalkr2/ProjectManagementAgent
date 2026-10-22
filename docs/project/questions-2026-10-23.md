@@ -16,8 +16,8 @@ written into the design (change log 174) and planned as roadmap item B-12.
    counted week before S1b (sending and calendar acts), the brief, meeting prep, people memory, areas of life, capture
    and the conversation are built. Tonight's build stops at the gate: S1's remaining items and B-11c are built; nothing
    behind the gate is.
-   - Decides: when the gate week starts, and whether anything behind the gate should be built before it (the plan says
-     no).
+   - *Answered (owner, 2026-10-22):* the gate week comes once the core is built; the rest of S is built now
+     (`docs/decisions.md`, "The gate week comes once the core is built").
    - Meanwhile: S1 is finished and ready for the week; B-11c's hardening continues.
    - Blocks: everything behind the gate.
 

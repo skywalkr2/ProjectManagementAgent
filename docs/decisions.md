@@ -4,6 +4,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: The gate week comes once the core is built
+
+- **Decided (owner):** "the gate week ... is supposed to come to me after we have implemented the core, and there are still
+  pieces missing." The rest of phase S (S1b, S2 to S5) is built now, without waiting for the gate week; the gate week is
+  the measured trial of the core as built, after S and before the installers (I).
+- **Why:** the week measures the core the owner will use, not a part of it.
+- **Impact:** the roadmap's order line and the gate's wording; nothing in the design changes. Change log: none.
+
 ## 2026-10-22: A new account takes the newest model of each tier's family, and asks nothing
 
 - **Decided (owner):** kind of rule: core concept, no setting. When an account is added, each tier takes the newest model

@@ -40,9 +40,10 @@ one full test run and one push (CLAUDE.md, "Usage and machine load").
   (`web/src/components/ViewSweep.test.tsx`), and the browser checks written on 2026-10-20 all pass in the full run of
   `9c0f76e`. What B-7 and B-6b still lack: the reviewer's next round on the pushed commit, and the owner's re-run of the
   failed learning cases. The items below name the rest.
-- **The order** (decided; the batches below follow it): S1 (S1-1 to S1-3) → B's waves 5 and 6 (B-5, B-6a, B-6b) built to
-  S's shape → the UI/UX designer's re-review and the feedback it brings (UI gate, B-7) → the gate week → the rest of S
-  (S1b, S2 to S5) → I (installers; the first milestone ends here) → C (the writing pack) → P (the other packs) → D
+- **The order** (decided; the batches below follow it; changed by the owner, 2026-10-22: the gate week comes once the
+  core is built, so the rest of S no longer waits for it): S1 (S1-1 to S1-3) → B's waves 5 and 6 (B-5, B-6a, B-6b) built
+  to S's shape → the UI/UX designer's re-review and the feedback it brings (UI gate, B-7) → the rest of S (S1b, S2 to S5)
+  → the gate week on the core as built → I (installers; the first milestone ends here) → C (the writing pack) → P (the other packs) → D
   (sign-off) → L-more (beside real use, after the packs) and E (the rest of version 1, ordered by what protects real data
   first) → Publish 1.0 once the owner finalizes scope.
 - **The first milestone** (owner, 2026-10-19): the core complete, with full UI and code reviews approved, and the
@@ -105,10 +106,10 @@ keep each item's full text.
       plan on `claude/paid-1-0-plan` (`docs/project/business-model.md`, its P25) is merged into this branch and folded
       into the roadmap as P25 says.
 
-9. **Gate week (owner)** (no items; the gate is written out in phase S; size: two measured days, then the counted week)
+9. **Gate week (owner)** (no items; the gate is written out in phase S; size: two measured days, then the counted week; *runs after S5, once the core is built*: owner, 2026-10-22, so batches 10 to 16 come first)
     - *Covers:* the owner's personal mail, at least one closed-lid night and one network drop; the owner writes down each promise they notice before looking at the assistant's list; two days are measured first and the thresholds set from what was seen, then the counted week. The testers are held to the thresholds this week sets for missed out of present, silent closes and wrong endings: those numbers come from real use, and per-tester thresholds would move the bar to fit. Counts that depend on how much mail a person gets are reported, not gated. The "Missed one" trend from week one to week two is the one measure only the testers have.
     - *Frozen:* What is measured is frozen during the counted week: Today, the promise lines, the prompts and the model choices don't change. Fixes found during the week go into `docs/project/gate-week-fixes.md` (created when the week starts) and land after it. The one exception is anything that loses a promise or closes one wrongly: it is fixed at once, and the day is noted in the week's log so the measures before and after it can be told apart.
-    - *Exit:* pass or not on the owner's thresholds for the measures in design 6.32. Nothing behind the gate starts before it.
+    - *Exit:* pass or not on the owner's thresholds for the measures in design 6.32. The installers (I) start after it.
 
 10. **S1b-1 The publisher and the guards** (2 open items; size: about a day)
     - *Covers:* *The publisher, brought forward from phase C4*; *Nothing on its own* (both in phase S, S1b); and the named S1b tests of the approval guards (designer's F7, `docs/project/designer-answers-2026-10-19.md`): a closed lid or lost network mid-send is checked with the service before any retry, an approval does not survive a restart that changed the draft's inputs, and the rest of that answer's list.
