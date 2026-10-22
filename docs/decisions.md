@@ -13,8 +13,13 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
   by a setting, `ai.models.follow_newest`, on by default: the weekly check finds it, the switch's check runs on it first
   (estimated, and waiting for the person's go above the configured amount), the move is kept only if the check passes,
   and Today says what moved and what it changes in cost, with Keep and Switch back. Turned off in Settings, the weekly
-  check only tells the person, with Switch. A model of another family is never moved to on its own. The person can
-  always change a tier in Settings (as decided 2026-10-21). This overrides the designer's "never switch automatically";
+  check only tells the person, with Switch. A model of another family is never moved to on its own. The weekly check
+  also compares prices: the move goes ahead on its own only when the new model's price is known and the same or lower;
+  when it costs more, or its price isn't known, Today says so ("about $X a day more at your current use") with Switch and
+  Not now, whatever the setting, since spending more is the person's choice; a price rise on a tier's current model is
+  reported the same way. Prices come from the service's own listing or the person's `ai.prices`; a price list the
+  maintainers publish and the app fetches weekly comes with the release feed (phase I), and until then a service that
+  lists no prices shows "price not known". The person can always change a tier in Settings (as decided 2026-10-21). This overrides the designer's "never switch automatically";
   the check before the move, the Today line after it and Switch back answer their concern that cost and quality change
   unseen.
 - **Why:** the newest model of a family is what the person expects, and the service's list order isn't promised; a move

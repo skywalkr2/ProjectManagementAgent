@@ -1234,6 +1234,9 @@ after phase S (the owner's order, 2026-10-17) and before phase C's plugin API re
   exports from the renders, checked to reproduce them pixel for pixel.
 - [ ] [I-1] **Add-ons install beside the app, not inside it:** an installed app's own folder is read-only (and signed), so
   Install on Add-ons puts add-ons in a per-person add-ons folder in the app-data place, which the app reads at start.
+- [ ] [I-1] **A price list for AI models, fetched with the release feed** (owner, 2026-10-22): the maintainers publish
+  each model's prices with every release, and the app fetches them on the weekly model check, so a service whose own
+  listing has no prices still gets a known price, and a newer model's price can be compared before any move (design 6.16).
 - [ ] [I-1] **Updates:** the app checks the release feed it was built with (a build variable, empty in the repository) and
   shows "A new version is ready" with what changed; the person downloads and installs it themselves; their data stays.
 - [ ] [I-2] **Three people set it up alone** (the first-run review's N8): three people who match the persona each complete

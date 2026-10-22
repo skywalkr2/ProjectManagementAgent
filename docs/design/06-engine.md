@@ -1682,10 +1682,13 @@ A person who adds an account gets every tier filled in, so routine work never la
   asks nothing (owner, 2026-10-22): a new account's tier takes the newest model of its family, decided from the listing's
   release date, else the version in the model's id compared as numbers, never the list's order, and never a model of
   another family. After setup the model never changes on its own: the person changes it in Settings (owner, 2026-10-21 and 2026-10-22). A weekly check of the service's models and
-  prices finds a newer model of the same family. With `ai.models.follow_newest` on (the default), the tier moves to it
-  after the switch's check passes (estimated, and waiting for the go above the configured amount), and Today says what
-  moved and the cost change, with Keep and Switch back; a failed check moves nothing and says why. With it off, Today
-  only tells the person, with Switch. A model of another family is never moved to on its own, and any switch is the same
+  prices finds a newer model of the same family. Its prices are compared with the current model's (from the service's listing or `ai.prices`;
+  a maintainers' price list fetched weekly comes with the release feed, phase I). With `ai.models.follow_newest` on (the
+  default) and the new price known and the same or lower, the tier moves to it after the switch's check passes (estimated, and waiting for the go above the configured amount), and Today says what
+  moved and the cost change, with Keep and Switch back; a failed check moves nothing and says why. When the new model costs
+  more or its price isn't known, or with the setting off, Today tells the person (the increase in dollars a day at current
+  use, or "price not known yet") with Switch and Not now, and nothing moves; a price rise on a tier's current model is
+  reported the same way. A model of another family is never moved to on its own, and any switch is the same
   change as Settings.
 - **Thinking off** is sent only to a model whose listing says it supports it; it is never inferred from a hand test.
 - **Estimates learn from use** (*built*, `tests/test_estimate_calibration.py`, change log 175): when an account is
