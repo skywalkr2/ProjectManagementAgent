@@ -301,6 +301,8 @@ class Todo:
     due_check: bool = False
     #: How it repeats, when it does: the words, the rule, the first day and the shape the screen says back.
     repeat: dict[str, Any] | None = None
+    #: About how long it takes, in minutes, when it says.
+    effort_minutes: int | None = None
 
 
 def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
@@ -341,6 +343,7 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
                 blocker=blocker,
                 due_check=bool(data.get("due_check")) and due is not None,
                 repeat=repeats.view_of(data.get("repeat")),
+                effort_minutes=data.get("effort_minutes"),
             )
         )
     unblocked = lambda t: not (t.blocker is not None and t.blocker.resolved)  # noqa: E731

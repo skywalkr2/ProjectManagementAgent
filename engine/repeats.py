@@ -27,7 +27,7 @@ SCAN_DAYS = 400
 SPAN_DAYS = 400
 SPANS = 20
 #: The fields an occurrence carries over from the one that ended.
-CARRIED = ("text", "owners", "project", "notes")
+CARRIED = ("text", "owners", "project", "notes", "effort_minutes")
 _UTC = ZoneInfo("UTC")
 
 

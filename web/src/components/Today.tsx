@@ -101,11 +101,13 @@ export function Today(props: {
       <div className={styles.full}>
         <SetupLine workspace={props.workspace} onOpenGuide={props.onOpenGuide} />
       </div>
-      <div className={styles.full}>
-        <BriefCard workspace={props.workspace} onOpenRecord={props.onOpenRecord} />
-      </div>
       <TodayQueue selected={selected} onSelect={setSelected} beside={beside} handlers={handlers} shortcuts={props.shortcuts} />
-      <TodayRail onView={props.onView} onAddSource={props.onAddSource} />
+      {/* The brief opens the rail, so the queue's own lines stay first on the page. */}
+      <TodayRail
+        onView={props.onView}
+        onAddSource={props.onAddSource}
+        brief={<BriefCard workspace={props.workspace} onOpenRecord={props.onOpenRecord} onOpenView={props.onView} />}
+      />
     </div>
   );
 }

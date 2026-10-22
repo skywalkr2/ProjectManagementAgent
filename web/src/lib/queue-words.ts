@@ -23,6 +23,15 @@ function moveWhen(held: S["HeldAsk"], t: T): string {
   return words || t("queue.held.e.new_date");
 }
 
+/** The minutes a held effort would set, as a length of time in words. */
+function effortTime(held: S["HeldAsk"], t: T): string {
+  const minutes = Number(held.value);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  const parts = [hours > 0 ? t(hours === 1 ? "time.hours.one" : "time.hours.other", { n: hours }) : "", rest > 0 || hours === 0 ? t(rest === 1 ? "time.minutes.one" : "time.minutes.other", { n: rest }) : ""];
+  return parts.filter(Boolean).join(" ");
+}
+
 /** A held line's title: the item as a question, named in quotes (design 7.6). */
 export function heldTitle(held: S["HeldAsk"], t: T): string {
   const item = held.item;
@@ -43,6 +52,8 @@ export function heldTitle(held: S["HeldAsk"], t: T): string {
       return t("queue.held.q.move", { item, when: moveWhen(held, t) });
     case "part":
       return t("queue.held.q.part", { item });
+    case "effort":
+      return t("queue.held.q.effort", { item, time: effortTime(held, t) });
     default:
       return item;
   }
@@ -75,6 +86,8 @@ export function heldAnswers(held: S["HeldAsk"], t: T): { primary: string; other:
       return { primary: t("queue.held.a.move"), other: held.from_value ? t("queue.held.k.date", { date: day(held.from_value) }) : t("queue.held.k.move") };
     case "part":
       return { primary: t("queue.held.a.part"), other: t("queue.held.k.part") };
+    case "effort":
+      return { primary: t("queue.held.a.effort", { time: effortTime(held, t) }), other: held.from_value ? t("queue.held.k.effort", { time: effortTime({ ...held, value: held.from_value }, t) }) : t("queue.held.k.same") };
     default:
       return { primary: t("queue.held.a.close"), other: t("queue.held.k.close") };
   }

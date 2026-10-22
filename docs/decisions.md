@@ -4,6 +4,33 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: The capacity check, clashes from today on, the attention budget and the reminder offer
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings.
+  *Effort* is an optional field of the action in minutes. The person sets it; the assistant's suggestion is a held
+  `record.set` that needs the quoted words (a person-only field, like a project's priority), so it reaches the person as
+  a question to keep or leave, and leaving it is the existing `held_declined` signal; keeping it makes it theirs. It is
+  for a to-do that already exists: one added in the same answer has no id to name yet, so its effort is not suggested.
+  *Today's to-dos* for the check are the person's own open to-dos due today or late, not on hold and not due at a meeting
+  (those are fixed); a to-do with no effort counts as no time, and an undated one is not counted. The check runs only
+  while the working day has time left; an all-day entry takes no time. Priority is the project's priority (a larger
+  number matters more); a to-do in no project ranks lowest. The day offered to move to is the next working day, and the
+  person may pick another. *Clashes* look `steward.clashes.days_ahead` ahead (7) and want `steward.clashes.travel_minutes`
+  (30) between two meetings in different places; a meeting the person hasn't accepted never makes a clash. *Attention*:
+  the suggestion lines are the follow-up that has gone unanswered, to-dos nobody has touched, items filed under no
+  project and what was learned; what is due or at risk is never held back. Quiet hours are the ones under Reminders. The
+  cap counts the suggestions shown and the ones the person put off today (no separate record of what was shown is kept).
+  What is saved for the quiet hours or the cap is one line each in the next morning brief; what is below the threshold
+  or put off is in neither. "Not now" is the signal `suggestion_dismissed`; the suggestion stays off while its change
+  key (its items) is the same, and comes back when it differs or when Undo takes the signal back. *The reminder offer*
+  is for the person's own to-do with a day in the next `steward.brief.remind_within_days` (3) and no reminder; the time
+  offered is the working morning before it is due, else the morning it is due. Only a to-do carries a reminder, so a
+  date read from a letter is offered one only once it is a to-do (S4).
+- **Left, said in the design:** an effort suggested for a to-do added in the same answer; a tentative entry's response is
+  read only from the entry the app kept; a connected event with no kept entry counts as busy.
+- **Impact:** design 6.32 and 7.7, 4.0 (the settings), roadmap S2. Plugin guide regenerated for the new action field and
+  signal kind. No change to scope. Change log: section 192.
+
 ## 2026-10-22: Prep and people memory are rules; the prep note is the only AI part, a draft on the entry
 
 - **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with settings. Prep

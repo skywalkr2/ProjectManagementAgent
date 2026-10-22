@@ -9,6 +9,9 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { copyMessage } from "../lib/copy";
 import { day, wallTime } from "../lib/dates";
+import { durationWords } from "../lib/duration";
+import { chooseFilters } from "../lib/open-items";
+import type { View } from "../lib/views";
 import { useMoney } from "../lib/money";
 import { reveal } from "../lib/reveal";
 import { useToasts } from "../lib/toasts";
@@ -133,9 +136,16 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
       return tn("brief.line.own_due.overdue", line.days ?? 0, { text });
     case "owed_late":
       return tn("brief.line.owed_late", line.days ?? 0, { name, text });
-    case "clash":
-      return tn("brief.line.clash", line.minutes ?? 0, { text, other: line.other ?? "", time: clock(line.at) });
+    case "clash":     {
+      const vars = { text, other: line.other ?? "", date, time: clock(line.at) };
+      return line.state === "travel" ? tn("brief.line.clash.travel", line.minutes ?? 0, vars) : tn("brief.line.clash", line.minutes ?? 0, vars);
+    }
+    case "capacity":
+      return t("brief.line.capacity", { needed: durationWords(line.needed_minutes ?? 0, tn), free: durationWords(line.minutes ?? 0, tn) });
+    case "digest":
+      return line.change === "escalate" ? t("brief.line.digest.escalate", { name, text }) : tn(`brief.line.digest.${line.change}`, line.count ?? 1);
     case "yes":
+      if (line.change === "reminder_offer") return t("brief.line.reminder_offer", { text, date, time: clock(line.at) });
       return queue ? title(queue) : text || t("brief.line.yes");
     case "done":
       return line.you ? t("brief.line.done_you", { text }) : name ? t("brief.line.done_them", { name, text }) : t("brief.line.done_anyone", { text });
@@ -161,20 +171,43 @@ function lineWords(line: Line, queue: QueueLine | undefined, t: T, tn: Tn, title
   }
 }
 
-function LineRow(props: { line: Line; queue: QueueLine | undefined; onOpenRecord: (kind: string, id: string) => void }) {
+/** Where a suggestion that waited for the brief is dealt with, since its line isn't on Today. */
+const DIGEST_VIEW: Record<string, View> = { stale: "work/open", unfiled: "records/projects", escalate: "work/followups", learned: "records/knowledge", catch_up: "records/knowledge" };
+
+function LineRow(props: { line: Line; queue: QueueLine | undefined; onOpenRecord: (kind: string, id: string) => void; onOpenView?: (view: View) => void }) {
   const { t } = useWords();
+  const act = useAct();
   const words = useLineWords();
   const { line } = props;
+  const offer = line.kind === "yes" && line.change === "reminder_offer" && line.link && line.when ? { action: line.link.id, at: line.when } : null;
+  const remind = () => {
+    if (!offer) return;
+    void act(
+      () => api.remind(offer.action, { at: offer.at }),
+      (result) => ({ message: t("brief.remind.saved", { text: line.text ?? "" }), undo: () => api.undo(result.changeset) }),
+    );
+  };
+  const view = line.kind === "digest" && line.change ? DIGEST_VIEW[line.change] : undefined;
   const open = () => {
+    if (view && props.onOpenView) {
+      if (line.change === "stale") chooseFilters({ state: "stale" });
+      props.onOpenView(view);
+      return;
+    }
     if (line.queue && reveal("line", line.queue)) return;
     if (line.link) props.onOpenRecord(line.link.kind, line.link.id);
   };
-  const opens = Boolean(line.queue) || Boolean(line.link);
+  const opens = !offer && (Boolean(line.queue) || Boolean(line.link) || Boolean(view && props.onOpenView));
   const meta = [line.kind === "own_due" && line.person_name ? t("brief.line.own_due.for", { name: line.person_name }) : "", line.kind === "week_promise" && line.you && line.person_name ? t("brief.line.week.to", { name: line.person_name }) : "", line.ready ? t("brief.ready") : ""].filter(Boolean);
   return (
     <li className={styles.line} data-kind={line.kind}>
       <span className={styles.what}>{words(line, props.queue)}</span>
       {meta.length > 0 && <span className={styles.meta}>{meta.join(" · ")}</span>}
+      {offer && (
+        <Button size="sm" className={styles.open} onClick={remind}>
+          {t("brief.remind")}
+        </Button>
+      )}
       {opens && (
         <Button size="sm" className={styles.open} onClick={open}>
           {t("brief.open")}
@@ -350,7 +383,7 @@ function Message(props: { message: NonNullable<Brief["message"]> }) {
   );
 }
 
-export function BriefCard(props: { workspace: string; onOpenRecord: (kind: string, id: string) => void }) {
+export function BriefCard(props: { workspace: string; onOpenRecord: (kind: string, id: string) => void; onOpenView?: (view: View) => void }) {
   const { t, tn } = useWords();
   const [asked, setAsked] = useState<Form | null>(null);
   const [, shut] = useState(0);
@@ -394,7 +427,7 @@ export function BriefCard(props: { workspace: string; onOpenRecord: (kind: strin
           <h3 className={styles.sub}>{heading(section.key, t)}</h3>
           <ul className={styles.lines}>
             {section.lines.map((line) => (
-              <LineRow key={line.key} line={line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} />
+              <LineRow key={line.key} line={line} queue={line.queue ? byKey.get(line.queue) : undefined} onOpenRecord={props.onOpenRecord} onOpenView={props.onOpenView} />
             ))}
           </ul>
           {section.more > 0 && <p className="hint">{tn("brief.more", section.more)}</p>}

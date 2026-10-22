@@ -176,3 +176,28 @@ test("the to-do's page says how it repeats and lists the earlier ones with their
   expect(rows[0]).toHaveTextContent("Done");
   expect(rows[1]).toHaveTextContent("Dropped");
 });
+
+test("the edit form shows how long a to-do takes, and a change is sent as its own edit of the to-do", async () => {
+  const user = userEvent.setup();
+  const calls = api([action({ effort_minutes: 60 })]);
+  renderApp(<OpenItems />);
+  await openEdit(user);
+  const sizes = screen.getByRole("combobox", { name: "How long it takes" });
+  expect(sizes).toHaveValue("60");
+  await user.selectOptions(sizes, "120");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({ kind: "action", id: "A-1", read_version: 3, fields: { effort_minutes: 120 } }));
+});
+
+test("choosing no estimate clears it, and a length not on the list shows as another length", async () => {
+  const user = userEvent.setup();
+  const calls = api([action({ effort_minutes: 50 })]);
+  renderApp(<OpenItems />);
+  await openEdit(user);
+  const sizes = screen.getByRole("combobox", { name: "How long it takes" });
+  expect(sizes).toHaveValue("other");
+  expect(screen.getByRole("spinbutton", { name: "Minutes" })).toHaveValue(50);
+  await user.selectOptions(sizes, "");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { effort_minutes: null } }));
+});

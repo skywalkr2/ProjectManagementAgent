@@ -14,6 +14,8 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine import (
+    day_capacity,
+    day_clashes,
     endings,
     held_ask,
     meeting_prep,
@@ -28,6 +30,7 @@ from engine import (
     sides,
     since_yesterday,
     source_intake,
+    suggestions,
     watch,
 )
 from engine.blocked import standing_hold
@@ -240,6 +243,13 @@ class Line:
     age_hours: float | None = None
     event: str | None = None
     open_items: int | None = None
+    #: For a capacity line, the free minutes left today (`minutes`) and the effort due today (`needed_minutes`); for a
+    #: clash line, the minutes of overlap or the travel time short (`minutes`) and the other meeting's title (`other`),
+    #: with the entry to open in `entry`.
+    minutes: int | None = None
+    needed_minutes: int | None = None
+    other: str | None = None
+    entry: str | None = None
     since: str = ""
 
 
@@ -306,9 +316,23 @@ def _model_lines(store: Any, cfg: Any) -> list[Line]:
     return lines
 
 
+def queue_split(
+    ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None
+) -> suggestions.Split:
+    """The queue's lines split by the attention rules (design 6.32): what shows on Today now, and the suggestions saved
+    for the brief."""
+    return suggestions.split(cfg, store.read(), _everything(ws, store, cfg, now, handover), now)
+
+
 def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> list[Line]:
-    """Every line that needs the person now, in rank order. `handover`: what stops the synced folder from being used,
-    as the worker reports it (state and the other computer's name), which is a line of its own."""
+    """Every line that needs the person now, in rank order, with the suggestions the attention rules hold back left out.
+    `handover`: what stops the synced folder from being used, as the worker reports it (state and the other computer's
+    name), which is a line of its own."""
+    return queue_split(ws, store, cfg, now, handover).shown
+
+
+def _everything(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> list[Line]:
+    """Every line, in rank order, before the attention rules."""
     today = now.astimezone(zone(cfg)).date()
     people = People(store, cfg)
     reader = store.read()
@@ -1222,11 +1246,52 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
 
+    lines += _day_lines(store, cfg, now)
+
     if cfg.steward.hold_outside_hours:
         # What the assistant or a rule added on its own waits for the person's hours; what waited arrives under one row.
         caused = release_hours.causes(lines, reader, requests, by_changeset, sources)
         lines = release_hours.keep_hours(lines, caused, cfg, now, Line)
     return sorted(lines, key=_rank)
+
+
+def _day_lines(store: Any, cfg: Any, now: datetime) -> list[Line]:
+    """The lines about the days ahead: the to-dos that don't fit what is left of today, and the meetings that clash from
+    today onward. Each is a risk to the person's own time."""
+    lines: list[Line] = []
+    held = day_capacity.check(store, cfg, now)
+    if held is not None:
+        lines.append(
+            Line(
+                key="capacity",
+                group="risk",
+                kind="capacity",
+                count=len(held.moves),
+                actions=[m.action for m in held.moves],
+                minutes=held.free_minutes,
+                needed_minutes=held.needed_minutes,
+                due=held.next_day.isoformat(),
+                since=now.astimezone(zone(cfg)).date().isoformat(),
+            )
+        )
+    for clash in day_clashes.upcoming(store, cfg, now):
+        link = clash.link
+        lines.append(
+            Line(
+                key=clash.key,
+                group="risk",
+                kind="clash",
+                text=clash.first.item.title,
+                other=clash.second.item.title,
+                state=clash.state,
+                minutes=clash.minutes,
+                due=clash.day.isoformat(),
+                at=clash.at.isoformat(),
+                entry=link[1] if link else None,
+                since=clash.at.isoformat(),
+            )
+        )
+    return lines
 
 
 def _tired_of_waiting(
@@ -1351,6 +1416,8 @@ _KIND_ORDER = {
     "paused": 1,
     "offline": 1,
     "overdue": 2,
+    "capacity": 2,
+    "clash": 3,
     "promise": 2,
     "reminder": 0,
     "reminder_digest": 1,

@@ -2,7 +2,7 @@
 // their content beside the queue (below it under 1024px, and on the phone each folded to one line). What needs the person is
 // the queue, not the rail.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
@@ -43,11 +43,12 @@ function useNow(): Date {
 }
 
 /** The rail's panels: top priorities, the week, the agenda, the to-dos and what came in. `onAddSource` opens Sources with the add form open. */
-export function TodayRail(props: { onView: (view: View) => void; onAddSource?: () => void }) {
+export function TodayRail(props: { onView: (view: View) => void; onAddSource?: () => void; brief?: ReactNode }) {
   const { t } = useWords();
   const add = props.onAddSource ?? (() => props.onView("sources"));
   return (
     <div className={styles.rail} role="group" aria-label={t("today.rail.label")}>
+      {props.brief}
       <TopPriorities onView={props.onView} />
       <ThisWeekPanel />
       <AgendaPanel onAddSource={add} />

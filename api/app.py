@@ -30,6 +30,7 @@ from api.brief_routes import build_brief_router
 from api.calendar_routes import build_calendar_router
 from api.correction_routes import build_correction_router
 from api.data_form_routes import build_data_form_router
+from api.day_routes import build_day_router
 from api.feedback_routes import build_feedback_router
 from api.first_promises_routes import build_first_promises_router
 from api.knowledge_routes import build_knowledge_router
@@ -339,6 +340,7 @@ def create_app(
     inner.include_router(build_reminder_router(ws, cfg, store, events, worker))
     inner.include_router(build_repeat_router(cfg, store, events, worker))
     inner.include_router(build_todo_router(cfg, store, events, worker))
+    inner.include_router(build_day_router(ws, cfg, store, events, worker))
     inner.include_router(build_since_router(ws, cfg, store, events, worker))
     inner.include_router(build_reply_router(ws, cfg, store, events, worker))
     inner.include_router(build_action_work_router(ws, cfg, store, events, worker))

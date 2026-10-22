@@ -1027,6 +1027,31 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 192. The capacity check, clashes from today on, the attention budget and the reminder offer (2026-10-22; S2, built)
+
+- **Design 6.32 (Time) and 7.7:** an optional effort on a to-do (minutes), set by the person in the edit form and in Add a
+  to-do (a list of common sizes, with another length typed), and suggested by the assistant from an input as a held
+  `record.set` the person keeps or leaves. The day's capacity check sets the free time left today (the calendars, inside
+  the working hours, with a buffer around meetings) against the effort of the person's to-dos due today or late; when
+  there is more than the day holds, the Today line "Move N to-dos: today holds about H hours" opens the to-dos the rules
+  propose to move, each with Move to the next working day or a day to pick, acting at once with Undo, and nothing is
+  scheduled. The brief carries the same line, first in its at-risk section. Clashes are found from today through
+  `steward.clashes.days_ahead`, with the travel time between two places, as at-risk lines on Today and in the brief. The
+  attention budget holds back suggestion lines (a follow-up gone unanswered, to-dos nobody has touched, items filed
+  under no project, what was learned): by importance, a cap a day, quiet hours and a threshold; what waits for the
+  quiet hours or the cap is in the next morning brief, and "Not now" puts a suggestion off until something about it
+  changes. The brief offers a reminder, Remind me, for a to-do with a day coming up and no reminder.
+- **New:** `engine/day_capacity.py`, `engine/day_clashes.py`, `engine/day_calendar.py`, `engine/suggestions.py`; the
+  field `effort_minutes` on the action (the assistant's `record.set` of it is held, as a project's priority is); the
+  signal kind `suggestion_dismissed`; the Today line kinds `capacity` and `clash`; the held ask `effort`; routes
+  `GET /api/capacity`, `POST /api/suggestions/not-now` and its undo; `effort_minutes` on `POST /api/todos`; settings
+  `steward.capacity.*`, `steward.clashes.*`, `steward.attention.*` and `steward.brief.offer_reminders` and
+  `remind_within_days`, each with a description, a default and demo values in both workspaces; a line in the notes prompt
+  and the case `effort-stated-for-an-open-todo` in both workspaces; sample mornings 6 and 7 are complete.
+- **Built:** `tests/test_day_capacity.py`, `tests/test_add_todo.py`, `tests/test_repeating_todos.py`,
+  `tests/test_brief.py`, `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`,
+  `web/src/components/AddTodo.test.tsx`, `web/src/components/RepeatingTodos.test.tsx`, `web/src/lib/queue-words.test.ts`.
+
 ## 193. Meeting prep, capture after a meeting and people memory (2026-10-22; S3, built in part)
 
 - **Design 6.32 (Promises and people), 7.7 and 7.14:** any calendar entry with other people on it (not only a series'

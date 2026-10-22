@@ -3042,6 +3042,17 @@ class BriefSettings(ConfigModel):
     goals_max: int = Field(
         5, ge=1, le=10, description="The most goals for the week you confirm, and how many the briefing proposes."
     )
+    offer_reminders: bool = Field(
+        True,
+        description="Whether the morning brief offers a reminder for a to-do that has a day coming up and no "
+        "reminder. Remind me sets one for the working morning before it is due.",
+    )
+    remind_within_days: int = Field(
+        3,
+        ge=1,
+        le=60,
+        description="How many days ahead a to-do's day can be for the morning brief to offer a reminder for it.",
+    )
 
     @field_validator("morning_from", "evening_from", "overnight_from", mode="before")
     @classmethod
@@ -3116,6 +3127,89 @@ class PeopleSettings(ConfigModel):
     )
 
 
+class CapacitySettings(ConfigModel):
+    buffer_minutes: int = Field(
+        0,
+        ge=0,
+        le=120,
+        description="Minutes of free time kept clear before and after each meeting when the day's free time is added "
+        "up, so a gap too short to start anything in isn't counted. Zero counts every gap.",
+    )
+    tentative_is_free: bool = Field(
+        False,
+        description="Whether a meeting you haven't accepted counts as free time. Off, it takes its time from the day.",
+    )
+
+
+class ClashSettings(ConfigModel):
+    days_ahead: int = Field(
+        7,
+        ge=0,
+        le=60,
+        description="How many days after today the app looks for meetings that overlap, or that leave too little time "
+        "to get from one place to the next. Zero looks only at today.",
+    )
+    travel_minutes: int = Field(
+        30,
+        ge=0,
+        le=240,
+        description="The least minutes between two meetings in different places before the second is at risk. An "
+        "online meeting needs none, and zero turns the check off. Meetings that overlap are always at risk.",
+    )
+
+
+class ImportanceSettings(ConfigModel):
+    escalate: float = Field(
+        0.8,
+        ge=0,
+        le=1,
+        description="How much it matters to be told that someone still hasn't answered after your follow-ups, from "
+        "0 to 1. The most important suggestions come first and keep their place when there are too many.",
+    )
+    unfiled: float = Field(
+        0.4, ge=0, le=1, description="How much it matters to be told what the assistant filed under no project."
+    )
+    stale: float = Field(
+        0.4, ge=0, le=1, description="How much it matters to be told of to-dos nothing has touched for a while."
+    )
+    learned: float = Field(
+        0.3, ge=0, le=1, description="How much it matters to look over what the assistant learned from your inputs."
+    )
+    catch_up: float = Field(
+        0.2,
+        ge=0,
+        le=1,
+        description="How much it matters to look over what the assistant learned from your corrections.",
+    )
+
+
+class AttentionSettings(ConfigModel):
+    quiet: bool = Field(
+        True,
+        description="Whether suggestions wait for the morning brief while quiet hours last (set under Reminders). "
+        "Off, they show at any hour. What needs you today, such as a late to-do or a clash, is never held back.",
+    )
+    daily_cap: int = Field(
+        5,
+        ge=0,
+        le=50,
+        description="The most suggestions Today shows in a day, counting any you put off. The rest wait for the "
+        "morning brief, most important first. Zero keeps every suggestion for the brief.",
+    )
+    threshold: float = Field(
+        0.0,
+        ge=0,
+        le=1,
+        description="Suggestions that matter less than this, from 0 to 1, are not shown on Today or in the brief. "
+        "Zero shows them all.",
+    )
+    importance: ImportanceSettings = Field(
+        default_factory=ImportanceSettings,
+        description="How much each kind of suggestion matters, from 0 to 1, which decides what is shown first and what "
+        "waits when there are more than the day's cap.",
+    )
+
+
 class StewardFile(FileModel):
     default_stance: Literal["manage", "alongside", "report_to", "watch"] = Field(
         "alongside",
@@ -3187,6 +3281,21 @@ class StewardFile(FileModel):
         default_factory=PeopleSettings,
         description="What a person's page remembers about them, and when a promise that has gone quiet gets a line "
         "on Today.",
+    )
+    capacity: CapacitySettings = Field(
+        default_factory=CapacitySettings,
+        description="How the free time left in your day is added up, for the check that your to-dos fit it. The "
+        "working hours are the ones under Reminders.",
+    )
+    clashes: ClashSettings = Field(
+        default_factory=ClashSettings,
+        description="Which meetings are at risk of clashing: how far ahead the app looks and how much travel time "
+        "two meetings in different places need.",
+    )
+    attention: AttentionSettings = Field(
+        default_factory=AttentionSettings,
+        description="How much the app interrupts you with suggestions: quiet hours, the most in a day, and how "
+        "important one must be to show.",
     )
 
 

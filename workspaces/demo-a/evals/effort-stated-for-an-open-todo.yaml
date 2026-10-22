@@ -1,0 +1,27 @@
+id: effort-stated-for-an-open-todo
+title: A person says how long their open to-do takes, so the effort is proposed and waits for their yes
+skills: [evidence, close-right-item]
+received: '2026-10-14'
+# The effort is a suggestion: it is held for the person to keep, and nothing else changes on the action.
+pasted: |-
+  From: Tobias Wren
+
+  The cut-over runbook is about two hours of work, so I will do it in one sitting.
+expect:
+- held: record.set
+  text_has:
+  - effort_minutes
+  - '120'
+forbid:
+- op: action.close
+- op: action.add
+stub_answer:
+  summary: Tobias says the runbook is about two hours of work; the effort waits for a yes.
+  ops:
+  - op: record.set
+    kind: action
+    id: ACT-1
+    field: effort_minutes
+    value: 120
+    evidence:
+      quote: The cut-over runbook is about two hours of work

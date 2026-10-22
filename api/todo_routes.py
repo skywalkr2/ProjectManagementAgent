@@ -36,6 +36,7 @@ def build_todo_router(cfg: Config, store: Store, events: Events, worker: Worker)
                 owners=body.owners,
                 project=body.project,
                 repeat=body.repeat,
+                effort_minutes=body.effort_minutes,
             )
         except (add_todo.TodoProblem, StoreError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None

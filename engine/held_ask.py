@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 CLOSE, DATE, OWNER, ROUTING, DROP, MOVE, PART = "close", "date", "owner", "routing", "drop", "move", "part"
+#: A guess at how long a to-do takes, held for the person to keep.
+EFFORT = "effort"
 #: An ending whose words say only "closed": the person is asked whether it is done by its owners or no longer needed.
 ENDING = "ending"
 
@@ -92,6 +94,18 @@ def describe(
             return None
         shown = {"ask": CLOSE, "item": _text(found), "quote": quote}
         return shown | _ending(people, found, op, reporter) if kind == "action" else shown
+    if name == "record.set" and op.get("kind") == "action" and op.get("field") == "effort_minutes":
+        found = view.get("action", op.get("id", ""))
+        if found is None:
+            return None
+        before = found.data.get("effort_minutes")
+        return {
+            "ask": EFFORT,
+            "item": _text(found),
+            "value": str(op.get("value")),
+            "from_value": str(before) if before else None,
+            "quote": quote,
+        }
     if name == "record.set" and op.get("kind") == "action" and op.get("field") in ("due", "owners", "owner"):
         found = view.get("action", op.get("id", ""))
         if found is None:

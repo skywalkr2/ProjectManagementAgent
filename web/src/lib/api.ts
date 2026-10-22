@@ -372,6 +372,11 @@ export const api = {
   checkTodoDay: (body: S["TodoDayCheckIn"]) => call<S["TodoDayView"]>("POST", "todos/day", body),
   /** Add a to-do by hand as the person's own; the changes made are undone last first. */
   addTodo: (body: S["TodoAddIn"]) => call<S["TodoAdded"]>("POST", "todos", body),
+  /** Whether the rest of today holds the to-dos due today or late, and what is proposed to move when it doesn't. */
+  capacity: () => call<S["CapacityView"]>("GET", "capacity"),
+  /** "Not now" on a suggestion line: it stays off until something about it changes. */
+  notNowSuggestion: (key: string) => call<S["NotNowDone"]>("POST", "suggestions/not-now", { key }),
+  undoNotNowSuggestion: (signal: string) => call<S["Ok"]>("POST", `suggestions/not-now/${id(signal)}/undo`),
   /** Why a promise exists: its words, who owes it to whom, its day, how it is known and what was heard since. */
   remind: (action: string, body: S["ReminderIn"]) => call<S["Applied"]>("POST", `reminders/${id(action)}`, body),
   promise: (action: string) => call<S["PromiseView"]>("GET", `promises/${id(action)}`),

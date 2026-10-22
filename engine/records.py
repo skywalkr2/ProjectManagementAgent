@@ -476,6 +476,8 @@ class Action(Record):
     record_kind: ClassVar[str] = "action"
     prefix: ClassVar[str] = "ACT"
     layout: ClassVar[str | None] = "actions/{id}"
+    #: The assistant's guess at the effort waits for the person's yes, as a project's priority does.
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"effort_minutes": ()}
 
     project: str | None = Field(None, description="The id of the project it belongs to.")
     text: str = Field(min_length=1, description="What is to be done, starting with a verb.")
@@ -483,6 +485,14 @@ class Action(Record):
         default_factory=list, description="The people who do it; required unless the action is held."
     )
     due: date | None = Field(None, description="The day it is due.")
+    effort_minutes: int | None = Field(
+        None,
+        ge=1,
+        le=1440,
+        description="About how long it takes, in whole minutes (design 6.32). The person sets it; the assistant may "
+        "suggest one from an input, which waits for the person's yes. It is what the day's capacity check adds up; a "
+        "to-do with none counts as no time.",
+    )
     status: Literal["held", "open", "done", "dropped"] = Field(
         "open",
         description="held: waiting for an owner to be picked. open: to be done. done: finished. dropped: closed "
@@ -2092,6 +2102,7 @@ class Signal(Record):
         "not_now",
         "no_reply_needed",
         "missed",
+        "suggestion_dismissed",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -2104,7 +2115,8 @@ class Signal(Record):
         "fields the assistant had set (the note says which, from what to what); not_now, put off the rules review "
         "line for its week (not a correction of anything the assistant made); no_reply_needed, said a reply the "
         "assistant thought was owed is not; missed, said in a sentence what the assistant missed (the note is their "
-        "words)."
+        'words); suggestion_dismissed, said "Not now" to a suggestion line on Today (the note says which line and '
+        "what it was when put off, so it stays off until something about it changes; it is not a correction)."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")

@@ -19,3 +19,4 @@ expect:
   - {kind: own_due, state: today, text: Send the estimate, person: PER-3, day: '2026-10-19', days: 0, at: '12:00', link: [action, ACT-92]}
   'yes':
   - {kind: 'yes', change: send, person: PER-3, ready: true, queue: 'send:PER-3'}
+  - {kind: 'yes', change: reminder_offer, text: Send the draft deadline plan, day: '2026-10-21', at: '08:30', link: [action, ACT-91]}

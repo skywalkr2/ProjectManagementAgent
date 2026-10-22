@@ -52,6 +52,7 @@ def _action(r: OpenAction) -> OpenActionView:
         to_send=r.to_send,
         due_check=r.due_check,
         repeat=r.repeat,  # type: ignore[arg-type]
+        effort_minutes=r.effort_minutes,
     )
 
 

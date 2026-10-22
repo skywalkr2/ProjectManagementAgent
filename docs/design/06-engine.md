@@ -3322,12 +3322,42 @@ people and details, and never acts in their name without their yes on the exact 
   credited to whoever did it, what moved ahead today or is still open today, and what others still owe or haven't
   answered; it is quiet when nothing moved and nobody is waited on. Each section shows at most `steward.brief.max_lines`
   and says how many more. The card is at the top of Today from `steward.brief.morning_from`, gives way to the wrap-up from
-  `steward.brief.evening_from` and closes for the day in that browser, which is no signal of anything. **Left:** the
-  capacity line and the moves it proposes (the capacity item, S2); at-risk lines from a date inside a mail or a booking
-  ("the last day to cancel"), from a meeting named only in words, and from a clash after today (only today's meetings are
-  compared, with no travel time); the reminder offer. The sample mornings are cases in both workspaces
+  `steward.brief.evening_from` and closes for the day in that browser, which is no signal of anything. **Left:** at-risk lines from a date
+  inside a mail or a booking ("the last day to cancel"; S4) and from a meeting named only in words. The sample mornings are cases in both workspaces
   (`workspaces/*/briefs/`, `engine/brief_cases.py`), each scored exactly with what it still lacks named (`left:`).
   `tests/test_brief.py`, `tests/test_brief_week.py`, `web/src/components/BriefCard.test.tsx`.
+- **The capacity check, clashes, the attention budget and the reminder offer (phase S2, built; change log 192).** *Effort:* a
+  to-do has an optional effort in minutes (`effort_minutes`), set in the edit form and in Add a to-do from a list of common
+  sizes with another length typed, carried to the next occurrence of a repeating to-do, and suggested by the assistant
+  from an input as a held `record.set` of the field (the notes prompt names it; it needs the quoted words, like a
+  project's priority only the person sets it): the held line asks "Keep it as taking about 2 hours?", leaving it is the
+  `held_declined` signal, and keeping it makes it the person's own. *The check* (`engine/day_capacity.py`) adds up the
+  working minutes left today that no meeting takes (`engine/free_slots.py` over every calendar, inside the working hours
+  and days of `steward.reminders`, with `steward.capacity.buffer_minutes` around meetings and
+  `tentative_is_free`; an all-day entry takes no time) and sets them against the effort of the person's own open to-dos
+  due today or late, not on hold; a to-do with no effort counts as no time. When there is more, `engine/capacity.py`
+  proposes whole to-dos to move (never one due at a meeting; those due today or late last, then by project priority,
+  not promised first), and the Today line **Move N to-dos: today holds about H hours** (risk group) opens them with Move
+  to the next working day or a day to pick: the person's own date change, at once, with Undo (`GET /api/capacity` is the
+  proposal; nothing is scheduled). With nothing movable it says today holds less than the to-dos need. The morning brief
+  carries the same line first in its at-risk section. *Clashes* (`engine/day_clashes.py`): `engine/clashes.py` runs over
+  every calendar's timed entries from today through `steward.clashes.days_ahead`, with `travel_minutes` between two
+  places (an online meeting needs none, a missing place is not assumed to differ, a meeting not accepted never clashes,
+  a clash already over today is left out), as one Today line each ("Sort out the clash: A and B overlap by 30 minutes, Tue
+  3:00 PM") and one at-risk line each in the brief. *The attention budget* (`engine/suggestions.py` over
+  `engine/attention.py`): the suggestion lines (a follow-up gone unanswered, to-dos nobody has touched, items filed under
+  no project, what was learned) are held back when put off and unchanged or below `steward.attention.threshold`, saved for
+  the brief in the quiet hours under Reminders (`steward.attention.quiet`) or past `daily_cap` (which counts the ones shown
+  and the ones put off today), most important first by `steward.attention.importance`; what is due or at risk is never
+  held. What is saved for the brief is one line each under "needs your yes". "Not now" (in a suggestion's menu) records the
+  signal `suggestion_dismissed` with the line and what it was, stays off until its items change, and Undo takes it back.
+  *The reminder offer:* for the person's own to-do with a day within `steward.brief.remind_within_days` and no reminder,
+  the brief says "Add a reminder on Thu at 9:00 for 'X'" with **Remind me**, which sets it for the working morning before
+  the day (else the morning of it), the person's own change with Undo. Only to-dos carry a reminder; a date inside a mail or
+  a booking is S4. **Left:** an effort suggested for a to-do added in the same answer; the response of a connected event the
+  app kept no entry for (it counts as busy). `tests/test_day_capacity.py`, `tests/test_add_todo.py`,
+  `tests/test_brief.py` (samples 6 and 7), `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`,
+  `web/src/components/AddTodo.test.tsx`, `web/src/components/RepeatingTodos.test.tsx`.
 - **Adding a to-do yourself (phase S2; designed 2026-10-22).** Today and To-dos have **Add a to-do**: the words, when
   (typed in plain words and read by the due-date rules, said back under the field, or left without a day), who
   (the person by default, picked from the list of people), the project (picked, optional) and Repeats. No AI is
@@ -3344,7 +3374,7 @@ people and details, and never acts in their name without their yes on the exact 
   repeat rule and said back from the wording sheet, so the person sees what was understood before it is kept; a phrase
   the grammar declines is said to be unclear and nothing repeats. **Each occurrence is its own to-do**: only the next
   one exists at a time, so a list never fills with future copies. When one ends (done, dropped, or done by someone
-  else), the next is made in the same change, with the same text, owners, project and notes, due on the next date of
+  else), the next is made in the same change, with the same text, owners, project, notes and effort, due on the next date of
   the rule after the one that ended and not before today; Undo of the ending takes the next one back too. One that is
   missed **stays open** (nothing a person meant to do is closed for them), and the next is made only when it ends, on
   the first rule date from that day. "Stop repeating" in the to-do's menu ends the repeat and leaves the open one as

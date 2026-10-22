@@ -8,11 +8,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day, wallTime } from "../lib/dates";
+import { day, wallTime, wallWhen } from "../lib/dates";
 import { backupAge } from "../lib/backup";
 import { useCoverage } from "../lib/coverage";
 import { useFirstGoText } from "../lib/first-go";
+import { durationWords } from "../lib/duration";
 import { useRowKeys } from "../lib/keys";
+import { SUGGESTION_KINDS, useNotNow } from "../lib/not-now";
 import { chooseFilters } from "../lib/open-items";
 import { onShowNewLines } from "../lib/queue-hold";
 import { useHeldAnswers } from "../lib/held-answers";
@@ -613,6 +615,14 @@ export function useLineTitle(): (line: QueueLine) => string {
         return t("queue.escalate", { text: (line.text ?? "").replace(/[?.!\s]+$/, "") });
       case "stale":
         return line.count === 1 && line.subject ? t("queue.stale.one_named", { text: line.subject }) : tn("queue.stale", line.count);
+      case "capacity": {
+        const time = durationWords(line.minutes ?? 0, tn);
+        return line.count > 0 ? tn("queue.capacity", line.count, { time }) : t("queue.capacity.none", { time });
+      }
+      case "clash": {
+        const vars = { text: line.text ?? "", other: line.other ?? "", when: line.at ? wallWhen(line.at) : day(line.due) };
+        return line.state === "travel" ? tn("queue.clash.travel", line.minutes ?? 0, vars) : tn("queue.clash.overlap", line.minutes ?? 0, vars);
+      }
       case "promise": {
         const vars = { name, text: line.text ?? "", date: line.due ? day(line.due) : "" };
         if ((line.replies ?? 0) > 0) return repliedWords(line.replies ?? 0, name, t);
@@ -691,6 +701,7 @@ function QueueRow(props: {
   const replyRow = useReplyChoices(line, () => ref.current?.focus());
   const sentRow = useSentCheckChoices(line);
   const heldWords = useHeldAnswers(line.changeset ?? "", line.op ?? 0, line.kind === "held" && line.changeset != null && line.op != null ? line.held : null);
+  const notNow = useNotNow();
   const reminderRow = useReminderChoices(line.kind === "reminder" ? (line.actions ?? [])[0] ?? "" : "", line.snoozes ?? [], () => ref.current?.focus());
   // The question of what happened at a meeting opens its box under the row; the cursor goes back to the row when it closes.
   const [capturing, setCapturing] = useState(false);
@@ -903,6 +914,22 @@ function QueueRow(props: {
           menu: [],
         };
       }
+      case "capacity":
+        return {
+          pill: t("queue.pill.capacity"),
+          tone: "warn",
+          meta: line.needed_minutes ? t("queue.capacity.meta", { needed: durationWords(line.needed_minutes, tn) }) : undefined,
+          primary: line.count > 0 ? { label: t("queue.capacity.look") } : null,
+          menu: [],
+        };
+      case "clash":
+        return {
+          pill: t("queue.pill.clash"),
+          tone: "warn",
+          meta: undefined,
+          primary: line.entry && props.handlers.onOpenRecord ? { label: t("queue.clash.open"), run: () => props.handlers.onOpenRecord?.("event", line.entry ?? "") } : null,
+          menu: [],
+        };
       case "stale":
         return {
           pill: t("queue.pill.stale"),
@@ -993,6 +1020,8 @@ function QueueRow(props: {
     }
   })();
 
+  // A suggestion can be put off until something about it changes; what is due cannot.
+  const menu: MenuAction[] = SUGGESTION_KINDS.has(line.kind) ? [...d.menu, { id: "not-now", label: t("queue.notnow"), run: () => notNow(line.key) }] : d.menu;
   useRowKeys(ref, { toggle: props.beside ? choose : opens ? () => select(!open) : undefined });
   const project = props.mixed && line.project_name ? <ProjectTag name={line.project_name} parent={line.parent_name} className={styles.tag} /> : null;
   const onClick = (event: React.MouseEvent) => {
@@ -1064,7 +1093,7 @@ function QueueRow(props: {
       meta={d.meta || undefined}
       oneLine
       primary={primary}
-      menu={d.menu.length > 0 || (d.groups?.length ?? 0) > 0 ? <RowMenu label={title} actions={d.menu} groups={d.groups} /> : undefined}
+      menu={menu.length > 0 || (d.groups?.length ?? 0) > 0 ? <RowMenu label={title} actions={menu} groups={d.groups} /> : undefined}
       onClick={onClick}
     >
       {line.kind === "reminder_digest" && <ReminderItems line={line} />}

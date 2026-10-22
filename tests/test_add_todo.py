@@ -71,6 +71,44 @@ def test_undo_of_a_to_do_with_no_repeat_takes_it_back(api):
     assert store.read().get("action", made["action"]) is None
 
 
+def test_a_to_do_added_with_an_effort_has_it_in_its_own_change_and_undo_takes_both_back(api):
+    client, store, cfg = api
+    made = client.post("/api/todos", json={"text": TEXT, "owners": [pm_of(cfg)], "effort_minutes": 90}).json()
+    assert len(made["changesets"]) == 2 and data(store, made["action"])["effort_minutes"] == 90
+    todo = next(t for t in client.get("/api/today/todo").json() if t["action"] == made["action"])
+    assert todo["effort_minutes"] == 90
+    assert (
+        client.post("/api/todos", json={"text": TEXT, "owners": [pm_of(cfg)], "effort_minutes": 0}).status_code == 422
+    )
+    undo_all(client, made)
+    assert store.read().get("action", made["action"]) is None
+
+
+def test_the_capacity_proposal_is_read_only_and_says_when_everything_fits(api):
+    client, store, cfg = api
+    found = client.get("/api/capacity").json()
+    assert found["fits"] is True and found["moves"] == []
+
+
+def test_not_now_puts_a_suggestion_off_with_undo_and_refuses_what_is_not_a_suggestion(api, monkeypatch):
+    from engine import today_queue
+
+    client, store, cfg = api
+    lines = [
+        today_queue.Line(key="stale", group="review", kind="stale", count=1, actions=["ACT-1"], since="a"),
+        today_queue.Line(key="overdue", group="risk", kind="overdue", count=1, since="a"),
+    ]
+    monkeypatch.setattr(today_queue, "_everything", lambda *a, **k: lines)
+    assert sorted(x["key"] for x in client.get("/api/today/queue").json()) == ["overdue", "stale"]
+    assert client.post("/api/suggestions/not-now", json={"key": "overdue"}).status_code == 404
+    done = client.post("/api/suggestions/not-now", json={"key": "stale"})
+    assert done.status_code == 200
+    assert [x["key"] for x in client.get("/api/today/queue").json()] == ["overdue"]
+    assert client.post(f"/api/suggestions/not-now/{done.json()['signal']}/undo").status_code == 200
+    assert sorted(x["key"] for x in client.get("/api/today/queue").json()) == ["overdue", "stale"]
+    assert client.post("/api/suggestions/not-now/SIG-999/undo").status_code == 404
+
+
 def test_a_to_do_with_no_day_has_none(api):
     client, store, cfg = api
     made = client.post("/api/todos", json={"text": TEXT, "owners": [pm_of(cfg)]}).json()

@@ -34,6 +34,8 @@ brief:
   max_lines: 5   # the most lines one section shows; the rest become one line saying how many more
   goals_min: 3   # the fewest goals for the week you confirm
   goals_max: 5   # the most goals for the week
+  offer_reminders: true   # the morning brief offers a reminder for a to-do with a day coming up and no reminder
+  remind_within_days: 3   # a to-do's day can be up to this many days ahead for a reminder to be offered
 meetings:
   prep_hours_before: 24   # the prep for an entry with other people shows on Today this many hours before it starts
   prep_min_open: 0   # the fewest open things with the people coming that an entry needs for a line on Today; 0 gives every one a line
@@ -43,3 +45,19 @@ people:
   quiet_promise_days: 7   # a promise to or from someone with no news for this many days gets a line on Today; 0 is off
   max_facts: 5   # the most facts a person's page shows under what matters to them, and under their dates
   date_words: [birthday, anniversary]   # words that mark a fact about a person as a date that comes round every year
+capacity:
+  buffer_minutes: 10   # minutes kept clear around each meeting when the day's free time is added up
+  tentative_is_free: false   # whether a meeting you haven't accepted counts as free time
+clashes:
+  days_ahead: 7   # how many days after today the app looks for clashing meetings
+  travel_minutes: 30   # the least minutes between two meetings in different places
+attention:
+  quiet: false   # on, suggestions wait for the morning brief in quiet hours; off here so the sandbox shows them at any time of day
+  daily_cap: 5   # the most suggestions Today shows in a day; the rest wait for the morning brief
+  threshold: 0.0   # a suggestion that matters less than this (0 to 1) is not shown
+  importance:
+    escalate: 0.8   # how much each kind of suggestion matters, from 0 to 1
+    unfiled: 0.4
+    stale: 0.4
+    learned: 0.3
+    catch_up: 0.2

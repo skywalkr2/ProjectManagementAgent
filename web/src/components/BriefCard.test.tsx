@@ -96,7 +96,7 @@ test("every kind of line is worded from the sheet: one fact each, the day and th
   expect(screen.getByText("Send the estimate is due today at 12:00 PM")).toBeInTheDocument();
   expect(screen.getByText("for Oren Example")).toBeInTheDocument();
   expect(screen.getByText("Dev Example: the measurements is a day late")).toBeInTheDocument();
-  expect(screen.getByText("Call and Dentist overlap by 30 minutes from 10:30 AM")).toBeInTheDocument();
+  expect(screen.getByText("Call and Dentist overlap by 30 minutes on Tue, Oct 20 from 10:30 AM")).toBeInTheDocument();
   expect(screen.queryByText(/done|progress|so far/i)).toBeNull();
 });
 
@@ -305,4 +305,54 @@ test("a message already copied can be copied again without approving anything", 
   await user.click(screen.getByRole("button", { name: "Copy message" }));
   expect(await navigator.clipboard.readText()).toBe("Hello.");
   expect(calls.some((c) => c.route === "POST brief/message/copied")).toBe(false);
+});
+
+const MORE: Brief = {
+  ...MORNING,
+  sections: [
+    {
+      key: "risk",
+      more: 0,
+      lines: [
+        line({ key: "capacity", kind: "capacity", minutes: 30, needed_minutes: 180, count: 2, queue: "capacity" }),
+        line({ key: "clash:a:b:2026-10-22", kind: "clash", state: "travel", text: "Site visit", other: "Supplier call", minutes: 20, day: "2026-10-22", at: "11:10" }),
+      ],
+    },
+    {
+      key: "yes",
+      more: 0,
+      lines: [
+        line({ key: "remind:ACT-7", kind: "yes", change: "reminder_offer", text: "Decide on the renewal", day: "2026-10-29", at: "09:00", when: "2026-10-29T09:00:00-05:00", link: { kind: "action", id: "ACT-7" } }),
+        line({ key: "digest:stale", kind: "digest", change: "stale", count: 3, queue: "stale" }),
+      ],
+    },
+  ],
+};
+
+test("the capacity line says what the to-dos need and what the calendar has, and a clash a few days on says its day and the travel", async () => {
+  show(MORE);
+  await screen.findByRole("heading", { level: 2, name: "Morning brief" });
+  expect(screen.getByText("Your to-dos need about 3 hours; your calendar has about 30 minutes free")).toBeInTheDocument();
+  expect(screen.getByText("Site visit and Supplier call leave 20 minutes too little to travel between them on Thu, Oct 22 from 11:10 AM")).toBeInTheDocument();
+});
+
+test("a reminder offer says when and Remind me sets it at that moment, with Undo", async () => {
+  const user = userEvent.setup();
+  const { calls } = show(MORE, { "POST reminders/ACT-7": () => ({ changeset: "CS-5" }), "POST changesets/CS-5/undo": () => ({ restored: [0], skipped: [] }) });
+  expect(await screen.findByText("Add a reminder on Thu, Oct 29 at 9:00 AM for 'Decide on the renewal'")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Remind me" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST reminders/ACT-7")?.body).toEqual({ at: "2026-10-29T09:00:00-05:00" }));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-5/undo")).toBe(true));
+});
+
+test("a suggestion that waited for the brief is worded as the brief's own line and opens where it is dealt with", async () => {
+  const user = userEvent.setup();
+  const onOpenView = vi.fn();
+  fakeApi({ "GET brief": () => MORE, "GET today/queue": () => [] });
+  renderApp(<BriefCard workspace="ws" onOpenRecord={vi.fn()} onOpenView={onOpenView} />);
+  expect(await screen.findByText("Keep or drop 3 to-dos nobody has touched lately")).toBeInTheDocument();
+  const item = screen.getByText("Keep or drop 3 to-dos nobody has touched lately").closest("li")!;
+  await user.click(within(item).getByRole("button", { name: "Open" }));
+  expect(onOpenView).toHaveBeenCalledWith("work/open");
 });

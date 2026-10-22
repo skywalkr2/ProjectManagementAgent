@@ -71,6 +71,8 @@ class OpenAction:
     due_check: bool = False
     #: How it repeats, when it does (`engine.repeats.view_of`).
     repeat: dict[str, Any] | None = None
+    #: About how long it takes, in minutes, when it says.
+    effort_minutes: int | None = None
 
 
 @dataclass
@@ -189,6 +191,7 @@ def open_actions(
                 to_send=a.id in to_send,
                 due_check=bool(d.get("due_check")) and due is not None,
                 repeat=repeats.view_of(d.get("repeat")),
+                effort_minutes=d.get("effort_minutes"),
             )
         )
     if not light:

@@ -292,10 +292,11 @@ class AgendaAddOp(OpModel):
 class RecordSetOp(OpModel):
     """Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent
     (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id);
-    action text, due and notes; the entry (event) or series an action, question or fact belongs to (an id, or null);
+    action text, due, notes and effort_minutes (about how long it takes, in whole minutes; it waits for the person's
+    yes); the entry (event) or series an action, question or fact belongs to (an id, or null);
     question title and text; person role, org, why_they_matter, side (personal, business or both) and relation
     (how they relate to the person, such as "my sister"). The new value must
-    be valid for the field. Evidence is required for due, status, owners, target and owner."""
+    be valid for the field. Evidence is required for due, status, owners, target, owner and effort_minutes."""
 
     op: Literal["record.set"]
     kind: Literal["project", "action", "question", "person", "fact"] = Field(
@@ -1937,12 +1938,12 @@ EVIDENCE_UNLESS_PERSON = {
     "action.part",
     "question.drop",
 }
-EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner", "event", "series"}
+EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner", "event", "series", "effort_minutes"}
 
 #: Fields record.set may change, per kind.
 SETTABLE: dict[str, set[str]] = {
     "project": {"status", "phase", "target", "priority", "summary", "parent", "language", "owner"},
-    "action": {"text", "due", "notes", "event", "series"},
+    "action": {"text", "due", "notes", "event", "series", "effort_minutes"},
     "question": {"title", "text", "event", "series"},
     "fact": {"event", "series"},
     "person": {"role", "org", "why_they_matter", "side", "relation"},

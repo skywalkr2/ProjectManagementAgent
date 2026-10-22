@@ -5304,6 +5304,18 @@
             ],
             "title": "Minutes"
           },
+          "needed_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For the capacity line: the effort, in minutes, of the to-dos due today or late.",
+            "title": "Needed Minutes"
+          },
           "other": {
             "anyOf": [
               {
@@ -5374,6 +5386,19 @@
               }
             ],
             "title": "Text"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a reminder offer: the moment the reminder would be set for, on the person's own clock.",
+            "title": "When"
           },
           "you": {
             "default": false,
@@ -5643,6 +5668,116 @@
           "changeset"
         ],
         "title": "BusinessView",
+        "type": "object"
+      },
+      "CapacityMoveView": {
+        "description": "A to-do proposed to move out of today: its `text`, its effort in `minutes`, whether it was `promised` to someone,\nwhere its date stands (`due_state`: none, overdue, today or later) and the `version` a change of its date states it\nread. Moving it is the person's own date change, applied at once with Undo.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "due_state": {
+            "enum": [
+              "none",
+              "overdue",
+              "today",
+              "later"
+            ],
+            "title": "Due State",
+            "type": "string"
+          },
+          "minutes": {
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "promised": {
+            "title": "Promised",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "version",
+          "text",
+          "minutes",
+          "promised",
+          "due_state"
+        ],
+        "title": "CapacityMoveView",
+        "type": "object"
+      },
+      "CapacityView": {
+        "description": "Whether the rest of today holds the to-dos due today or late (design 6.32). `fits` is true when it does, or when\nthere is nothing to count (the day is over, or not a working day); then the rest is empty. Otherwise `free_minutes`\nis what the calendar leaves, `needed_minutes` what the to-dos with an effort need, `over_minutes` the difference,\n`moves` what is proposed to move, `still_over` how much would be over even with those moved (to-dos fixed to a\nmeeting never move) and `next_day` the next working day, offered as where to move them. Nothing is scheduled.",
+        "properties": {
+          "fits": {
+            "title": "Fits",
+            "type": "boolean"
+          },
+          "free_minutes": {
+            "default": 0,
+            "title": "Free Minutes",
+            "type": "integer"
+          },
+          "moves": {
+            "items": {
+              "$ref": "#/components/schemas/CapacityMoveView"
+            },
+            "title": "Moves",
+            "type": "array"
+          },
+          "needed_minutes": {
+            "default": 0,
+            "title": "Needed Minutes",
+            "type": "integer"
+          },
+          "next_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Day"
+          },
+          "over_minutes": {
+            "default": 0,
+            "title": "Over Minutes",
+            "type": "integer"
+          },
+          "still_over": {
+            "default": 0,
+            "title": "Still Over",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fits"
+        ],
+        "title": "CapacityView",
         "type": "object"
       },
       "CatalogAddress": {
@@ -9484,7 +9619,7 @@
         "type": "object"
       },
       "HeldAsk": {
-        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered; `ending`: the words said only that it is closed, so the person\nis asked whether it is done by its owners or no longer needed), `item` the words of what it is about, `value` and\n`from_value` the new and the present date, `to_name` the person it would go to, `told` the people a drop would\nleave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action\nalso carries what the input says happened: the action's id in `record`, its `owners` in the owner format,\n`reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier words\n(`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the title\nand the answers from these.",
+        "description": "A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change\nits date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a\npromise, move its date or record a part delivered, or keep a guess at how long it takes (`effort`, with the minutes\nin `value`); `ending`: the words said only that it is closed, so the person\nis asked whether it is done by its owners or no longer needed), `item` the words of what it is about, `value` and\n`from_value` the new and the present date, `to_name` the person it would go to, `told` the people a drop would\nleave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action\nalso carries what the input says happened: the action's id in `record`, its `owners` in the owner format,\n`reporter` (who said it), and by ask the words of a new date (`due_words`) with the promise's own earlier words\n(`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the title\nand the answers from these.",
         "properties": {
           "ask": {
             "enum": [
@@ -9495,7 +9630,8 @@
               "drop",
               "move",
               "part",
-              "ending"
+              "ending",
+              "effort"
             ],
             "title": "Ask",
             "type": "string"
@@ -12346,6 +12482,34 @@
         "title": "NewPersonPrefillView",
         "type": "object"
       },
+      "NotNowDone": {
+        "description": "A suggestion put off until something about it changes. `signal` is what Undo takes back.",
+        "properties": {
+          "signal": {
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal"
+        ],
+        "title": "NotNowDone",
+        "type": "object"
+      },
+      "NotNowIn": {
+        "properties": {
+          "key": {
+            "description": "The key of the suggestion line on Today that the person puts off.",
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "NotNowIn",
+        "type": "object"
+      },
       "NoteIn": {
         "properties": {
           "note": {
@@ -13263,6 +13427,18 @@
               }
             ],
             "description": "The open action of the same project and owners it nearly repeats."
+          },
+          "effort_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About how long it takes, in minutes, when it says.",
+            "title": "Effort Minutes"
           },
           "id": {
             "title": "Id",
@@ -18031,7 +18207,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `account_move` is a saved account\n(`account`, its service's name in `subject`) that uses the generic connection to a service that has its own (the\nread-back is GET /api/ai/accounts/{account}/move, Move is POST to it and Not now POST .../move/not-now);\n`model_watch` is news about an account's models (`account`, the tiers in `names`): with `state` newer, a newer model\nof each tier's own family exists (`candidates`, by tier), `usd_per_day` what it would change in cost per day at\nthe current use (none when a price isn't known), `reason` why it isn't moved to on its own (asks, costs_more,\nprice_unknown, check_failed with `count` cases and `check_failed` when the check couldn't finish, or check_cost\nwith the check's `estimate_usd`); Switch is the settings' own switch with its check and Not now is POST\n/api/ai/model-watch/{account}/{state}/not-now; with `state` price, a tier's current model went up in price by\n`usd_per_day`; `model_moved` is a tier (`tier`) moved on its own to a newer model of its family after a check passed\n(the new `account`, the earlier one in `text`, `usd_per_day` the change in cost; Switch back and Keep are the\nswitch routes above); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered \"Not now\"\nabout reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the\nline goes once the account may see the internal level); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,\n`person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick\nwho is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an\naction, each with Undo; nothing is ever sent); `stale` is the person's own open to-dos nobody has touched for\n`ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;\nLook over opens GET /api/open-items narrowed to them); `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side\nthey belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is\nwaiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,\n`waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup\nthat works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup);\n`meeting_prep` is a calendar entry with other people on it that starts soon (`event`, its title in `text`, `at`\nwhen it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many things\nare open with them; it opens GET /api/meetings/{id}/prep and goes when the entry starts); `meeting_capture` is an\nentry with other people on it that has ended with nothing written down (`event`, `text`, `at` when it ended; it\ngoes when the person writes down what happened or says there is nothing to note, POST /api/meetings/{id}/capture);\n`quiet_promise` is an open promise with no news for `steward.people.quiet_promise_days` (its id in `actions`, its\nwords in `text`, `person` to follow up with, `state` to when the person promised it to them and from when they\npromised it to the person, `due` and `waiting_days` with no news; GET /api/people/{id}/memory says what else is\nopen with them).",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `intake_go` is a newly added source (`source`, `subject` its\nlabel) whose first read is held for one go (`count` items, `estimate_usd` and `unpriced` for the total, `days` how\nfar back its mail was read, none for a source with no mail; the go is POST /api/watch/{source}/intake/go);\n`intake_review` is what the first read of a newly added source found (`source`, `subject`, `count` items with\nsomething to look over, `outcome` their results counted), one line in place of a line for each until the list is\nopened (POST /api/watch/{source}/intake/seen); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `account_move` is a saved account\n(`account`, its service's name in `subject`) that uses the generic connection to a service that has its own (the\nread-back is GET /api/ai/accounts/{account}/move, Move is POST to it and Not now POST .../move/not-now);\n`model_watch` is news about an account's models (`account`, the tiers in `names`): with `state` newer, a newer model\nof each tier's own family exists (`candidates`, by tier), `usd_per_day` what it would change in cost per day at\nthe current use (none when a price isn't known), `reason` why it isn't moved to on its own (asks, costs_more,\nprice_unknown, check_failed with `count` cases and `check_failed` when the check couldn't finish, or check_cost\nwith the check's `estimate_usd`); Switch is the settings' own switch with its check and Not now is POST\n/api/ai/model-watch/{account}/{state}/not-now; with `state` price, a tier's current model went up in price by\n`usd_per_day`; `model_moved` is a tier (`tier`) moved on its own to a newer model of its family after a check passed\n(the new `account`, the earlier one in `text`, `usd_per_day` the change in cost; Switch back and Keep are the\nswitch routes above); `identity` is a command-line agent\naccount (`account`) whose sign-in changed (`state` changed: the sign-in found now in `text`, the recorded one in\n`subject`; Keep is POST /api/ai/accounts/{account}/identity/keep, Sign in again opens the account) or isn't set\nfor the level of the work waiting on it (`state` level: `text` the sign-in, none when unknown, `names` the levels\nof the waiting work, `count` the requests); `work_access` is an account (`account`) the person answered \"Not now\"\nabout reading their work mail and notes (Allow is POST /api/ai/accounts/{account}/allow-work, with Undo, and the\nline goes once the account may see the internal level); `no_account` is work with no AI account\nat all (`count` kinds of work, their tiers in `names`, the first in `tier`); `extractor` is a kind of file that\nisn't being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well;\n`source_unread` is a watched source that has failed for longer than its usual gap (`source` its id, `subject` its\nlabel, `problem_kind` the kind of failure, `text` what went wrong and what to do, `waiting_since` when it was last\nread, or first tried when it never was), which clears once it is read again; `promise` is one open action that\nneeds a look: the person's own past its date, or one someone else owes with its date near or past, or with none and\nnothing heard for a while (its id in `actions`, its words in `text` and `subject`, its day in `due`, none when it is\nundated, `waiting_days` past that day, below zero while it is ahead, or days with nothing heard when undated, and\n`person`, the one to chase, none when it is the person's own; its choices are the action's own routes and GET\n/api/promises/{id} says why it exists); `reminder` is an open action whose reminder has reached the person (its id\nin `actions`, its words in `text` and `subject`, `at` the moment it was set for, `late` when it came due while the\napp or the computer was not running, and `snoozes` the choices that still have a time, each with the moment it\nmoves the reminder to; a snooze is POST /api/reminders/{id}); `reminder_digest` is the reminders that waited, shown\ntogether: those that fell in quiet hours (`late` false) or, when the person chose one summary, those missed while\nthe computer slept (`late` true), each in `reminders`; `reply` is a reply the person owes, one open action (its id\nin `actions`, its words in `text`, the message's `subject`, who it is to in `person` or, for nobody known, `sender`\nas written, and the drafted `reply` with `reply_reviewed`; Copy reply and Edit are POST /api/actions/{id}/reply, No\nreply needed is POST /api/actions/{id}/drop and Answered another way is POST /api/replies/{id}/answered, each with\nUndo); `sent_check` asks whether a message the person copied went out (`sent_copy` its copy's id, `person` who it\nwas for, `questions` and `actions` what it covered; the answers are POST /api/copies/{id}/settle with `how`,\neach undone by POST /api/copies/{id}/unsettle; it is there only while a sent folder is being read and no sent\nmessage has matched the copy); `since_yesterday` is what the assistant or a rule did that the person hasn't looked\nover, one line for all of it (`count` entries, counted by act in `outcome`; Look over opens GET\n/api/since-yesterday, and opening it is POST /api/since-yesterday/seen);\n`away` is one row for the lines that waited for the person's working hours (or\nfor quiet hours to end) and arrived together with them (`count` of them; it has no choices and goes with the day);\n`escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,\n`person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick\nwho is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an\naction, each with Undo; nothing is ever sent); `capacity` says the to-dos due today need more time than the calendar\nleaves (`minutes` free, `needed_minutes` needed, `count` to-dos proposed to move with their ids in `actions`, and in\n`due` the day to offer; the proposal is GET /api/capacity and each move is the person's own date change, with Undo);\n`clash` is two meetings that overlap or leave too little time to get from one place to the next (`state` overlap or\ntravel, `minutes`, `text` and `other` the two titles, `due` the day and `at` the later one's start,\n`entry` the entry to open); `stale` is the person's own open to-dos nobody has touched for\n`ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;\nLook over opens GET /api/open-items narrowed to them); `unfiled` is\nwhat the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed\nby GET /api/unfiled; `state` which_side when a business is set, so the line is the one question of which side\nthey belong to, the business's name in `subject`); `nudge` is the one follow-up line for a person the person is\nwaiting on (`person`, `count` their items, `overdue` how many are past their date with the oldest in `due`,\n`waiting_days` the longest wait; it opens the one message to them, GET /api/followups); `backup` is no backup\nthat works (`state`, and `age_hours` since the last one that did; Back up now is POST /api/backup);\n`meeting_prep` is a calendar entry with other people on it that starts soon (`event`, its title in `text`, `at`\nwhen it starts, `names` the known people coming, `count` how many others are on it and `open_items` how many things\nare open with them; it opens GET /api/meetings/{id}/prep and goes when the entry starts); `meeting_capture` is an\nentry with other people on it that has ended with nothing written down (`event`, `text`, `at` when it ended; it\ngoes when the person writes down what happened or says there is nothing to note, POST /api/meetings/{id}/capture);\n`quiet_promise` is an open promise with no news for `steward.people.quiet_promise_days` (its id in `actions`, its\nwords in `text`, `person` to follow up with, `state` to when the person promised it to them and from when they\npromised it to the person, `due` and `waiting_days` with no news; GET /api/people/{id}/memory says what else is\nopen with them).",
         "properties": {
           "account": {
             "anyOf": [
@@ -18206,6 +18382,18 @@
             ],
             "title": "Due"
           },
+          "entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the calendar entry to open, when one is kept for the first meeting.",
+            "title": "Entry"
+          },
           "estimate_usd": {
             "anyOf": [
               {
@@ -18325,6 +18513,8 @@
               "nudge",
               "escalate",
               "stale",
+              "capacity",
+              "clash",
               "unfiled",
               "moved",
               "since_yesterday",
@@ -18371,6 +18561,18 @@
             ],
             "description": "For a line about one item: who made it, read from the change that made it and the item itself, for the inspector to say (never put in anything copied, shared or sent). None for a line about several things and for an item no maker is known for."
           },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a capacity line: the working minutes left today that no meeting takes. For a clash line: the minutes the two meetings overlap, or that the travel time between them falls short by.",
+            "title": "Minutes"
+          },
           "model": {
             "anyOf": [
               {
@@ -18402,6 +18604,18 @@
             },
             "title": "Names",
             "type": "array"
+          },
+          "needed_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a capacity line: the effort, in minutes, of the to-dos due today or late.",
+            "title": "Needed Minutes"
           },
           "notes": {
             "anyOf": [
@@ -18446,6 +18660,18 @@
             "description": "For a learned line: how many of the proposals came from an input (`input`) and how many from one of the person's corrections (`correction`).",
             "title": "Origins",
             "type": "object"
+          },
+          "other": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a clash line: the title of the second meeting; `text` is the first.",
+            "title": "Other"
           },
           "outcome": {
             "additionalProperties": {
@@ -18756,7 +18982,9 @@
                   "newer",
                   "price",
                   "to",
-                  "from"
+                  "from",
+                  "overlap",
+                  "travel"
                 ],
                 "type": "string"
               },
@@ -18764,7 +18992,7 @@
                 "type": "null"
               }
             ],
-            "description": "For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person).",
+            "description": "For a clash line: overlap (the two meetings overlap) or travel (they are in different places with less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's current model went up in price). For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name. For an identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in isn't set for the level of the work waiting). For a backup line: unset (no backup folder is chosen), never (a folder, and no backup has worked yet), failed (the last try failed and none has worked) or overdue (the last one that worked is older than it should be; `age_hours` says how old). For an unfiled line: which_side when a business is set, so the line asks which side the items belong to, once, for all of them. For a quiet_promise line: to (the person promised it to them) or from (they promised it to the person).",
             "title": "State"
           },
           "subject": {
@@ -23936,6 +24164,20 @@
       },
       "TodoAddIn": {
         "properties": {
+          "effort_minutes": {
+            "anyOf": [
+              {
+                "maximum": 1440.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About how long it takes, in minutes; left out, it says none.",
+            "title": "Effort Minutes"
+          },
           "owners": {
             "description": "The people who do it, by person id.",
             "items": {
@@ -24106,6 +24348,18 @@
             ],
             "description": "Its date is one the rules couldn't read for certain: the row says to check it, and it is never overdue until the person confirms it.",
             "title": "Due Check"
+          },
+          "effort_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About how long it takes, in minutes, when it says.",
+            "title": "Effort Minutes"
           },
           "on_hold": {
             "anyOf": [
@@ -28015,6 +28269,25 @@
           }
         },
         "summary": "Add"
+      }
+    },
+    "/api/capacity": {
+      "get": {
+        "description": "Whether the free time left today holds the to-dos due today or late, and what is proposed to move when it\ndoesn't. Nothing is moved or scheduled.",
+        "operationId": "capacity_api_capacity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capacity"
       }
     },
     "/api/changes": {
@@ -35924,6 +36197,85 @@
           }
         },
         "summary": "Status"
+      }
+    },
+    "/api/suggestions/not-now": {
+      "post": {
+        "description": "Put a suggestion line off until something about it changes. It records a signal and changes nothing else.",
+        "operationId": "not_now_api_suggestions_not_now_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotNowIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotNowDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Not Now"
+      }
+    },
+    "/api/suggestions/not-now/{signal_id}/undo": {
+      "post": {
+        "description": "Undo \"Not now\": the suggestion shows again at once.",
+        "operationId": "not_now_undo_api_suggestions_not_now__signal_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Not Now Undo"
       }
     },
     "/api/sync": {

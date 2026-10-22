@@ -12,6 +12,7 @@ import { useDayCheck } from "../lib/todo-day";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
+import { EffortField } from "./EffortField";
 import { PersonPicker } from "./PersonPicker";
 import { ProjectPicker } from "./ProjectPicker";
 
@@ -25,6 +26,7 @@ function AddTodoForm(props: { onClose: () => void }) {
   const [owner, setOwner] = useState<string | null>(null);
   const [project, setProject] = useState("");
   const [repeat, setRepeat] = useState("");
+  const [effort, setEffort] = useState<number | null>(null);
   const active = (people.data ?? []).filter((p) => p.status !== "left");
   // The person is the default owner until another is picked.
   const who = owner ?? active.find((p) => p.is_pm)?.id ?? "";
@@ -38,7 +40,7 @@ function AddTodoForm(props: { onClose: () => void }) {
   const ready = !!words && !!who && dayOk && repeatOk;
   const save = async () => {
     if (!ready) return;
-    const body = { text: words, owners: [who], ...(when.trim() ? { when: when.trim() } : {}), ...(project ? { project } : {}), ...(typedRepeat ? { repeat: typedRepeat } : {}) };
+    const body = { text: words, owners: [who], ...(when.trim() ? { when: when.trim() } : {}), ...(project ? { project } : {}), ...(typedRepeat ? { repeat: typedRepeat } : {}), ...(effort ? { effort_minutes: effort } : {}) };
     const made = await act(
       () => api.addTodo(body),
       (result) => ({
@@ -94,6 +96,7 @@ function AddTodoForm(props: { onClose: () => void }) {
             {read?.status === "unclear" && t("addtodo.day_unclear")}
           </p>
         </div>
+        <EffortField id={id} value={effort} onChange={setEffort} />
         <PersonPicker label={t("addtodo.owner")} value={who} suggested={[]} people={active} onChange={setOwner} />
         <ProjectPicker label={t("addtodo.project")} value={project} empty={t("addtodo.no_project")} onChange={setProject} />
         <div className="field">

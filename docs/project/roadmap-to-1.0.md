@@ -1191,10 +1191,11 @@ S2. **Time and attention:**
   and closes for the day, by rules and never AI (`engine/brief.py`, `tests/test_brief.py`,
   `web/src/components/BriefCard.test.tsx`); the ten samples are cases in both fictional workspaces
   (`workspaces/*/briefs/`, `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`), each scored
-  exactly, with what it still lacks named. **Left:** the capacity line and its proposed moves (the capacity item below),
-  at-risk lines from dates inside mail and bookings ("the last day to cancel", samples 7 and 9), from a meeting named only
-  in words (samples 4 and 8) and from a clash after today (only today's meetings are compared), and the reminder offer
-  (sample 7).
+  exactly, with what it still lacks named. **Built (S2, capacity and clashes):** the capacity line first in the at-risk
+  section (sample 6), clashes from today onward with travel time, and the reminder offer (sample 7)
+  (`tests/test_day_capacity.py`, `tests/test_brief.py::test_a_sample_morning_makes_the_brief_its_case_expects`).
+  **Left:** at-risk lines from dates inside mail and bookings ("the last day to cancel", samples 7 and 9) and from a
+  meeting named only in words (samples 4 and 8).
 - [ ] [S2] **A capacity check on the day's priorities:** an optional effort estimate on a to-do (the assistant suggests one),
   the free time left from the calendar, and "this is more than today holds" when it is, with what to move. No automatic
   scheduling.
@@ -1206,12 +1207,26 @@ S2. **Time and attention:**
   blocking unless counted as free; it also finds the slots for "propose a new time".
   Clashes are found by rules (`engine/clashes.py`, `tests/test_clashes.py`): overlaps across every calendar,
   tentative ones apart, and too little travel time between two places, an online meeting needing none.
+  **Built (S2):** `effort_minutes` on the to-do, set in the edit form and Add a to-do and suggested by the assistant as a
+  held `record.set` (`tests/test_day_capacity.py`, `tests/test_add_todo.py`,
+  `web/src/components/RepeatingTodos.test.tsx`, `web/src/components/AddTodo.test.tsx`, the case
+  `effort-stated-for-an-open-todo` in both workspaces); the check and the Today line "Move N to-dos: today holds about
+  H hours" with its proposed moves, each acting at once with Undo, and the same line in the brief
+  (`tests/test_day_capacity.py`, `web/src/components/TodayCapacity.test.tsx`); clashes from today onward as Today and
+  brief lines (`tests/test_day_capacity.py`). **Left:** an effort suggested for a to-do added in the same answer (the
+  op can name only an existing to-do).
 - [ ] [S2] **An attention budget:** quiet hours, a cap on suggestions per day (the rest wait for the digest), an importance
   threshold, and dismissals that stick and teach (a dismissed kind of suggestion comes back only when something
   changes). All settings with defaults.
   Which suggestions interrupt is decided by rules (`engine/attention.py`, `tests/test_attention.py`): held back when
   dismissed and unchanged or below the threshold, saved for the digest in quiet hours or past the day's cap, the
   most important shown first.
+  **Built (S2):** the rules are applied to the suggestion lines on Today (a follow-up gone unanswered, to-dos nobody has
+  touched, items filed under no project, what was learned), what waits is in the next morning brief, and "Not now" puts a
+  suggestion off until its items change, with Undo and the signal `suggestion_dismissed`
+  (`engine/suggestions.py`, `tests/test_day_capacity.py`, `tests/test_add_todo.py`,
+  `web/src/components/TodayCapacity.test.tsx`, `web/src/components/BriefCard.test.tsx`). **Left:** a dismissed kind of
+  suggestion teaching the assistant (the signal is recorded but no learning reads it yet).
 
 S3. **People and meetings:**
 - [ ] [S3] **Meeting prep and after-meeting capture** for any calendar event, not only a series.

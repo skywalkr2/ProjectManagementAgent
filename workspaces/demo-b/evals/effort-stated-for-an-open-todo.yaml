@@ -1,0 +1,27 @@
+id: effort-stated-for-an-open-todo
+title: A person says how long their open to-do takes, so the effort is proposed and waits for their yes
+skills: [evidence, close-right-item]
+received: '2026-10-09'
+# The effort is a suggestion: it is held for the person to keep, and nothing else changes on the action.
+pasted: |-
+  From: Sam Rivera
+
+  Sending the final interior file to the printer is a ten minute job, so I will do it first thing.
+expect:
+- held: record.set
+  text_has:
+  - effort_minutes
+  - '10'
+forbid:
+- op: action.close
+- op: action.add
+stub_answer:
+  summary: Sam says sending the interior file is a ten minute job; the effort waits for a yes.
+  ops:
+  - op: record.set
+    kind: action
+    id: ACT-1
+    field: effort_minutes
+    value: 10
+    evidence:
+      quote: Sending the final interior file to the printer is a ten minute job

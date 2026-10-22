@@ -1599,6 +1599,9 @@ class TodoAddIn(BaseModel):
     repeat: str | None = Field(
         None, max_length=120, description="How it repeats, in plain words; left out, it doesn't."
     )
+    effort_minutes: int | None = Field(
+        None, ge=1, le=1440, description="About how long it takes, in minutes; left out, it says none."
+    )
 
 
 class TodoAdded(BaseModel):
@@ -2105,12 +2108,14 @@ class TodoView(BaseModel):
         None, description="When the person asked to be reminded of it, on their own clock (their time zone)."
     )
     repeat: RepeatView | None = Field(None, description="How it repeats, when it does, said back from data.")
+    effort_minutes: int | None = Field(None, description="About how long it takes, in minutes, when it says.")
 
 
 class HeldAsk(BaseModel):
     """A held item as the question the person is asked (design 7.6): `ask` is what is proposed (close an item, change
     its date, give it to another owner, send a question to someone else instead, drop it, or, for an ending of a
-    promise, move its date or record a part delivered; `ending`: the words said only that it is closed, so the person
+    promise, move its date or record a part delivered, or keep a guess at how long it takes (`effort`, with the minutes
+    in `value`); `ending`: the words said only that it is closed, so the person
     is asked whether it is done by its owners or no longer needed), `item` the words of what it is about, `value` and
     `from_value` the new and the present date, `to_name` the person it would go to, `told` the people a drop would
     leave out of the loop (told on `told_on`) and `quote` the words the assistant rested it on. An ending of an action
@@ -2119,7 +2124,7 @@ class HeldAsk(BaseModel):
     (`earlier`), what was `delivered` and what is `left`, or the `reason` it is called off. The screen words the title
     and the answers from these."""
 
-    ask: Literal["close", "date", "owner", "routing", "drop", "move", "part", "ending"]
+    ask: Literal["close", "date", "owner", "routing", "drop", "move", "part", "ending", "effort"]
     item: str
     value: str | None = None
     from_value: str | None = None
@@ -2352,7 +2357,12 @@ class QueueLineView(BaseModel):
     `escalate` suggests asking someone else about one thing (`text` its words, in `questions` or `actions` its id,
     `person` who hasn't answered, `count` the follow-ups it has had, `waiting_days` the days since the last word; Pick
     who is POST /api/questions/{id}/reroute for a question and POST /api/records/edit on the action's owners for an
-    action, each with Undo; nothing is ever sent); `stale` is the person's own open to-dos nobody has touched for
+    action, each with Undo; nothing is ever sent); `capacity` says the to-dos due today need more time than the calendar
+    leaves (`minutes` free, `needed_minutes` needed, `count` to-dos proposed to move with their ids in `actions`, and in
+    `due` the day to offer; the proposal is GET /api/capacity and each move is the person's own date change, with Undo);
+    `clash` is two meetings that overlap or leave too little time to get from one place to the next (`state` overlap or
+    travel, `minutes`, `text` and `other` the two titles, `due` the day and `at` the later one's start,
+    `entry` the entry to open); `stale` is the person's own open to-dos nobody has touched for
     `ui.today.stale_after_days` (`count` of them, their ids in `actions`, `waiting_days` the oldest's days untouched;
     Look over opens GET /api/open-items narrowed to them); `unfiled` is
     what the assistant filed under no project (`count` items, never zero: with none there is no line; they are listed
@@ -2417,6 +2427,8 @@ class QueueLineView(BaseModel):
         "nudge",
         "escalate",
         "stale",
+        "capacity",
+        "clash",
         "unfiled",
         "moved",
         "since_yesterday",
@@ -2433,6 +2445,20 @@ class QueueLineView(BaseModel):
     )
     open_items: int | None = Field(
         None, description="For a meeting_prep line: how many things are open with the people coming."
+    )
+    minutes: int | None = Field(
+        None,
+        description="For a capacity line: the working minutes left today that no meeting takes. For a clash line: the "
+        "minutes the two meetings overlap, or that the travel time between them falls short by.",
+    )
+    needed_minutes: int | None = Field(
+        None, description="For a capacity line: the effort, in minutes, of the to-dos due today or late."
+    )
+    other: str | None = Field(
+        None, description="For a clash line: the title of the second meeting; `text` is the first."
+    )
+    entry: str | None = Field(
+        None, description="For a clash line: the calendar entry to open, when one is kept for the first meeting."
     )
     overdue: int | None = Field(
         None, description="For a nudge line: how many of its items are past their date; `due` is the oldest of those."
@@ -2528,13 +2554,17 @@ class QueueLineView(BaseModel):
             "price",
             "to",
             "from",
+            "overlap",
+            "travel",
         ]
         | None
     ) = Field(
         None,
-        description="For a model_watch line: newer (a newer model of a tier's family exists) or price (a tier's "
-        "current model went up in price). For a handover line: diverged (this computer and the synced folder each "
-        "changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere "
+        description="For a clash line: overlap (the two meetings overlap) or travel (they are in different places with "
+        "less than the configured travel time between them). For a model_watch line: newer (a newer model of a tier's "
+        "family exists) or price (a tier's current model went up in price). For a handover line: diverged (this "
+        "computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice "
+        "waits for the restart) or elsewhere "
         "(another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other "
         "computer's name. For an "
         "identity line: changed (the agent's sign-in is a different one than the one recorded) or level (its sign-in "
@@ -5169,6 +5199,7 @@ class OpenActionView(BaseModel):
         "/api/questions/{id}/answer).",
     )
     repeat: RepeatView | None = Field(None, description="How it repeats, when it does, said back from data.")
+    effort_minutes: int | None = Field(None, description="About how long it takes, in minutes, when it says.")
 
 
 class MeetingIn(BaseModel):
@@ -5650,6 +5681,12 @@ class BriefLineView(BaseModel):
     from_at: str | None = None
     days: int | None = None
     minutes: int | None = None
+    needed_minutes: int | None = Field(
+        None, description="For the capacity line: the effort, in minutes, of the to-dos due today or late."
+    )
+    when: datetime | None = Field(
+        None, description="For a reminder offer: the moment the reminder would be set for, on the person's own clock."
+    )
     count: int | None = None
     queue: str | None = None
     link: RecordRef | None = None
@@ -5880,3 +5917,43 @@ class PersonMemoryView(BaseModel):
     reach: ReachView
     dates: list[DatedView]
     matters: list[KeptView]
+
+
+class CapacityMoveView(BaseModel):
+    """A to-do proposed to move out of today: its `text`, its effort in `minutes`, whether it was `promised` to someone,
+    where its date stands (`due_state`: none, overdue, today or later) and the `version` a change of its date states it
+    read. Moving it is the person's own date change, applied at once with Undo."""
+
+    action: str
+    version: int
+    text: str
+    minutes: int
+    promised: bool
+    due: date | None = None
+    due_state: Literal["none", "overdue", "today", "later"]
+
+
+class CapacityView(BaseModel):
+    """Whether the rest of today holds the to-dos due today or late (design 6.32). `fits` is true when it does, or when
+    there is nothing to count (the day is over, or not a working day); then the rest is empty. Otherwise `free_minutes`
+    is what the calendar leaves, `needed_minutes` what the to-dos with an effort need, `over_minutes` the difference,
+    `moves` what is proposed to move, `still_over` how much would be over even with those moved (to-dos fixed to a
+    meeting never move) and `next_day` the next working day, offered as where to move them. Nothing is scheduled."""
+
+    fits: bool
+    free_minutes: int = 0
+    needed_minutes: int = 0
+    over_minutes: int = 0
+    still_over: int = 0
+    next_day: date | None = None
+    moves: list[CapacityMoveView] = Field(default_factory=list)
+
+
+class NotNowIn(BaseModel):
+    key: str = Field(description="The key of the suggestion line on Today that the person puts off.")
+
+
+class NotNowDone(BaseModel):
+    """A suggestion put off until something about it changes. `signal` is what Undo takes back."""
+
+    signal: str

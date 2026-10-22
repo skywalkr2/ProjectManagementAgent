@@ -26,15 +26,14 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
-from engine import clashes as clash_rules
-from engine import invitation_changes, since_yesterday, week_plan
+from engine import day_capacity, day_clashes, invitation_changes, since_yesterday, suggestions, week_plan
 from engine.blocked import standing_hold
 from engine.config.schema import WEEKDAYS
-from engine.connectors import moment as parse_moment
 from engine.firm_due import firm_due
 from engine.names import People
 from engine.records import entry_time
-from engine.today import agenda, zone
+from engine.reminder_lines import rules
+from engine.today import zone
 
 FORMS = ("morning", "evening", "monday")
 
@@ -81,6 +80,8 @@ class Line:
     from_at: str | None = None
     days: int | None = None
     minutes: int | None = None
+    needed_minutes: int | None = None
+    when: str | None = None
     count: int | None = None
     queue: str | None = None
     link: tuple[str, str] | None = None
@@ -189,15 +190,20 @@ class _Day:
         self.here = zone(cfg)
         self.today = now.astimezone(self.here).date()
         self.first, self.last = week_plan.week_bounds(cfg, self.today)
-        self._queue: list[Any] | None = None
+        self._split: suggestions.Split | None = None
+
+    @property
+    def split(self) -> suggestions.Split:
+        """Today's lines as the attention rules leave them: what shows now, and the suggestions saved for the brief."""
+        if self._split is None:
+            from engine.today_queue import queue_split
+
+            self._split = queue_split(self.ws, self.store, self.cfg, self.now)
+        return self._split
 
     @property
     def queue(self) -> list[Any]:
-        if self._queue is None:
-            from engine.today_queue import queue
-
-            self._queue = queue(self.ws, self.store, self.cfg, self.now)
-        return self._queue
+        return self.split.shown
 
     def name(self, person: str | None) -> str | None:
         return self.people.name(person) if person else None
@@ -393,39 +399,46 @@ def _meeting_time(c: _Day, event_id: str | None, day: date) -> str | None:
 
 
 def _clashes(c: _Day) -> list[Line]:
-    items = [a for a in agenda(c.store, c.cfg, c.now, through=c.today) if not a.cancelled and not a.all_day and a.end]
-    events: dict[str, Any] = {}
-    for a in items:
-        try:
-            start, end = parse_moment(a.start), parse_moment(a.end)
-        except ValueError:
-            continue
-        key = f"{a.snapshot}#{a.start}"
-        events[key] = (a, clash_rules.Event(key, a.source or "own", start, end, "busy", a.where))
-    report = clash_rules.clashes([e for _, e in events.values()])
+    """Meetings that overlap or leave too little travel time, from today through the configured days ahead."""
     lines = []
-    for clash in report.blocking:
-        if clash.overlap_minutes <= 0:
-            continue
-        first, second = events[clash.first.id][0], events[clash.second.id][0]
-        later = max(clash.first.start, clash.second.start).astimezone(c.here)
+    for clash in day_clashes.upcoming(c.store, c.cfg, c.now):
+        link = clash.link
         lines.append(
             Line(
-                f"clash:{first.snapshot}:{second.snapshot}",
+                clash.key,
                 "clash",
-                text=first.title,
-                other=second.title,
-                minutes=round(clash.overlap_minutes),
-                day=later.date().isoformat(),
-                at=later.strftime("%H:%M"),
-                link=("event", first.entry or first.snapshot) if (first.entry or first.own) else None,
+                text=clash.first.item.title,
+                other=clash.second.item.title,
+                state=clash.state,
+                minutes=clash.minutes,
+                day=clash.day.isoformat(),
+                at=clash.at.strftime("%H:%M"),
+                link=link,
             )
         )
     return lines
 
 
+def _capacity(c: _Day) -> list[Line]:
+    """The one line saying today's to-dos need more than the calendar leaves; it opens Today's line with the moves."""
+    held = day_capacity.check(c.store, c.cfg, c.now)
+    if held is None:
+        return []
+    return [
+        Line(
+            "capacity",
+            "capacity",
+            minutes=held.free_minutes,
+            needed_minutes=held.needed_minutes,
+            count=len(held.moves),
+            queue="capacity",
+        )
+    ]
+
+
 def _risk(c: _Day) -> list[Line]:
-    lines: list[Line] = []
+    # What doesn't fit today comes first: it is the reason the to-dos below it are at risk.
+    lines: list[Line] = _capacity(c)
     due: list[tuple[date, str, Line]] = []
     for a in c.open_actions():
         d = a.data
@@ -503,12 +516,78 @@ def _yes(c: _Day) -> list[Line]:
     return lines
 
 
+def _digest(c: _Day) -> list[Line]:
+    """The suggestions the attention rules saved for the brief (quiet hours, the day's cap), most important first."""
+    return [
+        Line(
+            f"digest:{q.key}",
+            "digest",
+            change=q.kind,
+            text=q.text,
+            person=q.person,
+            person_name=c.name(q.person),
+            count=q.count,
+            queue=q.key,
+        )
+        for q in c.split.digest
+    ]
+
+
+def _offers(c: _Day) -> list[Line]:
+    """A reminder offered for each of the person's own to-dos with a day coming up and no reminder: for the working
+    morning before it is due (or the morning it is due, when that one has passed)."""
+    rule = c.cfg.steward.brief
+    if not rule.offer_reminders:
+        return []
+    working = rules(c.cfg).working
+    ahead = c.today + timedelta(days=rule.remind_within_days)
+    found: list[tuple[date, str, Line]] = []
+    for a in c.open_actions():
+        d = a.data
+        day = firm_due(d)
+        if day is None or not c.today < day <= ahead or d.get("remind_at") or not c.mine(d):
+            continue
+        before = day - timedelta(days=1)
+        while before.weekday() not in working.days and before > c.today:
+            before -= timedelta(days=1)
+        at = next(
+            (
+                moment
+                for moment in (
+                    datetime.combine(before, working.start, c.here),
+                    datetime.combine(day, working.start, c.here),
+                )
+                if moment > c.now
+            ),
+            None,
+        )
+        if at is None:
+            continue
+        found.append(
+            (
+                day,
+                d["text"].lower(),
+                Line(
+                    f"remind:{a.id}",
+                    "yes",
+                    change="reminder_offer",
+                    text=d["text"],
+                    day=at.date().isoformat(),
+                    at=at.strftime("%H:%M"),
+                    when=at.isoformat(),
+                    link=("action", a.id),
+                ),
+            )
+        )
+    return [line for _, _, line in sorted(found, key=lambda t: (t[0], t[1], t[2].key))]
+
+
 def _morning(c: _Day) -> Brief:
     rule = c.cfg.steward.brief
     sections = [
         _cap(_changed(c), "changed", rule),
         _cap(_risk(c), "risk", rule),
-        _cap(_yes(c), "yes", rule),
+        _cap(_yes(c) + _offers(c) + _digest(c), "yes", rule),
     ]
     sections = [s for s in sections if s.lines]
     brief = Brief("morning", c.today, sections=sections, quiet=not sections)

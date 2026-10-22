@@ -105,6 +105,10 @@ How to answer:
   and whose "words" are the input's own words for how often ("every Friday"), copied exactly with nothing else; the
   app reads them, so never write a rule, a day or a date. Only for a to-do that repeats; a habit of someone's that is
   not a to-do ("she usually replies on Mondays") gets no "action.repeat".
+- When the input says how long an open to-do in the list takes ("that's about two hours of work", "a ten minute job"),
+  propose "record.set" on that action with "field": "effort_minutes", the whole minutes as "value" and those words as
+  evidence. Give one only for a length the input states or plainly implies, never for a to-do added in the same answer,
+  and never a guess; it waits for the person's yes.
 - A promise ends, moves or is answered with an op on the open action in the list, each with the words that say so as
   evidence. Never add a second action for something an open action already covers.
   - "action.close": the work is done, and the words you quote say it was delivered ("sent", "finished", "it's in",

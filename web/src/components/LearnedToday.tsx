@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
+import { useNotNow } from "../lib/not-now";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -29,6 +30,7 @@ export function LearnedLine(props: { line: S["QueueLineView"] }) {
   const { t, tn } = useWords();
   const { line } = props;
   const [open, setOpen] = useState(false);
+  const notNow = useNotNow();
   const list: List = line.kind === "learned" ? "daily" : "catch_up";
   const origins = line.origins ?? {};
   const sub = [
@@ -50,6 +52,7 @@ export function LearnedLine(props: { line: S["QueueLineView"] }) {
         <Button size="sm" variant="primary" data-key="primary" onClick={() => setOpen(true)}>
           {t("learned.today.open")}
         </Button>
+        <RowMenu label={t("learned.today.label")} actions={[{ id: "not-now", label: t("queue.notnow"), run: () => notNow(line.key) }]} />
       </div>
       {open && <ReviewDrawer list={list} onClose={() => setOpen(false)} />}
     </section>

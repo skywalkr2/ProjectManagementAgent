@@ -171,3 +171,39 @@ test("Add a to-do is a quiet button with Today's to-dos, not in the heading, whi
   expect(button.closest('[data-col="todo"]')).not.toBeNull();
   expect(container.querySelector("h1")?.parentElement?.contains(button)).toBe(false);
 });
+
+test("how long it takes is a list of common sizes, with another length typed, and is sent as minutes", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
+  await user.type(await screen.findByRole("textbox", { name: "What to do" }), "Send the weekly update");
+  const sizes = screen.getByRole("combobox", { name: "How long it takes" });
+  expect(within(sizes).getAllByRole("option").map((o) => o.textContent)).toEqual(["No estimate", "15 minutes", "30 minutes", "45 minutes", "1 hour", "1 hour 30 minutes", "2 hours", "3 hours", "4 hours", "8 hours", "Another length"]);
+  await user.selectOptions(sizes, "90");
+  await user.click(screen.getByRole("button", { name: "Add" }));
+  await waitFor(() => expect(sent(calls)).toMatchObject({ text: "Send the weekly update", effort_minutes: 90 }));
+});
+
+test("another length is typed in minutes, and no estimate sends none", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
+  await user.type(await screen.findByRole("textbox", { name: "What to do" }), "Send the weekly update");
+  await user.selectOptions(screen.getByRole("combobox", { name: "How long it takes" }), "other");
+  await user.type(screen.getByRole("spinbutton", { name: "Minutes" }), "50");
+  await user.click(screen.getByRole("button", { name: "Add" }));
+  await waitFor(() => expect(sent(calls)).toMatchObject({ effort_minutes: 50 }));
+});
+
+test("with no estimate chosen nothing about effort is sent", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  renderApp(<OpenItems />);
+  await user.click(await screen.findByRole("button", { name: "Add a to-do" }));
+  await user.type(await screen.findByRole("textbox", { name: "What to do" }), "Send the weekly update");
+  await user.click(screen.getByRole("button", { name: "Add" }));
+  await waitFor(() => expect(sent(calls)).toBeDefined());
+  expect(sent(calls)).not.toHaveProperty("effort_minutes");
+});

@@ -19,7 +19,7 @@ workspace's cases are the files in its `briefs/` folder, one case each:
     expect:                     # the sections in order, each the lines it holds, each line the values it must have
       changed: [{kind, change, text, person, day, at, ...}]
     quiet: true                 # instead of `expect`: nothing to say, so one line and no section
-    left: [capacity]            # what the sample has that no rule makes yet, so the case leaves it out
+    left: [booking]             # what the sample has that no rule makes yet, so the case leaves it out
 
 A line's values are those of `engine.brief.Line`; `link` is `[kind, id]`. Scoring is exact: the sections and their lines
 must be these, in this order, with these values; a value a line is not given to check is not compared, but every line
@@ -44,7 +44,7 @@ from engine.yaml_load import load_yaml
 
 FOLDER = "briefs"
 #: What a sample has that no rule makes yet, by the name a case gives it.
-LEFT = ("capacity", "deadline", "booking", "document_dates", "meeting_dependency", "reminder_offer")
+LEFT = ("deadline", "booking", "document_dates", "meeting_dependency")
 #: The records of the workspace that a case starts without, so what the case gives is all there is.
 LEFT_OUT = ("action", "question", "event", "series", "note")
 

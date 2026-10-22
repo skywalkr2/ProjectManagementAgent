@@ -1,4 +1,4 @@
-import { titleWords } from "./queue-words";
+import { heldAnswers, heldTitle, titleWords } from "./queue-words";
 import sheet from "../wording/en.json";
 
 // A title is "{kind} from {person} · {topic}" (design 7.14): with no topic it says so, and work the app started says what
@@ -38,4 +38,11 @@ test("a kind of task the sheet doesn't name reads as the assistant's work, with 
 test("work with no known kind or subject still says whose work it is", () => {
   expect(titleWords({ ...base, kind: "task" }, t, has)).toBe("Work Helper started");
   expect(titleWords({ ...base, kind: "task", task: "notes" }, t, has)).toBe("Filing notes");
+});
+
+test("a held guess at how long a to-do takes is a question with the length in words and answers that name it", () => {
+  const held = { ask: "effort", item: "Write the report", value: "90", from_value: null } as const;
+  expect(heldTitle(held, t)).toBe("Keep 'Write the report' as taking about 1 hour 30 minutes?");
+  expect(heldAnswers(held, t)).toEqual({ primary: "Keep 1 hour 30 minutes", other: "Keep it as it is" });
+  expect(heldAnswers({ ...held, from_value: "45" }, t).other).toBe("Keep it at 45 minutes");
 });

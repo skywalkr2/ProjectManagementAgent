@@ -4,7 +4,8 @@ repeats.
 No assistant reads anything. The day is read by the due-date rules (`engine/due_phrases.py`) from today on the person's
 own clock, and the repeat by the repeat grammar (`engine/repeats.py`); both are read before anything is kept, so words
 that aren't clear save nothing. The to-do is the person's own `action.add`, applied at once; a repeat is the person's
-own `action.repeat` on it. Each is its own change, returned in the order made so Undo takes them back last first.
+own `action.repeat` on it, and an effort the person gave is their own edit of it. Each is its own change, returned in
+the order made so Undo takes them back last first.
 """
 
 from __future__ import annotations
@@ -68,6 +69,7 @@ def add(
     owners: list[str] | None = None,
     project: str | None = None,
     repeat: str | None = None,
+    effort_minutes: int | None = None,
 ) -> tuple[str, list[str]]:
     """Add the to-do as the person's own. Returns its id and the changes made (the to-do, then its repeat), in order.
     Raises `TodoProblem` saying what to fix, before anything is kept, when the words, the day or the repeat aren't clear
@@ -109,6 +111,22 @@ def add(
         raise TodoProblem(outcome.get("reason") or "That couldn't be added.")
     action = next(r["id"] for r in outcome["records"] if r["kind"] == "action")
     changes = [made]
+    if effort_minutes:
+        # The person's own estimate is their own edit of the new to-do, so Undo can take it back by itself.
+        fresh = store.read().get("action", action)
+        edit_op = {
+            "op": "record.edit",
+            "record": {"kind": "action", "id": action},
+            "fields": {"effort_minutes": effort_minutes},
+            "read_version": fresh.version,
+        }
+        try:
+            changes.append(apply_as_person(store, cfg, [edit_op], "Set how long a to-do takes"))
+        except StoreError:
+            from engine.dispatcher import undo_changeset
+
+            undo_changeset(store, made)
+            raise
     if found is not None:
         repeat_op = {
             "op": "action.repeat",

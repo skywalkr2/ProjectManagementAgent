@@ -1,11 +1,13 @@
 id: brief-06-a-review-was-added-and-a-proposal-is-due
 sample: 6
-title: A client review was added overnight, a proposal is due today and a call to move is drafted
+title: A client review was added overnight, a proposal is due today, the day holds less than the to-dos need and a call to move is drafted
 received: '2026-10-26'
 now: '2026-10-26T09:00'
 form: morning
 given:
-- {kind: action, id: ACT-91, fields: {text: Send the proposal, owners: [{person: PER-1}], promised_to: [PER-3], due: '2026-10-26'}}
+- {kind: action, id: ACT-91, fields: {text: Send the proposal, owners: [{person: PER-1}], promised_to: [PER-3], due: '2026-10-26', effort_minutes: 60}}
+- {kind: action, id: ACT-92, fields: {text: Sort the receipts, owners: [{person: PER-1}], due: '2026-10-26', effort_minutes: 90}}
+- {kind: event, id: EVT-92, fields: {title: Planning workshop, start: '2026-10-26T09:30:00-04:00', end: '2026-10-26T16:00:00-04:00', trust: trusted}}
 - {kind: question, id: Q-91, fields: {to: PER-3, title: 'Could we move our call to tomorrow?'}}
 then:
 - at: '2026-10-25T20:00'
@@ -14,7 +16,8 @@ expect:
   changed:
   - {kind: invitation, change: new, text: Client review, person_name: Ines Duarte, day: '2026-10-26', at: '15:00', link: [event, EVT-91]}
   risk:
+  - {kind: capacity, minutes: 60, needed_minutes: 150, count: 1, queue: capacity}
   - {kind: own_due, state: today, text: Send the proposal, person: PER-3, day: '2026-10-26', days: 0, link: [action, ACT-91]}
+  - {kind: own_due, state: today, text: Sort the receipts, day: '2026-10-26', days: 0, link: [action, ACT-92]}
   'yes':
   - {kind: 'yes', change: send, person: PER-3, ready: true}
-left: [capacity]

@@ -118,6 +118,14 @@ def test_a_repeat_set_by_the_person_applies_at_once_with_its_words_its_rule_and_
     assert data(store, action_id)["repeat"] is None
 
 
+def test_the_next_occurrence_keeps_the_effort_the_person_gave(env):
+    cfg, store, _ = env
+    first = repeating(store, cfg, effort_minutes=45)
+    finish(store, cfg, first)
+    (later,) = open_ones(store, first)
+    assert later["effort_minutes"] == 45
+
+
 def test_a_to_do_with_no_day_is_due_on_the_first_day_of_its_repeat(env):
     cfg, store, _ = env
     action_id = todo(store, cfg, due=None)

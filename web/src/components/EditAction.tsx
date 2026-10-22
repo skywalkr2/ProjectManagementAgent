@@ -8,9 +8,10 @@ import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { saidRepeat, useRepeatCheck } from "../lib/repeat";
 import { useWords } from "../lib/wording";
+import { EffortField } from "./EffortField";
 import type { MenuAction } from "./RowMenu";
 
-type Target = Pick<S["OpenActionView"], "id" | "version" | "text" | "due" | "repeat">;
+type Target = Pick<S["OpenActionView"], "id" | "version" | "text" | "due" | "repeat" | "effort_minutes">;
 
 export function useEditAction(action: Target, onClosed?: () => void): { entry: MenuAction; form: ReactNode } {
   const { t } = useWords();
@@ -20,6 +21,7 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
   const [text, setText] = useState(action.text);
   const [due, setDue] = useState(action.due ?? "");
   const [repeat, setRepeat] = useState(action.repeat?.phrase ?? "");
+  const [effort, setEffort] = useState<number | null>(action.effort_minutes ?? null);
   const close = () => {
     setOpen(false);
     onClosed?.();
@@ -28,12 +30,14 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
     setText(action.text);
     setDue(action.due ?? "");
     setRepeat(action.repeat?.phrase ?? "");
+    setEffort(action.effort_minutes ?? null);
     setOpen(true);
   };
   const words = text.trim();
   const fields: Record<string, unknown> = {};
   if (words && words !== action.text) fields.text = words;
   if (due !== (action.due ?? "")) Object.assign(fields, { due: due || null, due_words: null, due_check: false });
+  if (effort !== (action.effort_minutes ?? null)) fields.effort_minutes = effort;
   const typed = repeat.trim();
   const repeatChanged = typed !== (action.repeat?.phrase ?? "");
   const read = useRepeatCheck(repeatChanged ? typed : "", due || null);
@@ -86,6 +90,7 @@ export function useEditAction(action: Target, onClosed?: () => void): { entry: M
         {t("open.edit.due")}
       </label>
       <input id={`${id}-due`} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+      <EffortField id={id} value={effort} onChange={setEffort} />
       <label className="hint" htmlFor={`${id}-repeat`}>
         {t("repeat.label")}
       </label>
