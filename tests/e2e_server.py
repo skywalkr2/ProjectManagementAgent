@@ -29,6 +29,7 @@ from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.cleaning import normalize
 from engine.evaluate import load_cases
+from engine.storage import WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 from tests.roundtrip import round_trip
@@ -78,8 +79,6 @@ def seed_layout(store, cfg, stress: dict[str, str]) -> None:
     """Records and a failed read that hold the long strings, so every screen has some to lay out."""
     from datetime import UTC, datetime
 
-    from engine.storage import WriteContext
-
     pm = cfg.workspace.user.person
     ctx = WriteContext(actor="pm", trust="trusted", op="e2e.layout")
     with store.transaction() as tx:
@@ -106,6 +105,39 @@ def seed_layout(store, cfg, stress: dict[str, str]) -> None:
             )
 
 
+def seed_outgoing(store, cfg):
+    """The core's stand-in channel, registered, and one message drafted to a known person who has an address, waiting
+    for the person's yes. Returns the channel and what the browser test reads from the fixture."""
+    from engine.applier import apply_as_person
+    from engine.channels import FakeChannel
+    from engine.names import People
+
+    channel = FakeChannel()
+    store.plugins.core_channels["fake"] = channel.registration()
+    pm = cfg.workspace.user.person
+    person = next(p["id"] for p in fixture_records(DEMO_B, "person") if p["id"] != pm)
+    address = "outgoing.recipient@example.com"
+    with store.transaction() as tx:
+        found = tx.get("person", person)
+        reach = {**(found.data.get("how_to_reach") or {}), "email": address}
+        tx.update(
+            "person",
+            person,
+            {"how_to_reach": reach},
+            WriteContext(actor="pm", trust="trusted", op="e2e.outgoing"),
+            read_version=found.version,
+        )
+    parts = {"subject": "The proofs", "body": "The proofs ship on Monday."}
+    op = {
+        "op": "act.draft",
+        "channel": "fake",
+        "target": {"kind": "message", "recipients": [{"person": person, "kind": "email"}]},
+        "parts": parts,
+    }
+    apply_as_person(store, cfg, [op], "Drafted a message to send")
+    return channel, {"name": People(store, cfg).name(person), "address": address, **parts}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, required=True)
@@ -120,6 +152,12 @@ def main() -> None:
         action="store_true",
         help="add a second stand-in AI account whose person said Not now about reading work mail and notes, so Today "
         "has the line that offers Allow",
+    )
+    parser.add_argument(
+        "--fake-channel",
+        action="store_true",
+        help="register the core's stand-in channel and draft one message to a known person on it, so the browser test "
+        "can approve and send it; /__e2e/delivered says what the channel was handed",
     )
     parser.add_argument(
         "--clock-at",
@@ -197,6 +235,7 @@ def main() -> None:
     if stress:
         seed_layout(store, cfg, stress)
     folder_targets = list(cfg.storage.backups.targets)
+    fake_channel = seed_outgoing(store, cfg) if args.fake_channel else None
 
     async def case_list(_request):
         return JSONResponse(cases)
@@ -233,8 +272,24 @@ def main() -> None:
         cfg.storage.backups.targets = folder_targets if request.query_params["configured"] == "1" else []
         return JSONResponse({"configured": len(cfg.storage.backups.targets)})
 
+    async def delivered(_request):
+        """What the stand-in channel was handed and the message waiting for it: who, where and the parts as drafted."""
+        if fake_channel is None:
+            return JSONResponse({"enabled": False})
+        channel, drafted = fake_channel
+        return JSONResponse(
+            {
+                "enabled": True,
+                **drafted,
+                "delivered": [
+                    {"parts": a.parts, "to": [r.address for r in a.recipients]} for a, _key in channel.delivered
+                ],
+            }
+        )
+
     outer = Starlette(
         routes=[
+            Route("/__e2e/delivered", delivered),
             Route("/__e2e/cases", case_list),
             Route("/__e2e/ledger", ledger),
             Route("/__e2e/standing", standing),

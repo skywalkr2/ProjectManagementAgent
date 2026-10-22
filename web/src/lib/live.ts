@@ -33,6 +33,8 @@ const AFFECTS: Record<string, string[]> = {
   team: ["people", "organizations", "followups", "record"],
   organization: ["organizations", "people", "record"],
   project: ["projects", "followups", "today", "stages", "panels", "setup", "record", "notes"],
+  // What waits to go out (a message, an entry, a file): its screen, Today's lines for it and what changed.
+  act: ["acts", "changes", "status"],
   file: FILES,
   working_copy: FILES,
   text_version: FILES,

@@ -1,10 +1,11 @@
 // What Today's queue holds, counted and grouped in one place so the heading, the menu's count and the rows agree
-// (design 7.7): the lines the engine ranks, the lines running plugins add, and the stage tasks waiting for a go. A line
+// (design 7.7): the lines the engine ranks, the lines running plugins add, the stage tasks waiting for a go and what failed or is unsure on its way out. A line
 // folded away (the week) is not counted.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "./api";
 import { onSide, type SideChoice } from "./sides";
 import { useStageToday } from "../components/StageToday";
+import { useActToday } from "./acts";
 
 export type QueueLine = S["QueueLineView"];
 export type QueueGroupName = QueueLine["group"];
@@ -54,8 +55,9 @@ export function useTodayCount(side: SideChoice = "all"): number | null {
   const queue = useQueue(side);
   const plugins = useQuery({ queryKey: ["plugin-today"], queryFn: api.pluginToday });
   const stage = useStageToday();
+  const outgoing = useActToday();
   if (!queue.data) return null;
-  return queue.data.length + (plugins.data?.length ?? 0) + stage.count;
+  return queue.data.length + (plugins.data?.length ?? 0) + stage.count + outgoing.count;
 }
 
 /** The lines of one group, in the engine's order. */

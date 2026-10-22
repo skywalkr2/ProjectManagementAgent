@@ -56,6 +56,16 @@ export const api = {
   source: (src: string) => call<S["SourceView"]>("GET", `sources/${id(src)}`),
   widenSource: (src: string, body: S["SourceWiden"]) => call<S["Applied"]>("POST", `sources/${id(src)}/widen`, body),
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
+  /** The outward acts (a message, a calendar entry, a file waiting to go out), newest first; all states, filtered by the caller. */
+  acts: () => call<S["ActListView"]>("GET", "acts"),
+  /** The person's yes on exactly what their screen showed: its fingerprint and the recipients called out they acknowledged. */
+  approveAct: (a: string, body: S["ActApproveIn"]) => call<S["ActResultView"]>("POST", `acts/${id(a)}/approve`, body),
+  /** Send an act that has the person's yes (the publisher checks again); the result says whether it went, failed or is unsure. */
+  sendAct: (a: string, body: S["ActApproveIn"]) => call<S["ActResultView"]>("POST", `acts/${id(a)}/send`, body),
+  /** Take an act back; the result's change is what Undo takes. */
+  withdrawAct: (a: string) => call<S["ActResultView"]>("POST", `acts/${id(a)}/withdraw`),
+  /** The answer for an act the app can't confirm went out: `sent`, or `again` to send it again. */
+  settleAct: (a: string, answer: S["ActSettleIn"]["answer"]) => call<S["ActResultView"]>("POST", `acts/${id(a)}/settle`, { answer }),
   /** Whether the person has a business and what it is called, for the Personal / business filter. */
   business: () => call<S["BusinessState"]>("GET", "setup/business"),
 

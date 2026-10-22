@@ -98,6 +98,7 @@ const quiet = {
   ...today,
   "GET status": () => statusFixture(),
   "GET changes": () => [],
+  "GET acts": () => ({ acts: [] }),
   "GET followups": () => [],
   "GET me": () => ({ full_name: "Casey Example", person: null }),
   "GET setup": () => setupView([], { finished: true }),
@@ -109,7 +110,7 @@ test("an address names the view it opens, and the sidebar marks it", async () =>
   fakeApi(quiet);
   renderApp(<App rc={rc()} />);
   expect(await screen.findByRole("heading", { level: 1, name: "Waiting to go out" })).toBeInTheDocument();
-  expect(screen.getByText("Nothing is waiting to go out.")).toBeInTheDocument();
+  expect(await screen.findByText("Nothing is waiting to go out.")).toBeInTheDocument();
   expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out", current: "page" })).toBeInTheDocument();
 });
 

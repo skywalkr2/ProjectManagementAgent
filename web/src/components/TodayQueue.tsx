@@ -19,6 +19,7 @@ import { useHeldAnswers } from "../lib/held-answers";
 import { afterMove, heldMeta, heldTitle, moveTitle, titleWords } from "../lib/queue-words";
 import { revealOrKeep, showRow } from "../lib/reveal";
 import type { View } from "../lib/views";
+import { useActToday } from "../lib/acts";
 import { GROUPS, inGroup, mixesProjects, recallLine, rememberLine, useQueue, useTodayCount, type QueueLine } from "../lib/today";
 import { useSideFilter } from "../lib/sides";
 import { useWords } from "../lib/wording";
@@ -40,6 +41,7 @@ import { PluginRows, usePluginToday } from "./PluginToday";
 import { QueueGroup } from "./QueueGroup";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
+import { ActTodayRows } from "./ActToday";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { ProjectTag } from "./ProjectTag";
 import { ThisWeekInspector } from "./ThisWeek";
@@ -84,6 +86,7 @@ export function TodayQueue(props: {
   const count = useTodayCount(filter.choice);
   const total = useTodayCount();
   const stage = useStageToday();
+  const outgoing = useActToday();
   const plugins = usePluginToday(props.handlers.onOpenRecord);
   const pane = useRef<HTMLDivElement>(null);
   const lines = queue.data ?? [];
@@ -328,7 +331,8 @@ export function TodayQueue(props: {
                 const these = inGroup(shown, group);
                 const extra = group === "decide" && stage.count > 0;
                 const added = plugins.in(group);
-                if (these.length === 0 && !extra && added.length === 0) return null;
+                const sending = group === "decide" || group === "risk" ? outgoing.in(group) : [];
+                if (these.length === 0 && !extra && added.length === 0 && sending.length === 0) return null;
                 return (
                   <QueueGroup key={group} id={`queue-group-${group}`} title={t(`queue.group.${group}`)}>
                     {these.map((line) => (
@@ -344,6 +348,7 @@ export function TodayQueue(props: {
                       />
                     ))}
                     {extra && <StageTodayRows today={stage} />}
+                    <ActTodayRows lines={sending} onView={props.handlers.onOpenView} />
                     <PluginRows lines={added} plugins={plugins} />
                   </QueueGroup>
                 );

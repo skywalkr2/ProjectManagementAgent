@@ -3,7 +3,7 @@
 // none does (its row isn't on this screen), the caller does something else.
 import { useEffect, useRef } from "react";
 
-export type Revealable = "changeset" | "question" | "person" | "intake" | "line";
+export type Revealable = "changeset" | "question" | "person" | "intake" | "line" | "act";
 const EVENT = "reveal-row";
 
 /** Ask whichever list holds this item to open it. True when one did. */

@@ -1070,8 +1070,13 @@ management (not just read only) lets do it"):
   **Built so far (S1b-1a, change log 180):** the `act` record and its states, the outbound-tier ops, the fingerprint, the
   callouts, the publisher with its attempt key and its start-up `resume`, the core's `copy` channel, `registrar.channel`
   (plugin API 0.3.87) and the API; `tests/test_publisher.py` holds the designer's eight named tests and the guards
-  (design 6.12, "Built so far"). **Left (S1b-1b):** Waiting to go out and the Today lines (failed, uncertain, stale),
-  each act's exact content and target on screen, and Undo of a sent act where a channel can.
+  (design 6.12, "Built so far"). **Built (S1b-1b, change log 182):** Waiting to go out (the list, each act's exact content and target on
+  screen, the callouts acknowledged by name, Approve and send with its confirm, Copy and Mark sent for a `copy` act,
+  Look again for a stale one, Take it back with Undo) and the Today lines (failed, uncertain, stale):
+  `web/src/components/WaitingToGoOut.test.tsx`, `web/src/components/TodayActs.test.tsx`; the browser test
+  `web/e2e/outgoing.spec.ts`. **Left:** Undo of a sent act where a channel can (no op reaches `undone` yet), the diff and
+  count previews of 7.4, the invitation's name on an answer (the act view doesn't carry it, so an answer reads as a
+  calendar entry), and a status filter with a limit on the acts list (the screen reads every act and filters).
 - [ ] [S1b-2] **Mail:** reply, reply all, forward and send a drafted message; archive, move, label and mark read, one at a time
   or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
@@ -1097,8 +1102,8 @@ management (not just read only) lets do it"):
   an act or a recipient (`act-from-outside`):
   `tests/test_publisher.py::test_only_the_person_approves_and_an_outbound_op_is_never_applied_automatically`,
   `tests/test_publisher.py::test_outside_content_that_tries_to_change_a_recipient_or_add_an_act_is_refused`.
-  **Left:** the rule check that a standing rule can only suggest an act has no case yet (no rule produces acts), and the
-  screens.
+  **Built (S1b-1b):** the screens (Waiting to go out and the Today lines).
+  **Left:** the rule check that a standing rule can only suggest an act has no case yet (no rule produces acts).
 
 S2. **Time and attention:**
 *Reminders at a time moved to S1 (batch S1-2), because the gate's first slice names reminders.*

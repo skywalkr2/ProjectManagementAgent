@@ -1027,6 +1027,19 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 182. Waiting to go out and the acts' Today lines, built (2026-10-22; S1b-1b, built)
+
+- **Design 6.12 and 7.4:** Waiting to go out lists the acts that wait as list | detail, one line each with its state as a
+  word and an icon and its one button; the detail shows every part as plain text, each recipient by name with the address
+  as it resolves now, a box to acknowledge each recipient called out by name, and **Approve and send**, which confirms
+  ("Send this message to Ana Example now?") and then says yes on the fingerprint shown and sends. A `copy` act has Copy
+  and Mark sent; a stale act says what changed and offers Look again before the yes; Take it back is in the menu with
+  Undo. Today has one line for each act that is `failed`, `uncertain` (It was sent, Send it again) or `stale`, each
+  starting with the verb and opening the act. The act lines are read from the acts list by the screen, as the stage rows
+  are, and are not ranked by the engine's queue. Built: `web/src/components/WaitingToGoOut.test.tsx`,
+  `web/src/components/TodayActs.test.tsx`; the browser test `web/e2e/outgoing.spec.ts`. Not built:
+  the previews of 7.4 (diff, count), grouping by channel, a subset, the phone review mode, and Undo of a sent act.
+
 ## 181. Who made an item, in the inspector (2026-10-22; B-12 batch 4, built)
 
 - **Design 7.7:** "who" is what made the item (the assistant's run, a rule, the person), from the change that made it,

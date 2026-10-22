@@ -1267,7 +1267,7 @@ wherever they are shown.
 
 ## 6.12 Records, renderer and publisher
 
-*Designed, not yet built* (roadmap, phase C4: the publisher and the file channel, with Waiting to go out). The product's rules
+*Built in part (S1b-1: the act, the publisher and the screens; the file channel is phase C4, mail and calendar channels S1b-2).* The product's rules
 for it, that nothing goes out without the PM approving that exact content, already bind every path that sends.
 
 - Records are the source of truth; outputs are rendered from records via templates into drafts. Never hand-edit a rendered
@@ -1326,7 +1326,7 @@ for it, that nothing goes out without the PM approving that exact content, alrea
     answer shows as uncertain, never as sent; a withdrawn sign-in stops the act plainly; outside content that tries to
     change a recipient or add an act is refused; a closed lid or lost network mid-send is checked with the service before
     any retry; a yes doesn't survive a restart that changed the act's inputs.
-  - **Built so far (S1b-1a, change log 180: the engine, the API and the plugin API 0.3.87; the screens are S1b-1b).**
+  - **Built so far (S1b-1a, change log 180: the engine, the API and the plugin API 0.3.87; the screens, S1b-1b, below).**
     - **The record and the ops:** `act` (`engine/records.py`) with its states, `engine/acts.py` and the outbound-tier ops
       `act.draft`, `act.edit`, `act.approve`, `act.withdraw`, the person's two answers `act.confirm_sent` ("It was sent")
       and `act.resend` ("Send it again"), and the publisher's `act.sending`, `act.sent`, `act.failed`, `act.uncertain`,
@@ -1356,8 +1356,22 @@ for it, that nothing goes out without the PM approving that exact content, alrea
     - **The API** (`api/act_routes.py`): `GET /api/acts`, `GET /api/acts/{id}`, `POST /api/acts/{id}/approve`, `/withdraw`,
       `/send` and `/settle`: `tests/test_publisher.py::test_the_api_lists_reads_approves_and_sends_an_act_after_the_yes`,
       `::test_the_api_withdraws_an_act_and_takes_the_persons_answers_for_one_it_cannot_confirm`.
-    - **Not built (S1b-1b and S1b-2):** Waiting to go out and the Today lines, a channel from a mail or calendar add-on,
-      undoing a sent act through a channel's `undo` (the `undone` state exists; no op reaches it yet), the follow-up
+    - **Built (S1b-1b, change log 182): the screens.** Waiting to go out lists the acts that wait (draft, approved,
+      sending, stale, failed, uncertain) as list | detail: one line each ("Message to Ana Example") with its state as a word
+      and an icon and its one button, the detail with every part as plain text, each recipient by name with the address as
+      it resolves now, a box to acknowledge each recipient called out by name, and **Approve and send**, which confirms
+      ("Send this message to Ana Example now?") and then says yes on the fingerprint shown and sends. A `copy` act has Copy
+      (the yes, then the exact text on the clipboard) and Mark sent instead. An act that went stale says what changed and
+      offers Look again before the yes is offered; Take it back is in the menu with Undo. Today has one line for each act
+      that is `failed` (the channel's own words for a withdrawn sign-in, else "Look at the message to Ana, which didn't
+      go out: <reason>"), `uncertain` (**It was sent** with Undo; **Send it again**, which confirms, in the menu) or `stale`
+      ("Look again at the message to Ana: <what changed>"); failed and unsure ones are in At risk, a stale one in Decide;
+      each opens the act in Waiting to go out. The lines are read from the acts list by the screen (like the stage rows),
+      not ranked by the engine's queue. `web/src/components/WaitingToGoOut.test.tsx`, `web/src/components/TodayActs.test.tsx`;
+      the browser test `web/e2e/outgoing.spec.ts`.
+    - **Not built (S1b-2, and what S1b-1b left):** a channel from a mail or calendar add-on,
+      undoing a sent act through a channel's `undo` (the `undone` state exists; no op reaches it yet; the screen offers none),
+      the engine's queue ranking the act lines, the follow-up
       message moving onto acts (Copy still works as it did), and calling `outward.check_outgoing` for the first export a
       person hands to someone else.
 - Change classification for the review list: real change, order only, layout or format only, columns changed, text the target
