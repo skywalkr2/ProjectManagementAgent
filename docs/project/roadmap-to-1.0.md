@@ -335,7 +335,7 @@ From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux
   *Built (wave 4):* `tests/test_held_ask.py`, `TodayRecords.test.tsx`. Left: "Drop it and draft the note", which waits for the publisher (S1b).
 
 From the original designer's lessons of 2026-10-14:
-- [ ] [B-6b] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
+- [x] [B-6b] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
   Sources shows on a source's row when its mail couldn't be sorted and why (from L0). Waiting to go out is a designed screen with its empty
   state.
   *Built (B-6b):* the "To send" marker on an open action's row in What changed and in To-dos and questions
@@ -348,15 +348,16 @@ From the original designer's lessons of 2026-10-14:
   to the line, every button and menu item of an open row in the detail
   (`web/src/components/WhatChangedListDetail.test.tsx`, `web/src/components/FollowUpsListDetail.test.tsx`,
   `web/src/components/WhatChanged.test.tsx`, `web/src/components/WhatChangedFold.test.tsx`,
-  `web/src/components/FollowUps.test.tsx`). *Left:* the browser tests on the new layout (`acceptance.spec.ts`,
-  `late-evening.spec.ts`, `journeys.spec.ts`, `panes.spec.ts`, `shell.spec.ts`, `layout.spec.ts`, `a11y.spec.ts`), written but
-  not yet run; a Follow-ups line says no age on To send, because the server holds none for a message not yet sent.
+  `web/src/components/FollowUps.test.tsx`). The browser tests on the new layout pass at `a79141c` (`acceptance.spec.ts`, `late-evening.spec.ts`,
+  `journeys.spec.ts`, `panes.spec.ts` with both phone review modes setting up their own item instead of skipping,
+  `shell.spec.ts`, `layout.spec.ts`, `a11y.spec.ts`). A To send line shows the count without an age, because the server
+  holds none for a message not yet sent (the design asks for none).
 - [ ] [B-6a] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
   *Built (wave 3):* nav, saved as made with Undo, "Changed · Reset", help beside the field, `Settings.test.tsx`, `shell.spec.ts`. Left: the contrast warning in Appearance and the pickers for money and dates, to check and finish in wave 6.
   *Built (B-6a):* the contrast warning in Appearance and the date-format list (`web/src/lib/theme.test.ts`,
   `web/src/components/Settings.test.tsx`). *Left:* a money list needs a currency setting, which doesn't exist yet.
-- [ ] [B-6b] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
+- [x] [B-6b] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
   tooltip; amber or red when something is wrong. The held-work and paused lines cover the bad case; this covers "is it
   alive?". The header is two rows when it needs them (title, views and primary buttons on top; status and the person's
