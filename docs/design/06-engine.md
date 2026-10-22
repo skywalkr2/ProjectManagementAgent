@@ -1681,8 +1681,9 @@ A person who adds an account gets every tier filled in, so routine work never la
 - **A newer model is asked about, never switched to** (designer, 2026-10-22; change log 174; *not built yet*). Setup
   asks nothing (owner, 2026-10-22): a new account's tier takes the newest model of its family, decided from the listing's
   release date, else the version in the model's id compared as numbers, never the list's order, and never a model of
-  another family. After setup, and a weekly check of the service's models and prices asks before any
-  switch, with what it would change in cost; it never switches by itself.
+  another family. After setup the model never changes on its own: the person changes it in Settings (owner, 2026-10-21 and 2026-10-22), and a weekly check of the service's models and
+  prices tells them on Today when a newer model of the same family appears, with what it would change in cost; its
+  Switch makes the same change as Settings.
 - **Thinking off** is sent only to a model whose listing says it supports it; it is never inferred from a hand test.
 - **Estimates learn from use** (*built*, `tests/test_estimate_calibration.py`, change log 175): when an account is
   checked, one token-count request per tier's model (for an adapter that can count without running; the adapter

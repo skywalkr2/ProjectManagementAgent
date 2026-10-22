@@ -9,8 +9,9 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 - **Decided (owner):** kind of rule: core concept, no setting. When an account is added, each tier takes the newest model
   of the family the catalog names for it (Haiku 4.5 to Haiku 5.5, say), decided from the listing's release date or the
   version in the model's id, never from the list's order; it never moves to another family (Haiku to another family is
-  the person's choice). Setup still asks nothing about tiers. Open with the owner: whether a newer model of the same
-  family that appears later is switched to on its own (with the check, a notice and Switch back) or asked about first.
+  the person's choice). Setup still asks nothing about tiers. After setup a tier's model never changes on its own: the
+  person changes it in Settings (as decided 2026-10-21), and the weekly watch only tells them a newer model of the same
+  family exists, with the cost change; its Switch makes the same change as Settings.
 - **Why:** the newest model of a family is what the person expects, and the service's list order isn't promised; a move
   to another family changes cost and quality in a way the person must choose.
 - **Impact:** design 6.16 (presets); `engine/ai/presets.py` (B-12 batch 2). Change log: section 174.
