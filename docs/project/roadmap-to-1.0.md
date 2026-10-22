@@ -799,7 +799,12 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
       (`tests/test_evaluate_harness.py::test_a_forbidden_owner_is_met_only_by_an_action_that_person_owns`).
     *Left on the 80% run:* `follow-up-goes-to-who-made-the-claim` (33%: the question goes to the person, not whoever
     made the claim), `thread-t21-m4-no-answer` (33%), `first-name-in-thread`, `promise-078`, `promise-114`,
-    `promise-119` and `they-finished-note` (67% each); the learning pairs are not re-run yet.
+    `promise-119` and `they-finished-note` (67% each). Pairs re-run the same day: main 69% (from 52%), harder 70% (from
+    57%). Pairs 06 and 14 had right lessons the expectation's words missed (widened, with a comment). *Left, for the
+    owner to decide:* pairs 15, 20, 23, 24 and 25 propose no lesson after a correction saying the answer was wrong.
+    Decision F31 says such a correction still proposes the narrow lesson; design 6.22 and
+    `tests/test_learn_correction.py::test_nothing_to_generalize_makes_no_knowledge` allow none ("Typo in the title").
+    The question: must a send-back, a decline, a miss or a drop always propose a lesson, typos included?
   - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
     reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
     20): whether the reach the model picks should be widened or checked against the correction's own task kind;

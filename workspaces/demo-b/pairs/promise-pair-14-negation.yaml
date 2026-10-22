@@ -35,7 +35,8 @@ first:
     note: I said I can't send them then. That date is no longer reliable.
   expect_proposal:
   - op: lesson.add
-    text_has: [negat|can't|cannot|not able]
+    # Also met by "will not be able to" and "unable": the same lesson in other words.
+    text_has: [negat|can't|cannot|not able|not be able|unable]
   keep: true
 later:
   received: '2026-11-09'

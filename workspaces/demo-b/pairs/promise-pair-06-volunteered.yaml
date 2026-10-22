@@ -24,7 +24,8 @@ first:
     note: Lena volunteered me. I haven't agreed to that.
   expect_proposal:
   - op: lesson.add
-    text_has: [behalf|volunteer|accept]
+    # Also met by "unless the person has agreed": a lesson saying the same thing in other words.
+    text_has: [behalf|volunteer|accept|agreed|agree]
   keep: true
 later:
   received: '2026-11-09'
