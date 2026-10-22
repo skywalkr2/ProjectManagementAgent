@@ -1607,6 +1607,8 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
+| `reminder` | str \| None | `None` | For an entry the engine made as a to-do's reminder: the to-do. The entry follows the reminder: a snooze moves it and a finished, dropped or held to-do removes it. |
+| `alarm_minutes` | int \| None | `None` | Minutes before the start an alarm rings in the app; 0 rings at the start. None for no alarm. |
 
 ### `series` (SER-n)
 
@@ -2179,6 +2181,7 @@ One thing the app does outside the workspace on the person's behalf (design 6.12
 | `approved.by` | str | required | The person who said yes. |
 | `approved.at` | AwareDatetime | required | When they said it. |
 | `approved.acknowledged` | list[str] | `[]` | The recipients called out that the yes acknowledged, by key. |
+| `approved.standing_yes` | str \| None | `None` | Set when the yes is the person's standing yes for reminders rather than their click on this act. |
 | `attempt_key` | str \| None | `None` | The key the channel was called with for the latest attempt. |
 | `attempt_at` | AwareDatetime \| None | `None` | When the latest attempt started. |
 | `service_id` | str \| None | `None` | The id the service gave the sent act. |
@@ -2194,13 +2197,32 @@ One thing the app does outside the workspace on the person's behalf (design 6.12
 | `undo_failure.at` | AwareDatetime | required | When it failed. |
 | `sent_at` | AwareDatetime \| None | `None` | When it went out, or the person said it did. |
 | `sent_by` | Literal['publisher', 'person'] \| None | `None` | publisher: the channel confirmed it; person: they said it was sent. |
-| `made_by` | Literal['assistant', 'person'] | `'person'` | What made the draft: the assistant, or the person (an add-on's proposal the person applies is theirs). |
+| `made_by` | Literal['assistant', 'person', 'reminders'] | `'person'` | What made the draft: the assistant, the person (an add-on's proposal the person applies is theirs), or the engine's own reminders, which draft only a reminder to the person themselves. |
+| `reminder` | str \| None | `None` | For a reminder act: the to-do it reminds the person of. Only the engine's reminders make one; the standing yes approves only an act that has this. |
+| `reminder_at` | AwareDatetime \| None | `None` | For a reminder act: the reminder time it was drafted for, so one reminder time never gets two acts and a snooze is noticed. |
 | `run` | str \| None | `None` | The AI run that wrote the draft, if one did. |
 | `sources` | list[Annotated[str, RefTo(kind='source')]] | `[]` | The saved inputs the content draws on. |
 | `in_reply_to` | str \| None | `None` | The message this answers; the people in that thread are people it may address. |
 | `project` | str \| None | `None` | The project it is about, if any. |
 | `sensitivity` | Literal['open', 'internal', 'restricted'] | `'internal'` | The most sensitive level of what it draws on. |
-| `why` | list[str] | `[]` | Codes for why it is stale (content, target, template or channel) or uncertain (lost_answer, no_status or no_channel); the screens word them. |
+| `why` | list[str] | `[]` | Codes for why it is stale (content, target, template or channel), uncertain (lost_answer, no_status or no_channel) or withdrawn (reminder_moved or reminder_ended); the screens word them. |
+
+### `standing_yes` (XSY-n)
+
+The person's standing yes for reminders (design 6.12): one choice, on one account, that lets the engine approve a reminder act that goes only to the person themselves (a message to their own address, or an event with an alarm on the account's own calendar), on that account, rendered from the core's reminder template at the version the person saw. Only the person's own `standing_yes.give` makes one and `standing_yes.end` ends it; it never covers anything else, and it goes stale (stops approving) when the template, the account's acting switch or the person's own address changes.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `person` | str | required | The person whose own address or calendar it covers. |
+| `account` | str | required | The account it goes through, as `<kind>:<name>` (the sign-in or mailbox). |
+| `channel` | str | required | The channel that account's reminders go through. |
+| `form` | Literal['calendar', 'mail'] | required | calendar: an event with an alarm on the account's own calendar. mail: a message to the person's own address. |
+| `address` | str \| None | `None` | For mail: the person's own address as it was when they said yes. A different address makes the yes stale. |
+| `template` | ActTemplate | required | The reminder template and the version the person saw. |
+| `template.name` | str | required | The template's name. |
+| `template.version` | str | required | The template's version when the content was rendered from it. |
+| `given_at` | AwareDatetime | required | When the person gave it. |
+| `ended_at` | AwareDatetime \| None | `None` | When the person ended it; none while it stands. |
 
 ## Core ops
 
@@ -2216,6 +2238,7 @@ The person's yes on one exact act: the fingerprint their screen showed, and the 
 | `id` | str | required | The id of the act. |
 | `fingerprint` | str | required | The fingerprint the person's screen showed. |
 | `acknowledged` | list[str] | `[]` | The recipients called out that the person acknowledged, by key. |
+| `by_standing` | str \| None | `None` | The id of the person's standing yes for reminders, when the engine approves a reminder act that matches it exactly. Only the engine's reminders write it; a person's click on an act never carries it. |
 
 ### `act.confirm_sent`
 
@@ -2264,6 +2287,9 @@ Draft something to go outside the workspace on the person's behalf: a message, a
 | `in_reply_to` | str \| None | `None` | The id of the saved message it answers, if it does. |
 | `project` | str \| None | `None` | The id of the project it is about, if any. |
 | `account` | str \| None | `None` | The account that carries it, as the sign-in or mailbox it goes through. Left out, a reply, a mailbox act or an answer uses the account the message or invitation came in on, and a new message the account last picked. |
+| `reminder` | ActReminderIn \| None | see below | Set only by the engine's own reminders, which draft a reminder to the person themselves; from anyone else it is refused. |
+| `reminder.action` | str | required | The id of the to-do. |
+| `reminder.at` | AwareDatetime | required | The reminder time it is for. |
 
 ### `act.edit`
 
@@ -2296,6 +2322,17 @@ The channel said it did not go out, and why. Only the publisher writes it.
 | `kind` | Literal['auth', 'refused', 'outage', 'offline'] | required | How the channel classified it. |
 | `reason` | str | required | Why, in plain words for the person. |
 | `at` | AwareDatetime | required | When it failed. |
+
+### `act.reminder_withdrawn`
+
+A reminder act that had not gone out is withdrawn because its to-do was snoozed, cleared, finished or dropped. Only the publisher writes it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the act. |
+| `why` | Literal['moved', 'ended'] | required | moved: the reminder time changed or was cleared. ended: the to-do is finished, dropped or on hold. |
+| `at` | AwareDatetime | required | When it was withdrawn. |
 
 ### `act.reopen`
 
@@ -2998,6 +3035,16 @@ Change one field of an existing record. Allowed fields: project status, phase, t
 | `evidence` | EvidenceIn \| None | see below | The words that justify the change; see the fields needing it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
+### `reminder.entry`
+
+The engine keeps a to-do's reminder on the app's own calendar: with a time it makes the entry (an alarm at that time) or moves the one it made; with no time it removes it. Local data: nothing leaves the workspace, so it is no act and needs no yes. Only the engine's own reminders use it; Undo takes the change back.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `action` | str | required | The id of the to-do. |
+| `at` | AwareDatetime \| None | `None` | The reminder time; left out, the entry made for this to-do is removed. |
+
 ### `report.draft`
 
 Draft a report to the product's maintainers when the PM asks for something the product can't do: what was wanted, what happens now, and why it would help. The PM reviews and sends it.
@@ -3135,6 +3182,26 @@ Propose entering a configured stage. Always waits for the person's confirmation.
 | `record.id` | str | required | The record's id. |
 | `to` | str | required | The id of the stage to enter. |
 | `read_version` | int | required | The version of the record that was read; the move fails if it changed. |
+
+### `standing_yes.end`
+
+The person ends their standing yes for reminders. It stops approving at once; Undo brings it back. Only the person's own choice makes it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the standing yes. |
+
+### `standing_yes.give`
+
+The person's standing yes for reminders: reminders that go only to them (a message to their own address, or an event with an alarm on the account's own calendar), on the one account, rendered from the core's reminder template at the version they saw, are approved without a click on each. Refused when the template is different now or the account can't act. Only the person's own choice makes it; Undo ends it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `account` | str | required | The account the reminders go through. |
+| `form` | Literal['calendar', 'mail'] | required | calendar: an event with an alarm on the account's own calendar. mail: a message. |
+| `template_version` | str | required | The version of the reminder template the person saw. |
 
 ### `style.add`
 

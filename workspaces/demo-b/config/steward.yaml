@@ -21,3 +21,7 @@ reminders:
   later_today_hours: 2   # hours from now that Later today snoozes to
   evening: "17:30"   # the time This evening snoozes to
   late_after_minutes: 10   # how long after its time a reminder not yet shown is marked late
+  where: nowhere   # where a reminder reaches you when the app isn't open: nowhere, app (the app's own calendar), calendar or mail (an account)
+  where_account: ""   # the account those reminders go through, one the assistant may act on
+  look_ahead_hours: 24   # a reminder coming due within this many hours is drafted ahead, so it can reach you while the computer sleeps
+  allowed_data: internal   # the most sensitive to-do whose own words a reminder may carry out; above it only the time goes

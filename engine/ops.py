@@ -1369,6 +1369,16 @@ class ActTargetIn(BaseModel):
         return self
 
 
+class ActReminderIn(BaseModel):
+    """What makes a draft a reminder act: the to-do it reminds the person of and the reminder time it is for. Only the
+    engine's own reminders draft one."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    action: str = Field(min_length=1, description="The id of the to-do.")
+    at: AwareDatetime = Field(description="The reminder time it is for.")
+
+
 class ActDraftOp(OpModel):
     """Draft something to go outside the workspace on the person's behalf: a message, a change to the mailbox, a
     calendar change or a file, on a channel and an account, with its content in named parts. It sends nothing: it
@@ -1391,6 +1401,11 @@ class ActDraftOp(OpModel):
         description="The account that carries it, as the sign-in or mailbox it goes through. Left out, a reply, a "
         "mailbox act or an answer uses the account the message or invitation came in on, and a new message the account "
         "last picked.",
+    )
+    reminder: ActReminderIn | None = Field(
+        None,
+        description="Set only by the engine's own reminders, which draft a reminder to the person themselves; from "
+        "anyone else it is refused.",
     )
 
     @model_validator(mode="after")
@@ -1438,6 +1453,11 @@ class ActApproveOp(OpModel):
     fingerprint: str = Field(min_length=1, description="The fingerprint the person's screen showed.")
     acknowledged: list[str] = Field(
         default_factory=list, description="The recipients called out that the person acknowledged, by key."
+    )
+    by_standing: str | None = Field(
+        None,
+        description="The id of the person's standing yes for reminders, when the engine approves a reminder act that "
+        "matches it exactly. Only the engine's reminders write it; a person's click on an act never carries it.",
     )
 
     def describe(self, view: Any = None) -> str | None:
@@ -1565,6 +1585,61 @@ class ActUndoFailedOp(OpModel):
     at: AwareDatetime = Field(description="When it failed.")
 
 
+class ActReminderWithdrawnOp(OpModel):
+    """A reminder act that had not gone out is withdrawn because its to-do was snoozed, cleared, finished or dropped.
+    Only the publisher writes it."""
+
+    op: Literal["act.reminder_withdrawn"] = "act.reminder_withdrawn"
+    id: str = Field(description="The id of the act.")
+    why: Literal["moved", "ended"] = Field(
+        description="moved: the reminder time changed or was cleared. ended: the to-do is finished, dropped or on hold."
+    )
+    at: AwareDatetime = Field(description="When it was withdrawn.")
+
+
+class ReminderEntryOp(OpModel):
+    """The engine keeps a to-do's reminder on the app's own calendar: with a time it makes the entry (an alarm at that
+    time) or moves the one it made; with no time it removes it. Local data: nothing leaves the workspace, so it is no
+    act and needs no yes. Only the engine's own reminders use it; Undo takes the change back."""
+
+    op: Literal["reminder.entry"] = "reminder.entry"
+    action: str = Field(min_length=1, description="The id of the to-do.")
+    at: AwareDatetime | None = Field(
+        None, description="The reminder time; left out, the entry made for this to-do is removed."
+    )
+
+    def describe(self, view: Any = None) -> str | None:
+        return "Put a reminder on the calendar" if self.at is not None else "Take a reminder off the calendar"
+
+
+class StandingYesGiveOp(OpModel):
+    """The person's standing yes for reminders: reminders that go only to them (a message to their own address, or an
+    event with an alarm on the account's own calendar), on the one account, rendered from the core's reminder template
+    at the version they saw, are approved without a click on each. Refused when the template is different now or the
+    account can't act. Only the person's own choice makes it; Undo ends it."""
+
+    op: Literal["standing_yes.give"] = "standing_yes.give"
+    account: str = Field(min_length=1, description="The account the reminders go through.")
+    form: Literal["calendar", "mail"] = Field(
+        description="calendar: an event with an alarm on the account's own calendar. mail: a message."
+    )
+    template_version: str = Field(min_length=1, description="The version of the reminder template the person saw.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return "Let reminders go without asking"
+
+
+class StandingYesEndOp(OpModel):
+    """The person ends their standing yes for reminders. It stops approving at once; Undo brings it back. Only the
+    person's own choice makes it."""
+
+    op: Literal["standing_yes.end"] = "standing_yes.end"
+    id: str = Field(description="The id of the standing yes.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return "Stop letting reminders go without asking"
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -1638,7 +1713,11 @@ Op = Annotated[
     | ActReopenOp
     | ActUndoOp
     | ActUndoneOp
-    | ActUndoFailedOp,
+    | ActUndoFailedOp
+    | ActReminderWithdrawnOp
+    | ReminderEntryOp
+    | StandingYesGiveOp
+    | StandingYesEndOp,
     Field(discriminator="op"),
 ]
 
@@ -1716,6 +1795,10 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "act.undo": ActUndoOp,
     "act.undone": ActUndoneOp,
     "act.undo_failed": ActUndoFailedOp,
+    "act.reminder_withdrawn": ActReminderWithdrawnOp,
+    "reminder.entry": ReminderEntryOp,
+    "standing_yes.give": StandingYesGiveOp,
+    "standing_yes.end": StandingYesEndOp,
 }
 
 #: The outward act's ops that only the publisher writes: the states from sending onward (design 6.12).
@@ -1729,11 +1812,16 @@ ACT_PUBLISHER_OPS = frozenset(
         "act.reopen",
         "act.undone",
         "act.undo_failed",
+        "act.reminder_withdrawn",
     }
 )
 #: The outward act's ops only the person makes: their yes, a change, a take-back and their answers about what went out.
 #: Approving has its own invariant (`act-approval`); the rest are in `PERSON_ONLY_OPS`.
-ACT_PERSON_OPS = frozenset({"act.edit", "act.withdraw", "act.confirm_sent", "act.resend", "act.undo"})
+ACT_PERSON_OPS = frozenset(
+    {"act.edit", "act.withdraw", "act.confirm_sent", "act.resend", "act.undo", "standing_yes.give", "standing_yes.end"}
+)
+#: The person's standing yes for reminders: given and ended only by the person's own choice (design 6.12).
+STANDING_YES_OPS = frozenset({"standing_yes.give", "standing_yes.end"})
 #: Every op of the outward act. All are outbound tier: none is applied on its own, by a rule or from an input.
 ACT_OPS = frozenset({"act.draft", "act.approve"}) | ACT_PERSON_OPS | ACT_PUBLISHER_OPS
 

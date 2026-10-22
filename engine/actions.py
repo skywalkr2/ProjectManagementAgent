@@ -34,7 +34,7 @@ ACTION_CORE_OPS = (
     frozenset(OP_MODELS)
     - (NEEDS_EVIDENCE - EVIDENCE_UNLESS_PERSON)
     - KNOWLEDGE_OPS
-    - {"file.add", "text.accept", "text.discard", "text.draft"}
+    - {"file.add", "text.accept", "text.discard", "text.draft", "reminder.entry"}
     - (ACT_OPS - {"act.draft"})
 )
 _PLACEHOLDER = "$file:"

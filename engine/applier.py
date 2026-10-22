@@ -26,10 +26,12 @@ from engine import (
     learn,
     outward,
     proposals,
+    reminder_entries,
     reply_lines,
     scope,
     sides,
     signature_contact,
+    standing_yes,
 )
 from engine import agenda as agenda_module
 from engine import search as workspace_search
@@ -51,6 +53,7 @@ from engine.ops import (
     NEEDS_EVIDENCE,
     PERSON_ONLY_OPS,
     SETTABLE,
+    STANDING_YES_OPS,
     ActApproveOp,
     ActDraftOp,
     ActEditOp,
@@ -91,6 +94,7 @@ from engine.ops import (
     RecordEditOp,
     RecordLogOp,
     RecordSetOp,
+    ReminderEntryOp,
     ReportDraftOp,
     RoutingAddOp,
     RuleAddOp,
@@ -166,7 +170,9 @@ class Context:
     hidden_words: list[str] = field(default_factory=list)
     confirmed_by_pm: bool = False
     # "pm" for a person action, whose exact proposal the person saw; "publisher" for the publisher's own state changes
-    actor: Literal["assistant", "pm", "publisher"] = "assistant"
+    # "reminders" for the engine's own reminders: they draft a reminder act and, under the person's standing yes,
+    # approve one that matches it exactly (design 6.12), and may do nothing else.
+    actor: Literal["assistant", "pm", "publisher", "reminders"] = "assistant"
     via: str | None = None  # "handler" or "job" for ops a plugin staged; otherwise worked out from the inputs
     # For an AI run: whether it searched the workspace before answering. None for anything that isn't one, which the
     # search-first check leaves alone.
@@ -269,12 +275,31 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         # The outward act (design 6.12): only the person says yes, only the publisher records what happened outside,
         # and content from outside never adds an act or a recipient.
         if name in ACT_OPS:
-            if isinstance(op, ActApproveOp) and ctx.actor != "pm":
-                refuse(
-                    i,
-                    "act-approval",
-                    "only the person's own yes approves an act; the assistant and add-ons may only draft",
-                )
+            if isinstance(op, ActApproveOp):
+                if op.by_standing is None and ctx.actor != "pm":
+                    refuse(
+                        i,
+                        "act-approval",
+                        "only the person's own yes approves an act; the assistant and add-ons may only draft",
+                    )
+                    continue
+                if op.by_standing is not None:
+                    # The one approval that isn't a click on the act: the engine's reminders, under the standing yes,
+                    # for an act that matches it in every respect (checked here, not by the caller).
+                    why = (
+                        "only the engine's reminders approve under a standing yes"
+                        if ctx.actor != "reminders"
+                        else standing_yes.approval_problem(
+                            ctx.store, ctx.cfg, view, ctx.people, view.get("act", op.id), op.by_standing
+                        )
+                    )
+                    if why is not None:
+                        refuse(i, "act-approval", why)
+                        continue
+            if isinstance(op, ActDraftOp) and (
+                why := standing_yes.draft_problem(ctx.store, ctx.cfg, view, ctx.people, ctx.actor, op)
+            ):
+                refuse(i, "act-reminder", why)
                 continue
             if name in ACT_PUBLISHER_OPS and ctx.via != "publisher":
                 refuse(i, "act-publisher-only", f"{name} is the publisher's alone: it records what happened to an act")
@@ -841,6 +866,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             and name not in ACT_PUBLISHER_OPS
             and ctx.actor != "pm"
             and not ctx.confirmed_by_pm
+            # The engine's reminders, past the checks above (which refused anything that isn't exactly a reminder),
+            # draft a reminder act and approve one under the standing yes.
+            and not (ctx.actor == "reminders" and isinstance(op, (ActDraftOp, ActApproveOp)))
         ):
             problems.append(Problem("tier", "hold", i, ACT_WAITS))
     problems += _inference_holds(cs, ctx, view)
@@ -2689,6 +2717,14 @@ def origin_of(ctx: Context) -> dict[str, Any]:
         return {"actor": "pm", "trust": "trusted", "via": "action", **run}
     if ctx.actor == "publisher":
         return {"actor": "rule", "trust": "trusted", "via": "rule", **run}
+    if ctx.actor == "reminders":
+        # A standing-yes approval is the person's own, given ahead; a reminder draft is the engine's.
+        return {
+            "actor": "pm" if ctx.via == "standing_yes" else "rule",
+            "trust": "trusted",
+            "via": ctx.via or "reminders",
+            **run,
+        }
     if ctx.confirmed_by_pm:
         return {"actor": "pm", "trust": "trusted", "via": "screen", **run}
     via = ctx.via or ("input" if ctx.inputs.source else "task" if ctx.inputs.trust == "untrusted" else "note")
@@ -2804,7 +2840,8 @@ def _wctx(ctx: Context, cs_id: str, index: int, op: OpModel) -> WriteContext:
     if evidence is not None:
         ev = {"source": ctx.inputs.evidence_source(evidence.quote), "quote": evidence.quote}
     return WriteContext(
-        actor=ctx.actor,
+        # The ledger records an approval under the standing yes as the person's, and the act names the yes.
+        actor="pm" if ctx.actor == "reminders" and isinstance(op, ActApproveOp) else ctx.actor,
         trust=ctx.inputs.trust,
         op=f"{op.op}#{index}",
         changeset=cs_id,
@@ -2831,6 +2868,10 @@ def _apply_op(
 
         # The workspace is the folder that holds the store's database.
         return set_aside.restore_in(tx, ctx.store, Workspace(ctx.store.path.parent), ctx.cfg, op.snapshot, w), None
+    if isinstance(op, ReminderEntryOp):
+        return reminder_entries.apply(tx, op, ctx, w), None
+    if op.op in STANDING_YES_OPS:
+        return standing_yes.apply(tx, op, ctx, w), None
     if op.op in ACT_OPS:
         return acts.apply(tx, op, ctx, w), None
     if isinstance(op, (QuestionUpdateOp, QuestionMoveOp, QuestionDropOp, QuestionMarkSentOp)):
@@ -4294,6 +4335,46 @@ def apply_for_publisher(store: Store, cfg: Config, op: dict[str, Any], summary: 
             request.id,
             {"changeset": cs_id},
             WriteContext("publisher", "trusted", "publisher.request"),
+            read_version=current.version,
+        )
+    return cs_id
+
+
+def apply_for_reminders(store: Store, cfg: Config, op: dict[str, Any], summary: str, *, standing: bool = False) -> str:
+    """Apply one op of the engine's own reminders (design 6.12): drafting a reminder act, or approving one under the
+    person's standing yes (`standing`). A changeset in the ledger like any other. The applier's checks decide whether it
+    stands (`act-reminder` for a draft, `act-approval` for the approval): returns the changeset id, and raises
+    StoreError when the op is refused or held, leaving everything as it was."""
+    from engine.names import People
+    from engine.ops import CHANGESET
+
+    changeset = CHANGESET.validate_python({"summary": summary, "ops": [op]}, context={"op_models": store.plugins.ops})
+    with store.transaction() as tx:
+        request = tx.create(
+            "request",
+            {"task": "notes", "origin": "schedule", "state": "done", "note": summary, "created_at": store.clock()},
+            WriteContext("reminders", "trusted", "reminders.request"),
+        )
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        ("act.draft", "act.approve", "reminder.entry"),
+        Inputs(request.id, None, "", "", "trusted"),
+        actor="reminders",
+        via="standing_yes" if standing else "reminders",
+    )
+    cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"reviewed": False})
+    outcome = store.read().get("changeset", cs_id).data["ops"][0]
+    if outcome["status"] != "applied":
+        raise StoreError(outcome.get("reason") or "that couldn't be done")
+    with store.transaction() as tx:
+        current = tx.get("request", request.id)
+        tx.update(
+            "request",
+            request.id,
+            {"changeset": cs_id},
+            WriteContext("reminders", "trusted", "reminders.request"),
             read_version=current.version,
         )
     return cs_id

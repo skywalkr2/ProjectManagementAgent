@@ -5414,7 +5414,7 @@ class ActView(BaseModel):
     service_id: str | None = None
     sent_at: datetime | None = None
     sent_by: Literal["publisher", "person"] | None = None
-    made_by: Literal["assistant", "person"]
+    made_by: Literal["assistant", "person", "reminders"]
     sensitivity: Literal["open", "internal", "restricted"]
 
 
@@ -5445,3 +5445,69 @@ class ActResultView(BaseModel):
     status: Literal["draft", "approved", "sending", "sent", "failed", "uncertain", "stale", "withdrawn", "undone"]
     reason: str | None = None
     changeset: str | None = Field(None, description="The change the person's own choice made, which Undo takes.")
+
+
+class ReminderTextView(BaseModel):
+    """A reminder as it will say it: the mail's subject and body, and an event's title."""
+
+    subject: str
+    body: str
+    event_title: str
+
+
+class ReminderExampleView(BaseModel):
+    """The reminder template's own example in both forms: the to-do's words (`item`), and the plain form that carries
+    none of them (`plain`)."""
+
+    item: ReminderTextView
+    plain: ReminderTextView
+
+
+class ReminderAccountView(BaseModel):
+    """An account that can act and can carry a reminder: as a mail (`mail`), as an event on its own calendar
+    (`calendar`), or both."""
+
+    id: str
+    label: str
+    mail: bool
+    calendar: bool
+
+
+class StandingYesView(BaseModel):
+    """The person's standing yes for reminders as it stands: what it covers and the reasons, if any, it has gone stale
+    (`template`, `acting`, `address`, `person`, `channel`)."""
+
+    id: str
+    form: Literal["calendar", "mail"]
+    account: str
+    account_label: str | None = None
+    given_at: datetime
+    template_version: str
+    stale: list[str] = Field(default_factory=list)
+
+
+class ReminderWhereView(BaseModel):
+    """Where reminders reach the person when the app isn't open (design 6.12): the choice (`where`, with its `account`
+    for the two that need one), the standing yes that lets them go without asking, why the choice can't work now
+    (`stale`, the yes's reasons or `acting` when the chosen account can't act), the accounts to pick from, the reminder
+    as it would go (`example`) and the version of the template that wording is from."""
+
+    where: Literal["nowhere", "app", "calendar", "mail"]
+    account: str | None = None
+    account_label: str | None = None
+    standing: StandingYesView | None = None
+    stale: list[str] = Field(default_factory=list)
+    accounts: list[ReminderAccountView] = Field(default_factory=list)
+    template_version: str
+    example: ReminderExampleView
+    look_ahead_hours: int
+
+
+class StandingYesIn(BaseModel):
+    """The person's yes: the form and account they chose, and the version of the reminder template they saw."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    form: Literal["calendar", "mail"]
+    account: str = Field(min_length=1)
+    template_version: str = Field(min_length=1)

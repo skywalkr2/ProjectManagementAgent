@@ -15,7 +15,9 @@ GUIDE = Path(__file__).parent / "guide" / "guide.md"
 #: Setting keys never put in a packet: where keys come from is nobody's business but the person's.
 PRIVATE_KEYS = re.compile(r"(^|\.)(auth|key_env|pass_env|token|secret)s?($|\.)")
 #: Settings only the person changes: never offered to an ask, so a setting proposal can't name them (design 6.12).
-PERSON_ONLY_KEYS = frozenset({"watch.acting"})
+PERSON_ONLY_KEYS = frozenset(
+    {"watch.acting", "steward.reminders.where", "steward.reminders.where_account", "steward.reminders.allowed_data"}
+)
 _WORD = re.compile(r"[a-z0-9]+")
 #: Words too common to say what a question is about.
 _COMMON = frozenset(

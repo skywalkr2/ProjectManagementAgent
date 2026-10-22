@@ -1085,13 +1085,15 @@ management (not just read only) lets do it"):
   outgoing server, the sent copy, status by Message-ID, archive, move, label and mark read over IMAP, and Undo
   (`tests/test_mailbox_channel.py`). **Left:** the add-ons' channels, the screens (including picking the sent and archive
   folders from the mailbox's folder list).
-- [ ] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
+- [x] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
   the publisher for it): (owner: "whatever we can do to make it full featured ... but not
-  phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
-  event with an alarm (an approved calendar write, once per reminder or by a standing yes for reminders), so their phone
-  rings without Thimbleby running; or as a reminder mail to their own address. No third-party push service. A
-  companion phone app (iOS and Android) that receives the desktop's reminders is planned after 1.0 (it needs a relay
-  the apps can reach).
+  phone pushes unless it was an installed ios or apk"): one choice in Settings: in the app's own calendar (local, with an
+  alarm; no act), in the person's calendar on a signed-in calendar account (an event with an alarm), or as a reminder
+  mail to their own address, the last two approved once per reminder or by a standing yes for reminders. No third-party
+  push service. **Built (S1b-2c):** `tests/test_standing_yes.py`, `tests/test_reminder_acts.py`,
+  `web/src/components/ReminderWhere.test.tsx`. **Left:** the calendar form on a real account waits for an add-on whose
+  channel declares `calendar: create`; a companion phone app (iOS and Android) that receives the desktop's reminders is
+  planned after 1.0 (it needs a relay the apps can reach).
 - [ ] [S1b-2] **Calendar:** create an event or a hold, move or cancel one the person owns, and accept, decline or propose a
   new time for an invitation. Through the account's service; a subscribed calendar link stays read-only by nature.
   Reading an invitation and preparing the answer has its engine (`engine/itip.py`, `tests/test_itip.py`); sending it

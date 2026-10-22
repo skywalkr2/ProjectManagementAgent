@@ -24,7 +24,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from engine import act_accounts, audience, outward
+from engine import act_accounts, audience, outward, reminder_content, reminder_template, standing_yes
 from engine.channels import COPY, OutgoingAbout, OutgoingAct, OutgoingRecipient
 from engine.ops import (
     ACT_ACTIONS,
@@ -36,6 +36,7 @@ from engine.ops import (
     ActEditOp,
     ActFailedOp,
     ActRecipientIn,
+    ActReminderWithdrawnOp,
     ActReopenOp,
     ActResendOp,
     ActSendingOp,
@@ -94,9 +95,11 @@ def channel_of(plugins: Any, name: str) -> Any:
 
 
 def template_version_now(plugins: Any, data: Mapping[str, Any]) -> str | None:
-    """The version the act's template has now, as its channel says; None when the act has no template or the channel
-    can't say."""
+    """The version the act's template has now: the core's reminder template's own (the workspace's copy if it has one),
+    else as its channel says; None when the act has no template or the channel can't say."""
     template = data.get("template")
+    if template and template["name"] == reminder_template.NAME:
+        return reminder_template.version(reminder_content.root_of(plugins.store))
     channel = channel_of(plugins, data["channel"])
     if not template or channel is None or channel.template_version is None:
         return None
@@ -503,7 +506,7 @@ def _need(found: Any, states: tuple[str, ...], what: str) -> None:
 
 
 def _made_by(ctx: Any) -> str:
-    return "person" if ctx.actor == "pm" else "assistant"
+    return {"pm": "person", "reminders": "reminders"}.get(ctx.actor, "assistant")
 
 
 def _about(tx: Tx, op: ActDraftOp) -> list[str]:
@@ -581,6 +584,8 @@ def _draft(tx: Tx, op: ActDraftOp, ctx: Any, w: WriteContext) -> list[dict[str, 
             "in_reply_to": op.in_reply_to,
             "project": op.project,
             "sensitivity": sensitivity_of(tx, sources),
+            "reminder": op.reminder.action if op.reminder else None,
+            "reminder_at": op.reminder.at.isoformat() if op.reminder else None,
         },
         w,
     )
@@ -643,6 +648,14 @@ def _approve(tx: Tx, op: ActApproveOp, ctx: Any, w: WriteContext) -> list[dict[s
     found = _get(tx, op.id)
     _need(found, APPROVABLE, "it can't be approved")
     data = found.data
+    if op.by_standing is not None:
+        # The engine's own approval under the person's standing yes: only for a reminder that matches it exactly.
+        if ctx.actor != "reminders":
+            raise StoreError("only the engine's reminders approve under a standing yes")
+        if (
+            why := standing_yes.approval_problem(ctx.store, ctx.cfg, tx, ctx.people, found, op.by_standing)
+        ) is not None:
+            raise StoreError(why)
     outward.check_outgoing(tx, ctx.cfg, part_labels(tx, ctx.cfg, data))
     if (why := audience_problem(tx, ctx.people, data["sources"], act_recipients(tx, data))) is not None:
         raise StoreError(why)
@@ -666,6 +679,7 @@ def _approve(tx: Tx, op: ActApproveOp, ctx: Any, w: WriteContext) -> list[dict[s
                 "by": _pm(ctx),
                 "at": ctx.store.clock(),
                 "acknowledged": sorted(k for k in op.acknowledged if k in keys),
+                "standing_yes": op.by_standing,
             },
             "failure": None,
             "why": [],
@@ -782,6 +796,21 @@ def _reopen(tx: Tx, op: ActReopenOp, ctx: Any, w: WriteContext) -> list[dict[str
     return [{"kind": "act", "id": found.id}]
 
 
+def _reminder_withdrawn(tx: Tx, op: ActReminderWithdrawnOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
+    found = _get(tx, op.id)
+    if not found.data.get("reminder"):
+        raise StoreError("only a reminder act is withdrawn this way")
+    _need(found, EDITABLE, "it can't be withdrawn")
+    tx.update(
+        "act",
+        found.id,
+        {"status": "withdrawn", "approved": None, "why": [f"reminder_{op.why}"]},
+        w,
+        read_version=found.version,
+    )
+    return [{"kind": "act", "id": found.id}]
+
+
 def _undo(tx: Tx, op: ActUndoOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
     found = _get(tx, op.id)
     _need(found, ("sent",), "it can't be taken back")
@@ -842,6 +871,7 @@ _APPLY: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "act.undo": _undo,
     "act.undone": _undone,
     "act.undo_failed": _undo_failed,
+    "act.reminder_withdrawn": _reminder_withdrawn,
 }
 
 

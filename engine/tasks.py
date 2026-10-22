@@ -34,6 +34,7 @@ NOT_FROM_NOTES = (
         "answer",
         "setting.propose",
         "report.draft",
+        "reminder.entry",
     }
     # Drafting something to send is the person's, or an add-on's action they apply; outward acts are never offered to
     # the assistant's reading of notes (design 6.12).

@@ -390,6 +390,12 @@ export const api = {
   backupKey: () => call<S["BackupKeyView"]>("GET", "backup-key"),
   /** Gives the backup key: typed, made by the app (shown once in the answer's `made`), or as where it is kept. */
   setBackupKey: (body: S["BackupKeyIn"]) => call<S["BackupKeySaved"]>("POST", "backup-key", body),
+  /** Where reminders reach the person when the app isn't open: the choice, the standing yes, the accounts, the exact words. */
+  reminderWhere: () => call<S["ReminderWhereView"]>("GET", "reminders/where"),
+  /** The person's yes for reminders going without asking (ends the one that stands, gives this one), with Undo. */
+  giveReminderYes: (body: S["StandingYesIn"]) => call<S["Applied"]>("POST", "reminders/yes", body),
+  /** Ends the standing yes for reminders, with Undo. */
+  endReminderYes: () => call<S["Applied"]>("POST", "reminders/yes/end"),
   /** What notices that something needs the person are set to now; never the address they go to. */
   notifications: () => call<S["NotificationsView"]>("GET", "notifications"),
   /** What the open screen shows a browser notice for: a key for each item in Today's Decide group, and the notice's words. */

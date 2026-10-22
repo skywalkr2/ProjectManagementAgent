@@ -26,6 +26,8 @@ invariants:
       - act.confirm_sent
       - act.resend
       - act.undo
+      - standing_yes.give
+      - standing_yes.end
     line: Only the person can make this change; from the assistant it is refused, except marking a question already asked when the person's own note says so.
     seed: >-
       Some changes are the person's alone: editing text, accepting or discarding a proposed version, editing a
@@ -200,13 +202,19 @@ invariants:
       limit to that group with the source limit op; widening a limit is the person's alone.
   act-approval:
     ops: [act.approve]
-    line: Only the person's own yes approves an act, on the exact act their screen showed; the assistant and add-ons may only draft.
+    line: Only the person's own yes approves an act, on the exact act their screen showed; the assistant and add-ons may only draft. The one exception is the person's standing yes for reminders, which approves a reminder to their own address or calendar, on the account they chose, with exactly the reminder template's words at the version they saw.
     seed: >-
       Never approve anything that goes outside the workspace. Draft it and leave the yes to the person: their yes
       covers the exact content, the recipients' addresses, what it is about, the account, the channel and the template, and nothing you write can
-      give it.
+      give it. A standing yes for reminders is the person's alone to give, end or renew.
+  act-reminder:
+    ops: [act.draft]
+    line: Only the engine's own reminders draft a reminder act, and it goes only to the person themselves, on the account they set reminders up for, with exactly the reminder template's words.
+    seed: >-
+      Never draft a reminder act, and never dress a draft as one. A reminder that reaches the person while the app is
+      closed is made by the engine from the reminder template; anything else you draft waits for the person's yes.
   act-publisher-only:
-    ops: [act.sending, act.sent, act.failed, act.uncertain, act.stale, act.reopen, act.undone, act.undo_failed]
+    ops: [act.sending, act.sent, act.failed, act.uncertain, act.stale, act.reopen, act.undone, act.undo_failed, act.reminder_withdrawn]
     line: What happened when an act was carried out is recorded by the publisher alone.
     seed: >-
       Never record that something was sent, failed or went stale. Those states are written by the publisher when it

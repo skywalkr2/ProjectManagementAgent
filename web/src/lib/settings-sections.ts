@@ -42,6 +42,9 @@ const OWN_PART = [
   "workspace.plugins.secrets",
   "ui.notifications.webhook",
   "ui.links",
+  // Where reminders reach you away from the app is one choice with its own yes, not two rows.
+  "steward.reminders.where",
+  "steward.reminders.where_account",
   // The cloud drives the backup step looks for are a list of records, changed in the file; the step shows what it found.
   "storage.backups.cloud_folders",
 ];

@@ -1027,6 +1027,24 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 189. Reminders that reach a sleeping person, and the standing yes (2026-10-22; S1b-2c, built)
+
+- **Design 6.12, "A reminder that reaches a sleeping person":** one choice in Settings: Nowhere, In the app's calendar
+  (local data, no act), In my calendar on a signed-in calendar account, or To my mail on a mailbox account; the last two
+  are acts the engine drafts from the core's reminder template for the person alone, one per reminder time, approved
+  one by one (Ask me each time) or by the person's standing yes. The plain "A reminder from" form is used above the
+  level the account may hold.
+- **The standing yes (6.12, 12.2):** a `standing_yes` record the person's own `standing_yes.give` and `.end` make and end;
+  the applier's `act-approval` lets the engine approve only an act that matches it in every respect, and refuses
+  everything else as before; it goes stale when the template, the account's acting switch, the person's address, the
+  person or the channel changes, and Today says so. New invariant `act-reminder`.
+- **New:** records `standing_yes`; fields `reminder`, `reminder_at` and `made_by: reminders` on the act, `reminder` and
+  `alarm_minutes` on the calendar entry; ops `standing_yes.give`, `standing_yes.end`, `act.reminder_withdrawn` and
+  `reminder.entry`; the API `GET /api/reminders/where`, `POST /api/reminders/yes`, `POST /api/reminders/yes/end`;
+  settings `steward.reminders.where`, `where_account`, `look_ahead_hours` and `allowed_data`, each with a description, a
+  default and demo values in both workspaces. Built: `tests/test_standing_yes.py`, `tests/test_reminder_acts.py`,
+  `web/src/components/ReminderWhere.test.tsx`.
+
 ## 188. The assistant suggests a repeat in the input's own words (2026-10-22; S2, designed)
 
 - **Design 6.32, "Repeating to-dos":** `action.repeat` may carry only the input's words for the engine to read, and may

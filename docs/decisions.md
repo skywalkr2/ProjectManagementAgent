@@ -4,6 +4,18 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: Reminders go to the app's own calendar first; a signed-in calendar or the person's mail by choice
+
+- **Decided (owner):** "there should be a local calendar, it doesnt have to publish to external", then "in app is okay
+  for now, but if the person does have the subscribed ... calendar then it would work through there".
+- **Also decided (main session):** kind of rule: a setting (`steward.reminders.where`, default nowhere) and a core
+  concept. In the app's own calendar a reminder is a local entry with its alarm: not an act, no yes needed. On a
+  signed-in calendar account's own calendar, or to the person's own mail, it is an act, which the standing yes may cover
+  (only those, only to the person, only from the reminder template at the recorded version). No export or feed of the
+  app's calendar to other programs for now. A reminder mail goes out as the look-ahead reaches it, so it can arrive
+  early and says the time in its words.
+- **Impact:** design 6.12 ("A reminder that reaches a sleeping person"), roadmap S1b-2. Change log: section 189.
+
 ## 2026-10-22: The assistant suggests a repeat by the input's words, naming a to-do from the same answer
 
 - **Decided (main session):** kind of rule: a core concept (the op's shape). The assistant can't write a repeat rule

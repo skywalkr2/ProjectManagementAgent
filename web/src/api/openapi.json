@@ -498,7 +498,8 @@
           "made_by": {
             "enum": [
               "assistant",
-              "person"
+              "person",
+              "reminders"
             ],
             "title": "Made By",
             "type": "string"
@@ -17648,6 +17649,52 @@
         "title": "RecordView",
         "type": "object"
       },
+      "ReminderAccountView": {
+        "description": "An account that can act and can carry a reminder: as a mail (`mail`), as an event on its own calendar\n(`calendar`), or both.",
+        "properties": {
+          "calendar": {
+            "title": "Calendar",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "mail": {
+            "title": "Mail",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "mail",
+          "calendar"
+        ],
+        "title": "ReminderAccountView",
+        "type": "object"
+      },
+      "ReminderExampleView": {
+        "description": "The reminder template's own example in both forms: the to-do's words (`item`), and the plain form that carries\nnone of them (`plain`).",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/ReminderTextView"
+          },
+          "plain": {
+            "$ref": "#/components/schemas/ReminderTextView"
+          }
+        },
+        "required": [
+          "item",
+          "plain"
+        ],
+        "title": "ReminderExampleView",
+        "type": "object"
+      },
       "ReminderIn": {
         "additionalProperties": false,
         "description": "The person's own change to an action's reminder: a snooze choice, or a time they picked (one without a zone is\non their own clock). Neither clears the reminder.",
@@ -17724,6 +17771,110 @@
           "at"
         ],
         "title": "ReminderItemView",
+        "type": "object"
+      },
+      "ReminderTextView": {
+        "description": "A reminder as it will say it: the mail's subject and body, and an event's title.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "body",
+          "event_title"
+        ],
+        "title": "ReminderTextView",
+        "type": "object"
+      },
+      "ReminderWhereView": {
+        "description": "Where reminders reach the person when the app isn't open (design 6.12): the choice (`where`, with its `account`\nfor the two that need one), the standing yes that lets them go without asking, why the choice can't work now\n(`stale`, the yes's reasons or `acting` when the chosen account can't act), the accounts to pick from, the reminder\nas it would go (`example`) and the version of the template that wording is from.",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderAccountView"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "example": {
+            "$ref": "#/components/schemas/ReminderExampleView"
+          },
+          "look_ahead_hours": {
+            "title": "Look Ahead Hours",
+            "type": "integer"
+          },
+          "stale": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stale",
+            "type": "array"
+          },
+          "standing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StandingYesView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "template_version": {
+            "title": "Template Version",
+            "type": "string"
+          },
+          "where": {
+            "enum": [
+              "nowhere",
+              "app",
+              "calendar",
+              "mail"
+            ],
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "where",
+          "template_version",
+          "example",
+          "look_ahead_hours"
+        ],
+        "title": "ReminderWhereView",
         "type": "object"
       },
       "RepeatCheckIn": {
@@ -21270,6 +21421,94 @@
           "ready"
         ],
         "title": "StageView",
+        "type": "object"
+      },
+      "StandingYesIn": {
+        "additionalProperties": false,
+        "description": "The person's yes: the form and account they chose, and the version of the reminder template they saw.",
+        "properties": {
+          "account": {
+            "minLength": 1,
+            "title": "Account",
+            "type": "string"
+          },
+          "form": {
+            "enum": [
+              "calendar",
+              "mail"
+            ],
+            "title": "Form",
+            "type": "string"
+          },
+          "template_version": {
+            "minLength": 1,
+            "title": "Template Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "form",
+          "account",
+          "template_version"
+        ],
+        "title": "StandingYesIn",
+        "type": "object"
+      },
+      "StandingYesView": {
+        "description": "The person's standing yes for reminders as it stands: what it covers and the reasons, if any, it has gone stale\n(`template`, `acting`, `address`, `person`, `channel`).",
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "form": {
+            "enum": [
+              "calendar",
+              "mail"
+            ],
+            "title": "Form",
+            "type": "string"
+          },
+          "given_at": {
+            "format": "date-time",
+            "title": "Given At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "stale": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stale",
+            "type": "array"
+          },
+          "template_version": {
+            "title": "Template Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "form",
+          "account",
+          "given_at",
+          "template_version"
+        ],
+        "title": "StandingYesView",
         "type": "object"
       },
       "Status": {
@@ -31287,6 +31526,83 @@
           }
         },
         "summary": "Record Stage History"
+      }
+    },
+    "/api/reminders/where": {
+      "get": {
+        "description": "Where reminders reach the person when the app isn't open: the choice, the standing yes if one stands and\nwhether it is stale, the accounts that can carry a reminder, and the exact reminder as it would go.",
+        "operationId": "where_api_reminders_where_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderWhereView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Where"
+      }
+    },
+    "/api/reminders/yes": {
+      "post": {
+        "description": "The person's yes for reminders: ends the one that stands, if any, and gives this one, as one change with\nUndo. Refused in plain words when the reminder changed since they looked or the account can't carry it.",
+        "operationId": "give_yes_api_reminders_yes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandingYesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Give Yes"
+      }
+    },
+    "/api/reminders/yes/end": {
+      "post": {
+        "description": "End the standing yes for reminders, with Undo.",
+        "operationId": "end_yes_api_reminders_yes_end_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "End Yes"
       }
     },
     "/api/reminders/{action_id}": {

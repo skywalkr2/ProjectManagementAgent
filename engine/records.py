@@ -1670,6 +1670,17 @@ class CalendarEntry(Record):
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
     )
+    reminder: Annotated[str | None, RefTo("action")] = Field(
+        None,
+        description="For an entry the engine made as a to-do's reminder: the to-do. The entry follows the reminder: a "
+        "snooze moves it and a finished, dropped or held to-do removes it.",
+    )
+    alarm_minutes: int | None = Field(
+        None,
+        ge=0,
+        le=40320,
+        description="Minutes before the start an alarm rings in the app; 0 rings at the start. None for no alarm.",
+    )
 
     @model_validator(mode="after")
     def _readable_times(self) -> CalendarEntry:
@@ -2230,6 +2241,10 @@ class ActApproval(BaseModel):
     acknowledged: list[str] = Field(
         default_factory=list, description="The recipients called out that the yes acknowledged, by key."
     )
+    standing_yes: Annotated[str | None, RefTo("standing_yes")] = Field(
+        None,
+        description="Set when the yes is the person's standing yes for reminders rather than their click on this act.",
+    )
 
 
 class ActFailure(BaseModel):
@@ -2290,10 +2305,20 @@ class Act(Record):
     sent_by: Literal["publisher", "person"] | None = Field(
         None, description="publisher: the channel confirmed it; person: they said it was sent."
     )
-    made_by: Literal["assistant", "person"] = Field(
+    made_by: Literal["assistant", "person", "reminders"] = Field(
         "person",
-        description="What made the draft: the assistant, or the person (an add-on's proposal the person applies is "
-        "theirs).",
+        description="What made the draft: the assistant, the person (an add-on's proposal the person applies is "
+        "theirs), or the engine's own reminders, which draft only a reminder to the person themselves.",
+    )
+    reminder: Annotated[str | None, RefTo("action")] = Field(
+        None,
+        description="For a reminder act: the to-do it reminds the person of. Only the engine's reminders make one; the "
+        "standing yes approves only an act that has this.",
+    )
+    reminder_at: AwareDatetime | None = Field(
+        None,
+        description="For a reminder act: the reminder time it was drafted for, so one reminder time never gets two "
+        "acts and a snooze is noticed.",
     )
     run: Annotated[str | None, RefTo("run")] = Field(None, description="The AI run that wrote the draft, if one did.")
     sources: list[Annotated[str, RefTo("source")]] = Field(
@@ -2308,9 +2333,40 @@ class Act(Record):
     )
     why: list[str] = Field(
         default_factory=list,
-        description="Codes for why it is stale (content, target, template or channel) or uncertain (lost_answer, "
-        "no_status or no_channel); the screens word them.",
+        description="Codes for why it is stale (content, target, template or channel), uncertain (lost_answer, "
+        "no_status or no_channel) or withdrawn (reminder_moved or reminder_ended); the screens word them.",
     )
+
+
+class StandingYes(Record):
+    """The person's standing yes for reminders (design 6.12): one choice, on one account, that lets the engine approve a
+    reminder act that goes only to the person themselves (a message to their own address, or an event with an alarm on
+    the account's own calendar), on that account, rendered from the core's reminder template at the version the
+    person saw. Only the person's own `standing_yes.give` makes one and `standing_yes.end` ends it; it
+    never covers anything else, and it goes stale (stops approving) when the template, the account's acting switch or
+    the person's own address changes."""
+
+    record_kind: ClassVar[str] = "standing_yes"
+    prefix: ClassVar[str] = "XSY"
+    record_label: ClassVar[str] = "standing yes"
+
+    person: Annotated[str, RefTo("person")] = Field(description="The person whose own address or calendar it covers.")
+    account: str = Field(
+        min_length=1, description="The account it goes through, as `<kind>:<name>` (the sign-in or mailbox)."
+    )
+    channel: str = Field(min_length=1, description="The channel that account's reminders go through.")
+    form: Literal["calendar", "mail"] = Field(
+        description="calendar: an event with an alarm on the account's own calendar. mail: a message to the person's "
+        "own address."
+    )
+    address: str | None = Field(
+        None,
+        description="For mail: the person's own address as it was when they said yes. A different address makes the "
+        "yes stale.",
+    )
+    template: ActTemplate = Field(description="The reminder template and the version the person saw.")
+    given_at: AwareDatetime = Field(description="When the person gave it.")
+    ended_at: AwareDatetime | None = Field(None, description="When the person ended it; none while it stands.")
 
 
 #: Record kind to its model. The order is the export order.
@@ -2354,6 +2410,7 @@ REGISTRY: dict[str, type[Record]] = {
         ValueList,
         Copy,
         Act,
+        StandingYes,
     )
 }
 
@@ -2394,11 +2451,14 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "act": [
         ("target.recipients[].person", "person"),
         ("approved.by", "person"),
+        ("approved.standing_yes", "standing_yes"),
+        ("reminder", "action"),
         ("run", "run"),
         ("sources[]", "source"),
         ("in_reply_to", "source"),
         ("project", "project"),
     ],
+    "standing_yes": [("person", "person")],
     "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],
     "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],
@@ -2463,6 +2523,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("organizer.person", "person"),
         ("attendees[].person", "person"),
         ("people[]", "person"),
+        ("reminder", "action"),
         *AGENDA_REFERENCES,
     ],
     "series": [("project", "project"), ("source", "source"), *AGENDA_REFERENCES],

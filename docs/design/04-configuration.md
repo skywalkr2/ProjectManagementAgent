@@ -329,6 +329,13 @@ Built keys:
   one is offered as a to-do with one click (6.2, 6.32).
 - `steward.second_move_days` (14): a second move of the same date within this many days is shown in the person's own
   history as "moved again" (7.14, 6.33); zero shows none.
+- `steward.reminders.where` (nowhere, app, calendar or mail), `where_account`, `look_ahead_hours` (24) and `allowed_data`
+  (internal): where a reminder reaches the person when the app isn't open (6.12). `app` is an entry on the app's own
+  calendar; `calendar` and `mail` go through `where_account`, an account the person let the assistant act on, as drafts
+  for the person's yes or, with their standing yes, without one. A reminder is drafted when it comes due within the
+  look-ahead; a to-do above `allowed_data` goes out as the plain "A reminder from" line with only the time. The choice is
+  made in Settings (it shows the exact reminder first), `where`, `where_account` and `allowed_data` are never offered to
+  an ask, and demo values are in both fictional workspaces.
 - `reasoning_phrases` and `question_marks`: what the `reasoning-in-title` and `question-is-statement` lints read (6.7): the
   words that mark the assistant's reasoning ("no recorded fact", "couldn't find", …), and the characters that end a question
   ("?", "？", "؟").

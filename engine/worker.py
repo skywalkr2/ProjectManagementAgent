@@ -285,6 +285,7 @@ class Worker:
         self._catch_up_queued = False
         self._synced_at: int | None = -1
         self._said_no_git = False
+        self._reminder_acts: Any = None
         self._beat = 0.0
         self._running_noted: float | None = None
         self.sync_lost = False
@@ -522,7 +523,22 @@ class Worker:
 
             if move_ready_records(self.store):
                 self.events.changed()
+            self.remind_acts()
         return done
+
+    def remind_acts(self) -> None:
+        """Draft, keep true, approve under the person's standing yes and send the reminders that reach them while the
+        app isn't open (`engine.reminder_acts`). A failure is logged and never stops the worker."""
+        from engine.reminder_acts import ReminderActs
+
+        try:
+            if self._reminder_acts is None:
+                self._reminder_acts = ReminderActs(self.store, self.cfg, now=self.now)
+            if self._reminder_acts.sweep():
+                self.events.changed()
+        except Exception:
+            log.exception("Couldn't keep the reminder acts up to date")
+            self._problem("reminders that reach you while the app is closed")
 
     def backup_if_due(self) -> bool:
         """Make a scheduled backup when one is due. On its own thread, so a large copy never holds up other work."""

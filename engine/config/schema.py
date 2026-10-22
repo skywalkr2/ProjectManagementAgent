@@ -2908,6 +2908,33 @@ class RemindersSettings(ConfigModel):
         description="A reminder that came due this long ago or more, without being shown, is marked late: the app or "
         "the computer was not running when it came due.",
     )
+    where: Literal["nowhere", "app", "calendar", "mail"] = Field(
+        "nowhere",
+        description="Where a reminder reaches you when the app isn't open. nowhere: only on Today. app: an entry in "
+        "the app's own calendar with an alarm, which stays on this computer. calendar: an event with an alarm on "
+        "your own calendar at a signed-in calendar account. mail: a message to your own address at a mailbox "
+        "account. The last two are drafted for you to look at in Waiting to go out; a standing yes you give in "
+        "Settings lets them go without asking, and only that yes does.",
+    )
+    where_account: str = Field(
+        "",
+        description="The account the calendar or mail reminders go through, one that can act (see Let the assistant "
+        "act after your yes). Empty until you pick one; not used for the app's own calendar.",
+        json_schema_extra={"choices": "acting_accounts"},
+    )
+    look_ahead_hours: int = Field(
+        24,
+        ge=1,
+        le=168,
+        description="How far ahead a reminder is drafted: a reminder that comes due within this many hours gets its "
+        "mail or event, so it can reach you while the computer sleeps.",
+    )
+    allowed_data: DataLevel = Field(
+        "internal",
+        description="The most sensitive to-do whose own words a reminder may carry out to the account it goes to. A "
+        'to-do above this level goes out as a plain "A reminder from" line with only the time, and its words stay in '
+        "the app.",
+    )
 
     @field_validator("working_start", "working_end", "quiet_start", "quiet_end", "evening", mode="before")
     @classmethod

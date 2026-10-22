@@ -1,0 +1,29 @@
+# The core's reminder template: the words of a reminder that goes out to the person themselves (a mail to their own
+# address, or an event with an alarm in their own calendar). A workspace may put its own copy at
+# `templates/reminder.yaml`, which wins; the template's version is a hash of the whole file, so any change to the words
+# is a new version and asks for the person's yes again.
+#
+# Two forms. `item` carries the to-do's own words. `plain` carries none of them and is used when the to-do is more
+# sensitive than the account may hold. Placeholders: {text} the to-do's words, {time} the reminder time on the
+# person's clock (written as `time_format`), {app} the workspace's display name.
+time_format: "%Y-%m-%d %H:%M"
+# How long the event lasts, in minutes, for the calendar form; its alarm rings at the reminder time.
+event_minutes: 15
+forms:
+  item:
+    subject: "{text}"
+    body: |-
+      {text}
+
+      Reminder for {time}.
+    event_title: "{text}"
+  plain:
+    subject: "A reminder from {app}"
+    body: |-
+      A reminder from {app}.
+
+      Reminder for {time}.
+    event_title: "A reminder from {app}"
+# What Settings shows as the exact reminder before the person says yes.
+example:
+  text: "Call the print shop about the proofs"

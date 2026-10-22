@@ -1,0 +1,16 @@
+/* Where reminders reach you when the app isn't open: the choices, the exact reminder, and the yes. */
+.where { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; max-width: 640px; margin: var(--space-3) 0; }
+.where h3, .where p, .where fieldset { margin: 0; }
+.choices { display: flex; flex-direction: column; gap: var(--space-2); border: 0; padding: 0; min-width: 0; }
+.choice { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.choice label { display: flex; gap: var(--space-2); align-items: baseline; font-weight: var(--weight-semibold); }
+.hint { margin-left: var(--space-5); font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.account { margin-left: var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-width: 0; }
+.account select { max-width: 100%; }
+.preview {
+  display: flex; flex-direction: column; gap: var(--space-2); min-width: 0;
+  padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); font-size: var(--text-sm); line-height: var(--lh-sm);
+}
+.preview p, .preview blockquote { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }

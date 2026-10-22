@@ -1359,19 +1359,51 @@ for it, that nothing goes out without the PM approving that exact content, alrea
       go over IMAP, by Message-ID. An answer to an invitation goes as mail to the organizer with the iTIP reply attached,
       which is how a plain mailbox answers. Creating, moving or cancelling events needs a calendar service: a subscribed
       calendar link is read-only, so those acts are offered only on an account whose add-on declares them.
-    - **A reminder that reaches a sleeping person** (owner, 2026-10-17 and 2026-10-20). A reminder can go out as an event
-      with an alarm in the person's own calendar, or as a mail to their own address, so their phone rings without the app
-      running. Each is an act like any other, drafted by the engine from the core's reminder template, addressed only to
-      the person themselves. The person approves it once per reminder, or gives a **standing yes for reminders**: one
-      choice in Settings ("Put my reminders in my calendar" or "Mail my reminders to me"), on one account, which approves
-      every reminder act that (a) goes only to the person's own address or own calendar on that account, (b) is rendered
-      from the reminder template at the version the standing yes recorded, and (c) carries no other content than the
-      template's. Anything else waits for a yes as usual. The standing yes is a record (`standing_yes`) that only the
-      person's own click makes or ends; its approvals are written to the ledger as the person's, naming the standing yes.
-      A change of the template's version, the account or the person's own address makes the standing yes stale and asks
-      again; no rule, input or add-on can make, widen or renew one. The reminder's words follow the notification rule
-      (7.19): when the item's data level is above what that account is allowed, the event's title and the mail say only
-      "A reminder from {app}" with the time, and the content stays in the app.
+    - **A reminder that reaches a sleeping person** (owner, 2026-10-17, 2026-10-20 and 2026-10-22). A reminder can reach
+      the person while the app is closed in four ways, one choice in Settings (Where reminders reach you when the app
+      isn't open): *Nowhere* (only Today, the default); *In the app's calendar*, an entry on the app's own calendar with
+      its alarm at the reminder time, which is local data and so no act, with no account, yes or channel; *In my calendar*
+      on a signed-in calendar account that can act (its channel declares `calendar: create`), an event with an alarm on
+      that account's own calendar; and *To my mail* on a mailbox account that can act, a message to the person's own
+      address. The last two are acts like any other, drafted by the engine from the core's reminder template, addressed
+      only to the person, for the one reminder time (`reminder` and `reminder_at` on the act), so a reminder time never
+      gets a second act. The person approves each one, or gives a **standing yes for reminders**: the choice itself, with
+      the exact reminder shown first, on one account and in one form. Core code names no calendar service: it says "a
+      signed-in calendar account". *Ask me each time* keeps the two outward forms as drafts in Waiting to go out.
+      - **The template** is a data file the core ships (`engine/defaults/reminder_template.yaml`) with its version the
+        hash of its text; the workspace's own `templates/reminder.yaml` replaces it and changes the version. Two forms:
+        the to-do's words, and the plain form ("A reminder from {app}", with the time) used when the to-do's data level
+        is above what the account may hold (`steward.reminders.allowed_data`, 7.19: the most sensitive to-do whose words
+        may go; the level of a to-do is the highest of internal and the saved input it came from).
+      - **What the engine does** (`engine/reminder_acts.py`, in the worker's pass): for each open to-do, not on hold,
+        whose reminder time lies within `steward.reminders.look_ahead_hours` (24) of now it drafts the one act
+        (`made_by: reminders`, tier outbound; the applier lets only this actor draft a reminder act, and only exactly the
+        reminder the template renders, to the person's own address or the account's own calendar, on the account the
+        person chose: invariant `act-reminder`). A snooze or a cleared reminder, and a to-do that is done, dropped or put
+        on hold, withdraws an act that has not gone out (the publisher's own `act.reminder_withdrawn`, recorded as such
+        and never undone from the ledger). For the app's own calendar the same pass makes, moves and removes the entry
+        (the engine's own `reminder.entry` op, a data-tier write with Undo; a to-do never has two).
+      - **The standing yes** is a record (`standing_yes`: account, channel, form `calendar` or `mail`, the person's own
+        address for a mail, the template name and version, given at, ended at) that only the person's `standing_yes.give`
+        and `standing_yes.end` make or end (person-only: refused from the assistant, an input, a rule, an add-on and the
+        engine's own reminders; an add-on's person action can't propose them). While one stands, the engine's approval
+        (`act.approve` with `by_standing`) is allowed only when the invariant `act-approval` finds **every** one of
+        these: the act is a reminder act the engine made; its channel and account are the yes's; a mail goes to exactly
+        one recipient, the person's own address as the yes recorded it, with no other recipient, and an event is `create`
+        on the account's own calendar with no attendee, at the reminder time with its alarm at that time; its template
+        name and version equal the yes's and the version in force; its parts are exactly the template rendered for that
+        to-do; it draws on no saved message; and the to-do's reminder time is still the one it was drafted for. Anything
+        else is refused as before. A change of the template's version, the account's acting switch, the person's own
+        address (for a mail), who the person is, or the account's channel makes it stale: it stops approving, and Today
+        says "Look again at reminders in your calendar" (or "mail") with what changed. The ledger records each approval
+        as the person's, and the act's `approved.standing_yes` names the yes. No rule, input, assistant or add-on can
+        make, widen or renew one.
+      - **Sending:** the engine's pass hands an act its standing yes approved to the publisher, which recomputes the
+        fingerprint first, as for any act. A reminder mail carries the time in its words and goes once the look-ahead
+        reaches it. A plain mailbox sends the mail through its own servers; it offers no calendar form (a subscribed
+        calendar link is read-only), so *In my calendar* is listed only for accounts whose channel declares it.
+      - The reminder's words follow the notification rule (7.19): above the allowed level the event's title and the mail
+        say only "A reminder from {app}" with the time, and the content stays in the app.
     - **The invariants** stay: only the person approves (now: their click on the act, or their standing yes when the act
       matches it exactly, `act-approval`); nothing from outside adds an act or a recipient; a mailbox act never deletes a
       message (there is no delete action, only archive).
@@ -1514,10 +1546,46 @@ for it, that nothing goes out without the PM approving that exact content, alrea
         `::test_a_lost_answer_with_no_copy_to_find_is_uncertain_not_reopened`,
         `::test_an_archive_goes_through_the_publisher_and_undo_puts_it_back`,
         `::test_an_invitation_answer_goes_through_the_publisher_as_mail`.
+    - **Built (S1b-2c, change log 189: reminders that reach a sleeping person and the standing yes).** The reminder
+      template, `engine/reminder_acts.py`, `engine/reminder_entries.py`, `engine/standing_yes.py`, the `standing_yes`
+      record, the ops `standing_yes.give`, `standing_yes.end`, `act.reminder_withdrawn` and `reminder.entry`, the
+      invariant `act-reminder` and the standing-yes branch of `act-approval`, `GET /api/reminders/where`,
+      `POST /api/reminders/yes`, `POST /api/reminders/yes/end`, and Settings (`ReminderWhere`) with Today's stale line.
+      - **The standing yes approves exactly a matching reminder act, and each refusal is its own test:**
+        `tests/test_standing_yes.py::test_a_standing_yes_approves_a_matching_reminder_act`,
+        `::test_it_refuses_an_act_with_a_second_recipient`, `::test_it_refuses_an_act_to_a_recipient_who_is_not_the_person`,
+        `::test_it_refuses_an_act_to_the_persons_name_at_another_address`, `::test_it_refuses_an_act_on_a_different_account`,
+        `::test_it_refuses_an_act_on_a_different_channel`, `::test_it_refuses_an_event_on_another_calendar_or_with_another_alarm`,
+        `::test_it_refuses_an_act_made_from_a_different_template_version`,
+        `::test_it_refuses_an_act_whose_words_were_edited_away_from_the_rendered_template`,
+        `::test_it_refuses_an_act_that_is_not_a_reminder`, `::test_it_refuses_an_act_from_the_assistant_dressed_as_a_reminder`,
+        `::test_it_refuses_an_act_from_an_add_on_dressed_as_a_reminder`,
+        `::test_only_the_engines_reminders_draft_a_reminder_act`,
+        `::test_nothing_but_the_engines_reminders_approves_under_a_standing_yes`,
+        `::test_a_click_on_an_act_never_carries_a_standing_yes_and_a_click_alone_still_approves`.
+      - **Giving and ending it is the person's alone, and it goes stale:**
+        `::test_giving_and_ending_a_standing_yes_are_refused_from_anything_but_the_person`,
+        `::test_the_engines_reminders_are_refused_giving_or_ending_one`,
+        `::test_giving_one_is_refused_for_a_template_that_changed_an_account_that_cannot_act_and_a_second`,
+        `::test_an_ended_standing_yes_approves_nothing_and_undo_brings_it_back`,
+        `::test_it_goes_stale_when_the_templates_version_changes`,
+        `::test_it_goes_stale_when_the_persons_own_address_changes`,
+        `::test_it_goes_stale_when_acting_is_turned_off_for_the_account`,
+        `::test_the_ledger_records_the_approval_as_the_persons_and_names_the_standing_yes`.
+      - **The reminders:** `tests/test_reminder_acts.py::test_a_due_reminder_drafts_one_act_to_the_person_and_never_a_second`,
+        `::test_the_plain_form_is_used_above_the_level_the_account_may_hold`,
+        `::test_a_snooze_withdraws_a_reminder_act_that_has_not_gone_out`,
+        `::test_a_done_to_do_withdraws_a_reminder_act_that_has_not_gone_out`,
+        `::test_ask_me_each_time_leaves_the_reminder_as_a_draft_in_waiting_to_go_out`,
+        `::test_with_a_standing_yes_a_reminder_goes_out_through_the_publisher_and_only_that_one`,
+        `::test_a_reminder_mail_goes_out_through_a_plain_mailbox_to_the_persons_own_address`,
+        `::test_a_reminder_in_the_apps_calendar_is_an_entry_with_an_alarm_and_no_act`,
+        `::test_a_snooze_moves_the_same_entry_and_a_done_to_do_removes_it_with_undo`.
+      - **The screens:** `web/src/components/ReminderWhere.test.tsx`.
     - **Not built (S1b-2, and what S1b-1b left):** the add-ons' channels, the screens for
       the new actions, the undo toast and the sent list's Undo, the Settings step that starts the sign-in with acting after the
       tick (the route takes `acting`), asking the service to drop the wider access when acting is turned off, the
-      reminders and the standing yes, the invitation's name on an answer line (the view carries `about` now),
+      invitation's name on an answer line (the view carries `about` now),
       the engine's queue ranking the act lines, the follow-up
       message moving onto acts (Copy still works as it did), and calling `outward.check_outgoing` for the first export a
       person hands to someone else.

@@ -42,6 +42,8 @@ import { QueueGroup } from "./QueueGroup";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import type { MenuGroup } from "../ui/MenuButton";
 import { ActTodayRows } from "./ActToday";
+import { ReminderWhereRow } from "./ReminderWhereRow";
+import { staleLine, useReminderWhere } from "../lib/reminder-where";
 import { StageTodayRows, useStageToday } from "./StageToday";
 import { ProjectTag } from "./ProjectTag";
 import { ThisWeekInspector } from "./ThisWeek";
@@ -87,6 +89,7 @@ export function TodayQueue(props: {
   const total = useTodayCount();
   const stage = useStageToday();
   const outgoing = useActToday();
+  const staleReminders = staleLine(useReminderWhere().data, t) !== null;
   const plugins = usePluginToday(props.handlers.onOpenRecord);
   const pane = useRef<HTMLDivElement>(null);
   const lines = queue.data ?? [];
@@ -332,7 +335,7 @@ export function TodayQueue(props: {
                 const extra = group === "decide" && stage.count > 0;
                 const added = plugins.in(group);
                 const sending = group === "decide" || group === "risk" ? outgoing.in(group) : [];
-                if (these.length === 0 && !extra && added.length === 0 && sending.length === 0) return null;
+                if (these.length === 0 && !extra && added.length === 0 && sending.length === 0 && !(group === "decide" && staleReminders)) return null;
                 return (
                   <QueueGroup key={group} id={`queue-group-${group}`} title={t(`queue.group.${group}`)}>
                     {these.map((line) => (
@@ -349,6 +352,7 @@ export function TodayQueue(props: {
                     ))}
                     {extra && <StageTodayRows today={stage} />}
                     <ActTodayRows lines={sending} onView={props.handlers.onOpenView} />
+                    {group === "decide" && <ReminderWhereRow onView={props.handlers.onOpenView} />}
                     <PluginRows lines={added} plugins={plugins} />
                   </QueueGroup>
                 );
