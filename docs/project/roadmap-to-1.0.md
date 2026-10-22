@@ -808,6 +808,11 @@ From the owner (2026-10-19), after phase B's screens and before the gate week:
     question. *Left:* the five pairs, on the owner's next re-run. The harder pairs re-run after it: 80%; left there are
     `other-project` (no lesson proposed; the later run files the work under the wrong project) and `over-application`
     (the later run moves an existing action's date instead of adding the review for the person).
+    The main pairs after it: 67% (06, 14 and 15 now pass). *Left, in order:* (1) clear corrections still answered with
+    nothing, not a lesson and not a question (20, 23, 24, 25, `rejected-ask`); (2) a promise in mail to the person
+    left owed to nobody (11; 07 and 20 also name the owner by a bare first name); (3) a lesson that contradicts a
+    built rule (03: "list the project team as owners", where the rule leaves "we" unowned); (4) a lesson kept for the
+    wrong kind of work after a drop (19: follow-on, not notes).
   - from the learning pairs' re-run (69 runs at 32%): a lesson kept with a reach that misses the later run (pair 19,
     reach `follow-on` or `action-work`, the later run `notes`) and three firsts that propose no lesson at all (15, 16,
     20): whether the reach the model picks should be widened or checked against the correction's own task kind;
