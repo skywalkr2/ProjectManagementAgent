@@ -1,6 +1,11 @@
 # Shared starting people for the promise cases and pairs (design 6.33): fictional, example.com addresses.
 # The person this workspace is for is PER-1; everyone else the cases name is here. All are on the person's team,
 # so these cases test reading promises, not the scope check for items owned by another team.
+# The person's own address, so their own sent mail reads as theirs.
+- kind: person
+  id: PER-1
+  fields:
+    how_to_reach: {email: avery.lane@example.com}
 - kind: person
   id: PER-101
   fields:

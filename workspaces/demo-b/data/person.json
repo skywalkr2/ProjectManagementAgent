@@ -4,10 +4,7 @@
     "id": "PER-1",
     "org": "ORG-1",
     "role": "Publisher",
-    "team": "TEAM-1",
-    "how_to_reach": {
-      "email": "avery.lane@example.com"
-    }
+    "team": "TEAM-1"
   },
   {
     "aliases": [

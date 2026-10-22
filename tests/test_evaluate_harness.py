@@ -632,3 +632,19 @@ def test_forbid_can_name_who_a_promise_must_not_be_owed_to(monkeypatch):
     also_owed = {**ideal, "promised_to": [*ideal["promised_to"], names[forbidden[0]]]}
     result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={**case["stub_answer"], "ops": [also_owed]})
     assert not result.passed and result.forbidden == [f"op=action.add, promised_to={forbidden}"]
+
+
+def test_a_starting_record_with_the_id_of_one_the_workspace_holds_sets_its_fields(tmp_path):
+    from engine.evaluate import _create_starting_records
+    from engine.storage import Store
+    from engine.workspace import init_workspace
+
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    store = Store(ws.db_path, cfg=ws.config(env={}))
+    try:
+        person = store.read().list("person")[0]
+        _create_starting_records(store, "case", [{"kind": "person", "id": person.id, "fields": {"role": "Tester"}}])
+        updated = store.read().get("person", person.id)
+        assert updated.data["role"] == "Tester" and updated.data["full_name"] == person.data["full_name"]
+    finally:
+        store.close()

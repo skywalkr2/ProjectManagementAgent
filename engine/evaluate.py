@@ -279,7 +279,7 @@ def starting_records(template: Path, case: dict[str, Any]) -> list[dict[str, Any
 
 def _create_starting_records(store: Store, case_id: str, records: list[dict[str, Any]]) -> None:
     """Create a case's starting records the way the fixture loader does, people and projects before what refers to
-    them."""
+    them. A record with the id of one the workspace already holds sets the fields it gives on that record."""
     order = list(REGISTRY)
     ordered = sorted(records, key=lambda r: order.index(r["kind"]) if r["kind"] in order else len(order))
     unknown = sorted({r["kind"] for r in records if r["kind"] not in store.plugins.records})
@@ -288,7 +288,12 @@ def _create_starting_records(store: Store, case_id: str, records: list[dict[str,
     try:
         with store.transaction(notify=False) as tx:
             for record in ordered:
-                tx.create(record["kind"], dict(record.get("fields") or {}), _STARTING, record_id=record.get("id"))
+                fields = dict(record.get("fields") or {})
+                existing = tx.get(record["kind"], record["id"]) if record.get("id") else None
+                if existing is not None:  # a record the workspace already holds: the case gives some of its fields
+                    tx.update(record["kind"], existing.id, fields, _STARTING, read_version=existing.version)
+                    continue
+                tx.create(record["kind"], fields, _STARTING, record_id=record.get("id"))
     except (StoreError, ValueError) as err:
         raise ValueError(f"case {case_id}: its starting records don't load: {err}") from None
 
