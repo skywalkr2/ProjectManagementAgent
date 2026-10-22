@@ -23,6 +23,7 @@ import { BrandContrast } from "./BrandContrast";
 import { AddonSecrets, BackupKey } from "./KeptSecrets";
 import { Notifications } from "./Notifications";
 import { PageLinks } from "./PageLinks";
+import { ActingAccounts } from "./ActingAccounts";
 import { ReminderWhere } from "./ReminderWhere";
 import { RefreshedLines } from "./RefreshedLines";
 import { SettingRow } from "./SettingRow";
@@ -373,6 +374,7 @@ export function Settings(props: {
         {section === "appearance" && <BrandContrast color={brandColor} />}
         {section === "appearance" && <PageLinks />}
         {section.startsWith("addon/") && <AddonSecrets plugin={section.slice("addon/".length)} name={label(section)} />}
+        {section === "you" && <ActingAccounts />}
         {section === "today" && <ReminderWhere />}
         {section === "today" && <Notifications />}
         {section === "backups" && (

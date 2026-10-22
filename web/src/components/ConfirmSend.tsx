@@ -2,7 +2,7 @@
 // the person's word. The content it sends is the one on the screen behind it.
 import { useId } from "react";
 import { Heading } from "react-aria-components";
-import { recipientNames, type Act } from "../lib/acts";
+import { actTitle, recipientNames, type Act } from "../lib/acts";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { ModalPanel } from "./ModalPanel";
@@ -11,17 +11,21 @@ export function ConfirmSend(props: { act: Act; again?: boolean; onGo: () => void
   const { t } = useWords();
   const titleId = useId();
   const { act } = props;
-  const title = t(`outgoing.confirm.${props.again ? "again." : ""}${act.kind}`, {
-    names: recipientNames(act, t),
-    calendar: act.calendar ?? "",
-    folder: act.folder ?? "",
-  });
+  // A reply, a change to the mail or an answer says what it does; the rest say what kind of thing goes.
+  const plain = act.kind === "message" && !["reply", "reply_all", "forward"].includes(act.action);
+  const title = plain || act.kind === "file" || (act.kind === "calendar" && act.action !== "answer")
+    ? t(`outgoing.confirm.${props.again ? "again." : ""}${act.kind}`, {
+        names: recipientNames(act, t),
+        calendar: act.calendar ?? "",
+        folder: act.folder ?? "",
+      })
+    : t(props.again ? "outgoing.confirm.again.act" : "outgoing.confirm.act", { what: actTitle(act, t) });
   return (
     <ModalPanel titleId={titleId} onClose={props.onCancel}>
       <Heading slot="title" id={titleId}>
         {title}
       </Heading>
-      <p>{t("outgoing.confirm.text")}</p>
+      <p>{t(act.kind === "mailbox" ? "outgoing.confirm.text.change" : "outgoing.confirm.text")}</p>
       <div className="row-end">
         <Button onClick={props.onCancel}>{t("action.cancel")}</Button>
         <Button variant="primary" onClick={props.onGo}>

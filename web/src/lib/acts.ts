@@ -1,12 +1,14 @@
 // What waits to go out (design 6.12, 7.4): the outward acts as the screen and Today's lines read them. An act is one thing
 // that will leave on the person's behalf (a message, a calendar entry, a file): its exact content, its target, its state.
 // The words for them are the sheet's; the person never sees the word "act".
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { api, type S } from "./api";
+import { ApiError, api, type S } from "./api";
 import { useAct } from "./act";
 import { copyMessage, type CopyResult } from "./copy";
+import { revealOrKeep } from "./reveal";
 import { useToasts } from "./toasts";
+import { toHash } from "./views";
 import { useWords } from "./wording";
 
 export type Act = S["ActView"];
@@ -36,6 +38,55 @@ export function useWaitingActs() {
   return useQuery({ queryKey: ["acts"], queryFn: api.acts, select: (r) => r.acts.filter((a) => WAITING.includes(a.status)) });
 }
 
+/** The acts that went out, newest first, with those taken back after: what Waiting to go out lists under what waits. */
+export function useSentActs() {
+  return useQuery({
+    queryKey: ["acts"],
+    queryFn: api.acts,
+    select: (r) => r.acts.filter((a) => a.status === "sent" || a.status === "undone").slice(0, SENT_SHOWN),
+  });
+}
+
+/** How many of the acts that went out the list shows. */
+const SENT_SHOWN = 10;
+
+/** Open an act in Waiting to go out: the list there opens its row, or, from another screen, the screen opens with it. */
+export function showInOutgoing(id: string): void {
+  if (!revealOrKeep("act", id)) window.location.hash = toHash("work/outgoing");
+}
+
+/** What can be done about a saved message, a calendar entry or a reply owed (its action's id): the account it came in on,
+ * whether acting is on for it, and what that account does. `enabled` false asks nothing. */
+export function useActOptions(record: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["act-options", record],
+    queryFn: () => api.actOptions(record ?? ""),
+    enabled: enabled && !!record,
+    staleTime: 30_000,
+  });
+}
+
+/** The person drafts an act and it opens in Waiting to go out for their yes, with Undo taking the draft back. A refusal says
+ * why (the account can't do it, the message has no one to reply to). Returns the act, or nothing when it was refused. */
+export function useDraftAct() {
+  const { t } = useWords();
+  const run = useAct();
+  return useCallback(
+    async (body: S["ActDraftIn"]): Promise<Act | undefined> => {
+      const made = await run(
+        () => api.draftAct(body),
+        (a) => ({
+          message: t(a.copied_because ? "acts.drafted_copy" : "acts.drafted", { what: actPhrase(a, t) }),
+          undo: () => api.withdrawAct(a.id),
+        }),
+      );
+      if (made) showInOutgoing(made.id);
+      return made;
+    },
+    [run, t],
+  );
+}
+
 // ---- words -----------------------------------------------------------------------------------------------------------
 
 function list(words: string[]): string {
@@ -48,16 +99,48 @@ export function recipientNames(a: Act, t: T): string {
   return to.length > 0 ? list(to) : t("queue.title.someone");
 }
 
-const vars = (a: Act, t: T) => ({ names: recipientNames(a, t), calendar: a.calendar ?? "", folder: a.folder ?? "" });
+const vars = (a: Act, t: T) => ({
+  names: recipientNames(a, t),
+  calendar: a.calendar ?? "",
+  folder: a.folder ?? "",
+  label: a.label ?? "",
+  title: a.title ?? "",
+  n: (a.about ?? []).length,
+  event: (a.about ?? []).find((x) => x.kind === "event")?.title ?? "",
+});
 
-/** A line's title: "Message to" and the recipient. */
+const REPLIES = ["reply", "reply_all", "forward"];
+const MAIL_CHANGES = ["archive", "move", "label", "mark_read"];
+
+/** The sheet's key for what this act does: its own words for a reply, a change to the mail or an answer to an invitation, else
+ * the kind's. */
+function wordsKey(a: Act, family: "title" | "what"): string {
+  if (a.kind === "message" && REPLIES.includes(a.action)) return `outgoing.${family}.message.${a.action}`;
+  if (a.kind === "mailbox" && MAIL_CHANGES.includes(a.action) && family === "title") {
+    return `outgoing.title.mailbox.${a.action}.${(a.about ?? []).length === 1 ? "one" : "other"}`;
+  }
+  if (a.kind === "calendar" && a.action === "create") return `outgoing.${family}.calendar.create`;
+  if (a.kind === "calendar" && a.action === "answer" && a.answer) {
+    return family === "title" ? `outgoing.title.calendar.answer.${a.answer}` : "outgoing.what.calendar.answer";
+  }
+  return `outgoing.${family}.${a.kind}`;
+}
+
+/** A line's title: what the act does ("Archive 3 messages", "Answer to <event>: accept", "Message to <person>"). */
 export function actTitle(a: Act, t: T): string {
-  return t(`outgoing.title.${a.kind}`, vars(a, t));
+  return t(wordsKey(a, "title"), vars(a, t));
 }
 
 /** The act inside a sentence: "the message to" and the recipient. */
 export function actPhrase(a: Act, t: T): string {
-  return t(`outgoing.what.${a.kind}`, vars(a, t));
+  return t(wordsKey(a, "what"), vars(a, t));
+}
+
+/** One of the saved messages a mailbox act is about, on a line: who sent it, what it says and when. */
+export function messageLine(about: S["ActAboutView"], t: T): string {
+  const sender = about.sender || t("outgoing.unknown_sender");
+  const subject = about.title || t("outgoing.no_subject");
+  return about.when ? t("outgoing.message_line.date", { sender, subject, when: about.when }) : t("outgoing.message_line", { sender, subject });
 }
 
 /** What about it is different now, in words ("who it goes to and what will be sent"), from what the yes covered. */
@@ -77,9 +160,14 @@ export function partLabel(name: string, t: T, has: (key: string) => boolean): st
 /** The recipients the person must acknowledge by name before their yes. */
 export const calledOut = (a: Act): ActRecipient[] => (a.recipients ?? []).filter((r) => (r.reasons ?? []).length > 0);
 
-/** What Copy puts on the clipboard: every part as written, the parts one after another. */
-export function copyText(a: Act): string {
-  return Object.values(a.parts).join("\n\n");
+/** What Copy puts on the clipboard: every part as written, the parts one after another; an act with no content of its own (a
+ * change to the mail, an answer) is carried by what it does and what it is about. */
+export function copyText(a: Act, t: T): string {
+  const parts = Object.values(a.parts);
+  if (parts.some((p) => p.trim())) return parts.join("\n\n");
+  const lines = [actTitle(a, t), ...(a.about ?? []).filter((x) => x.kind === "message").map((x) => messageLine(x, t))];
+  if (a.proposed_start && a.proposed_end) lines.push(t("outgoing.proposed_line", { start: a.proposed_start, end: a.proposed_end }));
+  return lines.join("\n");
 }
 
 /** The act's first part that reads as a subject, for a line's second row. */
@@ -111,6 +199,7 @@ export function useOutgoing() {
   const { t } = useWords();
   const run = useAct();
   const { push } = useToasts();
+  const client = useQueryClient();
 
   const said = useCallback(
     (a: Act, r: S["ActResultView"]): string => {
@@ -133,19 +222,36 @@ export function useOutgoing() {
     [t],
   );
 
+  /** Take back a sent act where its channel can: the toast says it is done, or why it is not. */
+  const takeBack = useCallback(
+    async (a: Act) => {
+      const what = actPhrase(a, t);
+      try {
+        const r = await api.takeBackAct(a.id);
+        push({ message: r.status === "undone" ? t("outgoing.take_back.done", { what }) : t("outgoing.take_back.failed", { reason: r.reason ?? t("outgoing.toast.no_reason") }) });
+      } catch (err) {
+        push({ message: t("outgoing.take_back.failed", { reason: err instanceof ApiError && err.detail ? err.detail : t("outgoing.toast.no_reason") }) });
+      }
+      await client.invalidateQueries();
+    },
+    [t, push, client],
+  );
+
   /** Approve and send: the yes on the fingerprint the screen showed with the recipients acknowledged, then the send. An act
-   * that already has the yes is only sent. */
+   * that already has the yes is only sent. A send that went out and can be taken back says so, with Undo in its toast. */
   const send = useCallback(
     (a: Act, acknowledged: string[]) =>
       run(
         async () => {
           const body = { fingerprint: a.fingerprint, acknowledged };
           if (a.status !== "approved") await api.approveAct(a.id, body);
-          return api.sendAct(a.id, body);
+          const result = await api.sendAct(a.id, body);
+          const fresh = result.status === "sent" ? await api.readAct(a.id).catch(() => null) : null;
+          return { result, undoable: !!fresh?.undoable };
         },
-        (r) => ({ message: said(a, r) }),
+        ({ result, undoable }) => ({ message: said(a, result), undo: undoable ? () => takeBack(a) : undefined }),
       ),
-    [run, said],
+    [run, said, takeBack],
   );
 
   /** Copy: the yes (when not given yet), then the exact content on the clipboard, for an act the person sends themselves. */
@@ -156,7 +262,7 @@ export function useOutgoing() {
         return true;
       });
       if (!approved) return undefined;
-      const result = await copyMessage(copyText(a));
+      const result = await copyMessage(copyText(a, t));
       push({ message: t(result === "blocked" ? "outgoing.toast.copy_blocked" : "outgoing.toast.copied") });
       return result;
     },
@@ -199,5 +305,5 @@ export function useOutgoing() {
     [run, t],
   );
 
-  return { send, copy, markSent, sendAgain, withdraw };
+  return { send, copy, markSent, sendAgain, withdraw, takeBack };
 }

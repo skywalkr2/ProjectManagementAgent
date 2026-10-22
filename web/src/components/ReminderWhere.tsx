@@ -6,7 +6,8 @@ import { useId, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
 import { useReminderWhere, whereWords, type Where } from "../lib/reminder-where";
-import { rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { knownFingerprint, rememberFingerprint, useAfterSave, useFreshFingerprint } from "../lib/settings-save";
+import { undoBody } from "../lib/settings";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { useQueryClient } from "@tanstack/react-query";
@@ -93,9 +94,19 @@ export function ReminderWhere() {
   const yes = () =>
     attempt(async () => {
       if (!outward || !chosenAccount) return;
-      rememberFingerprint(client, (await save(outward, chosenAccount)).fingerprint);
+      const saved = await save(outward, chosenAccount);
+      rememberFingerprint(client, saved.fingerprint);
       const given = await api.giveReminderYes({ form: outward, account: chosenAccount, template_version: data.template_version });
-      push({ message: t("reminders.where.given"), undo: () => undoYes(given.changeset) });
+      // Undo takes back both steps: the yes, then the choice and account it was given for, as they were before.
+      const undoBoth = async () => {
+        await api.undo(given.changeset);
+        if (saved.changes.length > 0) {
+          const back = await api.saveSettings(undoBody(saved.changes, knownFingerprint(client, saved.fingerprint) ?? saved.fingerprint));
+          rememberFingerprint(client, back.fingerprint);
+        }
+        await client.invalidateQueries();
+      };
+      push({ message: t("reminders.where.given"), undo: undoBoth });
       await client.invalidateQueries();
     });
 

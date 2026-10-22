@@ -58,6 +58,18 @@ export const api = {
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
   /** The outward acts (a message, a calendar entry, a file waiting to go out), newest first; all states, filtered by the caller. */
   acts: () => call<S["ActListView"]>("GET", "acts"),
+  /** One act, as its list line reads it. */
+  readAct: (a: string) => call<S["ActView"]>("GET", `acts/${id(a)}`),
+  /** The person drafts an act (a reply, a change to their mail, an answer to an invitation); nothing is sent. */
+  draftAct: (body: S["ActDraftIn"]) => call<S["ActView"]>("POST", "acts", body),
+  /** What can be done about a saved message, a calendar entry or a reply owed, and through which account. */
+  actOptions: (record: string) => call<S["ActOptionsView"]>("GET", `acts/options?record=${id(record)}`),
+  /** The free times to propose for a calendar entry's invitation. */
+  freeSlots: (about: string) => call<S["FreeSlotsView"]>("GET", `acts/free-slots?about=${id(about)}`),
+  /** The accounts an act can go through, with the switch for letting the assistant act after the person's yes. */
+  actAccounts: () => call<S["ActAccountsView"]>("GET", "acts/accounts"),
+  /** Take a sent act back where its channel can; the result says whether it is undone, or why not. */
+  takeBackAct: (a: string) => call<S["ActResultView"]>("POST", `acts/${id(a)}/undo`),
   /** The person's yes on exactly what their screen showed: its fingerprint and the recipients called out they acknowledged. */
   approveAct: (a: string, body: S["ActApproveIn"]) => call<S["ActResultView"]>("POST", `acts/${id(a)}/approve`, body),
   /** Send an act that has the person's yes (the publisher checks again); the result says whether it went, failed or is unsure. */
@@ -437,7 +449,9 @@ export const api = {
     call<S["DataFileSaved"]>("POST", `data-forms/${named(form)}/restore`, body),
 
   signIns: () => call<S["SignInView"][]>("GET", "sign-ins"),
-  startSignIn: (name: string) => call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start`),
+  /** The service's sign-in page; with `acting`, asking for the wider access that acting needs as well. */
+  startSignIn: (name: string, acting = false) =>
+    call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start${acting ? "?acting=true" : ""}`),
   /** Signs out of a service: one account by its key, or every account when none is named. */
   signOut: (name: string, account?: string) =>
     call<S["Ok"]>("DELETE", `sign-ins/${named(name)}${account ? `?account=${id(account)}` : ""}`),

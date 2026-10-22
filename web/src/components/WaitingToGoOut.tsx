@@ -19,6 +19,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { ActPill } from "./ActPill";
 import { OutgoingDetail } from "./OutgoingDetail";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { SentActs } from "./SentActs";
 import { SafeText } from "./SafeText";
 
 export function WaitingToGoOut(props: { onView: (view: View) => void }) {
@@ -82,6 +83,7 @@ export function WaitingToGoOut(props: { onView: (view: View) => void }) {
           </ol>
         </ListDetail>
       )}
+      {!acts.isPending && !acts.isError && <SentActs />}
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { useAct } from "../lib/act";
 import { copyMessage } from "../lib/copy";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { useMessageActs } from "./MessageActs";
 import type { MenuAction } from "./RowMenu";
 
 type Line = S["QueueLineView"];
@@ -34,6 +35,8 @@ export function useReplyChoices(line: Line, onClosed?: () => void): ReplyChoices
   const { push } = useToasts();
   const [asking, setAsking] = useState<"answered" | "edit" | null>(null);
   const action = line.kind === "reply" ? ((line.actions ?? [])[0] ?? "") : "";
+  // What the account the message came in on can do about it: when it can act, the reply goes after the person's yes.
+  const message = useMessageActs(action || null, line.subject ?? "", !!action);
   if (line.kind !== "reply" || !action) return { primary: null, menu: [], form: null };
 
   const close = () => {
@@ -94,9 +97,20 @@ export function useReplyChoices(line: Line, onClosed?: () => void): ReplyChoices
         onCancel={close}
       />
     ) : null;
+  const shown = (
+    <>
+      {form}
+      {message.form}
+    </>
+  );
+  const toMessage = message.menu(["reply"]);
+  const copyEntry: MenuAction = { id: "copy-reply", label: t("queue.reply.copy"), run: () => void copy() };
+  if (draft && message.canAct) {
+    return { primary: { label: t("queue.reply.send"), run: () => void message.replyNow(draft) }, menu: [copyEntry, ...toMessage, noReply, another, edit], form: shown };
+  }
   return draft
-    ? { primary: { label: t("queue.reply.copy"), run: () => void copy() }, menu: [noReply, another, edit], form }
-    : { primary: { label: t("queue.reply.write"), run: () => setAsking("edit") }, menu: [noReply, another], form };
+    ? { primary: { label: t("queue.reply.copy"), run: () => void copy() }, menu: [...toMessage, noReply, another, edit], form: shown }
+    : { primary: { label: t("queue.reply.write"), run: () => setAsking("edit") }, menu: [...toMessage, noReply, another], form: shown };
 }
 
 /** The draft under the line, marked as a draft until the person has reviewed it; with none, why there is none. */

@@ -3,6 +3,8 @@ would cover, the person's yes, taking one back, sending (the yes and the send in
 for an act the app can't confirm went out.
 
 Every change is the person's own click on that act, applied as theirs through the applier, so each is in the ledger.
+The person also drafts an act here (a reply, a change to their mail, an answer to an invitation), and asks what can be
+done about a saved message or an invitation and which times are free to propose.
 Only the publisher calls a channel, and only for an act whose yes still covers it."""
 
 from __future__ import annotations
@@ -10,27 +12,39 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import ValidationError
 
 from api.schemas import (
     ActAboutView,
+    ActAccountsView,
+    ActAccountView,
     ActApproveIn,
+    ActDraftIn,
     ActFailureView,
     ActListView,
+    ActOptionsView,
     ActRecipientView,
     ActResultView,
     ActSettleIn,
     ActView,
+    FreeSlotsView,
+    FreeSlotView,
 )
-from engine import act_accounts, acts
+from engine import act_accounts, acts, propose_times, reply_recipients
 from engine.applier import apply_as_person
+from engine.channels import COPY
+from engine.channels_mailbox import ANSWERS as MAILBOX_ANSWERS
+from engine.channels_mailbox import NO_PROPOSE
 from engine.config import Config
 from engine.names import People
+from engine.ops import ACT_ACTIONS, ACT_REPLY_ACTIONS, ActDraftOp
 from engine.publisher import Publisher
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
+from engine.workspace import Workspace
 
 
-def build_act_router(cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
+def build_act_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
 
     def guard(fn: Any) -> Any:
@@ -141,6 +155,149 @@ def build_act_router(cfg: Config, store: Store, events: Events, worker: Worker) 
 
     def status_of(act_id: str) -> str:
         return store.read().get("act", act_id).data["status"]
+
+    def serving(account: str, kind: str, action: str) -> tuple[str, Any] | None:
+        """The channel that serves this kind of account and does this action, else the first that serves the account
+        for this kind of target (so the draft is refused with its own reason); None when none serves the account."""
+        kind_of = act_accounts.kind_of(account)
+        found = [
+            (name, channel)
+            for name, channel in sorted(store.plugins.channels().items())
+            if not channel.manual and channel.accounts and kind_of in channel.accounts and kind in channel.kinds
+        ]
+        return next(((n, c) for n, c in found if c.takes(kind, action)), found[0] if found else None)
+
+    def message_of(view: Any, record: str) -> str:
+        """The saved message or entry a record stands for: a reply owed stands for the message that asked."""
+        action = view.get("action", record)
+        return (action.data.get("replies_to") or "") if action is not None else record
+
+    @r.get("/acts/options")
+    def options(record: str) -> ActOptionsView:
+        """What the person can do about a saved message, a calendar entry or a reply owed: the account it came in on,
+        whether acting is on for it, the actions its channel does and the ways an invitation can be answered."""
+        view = store.read()
+        rid = message_of(view, record)
+        kind = "message" if view.get("source", rid) else "event" if view.get("event", rid) else None
+        if kind is None:
+            return ActOptionsView(record=record, kind="missing")
+        account = act_accounts.of_record(view, store, cfg, rid)
+        acting = act_accounts.acting_on(cfg, account)
+        carrier = (
+            serving(account, "message" if kind == "message" else "calendar", "reply" if kind == "message" else "answer")
+            if account
+            else None
+        )
+        channel = carrier[1] if carrier else None
+        mailbox = account is not None and act_accounts.kind_of(account) == act_accounts.MAILBOX
+        out = ActOptionsView(
+            record=rid,
+            kind=kind,
+            account=account,
+            account_label=act_accounts.label_of(store, cfg, account),
+            acting=acting,
+            channel_label=channel.label if channel else None,
+        )
+        if kind == "message":
+            out.actions = list(ACT_REPLY_ACTIONS)
+            out.can_act = bool(channel and acting and channel.takes("message", "reply"))
+            if account and channel is not None:
+                serves = serving(account, "mailbox", "archive")
+                mail = serves[1] if serves else None
+                if mailbox:
+                    out.folder_source = act_accounts.name_of(account)
+                out.actions += [
+                    a
+                    for a in ("archive", "move", "label", "mark_read")
+                    if mail is not None and mail.takes("mailbox", a) and (a != "move" or out.folder_source)
+                ]
+        elif channel is not None and channel.takes("calendar", "answer"):
+            out.can_act = acting
+            out.answers = list(MAILBOX_ANSWERS) if mailbox else ["accepted", "tentative", "declined", "propose"]
+            out.propose_refusal = NO_PROPOSE if mailbox else None
+        return out
+
+    @r.get("/acts/accounts")
+    def accounts() -> ActAccountsView:
+        """The accounts an act can go through, each with the person's switch for letting the assistant act on it after
+        their yes (the `watch.acting` setting). `sign_in` names the sign-in a signed-in account belongs to, which the
+        screen starts with `acting` to ask the service for the wider access; a plain mailbox has none."""
+        sign_ins = store.plugins.sign_ins()
+        found = []
+        for info in act_accounts.known(store, cfg):
+            sign_in = sign_ins.get(act_accounts.kind_of(info.id))
+            found.append(
+                ActAccountView(
+                    id=info.id,
+                    label=info.label,
+                    acting=info.acting,
+                    sign_in=sign_in.name if sign_in is not None else None,
+                    can_act=sign_in is None or bool(sign_in.acting_scopes),
+                )
+            )
+        return ActAccountsView(accounts=found)
+
+    @r.get("/acts/free-slots")
+    def free_slots(about: str) -> FreeSlotsView:
+        """The free times to offer when proposing another time for the calendar entry `about`: each as long as the
+        entry, starting a gap in the working week, earliest first."""
+        found = propose_times.slots(store.read(), cfg, worker.now(), about)
+        return FreeSlotsView(slots=[FreeSlotView(start=s.start.isoformat(), end=s.end.isoformat()) for s in found])
+
+    @r.post("/acts")
+    def draft(body: ActDraftIn) -> ActView:
+        """The person drafts an act, applied as theirs with the account and channel chosen as the engine does: the
+        account named, else the one the message or invitation came in on. Acting off for the account makes it a Copy
+        act (`copied_because`). Nothing is sent. A draft its channel can't carry (proposing a time through a plain
+        mailbox, a move the channel doesn't do) is refused with the reason."""
+        view = store.read()
+        what = body.action or ACT_ACTIONS[body.kind][0]
+        account = body.account
+        if account is None:
+            ids = [body.in_reply_to] if what in ACT_REPLY_ACTIONS and body.in_reply_to else list(body.about)
+            came_in = {a.lower(): a for rid in ids if (a := act_accounts.of_record(view, store, cfg, rid))}
+            if len(came_in) > 1:
+                raise HTTPException(status_code=409, detail="These came in on different accounts; draft one for each.")
+            account = next(iter(came_in.values()), None)
+            if account is None and what in ("send", "create"):
+                account = act_accounts.last_picked(view)
+        if body.answer == "propose" and account is not None and act_accounts.kind_of(account) == act_accounts.MAILBOX:
+            raise HTTPException(status_code=409, detail=NO_PROPOSE)
+        recipients = [r.model_dump(mode="json", exclude_none=True) for r in body.recipients]
+        if body.kind == "message" and not recipients and what in ("reply", "reply_all") and body.in_reply_to:
+            recipients = reply_recipients.of_message(ws, view, cfg, body.in_reply_to, what)
+        target = {
+            "kind": body.kind,
+            "action": body.action,
+            "recipients": recipients,
+            "about": body.about,
+            "folder": body.folder,
+            "label": body.label,
+            "answer": body.answer,
+            "proposed_start": body.proposed_start,
+            "proposed_end": body.proposed_end,
+        }
+        carrier = serving(account, body.kind, what) if account else None
+        op: dict[str, Any] = {
+            "op": "act.draft",
+            "channel": carrier[0] if carrier else COPY.name,
+            "target": {k: v for k, v in target.items() if v not in (None, [])},
+            "parts": body.parts,
+        }
+        if account:
+            op["account"] = account
+        if body.in_reply_to:
+            op["in_reply_to"] = body.in_reply_to
+        try:
+            ActDraftOp.model_validate(op)
+        except ValidationError as err:
+            # The rule's own words ("a move names the folder"), never the raw input the validator echoes.
+            said = "; ".join(str(e["msg"]).removeprefix("Value error, ") for e in err.errors())
+            raise HTTPException(status_code=409, detail=said) from None
+        cs = guard(lambda: apply_as_person(store, cfg, [op], "Drafted an act"))
+        events.changed()
+        made = store.read().get("changeset", cs).data["ops"][0]["records"][0]["id"]
+        return view_of(need(made))
 
     @r.get("/acts")
     def list_acts(

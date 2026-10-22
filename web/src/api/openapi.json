@@ -88,6 +88,66 @@
         "title": "ActAboutView",
         "type": "object"
       },
+      "ActAccountView": {
+        "description": "An account an act can go through, and whether the person let the assistant act on it after their yes.",
+        "properties": {
+          "acting": {
+            "title": "Acting",
+            "type": "boolean"
+          },
+          "can_act": {
+            "default": true,
+            "description": "Its service has acting access to ask for (a mailbox always can).",
+            "title": "Can Act",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "As `watch.acting` and an act name it.",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "sign_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sign-in it belongs to (POST /api/sign-ins/{name}/start with `acting`); none for a mailbox.",
+            "title": "Sign In"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "acting"
+        ],
+        "title": "ActAccountView",
+        "type": "object"
+      },
+      "ActAccountsView": {
+        "description": "GET /api/acts/accounts.",
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ActAccountView"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "ActAccountsView",
+        "type": "object"
+      },
       "ActApproveIn": {
         "description": "The person's yes: the fingerprint their screen showed and the recipients called out that they acknowledged.",
         "properties": {
@@ -107,6 +167,152 @@
           "fingerprint"
         ],
         "title": "ActApproveIn",
+        "type": "object"
+      },
+      "ActDraftIn": {
+        "additionalProperties": false,
+        "description": "POST /api/acts: the person drafts an act (a reply, a change to their mail, an answer to an invitation) on a saved\nmessage or a calendar entry. `kind` and `action` say what it does and `about` what it is about; `account` is left\nout to use the account the message or entry came in on. A reply or reply all with no `recipients` goes to the\nmessage's sender (reply all: and everyone else on it but the person). The channel is the one that serves the\naccount; when acting is off for the account, Copy carries it and the answer says so (`copied_because`).",
+        "properties": {
+          "about": {
+            "description": "The saved messages a mailbox act changes, or the entry.",
+            "items": {
+              "type": "string"
+            },
+            "title": "About",
+            "type": "array"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account that carries it, as GET /api/acts/options names it.",
+            "title": "Account"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it does: reply, reply_all, forward or send; archive, move, label or mark_read; answer.",
+            "title": "Action"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "enum": [
+                  "accepted",
+                  "tentative",
+                  "declined",
+                  "propose"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How an invitation is answered.",
+            "title": "Answer"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The folder a move puts the messages in.",
+            "title": "Folder"
+          },
+          "in_reply_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The saved message a reply, reply all or forward is about.",
+            "title": "In Reply To"
+          },
+          "kind": {
+            "enum": [
+              "message",
+              "mailbox",
+              "calendar"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The label a label act puts on the messages.",
+            "title": "Label"
+          },
+          "parts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The content by part, for a message.",
+            "title": "Parts",
+            "type": "object"
+          },
+          "proposed_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The end a proposed new time suggests, as ISO 8601 text.",
+            "title": "Proposed End"
+          },
+          "proposed_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The start a proposed new time suggests, as ISO 8601 text.",
+            "title": "Proposed Start"
+          },
+          "recipients": {
+            "description": "Who a message goes to.",
+            "items": {
+              "$ref": "#/components/schemas/ActRecipientIn"
+            },
+            "title": "Recipients",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "ActDraftIn",
         "type": "object"
       },
       "ActFailureView": {
@@ -154,6 +360,188 @@
           "acts"
         ],
         "title": "ActListView",
+        "type": "object"
+      },
+      "ActOptionsView": {
+        "description": "GET /api/acts/options: what the person can do about one saved message, calendar entry or reply owed. The\n`account` it came in on (none when it came in another way) and whether acting is on for it; `can_act` is true when\nthe account carries the act itself, after the person's yes, rather than by Copy.",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "acting": {
+            "default": false,
+            "title": "Acting",
+            "type": "boolean"
+          },
+          "actions": {
+            "description": "The actions on a message: reply, reply_all and forward (Copy carries them when nothing else can), and the changes to the mail the account's channel does: archive, move, label and mark_read.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "answers": {
+            "description": "How a calendar entry's invitation can be answered through this account.",
+            "items": {
+              "enum": [
+                "accepted",
+                "tentative",
+                "declined",
+                "propose"
+              ],
+              "type": "string"
+            },
+            "title": "Answers",
+            "type": "array"
+          },
+          "can_act": {
+            "default": false,
+            "description": "Acting is on and the account's channel does what is offered.",
+            "title": "Can Act",
+            "type": "boolean"
+          },
+          "channel_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What carries it for the account, when one serves it.",
+            "title": "Channel Label"
+          },
+          "folder_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The mail source whose folders GET /api/watch/{source}/folders lists, for Move to.",
+            "title": "Folder Source"
+          },
+          "kind": {
+            "enum": [
+              "message",
+              "event",
+              "missing"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "propose_refusal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why proposing another time isn't offered, when it isn't and an answer is.",
+            "title": "Propose Refusal"
+          },
+          "record": {
+            "description": "The saved message or calendar entry it is about (for a reply owed, the message that asked); the id asked when there is none.",
+            "title": "Record",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record",
+          "kind"
+        ],
+        "title": "ActOptionsView",
+        "type": "object"
+      },
+      "ActRecipientIn": {
+        "additionalProperties": false,
+        "description": "Someone an act goes to: a known person (by name or id) with `kind`, which of the ways of reaching them to use, or\nan address alone for someone who isn't a known person. An address no known person holds is called out to the person\nbefore their yes.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An address, for someone who isn't a known person.",
+            "title": "Address"
+          },
+          "called_out": {
+            "default": false,
+            "description": "True to ask the person to look at this recipient before their yes.",
+            "title": "Called Out",
+            "type": "boolean"
+          },
+          "from_text": {
+            "default": false,
+            "description": "True when the address was taken from text that came from outside.",
+            "title": "From Text",
+            "type": "boolean"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which of the person's ways of reaching them to use (a key of their how_to_reach).",
+            "title": "Kind"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A known person, by name or id.",
+            "title": "Person"
+          },
+          "role": {
+            "default": "to",
+            "description": "to: addressed to them; cc: copied to them.",
+            "enum": [
+              "to",
+              "cc"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "title": "ActRecipientIn",
         "type": "object"
       },
       "ActRecipientView": {
@@ -8163,6 +8551,42 @@
           "to_send"
         ],
         "title": "FollowupSection",
+        "type": "object"
+      },
+      "FreeSlotView": {
+        "description": "A free time to propose: as long as the invitation, starting a gap in the working week.",
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "FreeSlotView",
+        "type": "object"
+      },
+      "FreeSlotsView": {
+        "description": "GET /api/acts/free-slots: the free times to offer for another time, earliest first.",
+        "properties": {
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/FreeSlotView"
+            },
+            "title": "Slots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "slots"
+        ],
+        "title": "FreeSlotsView",
         "type": "object"
       },
       "GenericRecordView": {
@@ -24475,6 +24899,142 @@
           }
         },
         "summary": "List Acts"
+      },
+      "post": {
+        "description": "The person drafts an act, applied as theirs with the account and channel chosen as the engine does: the\naccount named, else the one the message or invitation came in on. Acting off for the account makes it a Copy\nact (`copied_because`). Nothing is sent. A draft its channel can't carry (proposing a time through a plain\nmailbox, a move the channel doesn't do) is refused with the reason.",
+        "operationId": "draft_api_acts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActDraftIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft"
+      }
+    },
+    "/api/acts/accounts": {
+      "get": {
+        "description": "The accounts an act can go through, each with the person's switch for letting the assistant act on it after\ntheir yes (the `watch.acting` setting). `sign_in` names the sign-in a signed-in account belongs to, which the\nscreen starts with `acting` to ask the service for the wider access; a plain mailbox has none.",
+        "operationId": "accounts_api_acts_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActAccountsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Accounts"
+      }
+    },
+    "/api/acts/free-slots": {
+      "get": {
+        "description": "The free times to offer when proposing another time for the calendar entry `about`: each as long as the\nentry, starting a gap in the working week, earliest first.",
+        "operationId": "free_slots_api_acts_free_slots_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "about",
+            "required": true,
+            "schema": {
+              "title": "About",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeSlotsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Free Slots"
+      }
+    },
+    "/api/acts/options": {
+      "get": {
+        "description": "What the person can do about a saved message, a calendar entry or a reply owed: the account it came in on,\nwhether acting is on for it, the actions its channel does and the ways an invitation can be answered.",
+        "operationId": "options_api_acts_options_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "record",
+            "required": true,
+            "schema": {
+              "title": "Record",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActOptionsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Options"
       }
     },
     "/api/acts/{act_id}": {

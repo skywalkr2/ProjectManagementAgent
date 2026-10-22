@@ -266,6 +266,10 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   signed in and the plain mailboxes read; none until the person ticks one. Turning one on asks the account's own sign-in
   for the acting scopes its add-on declares; an account not ticked still gets drafts, carried out by Copy. Only the
   person changes it: the assistant's setting proposals and add-ons can't name it. Live.
+- `propose_days` (14) and `propose_slots` (6): how many days ahead to look, and how many free times to offer at most,
+  when the person proposes another time for an invitation (6.12). Each time is as long as the invitation and starts a free
+  gap in the working week of `steward.reminders`. `propose_round_minutes` (15): the first time offered starts at the next
+  multiple of this many minutes after now. Live.
 - `look_back_choices` (30, 90, 365): how many more days further back than a new source's first read the person can ask a mail
   source to look, offered as a list to pick from; each shows its item count and cost first (6.32).
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per

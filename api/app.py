@@ -342,7 +342,7 @@ def create_app(
     inner.include_router(build_action_work_router(ws, cfg, store, events, worker))
     inner.include_router(build_calendar_router(ws, cfg, store, events, worker))
     inner.include_router(build_sent_router(cfg, store, events, worker))
-    inner.include_router(build_act_router(cfg, store, events, worker))
+    inner.include_router(build_act_router(ws, cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))

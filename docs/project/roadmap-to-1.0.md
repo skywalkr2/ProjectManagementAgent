@@ -1074,17 +1074,24 @@ management (not just read only) lets do it"):
   screen, the callouts acknowledged by name, Approve and send with its confirm, Copy and Mark sent for a `copy` act,
   Look again for a stale one, Take it back with Undo) and the Today lines (failed, uncertain, stale):
   `web/src/components/WaitingToGoOut.test.tsx`, `web/src/components/TodayActs.test.tsx`; the browser test
-  `web/e2e/outgoing.spec.ts`. **Left:** the screens' Undo of a sent act (the engine and `POST /api/acts/{id}/undo` have it, S1b-2a), the diff and
-  count previews of 7.4, the invitation's name on an answer (the act view carries `about` now, the screen doesn't read it
-  yet), and the screen using the acts list's `status` values and `limit` (it still reads every act and filters).
+  `web/e2e/outgoing.spec.ts`. **Built (S1b-2d, change log 190):** the undo toast after a send and Take back in what went
+  out, the count of a list and every kind of act in words, the invitation's name on an answer
+  (`web/src/components/OutgoingActs.test.tsx`). **Left:** before-and-after text of a stale act (an act keeps only hashes of
+  what the yes covered), and the screen using the acts list's `status` values and `limit` (it still reads every act and
+  filters).
 - [ ] [S1b-2] **Mail:** reply, reply all, forward and send a drafted message; archive, move, label and mark read, one at a time
   or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
   **Built so far (S1b-2a):** the acts' actions, `about`, account and undo in the engine and API
   (`tests/test_act_actions.py`), and **(S1b-2b)** the core `mailbox` channel for a plain mailbox: sending through its
   outgoing server, the sent copy, status by Message-ID, archive, move, label and mark read over IMAP, and Undo
-  (`tests/test_mailbox_channel.py`). **Left:** the add-ons' channels, the screens (including picking the sent and archive
-  folders from the mailbox's folder list).
+  (`tests/test_mailbox_channel.py`). **Built (S1b-2d, change log 190):** the screens: Reply, Reply to everyone, Forward,
+  Archive, Move to, Label and Mark as read from a saved message, Send reply on a reply owed, the sent and archive folders as
+  pick lists (`tests/test_act_draft_api.py`, `web/src/components/ActsOnRecords.test.tsx`,
+  `web/src/components/TodayReplySend.test.tsx`, `web/src/components/Sources.test.tsx`); the browser test
+  `web/e2e/acts-journey.spec.ts` is written, not yet run. **Left:** the add-ons' channels; acting on several selected
+  messages at once (no list of saved messages lets the person select any); Move to for a signed-in account (no folder
+  list for one).
 - [x] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
   the publisher for it): (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): one choice in Settings: in the app's own calendar (local, with an
@@ -1101,7 +1108,10 @@ management (not just read only) lets do it"):
   **Built so far (S1b-2a):** the calendar acts' actions, an answer addressed to the organizer, and undo of a created event
   (`tests/test_act_actions.py`). **Built (S1b-2b):** the answer's iTIP reply by mail through the core `mailbox` channel
   (`tests/test_mailbox_channel.py::test_an_answer_goes_as_mail_to_the_organizer_with_the_itip_reply_attached`).
-  **Left:** creating, moving and cancelling events (a calendar service's add-on), the screens.
+  **Built (S1b-2d, change log 190):** Accept, Maybe, Decline and Propose a time from the invitation's calendar entry, the
+  free times of the working week to pick from (`tests/test_act_draft_api.py`,
+  `web/src/components/ActsOnRecords.test.tsx`). **Left:** creating, moving and cancelling events (a calendar service's
+  add-on, and their screens); an invitation line on Today (an invitation is answered from its entry).
 - [ ] [S1b-2] **Plugin API for acting:** add-ons declare the acts they can carry out (a channel per account kind: send,
   reply, move, label, create or change an event) and the access they need in `requires`; the core calls them only from
   the publisher after the yes, and their sign-in asks for the wider access when the person turns acting on. Released
@@ -1110,8 +1120,9 @@ management (not just read only) lets do it"):
   action, what it is about, the account and the event fields; `watch.acting` per account, with Copy carrying a draft for
   an account that is off; `acting_scopes` on a sign-in and `POST /api/sign-ins/{name}/start?acting=true`; `act.undo`
   with the channel's `undo(act, service_id)`: `tests/test_act_actions.py` (see design 6.12, "Built (S1b-2a)").
-  **Left:** the Settings step that starts the sign-in with acting after the tick, asking the service to drop the wider
-  access when acting is turned off, and the guide's section for the mail add-on's builder to confirm.
+  **Built (S1b-2d, change log 190):** the Settings switch for each account, which starts the sign-in with acting for a
+  signed-in account and saves for a mailbox (`web/src/components/ActingAccounts.test.tsx`). **Left:** asking the service
+  to drop the wider access when acting is turned off, and the guide's section for the mail add-on's builder to confirm.
 - [ ] [S1b-1] **Nothing on its own:** the assistant drafts every act; none runs without the person's yes on that exact act, and
   rules may only suggest (an outbound op is never applied automatically, design 6.7).
   **Built so far (S1b-1a):** an outbound op from the assistant is held, never applied; only the person's own click

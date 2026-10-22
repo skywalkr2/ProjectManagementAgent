@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api.screen_text import ScreenText
+from engine.ops import ActRecipientIn
 from engine.records import KnowledgeEvidence, Scope
 
 # ---- requests --------------------------------------------------------------------------------------------------------
@@ -5422,6 +5423,98 @@ class ActListView(BaseModel):
     """GET /api/acts: the acts, newest first, optionally of some states and at most `limit`."""
 
     acts: list[ActView]
+
+
+class ActDraftIn(BaseModel):
+    """POST /api/acts: the person drafts an act (a reply, a change to their mail, an answer to an invitation) on a saved
+    message or a calendar entry. `kind` and `action` say what it does and `about` what it is about; `account` is left
+    out to use the account the message or entry came in on. A reply or reply all with no `recipients` goes to the
+    message's sender (reply all: and everyone else on it but the person). The channel is the one that serves the
+    account; when acting is off for the account, Copy carries it and the answer says so (`copied_because`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["message", "mailbox", "calendar"]
+    action: str | None = Field(
+        None, description="What it does: reply, reply_all, forward or send; archive, move, label or mark_read; answer."
+    )
+    account: str | None = Field(None, description="The account that carries it, as GET /api/acts/options names it.")
+    about: list[str] = Field(
+        default_factory=list, description="The saved messages a mailbox act changes, or the entry."
+    )
+    in_reply_to: str | None = Field(None, description="The saved message a reply, reply all or forward is about.")
+    recipients: list[ActRecipientIn] = Field(default_factory=list, description="Who a message goes to.")
+    parts: dict[str, str] = Field(default_factory=dict, description="The content by part, for a message.")
+    folder: str | None = Field(None, description="The folder a move puts the messages in.")
+    label: str | None = Field(None, description="The label a label act puts on the messages.")
+    answer: Literal["accepted", "tentative", "declined", "propose"] | None = Field(
+        None, description="How an invitation is answered."
+    )
+    proposed_start: str | None = Field(None, description="The start a proposed new time suggests, as ISO 8601 text.")
+    proposed_end: str | None = Field(None, description="The end a proposed new time suggests, as ISO 8601 text.")
+
+
+class ActOptionsView(BaseModel):
+    """GET /api/acts/options: what the person can do about one saved message, calendar entry or reply owed. The
+    `account` it came in on (none when it came in another way) and whether acting is on for it; `can_act` is true when
+    the account carries the act itself, after the person's yes, rather than by Copy."""
+
+    record: str = Field(
+        description="The saved message or calendar entry it is about (for a reply owed, the message that asked); "
+        "the id asked when there is none."
+    )
+    kind: Literal["message", "event", "missing"]
+    account: str | None = None
+    account_label: str | None = None
+    acting: bool = False
+    can_act: bool = Field(False, description="Acting is on and the account's channel does what is offered.")
+    channel_label: str | None = Field(None, description="What carries it for the account, when one serves it.")
+    actions: list[str] = Field(
+        default_factory=list,
+        description="The actions on a message: reply, reply_all and forward (Copy carries them when nothing else can), "
+        "and the changes to the mail the account's channel does: archive, move, label and mark_read.",
+    )
+    answers: list[Literal["accepted", "tentative", "declined", "propose"]] = Field(
+        default_factory=list, description="How a calendar entry's invitation can be answered through this account."
+    )
+    propose_refusal: str | None = Field(
+        None, description="Why proposing another time isn't offered, when it isn't and an answer is."
+    )
+    folder_source: str | None = Field(
+        None, description="The mail source whose folders GET /api/watch/{source}/folders lists, for Move to."
+    )
+
+
+class ActAccountView(BaseModel):
+    """An account an act can go through, and whether the person let the assistant act on it after their yes."""
+
+    id: str = Field(description="As `watch.acting` and an act name it.")
+    label: str
+    acting: bool
+    sign_in: str | None = Field(
+        None,
+        description="The sign-in it belongs to (POST /api/sign-ins/{name}/start with `acting`); none for a mailbox.",
+    )
+    can_act: bool = Field(True, description="Its service has acting access to ask for (a mailbox always can).")
+
+
+class ActAccountsView(BaseModel):
+    """GET /api/acts/accounts."""
+
+    accounts: list[ActAccountView]
+
+
+class FreeSlotView(BaseModel):
+    """A free time to propose: as long as the invitation, starting a gap in the working week."""
+
+    start: str
+    end: str
+
+
+class FreeSlotsView(BaseModel):
+    """GET /api/acts/free-slots: the free times to offer for another time, earliest first."""
+
+    slots: list[FreeSlotView]
 
 
 class ActApproveIn(BaseModel):

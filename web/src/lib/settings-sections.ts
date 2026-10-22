@@ -45,6 +45,8 @@ const OWN_PART = [
   // Where reminders reach you away from the app is one choice with its own yes, not two rows.
   "steward.reminders.where",
   "steward.reminders.where_account",
+  // The accounts the assistant may act on are a switch on each account, not a list to tick.
+  "watch.acting",
   // The cloud drives the backup step looks for are a list of records, changed in the file; the step shows what it found.
   "storage.backups.cloud_folders",
 ];

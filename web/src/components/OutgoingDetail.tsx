@@ -13,6 +13,7 @@ import {
   canTakeBack,
   changedWords,
   isByHand,
+  messageLine,
   partLabel,
   useOutgoing,
   type Act,
@@ -31,7 +32,7 @@ export function OutgoingDetail(props: {
   looked: boolean;
   onLook: () => void;
 }) {
-  const { t, has } = useWords();
+  const { t, tn, has } = useWords();
   const out = useOutgoing();
   const client = useQueryClient();
   const base = useId();
@@ -50,6 +51,8 @@ export function OutgoingDetail(props: {
   const blocked = !!act.withheld;
   const title = actTitle(act, t);
   const approveId = `${base}-approve`;
+  const messages = (act.about ?? []).filter((x) => x.kind === "message");
+  const events = (act.about ?? []).filter((x) => x.kind === "event");
 
   const look = async () => {
     setBusy(true);
@@ -98,17 +101,55 @@ export function OutgoingDetail(props: {
         </p>
       )}
 
-      <section className={styles.section} aria-label={t("outgoing.section.content")}>
-        <h3>{t("outgoing.section.content")}</h3>
-        {Object.entries(act.parts).map(([name, text]) => (
-          <div key={name} className={styles.part}>
-            <p className={styles.partName}>{partLabel(name, t, has)}</p>
-            <p className={styles.text} data-part={name}>
-              {text}
-            </p>
-          </div>
-        ))}
-      </section>
+      {act.copied_because === "acting_off" && (
+        <p className="hint" role="note">
+          {t("outgoing.copied_because.acting_off", { account: act.account_label ?? act.account ?? "" })}
+        </p>
+      )}
+
+      {Object.keys(act.parts).length > 0 && (
+        <section className={styles.section} aria-label={t("outgoing.section.content")}>
+          <h3>{t("outgoing.section.content")}</h3>
+          {Object.entries(act.parts).map(([name, text]) => (
+            <div key={name} className={styles.part}>
+              <p className={styles.partName}>{partLabel(name, t, has)}</p>
+              <p className={styles.text} data-part={name}>
+                {text}
+              </p>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {act.kind === "mailbox" && (
+        <section className={styles.section} aria-label={t("outgoing.section.messages")}>
+          <h3>{t("outgoing.section.messages")}</h3>
+          <p data-count="">{tn("outgoing.count", messages.length)}</p>
+          <ul className={styles.target}>
+            {messages.map((m) => (
+              <li key={m.id} data-message={m.id}>
+                {messageLine(m, t)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {act.kind === "calendar" && (
+        <section className={styles.section} aria-label={t("outgoing.section.event")}>
+          <h3>{t("outgoing.section.event")}</h3>
+          <ul className={styles.target}>
+            {events.map((e) => (
+              <li key={e.id}>{e.end ? t("outgoing.invitation_line.range", { title: e.title, when: e.when ?? "", end: e.end }) : t("outgoing.invitation_line", { title: e.title, when: e.when ?? "" })}</li>
+            ))}
+            {act.answer && <li>{t(`outgoing.answer_line.${act.answer}`)}</li>}
+            {act.proposed_start && act.proposed_end && <li>{t("outgoing.proposed_line", { start: act.proposed_start, end: act.proposed_end })}</li>}
+            {act.action === "create" && act.title && <li>{t("outgoing.event_title_line", { title: act.title })}</li>}
+            {act.action === "create" && act.start && act.end && <li>{t("outgoing.event_when_line", { start: act.start, end: act.end })}</li>}
+            {act.alarm_minutes != null && <li>{t("outgoing.alarm_line", { minutes: act.alarm_minutes })}</li>}
+          </ul>
+        </section>
+      )}
 
       <section className={styles.section} aria-label={t(act.kind === "message" ? "outgoing.section.who" : "outgoing.section.where")}>
         <h3>{t(act.kind === "message" ? "outgoing.section.who" : "outgoing.section.where")}</h3>
@@ -119,6 +160,7 @@ export function OutgoingDetail(props: {
           {act.calendar && <li>{t("outgoing.calendar_line", { calendar: act.calendar })}</li>}
           {act.when && <li>{t("outgoing.when_line", { when: act.when })}</li>}
           {act.folder && <li>{t("outgoing.folder_line", { folder: act.folder })}</li>}
+          {act.label && <li>{t("outgoing.label_line", { label: act.label })}</li>}
           {act.template && <li>{t("outgoing.template_line", { template: act.template })}</li>}
           <li>{t("outgoing.via", { channel: act.channel_label })}</li>
         </ul>

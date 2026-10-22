@@ -580,6 +580,67 @@ describe("adding a source", () => {
   });
 });
 
+describe("a mailbox's folders", () => {
+  const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
+  const mailboxKind = kind("mailbox", "A mailbox", null, [
+    field("sent_folder", "text", { advanced: true }),
+    field("archive_folder", "text", { advanced: true }),
+    field("folder", "text"),
+  ]);
+  const mailbox = () => [{ id: "a", settings: { sent_folder: "Sent", archive_folder: "", folder: "INBOX" } }];
+  const FOLDERS = { folders: ["Archive", "Inbox", "Sent", "Receipts"], sent: "Sent", taken: ["Inbox"] };
+
+  test("the sent and archive folders are pick lists of the mailbox's own folders, and a pick is saved", async () => {
+    const user = userEvent.setup();
+    const { calls } = open([source("a", { connector: "mailbox" })], [], {
+      "GET watch/kinds": () => [mailboxKind],
+      "GET settings": () => stored(mailbox()),
+      "GET watch/a/folders": () => FOLDERS,
+      "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
+    });
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: "Change Source a" });
+    const sent = await within(form).findByRole("combobox", { name: "About sent_folder" });
+    const archive = within(form).getByRole("combobox", { name: "About archive_folder" });
+    await waitFor(() => expect(within(archive).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not chosen", "Archive", "Inbox", "Sent", "Receipts"]));
+    expect(sent).toHaveValue("Sent");
+    expect(archive).toHaveValue("");
+    // the folder it reads stays as it was: a text box, not part of this
+    expect(within(form).getByRole("textbox", { name: "About folder" })).toHaveValue("INBOX");
+    await user.selectOptions(archive, "Archive");
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
+    expect(body(calls, "POST watch/sources/a")).toMatchObject({ settings: { sent_folder: "Sent", archive_folder: "Archive", folder: "INBOX" } });
+  });
+
+  test("a folder the mailbox no longer lists stays in the list so the setting isn't lost", async () => {
+    const user = userEvent.setup();
+    open([source("a", { connector: "mailbox" })], [], {
+      "GET watch/kinds": () => [mailboxKind],
+      "GET settings": () => stored([{ id: "a", settings: { sent_folder: "Old sent", archive_folder: "", folder: "INBOX" } }]),
+      "GET watch/a/folders": () => FOLDERS,
+    });
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: "Change Source a" });
+    const sent = await within(form).findByRole("combobox", { name: "About sent_folder" });
+    expect(within(sent).getAllByRole("option").map((o) => o.textContent)).toContain("Old sent");
+    expect(sent).toHaveValue("Old sent");
+  });
+
+  test("when the folders can't be read the two settings stay text boxes", async () => {
+    const user = userEvent.setup();
+    open([source("a", { connector: "mailbox" })], [], {
+      "GET watch/kinds": () => [mailboxKind],
+      "GET settings": () => stored(mailbox()),
+      "GET watch/a/folders": () => new Refuse(409, "The mailbox can't be reached."),
+    });
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: "Change Source a" });
+    expect(await within(form).findByRole("textbox", { name: "About sent_folder" })).toHaveValue("Sent");
+    expect(within(form).queryByRole("combobox", { name: "About sent_folder" })).toBeNull();
+  });
+});
+
 describe("a source's menu", () => {
   const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
   const items = (kind: string) => [{ id: "a", connector: kind, settings: { path: "inbox", patterns: ["*.md"] } }];

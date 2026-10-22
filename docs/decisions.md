@@ -4,6 +4,17 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: Acting on mail and calendar from the screens: what the API adds
+
+- **Decided (main session's brief, details by the builder, for review):** kind of rule: a core concept with three
+  settings. The person drafts an act through `POST /api/acts` (account and channel chosen as the engine does, Copy when
+  acting is off); `GET /api/acts/options` says what a saved message, an entry or a reply owed offers; `GET
+  /api/acts/free-slots` offers the free times of the working week for a proposed time, as long as the invitation;
+  `GET /api/acts/accounts` lists the accounts with the acting switch. A plain mailbox can't propose a time (its channel
+  refuses it), so the choice isn't offered there. Settings `watch.propose_days` (14), `watch.propose_slots` (6) and
+  `watch.propose_round_minutes` (15). A reply with no recipients goes to the message's sender, read from the saved text.
+- **Impact:** design 6.12, 7.4 and 4.0 (`watch`), roadmap S1b-2. No change to scope. Change log: section 190.
+
 ## 2026-10-22: Reminders go to the app's own calendar first; a signed-in calendar or the person's mail by choice
 
 - **Decided (owner):** "there should be a local calendar, it doesnt have to publish to external", then "in app is okay

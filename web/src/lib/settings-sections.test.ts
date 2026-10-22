@@ -81,3 +81,9 @@ test("the tier of each kind of work, what a tier tries once more on and the rout
   expect(sectionItems([...ITEMS, ...own], "ai").map((i) => i.key)).not.toEqual(expect.arrayContaining(["ai.routing"]));
   expect(sectionItems([...ITEMS, ...own], "ai").map((i) => i.key)).toContain("ai.budgets.per_run_usd");
 });
+
+test("the accounts the assistant may act on are a switch on each account, not a row of their own", () => {
+  const acting = item("watch.acting", "watch", { type: "list" });
+  expect(isListed(acting)).toBe(false);
+  expect(sectionItems([...ITEMS, acting], "advanced").map((i) => i.key)).not.toContain("watch.acting");
+});

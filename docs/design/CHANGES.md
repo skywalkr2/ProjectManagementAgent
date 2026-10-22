@@ -1027,6 +1027,23 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 190. The screens for mail and calendar acts (2026-10-22; S1b-2d, built)
+
+- **Design 6.12 and 7.4:** the person drafts an act from a saved message (Reply, Reply to everyone, Forward, Archive, Move
+  to, Label, Mark as read), from a reply owed (Send reply where its account can act, else Copy reply as before) and from an
+  invitation's calendar entry (Accept, Maybe, Decline, Propose a time from the free times of the working week or typed);
+  each opens in Waiting to go out. The list line and detail say what each kind of act does, a mailbox act lists and counts
+  its messages, an act Copy carries says why, the toast after a send offers Undo while the act can be taken back, and a
+  sent act's menu has Take back (**Went out**, under what waits). Settings has **Let {assistant} act after your yes** for
+  each account; a mailbox's sent and archive folders are pick lists of its folders; Undo after a standing yes for
+  reminders brings back the earlier choice and account.
+- **New:** `POST /api/acts`, `GET /api/acts/options`, `GET /api/acts/free-slots`, `GET /api/acts/accounts`;
+  `engine/propose_times.py`, `engine/reply_recipients.py`; settings `watch.propose_days`, `watch.propose_slots` and
+  `watch.propose_round_minutes`, each with a description, a default and demo values in both workspaces. No change to the
+  act's rules or invariants, the applier, the ops or the prompts. Built: `tests/test_act_draft_api.py`,
+  `web/src/components/ActsOnRecords.test.tsx`, `TodayReplySend.test.tsx`, `OutgoingActs.test.tsx`,
+  `ActingAccounts.test.tsx`; the browser test `web/e2e/acts-journey.spec.ts` is written, not yet run.
+
 ## 189. Reminders that reach a sleeping person, and the standing yes (2026-10-22; S1b-2c, built)
 
 - **Design 6.12, "A reminder that reaches a sleeping person":** one choice in Settings: Nowhere, In the app's calendar

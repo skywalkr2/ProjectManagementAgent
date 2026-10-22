@@ -1582,13 +1582,42 @@ for it, that nothing goes out without the PM approving that exact content, alrea
         `::test_a_reminder_in_the_apps_calendar_is_an_entry_with_an_alarm_and_no_act`,
         `::test_a_snooze_moves_the_same_entry_and_a_done_to_do_removes_it_with_undo`.
       - **The screens:** `web/src/components/ReminderWhere.test.tsx`.
-    - **Not built (S1b-2, and what S1b-1b left):** the add-ons' channels, the screens for
-      the new actions, the undo toast and the sent list's Undo, the Settings step that starts the sign-in with acting after the
-      tick (the route takes `acting`), asking the service to drop the wider access when acting is turned off, the
-      invitation's name on an answer line (the view carries `about` now),
-      the engine's queue ranking the act lines, the follow-up
-      message moving onto acts (Copy still works as it did), and calling `outward.check_outgoing` for the first export a
-      person hands to someone else.
+    - **Built (S1b-2d, change log 190: the screens for mail and calendar acts).**
+      - **The person drafts an act:** `POST /api/acts` takes `kind`, `action`, `about`, `in_reply_to`, `recipients`,
+        `parts`, `folder`, `label`, `answer` and the proposed times, and an `account` (left out: the one the message or
+        invitation came in on, as the engine chooses it). The channel is the one that serves the account and declares the
+        action; with acting off for the account Copy carries it and the view says why (`copied_because`); a draft the
+        channel can't carry (a plain mailbox proposing a time, an action the channel doesn't declare) is refused with the
+        reason. A reply or reply all with no `recipients` goes to the message's sender (reply all: everyone else on its To
+        and Cc lines but the person's own addresses; `engine/reply_recipients.py`). `GET /api/acts/options` says what can be
+        done about a saved message, a calendar entry or a reply owed: the account it came in on, whether acting is on,
+        the actions and answers the account's channel does, why proposing isn't offered where it isn't, and the mail
+        source whose folders `Move to` lists; `GET /api/acts/free-slots` gives the free times to propose
+        (`engine/propose_times.py` over `engine/free_slots.py`: the working week of `steward.reminders`, every calendar
+        entry blocking except one declined or called off, each slot as long as the invitation, the first at the next
+        round time; `watch.propose_days`, `propose_slots` and `propose_round_minutes`); `GET /api/acts/accounts` lists
+        the accounts with the person's switch.
+      - **On screen:** a saved message's page has Reply, with Reply to everyone, Forward, Archive, Move to (a pick list of
+        the mailbox's folders), Label and Mark as read in its menu; the reply-owed line's primary is Send reply where its
+        account can act (the drafted reply goes as an act to approve; Copy reply moves into the menu), Copy reply as
+        before where it can't; a calendar entry that came as an invitation has Accept, with Maybe, Decline and Propose a
+        time in its menu (the free times of the working week or a typed start and end; not offered, with the reason, on
+        a plain mailbox). Each drafts the act and opens it in Waiting to go out. Settings has **Let {assistant} act after
+        your yes** for each account (a signed-in account starts its sign-in with `acting=true` first, a mailbox saves;
+        off saves at once with Undo), and a mailbox's sent and archive folders are pick lists of its folders.
+        Reminders' Undo after a standing yes brings back the earlier choice and account.
+      - **Tests:** `tests/test_act_draft_api.py`, `web/src/components/ActsOnRecords.test.tsx`,
+        `web/src/components/TodayReplySend.test.tsx`, `web/src/components/OutgoingActs.test.tsx`,
+        `web/src/components/ActingAccounts.test.tsx`, `web/src/components/Sources.test.tsx` ("a mailbox's folders"),
+        `web/src/components/ReminderWhere.test.tsx` ("Undo after giving the yes ..."); the browser test
+        `web/e2e/acts-journey.spec.ts` (written, not yet run).
+    - **Not built (S1b-2):** the add-ons' channels; asking the service to drop the wider access when acting is turned off;
+      an invitation line on Today (an invitation is answered from its calendar entry); acting on several selected
+      messages at once (the API takes a list in `about`, but no list of saved messages lets the person select any);
+      Move to for a signed-in account (the API has no folder list for one); before-and-after text for a stale act (an act
+      keeps only the hashes of what the yes covered); the engine's queue ranking the act lines; the follow-up message
+      moving onto acts (Copy still works as it did); and calling `outward.check_outgoing` for the first export a person
+      hands to someone else.
 - Change classification for the review list: real change, order only, layout or format only, columns changed, text the target
   doesn't show. Never show an empty "+0 −0" draft.
 - **The send step refuses the assistant's name** (the owner's lesson from running, 2026-10-20; `engine/outward.py`): content

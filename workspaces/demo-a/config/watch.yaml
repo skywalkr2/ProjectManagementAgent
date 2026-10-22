@@ -49,6 +49,9 @@ sources:
       server_keeps_sent: false       # true when the outgoing server saves its own copy
       archive_folder: Archive        # where Archive moves messages (the server's archive folder when empty)
 acting: []   # accounts the assistant may act on after your yes; none until you tick one in Settings
+propose_days: 14   # days ahead to look for a free time when proposing another time for an invitation
+propose_slots: 6   # free times offered at most when proposing another time
+propose_round_minutes: 15   # the first free time offered starts at the next multiple of this many minutes
 look_back_choices: [30, 90, 365]   # days a mail source can be asked to look further back, shown as a list
 failures_before_asking: 3
 unread_gap_factor: 2   # a failing source becomes a line on Today after this many of its own read intervals

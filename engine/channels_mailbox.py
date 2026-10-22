@@ -47,6 +47,9 @@ ACTIONS: dict[str, tuple[str, ...]] = {
     "mailbox": ("archive", "move", "label", "mark_read"),
     "calendar": ("answer",),
 }
+#: The answers to an invitation a mailbox can give (it can't propose another time), and why it refuses that one.
+ANSWERS = ("accepted", "tentative", "declined")
+NO_PROPOSE = "a mailbox can only accept, decline or say maybe to an invitation, not propose a new time"
 #: The port that is a secure connection from the start; any other is made secure after connecting.
 IMPLICIT_TLS_PORT = 465
 #: How a person's answer to an invitation reads in the iTIP reply.
@@ -163,7 +166,7 @@ class MailboxChannel:
     def _answer(self, act: OutgoingAct, settings: MailboxSettings, key: str) -> EmailMessage:
         status = _STATUS.get(act.answer or "")
         if status is None:
-            raise _refused("a mailbox can only accept, decline or say maybe to an invitation, not propose a new time")
+            raise _refused(NO_PROPOSE)
         if not act.about or not act.about[0].uid:
             raise _refused("the invitation has no id to answer")
         if not act.recipients:

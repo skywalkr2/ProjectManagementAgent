@@ -13,7 +13,7 @@ import { startCursor } from "../lib/cursor";
 import { projectChoices } from "../lib/project-choices";
 import { failureText } from "../lib/sources";
 import { changedTime, reconcile, type Refreshed } from "../lib/refreshed";
-import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, type Draft } from "../lib/settings";
+import { addonLabel, formatValue, formValues, labelOf, nest, prefill, valueAt, type Draft, type Item } from "../lib/settings";
 import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -355,6 +355,9 @@ function SentFolderOffer(props: { source: Source; save: ReturnType<typeof useSou
   );
 }
 
+/** The mailbox settings that name a folder of the mailbox. */
+const FOLDER_SETTINGS = ["sent_folder", "archive_folder"];
+
 type Mode = { type: "add"; plugin: string | null } | { type: "change"; source: Source };
 
 /** The form for adding a source or changing one: the kind (adding only), a name, how often, a project (adding only)
@@ -433,7 +436,24 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
     if (storedWas.current === undefined) storedWas.current = stored;
   }, [stored]);
   const waitingForSettings = !adding && settings.isPending;
-  const items = kind && !waitingForSettings && (adding || stored !== undefined) ? (adding ? kind.items : prefill(kind.items, stored)) : [];
+  // A mailbox's sent and archive folders are picked from the mailbox's own folders; where they can't be listed they stay text.
+  const folders = useQuery({
+    queryKey: ["watch-folders", source?.id],
+    queryFn: () => api.watchFolders(source?.id ?? ""),
+    enabled: !adding && source?.connector === "mailbox",
+    retry: false,
+    staleTime: 300_000,
+  });
+  const listed = folders.data?.folders;
+  const withFolders = (list: Item[]): Item[] =>
+    listed
+      ? list.map((i) =>
+          FOLDER_SETTINGS.includes(i.key) && i.type === "text"
+            ? { ...i, type: "choice" as const, choices: "mailbox_folders", options: [...new Set([...listed, ...(i.value ? [String(i.value)] : [])])] }
+            : i,
+        )
+      : list;
+  const items = kind && !waitingForSettings && (adding || stored !== undefined) ? withFolders(adding ? kind.items : prefill(kind.items, stored)) : [];
   const { values, bad } = formValues(items, edits);
   // A secret typed here is sent apart from the settings, and replaces whatever the setting held.
   const typed = Object.fromEntries(Object.entries(pasted).filter(([key, value]) => value.trim() !== "" && items.some((i) => i.key === key)));

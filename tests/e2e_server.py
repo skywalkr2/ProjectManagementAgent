@@ -139,6 +139,86 @@ def seed_outgoing(store, cfg):
     return channel, {"name": People(store, cfg).name(person), "address": address, **parts}
 
 
+#: The mailbox the act journey's saved messages came in on, and the account acting is switched on for.
+ACTS_SOURCE = "e2e-mail"
+ACTS_ACCOUNT = f"mailbox:{ACTS_SOURCE}"
+ACTS_SENDER = "sender.one@example.com"
+ACTS_ORGANIZER = "organizer@example.com"
+
+
+def seed_acts(ws, store, cfg):
+    """The stand-in channel serving a plain mailbox, with acting on for it, and what the journey acts on: two saved
+    messages (one to reply to, one to file away) and an invitation on the calendar. The mailbox's folders are a fixed
+    list, since nothing reads a real one. Returns the channel and what the browser test reads from the fixture."""
+    from types import SimpleNamespace
+
+    import engine.connectors.mailbox as mailbox
+    from engine.channels import FakeChannel
+
+    channel = FakeChannel(accounts=("mailbox",))
+    store.plugins.core_channels.pop("mailbox", None)
+    store.plugins.core_channels["fake"] = channel.registration()
+    mailbox.list_folders = lambda _settings: SimpleNamespace(names=("Inbox", "Projects", "Sent"), sent="Sent")
+    pm = cfg.workspace.user.person
+    ctx = WriteContext(actor="engine", trust="trusted", op="e2e.acts")
+    ws.sources_dir.mkdir(exist_ok=True)
+
+    def message(title: str, text: str, key: str) -> str:
+        digest = hashlib.sha256(text.encode()).hexdigest()
+        (ws.sources_dir / f"{digest}.txt").write_text(text, encoding="utf-8")
+        with store.transaction() as tx:
+            return tx.create(
+                "source",
+                {
+                    "received_at": datetime.now(UTC).isoformat(),
+                    "kind": "watched:mailbox",
+                    "title": title,
+                    "content_hash": digest,
+                    "trust": "untrusted",
+                    "watched": {"source": ACTS_SOURCE, "key": key, "change": "new", "author": ACTS_SENDER},
+                },
+                ctx,
+            ).id
+
+    me = f"{pm or 'me'}@example.com"
+    ask = message(
+        "Interior proofs",
+        f"From: Sender One <{ACTS_SENDER}>\nTo: {me}\nSubject: Interior proofs\n\nCan you confirm the proof date?",
+        "<proofs@example.com>",
+    )
+    tidy = message(
+        "Printer invoice",
+        f"From: Sender One <{ACTS_SENDER}>\nTo: {me}\nSubject: Printer invoice\n\nThe invoice is attached.",
+        "<invoice@example.com>",
+    )
+    invite = message(
+        "Invitation: Planning session",
+        f"From: The Organizer <{ACTS_ORGANIZER}>\nTo: {me}\nSubject: Invitation: Planning session\n\nPlease join.",
+        "<invite@example.com>",
+    )
+    with store.transaction() as tx:
+        entry = tx.create(
+            "event",
+            {
+                "title": "Planning session",
+                "start": "2026-11-03T14:00:00+00:00",
+                "end": "2026-11-03T15:00:00+00:00",
+                "key": "<planning@example.com>",
+                "source": invite,
+                "invitation": True,
+                "organizer": {"address": ACTS_ORGANIZER, "name": "The Organizer"},
+                "trust": "untrusted",
+            },
+            ctx,
+        ).id
+    return channel, {
+        "account": "E2E mail",
+        "reply": {"id": ask, "title": "Interior proofs", "sender": ACTS_SENDER},
+        "tidy": {"id": tidy, "title": "Printer invoice"},
+        "invitation": {"id": entry, "title": "Planning session", "organizer": ACTS_ORGANIZER},
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, required=True)
@@ -159,6 +239,13 @@ def main() -> None:
         action="store_true",
         help="register the core's stand-in channel and draft one message to a known person on it, so the browser test "
         "can approve and send it; /__e2e/delivered says what the channel was handed",
+    )
+    parser.add_argument(
+        "--acts",
+        action="store_true",
+        help="serve the stand-in channel for a plain mailbox with acting on, and seed two saved messages and an "
+        "invitation for the browser test to reply to, file away and answer; /__e2e/acts says what the channel was "
+        "handed and what it took back",
     )
     parser.add_argument(
         "--clock-at",
@@ -196,6 +283,16 @@ def main() -> None:
     if stress:
         flags["storage.backups.automatic"] = False
         flags["watch.sources"] = LAYOUT_SOURCES
+    if args.acts:
+        # A mailbox that is never read (nothing here reaches a real one), with acting switched on for it. In the
+        # settings file, so every screen reads it as it would a person's own.
+        path = ws.config_dir / "watch.yaml"
+        watch = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        watch["sources"] = [
+            {"id": ACTS_SOURCE, "connector": "mailbox", "label": "E2E mail", "enabled": False, "every_minutes": 43200}
+        ]
+        watch["acting"] = [ACTS_ACCOUNT]
+        path.write_text(yaml.safe_dump(watch, sort_keys=False), encoding="utf-8")
     if args.standin_account:
         # In the settings file, not a flag, so Allow's save is what the app reads afterwards.
         path = ws.config_dir / "ai.yaml"
@@ -237,6 +334,7 @@ def main() -> None:
         seed_layout(store, cfg, stress)
     folder_targets = list(cfg.storage.backups.targets)
     fake_channel = seed_outgoing(store, cfg) if args.fake_channel else None
+    acts = seed_acts(ws, store, cfg) if args.acts else None
 
     async def case_list(_request):
         return JSONResponse(cases)
@@ -288,9 +386,40 @@ def main() -> None:
             }
         )
 
+    async def acted(_request):
+        """What the act journey's records are, what the stand-in channel was handed (each act with what it is about, who
+        it goes to and what it carries) and what it was asked to take back."""
+        if acts is None:
+            return JSONResponse({"enabled": False})
+        channel, seeded = acts
+
+        def shown(act):
+            return {
+                "kind": act.kind,
+                "action": act.action,
+                "parts": act.parts,
+                "to": [r.address for r in act.recipients],
+                "about": [a.id for a in act.about],
+                "label": act.label,
+                "folder": act.folder,
+                "answer": act.answer,
+                "proposed_start": act.proposed_start,
+                "proposed_end": act.proposed_end,
+            }
+
+        return JSONResponse(
+            {
+                "enabled": True,
+                **seeded,
+                "delivered": [shown(a) for a, _key in channel.delivered],
+                "undone": [shown(a) for a, _service_id in channel.undone],
+            }
+        )
+
     outer = Starlette(
         routes=[
             Route("/__e2e/delivered", delivered),
+            Route("/__e2e/acts", acted),
             Route("/__e2e/cases", case_list),
             Route("/__e2e/ledger", ledger),
             Route("/__e2e/standing", standing),

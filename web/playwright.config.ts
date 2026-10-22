@@ -25,6 +25,10 @@ const late = { port: 8789 + offset, clockAt: "2026-10-21T00:30:00Z" };
 // And the way out: its server has the core's stand-in channel and one message waiting for the person's yes.
 const outgoing = { port: 8796 + offset };
 
+// And the acts on mail and calendar: its server's stand-in channel serves a plain mailbox with acting on, and seeds two saved
+// messages and an invitation to reply to, file away and answer.
+const acts = { port: 8797 + offset };
+
 // The journeys start the app as a person does (a new workspace, then the serve command) beside a process that plays the
 // outside services; each pair works in one state folder that the start-up script clears. Two pairs: one for the
 // journeys that share a workspace (a new workspace, a folder, an add-on installed from the list), and one for the
@@ -99,6 +103,7 @@ export default defineConfig({
     { name: "access", testMatch: /work-access\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${access.port}/` } },
     { name: "capacity", testMatch: /today-capacity\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${capacity.port}/` } },
     { name: "outgoing", testMatch: /outgoing\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${outgoing.port}/` } },
+    { name: "acts", testMatch: /acts-journey\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${acts.port}/` } },
     { name: "late", testMatch: /late-evening\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${late.port}/` } },
     {
       name: "journeys",
@@ -151,6 +156,13 @@ export default defineConfig({
       command: `uv run python -m tests.e2e_server --port ${outgoing.port} --base-path / --fake-channel`,
       cwd: "..",
       url: `http://127.0.0.1:${outgoing.port}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: `uv run python -m tests.e2e_server --port ${acts.port} --base-path / --acts`,
+      cwd: "..",
+      url: `http://127.0.0.1:${acts.port}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
     },

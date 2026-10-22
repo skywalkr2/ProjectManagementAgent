@@ -2789,6 +2789,26 @@ class WatchFile(FileModel):
         "Only you change this; nothing the assistant reads or proposes can.",
         json_schema_extra={"choices": "acting_accounts"},
     )
+    propose_days: int = Field(
+        14,
+        ge=1,
+        le=90,
+        description="How many days ahead to look for a free time when you propose another time for an invitation.",
+    )
+    propose_slots: int = Field(
+        6,
+        ge=1,
+        le=20,
+        description="How many free times to offer at most when you propose another time for an invitation. Each is as "
+        "long as the invitation and starts a free gap in your working week.",
+    )
+    propose_round_minutes: int = Field(
+        15,
+        ge=1,
+        le=60,
+        description="The first free time offered when you propose another time starts at the next multiple of this "
+        "many minutes after now, so no time starts at an odd moment.",
+    )
     look_back_choices: list[int] = Field(
         default_factory=lambda: [30, 90, 365],
         description="How many more days further back than the first read the person can ask a mail source to look, "

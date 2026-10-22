@@ -83,6 +83,39 @@ describe("where reminders reach you", () => {
     expect(sent(calls, "POST settings")).toMatchObject({ changes: { "steward.reminders.where": "mail", "steward.reminders.where_account": "mailbox:work" } });
   });
 
+  test("Undo after giving the yes brings back the earlier choice and account exactly, not Ask me each time", async () => {
+    const earlier = view({ where: "calendar", account: "signin:me@example.com", account_label: "My sign-in (me@example.com)" });
+    const change = (key: string, before: string, after: string) => ({ key, before, after, was_default: false, is_default: false });
+    const saved = {
+      changes: [change("steward.reminders.where", "calendar", "mail"), change("steward.reminders.where_account", "signin:me@example.com", "mailbox:work")],
+      fingerprint: "fp-2",
+      needs_restart: false,
+    } satisfies S["SettingsSaved"];
+    const calls = fakeApi(
+      routes(earlier, {
+        "POST settings": () => saved,
+        "POST reminders/yes": () => ({ changeset: "CS-9" }),
+        "POST changesets/CS-9/undo": () => ({ applied: [], skipped: [] }),
+      }),
+    );
+    renderApp(<ReminderWhere />);
+    await userEvent.click(await screen.findByRole("radio", { name: /To my mail/ }));
+    await userEvent.selectOptions(await screen.findByRole("combobox", { name: "Account" }), "mailbox:work");
+    await userEvent.click(screen.getByRole("button", { name: "Yes, send my reminders there without asking" }));
+    await waitFor(() => expect(sent(calls, "POST reminders/yes")).toBeTruthy());
+    await userEvent.click(await screen.findByRole("button", { name: /Undo/ }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST settings")).toHaveLength(2));
+    expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true);
+    // the yes is taken back first, then the choice and account go back to what they were
+    const order = calls.map((c) => c.route).filter((r) => r === "POST changesets/CS-9/undo" || r === "POST settings");
+    expect(order).toEqual(["POST settings", "POST changesets/CS-9/undo", "POST settings"]);
+    expect(calls.filter((c) => c.route === "POST settings")[1].body).toEqual({
+      changes: { "steward.reminders.where": "calendar", "steward.reminders.where_account": "signin:me@example.com" },
+      reset: [],
+      fingerprint: "fp-2",
+    });
+  });
+
   test("Ask me each time sets the choice and gives no yes", async () => {
     const calls = fakeApi(routes(view()));
     renderApp(<ReminderWhere />);

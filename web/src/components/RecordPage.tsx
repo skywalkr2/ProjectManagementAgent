@@ -21,6 +21,8 @@ import { PersonDrawer } from "./PersonForm";
 import { PersonPicker } from "./PersonPicker";
 import { AgendaSection } from "./AgendaList";
 import { Attendees } from "./Attendees";
+import { useInvitationActs } from "./InvitationActs";
+import { useMessageActs } from "./MessageActs";
 import { ProjectKnows } from "./ProjectKnows";
 import { PromiseWhy } from "./PromiseWhy";
 import { ProjectDrawer } from "./ProjectForm";
@@ -56,6 +58,10 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     { canMarkSent: questionFields?.status === "open" },
   );
   const menu = [...(kind === "question" ? questionMenu.entries : []), change.entry];
+  // A saved message can be replied to, forwarded or filed: each drafts an act that opens in Waiting to go out.
+  const message = useMessageActs(id, String(record.data?.fields.title ?? ""), kind === "source");
+  // An invitation on a calendar entry can be answered the same way.
+  const invite = useInvitationActs(id, kind === "event" && record.data?.fields.invitation === true);
   const [editing, setEditing] = useState(false);
   // A person and a project are edited in the same drawer as on their own screens.
   const drawer = kind === "person" ? (people.data ?? []).find((p) => p.id === id) : kind === "project" ? (projects.data ?? []).find((p) => p.id === id) : undefined;
@@ -110,11 +116,20 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
         {data && (
           <div className="acts">
             <Offers kind={kind} id={id} />
+            {message.options && (
+              <button type="button" className="btn primary" onClick={() => message.ask("reply")}>
+                {t("acts.reply")}
+              </button>
+            )}
+            {message.options && <RowMenu label={heading} actions={message.menu(["reply"])} />}
+            {invite.buttons}
             {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
           </div>
         )}
       </div>
       {data && kind === "question" && questionMenu.form}
+      {data && message.form}
+      {data && invite.form}
       {data && CHANGEABLE.has(kind) && change.form}
       {data && page.data?.filed && <FiledLine kind={kind} id={id} filed={page.data.filed} />}
       {data && kind === "fact" && page.data?.fact_source && <FactSource source={page.data.fact_source} fact={id} version={data.version} />}
