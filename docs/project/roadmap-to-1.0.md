@@ -1160,6 +1160,9 @@ and people answering a LinkedIn post. Areas stay inside one workspace.
 
 ## Phase I: installers for Windows and macOS (after phase S)
 
+- [ ] [I-0c] **Before any installer work: everything batched from the owner's first fresh-workspace setup is fixed**
+  (owner, 2026-10-22: "for sure all of what is batched up has to be fixed before we spend time on installers"): open
+  promises P34, P36, P37, P38's free-add-on part, P39 and P40 (all twelve setup findings), each with its named test.
 - [ ] [I-0a] **Before any installer work: every kind of AI account hardened** (owner, 2026-10-21: "I want this hardened
   across the board before we get to the installer"): B-11c done (each catalog entry confirmed against its own
   documentation with a named test per finding, and the native adapter in), subscription programs first.
