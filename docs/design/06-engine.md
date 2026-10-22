@@ -3243,9 +3243,13 @@ people and details, and never acts in their name without their yes on the exact 
   (`web/src/components/RepeatingTodos.test.tsx`). A phrase that carries the to-do's own words ("water the plants every
   day") is declined, since the field holds the repeat only. The same field is on the form that adds a to-do by hand,
   and Today's to-do rows carry the repeat mark in words (`web/src/components/AddTodo.test.tsx`,
-  `tests/test_add_todo.py`). **Left:** teaching the assistant to propose `action.repeat` from an input. It needs a
-  decision first: the op needs the id of an existing action and a rule and start the assistant can't write, so it
-  must be able to name a to-do made in the same answer and give only the person's words for the engine to read.
+  `tests/test_add_todo.py`). **Left:** teaching the assistant to propose a repeat from an input, decided
+  (2026-10-22, change log 188): `action.repeat` may carry only `words` (the input's exact words, as `due_words` does
+  for a day), which the engine reads with the repeat grammar from the to-do's due day (else the input's received
+  day), and its `id` may name a to-do added earlier in the same answer as `@<index of that op>`, which the applier
+  resolves to the new id when it checks and applies (and when a held one is released later). Words the grammar
+  declines repeat nothing and are said in the held line. It stays a suggestion that waits for the person
+  (`repeat-confirm`).
 - **Promises and people:** promises both ways from everything that comes in, the person's own sent mail included;
   replies owed with drafts in the person's voice; prep before and capture after any meeting; people memory with evidence.
 - **What arrives:** dates in documents become dated facts and proposed reminders (bills are reminders only: no bank

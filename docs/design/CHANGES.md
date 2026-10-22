@@ -1027,6 +1027,11 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 188. The assistant suggests a repeat in the input's own words (2026-10-22; S2, designed)
+
+- **Design 6.32, "Repeating to-dos":** `action.repeat` may carry only the input's words for the engine to read, and may
+  name a to-do added earlier in the same answer as `@<index>`; it stays a suggestion that waits for the person.
+
 ## 187. The core's mailbox channel, built (2026-10-22; S1b-2b)
 
 - **Design 6.12, the bullet "Built (S1b-2b, change log 187...)":** a plain mailbox acts through its own servers: the core

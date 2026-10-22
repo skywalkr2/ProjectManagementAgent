@@ -4,6 +4,14 @@ Dated entries: what was decided, who decided, why. Newest first. Entries that ci
 `docs/project/roadmap-done.md`: finished roadmap work moved there on 2026-10-19, and `roadmap-to-1.0.md` keeps only what is left. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-22: The assistant suggests a repeat by the input's words, naming a to-do from the same answer
+
+- **Decided (main session):** kind of rule: a core concept (the op's shape). The assistant can't write a repeat rule
+  and doesn't know the id of a to-do it adds in the same answer, so `action.repeat` takes the input's exact words for
+  the engine to read (as `due_words` does for a day) and may name an earlier op's to-do as `@<index>`. The grammar
+  decides what the words mean, never the model; unclear words repeat nothing.
+- **Impact:** design 6.32 ("Repeating to-dos"), roadmap S2. No change to scope. Change log: section 188.
+
 ## 2026-10-22: A person adds a to-do directly, without the assistant
 
 - **Decided (main session):** kind of rule: a core concept (a screen form over the existing `action.add`, applied as the
