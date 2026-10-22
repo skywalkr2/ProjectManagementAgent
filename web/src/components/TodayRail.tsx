@@ -23,6 +23,7 @@ import { SafeLink } from "./SafeText";
 import styles from "./Today.module.css";
 import { recordView, viewHref, type View } from "../lib/views";
 import { Button } from "../ui/Button";
+import { useAddTodo } from "./AddTodo";
 import { Drawer } from "../ui/Drawer";
 import { Skeleton } from "../ui/Skeleton";
 import { Empty, Failed, RailPanel } from "./RailPanel";
@@ -368,6 +369,7 @@ function TodoPanel() {
   const { t, tn } = useWords();
   const todo = useQuery({ queryKey: ["today", "todo"], queryFn: api.todo });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const addTodo = useAddTodo();
   const today = localDate(useNow());
   const items = todo.data ?? [];
   const names = new Map((projects.data ?? []).map((p) => [p.id, p.name]));
@@ -386,10 +388,19 @@ function TodoPanel() {
     { id: "on_hold", label: t("today.todo.on_hold"), rows: items.filter((x) => !!x.on_hold) },
   ].filter((g) => g.rows.length > 0);
 
+  // Adding one by hand sits with the to-dos, not in Today's heading, which stays one row.
   return (
     <RailPanel
       id="todo"
       title={t("today.todo.title")}
+      action={
+        <>
+          <Button variant="ghost" size="sm" icon="plus" onClick={addTodo.open}>
+            {t("addtodo.open")}
+          </Button>
+          {addTodo.form}
+        </>
+      }
       count={todo.data ? items.length : null}
       countText={tn("today.todo.count", items.length)}
       summary={todo.data ? (items.length > 0 ? String(items.length) : t("today.rail.nothing")) : ""}

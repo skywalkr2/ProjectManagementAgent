@@ -143,7 +143,7 @@ test("a refusal is said in the toast and the form stays open", async () => {
   expect(screen.getByRole("textbox", { name: "What to do" })).toBeInTheDocument();
 });
 
-test("Today has one quiet Add a to-do beside the hand-in, and Today's to-do row carries the repeat mark in words", async () => {
+test("Today's to-do row carries the repeat mark in words", async () => {
   const weekly: S["RepeatView"] = {
     phrase: "every Friday",
     rule: "FREQ=WEEKLY;BYDAY=FR",
@@ -163,9 +163,11 @@ test("Today has one quiet Add a to-do beside the hand-in, and Today's to-do row 
   expect(within(rows[1] as HTMLElement).queryByText("Repeats")).toBeNull();
 });
 
-test("Today's header has Add a to-do as a quiet button", async () => {
+test("Add a to-do is a quiet button with Today's to-dos, not in the heading, which stays one row", async () => {
   fakeApi({ "GET projects": () => [], "GET people": () => [ME] });
-  renderApp(<Today workspace="Demo" onView={() => undefined} onAddSource={() => undefined} onOpenGuide={() => undefined} onOpenRecord={() => undefined} />);
+  const { container } = renderApp(<Today workspace="Demo" onView={() => undefined} onAddSource={() => undefined} onOpenGuide={() => undefined} onOpenRecord={() => undefined} />);
   const button = await screen.findByRole("button", { name: "Add a to-do" });
   expect(button).toHaveAttribute("data-variant", "ghost");
+  expect(button.closest('[data-col="todo"]')).not.toBeNull();
+  expect(container.querySelector("h1")?.parentElement?.contains(button)).toBe(false);
 });
