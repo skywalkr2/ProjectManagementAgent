@@ -1027,6 +1027,22 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 185. Mail and calendar acts, built in part (2026-10-22; S1b-2a, engine, API and plugin API 0.3.88)
+
+- **Design 6.12, "Mail and calendar acts":** the act names its `action`, what it is `about` (saved messages for the new
+  `mailbox` kind, one calendar entry for an event act), the event fields and its `account`; the fingerprint covers all of
+  them, each thing's service id as it resolves now, so a changed service id, account or event field makes the yes stale.
+  An answer's recipient is the organizer, called out like any recipient. Acting is the setting `watch.acting` (accounts,
+  off until the person ticks one; never offered to an ask, so no rule, input or add-on can name it); an account that is
+  off gets drafts carried out by Copy, and the publisher never calls a channel for it. Channels declare `actions` and
+  `accounts`; a draft whose action its channel doesn't declare is refused. `act.undo` and the publisher's `act.undone`
+  and `act.undo_failed` take a sent mailbox act or a created event back.
+| Where | Before | Now |
+|---|---|---|
+| Plugin API | 0.3.87: `registrar.channel(name, label, kinds, send, status, undo, template_version)` | 0.3.88: `actions`, `accounts`; `undo(act, service_id)` returns `ChannelUndone()` or `ChannelFailed`; `OutgoingAct` carries `action`, `about`, `account` and the event fields; `registrar.sign_in(..., acting_scopes=)` |
+| Settings (4.6) | None | `watch.acting` (accounts the assistant may act on, picked from a live list), `language.messages.undo_no_answer`, each with a description, a default and demo values in both fictional workspaces |
+| API | `GET /api/acts?status=`; no undo | several `status` values and a `limit`; `POST /api/acts/{id}/undo`; `ActView` carries action, about, account, event fields and why Copy carries it; `POST /api/sign-ins/{name}/start?acting=true`; the sign-in view says which accounts are let act |
+
 ## 184. Repeating to-dos, designed (2026-10-22; S2, designed)
 
 - **Design 6.32, "Repeating to-dos":** a repeat typed in the person's words and said back before it is kept; each

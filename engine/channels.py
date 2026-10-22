@@ -2,7 +2,8 @@
 
 A channel is registered by a plugin (`registrar.channel`) or shipped by the core. It is called only by the publisher,
 and only for an act the person approved, whose fingerprint still matches. It declares what it can do: send, say what
-happened to an attempt by its key, and undo. The core ships `copy`, whose send is the person's own (they copy the
+happened to an attempt by its key, and undo; which actions it takes for each kind of target; and which kinds of
+account it serves. The core ships `copy`, whose send is the person's own (they copy the
 approved text and mark it sent), and `FakeChannel`, which tests use to play every answer a service can give.
 
 A channel never writes records and never sees anything but the act it is handed.
@@ -13,6 +14,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
+
+from engine.ops import ACT_ACTIONS
 
 
 @dataclass(frozen=True)
@@ -25,11 +28,27 @@ class OutgoingRecipient:
 
 
 @dataclass(frozen=True)
+class OutgoingAbout:
+    """One record an act is about, with the service's own id of it as it resolves now: `id` is the record's id in the
+    workspace; `service_id` is what the service calls the saved message or calendar entry; `uid` and `sequence` are a
+    calendar entry's, where the source gave them."""
+
+    id: str
+    service_id: str | None = None
+    uid: str | None = None
+    sequence: int | None = None
+
+
+@dataclass(frozen=True)
 class OutgoingAct:
-    """What a channel is handed to carry out: exactly what the person approved. `kind` is `message`, `calendar` or
-    `file`; `parts` is the content by part name; `recipients` are those of a message, `calendar` and `when` those of an
-    event and `folder` that of a file. `template` is the name and version of the template the content was rendered from,
-    or None."""
+    """What a channel is handed to carry out: exactly what the person approved. `kind` is `message`, `mailbox`,
+    `calendar` or `file`, and `action` what it does (`send`, `reply`, `archive`, `answer` and so on). `parts` is the
+    content by part name; `recipients` are those of a message (for an answer to an invitation, the organizer);
+    `about` is what a mailbox act or an event act is about; `account` is the account that carries it. For an event,
+    `calendar`, `when`, `start`, `end`, `title`, `alarm_minutes`; for an answer, `answer` (`accepted`, `tentative`,
+    `declined` or `propose`) and the proposed times; `folder` is a file's folder or the one a mailbox act moves messages
+    to, and `label` the label it applies. `template` is the name and version of the template the content was rendered
+    from, or None."""
 
     id: str
     kind: str
@@ -39,6 +58,17 @@ class OutgoingAct:
     when: str | None = None
     folder: str | None = None
     template: tuple[str, str] | None = None
+    action: str = ""
+    about: tuple[OutgoingAbout, ...] = ()
+    account: str | None = None
+    label: str | None = None
+    start: str | None = None
+    end: str | None = None
+    title: str | None = None
+    alarm_minutes: int | None = None
+    answer: str | None = None
+    proposed_start: str | None = None
+    proposed_end: str | None = None
 
 
 @dataclass(frozen=True)
@@ -56,6 +86,11 @@ class ChannelFailed:
 
     kind: Literal["auth", "refused", "outage", "offline"]
     reason: str
+
+
+@dataclass(frozen=True)
+class ChannelUndone:
+    """The answer to `undo` when the service took the act back."""
 
 
 @dataclass(frozen=True)
@@ -77,15 +112,28 @@ class ChannelRegistration:
     kinds: tuple[str, ...]
     send: Callable[[OutgoingAct, str], Any] | None
     status: Callable[[str], Any] | None = None
-    undo: Callable[[str], Any] | None = None
+    undo: Callable[[OutgoingAct, str], Any] | None = None
     template_version: Callable[[str], str | None] | None = None
+    #: What it does, by kind of target: `{"message": ["send", "reply"], "mailbox": ["archive"]}`. Empty means it takes
+    #: the first action of each of its kinds only.
+    actions: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    #: The kinds of account it serves (a sign-in's name, or `mailbox`); empty means it needs no account.
+    accounts: tuple[str, ...] = ()
     #: True for a channel the person carries out themselves (`copy`): the publisher never calls it, and the act is
     #: sent only when the person says it was.
     manual: bool = False
 
+    def takes(self, kind: str, action: str) -> bool:
+        """Whether the channel declares this action for this kind of target. A channel that lists none takes the first
+        action of each kind it serves."""
+        if kind not in self.kinds:
+            return False
+        declared = self.actions.get(kind)
+        return action in declared if declared else action == ACT_ACTIONS[kind][0]
+
 
 #: The core's own channel: the person copies the approved text and marks it sent.
-COPY = ChannelRegistration("copy", "Copy", ("message", "calendar", "file"), send=None, manual=True)
+COPY = ChannelRegistration("copy", "Copy", ("message", "mailbox", "calendar", "file"), send=None, manual=True)
 
 
 @dataclass
@@ -93,16 +141,22 @@ class FakeChannel:
     """A channel for tests, with no service behind it. `mode` is what `send` does: `succeed` (the act goes out and the
     answer is `ChannelSent`), `fail` (`ChannelFailed` with `failure`; nothing goes out), `timeout` (nothing goes out
     and the call raises `TimeoutError`) or `timeout_after_send` (it goes out, then the call raises `TimeoutError`).
-    `answer` is what `status` says: `truth` (sent for a key that went out, not sent for any other), `unknown` (it can't
-    say) or `no_status` for a channel that has no status capability at all. `templates` is the version each template
-    has now. What went out is in `delivered`, one (act, attempt key) for each call that reached the service; `calls`
-    is every call to `send` and `status_calls` the keys `status` was asked about."""
+    `undo_mode` is what `undo` does (a mailbox act or a created event taken back) and `undoes` False is a channel
+    that declares no undo. It declares every action of every kind in `kinds`. `answer` is what `status` says: `truth`
+    (sent for a key that went out, not sent for any other), `unknown` (it can't say) or `no_status` for a channel that
+    has no status capability at all. `templates` is the version each template has now. What went out is in
+    `delivered`, one (act, attempt key) for each call that reached the service; `calls` is every call to `send` and
+    `status_calls` the keys `status` was asked about."""
 
     mode: Literal["succeed", "fail", "timeout", "timeout_after_send"] = "succeed"
     failure: ChannelFailed = field(default_factory=lambda: ChannelFailed("outage", "The service was down."))
     answer: Literal["truth", "unknown", "no_status"] = "truth"
     templates: dict[str, str] = field(default_factory=dict)
-    kinds: tuple[str, ...] = ("message", "calendar", "file")
+    kinds: tuple[str, ...] = ("message", "mailbox", "calendar", "file")
+    accounts: tuple[str, ...] = ()
+    undoes: bool = True
+    undo_mode: Literal["succeed", "fail", "timeout"] = "succeed"
+    undone: list[tuple[OutgoingAct, str]] = field(default_factory=list)
     delivered: list[tuple[OutgoingAct, str]] = field(default_factory=list)
     calls: list[tuple[OutgoingAct, str]] = field(default_factory=list)
     status_calls: list[str] = field(default_factory=list)
@@ -129,6 +183,16 @@ class FakeChannel:
             return ChannelSent(self._id_of(attempt_key))
         return ChannelNotSent()
 
+    def undo(self, act: OutgoingAct, service_id: str) -> Any:
+        """Takes a sent act back: `undo_mode` says whether it works (`ChannelUndone`), is refused (`ChannelFailed`) or
+        gets no answer (raises `TimeoutError`). Every call is in `undone`."""
+        self.undone.append((act, service_id))
+        if self.undo_mode == "fail":
+            return self.failure
+        if self.undo_mode == "timeout":
+            raise TimeoutError("no answer")
+        return ChannelUndone()
+
     def template_version(self, name: str) -> str | None:
         return self.templates.get(name)
 
@@ -140,5 +204,8 @@ class FakeChannel:
             self.kinds,
             send=self.send,
             status=None if self.answer == "no_status" else self.status,
+            undo=self.undo if self.undoes else None,
             template_version=self.template_version,
+            actions={kind: tuple(ACT_ACTIONS[kind]) for kind in self.kinds},
+            accounts=self.accounts,
         )

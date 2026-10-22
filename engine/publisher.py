@@ -11,6 +11,9 @@ for the key, so the act is `approved` again and is never sent by itself; a chann
 makes it `uncertain`. It runs at start and before any send, so nothing is sent twice. An `auth` failure never
 retries: the act is `failed` and waits for the person. Every change of state is an op through the applier, so each is
 in the ledger; nothing here writes a record any other way.
+
+`undo` takes a sent act back where its channel can (a mailbox act, an event it created), only after the person asked
+(`act.undo`), by calling the channel once and recording `undone`, or the reason it could not, with the act left sent.
 """
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ from typing import Any
 
 from engine import acts, outward
 from engine.applier import apply_for_publisher
-from engine.channels import ChannelFailed, ChannelNotSent, ChannelSent
+from engine.channels import ChannelFailed, ChannelNotSent, ChannelSent, ChannelUndone
 from engine.config import Config
 from engine.storage import Store, StoreError
 
@@ -92,6 +95,8 @@ class Publisher:
         if now_print != covered["fingerprint"]:
             self._stale(act_id, acts.what_changed(covered["covers"], now_parts))
             return SendResult(act_id, "stale")
+        if (why := acts.acting_problem(self.cfg, self.store.plugins, data)) is not None:
+            raise StoreError(why)
         outward.check_outgoing(view, self.cfg, acts.part_labels(view, self.cfg, data))
         from engine.names import People
 
@@ -142,6 +147,45 @@ class Publisher:
             )
             return SendResult(act_id, "failed", answer.reason)
         return SendResult(act_id, "sending")  # no clear answer: it stays `sending`, and the service is asked next
+
+    # ---- taking back -------------------------------------------------------------------------------------------------
+
+    def undo(self, act_id: str) -> SendResult:
+        """Take back a sent act the person asked to take back: the channel is called once. `undone` when it did; when it
+        could not (a refusal, or no clear answer), the act stays sent and says why. Raises StoreError for an act the
+        person hasn't asked to take back, or whose channel can't."""
+        view = self.store.read()
+        found = view.get("act", act_id)
+        if found is None:
+            raise StoreError(f"act {act_id} doesn't exist")
+        data = found.data
+        if data["status"] != "sent" or not data.get("undo_requested_at"):
+            raise StoreError(
+                f"this act can't be taken back: it is {data['status']}, and taking it back wasn't asked for"
+            )
+        channel = acts.channel_of(self.store.plugins, data["channel"])
+        if channel is None or channel.undo is None:
+            raise StoreError("the channel that carried it out can't take it back")
+        outgoing = acts.outgoing(view, act_id, data)
+        at = self.now().isoformat()
+        try:
+            answer = channel.undo(outgoing, data["service_id"])
+        except Exception as err:  # no clear answer: the act stays sent and the person looks in the service
+            log.warning("the channel %s gave no answer to undoing act %s: %s", channel.name, act_id, type(err).__name__)
+            answer = None
+        if isinstance(answer, ChannelUndone):
+            self._op({"op": "act.undone", "id": act_id, "at": at}, "A sent act was taken back")
+            return SendResult(act_id, "undone")
+        failure = (
+            answer
+            if isinstance(answer, ChannelFailed)
+            else ChannelFailed("outage", self.cfg.language.messages.undo_no_answer)
+        )
+        self._op(
+            {"op": "act.undo_failed", "id": act_id, "kind": failure.kind, "reason": failure.reason, "at": at},
+            "A sent act could not be taken back",
+        )
+        return SendResult(act_id, "failed", failure.reason)
 
     # ---- settling what an earlier attempt left open ------------------------------------------------------------------
 

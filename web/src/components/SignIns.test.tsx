@@ -19,6 +19,7 @@ function signIn(name: string, extra: Partial<S["SignInView"]> = {}): S["SignInVi
     set_aside: false,
     several: false,
     default_unusable: false,
+    can_act: false,
     own_app_steps: [],
     ...extra,
   };
@@ -588,6 +589,7 @@ const account = (address: string | null, key: string, status: "signed_in" | "exp
   address,
   status,
   missing: [] as string[],
+  acting: false,
 });
 
 test("a service that names its accounts lists each by its address with Sign out on each, and Add another account", async () => {

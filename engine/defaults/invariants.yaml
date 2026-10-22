@@ -25,6 +25,7 @@ invariants:
       - act.withdraw
       - act.confirm_sent
       - act.resend
+      - act.undo
     line: Only the person can make this change; from the assistant it is refused, except marking a question already asked when the person's own note says so.
     seed: >-
       Some changes are the person's alone: editing text, accepting or discarding a proposed version, editing a
@@ -200,10 +201,10 @@ invariants:
     line: Only the person's own yes approves an act, on the exact act their screen showed; the assistant and add-ons may only draft.
     seed: >-
       Never approve anything that goes outside the workspace. Draft it and leave the yes to the person: their yes
-      covers the exact content, the recipients' addresses, the channel and the template, and nothing you write can
+      covers the exact content, the recipients' addresses, what it is about, the account, the channel and the template, and nothing you write can
       give it.
   act-publisher-only:
-    ops: [act.sending, act.sent, act.failed, act.uncertain, act.stale, act.reopen]
+    ops: [act.sending, act.sent, act.failed, act.uncertain, act.stale, act.reopen, act.undone, act.undo_failed]
     line: What happened when an act was carried out is recorded by the publisher alone.
     seed: >-
       Never record that something was sent, failed or went stale. Those states are written by the publisher when it

@@ -7,9 +7,13 @@ has now. `fingerprint` recomputes it from the act and the workspace as they are;
 recorded means the yes no longer covers this act.
 
 Every change of state is an op the applier checks and writes to the ledger. The person's ops are `act.draft` (also the
-assistant's and an add-on's, which wait for the person), `act.edit`, `act.approve`, `act.withdraw`, `act.confirm_sent`
-and `act.resend`; the publisher's own are `act.sending`, `act.sent`, `act.failed`, `act.uncertain`, `act.stale` and
-`act.reopen` (`engine/publisher.py`). Nothing here calls a channel.
+assistant's and an add-on's, which wait for the person), `act.edit`, `act.approve`, `act.withdraw`, `act.confirm_sent`,
+`act.resend` and `act.undo`; the publisher's own are `act.sending`, `act.sent`, `act.failed`, `act.uncertain`,
+`act.stale`, `act.reopen`, `act.undone` and `act.undo_failed` (`engine/publisher.py`). Nothing here calls a channel.
+
+An act says what it does (`action`), what it is about (`about`: saved messages, or a calendar entry) and which account
+carries it. The yes covers the action, each thing it is about with the service's own id as it resolves now, the event
+fields and the account.
 """
 
 from __future__ import annotations
@@ -20,9 +24,11 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from engine import audience, outward
-from engine.channels import OutgoingAct, OutgoingRecipient
+from engine import act_accounts, audience, outward
+from engine.channels import COPY, OutgoingAbout, OutgoingAct, OutgoingRecipient
 from engine.ops import (
+    ACT_ACTIONS,
+    ACT_UNDOABLE,
     ActApproveOp,
     ActConfirmSentOp,
     ActDraftOp,
@@ -35,6 +41,9 @@ from engine.ops import (
     ActSentOp,
     ActStaleOp,
     ActUncertainOp,
+    ActUndoFailedOp,
+    ActUndoneOp,
+    ActUndoOp,
     ActWithdrawOp,
     OpModel,
 )
@@ -45,6 +54,8 @@ from engine.storage.store import Tx
 STATES = ("draft", "approved", "sending", "sent", "failed", "uncertain", "stale", "withdrawn", "undone")
 #: Where a person's edit, a take-back or a new yes may start from.
 EDITABLE = ("draft", "approved", "stale", "failed")
+#: The event fields of a target, kept in the fingerprint when set.
+EVENT_FIELDS = ("start", "end", "title", "alarm_minutes", "answer", "proposed_start", "proposed_end", "label")
 APPROVABLE = ("draft", "stale", "failed")
 #: What a callout says about a recipient, in the order they are listed.
 CALLOUT_REASONS = ("new", "outside", "untrusted", "flagged")
@@ -91,10 +102,45 @@ def template_version_now(plugins: Any, data: Mapping[str, Any]) -> str | None:
     return channel.template_version(template["name"])
 
 
-def components(view: Any, data: Mapping[str, Any], template_now: str | None) -> dict[str, str]:
-    """The parts of the fingerprint, each hashed on its own, so a difference can say what changed."""
+def service_ref(view: Any, record_id: str) -> dict[str, Any]:
+    """What a record an act is about is to the service, as it resolves now: a saved message's service id (the key the
+    watched source gave it, a Message-ID for a plain mailbox) and a calendar entry's UID (its source key), with the
+    entry's time and state, which move when its organizer changes it. A record that is gone says so."""
+    found = view.get("source", record_id)
+    if found is not None:
+        watched = found.data.get("watched") or {}
+        return {"id": record_id, "service_id": watched.get("key"), "source": watched.get("source")}
+    entry = view.get("event", record_id)
+    if entry is not None:
+        data = entry.data
+        return {
+            "id": record_id,
+            "service_id": data.get("key"),
+            "uid": data.get("key"),
+            "sequence": None,
+            "start": data.get("start"),
+            "end": data.get("end"),
+            "cancelled": bool(data.get("cancelled")),
+        }
+    return {"id": record_id, "missing": True}
+
+
+def about_refs(view: Any, data: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The records the act is about, each as it resolves now."""
+    return [service_ref(view, rid) for rid in data["target"].get("about") or []]
+
+
+def what(data: Mapping[str, Any]) -> str:
+    """The action an act does: the one it names, else the first of its kind's (an act made before acts named one)."""
     target = data["target"]
-    resolved = {
+    return target.get("action") or ACT_ACTIONS[target["kind"]][0]
+
+
+def components(view: Any, data: Mapping[str, Any], template_now: str | None) -> dict[str, str]:
+    """The parts of the fingerprint, each hashed on its own, so a difference can say what changed. What an act did not
+    use before acts named an action, their things, an event or an account adds nothing, so an older yes still holds."""
+    target = data["target"]
+    resolved: dict[str, Any] = {
         "kind": target["kind"],
         "recipients": [
             {
@@ -108,13 +154,23 @@ def components(view: Any, data: Mapping[str, Any], template_now: str | None) -> 
         "when": target.get("when"),
         "folder": target.get("folder"),
     }
+    if target.get("action") and target["action"] != ACT_ACTIONS[target["kind"]][0]:
+        resolved["action"] = target["action"]
+    for name in EVENT_FIELDS:
+        if target.get(name) is not None:
+            resolved[name] = target[name]
     template = data.get("template")
-    return {
+    parts = {
         "channel": _hash(data["channel"]),
         "target": _hash(resolved),
         "content": _hash(dict(data.get("parts") or {})),
         "template": _hash(None if not template else {**template, "now": template_now}),
     }
+    if target.get("about"):
+        parts["about"] = _hash(about_refs(view, data))
+    if data.get("account"):
+        parts["account"] = _hash(data["account"].lower())
+    return parts
 
 
 def fingerprint(view: Any, data: Mapping[str, Any], template_now: str | None = None) -> str:
@@ -129,8 +185,10 @@ def current_fingerprint(view: Any, plugins: Any, data: Mapping[str, Any]) -> tup
 
 
 def what_changed(covered: Mapping[str, str], now: Mapping[str, str]) -> list[str]:
-    """Which parts of what the yes covered are different now (`channel`, `target`, `content`, `template`)."""
-    return [name for name in ("channel", "target", "content", "template") if covered.get(name) != now.get(name)]
+    """Which parts of what the yes covered are different now (`channel`, `target`, `about`, `account`, `content`,
+    `template`)."""
+    names = ("channel", "target", "about", "account", "content", "template")
+    return [name for name in names if covered.get(name) != now.get(name)]
 
 
 @dataclass(frozen=True)
@@ -178,7 +236,8 @@ def callouts(view: Any, pm: str | None, data: Mapping[str, Any], *, act_id: str 
 
 
 def outgoing(view: Any, act_id: str, data: Mapping[str, Any]) -> OutgoingAct:
-    """What the channel is handed: the act's exact content with each recipient's address as it resolves now."""
+    """What the channel is handed: the act's exact content with each recipient's address as it resolves now, and each
+    thing it is about with the service's id as it resolves now."""
     target = data["target"]
     template = data.get("template")
     return OutgoingAct(
@@ -193,15 +252,33 @@ def outgoing(view: Any, act_id: str, data: Mapping[str, Any]) -> OutgoingAct:
         when=target.get("when"),
         folder=target.get("folder"),
         template=(template["name"], template["version"]) if template else None,
+        action=what(data),
+        about=tuple(
+            OutgoingAbout(
+                id=ref["id"], service_id=ref.get("service_id"), uid=ref.get("uid"), sequence=ref.get("sequence")
+            )
+            for ref in about_refs(view, data)
+        ),
+        account=data.get("account"),
+        label=target.get("label"),
+        start=target.get("start"),
+        end=target.get("end"),
+        title=target.get("title"),
+        alarm_minutes=target.get("alarm_minutes"),
+        answer=target.get("answer"),
+        proposed_start=target.get("proposed_start"),
+        proposed_end=target.get("proposed_end"),
     )
 
 
 def _target_name(view: Any, data: Mapping[str, Any]) -> str:
     target = data["target"]
-    if target["kind"] == "calendar":
-        return str(target.get("calendar") or "")
     if target["kind"] == "file":
         return str(target.get("folder") or "")
+    if target["kind"] == "mailbox":
+        return ""
+    if target["kind"] == "calendar" and not target.get("recipients"):
+        return str(target.get("title") or target.get("calendar") or "")
     names = []
     for r in target.get("recipients") or []:
         found = view.get("person", r["person"]) if r.get("person") else None
@@ -232,6 +309,65 @@ def sensitivity_of(view: Any, sources: list[str]) -> str:
     """The act's data level: the highest level of the saved inputs it draws on."""
     found = (view.get("source", s) for s in sources)
     return highest(["internal", *(r.data.get("sensitivity") for r in found if r is not None)])
+
+
+def route(
+    tx: Any,
+    ctx: Any,
+    channel_name: str,
+    kind: str,
+    action: str,
+    account: str | None,
+    *,
+    about: list[str],
+    in_reply_to: str | None,
+) -> tuple[str, str | None, str | None]:
+    """The channel and account an act goes through: the channel the draft names (or, for an edit, the one it first
+    named), the account (named, or the one the message or invitation came in on, or the one last picked) and, when
+    acting is off for that account, Copy instead. Returns (channel, intended channel or None, account). Raises
+    StoreError
+    with the reason when the channel can't do it or doesn't serve the account."""
+    channel = channel_of(ctx.store.plugins, channel_name)
+    if channel is None:
+        raise StoreError(f"there is no channel {channel_name}")
+    if kind not in channel.kinds:
+        raise StoreError(f"the channel {channel_name} doesn't take a {kind}")
+    if not channel.manual and not channel.takes(kind, action):
+        declared = ", ".join(channel.actions.get(kind) or ACT_ACTIONS[kind][:1])
+        raise StoreError(f"the channel {channel_name} can't {action} for a {kind} act: it can {declared}")
+    if account is None:
+        ids = [in_reply_to] if action in ("reply", "reply_all", "forward") and in_reply_to else list(about)
+        came_in = {a.lower(): a for rid in ids if (a := act_accounts.of_record(tx, ctx.store, ctx.cfg, rid))}
+        if len(came_in) > 1:
+            raise StoreError("these came in on different accounts; draft one act for each account")
+        account = next(iter(came_in.values()), None)
+        if account is None and action in ("send", "create"):
+            account = act_accounts.last_picked(tx)
+    if channel.accounts:
+        if account is None:
+            raise StoreError("say which account carries it")
+        if act_accounts.kind_of(account) not in channel.accounts:
+            raise StoreError(f"the channel {channel_name} doesn't serve that account")
+        if not act_accounts.acting_on(ctx.cfg, account):
+            return COPY.name, channel_name, account
+    return channel_name, None, account
+
+
+def acting_problem(cfg: Any, plugins: Any, data: Mapping[str, Any]) -> str | None:
+    """Why the publisher may not call the act's channel: its account isn't switched on for acting (the person turned it
+    off after the yes). None when it may."""
+    channel = channel_of(plugins, data["channel"])
+    account = data.get("account")
+    if channel is None or channel.manual or not channel.accounts or account is None:
+        return None
+    if not act_accounts.acting_on(cfg, account):
+        return "acting is off for the account this goes through: turn it on in Settings, or copy it"
+    return None
+
+
+def undoable(data: Mapping[str, Any]) -> bool:
+    """Whether the act's action is one that can be taken back once it went out (a mailbox act, an event created)."""
+    return (data["target"]["kind"], what(data)) in ACT_UNDOABLE
 
 
 # ---- the checks the applier runs (they name no state of their own) -------------------------------------------------
@@ -365,26 +501,71 @@ def _made_by(ctx: Any) -> str:
     return "person" if ctx.actor == "pm" else "assistant"
 
 
+def _about(tx: Tx, op: ActDraftOp) -> list[str]:
+    """The records a mailbox act or an event act is about, each checked to be the right kind of record."""
+    target = op.target
+    kind = "source" if target.kind == "mailbox" else "event"
+    for rid in target.about:
+        if tx.get(kind, rid) is None:
+            raise StoreError(f"{rid} isn't {'a saved message' if kind == 'source' else 'a calendar entry'}")
+    if target.kind not in ("mailbox", "calendar") and target.about:
+        raise StoreError("only a mailbox or calendar act is about saved records")
+    return list(dict.fromkeys(target.about))
+
+
+def _organizer(tx: Tx, op: ActDraftOp) -> list[ActRecipientIn]:
+    """The recipient of an answer to an invitation: the organizer the calendar entry names, whose address came from the
+    invitation's own text when the entry did."""
+    if op.target.kind != "calendar" or op.target.what != "answer":
+        return list(op.target.recipients)
+    entry = tx.get("event", op.target.about[0])
+    organizer = (entry.data.get("organizer") or {}) if entry is not None else {}
+    address = (organizer.get("address") or "").strip()
+    if not address:
+        raise StoreError("that invitation names no organizer to answer")
+    return [ActRecipientIn(address=address, from_text=entry.data.get("trust") == "untrusted")]
+
+
 def _draft(tx: Tx, op: ActDraftOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
-    channel = channel_of(ctx.store.plugins, op.channel)
-    if channel is None:
-        raise StoreError(f"there is no channel {op.channel}")
-    if op.target.kind not in channel.kinds:
-        raise StoreError(f"the channel {op.channel} doesn't take a {op.target.kind}")
+    about = _about(tx, op)
+    channel, intended, account = route(
+        tx,
+        ctx,
+        op.channel,
+        op.target.kind,
+        op.target.what,
+        op.account,
+        about=about,
+        in_reply_to=op.in_reply_to,
+    )
     for source in [*op.sources, *([op.in_reply_to] if op.in_reply_to else [])]:
         if tx.get("source", source) is None:
             raise StoreError(f"source {source} doesn't exist")
-    sources = list(dict.fromkeys([*op.sources, *([op.in_reply_to] if op.in_reply_to else [])]))
+    saved_about = about if op.target.kind == "mailbox" else []
+    sources = list(dict.fromkeys([*op.sources, *([op.in_reply_to] if op.in_reply_to else []), *saved_about]))
+    target = op.target
     made = tx.create(
         "act",
         {
-            "channel": op.channel,
+            "channel": channel,
+            "account": account,
+            "intended_channel": intended,
             "target": {
-                "kind": op.target.kind,
-                "recipients": _resolved(tx, ctx, op.target.recipients),
-                "calendar": op.target.calendar,
-                "when": op.target.when,
-                "folder": op.target.folder,
+                "kind": target.kind,
+                "action": target.what,
+                "recipients": _resolved(tx, ctx, _organizer(tx, op)),
+                "about": about,
+                "calendar": target.calendar,
+                "when": target.when,
+                "folder": target.folder,
+                "label": target.label,
+                "start": target.start,
+                "end": target.end,
+                "title": target.title,
+                "alarm_minutes": target.alarm_minutes,
+                "answer": target.answer,
+                "proposed_start": target.proposed_start,
+                "proposed_end": target.proposed_end,
             },
             "parts": dict(op.parts),
             "template": op.template.model_dump(mode="json") if op.template else None,
@@ -419,9 +600,24 @@ def _edit(tx: Tx, op: ActEditOp, ctx: Any, w: WriteContext) -> list[dict[str, An
     _need(found, EDITABLE, "it can't be changed")
     changes: dict[str, Any] = {}
     if op.parts is not None:
-        if not any(str(v).strip() for v in op.parts.values()):
+        if found.data["target"]["kind"] == "mailbox":
+            raise StoreError("a mailbox act has no content to change")
+        if found.data["target"]["kind"] in ("message", "file") and not any(str(v).strip() for v in op.parts.values()):
             raise StoreError("an act has some content")
         changes["parts"] = dict(op.parts)
+    if op.account is not None:
+        target = found.data["target"]
+        channel, intended, account = route(
+            tx,
+            ctx,
+            found.data.get("intended_channel") or found.data["channel"],
+            target["kind"],
+            what(found.data),
+            op.account,
+            about=target.get("about") or [],
+            in_reply_to=found.data.get("in_reply_to"),
+        )
+        changes.update({"channel": channel, "intended_channel": intended, "account": account})
     if op.recipients is not None:
         if found.data["target"]["kind"] != "message":
             raise StoreError("only a message has recipients")
@@ -581,6 +777,50 @@ def _reopen(tx: Tx, op: ActReopenOp, ctx: Any, w: WriteContext) -> list[dict[str
     return [{"kind": "act", "id": found.id}]
 
 
+def _undo(tx: Tx, op: ActUndoOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
+    found = _get(tx, op.id)
+    _need(found, ("sent",), "it can't be taken back")
+    data = found.data
+    if data["sent_by"] != "publisher":
+        raise StoreError("you carried this out yourself, so it can't be taken back from here")
+    if not undoable(data):
+        raise StoreError(f"it can't be taken back: a {what(data).replace('_', ' ')} can't be undone once it is out")
+    channel = channel_of(ctx.store.plugins, data["channel"])
+    if channel is None or channel.undo is None:
+        raise StoreError("the channel that carried it out can't take it back")
+    if data.get("undo_requested_at"):
+        raise StoreError("taking it back was already asked for")
+    tx.update(
+        "act",
+        found.id,
+        {"undo_requested_at": ctx.store.clock(), "undo_failure": None},
+        w,
+        read_version=found.version,
+    )
+    return [{"kind": "act", "id": found.id}]
+
+
+def _undone(tx: Tx, op: ActUndoneOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
+    found = _get(tx, op.id)
+    _need(found, ("sent",), "it can't be undone")
+    tx.update(
+        "act",
+        found.id,
+        {"status": "undone", "undone_at": op.at.isoformat(), "undo_requested_at": None},
+        w,
+        read_version=found.version,
+    )
+    return [{"kind": "act", "id": found.id}]
+
+
+def _undo_failed(tx: Tx, op: ActUndoFailedOp, ctx: Any, w: WriteContext) -> list[dict[str, Any]]:
+    found = _get(tx, op.id)
+    _need(found, ("sent",), "taking it back can't have failed")
+    failure = {"kind": op.kind, "reason": op.reason, "at": op.at.isoformat()}
+    tx.update("act", found.id, {"undo_failure": failure, "undo_requested_at": None}, w, read_version=found.version)
+    return [{"kind": "act", "id": found.id}]
+
+
 _APPLY: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "act.draft": _draft,
     "act.edit": _edit,
@@ -594,6 +834,9 @@ _APPLY: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "act.uncertain": _uncertain,
     "act.stale": _stale,
     "act.reopen": _reopen,
+    "act.undo": _undo,
+    "act.undone": _undone,
+    "act.undo_failed": _undo_failed,
 }
 
 
@@ -614,6 +857,8 @@ def undo_problem(tx: Tx, entries: list[dict[str, Any]]) -> str | None:
         name = e["op"].split("#", 1)[0]
         if name in ACT_PUBLISHER_OPS:
             return "what happened to an act outside the workspace can't be undone"
+        if name == "act.undo":
+            return "taking back what an act did outside the workspace can't be undone"
         if name == "act.draft":
             current = tx.get("act", e["record_id"], include_deleted=True)
             if current is not None and not current.deleted and current.data["status"] != "draft":

@@ -1235,49 +1235,137 @@ class ActRecipientIn(BaseModel):
         return self
 
 
+#: What an act can do, by the kind of target (design 6.12). The first of a kind's actions is what a draft that names
+#: none does, so a message with no action is a new message, as before.
+ACT_ACTIONS: dict[str, tuple[str, ...]] = {
+    "message": ("send", "reply", "reply_all", "forward"),
+    "mailbox": ("archive", "move", "label", "mark_read"),
+    "calendar": ("create", "move", "cancel", "answer"),
+    "file": ("write",),
+}
+#: The actions that answer a saved message, and so name it.
+ACT_REPLY_ACTIONS = ("reply", "reply_all", "forward")
+#: The actions a channel can take back after they were carried out: a mailbox act, and an event it created. A message
+#: others received, and a change or an answer others were told of, can't be taken back.
+ACT_UNDOABLE: frozenset[tuple[str, str]] = frozenset(
+    [("mailbox", a) for a in ACT_ACTIONS["mailbox"]] + [("calendar", "create")]
+)
+#: How a person's answer to an invitation reads.
+ACT_ANSWERS = ("accepted", "tentative", "declined", "propose")
+
+
+def _filled(value: str | None) -> bool:
+    return bool((value or "").strip())
+
+
 class ActTargetIn(BaseModel):
-    """Where an act goes: a message's recipients, an event's calendar and time, or a file's folder."""
+    """Where an act goes and what it does: a message's recipients, a mailbox's saved messages, a calendar's event or an
+    answer to one, or a file's folder."""
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: Literal["message", "calendar", "file"] = Field(description="message, calendar or file.")
+    kind: Literal["message", "mailbox", "calendar", "file"] = Field(description="message, mailbox, calendar or file.")
+    action: str | None = Field(
+        None,
+        description="What it does: for a message send, reply, reply_all or forward; for a mailbox archive, move, label "
+        "or mark_read; for a calendar create, move, cancel or answer; for a file write. Left out, the kind's first.",
+    )
     recipients: list[ActRecipientIn] = Field(default_factory=list, description="Who a message goes to.")
+    about: list[str] = Field(
+        default_factory=list,
+        description="The records it is about: the saved messages a mailbox act changes, or the calendar entry an event "
+        "act moves, cancels or answers.",
+    )
     calendar: str | None = Field(None, description="The calendar an event goes on.")
     when: str | None = Field(None, description="The day or time of an event.")
-    folder: str | None = Field(None, description="The folder a file is written to.")
+    folder: str | None = Field(None, description="The folder a file is written to, or a mailbox act moves messages to.")
+    label: str | None = Field(None, description="The label a mailbox act puts on the messages.")
+    start: str | None = Field(None, description="When an event starts, as ISO 8601 text.")
+    end: str | None = Field(None, description="When an event ends, as ISO 8601 text.")
+    title: str | None = Field(None, description="What an event is called.")
+    alarm_minutes: int | None = Field(None, ge=0, le=40320, description="Minutes before the start an alarm rings.")
+    answer: Literal["accepted", "tentative", "declined", "propose"] | None = Field(
+        None, description="How an invitation is answered: accepted, tentative, declined or propose a new time."
+    )
+    proposed_start: str | None = Field(None, description="The start a proposed new time suggests.")
+    proposed_end: str | None = Field(None, description="The end a proposed new time suggests.")
+
+    @property
+    def what(self) -> str:
+        """The action this target does, the kind's first when none is named."""
+        return self.action or ACT_ACTIONS[self.kind][0]
 
     @model_validator(mode="after")
     def _complete(self) -> ActTargetIn:
+        what = self.what
+        if what not in ACT_ACTIONS[self.kind]:
+            raise ValueError(f"a {self.kind} act can't {what}: it can {', '.join(ACT_ACTIONS[self.kind])}")
         if self.kind == "message" and not any(r.role == "to" for r in self.recipients):
             raise ValueError("a message goes to at least one person")
-        if self.kind == "calendar" and not ((self.calendar or "").strip() and (self.when or "").strip()):
-            raise ValueError("a calendar act names the calendar and the time")
-        if self.kind == "file" and not (self.folder or "").strip():
+        if self.kind == "mailbox":
+            if self.recipients:
+                raise ValueError("a mailbox act has no recipients")
+            if not self.about:
+                raise ValueError("a mailbox act names the saved messages it is about")
+            if what == "move" and not _filled(self.folder):
+                raise ValueError("moving messages names the folder")
+            if what == "label" and not _filled(self.label):
+                raise ValueError("labeling messages names the label")
+        if self.kind == "calendar":
+            if self.recipients:
+                raise ValueError("an event act has no recipients: an answer goes to the organizer")
+            if what == "create":
+                if not _filled(self.calendar):
+                    raise ValueError("a calendar act names the calendar and the time")
+                if not (_filled(self.when) or (_filled(self.start) and _filled(self.end) and _filled(self.title))):
+                    raise ValueError("a calendar act names the calendar and the time")
+            else:
+                if len(self.about) != 1:
+                    raise ValueError(f"{what} names one calendar entry")
+                if what == "move" and not _filled(self.start):
+                    raise ValueError("moving an event names its new start")
+                if what == "answer":
+                    if self.answer is None:
+                        raise ValueError("an answer says accepted, tentative, declined or propose")
+                    if self.answer == "propose" and not (_filled(self.proposed_start) and _filled(self.proposed_end)):
+                        raise ValueError("proposing a new time names the proposed start and end")
+        if self.kind == "file" and not _filled(self.folder):
             raise ValueError("a file act names the folder")
         return self
 
 
 class ActDraftOp(OpModel):
-    """Draft something to go outside the workspace on the person's behalf: a message, a calendar change or a file, on a
-    channel, with its content in named parts. It sends nothing: it waits for the person's yes on this exact content. It
-    is an outbound op, so from the assistant or an add-on it waits for the person, and from outside content it is
-    refused. Undo takes the draft away while it is still a draft."""
+    """Draft something to go outside the workspace on the person's behalf: a message, a change to the mailbox, a
+    calendar change or a file, on a channel and an account, with its content in named parts. It sends nothing: it
+    waits for the person's yes on this exact content. It is an outbound op, so from the assistant or an add-on it
+    waits for the person, and from outside content it is refused. Undo takes the draft away while it is still a
+    draft."""
 
     op: Literal["act.draft"] = "act.draft"
     channel: str = Field(min_length=1, description="The channel that will carry it out.")
-    target: ActTargetIn = Field(description="Where it goes.")
-    parts: dict[str, str] = Field(description="The content in named parts, exactly as it will go.")
+    target: ActTargetIn = Field(description="Where it goes and what it does.")
+    parts: dict[str, str] = Field(
+        default_factory=dict, description="The content in named parts, exactly as it will go; a mailbox act has none."
+    )
     template: ActTemplate | None = Field(None, description="The template the content was rendered from, if any.")
     sources: list[str] = Field(default_factory=list, description="Ids of the saved inputs the content draws on.")
     in_reply_to: str | None = Field(None, description="The id of the saved message it answers, if it does.")
     project: str | None = Field(None, description="The id of the project it is about, if any.")
+    account: str | None = Field(
+        None,
+        description="The account that carries it, as the sign-in or mailbox it goes through. Left out, a reply, a "
+        "mailbox act or an answer uses the account the message or invitation came in on, and a new message the account "
+        "last picked.",
+    )
 
-    @field_validator("parts", mode="after")
-    @classmethod
-    def _has_content(cls, value: dict[str, str]) -> dict[str, str]:
-        if not any(str(v).strip() for v in value.values()):
+    @model_validator(mode="after")
+    def _complete(self) -> ActDraftOp:
+        # A mailbox act has no content and an event act's content is its fields (a note with it is optional).
+        if self.target.kind in ("message", "file") and not any(str(v).strip() for v in self.parts.values()):
             raise ValueError("an act has some content")
-        return value
+        if self.target.what in ACT_REPLY_ACTIONS and not (self.in_reply_to or "").strip():
+            raise ValueError(f"{self.target.what} names the saved message it answers")
+        return self
 
     def describe(self, view: Any = None) -> str | None:
         return "Draft something to send"
@@ -1292,10 +1380,11 @@ class ActEditOp(OpModel):
     read_version: int = Field(ge=1, description="The version of the act the person was looking at.")
     parts: dict[str, str] | None = Field(None, description="The content, replacing the parts now there.")
     recipients: list[ActRecipientIn] | None = Field(None, description="Who it goes to, replacing the list now there.")
+    account: str | None = Field(None, description="The account that carries it, replacing the one now named.")
 
     @model_validator(mode="after")
     def _changes_something(self) -> ActEditOp:
-        if self.parts is None and self.recipients is None:
+        if self.parts is None and self.recipients is None and self.account is None:
             raise ValueError("name what to change")
         return self
 
@@ -1350,6 +1439,19 @@ class ActResendOp(OpModel):
 
     def describe(self, view: Any = None) -> str | None:
         return f"Send {named(view, 'act', self.id)} again"
+
+
+class ActUndoOp(OpModel):
+    """The person takes back a sent act where its channel can: a mailbox act moved back, a label removed or a message
+    marked unread, an event it created deleted. A sent message, or a change or answer others were told of, can't be
+    taken back. The op records the person's request; the publisher then asks the channel, once, and records what
+    happened. Only the person uses it."""
+
+    op: Literal["act.undo"] = "act.undo"
+    id: str = Field(description="The id of the act.")
+
+    def describe(self, view: Any = None) -> str | None:
+        return f"Take back what {named(view, 'act', self.id)} did"
 
 
 class ActSendingOp(OpModel):
@@ -1408,6 +1510,24 @@ class ActReopenOp(OpModel):
     id: str = Field(description="The id of the act.")
     attempt_key: str = Field(min_length=1, description="The key of the attempt.")
     at: AwareDatetime = Field(description="When the channel said so.")
+
+
+class ActUndoneOp(OpModel):
+    """The channel took a sent act back. Only the publisher writes it."""
+
+    op: Literal["act.undone"] = "act.undone"
+    id: str = Field(description="The id of the act.")
+    at: AwareDatetime = Field(description="When the channel took it back.")
+
+
+class ActUndoFailedOp(OpModel):
+    """The channel could not take a sent act back, and why. The act stays sent. Only the publisher writes it."""
+
+    op: Literal["act.undo_failed"] = "act.undo_failed"
+    id: str = Field(description="The id of the act.")
+    kind: Literal["auth", "refused", "outage", "offline"] = Field(description="How the channel classified it.")
+    reason: str = Field(description="Why, in plain words for the person.")
+    at: AwareDatetime = Field(description="When it failed.")
 
 
 Op = Annotated[
@@ -1479,7 +1599,10 @@ Op = Annotated[
     | ActFailedOp
     | ActUncertainOp
     | ActStaleOp
-    | ActReopenOp,
+    | ActReopenOp
+    | ActUndoOp
+    | ActUndoneOp
+    | ActUndoFailedOp,
     Field(discriminator="op"),
 ]
 
@@ -1553,13 +1676,27 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "act.uncertain": ActUncertainOp,
     "act.stale": ActStaleOp,
     "act.reopen": ActReopenOp,
+    "act.undo": ActUndoOp,
+    "act.undone": ActUndoneOp,
+    "act.undo_failed": ActUndoFailedOp,
 }
 
 #: The outward act's ops that only the publisher writes: the states from sending onward (design 6.12).
-ACT_PUBLISHER_OPS = frozenset({"act.sending", "act.sent", "act.failed", "act.uncertain", "act.stale", "act.reopen"})
+ACT_PUBLISHER_OPS = frozenset(
+    {
+        "act.sending",
+        "act.sent",
+        "act.failed",
+        "act.uncertain",
+        "act.stale",
+        "act.reopen",
+        "act.undone",
+        "act.undo_failed",
+    }
+)
 #: The outward act's ops only the person makes: their yes, a change, a take-back and their answers about what went out.
 #: Approving has its own invariant (`act-approval`); the rest are in `PERSON_ONLY_OPS`.
-ACT_PERSON_OPS = frozenset({"act.edit", "act.withdraw", "act.confirm_sent", "act.resend"})
+ACT_PERSON_OPS = frozenset({"act.edit", "act.withdraw", "act.confirm_sent", "act.resend", "act.undo"})
 #: Every op of the outward act. All are outbound tier: none is applied on its own, by a rule or from an input.
 ACT_OPS = frozenset({"act.draft", "act.approve"}) | ACT_PERSON_OPS | ACT_PUBLISHER_OPS
 

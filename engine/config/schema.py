@@ -1601,6 +1601,11 @@ class MessageSettings(ConfigModel):
         "the message to {name}",
         description="How a message to one person is named in the reason it is held back: {name} is the person.",
     )
+    undo_no_answer: str = Field(
+        "The service gave no answer to taking this back. Look in it to see whether it was.",
+        description="The reason shown when the service gave no clear answer to taking back a sent act, so the act "
+        "stays sent and the person looks for themselves.",
+    )
     resourced_summary: str = Field(
         "Took the assistant's name out of {count} history lines and said where each came from",
         description="The line saying what the sweep did when it re-sourced history lines that named the assistant: "
@@ -2776,6 +2781,13 @@ class WatchFile(FileModel):
         "each message's sender, subject line and the mail service's category (never the text) and says work, "
         "personal or sales; unsure counts as work, so nothing is hidden on a guess. rules: no run; only the rules "
         "set mail aside.",
+    )
+    acting: list[str] = Field(
+        default_factory=list,
+        description="The accounts the assistant may act on after your yes (send a message, file mail, write an event): "
+        "an account not ticked is only read, and what the assistant drafts for it is carried out by you with Copy. "
+        "Only you change this; nothing the assistant reads or proposes can.",
+        json_schema_extra={"choices": "acting_accounts"},
     )
     look_back_choices: list[int] = Field(
         default_factory=lambda: [30, 90, 365],

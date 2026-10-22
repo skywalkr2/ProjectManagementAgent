@@ -62,7 +62,7 @@ export function actPhrase(a: Act, t: T): string {
 
 /** What about it is different now, in words ("who it goes to and what will be sent"), from what the yes covered. */
 export function changedWords(a: Act, t: T): string {
-  const known = (a.why ?? []).filter((code) => ["channel", "target", "content", "template"].includes(code));
+  const known = (a.why ?? []).filter((code) => ["channel", "target", "about", "account", "content", "template"].includes(code));
   return known.length > 0 ? list(known.map((code) => t(`outgoing.changed.${code}`))) : t("outgoing.changed.unknown");
 }
 

@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.87"
+PLUGIN_API_VERSION = "0.3.88"
 
 
 class Settings(BaseModel):
@@ -1844,11 +1844,24 @@ class Registrar:
         undo: Callable | None = None,
         *,
         template_version: Callable | None = None,
+        actions: dict[str, Sequence[str]] | None = None,
+        accounts: Sequence[str] = (),
     ) -> None:
-        """A way an approved act is carried out (listed in `provides.channels`): a message sent, an event written, a
-        file put in a folder, on the person's behalf. `kinds` are the kinds of target it takes: `message`, `calendar`,
-        `file`. The core calls it only for an act the person approved, whose approval still covers the act, and never
-        twice for one attempt.
+        """A way an approved act is carried out (listed in `provides.channels`): a message sent, a message filed, an
+        event written, a file put in a folder, on the person's behalf. `kinds` are the kinds of target it takes:
+        `message`, `mailbox`, `calendar`, `file`. The core calls it only for an act the person approved, whose approval
+        still covers the act, and never twice for one attempt.
+
+        `actions` says what the channel does, by kind: `{"message": ["send", "reply", "reply_all", "forward"],
+        "mailbox": ["archive", "move", "label", "mark_read"], "calendar": ["create", "move", "cancel", "answer"],
+        "file": ["write"]}`. A draft whose action the channel doesn't declare is refused at the draft, with the reason
+        in plain words; a channel that declares none takes the first action of each kind (`send`, `archive`, `create`,
+        `write`). The core never offers an action a channel didn't declare, and a mailbox act never deletes: there is
+        no delete action. `accounts` are the kinds of account the channel serves: the name of a sign-in the plugin
+        registers, or `mailbox` for a plain mailbox. An act names its account (the sign-in's account, `<kind>:<name>`),
+        and a draft on an account of another kind is refused. Acting is the person's switch for each account, off until
+        they turn it on: until then a draft for the account is carried out by Copy, so a channel is never called for an
+        account that isn't switched on.
 
         `send(act, attempt_key)` gets an `OutgoingAct` (exactly what the person approved, each recipient's address as it
         resolves now) and the attempt key the core recorded before calling, which the channel should hand to the service
@@ -1858,17 +1871,41 @@ class Registrar:
         sign in to again), or `ChannelUnknown()` when it can't tell. A timeout or a raised exception also leaves the act
         waiting: the core asks `status` before anything is sent again.
 
+        `OutgoingAct` carries what the act does and what it is about: `action`, `about` (each item an `OutgoingAbout`:
+        the record's id, the service's own id of the saved message or calendar entry as it resolves now, and for a
+        calendar entry its UID and sequence where the source gave them), `account`, and for an event `calendar`,
+        `when`, `start`, `end`, `title`, `alarm_minutes`, and for an answer `answer` (`accepted`, `tentative`,
+        `declined` or `propose`), `proposed_start` and `proposed_end`; an answer's recipient is the organizer, which
+        the core called out to the person like any recipient.
+
         `status(attempt_key)` says what happened to an attempt: `ChannelSent(service_id)`, `ChannelNotSent()` (the
         service has nothing for that key) or `ChannelUnknown()`. A channel with no `status` can't be asked, so an
-        attempt whose answer was lost is shown to the person as uncertain, never as sent. `undo(service_id)` takes a
-        sent act back where the service can. `template_version(name)` returns the version a template has now (None
-        when it is gone), so a yes given to content rendered from an older one goes stale. A channel never writes
-        records; it sees only the act it is handed. Draft acts with the core op `act.draft` from a person action."""
+        attempt whose answer was lost is shown to the person as uncertain, never as sent. `undo(act, service_id)` takes
+        a sent act back where the service can: only a mailbox act (moved back, the label removed, marked unread) and
+        a calendar `create` (the event deleted) are ever asked, never a sent message, and never a move, a cancel or an
+        answer that others were told of. It is called once, only after the person asked, and returns
+        `ChannelUndone()` or `ChannelFailed(kind, reason)`; an exception counts as a failure with no clear answer, so
+        the act stays sent and the person looks in the service. `template_version(name)` returns the version a
+        template has now (None when it is gone), so a yes given to content rendered from an older one goes stale. A
+        channel never writes records; it sees only the act it is handed. Draft acts with the core op `act.draft` from
+        a person action."""
         self._name(name)
         if name in self.channels or not callable(send):
             raise ValueError("duplicate channel or invalid send function")
-        if not kinds or not set(kinds) <= {"message", "calendar", "file"}:
-            raise ValueError("a channel takes message, calendar or file targets")
+        if not kinds or not set(kinds) <= {"message", "mailbox", "calendar", "file"}:
+            raise ValueError("a channel takes message, mailbox, calendar or file targets")
+        from engine.ops import ACT_ACTIONS
+
+        declared: dict[str, tuple[str, ...]] = {}
+        for kind, names in (actions or {}).items():
+            if kind not in kinds or not names or not set(names) <= set(ACT_ACTIONS[kind]):
+                raise ValueError(
+                    "actions names, for each kind the channel takes, some of that kind's actions: "
+                    + "; ".join(f"{k}: {', '.join(v)}" for k, v in ACT_ACTIONS.items())
+                )
+            declared[kind] = tuple(dict.fromkeys(names))
+        if not all(isinstance(a, str) and a.strip() for a in accounts):
+            raise ValueError("accounts are the names of the kinds of account the channel serves")
         if any(fn is not None and not callable(fn) for fn in (status, undo, template_version)):
             raise ValueError("a channel's status, undo and template_version are functions")
         from engine.channels import ChannelRegistration
@@ -1881,6 +1918,8 @@ class Registrar:
             status,
             undo,
             template_version,
+            declared,
+            tuple(dict.fromkeys(a.strip() for a in accounts)),
         )
 
     def sign_in(
@@ -1903,6 +1942,7 @@ class Registrar:
         own_app_steps: Sequence[str | tuple[str, str]] = (),
         default_redirects: Sequence[str] = (),
         sources: Sequence[dict[str, Any]] = (),
+        acting_scopes: tuple[str, ...] | list[str] = (),
     ) -> None:
         """A sign-in to a service through its own sign-in page, as the person (listed in `provides.sign_ins`):
         OAuth 2.0 authorization code with PKCE. `authorize_url` and `token_url` are the service's HTTPS addresses, on
@@ -1963,6 +2003,13 @@ class Registrar:
         registration isn't used and the person is asked for their own, with the reason. Without it, any address is
         assumed to be allowed.
 
+        `acting_scopes` are the extra scopes acting needs (send, change messages, write events), asked for only when the
+        person turns on **Let the assistant act after your yes** for an account of this sign-in; `scopes` stay the
+        reading ones, and signing in asks for those alone. Turning acting on starts the sign-in again for that
+        account with `scopes` and `acting_scopes` together; turning it off stops the core using the wider access, and
+        signing in again with the reading scopes gives it back where the service allows. Declare them only when a
+        channel of the plugin serves this sign-in's accounts.
+
         `sources` are what the core starts reading as soon as the person signs in, so signing in is all the setup
         there is: each is `{"connector": <one of this plugin's connectors>, "label": <a name for the list>,
         "settings": {...}, "every_minutes": 15}` (settings checked against the connector's, defaults filling the
@@ -1998,6 +2045,8 @@ class Registrar:
             raise ValueError("default_redirects are full http(s) callback addresses")
         if default_redirects and not default_client_id:
             raise ValueError("default_redirects describe default_client_id's registration")
+        if not all(isinstance(s, str) and s.strip() for s in acting_scopes):
+            raise ValueError("a sign-in's acting_scopes are words")
         started = []
         for source in sources:
             if not isinstance(source, dict) or not set(source) <= {"connector", "label", "settings", "every_minutes"}:
@@ -2027,6 +2076,7 @@ class Registrar:
             authorize_url=authorize_url,
             token_url=token_url,
             scopes=tuple(scopes),
+            acting_scopes=tuple(dict.fromkeys(s.strip() for s in acting_scopes if s not in scopes)),
             client_id=client_id,
             client_secret=client_secret,
             params=dict(params or {}),

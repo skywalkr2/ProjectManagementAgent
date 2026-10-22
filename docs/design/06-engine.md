@@ -1426,8 +1426,42 @@ for it, that nothing goes out without the PM approving that exact content, alrea
       each opens the act in Waiting to go out. The lines are read from the acts list by the screen (like the stage rows),
       not ranked by the engine's queue. `web/src/components/WaitingToGoOut.test.tsx`, `web/src/components/TodayActs.test.tsx`;
       the browser test `web/e2e/outgoing.spec.ts`.
-    - **Not built (S1b-2, and what S1b-1b left):** a channel from a mail or calendar add-on,
-      undoing a sent act through a channel's `undo` (the `undone` state exists; no op reaches it yet; the screen offers none),
+    - **Built (S1b-2a, change log 185: the engine, the API and the plugin API 0.3.88).**
+      - **Actions, `about`, the account:** `ActTargetIn` takes `action` (a message with none is a send), `about`, `label`
+        and the event fields, and the kind `mailbox` (no recipients, no content; an event act's content is its fields).
+        `reply`, `reply_all` and `forward` name `in_reply_to`; a mailbox act names its messages; `move`, `cancel` and
+        `answer` name one calendar entry; a proposal names both times; an answer's recipient is the organizer. The
+        fingerprint adds `about` (each item's service id as it resolves now: a saved message's watched key, a calendar
+        entry's key as its UID) and `account` only when the act uses them, so an older yes still holds.
+        `tests/test_act_actions.py::test_a_message_action_that_answers_a_saved_message_names_it`,
+        `::test_a_mailbox_act_needs_its_messages_and_what_its_action_needs`, `::test_a_mailbox_act_has_no_content_and_no_recipients`,
+        `::test_a_calendar_act_names_what_its_action_needs`,
+        `::test_an_act_made_before_actions_were_named_still_works_and_keeps_its_yes`,
+        `::test_the_yes_goes_stale_when_an_items_service_id_or_the_account_changes`,
+        `::test_a_changed_calendar_entry_or_event_field_makes_the_yes_stale_at_send`,
+        `::test_an_answers_recipient_is_the_organizer_and_is_called_out`,
+        `::test_the_account_defaults_to_where_the_message_came_in_and_a_new_message_to_the_one_picked_last`,
+        `::test_editing_the_account_clears_the_yes_and_can_bring_the_channel_back`.
+      - **Acting is the person's switch:** `watch.acting`; off sends the draft to Copy and the publisher refuses a channel
+        call for it; no ask can name the setting. `::test_a_draft_for_an_account_that_is_not_switched_on_is_carried_out_by_copy`,
+        `::test_switching_acting_off_after_the_yes_stops_the_channel_being_called`,
+        `::test_acting_is_the_persons_switch_a_setting_proposal_from_the_assistant_or_an_input_is_refused`,
+        `::test_a_sign_in_declares_the_scopes_acting_adds`.
+      - **Channels declare actions and accounts:** `::test_a_draft_whose_action_its_channel_does_not_declare_is_refused_with_a_reason`,
+        `::test_a_plugin_declares_actions_and_accounts_when_it_registers_a_channel`,
+        `::test_the_channel_is_handed_what_the_act_is_about_with_the_service_ids_as_they_resolve_now`.
+      - **Undo of a sent act:** `act.undo` (the person's), the publisher's `act.undone` and `act.undo_failed`, and
+        `POST /api/acts/{id}/undo`; only a mailbox act and a created event; a refusal or no answer leaves the act sent
+        with the reason. `::test_undo_of_a_sent_mailbox_act_calls_the_channel_once_and_records_undone`,
+        `::test_a_created_event_can_be_taken_back_but_a_move_a_cancel_and_an_answer_cannot`,
+        `::test_a_sent_message_cannot_be_taken_back`, `::test_a_refused_or_unanswered_undo_leaves_the_act_sent_with_the_reason`,
+        `::test_only_the_person_asks_to_take_an_act_back_and_a_channel_without_undo_cannot`.
+      - **The act view:** `::test_the_api_shows_what_an_act_does_and_takes_back_a_sent_mailbox_act`,
+        `::test_an_account_not_switched_on_says_why_copy_carries_it_and_the_settings_offer_the_switch`.
+    - **Not built (S1b-2, and what S1b-1b left):** the core `mailbox` channel, the add-ons' channels, the screens for
+      the new actions, the undo toast and the sent list's Undo, the Settings step that starts the sign-in with acting after the
+      tick (the route takes `acting`), asking the service to drop the wider access when acting is turned off, the
+      reminders and the standing yes, the invitation's name on an answer line (the view carries `about` now),
       the engine's queue ranking the act lines, the follow-up
       message moving onto acts (Copy still works as it did), and calling `outward.check_outgoing` for the first export a
       person hands to someone else.

@@ -4089,10 +4089,20 @@ class SignInAccount(BaseModel):
     missing: list[str] = Field(
         default_factory=list, description="Scopes asked for that the person didn't allow for this account."
     )
+    acting: bool = Field(
+        False, description="The person switched acting on for this account (the `watch.acting` setting)."
+    )
+    acting_id: str | None = Field(None, description="The account's id as `watch.acting` and an act name it.")
+    acting_missing: list[str] = Field(
+        default_factory=list,
+        description="With acting on: the acting scopes the service didn't grant, so the person signs in again with "
+        "acting to give them.",
+    )
 
 
 class SignInView(BaseModel):
     name: str
+    can_act: bool = Field(False, description="The add-on declares acting scopes, so an account can be let act.")
     label: str = Field(description="What to call the service's sign-in on screen.")
     status: Literal["signed_in", "expired", "signed_out"]
     ready: bool = Field(description="The add-on's app registration (its client id) is set, so signing in can start.")
@@ -5219,6 +5229,20 @@ class ActFailureView(BaseModel):
     at: datetime
 
 
+class ActAboutView(BaseModel):
+    """One thing an act is about, labeled for the screen: a saved message by its sender, subject and date, or a
+    calendar entry by its title and time."""
+
+    id: str = Field(description="The id of the saved message or calendar entry.")
+    kind: Literal["message", "event", "missing"] = Field(
+        description="message: a saved message; event: a calendar entry; missing: the record is gone."
+    )
+    title: str = Field(description="The message's subject or the event's title; empty when the record is gone.")
+    sender: str | None = Field(None, description="For a message, who it is from, as the source said.")
+    when: str | None = Field(None, description="For a message the day it arrived; for an event its start.")
+    end: str | None = Field(None, description="For an event, when it ends.")
+
+
 class ActView(BaseModel):
     """One outward act: its exact content and target, its state, the fingerprint a yes would cover and the recipients
     called out."""
@@ -5227,7 +5251,38 @@ class ActView(BaseModel):
     version: int
     channel: str
     channel_label: str = Field(description="What the channel is called, or its name when its add-on isn't running.")
-    kind: Literal["message", "calendar", "file"]
+    kind: Literal["message", "mailbox", "calendar", "file"]
+    action: str = Field(
+        description="What it does: send, reply, reply_all, forward, archive, move, label, mark_read, create, cancel, "
+        "answer or write."
+    )
+    about: list[ActAboutView] = Field(
+        default_factory=list, description="What it is about: the saved messages a mailbox act changes, or the event."
+    )
+    account: str | None = Field(None, description="The account that carries it, as its id.")
+    account_label: str | None = Field(None, description="What that account is called on screen.")
+    acting: bool = Field(False, description="Whether the person switched acting on for that account.")
+    copied_because: Literal["acting_off"] | None = Field(
+        None, description="Why Copy carries it instead of the channel the draft named: acting is off for its account."
+    )
+    intended_channel: str | None = Field(None, description="The channel the draft named, when Copy carries it instead.")
+    label: str | None = Field(None, description="The label a mailbox act applies.")
+    start: str | None = None
+    end: str | None = None
+    title: str | None = Field(None, description="What an event is called.")
+    alarm_minutes: int | None = None
+    answer: Literal["accepted", "tentative", "declined", "propose"] | None = None
+    proposed_start: str | None = None
+    proposed_end: str | None = None
+    undoable: bool = Field(
+        False,
+        description="A sent act the person can take back: its channel can, and what it did is the kind that can be "
+        "undone.",
+    )
+    undone_at: datetime | None = None
+    undo_failure: ActFailureView | None = Field(
+        None, description="Why the channel could not take it back; the act stays sent."
+    )
     status: Literal["draft", "approved", "sending", "sent", "failed", "uncertain", "stale", "withdrawn", "undone"]
     parts: dict[str, str] = Field(description="The content exactly as it will go, by part.")
     recipients: list[ActRecipientView] = Field(default_factory=list)
@@ -5253,7 +5308,7 @@ class ActView(BaseModel):
 
 
 class ActListView(BaseModel):
-    """GET /api/acts: the acts, newest first, optionally of one state."""
+    """GET /api/acts: the acts, newest first, optionally of some states and at most `limit`."""
 
     acts: list[ActView]
 

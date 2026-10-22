@@ -90,7 +90,7 @@ test("key families built at run time are complete", () => {
     ...(s.ActFailureView.properties.kind.enum ?? []).map((x) => `outgoing.failure.${x}`),
     ...(s.ActRecipientView.properties.reasons.items?.enum ?? []).map((x) => `outgoing.callout.${x}`),
     ...(s.ActRecipientView.properties.role.enum ?? []).map((x) => `outgoing.role.${x}`),
-    ...["channel", "target", "content", "template"].map((x) => `outgoing.changed.${x}`),
+    ...["channel", "target", "about", "account", "content", "template"].map((x) => `outgoing.changed.${x}`),
     ...(s.DataFile.properties.layer.enum ?? []).map((x) => `dataform.layer.${x}`),
     ...["done", "failed", "refused", "expired"].map((x) => `sign_in.return.${x}`),
     "op.note.under",

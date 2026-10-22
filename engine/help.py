@@ -14,6 +14,8 @@ from typing import Any
 GUIDE = Path(__file__).parent / "guide" / "guide.md"
 #: Setting keys never put in a packet: where keys come from is nobody's business but the person's.
 PRIVATE_KEYS = re.compile(r"(^|\.)(auth|key_env|pass_env|token|secret)s?($|\.)")
+#: Settings only the person changes: never offered to an ask, so a setting proposal can't name them (design 6.12).
+PERSON_ONLY_KEYS = frozenset({"watch.acting"})
 _WORD = re.compile(r"[a-z0-9]+")
 #: Words too common to say what a question is about.
 _COMMON = frozenset(
@@ -75,7 +77,11 @@ def askable_settings(cfg: Any) -> list[Any]:
     """The settings an ask may name: the ones the screens show, without anything secret."""
     from engine import settings as config_screens
 
-    return [i for i in config_screens.describe(cfg) if not PRIVATE_KEYS.search(i.key) and i.type != "other"]
+    return [
+        i
+        for i in config_screens.describe(cfg)
+        if not PRIVATE_KEYS.search(i.key) and i.key not in PERSON_ONLY_KEYS and i.type != "other"
+    ]
 
 
 def settings_lines(cfg: Any) -> list[str]:

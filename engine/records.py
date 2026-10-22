@@ -2152,15 +2152,36 @@ class ActRecipient(BaseModel):
 
 
 class ActTarget(BaseModel):
-    """Where an act goes: a message's recipients, a calendar's name and time, or a file's folder."""
+    """Where an act goes and what it does: a message's recipients, the saved messages a mailbox act changes, a
+    calendar's event (or an answer to one), or a file's folder."""
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: Literal["message", "calendar", "file"] = Field(description="message, calendar or file.")
+    kind: Literal["message", "mailbox", "calendar", "file"] = Field(description="message, mailbox, calendar or file.")
+    action: str | None = Field(
+        None,
+        description="What it does (send, reply, archive, create, answer, write and so on); none for an act made before "
+        "acts named one, which does the first of its kind's actions.",
+    )
     recipients: list[ActRecipient] = Field(default_factory=list, description="Who a message goes to.")
+    about: list[str] = Field(
+        default_factory=list,
+        description="The ids of the saved messages a mailbox act changes, or of the one calendar entry an event act "
+        "moves, cancels or answers.",
+    )
     calendar: str | None = Field(None, description="The calendar an event goes on, as the channel names it.")
     when: str | None = Field(None, description="The time or day of an event, as canonical time text.")
-    folder: str | None = Field(None, description="The folder a file is written to, as the channel names it.")
+    folder: str | None = Field(None, description="The folder a file is written to or messages are moved to.")
+    label: str | None = Field(None, description="The label a mailbox act puts on messages.")
+    start: str | None = Field(None, description="When an event starts, as canonical time text.")
+    end: str | None = Field(None, description="When an event ends, as canonical time text.")
+    title: str | None = Field(None, description="What an event is called.")
+    alarm_minutes: int | None = Field(None, description="Minutes before the start an alarm rings.")
+    answer: Literal["accepted", "tentative", "declined", "propose"] | None = Field(
+        None, description="How an invitation is answered."
+    )
+    proposed_start: str | None = Field(None, description="The start a proposed new time suggests.")
+    proposed_end: str | None = Field(None, description="The end a proposed new time suggests.")
 
 
 class ActTemplate(BaseModel):
@@ -2213,6 +2234,16 @@ class Act(Record):
     record_label: ClassVar[str] = "act"
 
     channel: str = Field(min_length=1, description="The channel that carries it out: `copy`, or a plugin's.")
+    account: str | None = Field(
+        None,
+        description="The account that carries it: the sign-in or mailbox it goes through, as `<kind>:<name>`. None for "
+        "an act on a channel that has no accounts.",
+    )
+    intended_channel: str | None = Field(
+        None,
+        description="The channel the draft named before acting was off for its account made it a copy; set only then, "
+        "so choosing another account can bring the channel back.",
+    )
     target: ActTarget = Field(description="Where it goes.")
     parts: dict[str, str] = Field(
         default_factory=dict, description="The content in named parts (a subject, a body), exactly as it will go."
@@ -2228,6 +2259,13 @@ class Act(Record):
     attempt_at: AwareDatetime | None = Field(None, description="When the latest attempt started.")
     service_id: str | None = Field(None, description="The id the service gave the sent act.")
     failure: ActFailure | None = Field(None, description="Why it failed, when it did.")
+    undo_requested_at: AwareDatetime | None = Field(
+        None, description="When the person asked to take a sent act back, until the channel answers."
+    )
+    undone_at: AwareDatetime | None = Field(None, description="When the channel took a sent act back.")
+    undo_failure: ActFailure | None = Field(
+        None, description="Why the channel could not take it back; the act stays sent."
+    )
     sent_at: AwareDatetime | None = Field(None, description="When it went out, or the person said it did.")
     sent_by: Literal["publisher", "person"] | None = Field(
         None, description="publisher: the channel confirmed it; person: they said it was sent."

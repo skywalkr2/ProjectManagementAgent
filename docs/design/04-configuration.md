@@ -262,6 +262,10 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
 - `public_mail_domains_extra` (empty list): mail domains anyone can have an address at, added to the list the app ships. No
   sorting rule is offered or saved for a whole public mail domain, only for a sender (6.5).
+- `acting` (empty list): the accounts the assistant may act on after the person's yes (6.12), picked from the accounts
+  signed in and the plain mailboxes read; none until the person ticks one. Turning one on asks the account's own sign-in
+  for the acting scopes its add-on declares; an account not ticked still gets drafts, carried out by Copy. Only the
+  person changes it: the assistant's setting proposals and add-ons can't name it. Live.
 - `look_back_choices` (30, 90, 365): how many more days further back than a new source's first read the person can ask a mail
   source to look, offered as a list to pick from; each shows its item count and cost first (6.32).
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per
@@ -314,7 +318,8 @@ Built keys:
   drafted for someone who was already told about an action when it is called off.
 - `language.messages.source_by_person`, `source_input`, `source_recorded` and `source_date_format`: how a history row's source is
   worded for readers (6.7): the one known person and the day, an input's title and day, or "recorded <day>"; `withheld_where`
-  and `withheld_name` say why a message to someone else is not offered while it names the assistant; `resourced_summary`
+  and `withheld_name` say why a message to someone else is not offered while it names the assistant; `undo_no_answer` is the
+  reason shown when the service gave no clear answer to taking a sent act back (6.12); `resourced_summary`
   and `resourced_label` word the change the sweep makes (6.7). Each has a description, a default and demo values in both fictional
 - `meeting_words`: the words that say something moved into a meeting ("we'll cover it", "in the planning sessions", "take it up"). A
   call-off whose words hold one and name a meeting the workspace knows (a calendar entry still ahead, else a series) names that

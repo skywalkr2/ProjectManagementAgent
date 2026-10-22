@@ -68,6 +68,7 @@ class SignIn:
     own_app_steps: tuple[tuple[str, str | None], ...] = ()  # how to make one's own registration: (step, link)
     default_redirects: tuple[str, ...] = ()  # the callback addresses the add-on's own registration allows
     sources: tuple[dict[str, Any], ...] = ()  # sources started when the person signs in: connector, label, settings
+    acting_scopes: tuple[str, ...] = ()  # the extra scopes acting needs, asked only when the person turns acting on
 
 
 def address_allowed(redirect: str, allowed: tuple[str, ...]) -> bool:
@@ -146,6 +147,7 @@ class _Pending:
     verifier: str
     redirect: str
     started: float
+    acting: bool = False
 
 
 _PENDING: dict[str, _Pending] = {}
@@ -171,8 +173,10 @@ def check_addresses(sign_in: SignIn, network: list[str]) -> None:
             raise ValueError(f"{url} must be an https address on a host the add-on says it reaches")
 
 
-def start(sign_in: SignIn, client_id: str, redirect: str, now: float | None = None) -> str:
-    """The address of the service's sign-in page for this sign-in; the answer comes back to `redirect`."""
+def start(sign_in: SignIn, client_id: str, redirect: str, now: float | None = None, acting: bool = False) -> str:
+    """The address of the service's sign-in page for this sign-in; the answer comes back to `redirect`. With `acting`
+    it asks for the sign-in's acting scopes as well as its reading ones (the person turned acting on); never
+    otherwise."""
     if not client_id:
         raise SignInError(f"{sign_in.label} needs an app registration first: paste one on its Sign-ins row")
     now = time.time() if now is None else now
@@ -181,13 +185,14 @@ def start(sign_in: SignIn, client_id: str, redirect: str, now: float | None = No
     state = secrets.token_urlsafe(24)
     verifier = secrets.token_urlsafe(48)
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
-    _PENDING[state] = _Pending(sign_in, verifier, redirect, now)
+    asked = (*sign_in.scopes, *(sign_in.acting_scopes if acting else ()))
+    _PENDING[state] = _Pending(sign_in, verifier, redirect, now, bool(acting and sign_in.acting_scopes))
     query = {
         **sign_in.params,
         "response_type": "code",
         "client_id": client_id,
         "redirect_uri": redirect,
-        "scope": " ".join(sign_in.scopes),
+        "scope": " ".join(asked),
         "state": state,
         "code_challenge": challenge,
         "code_challenge_method": "S256",
@@ -212,7 +217,8 @@ def finish(
     }
     if client_secret:
         form["client_secret"] = client_secret
-    return pending.sign_in, _tokens(web.post(pending.sign_in.token_url, data=form), now)
+    tokens = _tokens(web.post(pending.sign_in.token_url, data=form), now)
+    return pending.sign_in, {**tokens, "acting": True} if pending.acting else tokens
 
 
 def drop_pending(state: str) -> None:
@@ -433,6 +439,8 @@ def access_token(
         ) from None
     renewed["signed_in_at"] = tokens.get("signed_in_at")
     renewed["account"] = tokens.get("account")
+    if tokens.get("acting"):
+        renewed["acting"] = True
     renewed["scope"] = renewed.get("scope") or tokens.get("scope")
     keep(keys, sign_in, renewed, address)
     return renewed["access_token"]
@@ -468,13 +476,20 @@ def granted(keys: Path, sign_in: SignIn, account: str | None = None) -> set[str]
 def allowed_scopes(sign_in: SignIn, tokens: dict[str, Any]) -> set[str]:
     """The scopes one account's tokens carry: what the service said, or everything asked when it didn't say."""
     scope = tokens.get("scope")
-    return set(str(scope).split()) if scope else set(sign_in.scopes)
+    if scope:
+        return set(str(scope).split())
+    return {*sign_in.scopes, *(sign_in.acting_scopes if tokens.get("acting") else ())}
 
 
 def missing(sign_in: SignIn, allowed: set[str]) -> list[str]:
     """Scopes asked for and not granted. A granted scope written with the service's resource in front of it
     (".../Mail.Read") counts for the plain name."""
     return [s for s in sign_in.scopes if not any(g == s or g.endswith("/" + s) for g in allowed)]
+
+
+def missing_acting(sign_in: SignIn, allowed: set[str]) -> list[str]:
+    """Acting scopes asked for and not granted, by the same reading as `missing`."""
+    return [s for s in sign_in.acting_scopes if not any(g == s or g.endswith("/" + s) for g in allowed)]
 
 
 def revoke(web: Any, sign_in: SignIn, tokens: dict[str, Any] | None, client_id: str | None) -> bool:

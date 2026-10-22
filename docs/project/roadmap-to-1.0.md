@@ -1074,12 +1074,14 @@ management (not just read only) lets do it"):
   screen, the callouts acknowledged by name, Approve and send with its confirm, Copy and Mark sent for a `copy` act,
   Look again for a stale one, Take it back with Undo) and the Today lines (failed, uncertain, stale):
   `web/src/components/WaitingToGoOut.test.tsx`, `web/src/components/TodayActs.test.tsx`; the browser test
-  `web/e2e/outgoing.spec.ts`. **Left:** Undo of a sent act where a channel can (no op reaches `undone` yet), the diff and
-  count previews of 7.4, the invitation's name on an answer (the act view doesn't carry it, so an answer reads as a
-  calendar entry), and a status filter with a limit on the acts list (the screen reads every act and filters).
+  `web/e2e/outgoing.spec.ts`. **Left:** the screens' Undo of a sent act (the engine and `POST /api/acts/{id}/undo` have it, S1b-2a), the diff and
+  count previews of 7.4, the invitation's name on an answer (the act view carries `about` now, the screen doesn't read it
+  yet), and the screen using the acts list's `status` values and `limit` (it still reads every act and filters).
 - [ ] [S1b-2] **Mail:** reply, reply all, forward and send a drafted message; archive, move, label and mark read, one at a time
   or as an approved list. Through the account's own service (the Google and Microsoft add-ons ask for send and modify
   access, a change their builder makes) and, for a plain mailbox, sending through the account's outgoing server.
+  **Built so far (S1b-2a):** the acts' actions, `about`, account and undo in the engine and API
+  (`tests/test_act_actions.py`). **Left:** the core `mailbox` channel, the screens.
 - [ ] [S1b-2] **Reminders that reach the person while the computer sleeps** (moved from S1-2's reminders, which needed
   the publisher for it): (owner: "whatever we can do to make it full featured ... but not
   phone pushes unless it was an installed ios or apk"): a reminder can also go into the person's own calendar as an
@@ -1091,10 +1093,18 @@ management (not just read only) lets do it"):
   new time for an invitation. Through the account's service; a subscribed calendar link stays read-only by nature.
   Reading an invitation and preparing the answer has its engine (`engine/itip.py`, `tests/test_itip.py`); sending it
   waits for the publisher.
+  **Built so far (S1b-2a):** the calendar acts' actions, an answer addressed to the organizer, and undo of a created event
+  (`tests/test_act_actions.py`). **Left:** the answer's iTIP reply by mail through the core channel, the screens.
 - [ ] [S1b-2] **Plugin API for acting:** add-ons declare the acts they can carry out (a channel per account kind: send,
   reply, move, label, create or change an event) and the access they need in `requires`; the core calls them only from
   the publisher after the yes, and their sign-in asks for the wider access when the person turns acting on. Released
   with the guide, so the mail add-on's builder builds against it.
+  **Built so far (S1b-2a, plugin API 0.3.88):** channels declare `actions` and `accounts`; `OutgoingAct` carries the
+  action, what it is about, the account and the event fields; `watch.acting` per account, with Copy carrying a draft for
+  an account that is off; `acting_scopes` on a sign-in and `POST /api/sign-ins/{name}/start?acting=true`; `act.undo`
+  with the channel's `undo(act, service_id)`: `tests/test_act_actions.py` (see design 6.12, "Built (S1b-2a)").
+  **Left:** the Settings step that starts the sign-in with acting after the tick, asking the service to drop the wider
+  access when acting is turned off, and the guide's section for the mail add-on's builder to confirm.
 - [ ] [S1b-1] **Nothing on its own:** the assistant drafts every act; none runs without the person's yes on that exact act, and
   rules may only suggest (an outbound op is never applied automatically, design 6.7).
   **Built so far (S1b-1a):** an outbound op from the assistant is held, never applied; only the person's own click

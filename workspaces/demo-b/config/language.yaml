@@ -153,6 +153,7 @@ messages:
   source_recorded: "recorded {date}"
   source_date_format: "%b %d"
   withheld_where: "the message to {name}"
+  undo_no_answer: "The service gave no answer to taking this back. Look in it to see whether it was."
   resourced_summary: "Took the assistant's name out of {count} history lines and said where each came from"
   resourced_label: "Put where the change came from in a history line instead of the assistant's name"
   withheld_name: "Held back: {where} names {name}. Take the name out before this goes to anyone."

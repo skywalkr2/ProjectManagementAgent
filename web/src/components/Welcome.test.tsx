@@ -399,6 +399,7 @@ describe("a sign-in step that is done", () => {
     set_aside: false,
     several: false,
     default_unusable: false,
+    can_act: false,
   });
 
   test("still shows the sign-in row's actions: choose what to read, sign out and sign in again", async () => {

@@ -10,6 +10,28 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.88 adds
+
+Manifests stay `'>=0.3,<0.4'`. A channel written for 0.3.87 keeps working: it takes the first action of each kind it
+serves and no account.
+
+- **Channels declare what they do:** `registrar.channel(..., actions={kind: [action, ...]}, accounts=[account kinds])`.
+  The kinds are now `message`, `mailbox`, `calendar` and `file`; the actions are `send`, `reply`, `reply_all`, `forward`
+  (message); `archive`, `move`, `label`, `mark_read` (mailbox, never a delete); `create`, `move`, `cancel`, `answer`
+  (calendar); `write` (file). A draft whose action the channel doesn't declare is refused at the draft. `accounts` names
+  the sign-ins (or `mailbox`) the channel serves; an act names its account as `<kind>:<name>`.
+- **`OutgoingAct`** gains `action`, `about` (`OutgoingAbout`: `id`, `service_id`, `uid`, `sequence`), `account`, `label`,
+  `start`, `end`, `title`, `alarm_minutes`, `answer`, `proposed_start` and `proposed_end`; `folder` also names where a
+  mailbox move goes. An answer's recipient is the organizer.
+- **Acting is the person's switch per account** (`watch.acting`, off by default): until it is on, a draft for the
+  account is carried out by Copy and the channel is never called. `registrar.sign_in(..., acting_scopes=[...])` declares
+  the extra scopes acting needs; the person turning acting on starts the sign-in with reading plus acting scopes.
+- **Undo:** `undo(act, service_id)` (it was `undo(service_id)`) is called once, after the person's `act.undo`, only for a
+  mailbox act or a calendar `create`, and returns `ChannelUndone()` or `ChannelFailed(kind, reason)`.
+- **Core ops:** `act.undo` (the person's) and the publisher's `act.undone` and `act.undo_failed`, all outbound tier; the
+  act edit also takes `account`; `act.draft` takes `account` and a target with `action`, `about` and the event fields.
+  No validator or lint may target `act.undone` or `act.undo_failed`.
+
 ## What 0.3.87 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes has to change.

@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
 from api.schemas import Ok, SignInAccount, SignInApp, SignInStarted, SignInStep, SignInView
-from engine import audit
+from engine import act_accounts, audit
 from engine import sign_in as flow
 from engine.config import Config
 from engine.connectors import ConnectorError
@@ -45,11 +45,24 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         if had:
             audit.record(store, "sign_out", s.name, label=s.label, detail="The app registration it used was changed.")
 
+    def acting_of(s: flow.SignIn, a: flow.Account) -> dict:
+        """What an account says about acting: the switch, its id and any acting scope not granted when it is on."""
+        if not a.address or not s.acting_scopes:
+            return {}
+        account = act_accounts.account_id(s.name, a.address)
+        on = act_accounts.acting_on(cfg, account)
+        return {
+            "acting": on,
+            "acting_id": account,
+            "acting_missing": flow.missing_acting(s, flow.allowed_scopes(s, a.tokens)) if on else [],
+        }
+
     def view(s: flow.SignIn) -> SignInView:
         client_id, _, source = host.sign_in_app(s, ws.root)
         status = flow.status(keys(s.plugin), s)
         accounts = flow.list_accounts(keys(s.plugin), s)
         return SignInView(
+            can_act=bool(s.acting_scopes),
             name=s.name,
             label=s.label,
             status=status,
@@ -63,6 +76,7 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
                     address=a.address,
                     status=flow.account_status(a),  # type: ignore[arg-type]
                     missing=flow.missing(s, flow.allowed_scopes(s, a.tokens)),
+                    **acting_of(s, a),
                 )
                 for a in accounts
             ],
@@ -137,10 +151,14 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         return view(s)
 
     @r.post("/sign-ins/{name:path}/start")
-    def start(name: str) -> SignInStarted:
+    def start(name: str, acting: bool = False) -> SignInStarted:
+        """The address of the service's sign-in page. With `acting` it asks for the acting access as well as reading
+        (the person turned acting on for the account); without it, reading only."""
         s = find(name)
+        if acting and not s.acting_scopes:
+            raise HTTPException(status_code=409, detail=f"{s.label} has no acting access to ask for.")
         try:
-            url = flow.start(s, host.sign_in_app(s, ws.root)[0] or "", flow.redirect_uri(cfg.server))
+            url = flow.start(s, host.sign_in_app(s, ws.root)[0] or "", flow.redirect_uri(cfg.server), acting=acting)
         except flow.SignInError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         return SignInStarted(url=url)

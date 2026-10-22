@@ -42,6 +42,7 @@ sources:
       user: pm@example.com
       password: env:PROJECT_MAIL_PASSWORD
       folder: Projects
+acting: []   # accounts the assistant may act on after your yes; none until you tick one in Settings
 look_back_choices: [30, 90, 365]   # days a mail source can be asked to look further back, shown as a list
 failures_before_asking: 3
 unread_gap_factor: 2   # a failing source becomes a line on Today after this many of its own read intervals

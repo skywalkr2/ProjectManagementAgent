@@ -20,6 +20,74 @@
         "title": "AccountChoice",
         "type": "object"
       },
+      "ActAboutView": {
+        "description": "One thing an act is about, labeled for the screen: a saved message by its sender, subject and date, or a\ncalendar entry by its title and time.",
+        "properties": {
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an event, when it ends.",
+            "title": "End"
+          },
+          "id": {
+            "description": "The id of the saved message or calendar entry.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "message: a saved message; event: a calendar entry; missing: the record is gone.",
+            "enum": [
+              "message",
+              "event",
+              "missing"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a message, who it is from, as the source said.",
+            "title": "Sender"
+          },
+          "title": {
+            "description": "The message's subject or the event's title; empty when the record is gone.",
+            "title": "Title",
+            "type": "string"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a message the day it arrived; for an event its start.",
+            "title": "When"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title"
+        ],
+        "title": "ActAboutView",
+        "type": "object"
+      },
       "ActApproveIn": {
         "description": "The person's yes: the fingerprint their screen showed and the recipients called out that they acknowledged.",
         "properties": {
@@ -72,7 +140,7 @@
         "type": "object"
       },
       "ActListView": {
-        "description": "GET /api/acts: the acts, newest first, optionally of one state.",
+        "description": "GET /api/acts: the acts, newest first, optionally of some states and at most `limit`.",
         "properties": {
           "acts": {
             "items": {
@@ -224,6 +292,77 @@
       "ActView": {
         "description": "One outward act: its exact content and target, its state, the fingerprint a yes would cover and the recipients\ncalled out.",
         "properties": {
+          "about": {
+            "description": "What it is about: the saved messages a mailbox act changes, or the event.",
+            "items": {
+              "$ref": "#/components/schemas/ActAboutView"
+            },
+            "title": "About",
+            "type": "array"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account that carries it, as its id.",
+            "title": "Account"
+          },
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What that account is called on screen.",
+            "title": "Account Label"
+          },
+          "acting": {
+            "default": false,
+            "description": "Whether the person switched acting on for that account.",
+            "title": "Acting",
+            "type": "boolean"
+          },
+          "action": {
+            "description": "What it does: send, reply, reply_all, forward, archive, move, label, mark_read, create, cancel, answer or write.",
+            "title": "Action",
+            "type": "string"
+          },
+          "alarm_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alarm Minutes"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "enum": [
+                  "accepted",
+                  "tentative",
+                  "declined",
+                  "propose"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
           "approved_at": {
             "anyOf": [
               {
@@ -268,6 +407,30 @@
             "title": "Channel Label",
             "type": "string"
           },
+          "copied_because": {
+            "anyOf": [
+              {
+                "const": "acting_off",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why Copy carries it instead of the channel the draft named: acting is off for its account.",
+            "title": "Copied Because"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
           "failure": {
             "anyOf": [
               {
@@ -298,14 +461,39 @@
             "title": "Id",
             "type": "string"
           },
+          "intended_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The channel the draft named, when Copy carries it instead.",
+            "title": "Intended Channel"
+          },
           "kind": {
             "enum": [
               "message",
+              "mailbox",
               "calendar",
               "file"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The label a mailbox act applies.",
+            "title": "Label"
           },
           "made_by": {
             "enum": [
@@ -322,6 +510,28 @@
             "description": "The content exactly as it will go, by part.",
             "title": "Parts",
             "type": "object"
+          },
+          "proposed_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed End"
+          },
+          "proposed_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Start"
           },
           "recipients": {
             "items": {
@@ -377,6 +587,17 @@
             ],
             "title": "Service Id"
           },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
           "status": {
             "enum": [
               "draft",
@@ -403,6 +624,47 @@
             ],
             "description": "The name of the template the content was rendered from.",
             "title": "Template"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What an event is called.",
+            "title": "Title"
+          },
+          "undo_failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActFailureView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the channel could not take it back; the act stays sent."
+          },
+          "undoable": {
+            "default": false,
+            "description": "A sent act the person can take back: its channel can, and what it did is the kind that can be undone.",
+            "title": "Undoable",
+            "type": "boolean"
+          },
+          "undone_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Undone At"
           },
           "version": {
             "title": "Version",
@@ -446,6 +708,7 @@
           "channel",
           "channel_label",
           "kind",
+          "action",
           "status",
           "parts",
           "fingerprint",
@@ -19251,6 +19514,32 @@
       "SignInAccount": {
         "description": "One account signed in to a sign-in.",
         "properties": {
+          "acting": {
+            "default": false,
+            "description": "The person switched acting on for this account (the `watch.acting` setting).",
+            "title": "Acting",
+            "type": "boolean"
+          },
+          "acting_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account's id as `watch.acting` and an act name it.",
+            "title": "Acting Id"
+          },
+          "acting_missing": {
+            "description": "With acting on: the acting scopes the service didn't grant, so the person signs in again with acting to give them.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Acting Missing",
+            "type": "array"
+          },
           "address": {
             "anyOf": [
               {
@@ -19419,6 +19708,12 @@
             "description": "The address the service's app registration must allow to send people back to.",
             "title": "Callback",
             "type": "string"
+          },
+          "can_act": {
+            "default": false,
+            "description": "The add-on declares acting scopes, so an account can be let act.",
+            "title": "Can Act",
+            "type": "boolean"
           },
           "can_paste": {
             "default": false,
@@ -23323,7 +23618,7 @@
     },
     "/api/acts": {
       "get": {
-        "description": "The acts, newest first; with `status`, only those in that state (Waiting to go out reads draft, approved,\nstale, failed and uncertain).",
+        "description": "The acts, newest first; with `status` (repeat it for several), only those in one of those states (Waiting to\ngo out reads draft, approved, stale, failed and uncertain), and with `limit`, at most that many.",
         "operationId": "list_acts_api_acts_get",
         "parameters": [
           {
@@ -23333,13 +23628,33 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 {
                   "type": "null"
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
             }
           }
         ],
@@ -23556,6 +23871,46 @@
           }
         },
         "summary": "Settle"
+      }
+    },
+    "/api/acts/{act_id}/undo": {
+      "post": {
+        "description": "Take back a sent act where its channel can (a mailbox act, an event it created): the person's request is\nrecorded as theirs, then the channel is asked once. A refusal or no answer leaves the act sent, with the reason\non it. A sent message, or a change or answer others were told of, is refused.",
+        "operationId": "undo_api_acts__act_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "act_id",
+            "required": true,
+            "schema": {
+              "title": "Act Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActResultView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo"
       }
     },
     "/api/acts/{act_id}/withdraw": {
@@ -32160,6 +32515,7 @@
     },
     "/api/sign-ins/{name}/start": {
       "post": {
+        "description": "The address of the service's sign-in page. With `acting` it asks for the acting access as well as reading\n(the person turned acting on for the account); without it, reading only.",
         "operationId": "start_api_sign_ins__name__start_post",
         "parameters": [
           {
@@ -32169,6 +32525,16 @@
             "schema": {
               "title": "Name",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "acting",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Acting",
+              "type": "boolean"
             }
           }
         ],

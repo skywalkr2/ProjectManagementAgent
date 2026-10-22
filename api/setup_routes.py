@@ -86,7 +86,7 @@ from api.schemas import (
     WatchSourceChange,
     WatchSourceIn,
 )
-from engine import audit, kept_secrets, references, setup, templates
+from engine import act_accounts, audit, kept_secrets, references, setup, templates
 from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
 from engine import sorting_rules as sorting
@@ -244,6 +244,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             # The people there are and the tiers the AI settings define: lists their own records and settings keep.
             "people": [p.id for p in store.read().list("person") if p.data.get("status", "active") != "left"],
             "tiers": list(current().ai.tiers),
+            # The accounts an act can go through, picked from (never typed) where the person lets the assistant act.
+            "acting_accounts": [a.id for a in act_accounts.known(store, current())],
         }
 
     @r.get("/settings")

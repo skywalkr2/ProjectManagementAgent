@@ -7,11 +7,12 @@ Only the publisher calls a channel, and only for an act whose yes still covers i
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from api.schemas import (
+    ActAboutView,
     ActApproveIn,
     ActFailureView,
     ActListView,
@@ -20,7 +21,7 @@ from api.schemas import (
     ActSettleIn,
     ActView,
 )
-from engine import acts
+from engine import act_accounts, acts
 from engine.applier import apply_as_person
 from engine.config import Config
 from engine.names import People
@@ -37,6 +38,27 @@ def build_act_router(cfg: Config, store: Store, events: Events, worker: Worker) 
             return fn()
         except (StoreError, ValueError, KeyError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+
+    def about_of(rid: str) -> ActAboutView:
+        """One thing an act is about, labeled for the screen."""
+        view = store.read()
+        message = view.get("source", rid)
+        if message is not None:
+            data = message.data
+            sent = data.get("sent_at") or data.get("received_at")
+            return ActAboutView(
+                id=rid,
+                kind="message",
+                title=data.get("title") or "",
+                sender=(data.get("watched") or {}).get("author"),
+                when=str(sent)[:10] if sent else None,
+            )
+        entry = view.get("event", rid)
+        if entry is not None:
+            return ActAboutView(
+                id=rid, kind="event", title=entry.data["title"], when=entry.data["start"], end=entry.data.get("end")
+            )
+        return ActAboutView(id=rid, kind="missing", title="")
 
     def view_of(found: Any) -> ActView:
         view = store.read()
@@ -58,6 +80,9 @@ def build_act_router(cfg: Config, store: Store, events: Events, worker: Worker) 
                 )
             )
         channel = acts.channel_of(store.plugins, data["channel"])
+        target = data["target"]
+        account = data.get("account")
+        undo_channel = channel is not None and channel.undo is not None
         approval = data.get("approved")
         failure = data.get("failure")
         return ActView(
@@ -65,7 +90,29 @@ def build_act_router(cfg: Config, store: Store, events: Events, worker: Worker) 
             version=found.version,
             channel=data["channel"],
             channel_label=channel.label if channel is not None else data["channel"],
-            kind=data["target"]["kind"],
+            kind=target["kind"],
+            action=acts.what(data),
+            about=[about_of(rid) for rid in target.get("about") or []],
+            account=account,
+            account_label=act_accounts.label_of(store, cfg, account),
+            acting=act_accounts.acting_on(cfg, account),
+            copied_because="acting_off" if data.get("intended_channel") else None,
+            intended_channel=data.get("intended_channel"),
+            label=target.get("label"),
+            start=target.get("start"),
+            end=target.get("end"),
+            title=target.get("title"),
+            alarm_minutes=target.get("alarm_minutes"),
+            answer=target.get("answer"),
+            proposed_start=target.get("proposed_start"),
+            proposed_end=target.get("proposed_end"),
+            undoable=data["status"] == "sent"
+            and data.get("sent_by") == "publisher"
+            and undo_channel
+            and acts.undoable(data)
+            and not data.get("undo_requested_at"),
+            undone_at=data.get("undone_at"),
+            undo_failure=ActFailureView(**data["undo_failure"]) if data.get("undo_failure") else None,
             status=data["status"],
             parts=dict(data["parts"]),
             recipients=recipients,
@@ -96,12 +143,14 @@ def build_act_router(cfg: Config, store: Store, events: Events, worker: Worker) 
         return store.read().get("act", act_id).data["status"]
 
     @r.get("/acts")
-    def list_acts(status: str | None = None) -> ActListView:
-        """The acts, newest first; with `status`, only those in that state (Waiting to go out reads draft, approved,
-        stale, failed and uncertain)."""
-        found = [a for a in store.read().list("act") if status is None or a.data["status"] == status]
+    def list_acts(
+        status: Annotated[list[str] | None, Query()] = None, limit: Annotated[int | None, Query(ge=1)] = None
+    ) -> ActListView:
+        """The acts, newest first; with `status` (repeat it for several), only those in one of those states (Waiting to
+        go out reads draft, approved, stale, failed and uncertain), and with `limit`, at most that many."""
+        found = [a for a in store.read().list("act") if not status or a.data["status"] in status]
         found.sort(key=lambda a: int(a.id.rpartition("-")[2]), reverse=True)
-        return ActListView(acts=[view_of(a) for a in found])
+        return ActListView(acts=[view_of(a) for a in found[:limit]])
 
     @r.get("/acts/{act_id}")
     def read_act(act_id: str) -> ActView:
@@ -140,6 +189,17 @@ def build_act_router(cfg: Config, store: Store, events: Events, worker: Worker) 
         sent = guard(lambda: Publisher(store, cfg, now=worker.now).send(act_id))
         events.changed()
         return ActResultView(id=act_id, status=sent.status, reason=sent.reason, changeset=cs)
+
+    @r.post("/acts/{act_id}/undo")
+    def undo(act_id: str) -> ActResultView:
+        """Take back a sent act where its channel can (a mailbox act, an event it created): the person's request is
+        recorded as theirs, then the channel is asked once. A refusal or no answer leaves the act sent, with the reason
+        on it. A sent message, or a change or answer others were told of, is refused."""
+        need(act_id)
+        cs = guard(lambda: apply_as_person(store, cfg, [{"op": "act.undo", "id": act_id}], "Asked to take an act back"))
+        result = guard(lambda: Publisher(store, cfg, now=worker.now).undo(act_id))
+        events.changed()
+        return ActResultView(id=act_id, status=status_of(act_id), reason=result.reason, changeset=cs)
 
     @r.post("/acts/{act_id}/settle")
     def settle(act_id: str, body: ActSettleIn) -> ActResultView:
