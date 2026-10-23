@@ -40,7 +40,7 @@ The first run should read as one simple story, in this order:
   - **B: personal plus a small business.** A sole trader or a small shop owner with a few customers, a supplier and
     one helper, plus their personal life. Says **yes**, and sets up the business with one program and two projects.
 - For each, **hand in a real-feeling personal email and a business email**, and see where each one lands.
-- **Screenshots of every step** for the owner, in a gallery like the earlier rounds, with A and B side by side.
+- **Screenshots of every step**, kept as evidence for the findings (no gallery page).
 
 ## What to check
 
@@ -58,7 +58,7 @@ The first run should read as one simple story, in this order:
 
 ## What to hand back
 
-- **A review folder:** findings ranked, with a fix and a test for each, plus a gallery of both walkthroughs.
+- **A review folder:** findings ranked, with a fix, a test and a screenshot for each.
 - **A short verdict for the owner:** could persona A and persona B each set it up alone, yes or no, and what stops them
   if not.
 - **Proposed checklist items** for the personal and business setup (P1…), added to the master checklist.
@@ -134,8 +134,8 @@ The next time the main session asks for a review, it covers **everything**, not 
    Send the main session a clear list of **what should not be there at all**, with a one-line reason each. Group it
    for a beginner: the settings someone actually needs should fit on one short page.
 
-What to hand back, as before:
-- a review folder with a screenshot gallery, for the owner to see
-- ranked findings
+What to hand back:
+- a review folder with ranked findings, each with the screenshot that shows it
+- no gallery page (the owner no longer needs it)
 - the settings list
 - a short verdict in plain words
