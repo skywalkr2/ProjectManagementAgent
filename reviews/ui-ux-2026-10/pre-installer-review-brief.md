@@ -101,3 +101,41 @@ The main session's plan is in its roadmap (I-0, pushed as `2961aa6`, `b2e9449` a
 **Also check:**
 - With mail skipped, "Your promises" becomes "Hand something in to see what it does".
 - Welcome isn't counted as a step; progress starts at "You: 1 of 7".
+
+## Added by the owner, 2026-10-23: the scope of the next review
+
+The next time the main session asks for a review, it covers **everything**, not only the changes:
+
+1. **Walk the whole product as a complete beginner.** Someone who has never used software like this, reads every word
+   literally, and gives up when something doesn't make sense.
+   - Start from install and first run, then every screen and every button a beginner would press, in the order they'd
+     meet them.
+   - The owner's concern: **the screens are badly done and don't flow.** So judge the flow, not only each screen:
+     - Does each screen make the next step obvious?
+     - Does anything dead-end?
+     - Does the person ever have to go looking for where something is?
+     - Does the same thing appear in two places, or with two names?
+   - Write down every point where the beginner would stop, guess or give up. That list is the main output.
+2. **Light mode (black on white): the owner says it looks bad.** Review light mode as its own design, not as the
+   inverse of dark:
+   - contrast and hierarchy
+   - too many borders or boxes, and flat or washed-out areas
+   - the accent colour against white
+   - pills and tints
+   - how dense the text is
+
+   Propose concrete token changes with before-and-after screenshots.
+3. **Every setting, especially "More settings".** For each setting, decide:
+   - **keep** where it is
+   - **move** it (to Advanced, to the screen where it's used, or into a guided step)
+   - **automate** it (the app decides; there's no setting)
+   - **remove** it (it shouldn't exist for any user)
+
+   Send the main session a clear list of **what should not be there at all**, with a one-line reason each. Group it
+   for a beginner: the settings someone actually needs should fit on one short page.
+
+What to hand back, as before:
+- a review folder with a screenshot gallery, for the owner to see
+- ranked findings
+- the settings list
+- a short verdict in plain words
